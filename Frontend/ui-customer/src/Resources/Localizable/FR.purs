@@ -417,7 +417,7 @@ getFR stringKey =
         NO_DONT -> "Non, pas"
         YES_CANCEL_SEARCH -> "Oui, annulez la recherche"
         TRY_LOOKING_FOR_RIDES_AGAIN -> "Il semble que la journée soit très chargée. Vous pouvez essayer de chercher des manèges à nouveau"
-        NO_TIP -> "Aucun conseil"
+        NO_TIP -> "Pas de pourboire"
         CUSTOMER_TIP_DESCRIPTION -> "^ Montant supplémentaire ajouté par le client pour augmenter les chances d'obtenir un trajet."
         PLACE_CALL -> "Place Call"
         DIRECT_CALL -> "Appel direct"
@@ -1027,7 +1027,7 @@ getFR stringKey =
         YET_TO_START name -> name <> " n'a pas encore commencé le trajet"
         MESSAGE_FROM name -> "Message de " <> name
         RIDE_CANCELLED -> "Trajet annulé"
-        TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 Salut,\n\nJe suis en train de rouler avec le chauffeur " <> driverName <> " de " <> appName <> "! Suivez ce trajet sur : " <> trackLink <> "\n\nNuméro de véhicule : " <> vehicleNumber
+        TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 Salut,\n\nJe suis en train de rouler avec le chauffeur " <> driverName <> " de " <> appName <> "! Suivez ce trajet sur : " <> trackLink <> "\n\nNuméro de véhicule : " <> vehicleNumber        
         SAFETY_CENTER_IS_DISABLED -> "La fonction SOS est désactivée car elle a été utilisée de manière abusive trois fois"
         TRACK_ON_GOOGLE_MAP -> "Suivre sur Google Maps >"
         SHOW_WALKING_DIRECTION -> "Afficher les directions pour marcher >"
@@ -1036,6 +1036,11 @@ getFR stringKey =
         WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "Nous essaierons de vous connecter avec un chauffeur dans la zone de ramassage spéciale la plus proche."
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "Cela vous offre une expérience de ramassage instantanée."
         DRIVER_AT_PICKUP_LOCATION -> "est au lieu de ramassage"
+        A_TIP_HELPS_FIND_A_RIDE_QUICKER -> "Un conseil permet de trouver un trajet plus rapidement !"
+        TIP_ADDED -> "astuce ajoutée !"
+        CONTINUE_SEARCH_WITH_NO_TIP -> "Continuer la recherche sans pourboire"
+        SEARCHING_WITH_NO_TIP -> "Rechercher sans pourboire"
+        SEARCH_AGAIN -> "Chercher à nouveau"
         DRIVER_AT_PICKUP_LOCATION -> "Votre chauffeur est au lieu de prise en charge"
         DRIVER_IS_ON_THE_WAY -> "Votre chauffeur est en route"
         DRIVER_IS_WAITING_AT_PICKUP -> "Votre chauffeur attend au moment du ramassage"

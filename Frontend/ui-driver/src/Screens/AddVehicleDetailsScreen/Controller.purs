@@ -113,7 +113,6 @@ instance loggableAction :: Loggable Action where
     NoAction -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "no_action"
     PopUpModalLogoutAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "on_goback"
-      PopUpModal.Tipbtnclick _ _ -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "tip_button_click"
       PopUpModal.DismissPopup -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "dismiss_popup"
       PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "call_support"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "no_action"
@@ -123,13 +122,13 @@ instance loggableAction :: Loggable Action where
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
       PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "youtube_video_status"
+      _ -> pure unit
     ValidateDocumentModalAction act -> case act of
       ValidateDocumentModal.BackPressed  -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "validate_document_modal" "backpressed"
       ValidateDocumentModal.AfterRender ->  trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "validate_document_modal" "afterrender"
       _ -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "validate_document_modal" "no_action"
     PopUpModalActions act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "on_goback"
-      PopUpModal.Tipbtnclick _ _ -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "tip_button_click"
       PopUpModal.DismissPopup -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "dismiss_popup"
       PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "call_support"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "no_action"
@@ -139,6 +138,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
+      _ -> pure unit
     RenderProfileImage image id -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "renderImage" "afterrender"
     RedirectScreen -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "redirect_screem" "no_action"
     ChangeLocation -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "change_location" "on_click"

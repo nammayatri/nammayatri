@@ -72,6 +72,8 @@ type AppConfigCustomer a =
   , enableSingleEstimate :: Boolean
   , driverLocationPolling :: DriverLocationPollingConfig
   , banners :: Banners
+  , tipDisplayDuration :: Int
+  , enableTips :: Boolean
   | a
   }
 

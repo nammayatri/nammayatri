@@ -38,6 +38,7 @@ import Components.MenuButton.Controller (Action(..)) as MenuButtonController
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PricingTutorialModel.Controller as PricingTutorialModelController
 import Components.PrimaryButton.Controller as PrimaryButtonController
+import Components.TipsView as TipsView
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.QuoteListItem.Controller as QuoteListItemController
 import Components.QuoteListModel.Controller as QuoteListModelController
@@ -1452,7 +1453,7 @@ eval BackPressed state = do
         continue state {props {showBookingPreference = false}}
       else do
         _ <- pure $ updateLocalStage SearchLocationModel
-        continue updatedState{data{rideHistoryTrip = Nothing},props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation, isRepeatRide = false}}
+        continue updatedState{data{rideHistoryTrip = Nothing},props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation, isRepeatRide = false, customerTip = HomeScreenData.initData.props.customerTip, tipViewProps = HomeScreenData.initData.props.tipViewProps}}
     ConfirmingLocation -> do
                       _ <- pure $ performHapticFeedback unit
                       _ <- pure $ exitLocateOnMap ""
@@ -1794,7 +1795,7 @@ eval (SearchExpireCountDown seconds status timerID) state = do
     continue state { props { searchExpire = seconds } }
   else do
     let enableTips = isTipEnabled state
-    if any ( _ == state.props.currentStage) [FindingQuotes , QuoteList] then continue state { props { searchExpire = seconds ,timerId = timerID , tipViewProps {isVisible = enableTips && (seconds <= (getSearchExpiryTime "LazyCheck")-30 || state.props.tipViewProps.isVisible) && (state.props.customerTip.tipActiveIndex >0) }, customerTip{enableTips = enableTips}} }
+    if any ( _ == state.props.currentStage) [FindingQuotes , QuoteList] then continue state { props { searchExpire = seconds ,timerId = timerID , tipViewProps {isVisible = enableTips && (seconds <= (getSearchExpiryTime "LazyCheck")-state.data.config.tipDisplayDuration || state.props.tipViewProps.isVisible || state.props.tipViewProps.activeIndex >= 0)}, customerTip{enableTips = enableTips}} }
       else do
         _ <- pure $ clearTimerWithId timerID
         continue state { props { searchExpire = (getSearchExpiryTime "LazyCheck") ,timerId = timerID , tipViewProps {isVisible = false}} }
@@ -2167,14 +2168,16 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
 
 
 eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryButtonClick PrimaryButtonController.OnClick)) state = do
+  let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+      customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
   _ <- pure $ clearTimerWithId state.props.timerId
   void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), scaleType="CENTER_CROP"}
-  let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH }
-  let newState = state{ props{rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }, findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (state.props.tipViewProps.customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex+1 , isTipSelected = true } }, data{nearByDrivers = Nothing}}
+  let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH, onlyPrimaryText = true}
+  let newState = state{ props{rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }, findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex, isTipSelected = true } }, data{nearByDrivers = Nothing}}
   _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
   updateAndExit newState $ RetryFindingQuotes false newState
 
-eval (QuoteListModelActionController (QuoteListModelController.TipBtnClick index value)) state = do
+eval (QuoteListModelActionController (QuoteListModelController.TipsViewActionController (TipsView.TipBtnClick index value))) state = do
   let check = index == state.props.tipViewProps.activeIndex
   continue state { props {tipViewProps { stage = (if check then DEFAULT else TIP_AMOUNT_SELECTED) , isprimaryButtonVisible = not check , activeIndex = (if check then -1 else index)}}}
 
@@ -2220,6 +2223,9 @@ eval (QuoteListModelActionController (QuoteListModelController.HomeButtonActionC
   _ <- pure $ performHapticFeedback unit
   updateAndExit state CheckCurrentStatus
 
+eval (QuoteListModelActionController (QuoteListModelController.ChangeTip)) state = do
+  continue state {props { tipViewProps {stage = DEFAULT}}}
+
 eval (Restart err) state = exit $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.isPopUp of
@@ -2227,7 +2233,7 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
     _ <- pure $ performHapticFeedback unit
     let _ = unsafePerformEffect $ logEvent state.data.logField if state.props.customerTip.isTipSelected then ("ny_added_tip_for_" <> (show state.props.currentStage)) else "ny_no_tip_added"
     _ <- pure $ clearTimerWithId state.props.timerId
-    let tipViewData = state.props.tipViewProps{stage = RETRY_SEARCH_WITH_TIP , isVisible = not (state.props.customerTip.tipActiveIndex == 0) , activeIndex = state.props.customerTip.tipActiveIndex-1 }
+    let tipViewData = state.props.tipViewProps{stage = RETRY_SEARCH_WITH_TIP , isVisible = not (state.props.customerTip.tipActiveIndex == 0) , activeIndex = state.props.customerTip.tipActiveIndex, onlyPrimaryText = true}
     let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = RetryFindingQuote, isPopUp = NoPopUp ,tipViewProps = tipViewData, rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH } }}
     _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
     updateAndExit newState $ RetryFindingQuotes true newState
@@ -2270,7 +2276,7 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isP
       _ <- pure $ performHapticFeedback unit
       exit $ CheckCurrentStatus
 
-eval (PopUpModalAction (PopUpModal.Tipbtnclick index value)) state = do
+eval (PopUpModalAction (PopUpModal.TipsViewActionController (TipsView.TipBtnClick index value))) state = do
   _ <- pure $ performHapticFeedback unit
   case state.props.isPopUp of
     TipsPopUp -> continue state{props{customerTip{tipActiveIndex = index, tipForDriver= value, isTipSelected = not (index == 0)}}}
@@ -2608,7 +2614,8 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
     ]
   else do
       let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
-          newState = state{data{specialZoneQuoteList = updatedQuotes}}
+          props = if config.activeIndex == config.index then state.props else state.props{customerTip = HomeScreenData.initData.props.customerTip, tipViewProps = HomeScreenData.initData.props.tipViewProps}
+          newState = state{data{specialZoneQuoteList = updatedQuotes}, props = props}
       void $ pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
       if state.data.currentSearchResultType == QUOTES then
       continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
@@ -2631,7 +2638,12 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
     exit $ ConfirmRide state{props{currentStage = ConfirmingRide}}
   else do
     _ <- pure $ updateLocalStage FindingQuotes
-    let updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
+    let customerTip = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.customerTip else state.props.customerTip
+        tipViewProps = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.tipViewProps 
+                          else if state.props.tipViewProps.stage == TIP_AMOUNT_SELECTED then state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH}
+                          else state.props.tipViewProps
+        updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck"), customerTip = customerTip, tipViewProps = tipViewProps}}
+    void $ pure $ setTipViewData (TipViewData { stage : tipViewProps.stage , activeIndex : tipViewProps.activeIndex , isVisible : tipViewProps.isVisible })
     updateAndExit (updatedState) (GetQuotes updatedState)
 
 eval (ChooseYourRideAction ChooseYourRideController.NoAction) state = do
@@ -2663,6 +2675,26 @@ eval (ChooseYourRideAction ChooseYourRideController.PreferencesDropDown) state =
 
 eval (ChooseYourRideAction ChooseYourRideController.SpecialZoneInfoTag) state = do
   continue state{ props{ showSpecialZoneInfoPopup = true } }
+
+eval (ChooseYourRideAction (ChooseYourRideController.TipBtnClick index value)) state = do
+  let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+      customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+      tip = fromMaybe 0 (customerTipArrayWithValues !! index)
+      isTipSelected = tip > 0
+      customerTip = if isTipSelected then 
+                      state.props.customerTip {isTipSelected = isTipSelected, enableTips = isTipEnabled state, tipForDriver = tip, tipActiveIndex = index}
+                      else HomeScreenData.initData.props.customerTip
+      tipViewProps = if isTipSelected then 
+                      state.props.tipViewProps{ stage = RETRY_SEARCH_WITH_TIP, activeIndex = index, onlyPrimaryText = true}
+                      else HomeScreenData.initData.props.tipViewProps
+  void $ pure $ setTipViewData (TipViewData { stage : tipViewProps.stage , activeIndex : tipViewProps.activeIndex , isVisible : tipViewProps.isVisible })
+  continue state { props {customerTip = customerTip , tipViewProps = tipViewProps }}
+
+eval (ChooseYourRideAction ChooseYourRideController.AddTip) state = do
+  continue state { props { tipViewProps {stage = TIP_AMOUNT_SELECTED}}}
+
+eval (ChooseYourRideAction ChooseYourRideController.ChangeTip) state = do
+  continue state { props {tipViewProps { activeIndex = state.props.customerTip.tipActiveIndex, stage = TIP_AMOUNT_SELECTED}}} 
 
 eval CheckAndAskNotificationPermission state = do 
   _ <- pure $ checkAndAskNotificationPermission false
@@ -3016,7 +3048,11 @@ getSearchExpiryTime dummy =
   in searchExpiryTime
 
 tipEnabledState :: HomeScreenState -> HomeScreenState
-tipEnabledState state = state { props{customerTip {isTipSelected= true, tipForDriver= (fromMaybe 10 (state.props.tipViewProps.customerTipArrayWithValues !! (state.props.customerTip.tipActiveIndex-1)))}}}
+tipEnabledState state = do
+  let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+      customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+      tipActiveIndex = if state.props.customerTip.tipActiveIndex == -1 then 1 else state.props.customerTip.tipActiveIndex
+  state { props{customerTip {isTipSelected= true, tipForDriver= (fromMaybe 10 (customerTipArrayWithValues !! tipActiveIndex)), tipActiveIndex = tipActiveIndex}}}
 
 isTipEnabled :: HomeScreenState -> Boolean
 isTipEnabled state =

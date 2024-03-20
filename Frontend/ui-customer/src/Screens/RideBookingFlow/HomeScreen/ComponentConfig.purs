@@ -43,7 +43,7 @@ import Components.LocationTagBarV2 as LocationTagBar
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except (runExcept)
-import Data.Array ((!!), sortBy)
+import Data.Array ((!!), sortBy, mapWithIndex)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3)
@@ -580,7 +580,11 @@ logOutPopUpModelConfig state =
             }
       in
         popUpConfig'
-    ST.TipsPopUp -> PopUpModal.config{
+    ST.TipsPopUp -> do 
+      let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+          customerTipArray = tipConfig.customerTipArray
+          customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+      PopUpModal.config{
           optionButtonOrientation = "VERTICAL"
           , dismissIconMargin = Margin 0 0 14 13
           , dismissIconVisibility = if isLocalStageOn ST.QuoteList then GONE else VISIBLE
@@ -589,20 +593,25 @@ logOutPopUpModelConfig state =
           , fareEstimateText = getString FARE_ESTIMATE
           , tipSelectedText = getString TIP_SELECTED
           , fareEstimate = getValueToLocalStore FARE_ESTIMATE_DATA
-          , tipSelected = if state.props.customerTip.tipActiveIndex == 0 then "-" else " ₹"<> (fromMaybe "" (["0", "10", "20", "30"] DA.!! state.props.customerTip.tipActiveIndex))
+          , tipSelected = if state.props.customerTip.tipActiveIndex == 0 then "-" else " ₹"<> (show (fromMaybe 0 (customerTipArrayWithValues DA.!! state.props.customerTip.tipActiveIndex)))
           , dismissPopup = true
-          , customerTipArray = [(getString NO_TIP), "₹10 🙂", "₹20 😄", "₹30 🤩"]
-          , customerTipArrayWithValues = [0,10, 20, 30]
+          , customerTipArray = customerTipArray
+          , customerTipArrayWithValues = customerTipArrayWithValues
+          , isTipEnabled = state.data.config.enableTips
           , primaryText {
               text = if isLocalStageOn ST.QuoteList then (getString TRY_AGAIN <> "?") else getString SEARCH_AGAIN_WITH_A_TIP
             , textStyle = FontStyle.Heading1
             },
           secondaryText {
-            text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS)
-          , color = Color.black650}
+              text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS)
+            , color = Color.black650
+            , visibility = boolToVisibility state.data.config.enableTips
+            }
           , tipLayoutMargin = (Margin 22 2 22 22)
           , buttonLayoutMargin = (MarginHorizontal 16 16)
           , activeIndex = state.props.customerTip.tipActiveIndex
+          , isVisible = state.props.tipViewProps.isVisible
+          , isTipPopup = true
           , tipButton {
                 background = Color.white900
               , color = Color.black800
@@ -610,7 +619,7 @@ logOutPopUpModelConfig state =
               , padding = (Padding 16 12 16 12)
             },
           option1 {
-            text = if state.props.customerTip.tipActiveIndex == 0 then getString SEARCH_AGAIN_WITHOUT_A_TIP else getString SEARCH_AGAIN_WITH  <> " + ₹"<> (fromMaybe "" (["0", "10", "20", "30"] DA.!! state.props.customerTip.tipActiveIndex)) <>" "<> getString TIP
+            text = if not state.data.config.enableTips then getString SEARCH_AGAIN else if state.props.customerTip.tipActiveIndex == 0 then getString SEARCH_AGAIN_WITHOUT_A_TIP else getTipString state customerTipArrayWithValues
           , width = MATCH_PARENT
           , color = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
@@ -628,7 +637,6 @@ logOutPopUpModelConfig state =
           , height = WRAP_CONTENT
           },
           cornerRadius = (Corners 15.0 true true false false)
-
       }
     _ ->
       let
@@ -661,6 +669,12 @@ logOutPopUpModelConfig state =
             }
       in
         popUpConfig'
+  where getTipString :: ST.HomeScreenState -> Array Int -> String
+        getTipString state customerTipArrayWithValues = do
+          let tip = show (fromMaybe 0 (customerTipArrayWithValues DA.!! state.props.customerTip.tipActiveIndex))
+          case (getLanguageLocale languageKey) of
+            "EN_US" -> getString SEARCH_AGAIN_WITH  <> " +₹"<> tip <>" "<> getString TIP
+            _ -> "+₹"<> tip <>" "<>(getString TIP) <> " " <> getString SEARCH_AGAIN_WITH
 
 
 getBottomMargin :: Int
@@ -1270,6 +1284,7 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
 quoteListModelViewState state = let vehicleVariant = state.data.selectedEstimatesObject.vehicleVariant
+                                    tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
                                 in
                                 { source: state.data.source
                                 , destination: state.data.destination
@@ -1278,12 +1293,14 @@ quoteListModelViewState state = let vehicleVariant = state.data.selectedEstimate
                                 , autoSelecting: state.props.autoSelecting
                                 , searchExpire: state.props.searchExpire
                                 , showProgress : (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes
-                                , tipViewProps : getTipViewProps state.props.tipViewProps
+                                , tipViewProps : getTipViewProps state
                                 , findingRidesAgain : state.props.findingRidesAgain
                                 , progress : state.props.findingQuotesProgress
                                 , appConfig : state.data.config
                                 , vehicleVariant : vehicleVariant
                                 , city : state.props.city
+                                , customerTipArray : tipConfig.customerTipArray
+                                , customerTipArrayWithValues : tipConfig.customerTipArrayWithValues
                                 }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig
@@ -1440,7 +1457,10 @@ menuButtonConfig state item = let
     in menuButtonConfig'
 
 chooseYourRideConfig :: ST.HomeScreenState -> ChooseYourRide.Config
-chooseYourRideConfig state = ChooseYourRide.config
+chooseYourRideConfig state = 
+  let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+  in
+  ChooseYourRide.config
   {
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
@@ -1452,7 +1472,12 @@ chooseYourRideConfig state = ChooseYourRide.config
     flowWithoutOffers = state.props.flowWithoutOffers,
     enableSingleEstimate = state.data.config.enableSingleEstimate,
     selectedEstimateHeight = state.props.selectedEstimateHeight,
-    zoneType = state.props.zoneType.sourceTag
+    zoneType = state.props.zoneType.sourceTag,
+    tipViewProps = getTipViewProps state,
+    tipForDriver = state.props.customerTip.tipForDriver,
+    customerTipArray = tipConfig.customerTipArray,
+    customerTipArrayWithValues = tipConfig.customerTipArrayWithValues,
+    enableTips = state.data.config.enableTips
   }
 
 specialLocationConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
@@ -1474,8 +1499,9 @@ getTipViewData dummy =
     Right res -> Just res
     Left err -> Nothing
 
-getTipViewProps :: TipViewProps -> TipViewProps
-getTipViewProps tipViewProps =
+getTipViewProps :: ST.HomeScreenState -> TipViewProps
+getTipViewProps state = do  
+  let tipViewProps = state.props.tipViewProps
   case tipViewProps.stage of
     DEFAULT ->  tipViewProps{ stage = DEFAULT
                             , onlyPrimaryText = false
@@ -1488,18 +1514,23 @@ getTipViewProps tipViewProps =
                                        , isprimaryButtonVisible = true
                                        , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
                                        , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
-                                       , primaryButtonText = getTipViewText tipViewProps (getString CONTINUE_SEARCH_WITH)
+                                       , primaryButtonText = getTipViewText tipViewProps state (getString CONTINUE_SEARCH_WITH)
                                        }
-    TIP_ADDED_TO_SEARCH -> tipViewProps{ onlyPrimaryText = true , primaryText = getTipViewText tipViewProps (getString CONTINUING_SEARCH_WITH) }
-    RETRY_SEARCH_WITH_TIP -> tipViewProps{ onlyPrimaryText = true , primaryText = getTipViewText tipViewProps (getString SEARCHING_WITH) }
+    TIP_ADDED_TO_SEARCH -> tipViewProps{ onlyPrimaryText = true, isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "." }
+    RETRY_SEARCH_WITH_TIP -> tipViewProps{ onlyPrimaryText = true , isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "." }
 
-
-
-getTipViewText :: TipViewProps -> String -> String
-getTipViewText tipViewProps prefixString =
-  case (getLanguageLocale languageKey) of
-    "EN_US" -> prefixString <> " +₹"<>show (fromMaybe 10 (tipViewProps.customerTipArrayWithValues !! tipViewProps.activeIndex))<>" "<>(getString TIP)
-    _ -> " +₹"<>show (fromMaybe 10 (tipViewProps.customerTipArrayWithValues !! tipViewProps.activeIndex))<>" "<>(getString TIP) <> " " <> prefixString
+getTipViewText :: TipViewProps -> ST.HomeScreenState -> String -> String
+getTipViewText tipViewProps state prefixString = do
+  let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+      tip = show (fromMaybe 10 (tipConfig.customerTipArrayWithValues !! tipViewProps.activeIndex))
+  if tip == "0" then 
+    case tipViewProps.stage of
+      TIP_AMOUNT_SELECTED -> getString CONTINUE_SEARCH_WITH_NO_TIP
+      _ -> getString SEARCHING_WITH_NO_TIP
+  else  
+    case (getLanguageLocale languageKey) of
+      "EN_US" -> prefixString <> (if tipViewProps.stage == TIP_AMOUNT_SELECTED then " +₹" else " ₹")<>tip<>" "<> (getString TIP)
+      _ -> "+₹"<>tip<>" "<>(getString TIP) <> " " <> prefixString
 
 reportIssueOptions :: ST.HomeScreenState -> Array OptionButtonList -- need to modify
 reportIssueOptions state =
@@ -2007,6 +2038,61 @@ referralPopUpConfig state =
         }
       }
   in popUpConfig'
+
+type TipConfig = {
+  customerTipArray :: Array String,
+  customerTipArrayWithValues :: Array Int
+} 
+
+type TipVehicleConfig = {
+  sedan :: TipConfig,
+  suv :: TipConfig,
+  hatchback :: TipConfig,
+  autoRickshaw :: TipConfig,
+  taxi :: TipConfig,
+  taxiPlus :: TipConfig
+}
+
+getTipConfig :: String -> TipConfig
+getTipConfig variant = do
+  let city = HU.getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  case city of 
+    Bangalore -> bangaloreConfig variant
+    _ -> defaultTipConfig variant
+
+mkTipConfig :: Array Int -> TipConfig
+mkTipConfig customerTipArrayWithValues = {
+  customerTipArray: getTips customerTipArrayWithValues,
+  customerTipArrayWithValues: customerTipArrayWithValues
+}
+
+getTips :: Array Int -> Array String
+getTips arr = mapWithIndex (\index item -> if item == 0 then (getString NO_TIP) 
+                                           else "₹" <> show item <> " " <> fromMaybe "🤩" (emoji !! index)) arr
+  where
+    emoji = [(getString NO_TIP), "🙂", "😀", "😃", "😁", "🤩"]
+      
+bangaloreConfig :: String -> TipConfig
+bangaloreConfig variant = 
+  case variant of
+    "SEDAN" -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "SUV" -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "HATCHBACK" -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "TAXI" -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "TAXI_PLUS" -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    _ -> mkTipConfig [0, 10, 20, 30, 40, 50]
+
+defaultTipConfig :: String -> TipConfig
+defaultTipConfig variant = 
+  case variant of
+    "SEDAN" -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "SUV" -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "HATCHBACK" -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "TAXI" -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "TAXI_PLUS" -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    _ -> mkTipConfig [0, 10, 20, 30, 40, 50]
 
 specialZoneInfoPopupConfig :: HU.SpecialZoneInfoPopUp -> RequestInfoCard.Config
 specialZoneInfoPopupConfig infoConfig = let

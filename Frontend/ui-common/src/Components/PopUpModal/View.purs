@@ -14,14 +14,15 @@
 -}
 module Components.PopUpModal.View where
 
-import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map, when)
+import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map, when, mod)
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, rippleColor)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor)
 import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
 import Common.Styles.Colors as Color
+import Components.TipsView as TipsView
 import Font.Size as FontSize
 import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag, getVideoID, getYoutubeData)
 import PrestoDOM.Properties (cornerRadii)
@@ -30,7 +31,7 @@ import Components.PrimaryEditText.View as PrimaryEditText
 import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (os, getNewIDWithTag)
-import Data.Array ((!!), mapWithIndex, null)
+import Data.Array ((!!), mapWithIndex, null, length, findIndex)
 import Data.Maybe (Maybe(..),fromMaybe)
 import Control.Monad.Trans.Class (lift)
 import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer, addMediaPlayer)
@@ -41,6 +42,7 @@ import PrestoDOM.Animation as PrestoAnim
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Timers
 import Mobility.Prelude (boolToVisibility)
+import Engineering.Helpers.Utils(splitIntoEqualParts)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -440,6 +442,14 @@ view push state =
         videoId = videoId
         }
 
+tipsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
+tipsView push state = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , visibility $ boolToVisibility state.isTipPopup
+  ][ TipsView.view (push <<< TipsViewActionController) $ tipsViewConfig state ]
+
 listView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 listView push state = 
     linearLayout
@@ -471,113 +481,6 @@ listView push state =
 
         ]
         ) state.listViewArray)
-
-tipsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-tipsView push state =
-  linearLayout
-    [ 
-      height WRAP_CONTENT
-    , width MATCH_PARENT
-    , visibility if state.customerTipAvailable then VISIBLE else GONE
-    , orientation VERTICAL
-    , margin state.tipLayoutMargin
-    ]
-    [ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , visibility if state.customerTipAvailable then VISIBLE else GONE
-        ]( mapWithIndex
-        ( \index item ->
-            linearLayout
-              [ width WRAP_CONTENT
-              , height WRAP_CONTENT
-              , weight 1.0
-              , margin $ state.tipButton.margin
-              ]
-              [ textView $
-                  [ text item
-                  , color $ state.tipButton.color
-                  , visibility if state.tipButton.visibility then VISIBLE else GONE
-                  , clickable $ state.tipButton.isClickable
-                  , stroke $ "1," <> (if (state.activeIndex == index) then Color.blue800 else Color.grey900)
-                  , cornerRadius 8.0
-                  , width WRAP_CONTENT
-                  , height WRAP_CONTENT
-                  , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index)) <> " : Button"
-                  , accessibility ENABLE
-                  , padding state.tipButton.padding
-                  , onClick push $ const $ Tipbtnclick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
-                  , background (if (state.activeIndex == index) then Color.blue600 else state.tipButton.background)
-                  ] <> (FontStyle.getFontStyle state.tipButton.textStyle LanguageStyle)
-              ]
-        ) state.customerTipArray)
-    ,   linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , background Color.grey700
-        , cornerRadius 4.0
-        , margin $ MarginTop 12
-        , padding $ Padding 20 13 20 13
-        ]
-        [ 
-            linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            ]
-            [   imageView
-                [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_wallet_filled"
-                , width $ V 20
-                , height $ V 20
-                , margin $ MarginRight 5
-                ]
-            ,   textView
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , text state.fareEstimateText
-                , weight 1.0
-                , color Color.black800
-                , textSize FontSize.a_12
-                ]
-            ,   textView
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , text state.fareEstimate
-                , accessibilityHint (replaceAll (Pattern "-") (Replacement " To ") state.fareEstimate)
-                , accessibility ENABLE
-                , color Color.black800
-                , textSize FontSize.a_14
-                ]
-            ]
-        ,   linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , margin $ MarginTop 14
-            ]
-            [   imageView
-                [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_stop_circle_yellow"
-                , width $ V 20
-                , height $ V 20
-                , margin $ MarginRight 5
-                ]
-            ,   textView
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , text state.tipSelectedText
-                , weight 1.0
-                , color Color.black800
-                , textSize FontSize.a_12
-                ]
-            ,   textView
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , text state.tipSelected
-                , color Color.black800
-                , textSize FontSize.a_14
-                ]
-            ]
-        ]
-    ]
 
 clearTheTimer :: Config -> Effect Unit
 clearTheTimer config =
@@ -629,4 +532,21 @@ contactView push state =
         ]
     ]
 
+tipsViewConfig :: Config -> TipsView.Config
+tipsViewConfig state = let  
+  config = TipsView.config
+  tipsViewConfig' = config {
+    activeIndex = state.activeIndex
+  , isVisible = state.isVisible
+  , customerTipArray = state.customerTipArray
+  , customerTipArrayWithValues = state.customerTipArrayWithValues
+  , tipLayoutMargin = (Margin 22 2 22 22)
+  , fareEstimate = state.fareEstimate
+  , fareEstimateText = state.fareEstimateText
+  , tipSelected = state.tipSelected
+  , tipSelectedText = state.tipSelectedText
+  , showTipInfo = true
+  , enableTips = state.isTipEnabled
+  }
+  in tipsViewConfig'
 

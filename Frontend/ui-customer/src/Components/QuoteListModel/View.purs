@@ -22,7 +22,8 @@ import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListItem as QuoteListItem
 import Components.QuoteListModel.Controller (Action(..), QuoteListModelState)
 import Components.SeparatorView.View as SeparatorView
-import Data.Array (filter, head, null, (!!), mapWithIndex)
+import Components.TipsView as TipsView
+import Data.Array (filter, head, null, (!!), mapWithIndex, slice, length, cons, findIndex)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth)
@@ -33,8 +34,8 @@ import MerchantConfig.Utils (getMerchant, Merchant(..))
 import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor)
+import Prelude (class Eq, Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (*), (/), (/=), (<<<), (<>), (==), (||), (>), (-), mod, discard)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.Types (Stage(..), QuoteListItemState(..), City(..))
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -42,6 +43,9 @@ import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Data.String (replaceAll, Pattern(..), Replacement(..))
 import Locale.Utils
+import Mobility.Prelude
+import Engineering.Helpers.Utils(splitIntoEqualParts)
+import Debug
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -284,92 +288,83 @@ findingRidesView state push =
   , addTipView state push
   ]
 
-addTipView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+addTipView :: forall w. QuoteListModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 addTipView state push =
-  linearLayout
-    [ width MATCH_PARENT
-    , orientation VERTICAL
-    , height WRAP_CONTENT
-    , visibility if state.tipViewProps.isVisible then VISIBLE else GONE
-    , accessibility DISABLE
-    ]
-    [
       linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , alignParentBottom "true,-1"
-        , background Color.pink
-        , margin $ MarginHorizontal 16 16
-        , cornerRadius 12.0
-        , padding $ Padding 20 16 20 16
-        , accessibility DISABLE
-        ]
-        [
-          textView
+      [ width MATCH_PARENT
+      , orientation VERTICAL
+      , height WRAP_CONTENT
+      , accessibility DISABLE
+      , visibility $ boolToVisibility $ state.appConfig.enableTips && state.tipViewProps.isVisible
+      ]
+      [ linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
-          , text state.tipViewProps.secondaryText
-          , color Color.black800
-          , gravity CENTER
-          , textSize $ FontSize.a_12
-          , accessibility ENABLE
-          , accessibilityHint state.tipViewProps.secondaryText
-          , fontStyle $ FontStyle.regular LanguageStyle
-          , visibility if state.tipViewProps.onlyPrimaryText then GONE else VISIBLE
+          , orientation VERTICAL
+          , alignParentBottom "true,-1"
+          , background Color.ivory
+          , margin $ MarginHorizontal 16 16
+          , cornerRadius 12.0
+          , padding $ Padding 20 16 20 16
+          , accessibility DISABLE
           ]
-        , textView
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , text state.tipViewProps.primaryText
-          , color Color.black800
-          , gravity CENTER
-          , accessibility ENABLE
-          , accessibilityHint state.tipViewProps.primaryText
-          , textSize $ FontSize.a_14
-          , fontStyle $ FontStyle.bold LanguageStyle
+          [ textView
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , text state.tipViewProps.secondaryText
+              , color Color.black800
+              , gravity CENTER
+              , textSize $ FontSize.a_12
+              , accessibility ENABLE
+              , accessibilityHint state.tipViewProps.secondaryText
+              , fontStyle $ FontStyle.regular LanguageStyle
+              , visibility if state.tipViewProps.onlyPrimaryText then GONE else VISIBLE
+              ]
+          , linearLayout
+              ( [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , gravity CENTER
+                ]
+                  <> if state.tipViewProps.onlyPrimaryText then [ clickable true, onClick push $ const $ ChangeTip ] else []
+              ) $ 
+              [ textView
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text state.tipViewProps.primaryText
+                , color Color.black800
+                , gravity CENTER
+                , accessibility ENABLE
+                , accessibilityHint state.tipViewProps.primaryText
+                , textSize $ FontSize.a_14
+                , fontStyle $ FontStyle.bold LanguageStyle
+                ]
+              ] <> (if state.tipViewProps.onlyPrimaryText then [textView $ 
+                      [ text $ getString CHANGE
+                      , margin $ MarginLeft 4
+                      , height $ WRAP_CONTENT
+                      , width $ WRAP_CONTENT
+                      , color Color.blue900
+                      , visibility $ boolToVisibility state.tipViewProps.onlyPrimaryText
+                      ] <> FontStyle.body20 LanguageStyle
+                     ] else [])
+          , tipsView state push
+          , linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , visibility if state.tipViewProps.isprimaryButtonVisible && not state.tipViewProps.onlyPrimaryText then VISIBLE else GONE
+              ]
+              [ PrimaryButton.view (push <<< TipViewPrimaryButtonClick) (continueWithTipButtonConfig state)
+              ]
           ]
-        , linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , margin (MarginTop  16)
-          , visibility if state.tipViewProps.onlyPrimaryText then GONE else VISIBLE
-          ]
-          ( mapWithIndex
-              ( \index item ->
-                  linearLayout
-                    [ width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , weight if index == 2 then 0.0 else 1.0
-                    ]
-                    [ textView
-                        [ text $ item
-                        , color $ Color.black800
-                        , textSize FontSize.a_14
-                        , stroke $ "1," <> (if (state.tipViewProps.activeIndex == index) then Color.blue800 else Color.grey900)
-                        , cornerRadius 8.0
-                        , width WRAP_CONTENT
-                        , height WRAP_CONTENT
-                        , accessibility ENABLE
-                        , padding (Padding 20 10 20 10)
-                        , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.tipViewProps.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
-                        , fontStyle $ FontStyle.bold LanguageStyle
-                        , onClick push $ const $ TipBtnClick index (fromMaybe 100 (state.tipViewProps.customerTipArrayWithValues !! index))
-                        , background $ if state.tipViewProps.activeIndex == index then Color.blue600 else Color.white900
-                        ]
-                    ]
-              )state.tipViewProps.customerTipArray
-          )
-        , linearLayout
-          [
-            width MATCH_PARENT
-          , height WRAP_CONTENT
-          , visibility if state.tipViewProps.isprimaryButtonVisible && not state.tipViewProps.onlyPrimaryText then VISIBLE else GONE
-          ][
-            PrimaryButton.view (push <<< TipViewPrimaryButtonClick) (continueWithTipButtonConfig state)
-          ]
-        ]
-    ]
+      ]
+
+tipsView :: forall w. QuoteListModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+tipsView state push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , visibility $ boolToVisibility $ not state.tipViewProps.onlyPrimaryText
+  ][TipsView.view (push <<< TipsViewActionController) $ tipsViewConfig state]
 
 selectRideAndConfirmView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 selectRideAndConfirmView state push =
@@ -621,7 +616,7 @@ continueWithTipButtonConfig state = let
         , accessibilityHint = state.tipViewProps.primaryButtonText <> " : Button" 
         }
       , id = "ContinueWithTipButtonQuoteList"
-      , margin = MarginTop 10
+      , margin = MarginTop 12
       , background = state.appConfig.primaryBackground
       , enableRipple = true
       , rippleColor = Color.rippleShade
@@ -729,3 +724,16 @@ getAutoLottie city =
     Kochi     -> "lottie/finding_rides_loader_auto_kochi.json"
     Chennai   -> "lottie/finding_rides_loader_auto_yellow_black.json"
     _         -> "lottie/finding_rides_loader_with_text_auto.json"
+
+tipsViewConfig :: QuoteListModelState -> TipsView.Config
+tipsViewConfig state = let  
+  config = TipsView.config
+  tipsViewConfig' = config {
+    activeIndex = state.tipViewProps.activeIndex
+  , isVisible = state.tipViewProps.isVisible
+  , customerTipArray = state.customerTipArray
+  , customerTipArrayWithValues = state.customerTipArrayWithValues
+  , enableTips = state.appConfig.enableTips
+  , showTipInfo = false
+  }
+  in tipsViewConfig'
