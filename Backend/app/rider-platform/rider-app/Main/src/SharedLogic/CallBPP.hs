@@ -34,6 +34,7 @@ import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
 import qualified Kernel.External.Maps.Types as MapSearch
 import Kernel.Prelude
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -46,6 +47,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -156,7 +158,8 @@ callTrack ::
     CoreMetrics m,
     EsqDBFlow m r,
     CacheFlow m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DB.Booking ->
   DRide.Ride ->
@@ -177,6 +180,8 @@ callTrack booking ride = do
           }
   trackBecknReq <- TrackACL.buildTrackReqV2 trackBuildReq
   fork "sending track, pushing ondc logs" do
+    let kafkaLog = TransactionLog "track" $ Req trackBecknReq.trackReqContext (toJSON trackBecknReq.trackReqMessage)
+    pushBecknLogToKafka kafkaLog
     let transactionLog = TransactionLogReq "track" $ ReqLog (toJSON trackBecknReq.trackReqContext) (maskSensitiveData $ toJSON trackBecknReq.trackReqMessage)
     becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
     void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?

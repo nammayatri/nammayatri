@@ -40,6 +40,7 @@ import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import Tools.Auth
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -81,6 +82,8 @@ confirm (personId, _) quoteId mbPaymentMethodId =
     let ttlInInt = initTtl + confirmTtl + confirmBufferTtl
     handle (errHandler dConfirmRes.booking) $ do
       fork "sending init, pushing ondc logs" do
+        let kafkaLog = TransactionLog "init" $ Req becknInitReq.initReqContext (toJSON becknInitReq.initReqMessage)
+        pushBecknLogToKafka kafkaLog
         let transactionLog = TransactionLogReq "init" $ ReqLog (toJSON becknInitReq.initReqContext) (maskSensitiveData $ toJSON becknInitReq.initReqMessage)
         void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
       void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq

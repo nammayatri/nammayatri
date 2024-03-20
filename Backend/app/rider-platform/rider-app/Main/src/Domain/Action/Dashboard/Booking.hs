@@ -45,6 +45,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -161,6 +162,8 @@ bookingSync merchant merchantOpCityId reqBookingId = do
   let dStatusReq = DStatusReq {booking = updBooking, merchant, city}
   becknStatusReq <- buildStatusReqV2 dStatusReq
   fork "sending status, pushing ondc logs" do
+    let kafkaLog = TransactionLog "status" $ Req becknStatusReq.statusReqContext (toJSON becknStatusReq.statusReqMessage)
+    pushBecknLogToKafka kafkaLog
     let transactionLog = TransactionLogReq "status" $ ReqLog (toJSON becknStatusReq.statusReqContext) (maskSensitiveData $ toJSON becknStatusReq.statusReqMessage)
     becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
     void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?

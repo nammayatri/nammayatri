@@ -29,6 +29,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import Tools.Error
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -60,6 +61,8 @@ onCancel _ req = withFlowHandlerBecknAPI do
           Redis.whenWithLockRedis (onCancelProcessingLockKey messageId) 60 $
             DOnCancel.onCancel validatedOnCancelReq
         fork "on cancel received pushing ondc logs" do
+          let kafkaLog = TransactionLog "on_cancel" $ Req req.onCancelReqContext (toJSON req.onCancelReqMessage)
+          pushBecknLogToKafka kafkaLog
           let transactionLog = TransactionLogReq "on_cancel" $ ReqLog (toJSON req.onCancelReqContext) (maskSensitiveData $ toJSON req.onCancelReqMessage)
           becknConfig <- QBC.findByMerchantIdDomainAndVehicle validatedOnCancelReq.booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle validatedOnCancelReq.booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
           void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?

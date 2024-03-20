@@ -75,6 +75,7 @@ import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -94,6 +95,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -104,7 +106,8 @@ callOnSelectV2 ::
     CacheFlow m r,
     EsqDBFlow m r,
     HasHttpClientOptions r c,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DM.Merchant ->
   DSR.SearchRequest ->
@@ -128,6 +131,8 @@ callOnSelectV2 transporter searchRequest searchTry content = do
   context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttlToISO8601Duration)
   logDebug $ "on_selectV2 request bpp: " <> show content
   fork "sending on select, pushing ondc logs" do
+    let kafkaLog = TransactionLog "on_select" $ Req context (toJSON (Just content))
+    pushBecknLogToKafka kafkaLog
     let transactionLog = TransactionLogReq "on_select" $ ReqLog (toJSON context) (maskSensitiveData $ toJSON (Just content))
     void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (Spec.OnSelectReq context Nothing (Just content))
@@ -199,7 +204,8 @@ callOnConfirmV2 ::
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DM.Merchant ->
   Spec.Context ->
@@ -222,6 +228,8 @@ callOnConfirmV2 transporter context content bppConfig = do
       ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
   context_ <- ContextV2.buildContextV2 Context.ON_CONFIRM Context.MOBILITY msgId (Just txnId) bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttlToISO8601Duration)
   fork "sending on confirm, pushing ondc logs" do
+    let kafkaLog = TransactionLog "on_confirm" $ Req context_ (toJSON (Just content))
+    pushBecknLogToKafka kafkaLog
     let transactionLog = TransactionLogReq "on_confirm" $ ReqLog (toJSON context_) (maskSensitiveData $ toJSON (Just content))
     void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap (Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content})
@@ -246,7 +254,8 @@ sendRideAssignedUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -289,6 +298,8 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
   let generatedMsg = A.encode rideAssignedMsgV2
   logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
   fork "sending on update, pushing ondc logs" do
+    let kafkaLog = TransactionLog "on_update" $ Req rideAssignedMsgV2.onUpdateReqContext (toJSON rideAssignedMsgV2.onUpdateReqMessage)
+    pushBecknLogToKafka kafkaLog
     let transactionLog = TransactionLogReq "on_update" $ ReqLog (toJSON rideAssignedMsgV2.onUpdateReqContext) (maskSensitiveData $ toJSON rideAssignedMsgV2.onUpdateReqMessage)
     void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
   void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig
@@ -343,7 +354,8 @@ sendRideStartedUpdateToBAP ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -367,6 +379,8 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
   retryConfig <- asks (.longDurationRetryCfg)
   rideStartedMsgV2 <- ACL.buildOnStatusReqV2 merchant booking rideStartedBuildReq
   fork "sending on status, pushing ondc logs" do
+    let kafkaLog = TransactionLog "on_status" $ Req rideStartedMsgV2.onStatusReqContext (toJSON rideStartedMsgV2.onStatusReqMessage)
+    pushBecknLogToKafka kafkaLog
     let transactionLog = TransactionLogReq "on_status" $ ReqLog (toJSON rideStartedMsgV2.onStatusReqContext) (maskSensitiveData $ toJSON rideStartedMsgV2.onStatusReqMessage)
     void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
   void $ callOnStatusV2 rideStartedMsgV2 retryConfig
@@ -378,7 +392,8 @@ sendRideCompletedUpdateToBAP ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -400,6 +415,8 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   retryConfig <- asks (.longDurationRetryCfg)
   rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking rideCompletedBuildReq
   fork "sending on update, pushing ondc logs" do
+    let kafkaLog = TransactionLog "on_update" $ Req rideCompletedMsgV2.onUpdateReqContext (toJSON rideCompletedMsgV2.onUpdateReqMessage)
+    pushBecknLogToKafka kafkaLog
     let transactionLog = TransactionLogReq "on_update" $ ReqLog (toJSON rideCompletedMsgV2.onUpdateReqContext) (maskSensitiveData $ toJSON rideCompletedMsgV2.onUpdateReqMessage)
     void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
   void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig
@@ -413,7 +430,8 @@ sendBookingCancelledUpdateToBAP ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     CoreMetrics m,
-    CacheFlow m r
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   DM.Merchant ->
@@ -433,7 +451,8 @@ sendDriverOffer ::
     CacheFlow m r,
     EsqDBFlow m r,
     CoreMetrics m,
-    HasPrettyLogger m r
+    HasPrettyLogger m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DM.Merchant ->
   DSR.SearchRequest ->
@@ -481,7 +500,8 @@ sendDriverArrivalUpdateToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -505,6 +525,8 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   retryConfig <- asks (.shortDurationRetryCfg)
   driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking driverArrivedBuildReq
   fork "sending on update, pushing ondc logs" do
+    let kafkaLog = TransactionLog "on_update" $ Req driverArrivedMsgV2.onUpdateReqContext (toJSON driverArrivedMsgV2.onUpdateReqMessage)
+    pushBecknLogToKafka kafkaLog
     let transactionLog = TransactionLogReq "on_update" $ ReqLog (toJSON driverArrivedMsgV2.onUpdateReqContext) (maskSensitiveData $ toJSON driverArrivedMsgV2.onUpdateReqMessage)
     void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
   void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig
@@ -516,7 +538,8 @@ sendStopArrivalUpdateToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -538,6 +561,8 @@ sendStopArrivalUpdateToBAP booking ride driver vehicle = do
     stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking stopArrivedBuildReq
     retryConfig <- asks (.shortDurationRetryCfg)
     fork "sending on update, pushing ondc logs" do
+      let kafkaLog = TransactionLog "on_update" $ Req stopArrivedMsgV2.onUpdateReqContext (toJSON stopArrivedMsgV2.onUpdateReqMessage)
+      pushBecknLogToKafka kafkaLog
       let transactionLog = TransactionLogReq "on_update" $ ReqLog (toJSON stopArrivedMsgV2.onUpdateReqContext) (maskSensitiveData $ toJSON stopArrivedMsgV2.onUpdateReqMessage)
       void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
     void $ callOnUpdateV2 stopArrivedMsgV2 retryConfig
@@ -549,7 +574,8 @@ sendNewMessageToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -574,6 +600,8 @@ sendNewMessageToBAP booking ride message = do
     retryConfig <- asks (.shortDurationRetryCfg)
     newMessageMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking newMessageBuildReq
     fork "sending on update, pushing ondc logs" do
+      let kafkaLog = TransactionLog "on_update" $ Req newMessageMsgV2.onUpdateReqContext (toJSON newMessageMsgV2.onUpdateReqMessage)
+      pushBecknLogToKafka kafkaLog
       let transactionLog = TransactionLogReq "on_update" $ ReqLog (toJSON newMessageMsgV2.onUpdateReqContext) (maskSensitiveData $ toJSON newMessageMsgV2.onUpdateReqMessage)
       void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
     void $ callOnUpdateV2 newMessageMsgV2 retryConfig
@@ -585,7 +613,8 @@ sendSafetyAlertToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -611,6 +640,8 @@ sendSafetyAlertToBAP booking ride reason driver vehicle = do
     retryConfig <- asks (.shortDurationRetryCfg)
     safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking safetyAlertBuildReq
     fork "sending on update, pushing ondc logs" do
+      let kafkaLog = TransactionLog "on_update" $ Req safetyAlertMsgV2.onUpdateReqContext (toJSON safetyAlertMsgV2.onUpdateReqMessage)
+      pushBecknLogToKafka kafkaLog
       let transactionLog = TransactionLogReq "on_update" $ ReqLog (toJSON safetyAlertMsgV2.onUpdateReqContext) (maskSensitiveData $ toJSON safetyAlertMsgV2.onUpdateReqMessage)
       void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
     void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig
@@ -622,7 +653,8 @@ sendEstimateRepetitionUpdateToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -648,6 +680,8 @@ sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource dri
     retryConfig <- asks (.shortDurationRetryCfg)
     estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking estimateRepetitionBuildReq
     fork "sending on update, pushing ondc logs" do
+      let kafkaLog = TransactionLog "on_update" $ Req estimateRepMsgV2.onUpdateReqContext (toJSON estimateRepMsgV2.onUpdateReqMessage)
+      pushBecknLogToKafka kafkaLog
       let transactionLog = TransactionLogReq "on_update" $ ReqLog (toJSON estimateRepMsgV2.onUpdateReqContext) (maskSensitiveData $ toJSON estimateRepMsgV2.onUpdateReqMessage)
       void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
     void $ callOnUpdateV2 estimateRepMsgV2 retryConfig

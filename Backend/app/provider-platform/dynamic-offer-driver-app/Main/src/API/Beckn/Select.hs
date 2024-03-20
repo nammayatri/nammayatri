@@ -32,6 +32,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -60,6 +61,8 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
         Redis.whenWithLockRedis (selectProcessingLockKey dSelectReq.messageId) 60 $
           DSelect.handler merchant dSelectReq estimate
       fork "select received pushing ondc logs" do
+        let kafkaLog = TransactionLog "select" $ Req reqV2.selectReqContext (toJSON reqV2.selectReqMessage)
+        pushBecknLogToKafka kafkaLog
         let transactionLog = TransactionLogReq "select" $ ReqLog (toJSON reqV2.selectReqContext) (maskSensitiveData $ toJSON reqV2.selectReqMessage)
         becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle estimate.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
         void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?

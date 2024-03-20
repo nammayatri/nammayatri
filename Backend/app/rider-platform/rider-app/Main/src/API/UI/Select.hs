@@ -55,6 +55,7 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
 import Tools.Error
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -101,6 +102,8 @@ select (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonId
     dSelectReq <- DSelect.select personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
     fork "sending select, pushing ondc logs" do
+      let kafkaLog = TransactionLog "select" $ Req becknReq.selectReqContext (toJSON becknReq.selectReqMessage)
+      pushBecknLogToKafka kafkaLog
       let transactionLog = TransactionLogReq "select" $ ReqLog (toJSON becknReq.selectReqContext) (maskSensitiveData $ toJSON becknReq.selectReqMessage)
       void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
     void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq
@@ -124,6 +127,8 @@ select2 (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonI
     dSelectReq <- DSelect.select2 personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
     fork "sending select, pushing ondc logs" do
+      let kafkaLog = TransactionLog "select" $ Req becknReq.selectReqContext (toJSON becknReq.selectReqMessage)
+      pushBecknLogToKafka kafkaLog
       let transactionLog = TransactionLogReq "select" $ ReqLog (toJSON becknReq.selectReqContext) (maskSensitiveData $ toJSON becknReq.selectReqMessage)
       estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchantId "MOBILITY" (UCommon.mapVariantToVehicle estimate.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
@@ -153,6 +158,8 @@ cancelSearch (personId, merchantId) estimateId = withFlowHandlerAPI . withPerson
           when sendToBpp . void . withShortRetry $ do
             cancelBecknReq <- CACL.buildCancelSearchReqV2 dCancelSearch
             fork "sending cancel, pushing ondc logs" do
+              let kafkaLog = TransactionLog "cancel" $ Req cancelBecknReq.cancelReqContext (toJSON cancelBecknReq.cancelReqMessage)
+              pushBecknLogToKafka kafkaLog
               let transactionLog = TransactionLogReq "cancel" $ ReqLog (toJSON cancelBecknReq.cancelReqContext) (maskSensitiveData $ toJSON cancelBecknReq.cancelReqMessage)
               estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
               becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchantId "MOBILITY" (UCommon.mapVariantToVehicle estimate.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")

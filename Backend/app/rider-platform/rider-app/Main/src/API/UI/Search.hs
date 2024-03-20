@@ -52,6 +52,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -79,6 +80,8 @@ search (personId, merchantId) req mbBundleVersion mbClientVersion mbDevice = wit
     let generatedJson = encode becknTaxiReqV2
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
     fork "sending search, pushing ondc logs" do
+      let kafkaLog = TransactionLog "search" $ Req becknTaxiReqV2.searchReqContext (toJSON becknTaxiReqV2.searchReqMessage)
+      pushBecknLogToKafka kafkaLog
       let transactionLog = TransactionLogReq "search" $ ReqLog (toJSON becknTaxiReqV2.searchReqContext) (maskSensitiveData $ toJSON becknTaxiReqV2.searchReqMessage)
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchantId "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError "Beckn Config not found")
       void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?

@@ -40,6 +40,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.Booking as QBooking
 import Tools.Auth
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -88,6 +89,8 @@ cancel bookingId (personId, merchantId) req =
     dCancelRes <- DCancel.cancel bookingId (personId, merchantId) req
     cancelBecknReq <- ACL.buildCancelReqV2 dCancelRes
     fork "sending cancel, pushing ondc logs" do
+      let kafkaLog = TransactionLog "cancel" $ Req cancelBecknReq.cancelReqContext (toJSON cancelBecknReq.cancelReqMessage)
+      pushBecknLogToKafka kafkaLog
       let transactionLog = TransactionLogReq "cancel" $ ReqLog (toJSON cancelBecknReq.cancelReqContext) (maskSensitiveData $ toJSON cancelBecknReq.cancelReqMessage)
       booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
@@ -104,6 +107,8 @@ softCancel bookingId (personId, merchantId) =
     dCancelRes <- DCancel.softCancel bookingId (personId, merchantId)
     cancelBecknReq <- ACL.buildCancelReqV2 dCancelRes
     fork "sending cancel, pushing ondc logs" do
+      let kafkaLog = TransactionLog "cancel" $ Req cancelBecknReq.cancelReqContext (toJSON cancelBecknReq.cancelReqMessage)
+      pushBecknLogToKafka kafkaLog
       let transactionLog = TransactionLogReq "cancel" $ ReqLog (toJSON cancelBecknReq.cancelReqContext) (maskSensitiveData $ toJSON cancelBecknReq.cancelReqMessage)
       booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")

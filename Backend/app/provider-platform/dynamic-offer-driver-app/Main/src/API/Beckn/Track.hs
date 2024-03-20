@@ -37,6 +37,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -70,6 +71,8 @@ track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBe
 
     internalEndPointHashMap <- asks (.internalEndPointHashMap)
     fork "track received pushing ondc logs" do
+      let kafkaLog = TransactionLog "on_search" $ Req reqV2.trackReqContext (toJSON reqV2.trackReqMessage)
+      pushBecknLogToKafka kafkaLog
       let transactionLog = TransactionLogReq "track" $ ReqLog (toJSON reqV2.trackReqContext) (maskSensitiveData $ toJSON reqV2.trackReqMessage)
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle transporterId "MOBILITY" (Utils.mapVariantToVehicle dTrackRes.booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
       void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
@@ -77,6 +80,8 @@ track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBe
     context' <- ContextV2.buildContextV2 Context.ON_TRACK Context.MOBILITY msgId (Just transactionId) bapId callbackUrl context.contextBppId bppUri city country (Just "PT2M")
     let onTrackBecknReq = mkOnTrackRequest context (ACL.mkOnTrackMessageV2 dTrackRes)
     fork "sending on track, pushing ondc logs" do
+      let kafkaLog = TransactionLog "on_track" $ Req onTrackBecknReq.onTrackReqContext (toJSON onTrackBecknReq.onTrackReqMessage)
+      pushBecknLogToKafka kafkaLog
       let transactionLog = TransactionLogReq "on_track" $ ReqLog (toJSON onTrackBecknReq.onTrackReqContext) (maskSensitiveData $ toJSON onTrackBecknReq.onTrackReqMessage)
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle transporterId "MOBILITY" (Utils.mapVariantToVehicle dTrackRes.booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
       void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?

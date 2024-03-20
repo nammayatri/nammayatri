@@ -30,6 +30,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.Booking as QRB
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -54,6 +55,8 @@ onStatus _ reqV2 = withFlowHandlerBecknAPI do
           Redis.whenWithLockRedis (onStatusProcessngLockKey messageId) 60 $
             DOnStatus.onStatus validatedOnStatusReq
         fork "on status received pushing ondc logs" do
+          let kafkaLog = TransactionLog "on_status" $ Req reqV2.onStatusReqContext (toJSON reqV2.onStatusReqMessage)
+          pushBecknLogToKafka kafkaLog
           (variant, merchantId) <- do
             booking <- QRB.findByBPPBookingId onStatusReq.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> onStatusReq.bppBookingId.getId)
             return (booking.vehicleVariant, booking.merchantId)

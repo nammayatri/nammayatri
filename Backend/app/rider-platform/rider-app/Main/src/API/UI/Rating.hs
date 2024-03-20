@@ -36,6 +36,7 @@ import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import Tools.Auth
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -56,6 +57,8 @@ rating (personId, _) request = withFlowHandlerAPI . withPersonIdLogTag personId 
   dFeedbackRes <- DFeedback.feedback request
   becknReq <- ACL.buildRatingReqV2 dFeedbackRes
   fork "sending rating, pushing ondc logs" do
+    let kafkaLog = TransactionLog "rating" $ Req becknReq.ratingReqContext (toJSON becknReq.ratingReqMessage)
+    pushBecknLogToKafka kafkaLog
     let transactionLog = TransactionLogReq "rating" $ ReqLog (toJSON becknReq.ratingReqContext) (maskSensitiveData $ toJSON becknReq.ratingReqMessage)
     becknConfig <- QBC.findByMerchantIdDomainAndVehicle dFeedbackRes.booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle dFeedbackRes.booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
     void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?

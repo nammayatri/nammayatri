@@ -29,6 +29,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.Booking as QRB
 import Tools.Error
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -50,6 +51,8 @@ onTrack _ reqV2 = withFlowHandlerBecknAPI do
       fork "on track processing" $
         DOnTrack.onTrack validatedReq
       fork "on track received pushing ondc logs" do
+        let kafkaLog = TransactionLog "on_track" $ Req reqV2.onTrackReqContext (toJSON reqV2.onTrackReqMessage)
+        pushBecknLogToKafka kafkaLog
         booking <- QRB.findById validatedReq.ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BookingId:-" <> validatedReq.ride.bookingId.getId)
         let transactionLog = TransactionLogReq "on_track" $ ReqLog (toJSON reqV2.onTrackReqContext) (maskSensitiveData $ toJSON reqV2.onTrackReqMessage)
         becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle validatedReq.ride.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")

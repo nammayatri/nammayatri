@@ -32,6 +32,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -53,6 +54,8 @@ onSelect _ reqV2 = withFlowHandlerBecknAPI do
       Redis.whenWithLockRedis (onSelectLockKey messageId) 60 $ do
         validatedOnSelectReq <- DOnSelect.validateRequest onSelectReq
         fork "on select received pushing ondc logs" do
+          let kafkaLog = TransactionLog "on_select" $ Req reqV2.onSelectReqContext (toJSON reqV2.onSelectReqMessage)
+          pushBecknLogToKafka kafkaLog
           let transactionLog = TransactionLogReq "on_select" $ ReqLog (toJSON reqV2.onSelectReqContext) (maskSensitiveData $ toJSON reqV2.onSelectReqMessage)
               variant = fromMaybe VehVar.AUTO_RICKSHAW (listToMaybe onSelectReq.quotesInfo >>= \q -> Just q.vehicleVariant)
           becknConfig <- QBC.findByMerchantIdDomainAndVehicle validatedOnSelectReq.searchRequest.merchantId "MOBILITY" (UCommon.mapVariantToVehicle variant) >>= fromMaybeM (InternalError "Beckn Config not found")

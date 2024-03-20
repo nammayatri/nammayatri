@@ -594,6 +594,7 @@ library
       Tools.PaymentNudge
       Tools.SMS
       Tools.Ticket
+      Tools.TransactionLogs
       Tools.Verification
       Tools.Whatsapp
       API.Action.UI.Cac

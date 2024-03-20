@@ -29,6 +29,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.Booking as QRB
 import Tools.Error
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -54,16 +55,18 @@ onUpdate _ reqV2 = withFlowHandlerBecknAPI do
             DOnUpdate.onUpdate validatedOnUpdateReq
         fork "on update received pushing ondc logs" do
           booking <- case validatedOnUpdateReq of
-            DOnUpdate.ValidatedRideAssignedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
-            DOnUpdate.ValidatedRideStartedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
-            DOnUpdate.ValidatedRideCompletedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
-            DOnUpdate.ValidatedBookingCancelledReq req -> QRB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bppBookingId.getId)
-            DOnUpdate.ValidatedBookingReallocationReq {..} -> return booking
-            DOnUpdate.ValidatedDriverArrivedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
-            DOnUpdate.ValidatedEstimateRepetitionReq {..} -> return booking
-            DOnUpdate.ValidatedNewMessageReq {..} -> return booking
-            DOnUpdate.ValidatedSafetyAlertReq {..} -> return booking
-            DOnUpdate.ValidatedStopArrivedReq {..} -> return booking
+            DOnUpdate.OUValidatedRideAssignedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
+            DOnUpdate.OUValidatedRideStartedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
+            DOnUpdate.OUValidatedRideCompletedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
+            DOnUpdate.OUValidatedBookingCancelledReq req -> QRB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bppBookingId.getId)
+            DOnUpdate.OUValidatedBookingReallocationReq req -> return req.booking
+            DOnUpdate.OUValidatedDriverArrivedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
+            DOnUpdate.OUValidatedEstimateRepetitionReq req -> return req.booking
+            DOnUpdate.OUValidatedNewMessageReq req -> return req.booking
+            DOnUpdate.OUValidatedSafetyAlertReq req -> return req.booking
+            DOnUpdate.OUValidatedStopArrivedReq req -> return req.booking
+          let kafkaLog = TransactionLog "on_update" $ Req reqV2.onUpdateReqContext (toJSON reqV2.onUpdateReqMessage)
+          pushBecknLogToKafka kafkaLog
           let transactionLog = TransactionLogReq "on_update" $ ReqLog (toJSON reqV2.onUpdateReqContext) (maskSensitiveData $ toJSON reqV2.onUpdateReqMessage)
           becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
           void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?

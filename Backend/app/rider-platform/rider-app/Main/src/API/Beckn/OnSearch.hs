@@ -30,6 +30,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -53,6 +54,8 @@ onSearch _ reqV2 = withFlowHandlerBecknAPI do
       Redis.whenWithLockRedis (onSearchLockKey messageId) 60 $ do
         validatedRequest <- DOnSearch.validateRequest request
         fork "on search received pushing ondc logs" do
+          let kafkaLog = TransactionLog "on_search" $ Req reqV2.onSearchReqContext (toJSON reqV2.onSearchReqMessage)
+          pushBecknLogToKafka kafkaLog
           let transactionLog = TransactionLogReq "on_search" $ ReqLog (toJSON reqV2.onSearchReqContext) (maskSensitiveData $ toJSON reqV2.onSearchReqMessage)
           becknConfig <- QBC.findByMerchantIdDomainAndVehicle validatedRequest.merchant.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError "Beckn Config not found")
           void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?

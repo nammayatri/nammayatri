@@ -50,6 +50,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -120,6 +121,8 @@ onSelect OnSelectValidatedReq {..} = do
           becknInitReq <- ACL.buildInitReqV2 dConfirmRes
           handle (errHandler dConfirmRes.booking) $ do
             fork "sending init, pushing ondc logs" do
+              let kafkaLog = TransactionLog "init" $ Req becknInitReq.initReqContext (toJSON becknInitReq.initReqMessage)
+              pushBecknLogToKafka kafkaLog
               let transactionLog = TransactionLogReq "init" $ ReqLog (toJSON becknInitReq.initReqContext) (maskSensitiveData $ toJSON becknInitReq.initReqMessage)
               becknConfig <- QBC.findByMerchantIdDomainAndVehicle searchRequest.merchantId "MOBILITY" (UCommon.mapVariantToVehicle autoAssignQuote.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
               void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?

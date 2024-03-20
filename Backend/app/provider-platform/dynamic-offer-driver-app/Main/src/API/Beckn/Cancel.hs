@@ -46,6 +46,7 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.Queries.Booking as QRB
 import Tools.Error
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -84,6 +85,8 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
       merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
       booking <- QRB.findById cancelReq.bookingId >>= fromMaybeM (BookingDoesNotExist cancelReq.bookingId.getId)
       fork "cancel received pushing ondc logs" do
+        let kafkaLog = TransactionLog "cancel" $ Req reqV2.cancelReqContext (toJSON reqV2.cancelReqMessage)
+        pushBecknLogToKafka kafkaLog
         let transactionLog = TransactionLogReq "cancel" $ ReqLog (toJSON reqV2.cancelReqContext) (maskSensitiveData $ toJSON reqV2.cancelReqMessage)
         becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
         void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
@@ -102,6 +105,8 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
               DCancel.cancel cancelReq merchant booking
               buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
               fork "sending on cancel, pushing ondc logs" do
+                let kafkaLog = TransactionLog "on_cancel" $ Req reqV2.cancelReqContext (toJSON reqV2.cancelReqMessage)
+                pushBecknLogToKafka kafkaLog
                 let transactionLog = TransactionLogReq "on_cancel" $ ReqLog (toJSON buildOnCancelMessageV2.onCancelReqContext) (maskSensitiveData $ toJSON buildOnCancelMessageV2.onCancelReqMessage)
                 becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
                 void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
@@ -111,6 +116,8 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
         Just Enums.SOFT_CANCEL -> do
           buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
           fork "sending on cancel, pushing ondc logs" do
+            let kafkaLog = TransactionLog "on_cancel" $ Req reqV2.cancelReqContext (toJSON reqV2.cancelReqMessage)
+            pushBecknLogToKafka kafkaLog
             let transactionLog = TransactionLogReq "on_cancel" $ ReqLog (toJSON buildOnCancelMessageV2.onCancelReqContext) (maskSensitiveData $ toJSON buildOnCancelMessageV2.onCancelReqMessage)
             becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
             void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?

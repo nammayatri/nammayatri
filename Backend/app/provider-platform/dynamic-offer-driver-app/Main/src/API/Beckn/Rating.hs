@@ -34,6 +34,7 @@ import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.Booking as QRB
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -62,6 +63,8 @@ rating merchantId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBeck
         Redis.whenWithLockRedis (ratingProcessingLockKey dRatingReq.bookingId.getId) 60 $
           DRating.handler merchantId dRatingReq ride
       fork "rating received pushing ondc logs" do
+        let kafkaLog = TransactionLog "rating" $ Req reqV2.ratingReqContext (toJSON reqV2.ratingReqMessage)
+        pushBecknLogToKafka kafkaLog
         booking <- B.runInReplica $ QRB.findById dRatingReq.bookingId >>= fromMaybeM (BookingDoesNotExist dRatingReq.bookingId.getId)
         let transactionLog = TransactionLogReq "rating" $ ReqLog (toJSON reqV2.ratingReqContext) (maskSensitiveData $ toJSON reqV2.ratingReqMessage)
         becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")

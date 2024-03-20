@@ -71,6 +71,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearch
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -465,6 +466,8 @@ rideSync merchant reqRideId = do
   let dStatusReq = DStatusReq {booking, merchant, city}
   becknStatusReq <- buildStatusReqV2 dStatusReq
   fork "sending status, pushing ondc logs" do
+    let kafkaLog = TransactionLog "status" $ Req becknStatusReq.statusReqContext (toJSON becknStatusReq.statusReqMessage)
+    pushBecknLogToKafka kafkaLog
     let transactionLog = TransactionLogReq "status" $ ReqLog (toJSON becknStatusReq.statusReqContext) (maskSensitiveData $ toJSON becknStatusReq.statusReqMessage)
     becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
     void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?

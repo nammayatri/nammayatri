@@ -35,6 +35,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -57,11 +58,15 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
           (onInitRes, booking) <- DOnInit.onInit onInitReq
           becknConfig <- QBC.findByMerchantIdDomainAndVehicle onInitRes.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle onInitRes.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
           fork "on init received pushing ondc logs" do
+            let kafkaLog = TransactionLog "on_init" $ Req reqV2.onInitReqContext (toJSON reqV2.onInitReqMessage)
+            pushBecknLogToKafka kafkaLog
             let transactionLog = TransactionLogReq "on_init" $ ReqLog (toJSON reqV2.onInitReqContext) (maskSensitiveData $ toJSON reqV2.onInitReqMessage)
             void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
           handle (errHandler booking) . void . withShortRetry $ do
             confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
             fork "sending confirm, pushing ondc logs" do
+              let kafkaLog = TransactionLog "confirm" $ Req confirmBecknReq.confirmReqContext (toJSON confirmBecknReq.confirmReqMessage)
+              pushBecknLogToKafka kafkaLog
               let transactionLog = TransactionLogReq "confirm" $ ReqLog (toJSON confirmBecknReq.confirmReqContext) (maskSensitiveData $ toJSON confirmBecknReq.confirmReqMessage)
               void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
             CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq

@@ -33,6 +33,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
+import Tools.TransactionLogs
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
@@ -58,6 +59,8 @@ onConfirm _ reqV2 = withFlowHandlerBecknAPI do
       Redis.whenWithLockRedis (onConfirmLockKey bppBookingId.getId) 60 $ do
         validatedReq <- DOnConfirm.validateRequest onConfirmReq
         fork "on confirm received pushing ondc logs" do
+          let kafkaLog = TransactionLog "on_confirm" $ Req reqV2.onConfirmReqContext (toJSON reqV2.onConfirmReqMessage)
+          pushBecknLogToKafka kafkaLog
           (variant, merchantId) <- do
             booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
             return (booking.vehicleVariant, booking.merchantId)
