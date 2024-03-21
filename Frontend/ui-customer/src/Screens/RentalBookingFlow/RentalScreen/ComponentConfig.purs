@@ -34,7 +34,7 @@ import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
 import Prelude (map, show, not, (<>), (==), ($), (>), (-), (<), (+), (||), (&&))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..))
-import Screens.Types (DateTimeConfig, RentalScreenStage(..), RentalScreenState, RentalQuoteList)
+import Screens.Types (DateTimeConfig, RentalScreenStage(..), RentalScreenState, QuotesList)
 import Styles.Colors as Color
 import Data.String
 import JBridge 
@@ -219,31 +219,6 @@ mapInputViewConfig state =
       RENTAL_SELECT_PACKAGE -> getString TRIP_DETAILS_
       _ -> getString CHOOSE_YOUR_RENTAL_RIDE
 
-
-rentalRateCardConfig :: RentalQuoteList -> RateCard.Config
-rentalRateCardConfig state =
-  let config = RateCard.config
-      currency = getCurrency appConfig
-      rentalRateCardConfig' = config
-        { currentRateCardType = RentalRateCard
-        , title = getString RENTAL_PACKAGE
-        , primaryButtonConfig {
-            margin = MarginTop 16,
-            text = getString GOT_IT,
-            color = Color.blue800,
-            height = V 40,
-            cornerRadius = 8.0,
-            background = Color.white900,
-            visibility = VISIBLE
-          }
-        , additionalStrings = [
-            {key : "FINAL_FARE_DESCRIPTION", val : (getString FINAL_FARE_DESCRIPTION)}
-          , {key : "EXCESS_DISTANCE_CHARGE_DESCRIPTION", val : (getString EXCESS_DISTANCE_CHARGE_DESCRIPTION) <> " " <> currency <> (show state.fareDetails.perExtraKmRate) <> "/km."}
-          , {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> (show state.fareDetails.nightShiftCharge))}
-          , {key : "PARKING_FEES_AND_TOLLS_NOT_INCLUDED", val : (getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED)}
-          ]
-        }
-  in rentalRateCardConfig'
 
 locUnserviceablePopUpConfig :: RentalScreenState -> PopUpModal.Config
 locUnserviceablePopUpConfig state = let

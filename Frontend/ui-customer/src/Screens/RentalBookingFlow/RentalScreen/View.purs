@@ -39,17 +39,17 @@ import Language.Types (STR(..))
 import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..))
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback, alignParentBottom)
-import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, rentalRateCardConfig, locUnserviceablePopUpConfig, rentalPolicyInfoConfig)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback, alignParentBottom, singleLine, ellipsize)
+import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, locUnserviceablePopUpConfig, rentalPolicyInfoConfig)
 import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval, dummyRentalQuote)
-import Screens.Types (RentalScreenState, RentalScreenStage(..), RentalQuoteList)
+import Screens.Types (RentalScreenState, RentalScreenStage(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import Types.App (GlobalState, defaultGlobalState)
 import Styles.Colors as Color
 import Services.Backend (getQuotes, rideBooking)
 import Data.Either (Either(..))
 import Data.Time.Duration (Milliseconds(..))
-import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getVariantDescription, getVehicleName)
 import Log (printLog)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Lens ((^.))
@@ -60,27 +60,21 @@ import PrestoDOM.Animation as PrestoAnim
 import Animation.Config (translateFullYAnimWithDurationConfig)
 import Animation (translateYAnimFromTop, fadeInWithDelay)
 import Components.PopUpModal.View as PopUpModal
-
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Data.String as DS
 
 rentalScreen :: RentalScreenState -> Screen Action RentalScreenState ScreenOutput
 rentalScreen initialState =
   { initialState
   , view
   , name: "RentalScreen"
-  , globalEvents: [getEstimateEvent]
+  , globalEvents: []
   , eval:
       \action state -> do
         let _ = spy "RentalScreen action " action
         let _ = spy "RentalScreen state  " state
         eval action state
   }
-
-  where 
-    getEstimateEvent push = do 
-      when (null initialState.data.rentalsQuoteList) $ do 
-        void $ launchAff $ EHC.flowRunner defaultGlobalState $ getRentalQuotes GetRentalQuotes CheckFlowStatusAction 10 1000.0 push initialState
-        pure unit
-      pure $ pure unit
 
 view :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -95,8 +89,7 @@ view push state =
     , background Color.white900
     ] $
     [ getRentalScreenView push state
-    ] <> if state.props.showRateCard then [RateCard.view (push <<< RateCardAC) (rentalRateCardConfig (maybe dummyRentalQuote identity (fetchSelectedQuote state.data.rentalsQuoteList)))] else []
-      <> if state.props.showPopUpModal then [locUnserviceableView push state] else []
+    ] <> if state.props.showPopUpModal then [locUnserviceableView push state] else []
       <> if state.props.showRentalPolicy then [rentalPolicyExplainerView push state] else []
 
 rentalPolicyExplainerView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
@@ -115,7 +108,6 @@ getRentalScreenView push state =
   , width MATCH_PARENT
   ]
   [ if state.data.currentStage == RENTAL_SELECT_PACKAGE then rentalPackageSelectionView push state else emptyTextView
-  , if state.data.currentStage == RENTAL_SELECT_VARIANT then rentalVariantSelectionView push state else emptyTextView
   , if state.data.currentStage == RENTAL_CONFIRMATION then fareBreakupView push state else emptyTextView
   ] 
 
@@ -267,8 +259,7 @@ rentalVariantSelectionView push state =
           , margin $ MarginBottom 32
           , orientation VERTICAL
           ]
-          [ if (null state.data.rentalsQuoteList) && state.props.showShimmer then shimmerChooseVehicleView push state
-            else if null state.data.rentalsQuoteList then noQuotesErrorModel state 
+          [ if null state.data.rentalsQuoteList then noQuotesErrorModel state 
             else chooseVehicleView push state
           ]]
         
@@ -305,7 +296,7 @@ chooseVehicleView push state =
 fareBreakupView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
 fareBreakupView push state = let 
   currency = getCurrency appConfig
-  selectedQuote = maybe dummyRentalQuote identity (fetchSelectedQuote state.data.rentalsQuoteList)
+  selectedQuote = maybe dummyRentalQuote identity (state.data.selectedQuote)
   in 
   relativeLayout
     [height MATCH_PARENT
@@ -326,16 +317,44 @@ fareBreakupView push state = let
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
-                ][  linearLayout
+                ][  
+                 linearLayout
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
-                    , orientation VERTICAL
-                    , margin $ MarginVertical 16 32
-                    ] $ map ( 
-                        \quote -> let
-                          item = quote.quoteDetails
-                          in if (item.index == item.activeIndex) then ChooseVehicle.view (\action -> pure unit) (item{showStroke = false, showInfo = false}) else emptyTextView 
-                        ) state.data.rentalsQuoteList
+                    , background Color.blue600
+                    , cornerRadius 12.0
+                    , margin $ Margin 12 16 16 32 
+                    , padding $ Padding 8 12 8 12
+                    ][  imageView
+                        [ imageWithFallback selectedQuote.quoteDetails.vehicleImage
+                        , height $ V if selectedQuote.quoteDetails.vehicleVariant == "AUTO_RICKSHAW" then 45 else 48
+                        , width $ V 60
+                        ]
+                      , linearLayout
+                        [ weight 1.0
+                        , height WRAP_CONTENT
+                        , orientation VERTICAL
+                        , padding $ PaddingLeft 8
+                        ][  textView
+                            $ [ width WRAP_CONTENT
+                              , height WRAP_CONTENT
+                              , singleLine true
+                              , ellipsize true
+                              , text $ getVehicleName selectedQuote.quoteDetails.vehicleVariant
+                              , color Color.black800
+                              ]
+                            <> FontStyle.body7 TypoGraphy
+                        , capacityView push selectedQuote.quoteDetails 
+                        ]
+                      , textView
+                        $ [ width WRAP_CONTENT
+                          , height WRAP_CONTENT
+                          , text selectedQuote.quoteDetails.price
+                          , color Color.black800
+                          ]
+                        <> FontStyle.body7 TypoGraphy
+
+                    ]
                   , linearLayout 
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
@@ -353,7 +372,7 @@ fareBreakupView push state = let
                     , padding $ PaddingHorizontal 16 16
                     ]
                     [ textView $ [
-                        text $ getString NOTE <> ": "
+                        text $ getString NOTE <> " : "
                       , color Color.black900
                       ] <> FontStyle.body3 TypoGraphy
                       , textView $ [
@@ -368,6 +387,69 @@ fareBreakupView push state = let
           ]
       , noteAndPrimaryButtonView push state
       ]
+    where 
+    
+    capacityView push config = 
+      linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , padding $ PaddingTop 5
+        , orientation VERTICAL
+        ][ vehicleInfoView "ic_user_filled" config.capacity config.vehicleVariant true
+        , textView
+                $ [ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , text $ (getVariantDescription config.vehicleVariant).text
+                  , visibility $ boolToVisibility $ DS.length (getVariantDescription config.vehicleVariant).text >= 20
+                  , color Color.black700
+                  ]
+                <> FontStyle.tags TypoGraphy]
+
+    vehicleInfoView imageName description vehicleVariant showAdditionalDesc = let 
+      vehicleDesc = getVariantDescription vehicleVariant
+      in
+      linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , gravity CENTER
+        ][ imageView
+            [ imageWithFallback $ fetchImage FF_ASSET imageName
+            , width $ V 14
+            , height $ V 14
+            ]
+          , textView
+              $ [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , text description
+                , color Color.black700
+                ]
+              <> FontStyle.tags TypoGraphy
+          , linearLayout[
+              height $ WRAP_CONTENT
+            , gravity CENTER
+            , width MATCH_PARENT 
+            , visibility $ boolToVisibility $ showAdditionalDesc && DS.length vehicleDesc.text < 20 
+            ][  textView
+                [ height $ V 3 
+                , width $ V 3 
+                , cornerRadius 1.5 
+                , margin $ MarginHorizontal 2 2
+                , background Color.black700
+                ]
+              , imageView
+                [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_snow"
+                , width $ V 12
+                , visibility $ boolToVisibility vehicleDesc.airConditioned
+                , height $ V 12
+                ]
+              , textView
+                $ [ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , text $ vehicleDesc.text
+                  , color Color.black700
+                  ]
+                <> FontStyle.tags TypoGraphy]     
+        ]
 
 descriptionView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> FareBreakupRowType -> PrestoDOM (Effect Unit) w
 descriptionView push state description = 
@@ -427,43 +509,6 @@ separatorView push state =
     ]
     []
 
-
-getRentalQuotes :: forall action. (GetQuotesRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> RentalScreenState -> Flow GlobalState Unit
-getRentalQuotes action flowStatusAction count duration push state = do
-  if (state.data.currentStage == RENTAL_SELECT_VARIANT) then
-    if (count > 0) then do
-      resp <- getQuotes (state.data.searchId)
-      _ <- pure $ printLog "caseId" (state.data.searchId)
-      case resp of
-        Right response -> do
-          _ <- pure $ printLog "api Results " response
-          let (GetQuotesRes resp) = response
-          if not (null resp.quotes) || not (null resp.estimates) then do
-            doAff do liftEffect $ push $ action response
-            pure unit
-          else do
-            if (count == 1) then do
-              doAff do liftEffect $ push $ action response
-            else do
-              void $ delay $ Milliseconds duration
-              getRentalQuotes action flowStatusAction (count - 1) duration push state
-        Left err -> do
-          let errResp = err.response
-              codeMessage = decodeError errResp.errorMessage "errorMessage"
-          if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_ALREADY_PRESENT" ) then do
-            void $ pure $ toast "ACTIVE BOOKING ALREADY PRESENT"
-            doAff do liftEffect $ push $ flowStatusAction
-          else do
-            void $ delay $ Milliseconds duration
-            if (count == 1) then do
-              let response = GetQuotesRes { quotes: [], estimates: [], fromLocation: SearchReqLocationAPIEntity { lat: 0.0, lon: 0.0 }, toLocation: Nothing }
-              doAff do liftEffect $ push $ action response
-            else do
-              getRentalQuotes action flowStatusAction (count - 1) duration push state
-    else
-      pure unit
-  else
-    pure unit
 
 shimmerChooseVehicleView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
 shimmerChooseVehicleView push state = 

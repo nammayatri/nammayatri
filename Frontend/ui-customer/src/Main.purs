@@ -38,9 +38,8 @@ import Prelude (Unit, bind, pure, show, unit, void, ($), (<$>), (<<<), discard)
 import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Types.App (defaultGlobalState, FlowBT, ScreenType(..))
-import Screens.Types(PermissionScreenStage(..), FollowRideScreenStage(..), SafetyAlertType(..))
+import Screens.Types(PermissionScreenStage(..), SafetyAlertType(..))
 import AssetsProvider (fetchAssets)
-import Timers
 import Effect.Uncurried
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Storage (setValueToLocalStore, KeyStore(..))

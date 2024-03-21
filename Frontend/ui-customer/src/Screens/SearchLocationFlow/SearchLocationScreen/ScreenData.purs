@@ -15,17 +15,27 @@
 
 module Screens.SearchLocationScreen.ScreenData where
 
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..), City(..))
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..), City(..), FareDetails(..), QuotesList(..))
 import ConfigProvider
 import Screens (ScreenName(..), getScreen)
 import Data.Maybe (Maybe(..))
 import Services.API (PlaceName(..), LatLong(..))
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
+import Components.ChooseVehicle.Controller as ChooseVehicleController
+ 
 
 initData :: SearchLocationScreenState 
 initData = {
   data : { srcLoc : Nothing
          , destLoc : Nothing
+         , route : Nothing
+         , rideDetails : {
+            searchId : "",
+            rideDistance : 0,
+            rideDuration : 0,
+            rideScheduledDate : "",
+            rideScheduledTime : ""
+         }
          , currentLoc : dummyLocationInfo{
             address = "Current Location"
          } 
@@ -38,6 +48,7 @@ initData = {
             , selectedItem : locationListStateObj
             , isBtnActive : false
         }
+        , selectedQuote : Nothing
         , latLonOnMap : dummyLocationInfo
         , defaultGate : ""
         , nearByGates : []
@@ -46,6 +57,7 @@ initData = {
         , metroStations : []
         , updatedMetroStations : []
         , predictionSelectedFromHome : locationListStateObj
+        , quotesList : []
   } ,
   props : {
     searchLocStage : PredictionsStage ,
@@ -59,7 +71,8 @@ initData = {
     locUnserviceable : false,
     isSpecialZone : false,
     isAutoComplete : false,
-    pickUpSelectedOnMap : false
+    pickUpSelectedOnMap : false,
+    showRateCard : false
   },
   appConfig : getAppConfig appConfig
 }
@@ -86,4 +99,23 @@ dummyLocationInfo = {
   stationCode : "",
   metroInfo : Nothing,
   city : AnyCity 
+}
+
+dummyQuote :: QuotesList
+dummyQuote = {
+  quoteDetails : ChooseVehicleController.config ,
+  index : 0 ,
+  activeIndex : 0 ,
+  fareDetails : dummyFareQuoteDetails
+}
+
+dummyFareQuoteDetails :: FareDetails
+dummyFareQuoteDetails = {
+  baseFare : 0 ,
+  includedKmPerHr : 0 ,
+  perExtraKmRate : 0 ,
+  perExtraMinRate : 0 ,
+  perHourCharge : 0 ,
+  plannedPerKmRate : 0,
+  nightShiftCharge : 0
 }

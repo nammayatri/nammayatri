@@ -15,14 +15,16 @@
 
 module Screens.Types where
 
-import MerchantConfig.Types
-
 import Common.Types.App
-import Domain.Payments as PP
+import MerchantConfig.Types
+import PrestoDOM.List
+
 import Common.Types.App as Common
 import Components.ChatView.Controller (ChatComponentConfig, Config)
 import Components.ChooseVehicle.Controller as ChooseVehicle
+import Components.MessagingView.Controller (ChatComponent)
 import Components.SettingSideBar.Controller (SettingSideBarState)
+import Components.SettingSideBar.Controller as SideBar
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Generic (genericDecodeJson)
 import Data.Argonaut.Encode (class EncodeJson)
@@ -32,20 +34,19 @@ import Data.Generic.Rep (class Generic)
 import Data.Map (Map)
 import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
+import Domain.Payments as PP
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
+import JBridge (Location)
+import Language.Types (STR(..))
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes)
-import Components.SettingSideBar.Controller as SideBar
-import Components.MessagingView.Controller (ChatComponent)
-import Screens(ScreenName)
-import PrestoDOM.List
-import JBridge (Location)
+import Screens (ScreenName)
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..), GetMetroStationResp(..), TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes, Route(..))
 
 type Contacts = {
   name :: String,
@@ -823,6 +824,7 @@ type HomeScreenStateProps =
   , zoneOtpExpired :: Boolean
   , stageBeforeChatScreen :: Stage
   , specialZoneType :: String
+  , isBannerDataComputed :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -1954,19 +1956,31 @@ type SearchLocationScreenData =
   {
     srcLoc :: Maybe LocationInfo,
     destLoc :: Maybe LocationInfo,
+    route :: Maybe Route,
     currentLoc :: LocationInfo,
     locationList :: Array LocationListItemState,
     fromScreen :: String,
     saveFavouriteCard :: SaveFavouriteCardState,
     latLonOnMap :: LocationInfo,
+    selectedQuote :: Maybe QuotesList,
     defaultGate :: String,
     nearByGates :: Array Location,
     specialZoneCoordinates :: String,
     confirmLocCategory :: ZoneType,
     metroStations :: Array Station,
     updatedMetroStations :: Array Station,
-    predictionSelectedFromHome :: LocationListItemState
+    predictionSelectedFromHome :: LocationListItemState,
+    quotesList :: Array QuotesList,
+    rideDetails :: RideDetails
   }
+
+type RideDetails = {
+  searchId :: String ,
+  rideDistance :: Int ,
+  rideDuration :: Int ,
+  rideScheduledDate :: String,
+  rideScheduledTime :: String
+}
 
 type Station = {
   stationName :: String,
@@ -1985,7 +1999,8 @@ type SearchLocationScreenProps =
   , locUnserviceable :: Boolean
   , isSpecialZone :: Boolean
   , isAutoComplete :: Boolean
-  , pickUpSelectedOnMap :: Boolean  }
+  , pickUpSelectedOnMap :: Boolean
+  , showRateCard :: Boolean  }
 
 data SearchLocationActionType = AddingStopAction 
                               | SearchLocationAction
@@ -2006,6 +2021,7 @@ data SearchLocationStage =  ConfirmLocationStage
                           | LocateOnMapStage
                           | AllFavouritesStage
                           | PredictionSelectedFromHome
+                          | ChooseYourRide
 
 derive instance genericSearchLocationStage :: Generic SearchLocationStage _
 instance eqSearchLocationStage :: Eq SearchLocationStage where eq = genericEq
@@ -2306,7 +2322,8 @@ type RentalScreenData = {
     rentalBookingData :: RentalBookingConfig
   , startTimeUTC :: String
   , currentStage :: RentalScreenStage
-  , rentalsQuoteList :: Array RentalQuoteList
+  , rentalsQuoteList :: Array QuotesList
+  , selectedQuote :: Maybe QuotesList
   , endOTP :: Maybe String
   , nextStop :: Maybe String
   , selectedDateTimeConfig :: DateTimeConfig
@@ -2317,14 +2334,15 @@ type RentalScreenData = {
   , config :: AppConfig
 }
 
-type RentalQuoteList = {
+type QuotesList = {
   quoteDetails :: ChooseVehicle.Config,
   index :: Int,
   activeIndex :: Int,
-  fareDetails :: RentalFareDetails
+  fareDetails :: FareDetails
 }
 
-type RentalFareDetails = {
+
+type FareDetails = {
   plannedPerKmRate ::  Int,
   baseFare :: Int,
   includedKmPerHr :: Int,

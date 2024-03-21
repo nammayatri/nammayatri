@@ -124,6 +124,17 @@ bannerView push config =
                   , visibilityHolder "actionArrowIconVisibility"
                   ]
                 <> (FontStyle.getFontStyle config.actionTextStyle LanguageStyle)
+            , textView
+                $ [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , gravity LEFT
+                  , text "↓"
+                  , colorHolder "actionTextColor"
+                  , padding $ PaddingBottom 3
+                  , margin $ MarginLeft 5
+                  , visibilityHolder "actionBottomArrowIconVisibility"
+                  ]
+                <> (FontStyle.getFontStyle config.actionTextStyle LanguageStyle)
             ]
             ]
     , linearLayout

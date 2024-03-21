@@ -127,6 +127,7 @@ initData = {
       , layoutMargin : Margin 0 0 0 0
       , isSingleEstimate : false
       , showStroke: true
+      , showAdditionalDesc : false
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -336,6 +337,7 @@ initData = {
     , showIntercityUnserviceablePopUp : false
     , showNormalRideNotSchedulablePopUp : false
     , zoneOtpExpired : false
+    , isBannerDataComputed : false
   }
 }
 

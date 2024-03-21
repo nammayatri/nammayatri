@@ -103,7 +103,7 @@ import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutpu
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
-import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationTextField(..), SearchLocationScreenState, SearchLocationActionType(..), SearchLocationStage(..), LocationInfo, BottomNavBarIcon(..), FollowRideScreenStage(..), ReferralStatus(..), LocationType(..), Station(..),MetroTicketBookingStage(..), MetroStations(..), SearchResultType(..))
+import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationTextField(..), SearchLocationScreenState, SearchLocationActionType(..), SearchLocationStage(..), LocationInfo, BottomNavBarIcon(..), FollowRideScreenStage(..), ReferralStatus(..), LocationType(..), Station(..),MetroTicketBookingStage(..), MetroStations(..), SearchResultType(..) , RentalScreenStage(..))
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (ScreenOutput(..)) as RideScheduledScreenOutput
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig, getTipViewData, setTipViewData)
@@ -3676,7 +3676,10 @@ searchLocationFlow = do
       when (globalState.homeScreen.props.currentStage == HomeScreen ) $ do
         modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData)
       homeScreenFlow 
-    SearchLocationController.RentalsScreen state -> modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
+    SearchLocationController.RentalsScreen state -> do 
+      modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
+      modifyScreenState $ RentalScreenStateType (\rentalScreenState -> rentalScreenState{data{currentStage = RENTAL_SELECT_PACKAGE}, props{showPrimaryButton = true}})
+      rentalScreenFlow
     SearchLocationController.LocSelectedOnMap state -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
       locSelectedOnMapFlow state 
@@ -3684,6 +3687,11 @@ searchLocationFlow = do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
       metroTicketBookingFlow
     SearchLocationController.RideScheduledScreen state -> rideScheduledFlow
+    SearchLocationController.CurrentFlowStatus -> currentFlowStatus
+    SearchLocationController.SelectedQuote state -> do 
+      modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
+      modifyScreenState $ RentalScreenStateType (\rentalScreenState -> rentalScreenState{data{selectedQuote = state.data.selectedQuote, currentStage = RENTAL_CONFIRMATION}, props{showPrimaryButton = true}})
+      rentalScreenFlow 
     _ -> pure unit
   where
     locSelectedOnMapFlow :: SearchLocationScreenState -> FlowBT String Unit
@@ -4381,7 +4389,9 @@ rentalScreenFlow = do
       if (isJust sourceServiceabilityResp.specialLocation) then do
         modifyScreenState $ RentalScreenStateType (\_ -> state {data {currentStage = RENTAL_SELECT_PACKAGE}, props{showPrimaryButton = true, showPopUpModal = true}})
         rentalScreenFlow 
-      else do
+      else do   
+        void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
+        void $ lift $ lift $ toggleLoader true
         srcFullAddress <- getPlaceName (fromMaybe 0.0 state.data.pickUpLoc.lat) (fromMaybe 0.0 state.data.pickUpLoc.lon) HomeScreenData.dummyLocation true 
         destFullAddress <- getPlaceName (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) HomeScreenData.dummyLocation true
         let currentTime = runFn2 EHC.getUTCAfterNSecondsImpl (EHC.getCurrentUTC "") 60 -- TODO-codex :: Delay, need to check if this is the correct way
@@ -4389,11 +4399,16 @@ rentalScreenFlow = do
             newState = if state.data.startTimeUTC == "" || not isTimeAheadOfCurrent then state {data {startTimeUTC = currentTime}} else state
             address = maybe "" (\(PlaceName address) -> address.formattedAddress) srcFullAddress
             destAddress = maybe "" (\(PlaceName address) -> address.formattedAddress) destFullAddress
+            rideDate = convertUTCtoISC newState.data.startTimeUTC "D" <> " " <> convertUTCtoISC newState.data.startTimeUTC "MMMM" <> " " <> convertUTCtoISC newState.data.startTimeUTC "YYYY"
+            rideTime = convertUTCtoISC newState.data.startTimeUTC "HH" <> ":" <> convertUTCtoISC newState.data.startTimeUTC "mm"    
+            srcMarkerConfig = defaultMarkerConfig{ pointerIcon = "ny_ic_auto_map" }
+            destMarkerConfig = defaultMarkerConfig{ pointerIcon = "src_marker"}
         (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.mkRentalSearchReq (fromMaybe 0.0 newState.data.pickUpLoc.lat) (fromMaybe 0.0 newState.data.pickUpLoc.lon) (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) (encodeAddress address [] Nothing (fromMaybe 0.0 state.data.pickUpLoc.lat) (fromMaybe 0.0 state.data.pickUpLoc.lon))  (encodeAddress destAddress [] Nothing (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon)) newState.data.startTimeUTC (newState.data.rentalBookingData.baseDistance * 1000) (newState.data.rentalBookingData.baseDuration * 60 * 60))
-        -- (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.mkRentalSearchReq (fromMaybe 0.0 newState.data.pickUpLoc.lat)  (fromMaybe 0.0 newState.data.pickUpLoc.lon) 0.0 0.0 (encodeAddress address.formattedAddress [] Nothing) (encodeAddress destAddress.formattedAddress [] Nothing) newState.data.startTimeUTC (newState.data.rentalBookingData.baseDistance * 1000) (newState.data.rentalBookingData.baseDuration * 60 * 60))
-        modifyScreenState $ RentalScreenStateType (\rentalScreen -> state{data{searchId = rideSearchRes.searchId, currentStage = RENTAL_SELECT_VARIANT}})
+        modifyScreenState $ RentalScreenStateType (\rentalScreen -> state{data{searchId = rideSearchRes.searchId}})
+        modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData{data{srcLoc = Just newState.data.pickUpLoc{address = address}, destLoc = state.data.dropLoc , route = rideSearchRes.routeInfo , rideDetails{searchId = rideSearchRes.searchId, rideDistance = state.data.rentalBookingData.baseDistance, rideDuration = state.data.rentalBookingData.baseDuration, rideScheduledDate = rideDate, rideScheduledTime = rideTime}}, props{searchLocStage = ChooseYourRide}})
+        void $ lift $ lift $ toggleLoader false
         (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ ->do 
-          rentalScreenFlow)
+          searchLocationFlow)
     RentalScreenController.GoToHomeScreen -> do 
       -- updateRideScheduledTime ""
       homeScreenFlow
@@ -4416,8 +4431,11 @@ rentalScreenFlow = do
       rentalScreenFlow
     RentalScreenController.GoToRideScheduledScreen updatedState -> do
       rideScheduledFlow
+    RentalScreenController.GoToSelectVariant updatedState -> do 
+      modifyScreenState $ RentalScreenStateType (\_ -> updatedState)
+      searchLocationFlow
     RentalScreenController.OnRentalRideConfirm updatedState -> do
-      let quoteConfig = head (filter (\item -> item.index == item.activeIndex) updatedState.data.rentalsQuoteList)
+      let quoteConfig = updatedState.data.selectedQuote
           selectedQuote = (fromMaybe { quoteDetails : ChooseVehicle.config
                                     , index : 0 , activeIndex : 0, fareDetails : {plannedPerKmRate : 0, baseFare : 0,includedKmPerHr : 0, perExtraKmRate : 0, perExtraMinRate : 0, perHourCharge : 0, nightShiftCharge : 0}} quoteConfig).quoteDetails
       setValueToLocalStore SELECTED_VARIANT selectedQuote.vehicleVariant

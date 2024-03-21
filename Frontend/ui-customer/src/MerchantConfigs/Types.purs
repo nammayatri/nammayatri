@@ -380,7 +380,8 @@ type CityConfig = {
   cityCode :: String,
   geoCodeConfig :: GeoCodeConfig,
   enableRentals :: Boolean,
-  enableIntercity :: Boolean
+  enableIntercity :: Boolean,
+  enableCabs :: Boolean
 }
 
 type GeoCodeConfig = {

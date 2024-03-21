@@ -35,6 +35,7 @@ type Config
     , isSingleEstimate :: Boolean
     , layoutMargin :: Margin 
     , showStroke :: Boolean
+    , showAdditionalDesc :: Boolean
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -68,4 +69,5 @@ config =
   , layoutMargin : MarginHorizontal 12 12
   , isSingleEstimate : false
   , showStroke : true
+  , showAdditionalDesc : false
   }
