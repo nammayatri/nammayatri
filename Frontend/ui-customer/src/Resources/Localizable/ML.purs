@@ -1032,4 +1032,7 @@ getML stringKey =
         SPECIAL_PICKUP_ZONE_RIDE -> "പ്രത്യേക പിക്കപ്പ് പേരിന് റൈഡ്"
         WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "നികടത്തിൽ പ്രത്യേക പിക്കപ്പ് പേരിന് നിലവിലെ ചാലകനുമായി നാം നിങ്ങൾക്ക് കണക്ട് ചെയ്യാനോട് ശ്രമിക്കുകയും ചെയ്യും."
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "ഇത് നിങ്ങൾക്ക് തത്കാലം പിക്കപ്പ് അനുഭവം നൽകുന്നു."
-        IS_AT_PICKUP_LOCATION -> "പിക്കപ്പ് സ്ഥലത്തില്‍ ഉള്ളു"
+        DRIVER_AT_PICKUP_LOCATION -> "പിക്കപ്പ് സ്ഥലത്തില്‍ ഉള്ളു"
+        DRIVER_AT_PICKUP_LOCATION -> "നിങ്ങളുടെ ഡ്രൈവർ പിക്കപ്പ് സ്ഥലത്താണ്"
+        DRIVER_IS_ON_THE_WAY -> "നിങ്ങളുടെ ഡ്രൈവർ വഴിയിലാണ്"
+        DRIVER_IS_WAITING_AT_PICKUP -> "നിങ്ങളുടെ ഡ്രൈവർ പിക്കപ്പിൽ കാത്തിരിക്കുന്നു"
