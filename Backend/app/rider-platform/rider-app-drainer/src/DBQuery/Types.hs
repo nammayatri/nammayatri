@@ -45,13 +45,13 @@ newtype SchemaName = SchemaName {getSchemaName :: Text}
   deriving stock (Show)
 
 newtype DBModel = DBModel {getDBModel :: Text}
-  deriving stock (Show, Generic)
+  deriving stock (Show, Generic, Eq)
   deriving newtype (FromJSON)
 
 type Where = [Clause]
 
 newtype Column = Column {getColumn :: Text}
-  deriving stock (Show)
+  deriving stock (Show, Eq)
 
 data Clause where
   And :: [Clause] -> Clause
