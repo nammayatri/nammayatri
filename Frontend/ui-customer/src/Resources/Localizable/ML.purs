@@ -1077,3 +1077,4 @@ getML stringKey =
         I_NEED_HELP_WITH_MY_RECENT_RIDE -> "എനിക്ക് എന്റെ അടുത്ത റൈഡിൽ സഹായം ആവശ്യമുണ്ട്"
         CONTINUE_WITH_SAFETY_SETTINGS -> "സുരക്ഷ ക്രമീകരണങ്ങൾ തുടരുക"
         TAP_WHERE_TO_TO_BOOK_RIDE -> "നിങ്ങളുടെ റൈഡ് ബുക്ക് ചെയ്യാൻ 'എവിടെയാണ്?' ടാപ്പ് ചെയ്യുക!"
+        NAMMA_SERVICES -> "നമ്മ സേവനങ്ങൾ"

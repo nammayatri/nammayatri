@@ -1092,3 +1092,4 @@ getTA stringKey =
     I_NEED_HELP_WITH_MY_RECENT_RIDE -> "எனக்கு என் சமீபத்திய சவாரியில் உதவி தேவை"
     CONTINUE_WITH_SAFETY_SETTINGS -> "பாதுகாப்பு அமைப்புகளுடன் தொடரவும்"
     TAP_WHERE_TO_TO_BOOK_RIDE -> "உங்கள் சயம் பதிகை செய்ய 'எங்கே?' அழுத்தவும்!"
+    NAMMA_SERVICES -> "நம்ம சேவைகள்"
