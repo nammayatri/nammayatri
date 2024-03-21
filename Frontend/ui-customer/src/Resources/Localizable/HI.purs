@@ -1045,3 +1045,4 @@ getHI stringKey =
         GO_TO_SELECTED_SPOT_FOR_PICKUP -> "पिकअप के लिए चयनित स्थान पर जाएं"
         SELECT_POPULAR_SPOT_FOR_HASSLE_FREE_PICKUP -> "परेशानी मुक्त पिकअप के लिए लोकप्रिय स्थान का चयन करें"
         TAP_WHERE_TO_TO_BOOK_RIDE -> "राइड बुक करने के लिए 'कहाँ जाना है?' टैप करें!"
+        NAMMA_SERVICES -> "हमारी सेवाएं"

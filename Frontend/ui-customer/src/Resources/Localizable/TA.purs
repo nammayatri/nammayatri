@@ -1062,3 +1062,4 @@ getTA stringKey =
     SELECT_POPULAR_SPOT_FOR_HASSLE_FREE_PICKUP -> "சுற்றுச்சூழலிலிருந்து புதுமையான தொடர்புறுப்புக்கு மாதிரி பிக்கப்பிற்கான பிரபலமான இடத்தைத் தேர்ந்தெடுக்கவும்"
     IS_AT_PICKUP_LOCATION -> "பிக்‌அப் இடத்தில் உள்ளது"
     TAP_WHERE_TO_TO_BOOK_RIDE -> "உங்கள் சயம் பதிகை செய்ய 'எங்கே?' அழுத்தவும்!"
+    NAMMA_SERVICES -> "நம்ம சேவைகள்"

@@ -1047,3 +1047,4 @@ getML stringKey =
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "ഇത് നിങ്ങൾക്ക് തത്കാലം പിക്കപ്പ് അനുഭവം നൽകുന്നു."
         IS_AT_PICKUP_LOCATION -> "പിക്കപ്പ് സ്ഥലത്തില്‍ ഉള്ളു"
         TAP_WHERE_TO_TO_BOOK_RIDE -> "നിങ്ങളുടെ റൈഡ് ബുക്ക് ചെയ്യാൻ 'എവിടെയാണ്?' ടാപ്പ് ചെയ്യുക!"
+        NAMMA_SERVICES -> "നമ്മ സേവനങ്ങൾ"

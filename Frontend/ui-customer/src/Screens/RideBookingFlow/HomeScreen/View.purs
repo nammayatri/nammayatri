@@ -1138,7 +1138,7 @@ emptySuggestionsBanner state push =
       getHomeScreenIllustration :: HomeScreenState -> String
       getHomeScreenIllustration state = let 
         cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
-        in (if state.data.config.autoVariantEnabled && cityConfig.enableCabs then "ny_ic_home_illustration_auto_cab"
+        in (if state.data.config.autoVariantEnabled && cityConfig.enableCabs then "ny_ic_home_illustration_cab_auto"
           else if state.data.config.autoVariantEnabled then "ny_ic_home_illustration_auto"
           else if cityConfig.enableCabs then "ny_ic_home_illustration_cab"
           else "ny_ic_home_illustration_auto")
@@ -3170,7 +3170,7 @@ homeScreenViewV2 push state =
                           [locationUnserviceableView push state]
                         else 
                           []
-                          <> (maybe (if isHomeScreenView state && state.props.isBannerDataComputed then [mapView push state "CustomerHomeScreenMap"] else [emptyTextView state ]) (\item -> [bannersCarousal item state push]) state.data.bannerData.bannerItem)
+                          <> contentView state
                           <> [ shimmerView state
                           , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
                           , suggestionsView push state
@@ -3180,6 +3180,33 @@ homeScreenViewV2 push state =
               ]
           ]
         ]  
+  where 
+    contentView state = if state.props.showShimmer then [
+      PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
+        shimmerFrameLayout
+        [ height $ V 100
+        , width MATCH_PARENT 
+        , background Color.greyDark
+        , margin $ Margin 16 24 16 0
+        , cornerRadius 8.0
+        , onAnimationEnd
+            ( \action -> do
+                _ <- push action
+                _ <- getCurrentPosition push CurrentLocation
+                case state.props.currentStage of
+                  HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
+                  _ -> pure unit
+                pure unit
+            )(const MapReadyAction)
+        ][]] 
+      else
+      (maybe 
+        (if isHomeScreenView state && state.props.isBannerDataComputed 
+          then [mapView push state "CustomerHomeScreenMap"] 
+          else [emptyTextView state]
+        ) 
+        (\item -> [bannersCarousal item state push]) 
+        state.data.bannerData.bannerItem)
 
 showMapOnHomeScreen :: HomeScreenState -> Boolean
 showMapOnHomeScreen state = isHomeScreenView state && isNothing state.data.bannerData.bannerItem
@@ -3362,7 +3389,7 @@ pickupLocationView push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT 
                 , padding $ Padding 14 16 14 16 
-                , stroke $ "1,#373B49"
+                , stroke $ "1," <> Color.mountainFig
                 , onClick push $ const WhereToClick
                 , gravity CENTER_VERTICAL
                 , background Color.black900
@@ -3939,9 +3966,10 @@ additionalServicesView push state =
     , width MATCH_PARENT
     , orientation VERTICAL 
     , padding $ PaddingHorizontal 16 16
+    , visibility $ boolToVisibility $ not state.props.showShimmer
     , margin $ MarginTop 20
     ][  textView $
-          [ text "Namma Services"
+          [ text $ getString NAMMA_SERVICES
           , color Color.black900
           ] <> FontStyle.subHeading1 TypoGraphy
       , linearLayout
