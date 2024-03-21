@@ -325,7 +325,7 @@ config =
   }
   , logFunctionCalls : false
   , locationTagBar : {
-    cornerRadius : 8.0
+    cornerRadius : 24.0
   , textColor : "#454545"
   , stroke: "1,#E5E7EB"
   }
@@ -348,6 +348,15 @@ config =
             { radius : 50000
             , strictBounds : true
             }
+        , enableCabs : false
+        }
+      , { cityCode : "std:044"
+        , cityName : "Chennai"
+        , geoCodeConfig :
+            { radius : 50000
+            , strictBounds : true
+            }
+        , enableCabs : true
         }
       ]
   , bannerCarousel : defaultBannerCarousel
@@ -370,5 +379,6 @@ defaultCityConfig =
     geoCodeConfig :
       { radius : 100000
       , strictBounds : false
-      }
+      },
+    enableCabs : false
   }

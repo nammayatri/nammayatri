@@ -311,6 +311,7 @@ initData = {
     , locateOnMapProps : { sourceLocationName : Nothing, sourceGeoJson : Nothing, sourceGates : Nothing, isSpecialPickUpGate : false }
     , showSpecialZoneInfoPopup : false
     , hotSpot : { selectedSpot : Nothing, centroidPoint : Nothing }
+    , isBannerDataComputed : false
   }
 }
 

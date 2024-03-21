@@ -374,7 +374,8 @@ type HotSpotConfig = {
 type CityConfig = {
   cityName :: String,
   cityCode :: String,
-  geoCodeConfig :: GeoCodeConfig
+  geoCodeConfig :: GeoCodeConfig,
+  enableCabs :: Boolean
 }
 
 type GeoCodeConfig = {
