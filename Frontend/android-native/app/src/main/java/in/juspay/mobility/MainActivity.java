@@ -25,6 +25,7 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -80,6 +81,7 @@ import java.util.Collections;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
@@ -112,6 +114,7 @@ import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 import in.juspay.mobility.app.reels.ExoplayerItem;
 import in.juspay.mobility.app.services.MobilityAppUpdate;
 import in.juspay.mobility.common.Utils;
+import in.juspay.mobility.common.data.NotificationChannelData;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 import in.juspay.services.HyperServices;
@@ -511,49 +514,86 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initNotificationChannel() {
-        NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
-                notificationManager.deleteNotificationChannel("RINGING_ALERT");
-                notificationManager.deleteNotificationChannel("TRIP_STARTED");
-                notificationManager.deleteNotificationChannel("General");
-                notificationManager.deleteNotificationChannel("FLOATING_NOTIFICATION");
-            } catch(Exception e) {
-                System.out.println("Notification Channel doesn't exists");
-            }
-        }
-
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannelGroup safetyGroup = new NotificationChannelGroup("1_safety", "Enhanced Safety");
-            NotificationChannelGroup rideRelatedGroup = new NotificationChannelGroup("2_ride_related", "Essential - Ride related");
-            NotificationChannelGroup serviceGroup = new NotificationChannelGroup("3_services", "Services");
-            NotificationChannelGroup promotionalGroup = new NotificationChannelGroup("4_promotional", "Promotional");
-
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P){
-                safetyGroup.setDescription("Notifications related to Safety");
-                rideRelatedGroup.setDescription("Notifications related to ride starts, end");
-                serviceGroup.setDescription("Notifications related to Services");
-                promotionalGroup.setDescription("Notifications related to promotional");
+        new Thread(() -> {
+            NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                try {
+                    notificationManager.deleteNotificationChannel("RINGING_ALERT");
+                    notificationManager.deleteNotificationChannel("TRIP_STARTED");
+                    notificationManager.deleteNotificationChannel("General");
+                    notificationManager.deleteNotificationChannel("FLOATING_NOTIFICATION");
+                } catch(Exception e) {
+                    System.out.println("Notification Channel doesn't exists");
+                }
             }
 
-            notificationManager.createNotificationChannelGroup(safetyGroup);
-            notificationManager.createNotificationChannelGroup(rideRelatedGroup);
-            notificationManager.createNotificationChannelGroup(serviceGroup);
-            notificationManager.createNotificationChannelGroup(promotionalGroup);
-        }
+            List<NotificationChannelData> notificationChannels = new ArrayList<>();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                notificationChannels.add(new NotificationChannelData( NotificationUtils.DRIVER_QUOTE_INCOMING, "Driver Quote Incoming", "Driver quote related Notifications", "2_ride_related", NotificationManager.IMPORTANCE_HIGH, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)));
+                notificationChannels.add(new NotificationChannelData(NotificationUtils.DRIVER_ASSIGNMENT, "Driver Assignment", "Driver Assignment related Notifications", "2_ride_related", NotificationManager.IMPORTANCE_HIGH, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)));
+                notificationChannels.add(new NotificationChannelData(NotificationUtils.REALLOCATE_PRODUCT, "Ride Reallocation", "Ride Reallocation related Notifications", "2_ride_related", NotificationManager.IMPORTANCE_HIGH, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)));
+                notificationChannels.add(new NotificationChannelData(NotificationUtils.GENERAL_NOTIFICATION, "Other ride related", "Other ride related Notifications", "", NotificationManager.IMPORTANCE_HIGH,  RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)));
 
 
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_QUOTE_INCOMING);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_ASSIGNMENT);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.REALLOCATE_PRODUCT);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.GENERAL_NOTIFICATION);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.RIDE_STARTED);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.CANCELLED_PRODUCT);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_HAS_REACHED);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.TRIP_FINISHED);
-        NotificationUtils.createNotificationChannel(this, MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED);
-        NotificationUtils.createNotificationChannel(this, MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED);
+                notificationChannels.add(new NotificationChannelData( NotificationUtils.RIDE_STARTED, "Ride Started", "Ride Started", "2_ride_related", NotificationManager.IMPORTANCE_HIGH,  Uri.parse("android.resource://" + context.getPackageName() + "/" + in.juspay.mobility.app.R.raw.ride_started)));
+                notificationChannels.add(new NotificationChannelData(NotificationUtils.CANCELLED_PRODUCT, "Ride Cancelled", "Used to notify when ride is cancelled", "2_ride_related", NotificationManager.IMPORTANCE_HIGH, Uri.parse("android.resource://" + context.getPackageName() + "/" + in.juspay.mobility.app.R.raw.cancel_notification_sound)));
+                notificationChannels.add(new NotificationChannelData(NotificationUtils.DRIVER_HAS_REACHED, "Driver Arrived", "Used to notify when driver has arrived", "2_ride_related", NotificationManager.IMPORTANCE_HIGH, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)));
+
+            }
+
+            case DRIVER_HAS_REACHED:
+                soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + in.juspay.mobility.app.R.raw.driver_arrived);
+                channel.setName("Driver Arrived");
+                channel.setDescription("Used to notify when driver has arrived");
+                break;
+
+            case RIDE_STARTED:
+                soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + in.juspay.mobility.app.R.raw.ride_started);
+                channel.setName("Ride Started");
+                channel.setDescription("Used to notify when ride has started");
+                break;
+            case CANCELLED_PRODUCT:
+                soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + in.juspay.mobility.app.R.raw.cancel_notification_sound);
+                channel.setName("Ride Cancelled");
+                channel.setDescription("Used to notify when ride is cancelled");
+                break;
+
+            soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            channel.setName("Other ride related");
+            channel.setDescription("Other ride related Notifications");
+
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannelGroup safetyGroup = new NotificationChannelGroup("1_safety", "Enhanced Safety");
+                NotificationChannelGroup rideRelatedGroup = new NotificationChannelGroup("2_ride_related", "Essential - Ride related");
+                NotificationChannelGroup serviceGroup = new NotificationChannelGroup("3_services", "Services");
+                NotificationChannelGroup promotionalGroup = new NotificationChannelGroup("4_promotional", "Promotional");
+
+                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P){
+                    safetyGroup.setDescription("Notifications related to Safety");
+                    rideRelatedGroup.setDescription("Notifications related to ride starts, end");
+                    serviceGroup.setDescription("Notifications related to Services");
+                    promotionalGroup.setDescription("Notifications related to promotional");
+                }
+
+                notificationManager.createNotificationChannelGroup(safetyGroup);
+                notificationManager.createNotificationChannelGroup(rideRelatedGroup);
+                notificationManager.createNotificationChannelGroup(serviceGroup);
+                notificationManager.createNotificationChannelGroup(promotionalGroup);
+            }
+
+
+//            NotificationUtils.createNotificationChannel(MainActivity.this, NotificationUtils.DRIVER_QUOTE_INCOMING);
+//            NotificationUtils.createNotificationChannel(MainActivity.this, NotificationUtils.DRIVER_ASSIGNMENT);
+//            NotificationUtils.createNotificationChannel(MainActivity.this, NotificationUtils.REALLOCATE_PRODUCT);
+//            NotificationUtils.createNotificationChannel(MainActivity.this, NotificationUtils.GENERAL_NOTIFICATION);
+            NotificationUtils.createNotificationChannel(MainActivity.this, NotificationUtils.RIDE_STARTED);
+            NotificationUtils.createNotificationChannel(MainActivity.this, NotificationUtils.CANCELLED_PRODUCT);
+            NotificationUtils.createNotificationChannel(MainActivity.this, NotificationUtils.DRIVER_HAS_REACHED);
+            NotificationUtils.createNotificationChannel(MainActivity.this, NotificationUtils.TRIP_FINISHED);
+            NotificationUtils.createNotificationChannel(MainActivity.this, MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED);
+            NotificationUtils.createNotificationChannel(MainActivity.this, MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED);
+        }).start();
     }
 
     public void updateConfigURL() {
