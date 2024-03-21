@@ -698,7 +698,7 @@ getEN stringKey =
         THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "The ride had to be cancelled, we’re finding you another"
         ENJOY_THE_RIDE -> "Enjoy the ride to your destination!"
         RIDE_STARTED -> "Ride started"
-        ONE_CLICK -> "1 Click"
+        ONE_CLICK -> "1 Click Booking"
         SMART -> "Smart"
         NOT_SERVICEABLE -> "Not Serviceable"
         WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "We are not live in your area yet! \nYou can access ride history and other \nsettings from the menu on the top left."
@@ -1130,7 +1130,7 @@ getEN stringKey =
         SELECT_PACKAGE -> "Select Package"
         RENTAL_POLICY_DESC -> "Every hour gets you 10 kms in the package. You can plan additional kms upto a limit and save on extra costs if you end up exceeding the base distance."
         RENTAL_POLICY_DESC_1 -> "You can still review your fare on the next screen before confirming the booking."
-        RENTALS_INTERCITY_AVAILABLE -> "Rentals and Intercity trips, now on Yatri Sathi"
+        RENTALS_INTERCITY_AVAILABLE appName -> "Rentals and Intercity trips, now on " <> appName
         CHECK_IT_OUT -> "Check it out"
         FAILED_TO_CANCEL -> "Failed To Cancel Ride"
         SCHEDULING_ALLOWED_IN_INTERCITY_RENTAL -> "Scheduling is only allowed in Intercity or Rental Rides."
@@ -1138,3 +1138,6 @@ getEN stringKey =
         NO_RIDES_SCHEDULED_YET -> "No rides scheduled yet!"
         RIDE_BOOKING -> "Ride Booking."
         SPECIAL_ZONE_RENTAL_INELIGIBLE -> "Locations within special zone are not eligible for rental rides."
+        TAP_WHERE_TO_TO_BOOK_RIDE -> "Tap 'Where to?' to book your ride!"
+        YATRI_SERVICES -> "Yatri Services"
+        YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "You have an upcoming rental booking on " <> bookingTime 

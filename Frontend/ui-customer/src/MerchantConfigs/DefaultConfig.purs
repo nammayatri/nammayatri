@@ -337,7 +337,7 @@ config =
   }
   , logFunctionCalls : false
   , locationTagBar : {
-    cornerRadius : 8.0
+    cornerRadius : 24.0
   , textColor : "#454545"
   , stroke: "1,#E5E7EB"
   }
@@ -362,6 +362,7 @@ config =
             }
         , enableRentals : false 
         , enableIntercity : false
+        , enableCabs : false
         },
         { cityCode : "std:033"
         , cityName : "Kolkata"
@@ -371,6 +372,7 @@ config =
             }
         , enableRentals : true 
         , enableIntercity : true
+        , enableCabs : true
         },
         { cityCode : "std:044"
         , cityName : "Chennai"
@@ -380,6 +382,7 @@ config =
             }
         , enableRentals : true 
         , enableIntercity : true
+        , enableCabs : false
         }
       ]
   , bannerCarousel : defaultBannerCarousel
@@ -404,5 +407,6 @@ defaultCityConfig =
       , strictBounds : false
       },
     enableRentals : false,
-    enableIntercity : false
+    enableIntercity : false,
+    enableCabs : false
   }

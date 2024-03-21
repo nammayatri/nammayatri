@@ -1,7 +1,7 @@
 module Resources.Localizable.FR where
 
-import Prelude ((<>))
 import Language.Types (STR(..))
+import Prelude ((<>))
 import Prelude ((<>))
 
 getFR :: STR -> String
@@ -698,7 +698,7 @@ getFR stringKey =
         ENJOY_THE_RIDE -> "Bon voyage jusqu'à votre destination !"
         RIDE_STARTED -> "Le trajet a commencé"
         DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "Découvrez des endroits géniaux adaptés à vos besoins"
-        ONE_CLICK -> "1 clic"
+        ONE_CLICK -> "Réservation en 1 clic"
         SMART -> "Intelligent"
         NOT_SERVICEABLE -> "Non réparable"
         WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "Nous ne sommes pas encore en ligne dans votre région ! \nVous pouvez accéder à l'historique des courses et à d'autres \nparamètres à partir du menu en haut à gauche."
@@ -1131,7 +1131,7 @@ getFR stringKey =
         SELECT_PACKAGE -> "Sélectionnez le forfait"
         RENTAL_POLICY_DESC -> "Chaque heure vous rapporte 10 km dans le forfait. Vous pouvez planifier des kilomètres supplémentaires jusqu'à une certaine limite et économiser sur les coûts supplémentaires si vous dépassez la distance de base."
         RENTAL_POLICY_DESC_1 -> "Vous pouvez toujours consulter votre tarif sur l'écran suivant avant de confirmer la réservation."
-        RENTALS_INTERCITY_AVAILABLE -> "Locations et voyages interurbains, désormais disponibles sur Yatri Sathi"
+        RENTALS_INTERCITY_AVAILABLE appName -> "Locations et voyages interurbains, désormais disponibles sur " <> appName
         CHECK_IT_OUT -> "Vérifiez-le"
         FAILED_TO_CANCEL -> "Échec de l'annulation de la course"
         SCHEDULING_ALLOWED_IN_INTERCITY_RENTAL -> "La planification est autorisée uniquement pour les trajets interurbains ou les locations."
@@ -1139,3 +1139,6 @@ getFR stringKey =
         NO_RIDES_SCHEDULED_YET -> "Aucun trajet n'est programmé pour le moment!"
         RIDE_BOOKING -> "Réservation de trajet."
         SPECIAL_ZONE_RENTAL_INELIGIBLE -> "Les lieux situés dans une zone spéciale ne sont pas éligibles pour les locations."
+        TAP_WHERE_TO_TO_BOOK_RIDE -> "Appuyez sur 'Où aller ?' pour réserver votre trajet !"
+        YATRI_SERVICES -> "Services de voyageurs"
+        YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "Vous avez une réservation de location à venir le " <> bookingTime

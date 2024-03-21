@@ -402,47 +402,18 @@ rentalBannerConfig state =
       {
         backgroundColor = Color.blue600
       , stroke = "1," <> Color.grey900
-      , imageHeight = V 43
+      , imageHeight = V 45
       , imageWidth = V 66
       , imagePadding = PaddingVertical 0 0
-      , title = getString RIDE_BOOKING <> (maybe "" (\rentalsInfo ->
-                                                      let timeUTC = rentalsInfo.rideScheduledAtUTC
-                                                          currentUTC = EHC.getCurrentUTC ""
-                                                          date = if EHC.convertUTCtoISC timeUTC "Do" == EHC.convertUTCtoISC currentUTC "Do" then "at " else "on " <>  EHC.convertUTCtoISC timeUTC "ddd" <> ", "
-                                                      in date <> EHC.convertUTCtoISC timeUTC "hh" <> ":" <> EHC.convertUTCtoISC timeUTC "mm" <> " " <> EHC.convertUTCtoISC timeUTC "A"
+      , title = getString $ YOU_HAVE_UPCOMING_RENTAL_BOOKING (maybe "" (\rentalsInfo ->
+                                                            let timeUTC = rentalsInfo.rideScheduledAtUTC
+                                                            in EHC.convertUTCtoISC timeUTC "D" <> " " <> EHC.convertUTCtoISC timeUTC "MMMM" <> " " <> EHC.convertUTCtoISC timeUTC "YYYY" <> " , " <> EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"    
                                                   ) state.data.rentalsInfo)
       , titleColor = Color.blue800
       , actionTextVisibility = false
       , cornerRadius = 8.0
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_rental_booking"
       , imageMargin = MarginRight 0
-      }
-  in config'
-
-checkoutRentalBannerConfig :: ST.HomeScreenState -> Banner.Config
-checkoutRentalBannerConfig _ =
-  let
-    config = Banner.config
-    config' = config
-      { backgroundColor = Color.blue600
-      , stroke = "0," <> Color.grey900
-      , imageHeight = V 96
-      , imageWidth = V 80
-      , imagePadding = PaddingVertical 0 0
-      , title = getString RENTALS_INTERCITY_AVAILABLE
-      , titleColor = Color.blue800
-      , actionText {
-          text = getString CHECK_IT_OUT,
-          backgroundColor = Just Color.blue800 ,
-          textColor = Color.white900,
-          cornerRadius = if EHC.os == "IOS" then 9.0 else 50.0,
-          padding = PaddingHorizontal 16 16,
-          margin = MarginTop 6
-        }
-      , actionTextImgType = Banner.DownArrow
-      , actionTextVisibility = true
-      , cornerRadius = 12.0
-      , imageUrl = fetchImage FF_ASSET "ny_ic_rental_banner"
       }
   in config'
 
@@ -1966,9 +1937,9 @@ locationTagBarConfig state  = let
               , fontSize : FontSize.a_14
               , color : Color.black800
               },
-            stroke : "0," <> Color.blue600 ,
+            stroke : "1," <> Color.grey700 ,
             cornerRadius : Corners 19.0 true true true true ,
-            background : Color.blue600 ,
+            background : Color.transparent ,
             height : WRAP_CONTENT ,
             width : WRAP_CONTENT,
             padding : Padding 8 8 8 8 ,

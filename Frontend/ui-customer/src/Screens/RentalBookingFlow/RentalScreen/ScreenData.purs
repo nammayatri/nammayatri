@@ -38,6 +38,7 @@ initData =
         , finalFare : 0
         , nightCharge : "250"
       }
+    , selectedQuote : Nothing
     , config : getAppConfig appConfig
     , searchId : ""
     , bookingId : ""

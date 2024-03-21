@@ -25,10 +25,12 @@ import Components.GenericHeader as GenericHeaderController
 import Components.SaveFavouriteCard as SaveFavCardController 
 import Components.PrimaryEditText as EditTextController
 import Components.PrimaryButton as PrimaryButtonController
+import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.InputView as InputViewController
 import Components.MenuButton as MenuButtonController
 import Components.SavedLocationCard as SavedLocationCardController
 import Components.PopUpModal.Controller as PopUpModalController
+import Components.RateCard.Controller as RateCardController
 import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick)
@@ -36,19 +38,29 @@ import Screens (getScreen, ScreenName(..))
 import Data.String as STR
 import Data.Array as DA
 import Debug (spy)
-import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker, Location)
+import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker, Location, setMapPadding, getExtendedPath, drawRoute, defaultMarkerConfig)
 import Data.Maybe as MB
 import Data.Number (fromString) as NUM
 import Helpers.Utils (updateLocListWithDistance, setText, getSavedLocationByTag, getCurrentLocationMarker)
 import Data.Ord (comparing)
 import Effect.Unsafe (unsafePerformEffect)
 import Effect.Uncurried (runEffectFn1)
-import Engineering.Helpers.Commons (getNewIDWithTag, isTrue)
+import Engineering.Helpers.Commons (getNewIDWithTag, isTrue,flowRunner, liftFlow)
 import Mobility.Prelude
 import Components.LocationListItem.Controller ( dummyAddress)
 import Data.String (contains, Pattern(..))
 import Resources.Constants (encodeAddress)
 import Storage (getValueToLocalStore, KeyStore(..))
+import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote)
+import Services.API(QuoteAPIEntity(..), GetQuotesRes(..), OfferRes(..), RentalQuoteAPIDetails(..), QuoteAPIContents(..), Snapped(..), LatLong(..), Route(..))
+import Data.Lens
+import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
+import Effect.Aff (launchAff)
+import Services.Backend (walkCoordinates, walkCoordinate, normalRoute)
+import Control.Monad.Trans.Class (lift)
+import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig)
+import Accessor
+import Constants.Configs (getPolylineAnimationConfig)
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -77,11 +89,16 @@ data Action = NoAction
             | PrimaryButtonAC PrimaryButtonController.Action
             | InputViewAC GlobalProps InputViewController.Action 
             | MenuButtonAC MenuButtonController.Action
+            | RateCardAC RateCardController.Action
             | BackpressAction
             | BackPressed
             | SpecialZoneInfoTag
             | PopUpModalAC PopUpModalController.Action
+            | GetQuotes GetQuotesRes
+            | ChooseVehicleAC ChooseVehicleController.Action
+            | CheckFlowStatusAction
             | CurrentLocation 
+            
 
 data ScreenOutput = NoOutput SearchLocationScreenState
                   | Reload SearchLocationScreenState
@@ -98,14 +115,30 @@ data ScreenOutput = NoOutput SearchLocationScreenState
                   | MetroTicketBookingScreen SearchLocationScreenState
                   | GoToMetroRouteMap SearchLocationScreenState
                   | RideScheduledScreen SearchLocationScreenState
+                  | SelectedQuote SearchLocationScreenState
+                  | CurrentFlowStatus
 
 eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLocationScreenState
+
+eval CheckFlowStatusAction state = exit $ CurrentFlowStatus
+
+eval (ChooseVehicleAC (ChooseVehicleController.OnSelect variant)) state =
+  let updatedQuotes = map (\item -> 
+                              item {activeIndex = variant.index , quoteDetails {activeIndex = variant.index}}) state.data.quotesList
+      selectedQuote = (fetchSelectedQuote updatedQuotes)
+  in  continue state { data { quotesList = updatedQuotes , selectedQuote = selectedQuote}}
+  
+eval (ChooseVehicleAC (ChooseVehicleController.ShowRateCard _)) state = 
+  continue state { props { showRateCard = true }}
 
 eval (MapReady _ _ _) state = do 
   if state.props.searchLocStage == PredictionSelectedFromHome then 
     continueWithCmd state [do 
       pure (LocationListItemAC [] (LocationListItemController.OnClick state.data.predictionSelectedFromHome))
     ]
+    else if state.props.searchLocStage == ChooseYourRide then do
+      pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+      drawRouteOnMap state
     else continue state
 
 eval (PopUpModalAC (PopUpModalController.OnButton2Click)) state = updateAndExit state{props{locUnserviceable = false, isSpecialZone = false}} $ HomeScreen state
@@ -128,14 +161,16 @@ eval (MenuButtonAC (MenuButtonController.OnClick config)) state = do
     ]
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state =  
-  MB.maybe 
-    (continue state) 
-    (\ focussedField -> do
-      let newState = if focussedField == SearchLocPickup then state{data{srcLoc = MB.Just state.data.latLonOnMap}}
-                      else state{data{destLoc = MB.Just state.data.latLonOnMap}} 
-      void $ pure $ exitLocateOnMap ""
-      updateAndExit newState $ LocSelectedOnMap newState
-    ) (state.props.focussedTextField)
+  if state.props.searchLocStage == ChooseYourRide then exit $ SelectedQuote state
+    else 
+      MB.maybe 
+        (continue state) 
+        (\ focussedField -> do
+          let newState = if focussedField == SearchLocPickup then state{data{srcLoc = MB.Just state.data.latLonOnMap}}
+                          else state{data{destLoc = MB.Just state.data.latLonOnMap}} 
+          void $ pure $ exitLocateOnMap ""
+          updateAndExit newState $ LocSelectedOnMap newState
+        ) (state.props.focussedTextField)
  
 eval CurrentLocation state = do
   let newState = state{data{srcLoc = MB.Just state.data.currentLoc}, props{focussedTextField = MB.Just SearchLocDrop}}
@@ -381,6 +416,15 @@ eval BackPressed state = do
  if state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN then exit $ MetroTicketBookingScreen state 
   else continue state
 
+eval (GetQuotes (GetQuotesRes res )) state = quotesFlow res state 
+  -- handle for other cases too ( other fare product types )
+
+eval (RateCardAC action) state =
+  case action of
+    RateCardController.NoAction -> continue state
+    RateCardController.PrimaryButtonAC (PrimaryButtonController.NoAction) -> continue state
+    _ -> continue state { props {showRateCard = false}}
+    
 eval _ state = continue state
 
 
@@ -420,6 +464,7 @@ handleBackPress state = do
       else exit $ RentalsScreen state 
     AllFavouritesStage -> continue state{props{searchLocStage = PredictionsStage}}
     LocateOnMapStage -> continue state{props{searchLocStage = PredictionsStage}}
+    ChooseYourRide -> exit $ RentalsScreen state
     _ -> continue state
 
 findStationWithPrefix :: String -> Array Station -> Array Station
@@ -443,3 +488,92 @@ type ServiceabilityResponse = {
   , geoJson :: String
   , specialLocCategory :: String
 }
+
+dummyFareQuoteDetails = {
+  baseFare : 0 ,
+  includedKmPerHr : 0 ,
+  perExtraKmRate : 0 ,
+  perExtraMinRate : 0 ,
+  perHourCharge : 0 ,
+  plannedPerKmRate : 0,
+  nightShiftCharge : 0
+}
+
+fetchSelectedQuote quotesList = DA.head $ DA.filter (\item -> item.activeIndex == item.index) quotesList
+
+
+dummyQuote = {
+  quoteDetails : ChooseVehicleController.config ,
+  index : 0 ,
+  activeIndex : 0 ,
+  fareDetails : dummyFareQuoteDetails
+}
+
+drawRouteOnMap state =  
+  continueWithCmd state [do 
+    let startLat = MB.maybe 0.0 (\item -> MB.fromMaybe 0.0 item.lat) state.data.srcLoc
+        startLon = MB.maybe 0.0 (\item -> MB.fromMaybe 0.0 item.lon) state.data.srcLoc 
+        endLat = MB.maybe 0.0 (\item -> MB.fromMaybe 0.0 item.lat) state.data.destLoc
+        endLon = MB.maybe 0.0 (\item -> MB.fromMaybe 0.0 item.lon) state.data.destLoc
+        address = MB.maybe "" (\item -> item.address) state.data.srcLoc
+        destAddress = MB.maybe "" (\item -> item.address) state.data.destLoc
+        markers = normalRoute ""
+        sourceMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = address, position {lat = startLat, lng = startLon}}
+        destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = destAddress, position {lat = endLat, lng = endLon} }
+    void $ launchAff $ flowRunner defaultGlobalState $ do 
+      let newRoute = case state.data.route of 
+                        MB.Just (Route route) ->
+                          let (Snapped routePts) = route.points 
+                              newPts = if DA.length routePts > 1 then 
+                                        getExtendedPath $ walkCoordinates (route.points)
+                                        else 
+                                          walkCoordinate startLat startLon endLat endLon
+                              newRoute = route {points = Snapped (map (\item -> LatLong { lat : item.lat, lon : item.lng}) newPts.points)}
+                          in (newRoute)
+                        MB.Nothing -> 
+                          let endLatitude = if endLat == 0.0 then startLat else endLat 
+                              endLongitude = if endLon == 0.0 then startLon else endLon
+                              newPts =walkCoordinate startLat startLon endLatitude endLongitude
+                              newRoute = {boundingBox: MB.Nothing, distance: 0, duration: 0, pointsForRentals: MB.Nothing, points : Snapped (map (\item -> LatLong { lat : item.lat, lon : item.lng}) newPts.points), snappedWaypoints : Snapped []}
+                          in newRoute
+      liftFlow $ drawRoute [ (walkCoordinates newRoute.points)] "LineString" true sourceMarkerConfig destMarkerConfig 8 "NORMAL" (specialLocationConfig "" "" false getPolylineAnimationConfig) (getNewIDWithTag "SearchLocationScreenMap")
+    pure NoAction
+  ] 
+
+quotesFlow res state = do
+  let quoteList = getQuotesTransformer res.quotes state.appConfig.estimateAndQuoteConfig
+      filteredQuoteList = (getFilteredQuotes res.quotes state.appConfig.estimateAndQuoteConfig)
+      sortedByFare = DA.sortBy compareByFare filteredQuoteList
+      rentalsQuoteList =  (DA.mapWithIndex (\index quote -> 
+    let quoteDetails = transformQuote quote index 
+        fareDetails = case quote of 
+          RentalQuotes body -> 
+            let (QuoteAPIEntity quoteEntity) = body.onRentalCab
+            in case (quoteEntity.quoteDetails)^._contents of
+              (RENTAL contents) -> 
+                let (RentalQuoteAPIDetails quoteDetails) = contents 
+                in (transFormQuoteDetails quoteDetails)
+              _ -> dummyFareQuoteDetails
+          _  -> dummyFareQuoteDetails
+    in { quoteDetails : quoteDetails, index : index, activeIndex : 0 , fareDetails : fareDetails}
+    ) sortedByFare)
+  continue state { data{quotesList = rentalsQuoteList, selectedQuote = if MB.isNothing state.data.selectedQuote then DA.head $ rentalsQuoteList else state.data.selectedQuote}}
+  where 
+    transFormQuoteDetails quoteDetails = 
+        { includedKmPerHr : MB.fromMaybe 0 quoteDetails.includedKmPerHr 
+        , nightShiftCharge : MB.fromMaybe 250 quoteDetails.nightShiftCharge 
+        , perExtraKmRate : MB.fromMaybe 0 quoteDetails.perExtraKmRate 
+        , perExtraMinRate : MB.fromMaybe 0 quoteDetails.perExtraMinRate 
+        , perHourCharge : MB.fromMaybe 0 quoteDetails.perHourCharge 
+        , plannedPerKmRate : MB.fromMaybe 0 quoteDetails.plannedPerKmRate 
+        , baseFare : quoteDetails.baseFare
+        }
+
+    compareByFare :: OfferRes -> OfferRes -> Ordering
+    compareByFare quote1 quote2 = 
+        case quote1, quote2 of 
+          RentalQuotes body1, RentalQuotes body2 -> 
+            let (QuoteAPIEntity quoteEntity1) = body1.onRentalCab
+                (QuoteAPIEntity quoteEntity2) = body2.onRentalCab
+            in compare quoteEntity1.estimatedFare quoteEntity2.estimatedFare
+          _ , _ -> EQ

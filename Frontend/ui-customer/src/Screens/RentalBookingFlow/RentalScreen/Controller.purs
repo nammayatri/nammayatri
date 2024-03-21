@@ -86,8 +86,6 @@ data Action =
   | RateCardAC RateCardController.Action
   | BackpressAction
   | RentalPolicyInfo
-  | GetRentalQuotes GetQuotesRes
-  | CheckFlowStatusAction 
   | GetRideConfirmation RideBookingRes
   | UpdateLocAndLatLong String String
   | PopUpModalAC PopUpModalController.Action
@@ -101,6 +99,7 @@ data ScreenOutput = NoScreen
                   | DoRentalSearch RentalScreenState
                   | UpdateQuoteList RentalScreenState
                   | GoToSelectPackage RentalScreenState
+                  | GoToSelectVariant RentalScreenState
                   
 data FareBreakupRowType = BookingTime | BookingDistance | BaseFare | TollFee
 
@@ -124,49 +123,6 @@ eval (UpdateLocAndLatLong lat lon) state =
 
 eval BackpressAction state = genericBackPressed state 
 
-eval (GetRentalQuotes (GetQuotesRes quoteRes)) state = do 
-  let quoteList = getQuotesTransformer quoteRes.quotes state.data.config.estimateAndQuoteConfig
-      filteredQuoteList = (getFilteredQuotes quoteRes.quotes state.data.config.estimateAndQuoteConfig)
-      sortedByFare = DA.sortBy compareByFare filteredQuoteList
-      rentalsQuoteList =  (DA.mapWithIndex (\index quote -> 
-    let quoteDetails = transformQuote quote index 
-        currIndex = index 
-        activeIndex = 0 
-        fareDetails = case quote of 
-          RentalQuotes body -> 
-            let (QuoteAPIEntity quoteEntity) = body.onRentalCab
-            in case (quoteEntity.quoteDetails)^._contents of
-              (RENTAL contents) -> 
-                let (RentalQuoteAPIDetails quoteDetails) = contents 
-                in (transFormQuoteDetails quoteDetails)
-              _ -> dummyFareQuoteDetails
-          _  -> dummyFareQuoteDetails
-    in { quoteDetails : quoteDetails, index : currIndex, activeIndex : 0 , fareDetails : fareDetails}
-    ) sortedByFare)
-  continue state { data{rentalsQuoteList = rentalsQuoteList}, props{showShimmer = false, showPrimaryButton = if state.data.currentStage == RENTAL_SELECT_VARIANT then not (DA.null rentalsQuoteList) else true}}
-  where 
-    transFormQuoteDetails quoteDetails = 
-       { includedKmPerHr : fromMaybe 0 quoteDetails.includedKmPerHr 
-        , nightShiftCharge : fromMaybe 250 quoteDetails.nightShiftCharge 
-        , perExtraKmRate : fromMaybe 0 quoteDetails.perExtraKmRate 
-        , perExtraMinRate : fromMaybe 0 quoteDetails.perExtraMinRate 
-        , perHourCharge : fromMaybe 0 quoteDetails.perHourCharge 
-        , plannedPerKmRate : fromMaybe 0 quoteDetails.plannedPerKmRate 
-        , baseFare : quoteDetails.baseFare
-        }
-
-    compareByFare :: OfferRes -> OfferRes -> Ordering
-    compareByFare quote1 quote2 = 
-        case quote1, quote2 of 
-          RentalQuotes body1, RentalQuotes body2 -> 
-            let (QuoteAPIEntity quoteEntity1) = body1.onRentalCab
-                (QuoteAPIEntity quoteEntity2) = body2.onRentalCab
-            in compare quoteEntity1.estimatedFare quoteEntity2.estimatedFare
-          _ , _ -> EQ
-
-
-eval (CheckFlowStatusAction) state = continue state{data{currentStage = RENTAL_SELECT_PACKAGE}, props{showShimmer = false, showPrimaryButton = false}}
-
 eval (SliderCallback hours) state = 
   let minDistance = hours * 10
       maxDistance = minDistance + (min 50 $ min (hours * 10) $ 120 - (hours * 10))
@@ -174,11 +130,7 @@ eval (SliderCallback hours) state =
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = 
   case state.data.currentStage of
-    RENTAL_SELECT_PACKAGE -> updateAndExit state{props{showShimmer = true, showPrimaryButton = not (DA.null state.data.rentalsQuoteList)}} $ DoRentalSearch state{props{showShimmer = true, showPrimaryButton = not (DA.null state.data.rentalsQuoteList)}}
-    RENTAL_SELECT_VARIANT -> do 
-      let selectedRentalQuote = fromMaybe (dummyRentalQuote) $ DA.head $ DA.filter (\item -> item.activeIndex == item.index) state.data.rentalsQuoteList
-      continue state { data { currentStage = RENTAL_CONFIRMATION }
-        , props { farePerKm = show (selectedRentalQuote.fareDetails.perExtraKmRate)}}
+    RENTAL_SELECT_PACKAGE -> updateAndExit state{props{showPrimaryButton = false}} $ DoRentalSearch state{props{showPrimaryButton = false}}
     RENTAL_CONFIRMATION -> exit $ OnRentalRideConfirm state
     _ -> continue state
 
@@ -257,7 +209,7 @@ genericBackPressed state = case state.data.currentStage of
   RENTAL_SELECT_VARIANT -> do 
     if state.props.showRateCard then continue state { props {showRateCard = false}}
     else exit $ GoToSelectPackage state { data { currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}, props { showPrimaryButton = true}}
-  RENTAL_CONFIRMATION -> continue state { data { currentStage = RENTAL_SELECT_VARIANT }}
+  RENTAL_CONFIRMATION -> exit $ GoToSelectVariant state
   _ -> continue state
 
 openDateTimePicker :: RentalScreenState -> Eval Action ScreenOutput RentalScreenState
@@ -283,20 +235,3 @@ incrementDecrementDistance isIncrement state =
       toUpdate = if isIncrement then (initialDistance < state.props.maxDistance) else (initialDistance > state.props.minDistance)
       updatedDistance = if toUpdate then initialDistance + (if isIncrement then 5 else (negate 5)) else initialDistance
   in state { data { rentalBookingData { baseDistance = updatedDistance }}}
-
-dummyFareQuoteDetails = {
-  baseFare : 0 ,
-  includedKmPerHr : 0 ,
-  perExtraKmRate : 0 ,
-  perExtraMinRate : 0 ,
-  perHourCharge : 0 ,
-  plannedPerKmRate : 0,
-  nightShiftCharge : 0
-}
-
-dummyRentalQuote = {
-  quoteDetails : ChooseVehicleController.config ,
-  index : 0 ,
-  activeIndex : 0 ,
-  fareDetails : dummyFareQuoteDetails
-}

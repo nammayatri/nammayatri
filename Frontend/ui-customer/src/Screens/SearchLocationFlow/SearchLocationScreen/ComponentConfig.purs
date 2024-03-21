@@ -20,6 +20,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.SeparatorView.View as SeparatorView
 import Components.LocationTagBarV2 as LTB
 import Components.InputView as InputView
+import Components.RateCard as RateCard
 import Components.MenuButton as MenuButton
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types as ST
@@ -35,11 +36,14 @@ import Prelude (show, (&&))
 import Language.Strings (getString)
 import Components.PopUpModal as PopUpModal
 import Language.Types (STR(..))
-import Common.Types.App (LazyCheck(..))
+import Language.Strings (getVarString)
+import Common.Types.App (LazyCheck(..), RateCardType(..))
 import PrestoDOM.Types.DomAttributes as PTD
 import Mobility.Prelude (boolToVisibility)
 import Screens 
 import JBridge as JB
+import ConfigProvider 
+import Data.Array as DA
 
 locationTagBarConfig :: ST.SearchLocationScreenState -> ST.GlobalProps -> LTB.LocationTagBarConfig
 locationTagBarConfig state globalProps = 
@@ -372,3 +376,49 @@ locUnserviceablePopUpConfig state = let
     }
   }
   in popUpConfig'
+
+primaryButtonRequestRideConfig :: ST.SearchLocationScreenState -> PrimaryButton.Config
+primaryButtonRequestRideConfig state =
+  let
+    config = PrimaryButton.config
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text =  "Book Rental Ride" 
+          , color = state.appConfig.primaryTextColor
+          , accessibilityHint = "Book Rental Ride : Button"
+          }
+        , cornerRadius = state.appConfig.primaryButtonCornerRadius
+        , margin = (Margin 16 16 16 16)
+        , id = "RequestRentalRideButton"
+        , background = state.appConfig.primaryBackground
+        , enableRipple = true
+        , rippleColor = Color.rippleShade
+        }
+  in
+    primaryButtonConfig'
+
+rentalRateCardConfig :: ST.QuotesList -> RateCard.Config
+rentalRateCardConfig state =
+  let config = RateCard.config
+      currency = getCurrency appConfig
+      rentalRateCardConfig' = config
+        { currentRateCardType = RentalRateCard
+        , title = getString RENTAL_PACKAGE
+        , primaryButtonConfig {
+            margin = MarginTop 16,
+            text = getString GOT_IT,
+            color = Color.blue800,
+            height = V 40,
+            cornerRadius = 8.0,
+            background = Color.white900,
+            visibility = VISIBLE
+          }
+        , additionalStrings = [
+            {key : "FINAL_FARE_DESCRIPTION", val : (getString FINAL_FARE_DESCRIPTION)}
+          , {key : "EXCESS_DISTANCE_CHARGE_DESCRIPTION", val : (getString EXCESS_DISTANCE_CHARGE_DESCRIPTION) <> " " <> currency <> (show state.fareDetails.perExtraKmRate) <> "/km."}
+          , {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ DA.singleton $ currency <> (show state.fareDetails.nightShiftCharge))}
+          , {key : "PARKING_FEES_AND_TOLLS_NOT_INCLUDED", val : (getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED)}
+          ]
+        }
+  in rentalRateCardConfig'

@@ -963,3 +963,31 @@ getMetroConfigFromCity city =
         , errorPopupTitle
         , showCancelButton
         }
+
+getVariantDescription :: String -> { text :: String, airConditioned :: Boolean}
+getVariantDescription variant = 
+  case variant of
+    "AUTO_RICKSHAW" -> { text : "Commute friendly", airConditioned : false}
+    "TAXI" ->{text : "Non-AC Taxi" , airConditioned : false}
+    "TAXI_PLUS" ->{text : "AC Taxi" , airConditioned : false}
+    "SEDAN" ->{text : "AC, Plush rides" , airConditioned : true}
+    "SUV" ->{text : "AC , Spacious rides" , airConditioned : true}
+    "HATCHBACK" ->{text : "Non-AC , Budget rides " , airConditioned : false}
+    _ ->{text : "Non-AC Taxi" , airConditioned : false}
+
+
+getVehicleName :: String -> String
+getVehicleName vaiant = 
+  case (getMerchant FunctionCall) of
+    YATRISATHI -> case vaiant of
+                    "TAXI" -> "Non AC Taxi"
+                    "SUV"  -> "AC SUV"
+                    _      -> "AC Cab"
+    _          -> case vaiant of
+                    "AUTO_RICKSHAW" -> "Auto Rickshaw"
+                    "TAXI" -> "Non-AC Taxi"
+                    "TAXI_PLUS" -> "AC Taxi"
+                    "SEDAN" -> "Comfy" 
+                    "SUV" -> "SUV"
+                    "HATCHBACK" -> "Eco" 
+                    _ -> "Non-AC Taxi"
