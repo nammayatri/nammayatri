@@ -335,3 +335,6 @@ policeBlue = "#2A5465"
 
 azureWhite :: Color
 azureWhite = "#D6EBF5"
+
+mountainFig :: Color 
+mountainFig = "#373B49"

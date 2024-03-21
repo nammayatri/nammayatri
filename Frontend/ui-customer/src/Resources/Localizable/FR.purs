@@ -1078,3 +1078,4 @@ getFR stringKey =
         I_NEED_HELP_WITH_MY_RECENT_RIDE -> "J'ai besoin d'aide avec mon trajet récent"
         CONTINUE_WITH_SAFETY_SETTINGS -> "Continuer avec les paramètres de sécurité"
         TAP_WHERE_TO_TO_BOOK_RIDE -> "Appuyez sur 'Où aller ?' pour réserver votre trajet !"
+        NAMMA_SERVICES -> "Nos Services"

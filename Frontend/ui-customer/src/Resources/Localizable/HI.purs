@@ -1075,3 +1075,4 @@ getHI stringKey =
         I_NEED_HELP_WITH_MY_RECENT_RIDE -> "मुझे मेरी हाल की सवारी में मदद चाहिए"
         CONTINUE_WITH_SAFETY_SETTINGS -> "सुरक्षा सेटिंग्स के साथ जारी रखें"
         TAP_WHERE_TO_TO_BOOK_RIDE -> "राइड बुक करने के लिए 'कहाँ जाना है?' टैप करें!"
+        NAMMA_SERVICES -> "हमारी सेवाएं"

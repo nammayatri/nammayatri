@@ -1077,3 +1077,4 @@ getBN stringKey =
         I_NEED_HELP_WITH_MY_RECENT_RIDE -> "আমার সাম্প্রতিক রাইডে সাহায্য প্রয়োজন"
         CONTINUE_WITH_SAFETY_SETTINGS -> "নিরাপত্তা সেটিংস চালিয়ে যান"
         TAP_WHERE_TO_TO_BOOK_RIDE -> "আপনার রাইড বুক করতে 'কোথায় যাবেন?' ট্যাপ করুন!"
+        NAMMA_SERVICES -> "আমাদের সেবাগুলি"
