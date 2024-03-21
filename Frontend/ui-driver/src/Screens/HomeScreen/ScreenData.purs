@@ -214,7 +214,10 @@ initData = {
         safetyAudioAutoPlay : false,
         vehicleNSPopup : false,
         bgLocationPopup : false,
-        specialZoneProps : { specialZonePopup : false, nearBySpecialZone : false, currentGeoHash : "" }
+        specialZoneProps : { specialZonePopup : false, nearBySpecialZone : false, currentGeoHash : "" },
+        missingPermission : Nothing,
+        onPermissionScreen : false,
+        enablePermissionAnim : false
     }
 }
 

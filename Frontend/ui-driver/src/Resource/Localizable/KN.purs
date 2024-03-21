@@ -1305,3 +1305,6 @@ getKN stringKey =
         ENABLE_LOC_PERMISSION_TO_GET_RIDES -> "ಸವಾರಿಗಳನ್ನು ಪಡೆಯಲು ಸ್ಥಳ ಅನುಮತಿಯನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ"
         ENABLE_LOC_PER_FROM_SETTINGS -> "ತಡೆರಹಿತ ಸವಾರಿಗಳನ್ನು ಪಡೆಯಲು ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ನಿಂದ ಸ್ಥಳ ಅನುಮತಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ."
         ENABLE_PERMISSION_STR -> "ಅನುಮತಿ ಸಕ್ರಿಯಗೊಳಿಸಿ"
+        TO_GET_YOU_RIDES -> "ನಿಮ್ಮ ಸವಾರಿಗಳನ್ನು ಪಡೆಯಲು, ನಮಗೆ ನಿಮ್ಮ ಸಾಧನದ ಸ್ಥಳದ ಅಗತ್ಯವಿದೆ."
+        ALLOW -> "ಅನುಮತಿಸು"
+        PERMISSIONS_REQUIRED -> "ಅನುಮತಿಗಳ ಅಗತ್ಯವಿದೆ"

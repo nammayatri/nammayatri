@@ -1306,3 +1306,6 @@ getBN stringKey =
         ENABLE_LOC_PERMISSION_TO_GET_RIDES -> "রাইড পেতে লোকেশন পারমিশন চালু করুন"
         ENABLE_LOC_PER_FROM_SETTINGS -> "অনুগ্রহ করে নন-স্টপ রাইডগুলি পেতে সেটিংস থেকে অবস্থানের অনুমতিগুলি সক্ষম করুন৷"
         ENABLE_PERMISSION_STR -> "অনুমতি সক্ষম করুন"
+        TO_GET_YOU_RIDES -> "আপনাকে রাইড করতে, আমাদের আপনার ডিভাইসের অবস্থান প্রয়োজন।"
+        ALLOW -> "অনুমতি দিন"
+        PERMISSIONS_REQUIRED -> "অনুমতি প্রয়োজন"

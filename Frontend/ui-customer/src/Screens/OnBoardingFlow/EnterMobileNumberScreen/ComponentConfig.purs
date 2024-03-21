@@ -28,6 +28,7 @@ import Engineering.Helpers.Utils (mobileNumberMaxLength)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -39,6 +40,7 @@ import Styles.Colors as Color
 import Common.Types.App
 import Storage(getValueToLocalStore, KeyStore(..))
 import Data.String as DS
+import Components.StepsHeaderModel as SHM
 
 mobileNumberButtonConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
 mobileNumberButtonConfig state = let 
@@ -197,11 +199,13 @@ genericHeaderConfig state = let
   in genericHeaderConfig'
   
 
-
-
-
-
-
+stepsHeaderData :: ST.EnterMobileNumberScreenState -> SHM.StepsHeaderModelState
+stepsHeaderData state = SHM.config {
+    activeIndex = if state.props.enterOTP then 1 else 0,
+    textArray = [(getString LETS_GET_YOU_TRIP_READY), (getString GOT_AN_OTP), (getString JUST_ONE_LAST_THING)],
+    backArrowVisibility = HU.showCarouselScreen FunctionCall,
+    primaryBackground = state.data.config.primaryBackground
+}
 
 
 

@@ -92,7 +92,7 @@ view push state =
             , padding (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom)
             , background Color.white900
             , onBackPressed push (const BackPressed)
-            ][ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (StepsHeaderModel.stepsHeaderData 2)
+            ][ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (stepsHeaderData state)
             , Anim.screenAnimation $
               scrollView
                 [ width MATCH_PARENT

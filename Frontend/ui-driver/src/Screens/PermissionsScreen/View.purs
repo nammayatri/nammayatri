@@ -38,9 +38,10 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.PermissionsScreen.Controller (Action(..), eval, ScreenOutput, getTitle, getDescription)
-import Screens.PermissionsScreen.ScreenData (Listtype, Permissions(..), permissionsList)
+import Screens.PermissionsScreen.ScreenData (Listtype, permissionsList)
 import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
 import Screens.Types as ST
+import Screens.Types (Permissions(..))
 import Styles.Colors as Color
 import Web.HTML.History (back)
 

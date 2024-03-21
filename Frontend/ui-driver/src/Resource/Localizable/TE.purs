@@ -1305,3 +1305,6 @@ getTE stringKey =
         ENABLE_LOC_PERMISSION_TO_GET_RIDES -> "రైడ్‌లను పొందడానికి లొకేషన్ అనుమతిని ఇవ్వండి"
         ENABLE_LOC_PER_FROM_SETTINGS -> "నాన్‌స్టాప్ రైడ్‌లను పొందడానికి దయచేసి సెట్టింగ్‌ల నుండి లొకేషన్ అనుమతులను ఇవ్వండి"
         ENABLE_PERMISSION_STR -> "అనుమతిని ప్రారంభించు"
+        TO_GET_YOU_RIDES -> "మీ రైడ్‌లను పొందడానికి, మాకు మీ పరికరం స్థానం అవసరం."
+        ALLOW -> "అనుమతించు"
+        PERMISSIONS_REQUIRED -> "అనుమతులు అవసరం"

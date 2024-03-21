@@ -1305,3 +1305,6 @@ getEN stringKey =
         ENABLE_LOC_PERMISSION_TO_GET_RIDES -> "Enable Location Permission to Get Rides"
         ENABLE_LOC_PER_FROM_SETTINGS -> "Please enable location permissions from  settings to get non-stop rides"
         ENABLE_PERMISSION_STR -> "Enable Permission"
+        TO_GET_YOU_RIDES -> "To get you rides, we require your device location."
+        ALLOW -> "Allow"
+        PERMISSIONS_REQUIRED -> "Permissions Required"

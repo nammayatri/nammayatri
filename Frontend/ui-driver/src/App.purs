@@ -64,6 +64,7 @@ import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScre
 import Screens.VehicleDetailsScreen.ScreenData as VehicleDetailsScreenData
 import Screens.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.WriteToUsScreen.ScreenData as WriteToUsScreenData
+import Screens.AskPermissionScreen.ScreenData as AskPermissionScreenData
 import Data.Maybe (Maybe(..))
 import MerchantConfig.Types (AppConfig(..))
 import Screens.Benefits.BenefitsScreen.ScreenData as BenefitsScreenData
@@ -121,6 +122,7 @@ newtype GlobalState = GlobalState {
   , benefitsScreen :: BenefitsScreenState
   , lmsVideoScreen :: LmsVideoScreenState
   , lmsQuizScreen :: LmsQuizScreenState
+  , askPermissionScreen :: AskPermissionScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -171,6 +173,7 @@ defaultGlobalState = GlobalState {
 , benefitsScreen : BenefitsScreenData.initData
 , lmsVideoScreen : LmsVideoScreenData.initData
 , lmsQuizScreen : LmsQuizScreenData.initData
+, askPermissionScreen : AskPermissionScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -230,6 +233,8 @@ data ScreenType =
   | RegistrationScreenStateType (RegistrationScreenState -> RegistrationScreenState)
   | LmsVideoScreenStateType (LmsVideoScreenState -> LmsVideoScreenState)
   | LmsQuizScreenStateType (LmsQuizScreenState -> LmsQuizScreenState)
+  | AskPermissionScreenStateType (AskPermissionScreenState -> AskPermissionScreenState)
+  
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -479,3 +484,5 @@ data LMS_QUIZ_SCREEN_OUTPUT = GO_TO_NEXT_QUESTION LmsQuizScreenState
                             | SELECT_LANGUAGE_FOR_QUESTION LmsQuizScreenState
                             | GO_TO_LMS_VIDEOS_SCREEN_FROM_QUIZ LmsQuizScreenState
                             | GO_TO_BENEFITS_SCREEN_FROM_QUIZ LmsQuizScreenState
+
+data ASK_PERMISSION_SCREEN_OUTPUT = HOME_FROM_PERMISSION

@@ -1305,3 +1305,6 @@ getTA stringKey =
         ENABLE_LOC_PERMISSION_TO_GET_RIDES -> "சவாரிகளைப் பெற இருப்பிட அனுமதியை இயக்கவும்"
         ENABLE_LOC_PER_FROM_SETTINGS -> "இடைவிடாத சவாரிகளைப் பெற, அமைப்புகளிலிருந்து இருப்பிட அனுமதிகளை இயக்கவும்"
         ENABLE_PERMISSION_STR -> "அனுமதியை இயக்கு"
+        TO_GET_YOU_RIDES -> "உங்கள் சவாரிகளைப் பெற, உங்கள் சாதனத்தின் இருப்பிடம் தேவை."
+        ALLOW -> "அனுமதி"
+        PERMISSIONS_REQUIRED -> "அனுமதிகள் தேவை"

@@ -147,7 +147,7 @@ homeScreen = do
     EarningsScreen updatedState showCoinsView -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ HOMESCREEN_NAV $ GoToEarningsScreen showCoinsView)
-    DriverStatsUpdate driverStats updatedState -> do       
+    DriverStatsUpdate driverStats updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ GOT_DRIVER_STATS driverStats)
     UpdateSpecialLocationList updatedState -> do

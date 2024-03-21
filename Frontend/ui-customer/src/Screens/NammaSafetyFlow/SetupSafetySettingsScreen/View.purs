@@ -44,10 +44,12 @@ import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.NammaSafetyFlow.Components.ContactsList as ContactsList
 import Screens.NammaSafetyFlow.SetupSafetySettingsScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.Types (NammaSafetyScreenState, NewContacts, RecordingState(..), SafetySetupStage(..))
 import Screens.Types as ST
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Components.StepsHeaderModel as SHM
 
 screen :: ST.NammaSafetyScreenState -> Screen Action ST.NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -226,12 +228,11 @@ settingUpContentView config state push =
           ]
       ]
 
-stepsHeaderData :: Int -> ST.StepsHeaderModelState
-stepsHeaderData currentIndex =
-  { activeIndex: currentIndex
-  , textArray: [ getString SET_UP_YOUR_PERSONAL_SAFETY_SETTINGS, getString SET_UP_YOUR_PERSONAL_SAFETY_SETTINGS, getString SET_UP_YOUR_PERSONAL_SAFETY_SETTINGS ]
-  , backArrowVisibility: true
-  , config: DC.config
+stepsHeaderData :: Int -> SHM.StepsHeaderModelState
+stepsHeaderData currentIndex = SHM.config{
+    activeIndex = currentIndex
+  , textArray = [ getString SET_UP_YOUR_PERSONAL_SAFETY_SETTINGS, getString SET_UP_YOUR_PERSONAL_SAFETY_SETTINGS, getString SET_UP_YOUR_PERSONAL_SAFETY_SETTINGS ]
+  , backArrowVisibility = true
   }
 
 type ContentViewDataType
