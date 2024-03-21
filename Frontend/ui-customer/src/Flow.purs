@@ -66,7 +66,7 @@ import JBridge as JB
 import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, zoneLabelIcon, transformGeoJsonFeature, getCityFromString, getMetroConfigFromAppConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
-import Log (printLog)
+import Log (logInfo)
 import MerchantConfig.Types (AppConfig(..), MetroConfig(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils as MU
@@ -192,8 +192,8 @@ import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.FollowRideScreen.Controller (deleteDismisedMockDrills)
 import Data.Map as Map
 import Foreign.Object (lookup)
-
 import Services.FlowCache as FlowCache
+import Data.HashMap as DHM
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -793,52 +793,63 @@ homeScreenFlow = do
         rideSearchFlow "NORMAL_FLOW"
 
     SEARCH_LOCATION input state -> do
-      let cityConfig = case state.props.isSource of
-                            Just false -> let config = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
-                                          in config{ geoCodeConfig{ strictBounds = true }}
-                            _          -> defaultCityConfig
-      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input ( state.props.sourceLat) ( state.props.sourceLong) (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "" cityConfig.geoCodeConfig state.props.rideSearchProps.autoCompleteType state.props.rideSearchProps.sessionId)
-      let event =
-            case state.props.isSource of
-              Just true -> "ny_user_auto_complete_api_trigger_src"
-              Just false -> "ny_user_auto_complete_api_trigger_dst"
-              Nothing -> ""
-      void $ lift $ lift $ liftFlow $ logEvent logField_ event
       let 
-        sortedByDistanceList = sortPredictionByDistance searchLocationResp.predictions
-        predictionList = getLocationList sortedByDistanceList
-        listToBeUpdated = 
-          if state.props.isSource == Just true 
-            then state.data.recentSearchs.predictionArray 
-            else state.data.destinationSuggestions
-        recentLists = 
-          updateLocListWithDistance 
-            listToBeUpdated
-            state.props.sourceLat 
-            state.props.sourceLong 
-            true 
-            state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist 
-        filteredRecentsList = filterRecentSearches recentLists predictionList
-        filteredPredictionList = differenceOfLocationLists predictionList filteredRecentsList
-
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{locationList =
-        map
-        (\item -> do
-                  let savedLocation  = getPrediction item state.data.savedLocations
-                      locIsPresentInSavedLoc = checkPrediction item state.data.savedLocations
-                  if not locIsPresentInSavedLoc then
-                    item {
-                      lat = savedLocation.lat,
-                      lon = savedLocation.lon,
-                      locationItemType = Just SAVED_LOCATION,
-                      postfixImageUrl = fetchImage FF_ASSET "ny_ic_fav_red" }
-                    else
-                      item {
-                        lat = item.lat,
-                        lon = item.lon,
-                        locationItemType = item.locationItemType,
-                        postfixImageUrl = fetchImage FF_ASSET "ny_ic_fav" }
-            ) ((filteredRecentsList) <> filteredPredictionList) }, props{searchLocationModelProps{isAutoComplete = true,  showLoader = false, findPlaceIllustration = false}}})
+        cityConfig = case state.props.isSource of
+                        Just false -> let config = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
+                                      in config{ geoCodeConfig{ strictBounds = true }}
+                        _          -> defaultCityConfig
+        event = case state.props.isSource of
+                  Just true -> "ny_user_auto_complete_api_trigger_src"
+                  Just false -> "ny_user_auto_complete_api_trigger_dst"
+                  Nothing -> ""
+      void $ lift $ lift $ liftFlow $ logEvent logField_ event
+      case DHM.lookup input state.props.rideSearchProps.cachedPredictions of
+        Just locationList' -> do
+          logInfo "auto_complete_cached_predictions" input
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{locationList = locationList'}, props{searchLocationModelProps{isAutoComplete = true, showLoader = false, findPlaceIllustration = false}}})
+        Nothing -> do
+          logInfo "auto_complete_search_predictions" input
+          (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input state.props.sourceLat state.props.sourceLong (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "" cityConfig.geoCodeConfig state.props.rideSearchProps.autoCompleteType state.props.rideSearchProps.sessionId)
+          let 
+            sortedByDistanceList = sortPredictionByDistance searchLocationResp.predictions
+            predictionList = getLocationList sortedByDistanceList
+            listToBeUpdated = 
+              if state.props.isSource == Just true 
+                then state.data.recentSearchs.predictionArray 
+                else state.data.destinationSuggestions
+            recentLists = 
+              updateLocListWithDistance 
+                listToBeUpdated
+                state.props.sourceLat 
+                state.props.sourceLong 
+                true 
+                state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist 
+            filteredRecentsList = filterRecentSearches recentLists predictionList
+            filteredPredictionList = differenceOfLocationLists predictionList filteredRecentsList
+            filteredLocationList = 
+              map
+                (\item -> do
+                          let savedLocation  = getPrediction item state.data.savedLocations
+                              locIsPresentInSavedLoc = checkPrediction item state.data.savedLocations
+                          if not locIsPresentInSavedLoc then
+                            item {
+                              lat = savedLocation.lat,
+                              lon = savedLocation.lon,
+                              locationItemType = Just SAVED_LOCATION,
+                              postfixImageUrl = fetchImage FF_ASSET "ny_ic_fav_red" }
+                            else
+                              item {
+                                lat = item.lat,
+                                lon = item.lon,
+                                locationItemType = item.locationItemType,
+                                postfixImageUrl = fetchImage FF_ASSET "ny_ic_fav" }
+                ) (filteredRecentsList <> filteredPredictionList)
+            cachedPredictions = DHM.insert input filteredLocationList state.props.rideSearchProps.cachedPredictions
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data {locationList = filteredLocationList}
+                                                                      , props{ searchLocationModelProps{ isAutoComplete = true
+                                                                                                      , showLoader = false
+                                                                                                      , findPlaceIllustration = false }
+                                                                             , rideSearchProps { cachedPredictions = cachedPredictions } }})
       homeScreenFlow
     GET_QUOTES state -> do
           setValueToLocalStore AUTO_SELECTING "false"
