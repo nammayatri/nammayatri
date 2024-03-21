@@ -661,3 +661,29 @@ showDatePicker push action= do
   let (TimePicker timeResp hour minute) = timePicker
   liftEffect $ push $ action dateResp year month day timeResp hour minute
   
+type CircleConfig = {
+    id :: String,
+    centerLat :: Number,
+    centerLon :: Number,
+    radius :: Int,
+    strokeWidth :: Int,
+    stroke :: String,
+    fillColor :: String
+}
+
+circleConfig :: CircleConfig
+circleConfig = {
+  id : "",
+  centerLat : 0.0,
+  centerLon : 0.0,
+  radius : 0,
+  strokeWidth : 0,
+  stroke : "",
+  fillColor : ""
+}
+
+-- LatLng dummyCenter = new LatLng(12.84521, 77.66011); // Dummy center coordinates
+-- double dummyRadius = 10; // Dummy radius in meters
+-- int dummyStrokeColor = Color.BLUE; // Dummy stroke color
+-- int dummyFillColor = Color.argb(70, 0, 0, 255); // Dummy fill color
+-- drawOrUpdateCircle("circle1", dummyCenter, dummyRadius, dummyStrokeColor, dummyFillColor);
