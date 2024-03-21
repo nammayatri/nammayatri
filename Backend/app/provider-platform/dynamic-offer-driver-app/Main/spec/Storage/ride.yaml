@@ -1,0 +1,148 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Location: Domain.Types.Location
+  LatLong: Kernel.External.Maps
+  Centesimal: Kernel.Types.Common
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  Money: Kernel.Types.Common
+  BaseUrl: Kernel.Types.Common
+  VehicleVariant: Domain.Types.VehicleVariant
+  Booking: Domain.Types.Booking
+  Person: Domain.Types.Person
+  FareParameters: Domain.Types.FareParameters
+  DriverGoHomeRequest: Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
+  Client: Domain.Types.Client
+
+Ride:
+  tableName: ride
+  derives: "Generic,Show,Eq,ToJSON,FromJSON"
+  types:
+    OdometerReading:
+      value: Centesimal
+      fileId: Maybe (Id MediaFile)
+      derive: "Eq"
+    RideStatus:
+      enum: "NEW,INPROGRESS,COMPLETED,CANCELLED"
+      derive: "'ListInstance,HttpInstance"
+  fields:
+    id: Id Ride
+    bookingId: Id Booking
+    shortId: ShortId Ride
+    clientId: Maybe (Id Client)
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Id MerchantOperatingCity
+    status: RideStatus
+    driverId: Id Person
+    otp: Text
+    endOtp: Maybe Text
+    trackingUrl: BaseUrl
+    fare: Maybe Money
+    traveledDistance: HighPrecMeters
+    chargeableDistance: Maybe Meters
+    driverArrivalTime: Maybe UTCTime
+    tripStartTime: Maybe UTCTime
+    tripEndTime: Maybe UTCTime
+    tripStartPos: Maybe LatLong
+    tripEndPos: Maybe LatLong
+    fromLocation: Location
+    toLocation: Maybe Location
+    fareParametersId: Maybe (Id FareParameters)
+    distanceCalculationFailed: Maybe Bool
+    pickupDropOutsideOfThreshold: Maybe Bool
+    startOdometerReading: Maybe OdometerReading
+    endOdometerReading: Maybe OdometerReading
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    driverDeviatedFromRoute: Maybe Bool
+    numberOfSnapToRoadCalls: Maybe Int
+    numberOfOsrmSnapToRoadCalls: Maybe Int
+    numberOfDeviation: Maybe Bool
+    uiDistanceCalculationWithAccuracy: Maybe Int
+    uiDistanceCalculationWithoutAccuracy: Maybe Int
+    isFreeRide: Maybe Bool
+    driverGoHomeRequestId: Maybe (Id DriverGoHomeRequest)
+    safetyAlertTriggered: Bool
+    enableFrequentLocationUpdates: Maybe Bool
+
+  sqlType:
+    id: character(36)
+    bookingId: character(36)
+    status: character varying(255)
+    driverId: character(36)
+    otp: character(4)
+    trackingUrl: character varying(255)
+    traveledDistance: double precision
+    fareParametersId: character(36)
+    merchantId: character(36)
+    merchantOperatingCityId: character(36)
+    startOdometerReadingValue: double precision
+    endOdometerReadingValue: double precision
+    startOdometerReadingFileId: character varying(36)
+    endOdometerReadingFileId: character varying(36)
+
+
+  default:
+    traveledDistance: '0'
+    tripStartTime: 'CURRENT_TIMESTAMP'
+    tripEndTime: 'CURRENT_TIMESTAMP'
+    safetyAlertTriggered: 'false'
+
+  beamFields:
+    toLocation: {}
+    fromLocation: {}
+    tripStartPos:
+      tripStartLat: Maybe Double
+      tripStartLon: Maybe Double
+    tripEndPos:
+      tripEndLat: Maybe Double
+      tripEndLon: Maybe Double
+    startOdometerReading:
+      startOdometerReadingValue: Maybe Centesimal
+      startOdometerReadingFileId:  Maybe Text
+    endOdometerReading:
+      endOdometerReadingValue: Maybe Centesimal
+      endOdometerReadingFileId:  Maybe Text
+
+  fromTType:
+    toLocation: Storage.Queries.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
+    fromLocation: Storage.Queries.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId|IM
+    trackingUrl: Kernel.Prelude.parseBaseUrl|IM
+    merchantOperatingCityId: Storage.Queries.Transformers.Ride.getMerchantOperatingCityId bookingId merchantId|IM
+    tripStartPos: Storage.Queries.Transformers.Ride.mkLatLong|I
+    tripEndPos: Storage.Queries.Transformers.Ride.mkLatLong|I
+    startOdometerReading: Storage.Queries.Transformers.Ride.mkOdometerReading|I
+    endOdometerReading: Storage.Queries.Transformers.Ride.mkOdometerReading|I
+
+  toTType:
+    trackingUrl: Kernel.Prelude.showBaseUrl|I
+    tripStartLat: Kernel.Prelude.fmap (.lat)|I
+    tripStartLon: Kernel.Prelude.fmap (.lon)|I
+    tripEndLat: Kernel.Prelude.fmap (.lat)|I
+    tripEndLon: Kernel.Prelude.fmap (.lon)|I
+    startOdometerReadingValue: Kernel.Prelude.fmap Domain.Types.Ride.value|I
+    startOdometerReadingFileId: getStartOdometerReadingFileId
+    endOdometerReadingValue: Kernel.Prelude.fmap Domain.Types.Ride.value|I
+    endOdometerReadingFileId: getEndOdometerReadingFileId
+    merchantOperatingCityId: Kernel.Prelude.Just $ Kernel.Types.Id.getId|I
+
+  beamType:
+    trackingUrl: Text
+    merchantOperatingCityId: Maybe Text
+
+  constraints:
+    id: PrimaryKey
+    bookingId: SecondaryKey
+    driverId: SecondaryKey
+    driverGoHomeRequestId: SecondaryKey
+
+  queries: {}
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

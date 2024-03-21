@@ -1,6 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.ride DROP CONSTRAINT IF EXISTS ride_driver_id_fkey;
-ALTER TABLE atlas_driver_offer_bpp.ride DROP CONSTRAINT IF EXISTS ride_vehicle_id_fkey;
-
 CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.ride_details (
     id character(36) PRIMARY KEY NOT NULL,
     driver_name varchar (255),

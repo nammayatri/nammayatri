@@ -30,6 +30,7 @@ import qualified Data.HashMap.Strict as HM
 import Data.List (sortBy)
 import Data.Ord
 import qualified Domain.Action.Beckn.OnTrack as OnTrack
+import Domain.Types.Booking.API (makeRideAPIEntity)
 import qualified Domain.Types.Booking.Type as DB
 import Domain.Types.Location (LocationAPIEntity, makeLocationAPIEntity)
 import qualified Domain.Types.Location as DL

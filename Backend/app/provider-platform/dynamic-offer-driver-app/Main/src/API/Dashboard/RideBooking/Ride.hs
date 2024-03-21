@@ -57,7 +57,7 @@ rideStart merchantShortId opCity reqRideId Common.StartRideReq {point, odometerR
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let merchantId = merchant.id
   merchantOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let odometer = (\value -> DRide.OdometerReading value Nothing) <$> odometerReadingValue
+  let odometer = (\value -> DRide.OdometerReading Nothing value) <$> odometerReadingValue
   let dashboardReq = SHandler.DashboardStartRideReq {point, merchantId, merchantOperatingCityId, odometer}
   shandle <- SHandler.buildStartRideHandle merchantId merchantOperatingCityId
   SHandler.dashboardStartRide shandle rideId dashboardReq
@@ -68,7 +68,7 @@ rideEnd merchantShortId opCity reqRideId Common.EndRideReq {point, odometerReadi
   merchantOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let merchantId = merchant.id
-  let odometer = (\value -> DRide.OdometerReading value Nothing) <$> odometerReadingValue
+  let odometer = (\value -> DRide.OdometerReading Nothing value) <$> odometerReadingValue
   let dashboardReq = EHandler.DashboardEndRideReq {point, merchantId, merchantOperatingCityId, odometer}
   shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId
   EHandler.dashboardEndRide shandle rideId dashboardReq

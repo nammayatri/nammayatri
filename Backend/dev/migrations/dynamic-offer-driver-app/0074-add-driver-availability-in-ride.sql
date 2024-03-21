@@ -1,6 +1,3 @@
--- Add driver_arrival_time column in ride table
-ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN driver_arrival_time timestamp with time zone;
-
 -- Update fare policy table to include waiting charges
 ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN waiting_charge_per_min double precision;
 

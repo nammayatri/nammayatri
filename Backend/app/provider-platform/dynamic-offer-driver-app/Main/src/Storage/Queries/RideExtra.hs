@@ -1,20 +1,8 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
 {-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.Ride where
+module Storage.Queries.RideExtra where
 
 import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
@@ -58,7 +46,7 @@ import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
-import qualified Storage.Beam.Ride.Table as BeamR
+import qualified Storage.Beam.Ride as BeamR
 import qualified Storage.Beam.RideDetails as BeamRD
 import qualified Storage.Beam.RiderDetails as BeamRDR
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -67,6 +55,7 @@ import qualified Storage.Queries.Booking as QBooking
 import Storage.Queries.Instances.DriverInformation ()
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
+import Storage.Queries.OrphanInstances.Ride ()
 import Storage.Queries.RideDetails ()
 import Storage.Queries.RiderDetails ()
 import Tools.Error
@@ -737,93 +726,3 @@ totalEarningsByFleetOwnerPerVehicleAndDriver fleetId vehicleNumber driverId = do
     Right res' -> mapM fromTType' res'
     Left _ -> pure []
   pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
-
-instance FromTType' BeamR.Ride Ride where
-  fromTType' BeamR.RideT {..} = do
-    mappings <- QLM.findByEntityId id
-    (fromLocationMapping, mbToLocationMapping) <-
-      if null mappings
-        then do
-          void $ QBooking.findById (Id bookingId)
-          createMapping bookingId id (Id <$> merchantId) (Id <$> merchantOperatingCityId)
-        else do
-          fromLocationMapping' <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
-          mbToLocationMapping' <- QLM.getLatestEndByEntityId id
-          return (fromLocationMapping', mbToLocationMapping')
-
-    fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
-    toLocation <- maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
-
-    tUrl <- parseBaseUrl trackingUrl
-    merchant <- case merchantId of
-      Nothing -> do
-        booking <- QBooking.findById (Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
-        CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-      Just mId -> CQM.findById (Id mId) >>= fromMaybeM (MerchantNotFound mId)
-    merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant Nothing
-
-    let startOdometerReading = startOdometerReadingValue <&> (\value -> OdometerReading value (Id <$> startOdometerReadingFileId))
-        endOdometerReading = endOdometerReadingValue <&> (\value -> OdometerReading value (Id <$> endOdometerReadingFileId))
-    pure $
-      Just
-        Ride
-          { id = Id id,
-            bookingId = Id bookingId,
-            shortId = ShortId shortId,
-            merchantId = Id <$> merchantId,
-            clientId = Id <$> clientId,
-            merchantOperatingCityId = merchantOpCityId,
-            driverId = Id driverId,
-            tripStartPos = LatLong <$> tripStartLat <*> tripStartLon,
-            tripEndPos = LatLong <$> tripEndLat <*> tripEndLon,
-            fareParametersId = Id <$> fareParametersId,
-            driverGoHomeRequestId = Id <$> driverGoHomeRequestId,
-            trackingUrl = tUrl,
-            safetyAlertTriggered = safetyAlertTriggered,
-            ..
-          }
-
-instance ToTType' BeamR.Ride Ride where
-  toTType' Ride {..} =
-    BeamR.RideT
-      { BeamR.id = getId id,
-        BeamR.bookingId = getId bookingId,
-        BeamR.shortId = getShortId shortId,
-        BeamR.merchantId = getId <$> merchantId,
-        BeamR.clientId = getId <$> clientId,
-        BeamR.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
-        BeamR.status = status,
-        BeamR.driverId = getId driverId,
-        BeamR.otp = otp,
-        BeamR.endOtp = endOtp,
-        BeamR.trackingUrl = showBaseUrl trackingUrl,
-        BeamR.fare = fare,
-        BeamR.traveledDistance = traveledDistance,
-        BeamR.chargeableDistance = chargeableDistance,
-        BeamR.driverArrivalTime = driverArrivalTime,
-        BeamR.tripStartTime = tripStartTime,
-        BeamR.tripEndTime = tripEndTime,
-        BeamR.tripStartLat = lat <$> tripStartPos,
-        BeamR.tripEndLat = lat <$> tripEndPos,
-        BeamR.tripStartLon = lon <$> tripStartPos,
-        BeamR.tripEndLon = lon <$> tripEndPos,
-        BeamR.startOdometerReadingValue = startOdometerReading <&> (.value),
-        BeamR.startOdometerReadingFileId = getId <$> (startOdometerReading >>= (.fileId)),
-        BeamR.endOdometerReadingValue = endOdometerReading <&> (.value),
-        BeamR.endOdometerReadingFileId = getId <$> (endOdometerReading >>= (.fileId)),
-        BeamR.pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
-        BeamR.fareParametersId = getId <$> fareParametersId,
-        BeamR.distanceCalculationFailed = distanceCalculationFailed,
-        BeamR.createdAt = createdAt,
-        BeamR.updatedAt = updatedAt,
-        BeamR.driverDeviatedFromRoute = driverDeviatedFromRoute,
-        BeamR.numberOfSnapToRoadCalls = numberOfSnapToRoadCalls,
-        BeamR.numberOfOsrmSnapToRoadCalls = numberOfOsrmSnapToRoadCalls,
-        BeamR.numberOfDeviation = numberOfDeviation,
-        BeamR.uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
-        BeamR.uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
-        BeamR.isFreeRide = isFreeRide,
-        BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId,
-        BeamR.safetyAlertTriggered = safetyAlertTriggered,
-        BeamR.enableFrequentLocationUpdates = enableFrequentLocationUpdates
-      }

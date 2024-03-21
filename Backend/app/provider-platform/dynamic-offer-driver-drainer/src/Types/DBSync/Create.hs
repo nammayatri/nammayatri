@@ -78,7 +78,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Quote as Quote
 import qualified "dynamic-offer-driver-app" Storage.Beam.Rating as Rating
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as RegistrationToken
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistryMapFallback as RegistryMapFallback
-import qualified "dynamic-offer-driver-app" Storage.Beam.Ride.Table as Ride
+import qualified "dynamic-offer-driver-app" Storage.Beam.Ride as Ride
 import qualified "dynamic-offer-driver-app" Storage.Beam.RideDetails as RideDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest as SearchRequest

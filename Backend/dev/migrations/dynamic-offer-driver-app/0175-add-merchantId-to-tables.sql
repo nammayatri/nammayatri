@@ -6,8 +6,6 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN merchant
 
 UPDATE atlas_driver_offer_bpp.search_request_for_driver SET merchant_id = NULL;
 
-ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN merchant_id character(36) REFERENCES atlas_driver_offer_bpp.merchant (id);
-
 UPDATE atlas_driver_offer_bpp.ride SET merchant_id = NULL;
 
 

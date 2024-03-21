@@ -52,18 +52,10 @@ ALTER TABLE atlas_driver_offer_bpp.ride_booking ADD COLUMN quote_id character(36
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN start_time timestamp with time zone NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN start_time timestamp with time zone NOT NULL;
 
-CREATE TABLE atlas_driver_offer_bpp.ride (
-id character(36) NOT NULL PRIMARY KEY,
-booking_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.ride_booking(id),
-short_id character varying(36) NOT NULL,
-status character varying(255) NOT NULL,
-driver_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.person(id),
-vehicle_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.vehicle(id),
-otp character(4) NOT NULL,
-tracking_url character varying(255) NOT NULL,
-fare double precision,
-traveled_distance double precision DEFAULT 0 NOT NULL,
-created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
+-- ride
+ALTER TABLE atlas_driver_offer_bpp.ride
+  ALTER COLUMN fare SET DATA TYPE integer
+  USING round(fare);
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD CONSTRAINT fk_booking_id FOREIGN KEY (booking_id) REFERENCES atlas_driver_offer_bpp.ride_booking(id);
 ALTER TABLE atlas_driver_offer_bpp.ride OWNER TO atlas_driver_offer_bpp_user;
