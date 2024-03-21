@@ -196,7 +196,7 @@ confirmLocationView push state = let
                       [ width (V 20)
                       , height (V 20)
                       , margin (MarginRight 6)
-                      , imageWithFallback $ fetchImage FF_ASSET tagConfig.icon
+                      , imageWithFallback $ fetchImage FF_COMMON_ASSET tagConfig.icon
                       ]
                     , textView
                       [ width if os == "IOS" && state.data.confirmLocCategory == AUTO_BLOCKED then (V 230) else WRAP_CONTENT

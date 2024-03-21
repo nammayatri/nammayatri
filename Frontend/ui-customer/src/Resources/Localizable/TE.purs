@@ -1054,3 +1054,6 @@ getTE stringKey =
     CONTINUE_SEARCH_WITH_NO_TIP -> "టిప్ లేకుండా శోధనను కొనసాగించు"
     SEARCHING_WITH_NO_TIP -> "టిప్ లేకుండా శోధన కొనసాగుతోంది"
     SEARCH_AGAIN -> "మళ్ళీ శోధించు"
+    IS_AT_PICKUP_LOCATION -> "పికప్ లొకేషన్‌లో ఉంది"
+    GO_TO_SELECTED_SPOT_FOR_PICKUP -> "పికప్‌కు ఎంపికచేసిన స్థానంకు వెళ్ళండి"
+    SELECT_POPULAR_SPOT_FOR_HASSLE_FREE_PICKUP -> "అసంకేతంగా పికప్‌కు జనప్రియమైన స్థానం ఎంచుకోండి"

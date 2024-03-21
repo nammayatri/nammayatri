@@ -1042,3 +1042,6 @@ getKN stringKey =
         CONTINUE_SEARCH_WITH_NO_TIP -> "ಯಾವುದೇ ಟಿಪ್ ಇಲ್ಲದೆ ಹುಡುಕಾಟವನ್ನು ಮುಂದುವರಿಸಿ"
         SEARCHING_WITH_NO_TIP -> "ಯಾವುದೇ ಟಿಪ್ ಇಲ್ಲದೆ ಹುಡುಕಲಾಗುತ್ತಿದೆ"
         SEARCH_AGAIN -> "ಮತ್ತೆ ಹುಡುಕಿ"
+        IS_AT_PICKUP_LOCATION -> "ಪಿಕಪ್ ಸ್ಥಳದಲ್ಲಿದೆ"
+        GO_TO_SELECTED_SPOT_FOR_PICKUP -> "ಪಿಕಪ್‌ಗಾಗಿ ಆಯ್ಕೆಮಾಡಿದ ಸ್ಥಳಕ್ಕೆ ಹೋಗಿ"
+        SELECT_POPULAR_SPOT_FOR_HASSLE_FREE_PICKUP -> "ತೊಂದರೆ ರಹಿತ ಪಿಕಪ್ ಗಾಗಿ ಜನಪ್ರಿಯ ಸ್ಥಳವನ್ನು ಆಯ್ಕೆ ಮಾಡಿ"

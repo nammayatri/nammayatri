@@ -1045,3 +1045,6 @@ getFR stringKey =
         DRIVER_IS_ON_THE_WAY -> "Votre chauffeur est en route"
         DRIVER_IS_WAITING_AT_PICKUP -> "Votre chauffeur attend au moment du ramassage"
 
+        IS_AT_PICKUP_LOCATION -> "est au lieu de ramassage"
+        GO_TO_SELECTED_SPOT_FOR_PICKUP -> "Aller au lieu sélectionné pour le ramassage"
+        SELECT_POPULAR_SPOT_FOR_HASSLE_FREE_PICKUP -> "Sélectionnez un endroit populaire pour un ramassage sans tracas"

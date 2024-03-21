@@ -841,9 +841,15 @@ specialZoneTagConfig zoneType =
       , infoPopUpConfig : Nothing
       , backgroundColor : Color.blue800
       }
+    HOTSPOT onSpot ->
+      { icon : if onSpot then "ny_ic_zone_walk" else "ny_ic_select_spot"
+      , text : getString $ if onSpot then GO_TO_SELECTED_SPOT_FOR_PICKUP else SELECT_POPULAR_SPOT_FOR_HASSLE_FREE_PICKUP
+      , infoPopUpConfig : Nothing
+      , backgroundColor : Color.blue800
+      }
     _ ->
       { icon : "ny_ic_zone_walk"
-      , text : getString GO_TO_SELECTED_PICKUP_SPOT
+      , text : getString GO_TO_SELECTED_SPOT_FOR_PICKUP
       , infoPopUpConfig : Nothing
       , backgroundColor : Color.blue800
       }

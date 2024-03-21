@@ -2115,7 +2115,7 @@ specialZoneInfoPopupConfig infoConfig = let
         width = (V $ JB.getWidthFromPercent 75)
       }
     , imageConfig {
-        imageUrl = fetchImage FF_ASSET infoConfig.icon,
+        imageUrl = fetchImage FF_COMMON_ASSET infoConfig.icon,
         height = V 130,
         width = V 130,
         padding = Padding 0 2 2 0
