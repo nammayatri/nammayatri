@@ -20,6 +20,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -27,6 +29,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
@@ -61,6 +64,7 @@ import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
+import in.juspay.mobility.app.dataModel.VariantConfig;
 import in.juspay.mobility.common.services.TLSSocketFactory;
 
 
@@ -69,6 +73,8 @@ public class RideRequestUtils {
     private final static String RIDE_REQUEST_CHANNEL = "in.juspay.mobility.riderequest";
     private final static int rideReqNotificationReqCode = 6032023;
     private static final String LOG_TAG = "RideRequestUtils";
+    private static final String KOLKATA = "kolkata";
+    private static final String KOCHI = "kochi";
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
 
     public static Boolean driverRespondApi(String searchRequestId, double offeredPrice, boolean isAccept, Context context, int slotNumber) {
@@ -473,6 +479,77 @@ public class RideRequestUtils {
         } catch (NumberFormatException e) {
             Log.e("ParseInt Error", e.toString());
             return "";
+        }
+    }
+
+    public static String getCityWithFallback (Context context){
+        SharedPreferences sharedPref = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String city = sharedPref.getString("DRIVER_LOCATION", "null").toLowerCase();
+        if (!city.equals("null")){
+            return city;
+        }else {
+            // fallback
+            String buildType = context.getResources().getString(R.string.service);
+            if (buildType.equals("yatrisathiprovider")){
+                return KOLKATA;
+            } else if (buildType.equals("yatriprovider")) {
+                return KOCHI;
+            }else {
+                return city;
+            }
+        }
+
+    }
+
+    public static VariantConfig getVariantConfig(String myVariant, Context context) throws JSONException {
+        String city = getCityWithFallback(context);
+        String allCitiesVariant = remoteConfigs.getString("variant_config");
+        JSONObject allCitiesVariantOb = new JSONObject(allCitiesVariant);
+        
+        if (allCitiesVariantOb.has(city)){
+            JSONObject myCityVariantConfig = allCitiesVariantOb.getJSONObject(city);
+             if (myCityVariantConfig.has(myVariant)){
+                 JSONObject myVariantConfig = myCityVariantConfig.getJSONObject(myVariant);
+                 String text = myVariantConfig.optString("text", "");
+                 String textColor = myVariantConfig.optString("textColor", "");
+                 String background = myVariantConfig.optString("background", "");
+                 String icon = myVariantConfig.optString("icon", "");
+                 boolean visible = myVariantConfig.optBoolean("visible", false);
+                 return new VariantConfig(text, textColor, background, icon, visible);
+             }
+        }
+        return new VariantConfig("","","","",false);
+    }
+
+    public static int dpToPx(int dp, Context context) {
+        float density = context.getResources().getDisplayMetrics().density;
+        return Math.round(dp * density);
+    }
+
+    private static GradientDrawable getGradientDrawable(String background, Context context){
+        // Create a new shape drawable
+        GradientDrawable shapeDrawable = new GradientDrawable();
+        shapeDrawable.setShape(GradientDrawable.RECTANGLE);
+        int cornerVal = dpToPx(13, context );
+        shapeDrawable.setCornerRadii(new float[]{cornerVal,cornerVal,cornerVal,cornerVal,cornerVal,cornerVal,cornerVal,cornerVal}); // setting corners
+        shapeDrawable.setStroke(1, Color.parseColor(background)); // setting stroke color and width
+        shapeDrawable.setColor(Color.parseColor(background)); // setting solid color
+        return shapeDrawable;
+    }
+
+    public static boolean handleVariant(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context){
+        String vehicleVariant = model.getRequestedVehicleVariant();
+        try {
+            VariantConfig variantConfig = RideRequestUtils.getVariantConfig(vehicleVariant, context);
+            holder.rideTypeTag.setBackground(getGradientDrawable(variantConfig.getBackground(), context));
+            holder.rideTypeText.setText(variantConfig.getText());
+            holder.rideTypeImage.setVisibility(variantConfig.getIcon().isEmpty() ? View.GONE : View.VISIBLE);
+            holder.rideTypeImage.setImageURI(Uri.parse("android.resource://"+ context.getPackageName() +"/drawable/"+ variantConfig.getIcon()));
+            holder.rideTypeText.setTextColor(Color.parseColor(variantConfig.getTextColor()));
+            return variantConfig.isVisible();
+        }catch (Exception e){
+            holder.rideTypeTag.setVisibility(View.GONE);
+            return false;
         }
     }
 }

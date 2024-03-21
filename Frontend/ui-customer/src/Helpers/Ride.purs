@@ -31,10 +31,9 @@ import Data.Array (any, null, head, length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust, maybe', maybe)
 import Screens.HomeScreen.ScreenData (dummyRideBooking, initData) as HSD
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getSpecialTag)
-import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Data.Lens ((^.))
 import Accessor
-import Screens.Types (Stage(..), SearchResultType(..), PopupType(..), FlowStatusData(..), TipViewData(..))
+import Screens.Types (Stage(..), SearchResultType(..), PopupType(..), FlowStatusData(..))
 import Engineering.Helpers.Commons (liftFlow, convertUTCtoISC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
@@ -86,7 +85,7 @@ checkRideStatus rideAssigned = do
             void $ pure $ logEventWithTwoParams logField_ "ny_active_ride_with_idle_state" "status" status "bookingId" resp.id
           modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
           updateLocalStage rideStatus
-          maybe' (\_ -> pure unit) updateCity (getFlowStatusData "LazyCheck")
+          maybe' (\_ -> pure unit) updateFlowStatusData (getFlowStatusData "LazyCheck")
           let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
               (RideBookingDetails contents) = bookingDetails.contents
               otpCode = contents.otpCode
@@ -178,8 +177,12 @@ checkRideStatus rideAssigned = do
     Left err -> updateLocalStage HomeScreen
   if not (any isLocalStageOn [RideAccepted, RideStarted]) then removeChatService "" else pure unit
   where 
-    updateCity :: FlowStatusData -> FlowBT String Unit
-    updateCity (FlowStatusData flowStatusData) = modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = getCityNameFromCode flowStatusData.source.city}})
+    updateFlowStatusData :: FlowStatusData -> FlowBT String Unit
+    updateFlowStatusData (FlowStatusData flowStatusData) = 
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{ city = getCityNameFromCode flowStatusData.source.city
+                                                                              , locateOnMapProps{ sourceLocationName = flowStatusData.source.address
+                                                                                                , sourceGeoJson = flowStatusData.sourceGeoJson
+                                                                                                , sourceGates = flowStatusData.sourceGates } }})
         
 
 removeChatService :: String -> FlowBT String Unit

@@ -48,10 +48,10 @@ import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromSave
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.ScreenData (dummyAddress)
 import Screens.HomeScreen.Transformer (checkShowDistance)
-import Screens.Types (AddNewAddressScreenState, CardType(..), Location, LocationListItemState, DistInfo, LocItemType(..), LocationItemType(..))
+import Screens.Types (AddNewAddressScreenState, CardType(..), LocationListItemState, DistInfo, LocItemType(..), LocationItemType(..))
 import Services.API (AddressComponents, Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
-import JBridge (fromMetersToKm)
+import JBridge (fromMetersToKm, Location)
 import Common.Resources.Constants (pickupZoomLevel)
 
 instance showAction :: Show Action where
@@ -159,7 +159,7 @@ eval (ClearEditText) state = do
   void $ pure $ requestKeyboardShow (getNewIDWithTag "SavedLocationEditText")
   continue state{props{isSearchedLocationServiceable = true}}
 
-eval SetLocationOnMap state = do 
+eval SetLocationOnMap state = do
   let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "AddAddressPin"}
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
@@ -169,12 +169,15 @@ eval SetLocationOnMap state = do
   continue newState
 
 eval (UpdateLocation key lat lon) state = do
+  let latitude = fromMaybe 0.0 (Number.fromString lat)
+      longitude = fromMaybe 0.0 (Number.fromString lon)
   case key of
     "LatLon" -> do
-      exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))
-    _ ->  if DA.length (DA.filter( \item -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
-            exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))
-          else continue state
+      let selectedSpot = DA.head (DA.filter (\spots -> (getDistanceBwCordinates latitude longitude spots.lat spots.lng) * 1000.0 < 1.0 ) state.data.nearByPickUpPoints)
+      exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} latitude longitude
+    _ ->  case DA.head (DA.filter(\item -> item.place == key) state.data.nearByPickUpPoints) of
+            Just spot -> exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} spot.lat spot.lng
+            Nothing -> continue state
 
 eval (UpdateCurrLocName lat lon name) state = do
   continue state {data{locSelectedFromMap = name, latSelectedFromMap = (fromMaybe 0.0 (Number.fromString lat)), lonSelectedFromMap = (fromMaybe 0.0 (Number.fromString lon))}}
@@ -445,6 +448,7 @@ constructLatLong lat lng _ =
   , place : ""
   , address : Nothing
   , city : Nothing
+  , isSpecialPickUp : Nothing
   }
 
 calculateDistance ::Array LocationListItemState -> String -> Number -> Number -> Array DistInfo

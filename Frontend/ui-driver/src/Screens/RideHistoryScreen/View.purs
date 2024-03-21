@@ -409,5 +409,6 @@ shimmerData i = {
   specialZoneLayoutBackground : toPropValue "",
   gotoTagVisibility : toPropValue "",
   purpleTagVisibility : toPropValue "",
-  tipTagVisibility : toPropValue ""
+  tipTagVisibility : toPropValue "",
+  specialZonePickup : toPropValue ""
 }

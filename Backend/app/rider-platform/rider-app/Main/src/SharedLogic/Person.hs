@@ -26,10 +26,11 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, fork, fromMaybeM, getCurrentTime)
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonStats as QP
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
@@ -106,3 +107,21 @@ convertTimeZone timeInUTC minuteDiffFromUTC = utcToLocalTime (minutesToTimeZone 
 
 getName :: DP.Person -> Text
 getName person = (fromMaybe "" person.firstName) <> " " <> (fromMaybe "" person.lastName)
+
+checkSafetyCenterDisabled :: (EsqDBFlow m r, CacheFlow m r) => DP.Person -> m Bool
+checkSafetyCenterDisabled person = do
+  let isPermanentBlock = person.falseSafetyAlarmCount >= 6
+  case person.safetyCenterDisabledOnDate of
+    Nothing -> return False
+    Just safetyCenterDisabledOnDate -> do
+      if isPermanentBlock
+        then return True
+        else do
+          now <- getCurrentTime
+          riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+          let unblockAfterDays = (intToNominalDiffTime riderConfig.autoUnblockSafetyCenterAfterDays) * 24 * 60 * 60
+          if diffUTCTime now safetyCenterDisabledOnDate > unblockAfterDays
+            then do
+              fork "" $ QPerson.updateSafetyCenterBlockingCounter person.id Nothing Nothing
+              return False
+            else return True

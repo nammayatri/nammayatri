@@ -10,6 +10,15 @@
       "NotoSansKannada-Regular" : true,
       "NotoSansKannada-SemiBold" : true,
       "NotoSansKannada-Thin" : true,
+      "NotoSansTelugu-Black" : true,
+      "NotoSansTelugu-Bold" : true,
+      "NotoSansTelugu-ExtraBold" : true,
+      "NotoSansTelugu-ExtraLight" : true,
+      "NotoSansTelugu-Light" : true,
+      "NotoSansTelugu-Medium" : true,
+      "NotoSansTelugu-Regular" : true,
+      "NotoSansTelugu-SemiBold" : true,
+      "NotoSansTelugu-Thin" : true,
       "PlusJakartaSans-Bold" : true,
       "PlusJakartaSans-BoldItalic" : true,
       "PlusJakartaSans-ExtraBold" : true,
@@ -489,6 +498,9 @@
       "rounded_corner_background" : true,
       "separator_silent_mode" : true,
       "silent_popup_background" : true,
-      "widget_close_gradient" : true
+      "widget_close_gradient" : true,
+      "ny_ic_white_info" : true,
+      "ny_ic_location_pin_white" : true,
+      "ny_ic_sp_pickup_zone_map" : true
    }
 }

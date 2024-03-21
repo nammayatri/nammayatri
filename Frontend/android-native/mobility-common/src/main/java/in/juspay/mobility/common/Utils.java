@@ -1,9 +1,13 @@
 package in.juspay.mobility.common;
 
+import static in.juspay.hyper.core.JuspayCoreLib.getApplicationContext;
+
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -11,10 +15,13 @@ import android.graphics.Canvas;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import com.theartofdev.edmodo.cropper.CropImage;
@@ -211,6 +218,34 @@ public class Utils {
             e.printStackTrace();
         }
     }
+    
+    // Return: Device total RAM in GB
+    public static int getDeviceRAM(){
+        try{
+            Context context = getApplicationContext();
+            if(context == null)
+                return 0;
+            ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+            ActivityManager.MemoryInfo memInfo = new ActivityManager.MemoryInfo();
+            activityManager.getMemoryInfo(memInfo);
+            return (int)(1L + memInfo.totalMem / (1024L * 1024L * 1024L));
+        }catch (Exception e){
+            e.printStackTrace();
+            return 0;
+        }
+    }
 
-
+    public static void checkPermissionRationale(String permission, Context context, Activity activity) {
+        if (context == null || activity == null) return;
+        if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_DENIED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)){
+                // We need to provide a rationale or explanation to the user before requesting the permission again
+            } else {
+                Intent appSettingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                appSettingsIntent.setData(Uri.fromParts("package", context.getPackageName(), null));
+                appSettingsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(appSettingsIntent);
+            }
+        }
+    }
 }

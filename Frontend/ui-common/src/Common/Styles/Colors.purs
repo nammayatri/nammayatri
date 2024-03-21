@@ -49,6 +49,9 @@ grey800 = "#F1F1F1"
 grey900 :: Color
 grey900 = "#E5E7EB"
 
+green400 :: Color
+green400 = "#26A047"
+
 greyDavy :: Color
 greyDavy = "#555555"
 
@@ -75,6 +78,9 @@ white200 = "#99FFFFFF"
 
 yellow900 :: Color
 yellow900 = "#FCC32C"
+
+yellow600 :: Color
+yellow600 = "#FCF6E7"
 
 shadowGray :: Color
 shadowGray = "#D1D5DB"

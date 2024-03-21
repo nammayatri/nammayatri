@@ -33,6 +33,7 @@ data CustomerEndpoint
   | BlockCustomerEndpoint
   | UnblockCustomerEndpoint
   | CustomerCancellationDuesSyncEndpoint
+  | UpdateSafetyCenterEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "CustomerEndpoint"
@@ -72,8 +73,10 @@ type CustomerInfoAPI =
     :> "info"
     :> Get '[JSON] CustomerInfoRes
 
-newtype CustomerInfoRes = CustomerInfoRes
-  { numberOfRides :: Int
+data CustomerInfoRes = CustomerInfoRes
+  { numberOfRides :: Int,
+    falseSafetyAlarmCount :: Int,
+    safetyCenterDisabledOnDate :: Maybe UTCTime
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -142,5 +145,20 @@ data CancellationDuesDetailsRes = CancellationDuesDetailsRes
   { cancellationDues :: HighPrecMoney,
     disputeChancesUsed :: Int,
     canBlockCustomer :: Maybe Bool
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+-----------------------------------------------------------------------------
+-- safety center blocking api ----------------------------------------------
+
+type UpdateSafetyCenterBlockingAPI =
+  Capture "customerId" (Id Customer)
+    :> "updateSafetyCenterBlocking"
+    :> ReqBody '[JSON] UpdateSafetyCenterBlockingReq
+    :> Post '[JSON] APISuccess
+
+data UpdateSafetyCenterBlockingReq = UpdateSafetyCenterBlockingReq
+  { incrementCount :: Maybe Bool,
+    resetCount :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

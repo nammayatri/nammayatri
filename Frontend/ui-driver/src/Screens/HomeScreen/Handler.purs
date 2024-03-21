@@ -47,7 +47,9 @@ homeScreen = do
   logField_ <- lift $ lift $ getLogFields
   (GlobalState state) <- getState
   liftFlowBT $ markPerformance "HOME_SCREEN"
-  action <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen{data{logField = logField_}}
+  action <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen{data{logField = logField_}} (GlobalState state)
+  (GlobalState updatedGlobalState) <- getState
+  modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { bgLocPopupShown = updatedGlobalState.globalProps.bgLocPopupShown || updatedGlobalState.homeScreen.props.bgLocationPopup }
   case action of
     GoToVehicleDetailScreen updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
@@ -145,5 +147,9 @@ homeScreen = do
     EarningsScreen updatedState showCoinsView -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ HOMESCREEN_NAV $ GoToEarningsScreen showCoinsView)
-    DriverStatsUpdate driverStats -> do       
+    DriverStatsUpdate driverStats updatedState -> do       
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ GOT_DRIVER_STATS driverStats)
+    UpdateSpecialLocationList updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ UPDATE_SPECIAL_LOCATION_LIST)

@@ -38,9 +38,10 @@ import Foreign.Generic (Foreign, decode, encode)
 import JBridge as JBridge
 import ConfigProvider
 import MerchantConfig.DefaultConfig as DC
+import Locale.Utils(getLanguageLocale)
 
 getLanguageFromLocalStore :: Unit -> String
-getLanguageFromLocalStore _ = "EN_US"
+getLanguageFromLocalStore _ = getLanguageLocale languageKey
 
 getFontType :: String ->  FontType
 getFontType dummy = 
@@ -60,9 +61,11 @@ light :: LazyCheck -> FontStyle
 light style = do
   let font = getDefaultFont style
   let fontKn = getKannadaFont style
+      fontTe = getTeluguFont style
   case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS (font <> "-Light") (font <> "-Light") "Arial"
     "KN_IN" -> fontByOS (fontKn <> "-Light") (fontKn <> "-Light") "Arial"
+    "TE_IN" -> fontByOS (fontTe <> "-Light") (fontTe <> "-Light") "Arial"
     "HI_IN" -> fontByOS (font <> "-Light") (font <> "-Light") "Arial"
     _ -> fontByOS (font <> "-Light") (font <> "-Light") "Arial"
 
@@ -75,9 +78,11 @@ extraLight :: LazyCheck -> FontStyle
 extraLight style = do
   let font = getDefaultFont style
   let fontKn = getKannadaFont style
+      fontTe = getTeluguFont style
   case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS (font <> "-ExtraLight") (font <> "-ExtraLight") "Arial"
     "KN_IN" -> fontByOS (fontKn <> "-ExtraLight") (fontKn <> "-ExtraLight") "Arial"
+    "TE_IN" -> fontByOS (fontTe <> "-ExtraLight") (fontTe <> "-ExtraLight") "Arial"
     "HI_IN" -> fontByOS (font <> "-ExtraLight") (font <> "-ExtraLight") "Arial"
     _ -> fontByOS (font <> "-ExtraLight") (font <> "-ExtraLight") "Arial"
 
@@ -90,9 +95,11 @@ regular :: LazyCheck -> FontStyle
 regular style = do
   let font = getDefaultFont style
   let fontKn = getKannadaFont style
+      fontTe = getTeluguFont style
   case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS (font <> "-Regular") (font <> "-Regular") "Arial"
     "KN_IN" -> fontByOS (fontKn <> "-Regular") (fontKn <> "-Regular") "Arial"
+    "TE_IN" -> fontByOS (fontTe <> "-Regular") (fontTe <> "-Regular") "Arial"
     "HI_IN" -> fontByOS (font <> "-Regular") (font <> "-Regular") "Arial"
     _ -> fontByOS (font <> "-Regular") (font <> "-Regular") "Arial"
 
@@ -100,9 +107,11 @@ medium :: LazyCheck -> FontStyle
 medium style = do
   let font = getDefaultFont style
   let fontKn = getKannadaFont style
+      fontTe = getTeluguFont style
   case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS (font <> "-Medium") (font <> "-Medium") "Arial"
     "KN_IN" -> fontByOS (fontKn <> "-Medium") (fontKn <> "-Medium") "Arial"
+    "TE_IN" -> fontByOS (fontTe <> "-Medium") (fontTe <> "-Medium") "Arial"
     "HI_IN" -> fontByOS (font <> "-Medium") (font <> "-Medium") "Arial"
     _ -> fontByOS (font <> "-Medium") (font <> "-Medium") "Arial"
 
@@ -115,9 +124,11 @@ semiBold :: LazyCheck -> FontStyle
 semiBold style = do
   let font = getDefaultFont style
   let fontKn = getKannadaFont style
+      fontTe = getTeluguFont style
   case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS (font <> "-SemiBold") (font <> "-SemiBold") "Arial"
     "KN_IN" -> fontByOS (fontKn <> "-SemiBold") (fontKn <> "-SemiBold") "Arial"
+    "TE_IN" -> fontByOS (fontTe <> "-SemiBold") (fontTe <> "-SemiBold") "Arial"
     "HI_IN" -> fontByOS (font <> "-SemiBold") (font <> "-SemiBold") "Arial"
     _ -> fontByOS (font <> "-SemiBold") (font <> "-SemiBold") "Arial"
 
@@ -130,9 +141,11 @@ bold :: LazyCheck -> FontStyle
 bold style = do
   let font = getDefaultFont style
   let fontKn = getKannadaFont style
+      fontTe = getTeluguFont style
   case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS (font <> "-Bold") (font <> "-Bold") "Arial"
     "KN_IN" -> fontByOS (fontKn <> "-Bold") (fontKn <> "-Bold") "Arial"
+    "TE_IN" -> fontByOS (fontTe <> "-Bold") (fontTe <> "-Bold") "Arial"
     "HI_IN" -> fontByOS (font <> "-Bold") (font <> "-Bold") "Arial"
     _ -> fontByOS (font <> "-Bold") (font <> "-Bold") "Arial"
 
@@ -145,9 +158,11 @@ extraBold :: LazyCheck -> FontStyle
 extraBold style = do
   let font = getDefaultFont style
   let fontKn = getKannadaFont style
+      fontTe = getTeluguFont style
   case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS (font <> "-ExtraBold") (font <> "-ExtraBold") "Arial"
     "KN_IN" -> fontByOS (fontKn <> "-ExtraBold") (fontKn <> "-ExtraBold") "Arial"
+    "TE_IN" -> fontByOS (fontTe <> "-ExtraBold") (fontTe <> "-ExtraBold") "Arial"
     "HI_IN" -> fontByOS (font <> "-ExtraBold") (font <> "-ExtraBold") "Arial"
     _ -> fontByOS (font <> "-ExtraBold") (font <> "-ExtraBold") "Arial"
 
@@ -487,6 +502,10 @@ getKannadaFont _ =
   let config = (getAppConfig appConfig).fontConfig
   in config.kannada
 
+getTeluguFont :: LazyCheck -> String
+getTeluguFont _ = 
+  let config = (getAppConfig appConfig).fontConfig
+  in config.telugu
 
 decodeFontStyle :: Foreign -> Maybe Style
 decodeFontStyle = hush <<< runExcept <<< defaultEnumDecode

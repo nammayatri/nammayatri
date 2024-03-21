@@ -301,7 +301,8 @@ shimmerData i =
   specialZoneImage : toPropValue "",
   specialZoneLayoutBackground : toPropValue "",
   purpleTagVisibility : toPropValue "",
-  tipTagVisibility : toPropValue ""
+  tipTagVisibility : toPropValue "",
+  specialZonePickup : toPropValue ""
   }
 
 getCategoryName :: String -> String

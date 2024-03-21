@@ -133,13 +133,13 @@ getDriverIntelligentPoolConfigFromCAC id srId idName = do
 getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m DriverIntelligentPoolConfig
 getConfigFromInMemory id srId idName = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
-  dipc <- L.getOption DTC.DriverIntelligentPoolConfig
+  dipc <- L.getOption (DTC.DriverIntelligentPoolConfig id.getId)
   isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
   bool
     ( maybe
         ( getDriverIntelligentPoolConfigFromCAC id Nothing Nothing
             >>= ( \config -> do
-                    L.setOption DTC.DriverIntelligentPoolConfig config
+                    L.setOption (DTC.DriverIntelligentPoolConfig id.getId) config
                     pure config
                 )
         )
@@ -148,7 +148,7 @@ getConfigFromInMemory id srId idName = do
             if isUpdateReq
               then do
                 config <- getDriverIntelligentPoolConfigFromCAC id Nothing Nothing
-                L.setOption DTC.DriverIntelligentPoolConfig config
+                L.setOption (DTC.DriverIntelligentPoolConfig id.getId) config
                 pure config
               else pure config'
         )

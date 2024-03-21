@@ -6,7 +6,7 @@ if (typeof __VERSION__ !== "undefined") {
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "RC_VALIDATION_TEXT": "KA|AP|TS|DL|TN|PY|UP|HR",
+    "RC_VALIDATION_TEXT": "KA|AP|TS|DL|TN|PY|UP|HR|TG",
     "DOCUMENT_LINK": "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc",
     "APP_LINK": "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner",
     "USER_APP_LINK": "https://nammayatri.in/link/rider/mvnw",
@@ -518,7 +518,7 @@ window.getMerchantConfig = function () {
       "lottieQRAnim" : true
   }
    , "vehicle" : {
-      "validationPrefix" : "KA|AP|TS|DL|TN|PY|UP|HR"
+      "validationPrefix" : "KA|AP|TS|DL|TN|PY|UP|HR|TG"
     }
   })
 }

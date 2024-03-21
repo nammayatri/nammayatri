@@ -548,3 +548,7 @@ export const markPerformance = function (str) {
     }
   };
 };
+
+export const toStringJSON = function (attr) {
+  return JSON.stringify(attr);
+};

@@ -35,6 +35,7 @@ data KeyStore = USER_NAME
                 | TEST_FLOW_FOR_REGISTRATOION
                 | MOBILE_NUMBER_KEY
                 | IS_RIDE_ACTIVE
+                | IS_DRIVER_STATS_CALLED
                 | IS_DRIVER_ENABLED
                 | DRIVER_STATUS
                 | DRIVER_STATUS_N
@@ -130,6 +131,9 @@ data KeyStore = USER_NAME
                 | ANOTHER_ACTIVITY_LAUNCHED
                 | DRIVER_PROFILE_STATS_RESPONSE
                 | VEHICLE_CATEGORY
+                | SPECIAL_LOCATION_LIST
+                | SPECIAL_LOCATION_LIST_EXPIRY
+                | ENABLE_SPECIAL_PICKUP_WIDGET
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

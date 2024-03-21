@@ -72,7 +72,8 @@ initData =
             spLocTagVisibility : false,
             specialZoneLayoutBackground : "",
             specialZoneImage : "",
-            specialZoneText : ""
+            specialZoneText : "",
+            specialZonePickup : false
         }
       , logField : empty
       }

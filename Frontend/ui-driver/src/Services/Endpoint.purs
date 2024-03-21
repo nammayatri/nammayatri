@@ -312,3 +312,6 @@ getReelsData reelsKey language = (getBaseUrl "") <> "/reels/getAllReelVideos?lan
 
 dummyRideRequest :: String -> String
 dummyRideRequest _ =  (getBaseUrl "") <> "/driver/getDummyRideRequest"
+
+specialLocationList :: String -> String
+specialLocationList _ = (getBaseUrl "") <> "/specialLocation/list"

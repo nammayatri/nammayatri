@@ -14,23 +14,23 @@ import Kernel.Prelude
 import Kernel.Types.App (MonadFlow)
 import qualified System.Environment as Se
 
-data GoHomeConfig = GoHomeConfig
+data GoHomeConfig = GoHomeConfig Text
   deriving stock (Generic, Typeable, Show, Eq)
   deriving anyclass (ToJSON, FromJSON)
 
-data TransporterConfig = TransporterConfig
+data TransporterConfig = TransporterConfig Text
   deriving stock (Generic, Typeable, Show, Eq)
   deriving anyclass (ToJSON, FromJSON)
 
-data DriverPoolConfig = DriverPoolConfig
+data DriverPoolConfig = DriverPoolConfig Text String String Int
   deriving stock (Generic, Typeable, Show, Eq)
   deriving anyclass (ToJSON, FromJSON)
 
-data DriverIntelligentPoolConfig = DriverIntelligentPoolConfig
+data DriverIntelligentPoolConfig = DriverIntelligentPoolConfig Text
   deriving stock (Generic, Typeable, Show, Eq)
   deriving anyclass (ToJSON, FromJSON)
 
-data FarePolicy = FarePolicy
+data FarePolicy = FarePolicy Text
   deriving stock (Generic, Typeable, Show, Eq)
   deriving anyclass (ToJSON, FromJSON)
 

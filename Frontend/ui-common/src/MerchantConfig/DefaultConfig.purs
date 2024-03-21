@@ -28,6 +28,7 @@ defaultFontConfig :: FontConfig
 defaultFontConfig = {
     default : "PlusJakartaSans"
   , kannada : "NotoSansKannada"
+  , telugu : "NotoSansTelugu"
   , "type": "Assets"
   }
 
@@ -60,4 +61,28 @@ defaultBannerCarousel :: BannerCarousalConfig
 defaultBannerCarousel = {
   autoScrollDelay : 5000.0,
   enableAutoScroll : true
+}
+
+defaultGeoJson :: GeoJson
+defaultGeoJson = {
+    type : "FeatureCollection"
+  , features : []
+}
+
+defaultGeoJsonFeature :: GeoJsonFeature
+defaultGeoJsonFeature = {
+    type : "Feature"
+  , properties : {
+        name : ""
+      , id : ""
+      , defaultDriverExtra : 0
+      , canQueueUpOnGate : false
+    }
+  , geometry : defaultGeoJsonGeometry
+}
+
+defaultGeoJsonGeometry :: GeoJsonGeometry
+defaultGeoJsonGeometry = {
+    type : "MultiPolygon"
+  , coordinates : [[[[]]]]
 }

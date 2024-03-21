@@ -22,19 +22,22 @@ module Helpers.Utils
 import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
-import Data.Array ((!!), elemIndex, length, slice, last, find) as DA
+import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null) as DA
 import Data.String (Pattern(..), split) as DS
+import Data.Array as DA
+import Data.String as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
 import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek)
 import Domain.Payments (PaymentStatus(..))
-import Common.Types.Config (CityConfig(..))
+import Common.Types.Config (CityConfig(..), GeoJson, GeoJsonFeature, GeoJsonGeometry)
+import Common.DefaultConfig as CC
 import Types.App (FlowBT, defaultGlobalState)
 import Control.Monad.Except (runExcept, runExceptT)
-import Data.Array ((!!), fold, any, head, filter) as DA
+import Data.Array ((!!), fold, any, head, filter, foldr, sort, sortWith) as DA
 import Data.Array.NonEmpty (fromArray)
-import Data.Either (Either(..), hush)
+import Data.Either (Either(..), hush, either)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
@@ -47,7 +50,7 @@ import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC, getPastDays, getPastWeeks) as ReExport
+import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC, getPastDays, getPastWeeks, toStringJSON) as ReExport
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode, decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
@@ -55,10 +58,10 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<))
+import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<), not, (=<<))
 import Prelude (class Eq, class Show, (<<<))
-import Prelude (map, (*), (-), (/), (==), div, mod)
-import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Prelude (map, (*), (-), (/), (==), div, mod, not)
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, runFn2)
 import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
 import Common.Types.App (OptionButtonList)
@@ -67,12 +70,13 @@ import Engineering.Helpers.Commons (flowRunner)
 import PaymentPage(PaymentPagePayload, UpiApps(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, loadS)
 import Control.Monad.Except.Trans (lift)
-import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
+import Foreign.Generic (Foreign)
 import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig)
+import Services.API as SA
 import Storage (KeyStore) 
-import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys)
+import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3, EffectFn7, runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -91,19 +95,29 @@ import MerchantConfig.Types as MCT
 import Locale.Utils
 import Language.Types (STR(..))
 import LocalStorage.Cache (getValueFromCache)
+import Data.Map as DM
+import Engineering.Helpers.Utils as EHU
+import Engineering.Helpers.GeoHash as EHG
+import Data.List as DL
+import Data.Argonaut.Core
+import Data.Argonaut.Decode.Error
+import Data.Argonaut.Decode.Class as AD
+import Data.Argonaut.Encode.Class as AE
+import Data.Argonaut.Core as AC
+import Data.Argonaut.Decode.Parser as ADP
 
 type AffSuccess s = (s -> Effect Unit)
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
 foreign import storeCallBackTime :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action)  -> Effect Unit
+foreign import onMarkerClickCallbackMapper :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action)  -> String
 foreign import getTime :: Unit -> Int
 foreign import hideSplash :: Effect Unit
 foreign import startTimer :: forall action. Int -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import convertKmToM :: String -> String
 foreign import clearTimer :: String -> Unit
 foreign import clearAllTimer :: String -> Unit
-foreign import toStringJSON :: forall a. a-> String
 foreign import toInt :: forall a. a -> String
 foreign import setRefreshing :: String -> Boolean -> Unit
 foreign import setEnabled :: String -> Boolean -> Unit
@@ -137,6 +151,25 @@ foreign import getDateAfterNDays :: Int -> String
 foreign import downloadQR  :: String -> Effect Unit
 
 foreign import renderSlider :: forall action. (action -> Effect Unit) -> (Int -> action) -> SliderConfig -> Unit
+
+
+decodeGeoJson :: String -> Maybe GeoJson
+decodeGeoJson stringGeoJson = 
+  case (AD.decodeJson =<< ADP.parseJson stringGeoJson) of
+    Right resp -> Just resp
+    Left err   -> Nothing
+
+decodeGeoJsonGeometry :: String -> Maybe GeoJsonGeometry
+decodeGeoJsonGeometry stringGeometry =
+  case (AD.decodeJson =<< ADP.parseJson stringGeometry) of
+    Right resp -> Just resp
+    Left err   -> Nothing
+
+decodeSpecialLocationList :: String -> SpecialLocationMap 
+decodeSpecialLocationList dummy = 
+  case (AD.decodeJson =<< ADP.parseJson (getValueToLocalStore SPECIAL_LOCATION_LIST)) of
+    Right resp -> resp
+    Left err   -> DM.empty
 
 type SliderConfig = { 
   id :: String,
@@ -181,6 +214,16 @@ type LabelConfig = {
   cancelConfirmImage :: String
 }
 
+type SpecialLocationMap = DM.Map String SpecialLocationList
+
+type SpecialLocationList = {
+    geoJson :: String
+  , gates :: Array Location
+  , locationName :: String
+  , category :: String
+  , city :: String
+}
+
 dummyLabelConfig = { 
   label : "",
   backgroundColor : "",
@@ -215,42 +258,6 @@ startOtpReciever action push = do
     void $ initiateSMSRetriever
     liftEffect $ startOtpReciever action push
   pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
-
--- -- type Locations = {
--- --     paths :: Array Paths
--- -- }
-
-
--- -- type Paths = {
--- --     points :: Points
--- -- }
-
--- -- type Points = {
--- --     type :: String
--- -- ,   coordinates :: Array Point
--- -- }
-
--- -- type Point = Array Number
-
--- -- type Markers = {
--- --     markerObject :: Array MarkerObject
--- -- }
-
--- -- type MarkerObject = {
--- --     type :: String,
--- --     title :: String,
--- --     coordinates :: Array Number
--- -- }
-
--- -- newtype LocationLatLong = LocationLatLong
--- --   { lat :: String
--- --   , long :: String
--- --   }
-
--- -- derive instance genericLocationLatLong :: Generic LocationLatLong _
--- -- derive instance newtypeLocationLatLong :: Newtype LocationLatLong _
--- -- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
--- -- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
 
 getDistanceBwCordinates :: Number -> Number -> Number -> Number -> Number
 getDistanceBwCordinates lat1 long1 lat2 long2 = do
@@ -326,7 +333,7 @@ getRideLabelData maybeLabel = fromMaybe dummyLabelConfig (getRequiredTag maybeLa
 getRequiredTag :: Maybe String -> Maybe LabelConfig
 getRequiredTag maybeLabel  =
   case maybeLabel of
-    Just label -> if DA.any (_ == label) ["Accessibility", "GOTO", "Safety"] then
+    Just label -> if DA.any (_ == label) ["Accessibility", "GOTO", "Safety", "SpecialZonePickup"] then
                     DA.head (DA.filter (\item -> item.label == label) (rideLabelConfig FunctionCall))
                   else do
                     let arr = DS.split (DS.Pattern "_") label
@@ -378,6 +385,15 @@ rideLabelConfig _ = [
       imageUrl : "ny_pin_check_white,",
       cancelText : "GO_TO_CANCELLATION_TITLE",
       cancelConfirmImage : "ny_ic_gotodriver_zero,"
+    },
+    {
+      label : "SpecialZonePickup",
+      backgroundColor : Color.green900,
+      text : getString SPECIAL_PICKUP_ZONE_RIDE,
+      secondaryText : getString LEARN_MORE,
+      imageUrl : "ny_ic_location_pin_white,",
+      cancelText : "ZONE_CANCEL_TEXT_DROP",
+      cancelConfirmImage : "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
     }
 ]
 
@@ -731,3 +747,103 @@ updateDriverStatus status = do
   if status && getValueToLocalNativeStore DRIVER_STATUS_N == "Silent" then Silent
     else if status then Online
       else Offline
+      
+transformSpecialLocationList :: SA.SpecialLocationFullRes -> Effect Unit
+transformSpecialLocationList (SA.SpecialLocationFullRes specialLocations) = do
+  let transformedList = DA.foldr (\(SA.SpecialLocationFull specialLocation) hashMap -> 
+                                    if not $ DA.null specialLocation.gatesInfo then
+                                      updateHashMap (SA.SpecialLocationFull specialLocation) hashMap
+                                    else hashMap
+                                  ) DM.empty specialLocations
+      json = AE.encodeJson transformedList
+      _ = runFn2 setValueToLocalStore (show SPECIAL_LOCATION_LIST) (AC.stringify json)
+  pure unit
+
+updateHashMap :: SA.SpecialLocationFull -> SpecialLocationMap -> SpecialLocationMap
+updateHashMap (SA.SpecialLocationFull specialLocation) hashMap =
+  let geoJson = transformGeoJsonFeature specialLocation.geoJson specialLocation.gatesInfo
+      gates = transformGates specialLocation.gatesInfo
+      locationName = specialLocation.locationName
+      category = specialLocation.category
+      city = ""
+  in DA.foldr (\gate hashMap' -> DM.insert (runFn3 EHG.encodeGeohash gate.lat gate.lng 7) { geoJson : geoJson, gates : gates, locationName : locationName, category : category, city : city } hashMap') hashMap gates
+
+transformGates :: Array SA.GateInfoFull -> Array Location
+transformGates gatesInfoFulls = 
+  DA.foldr  (\(SA.GateInfoFull gateInfoFull) locations ->
+                case gateInfoFull.geoJson of
+                  Just _ ->
+                    let (SA.LatLong point) = gateInfoFull.point 
+                    in locations <> [{ lat : point.lat, lng : point.lon, place : gateInfoFull.name, address : gateInfoFull.address, city : Nothing, isSpecialPickUp : Just true }]
+                  Nothing -> locations
+            ) [] gatesInfoFulls
+
+transformGeoJsonFeature :: Maybe String -> Array SA.GateInfoFull -> String
+transformGeoJsonFeature geoJson gateInfoFulls = 
+  AC.stringify $ AE.encodeJson CC.defaultGeoJson { features = geoJsonFeatures }
+  where
+    geoJsonFeatures :: Array GeoJsonFeature
+    geoJsonFeatures = 
+      DA.foldr (\(SA.GateInfoFull gateInfoFull) specialZones -> 
+                  case gateInfoFull.geoJson of
+                    Just _ -> specialZones <> [createGeoJsonFeature (SA.GateInfoFull gateInfoFull)]
+                    Nothing -> specialZones
+               ) [] gateInfoFulls
+      <> case geoJson of
+            Just geoJson' -> DA.singleton CC.defaultGeoJsonFeature{ geometry = fromMaybe CC.defaultGeoJsonGeometry (decodeGeoJsonGeometry geoJson') }
+            Nothing -> []
+            
+    createGeoJsonFeature :: SA.GateInfoFull ->  GeoJsonFeature
+    createGeoJsonFeature (SA.GateInfoFull gateInfoFull) = 
+      CC.defaultGeoJsonFeature {
+          properties {
+              name = gateInfoFull.name
+            , defaultDriverExtra = fromMaybe 0 gateInfoFull.defaultDriverExtra
+            , canQueueUpOnGate = fromMaybe false gateInfoFull.canQueueUpOnGate
+          }
+        , geometry = case gateInfoFull.geoJson of
+                        Just geoJson -> fromMaybe CC.defaultGeoJsonGeometry (decodeGeoJsonGeometry geoJson)
+                        Nothing      -> CC.defaultGeoJsonGeometry
+      }
+
+findNearestSpecialZone :: Number -> Number -> Maybe SpecialLocationList
+findNearestSpecialZone lat lon =
+  let currentGeoHash = runFn3 EHG.encodeGeohash lat lon 7
+      hashMap = decodeSpecialLocationList ""
+      neighbourGeoHash = (EHG.geohashNeighbours currentGeoHash) <> [currentGeoHash]
+      specialZoneMaps = DM.filterWithKey (\key value -> (DM.member key hashMap) && (ifGatesWithInRadius lat lon value.gates) ) hashMap
+  in DL.head (DM.values specialZoneMaps)
+  where
+    ifGatesWithInRadius :: Number -> Number -> Array Location -> Boolean
+    ifGatesWithInRadius lat lon gates = not $ DA.null $ DA.filter (\gate -> (getDistanceBwCordinates lat lon gate.lat gate.lng)*1000.0 < 150.0) gates
+
+findSpecialPickupZone :: Number -> Number -> Maybe SpecialLocationList
+findSpecialPickupZone lat lon =
+  let currentGeoHash = runFn3 EHG.encodeGeohash lat lon 7
+      hashMap = decodeSpecialLocationList ""
+      specialZone = DM.lookup currentGeoHash hashMap
+      nearestGate = case specialZone of
+                      Just zone -> ((DA.sortWith (\gate -> getDistanceBwCordinates lat lon gate.lat gate.lng) zone.gates) DA.!! 0)
+                      Nothing -> Nothing
+      pickupZone = case specialZone, nearestGate of
+                    Just zone, Just gate -> 
+                      case decodeGeoJson zone.geoJson of
+                        Just geoJson -> 
+                          let feature = (DA.filter (\feature -> feature.properties.name == gate.place) geoJson.features) DA.!! 0
+                          in case feature of
+                                Just feature' -> 
+                                  let properties = feature'.properties
+                                      gatesInfoFull = SA.GateInfoFull { address : Nothing, canQueueUpOnGate : Just properties.canQueueUpOnGate, defaultDriverExtra : Just properties.defaultDriverExtra, geoJson : Just (AC.stringify $ AE.encodeJson feature'.geometry), name : properties.name, point : SA.LatLong { lat : gate.lat, lon : gate.lng } }
+                                  in Just zone{ gates = [gate], geoJson = transformGeoJsonFeature Nothing [gatesInfoFull]  }
+                                Nothing -> Nothing
+                        Nothing -> Nothing
+                    _, _ -> Nothing
+  in pickupZone
+
+checkSpecialPickupZone :: Maybe String -> Boolean
+checkSpecialPickupZone maybeLabel = 
+  case maybeLabel of
+    Just label -> let arr = DS.split (DS.Pattern "_") label
+                      specialPickupZone = fromMaybe "" (arr DA.!! 3)
+                  in specialPickupZone == "PickupZone"
+    Nothing    -> false

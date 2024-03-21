@@ -43,7 +43,8 @@ initData = {
       specialZoneImage : "",
       specialZoneText : "",
       goBackTo : ST.Earning,
-      config : DC.config
+      config : DC.config,
+      specialZonePickup : false 
   },
   props: {
     rating : 4,

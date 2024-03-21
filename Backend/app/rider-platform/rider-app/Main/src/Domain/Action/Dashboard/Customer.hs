@@ -20,6 +20,7 @@ module Domain.Action.Dashboard.Customer
     customerInfo,
     customerCancellationDuesSync,
     getCancellationDuesDetails,
+    updateSafetyCenterBlocking,
   )
 where
 
@@ -129,7 +130,12 @@ customerInfo merchantShortId opCity customerId = do
   unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
 
   numberOfRides <- fromMaybe 0 <$> runInReplica (QP.fetchRidesCount personId)
-  pure Common.CustomerInfoRes {numberOfRides}
+  pure $
+    Common.CustomerInfoRes
+      { numberOfRides,
+        falseSafetyAlarmCount = customer.falseSafetyAlarmCount,
+        safetyCenterDisabledOnDate = customer.safetyCenterDisabledOnDate
+      }
 
 ---------------------------------------------------------------------
 listCustomers :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Flow Common.CustomerListRes
@@ -189,3 +195,24 @@ getCancellationDuesDetails merchantShortId personId = do
         disputeChancesUsed = res.disputeChancesUsed,
         canBlockCustomer = res.canBlockCustomer
       }
+
+updateSafetyCenterBlocking ::
+  Id Common.Customer ->
+  Common.UpdateSafetyCenterBlockingReq ->
+  Flow APISuccess
+updateSafetyCenterBlocking personId req = do
+  case req.resetCount of
+    Just True -> do
+      let personId' = cast @Common.Customer @DP.Person personId
+      QP.updateSafetyCenterBlockingCounter personId' (Just 0) Nothing
+    _ -> pure ()
+  case req.incrementCount of
+    Just True -> do
+      let personId' = cast @Common.Customer @DP.Person personId
+      now <- getCurrentTime
+      person <- runInReplica $ QP.findById personId' >>= fromMaybeM (PersonNotFound personId'.getId)
+      QP.updateSafetyCenterBlockingCounter personId' (Just $ person.falseSafetyAlarmCount + 1) $ blockingDate now person.falseSafetyAlarmCount
+    _ -> pure ()
+  return Success
+  where
+    blockingDate now count = if (count + 1) == 3 || count + 1 >= 6 then Just now else Nothing

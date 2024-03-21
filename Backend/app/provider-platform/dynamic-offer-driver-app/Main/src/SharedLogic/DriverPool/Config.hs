@@ -161,16 +161,20 @@ getDriverPoolConfigFromCAC merchantOpCityId mbvt tripCategory dist srId idName =
     )
     res
 
+doubleToInt :: Double -> Int
+doubleToInt = round
+
 getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Variant.Variant -> DTC.TripCategory -> Meters -> Maybe Text -> Maybe Text -> m DriverPoolConfig
 getConfigFromInMemory id mbvt tripCategory dist srId idName = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
-  dpc <- L.getOption DTC.DriverPoolConfig
+  let roundeDist = doubleToInt (fromIntegral (dist.getMeters + 500) / 1000)
+  dpc <- L.getOption (DTC.DriverPoolConfig id.getId (show mbvt) (show tripCategory) roundeDist)
   isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
   bool
     ( maybe
         ( getDriverPoolConfigFromCAC id mbvt tripCategory dist Nothing Nothing
             >>= ( \config -> do
-                    L.setOption DTC.DriverPoolConfig config
+                    L.setOption (DTC.DriverPoolConfig id.getId (show mbvt) (show tripCategory) roundeDist) config
                     pure config
                 )
         )
@@ -179,7 +183,7 @@ getConfigFromInMemory id mbvt tripCategory dist srId idName = do
             if isUpdateReq
               then do
                 config <- getDriverPoolConfigFromCAC id mbvt tripCategory dist Nothing Nothing
-                L.setOption DTC.DriverPoolConfig config
+                L.setOption (DTC.DriverPoolConfig id.getId (show mbvt) (show tripCategory) roundeDist) config
                 pure config
               else pure config'
         )

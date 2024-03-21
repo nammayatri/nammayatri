@@ -16,6 +16,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
+import android.media.Image;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
@@ -83,7 +84,11 @@ public class WidgetService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(getApplicationContext());
         String intentMessage = intent != null && intent.hasExtra(getResources().getString(R.string.WIDGET_MESSAGE)) ? intent.getStringExtra(getResources().getString(R.string.WIDGET_MESSAGE)) : null;
-        if (intent != null && calculatedTime == 0 && intentMessage == null && animationRunnable == null) {
+        Boolean showNearbySpecialPickup = intent != null && intent.hasExtra("showNearbySpecialPickup") ? intent.getBooleanExtra("showNearbySpecialPickup", false) : null;
+        if (showNearbySpecialPickup != null) {
+            specialPickupNotification(intent, showNearbySpecialPickup);
+        }
+        else if (intent != null && calculatedTime == 0 && intentMessage == null && animationRunnable == null) {
             showSilentNotification(intent);
         } else {
             if (intentMessage != null && intentMessage.equals("CLEAR_FARE") && silentRideRequest != null && progressBar != null && dismissRequest != null && handler != null) {
@@ -111,6 +116,115 @@ public class WidgetService extends Service {
 
     private float mAngleToRotate;
 
+    private void showViewWithAnimation(View view) {
+        if (view != null) {
+            view.setVisibility(View.VISIBLE);
+            view.setTranslationX(-1500);
+            view.animate().translationX(0)
+                    .setInterpolator(new FastOutLinearInInterpolator())
+                    .setDuration(600)
+                    .start();
+        }
+    }
+
+    private void hideViewWithAnimation(View view) {
+        if (view != null) {
+            view.animate().translationX(-1500)
+                    .setInterpolator(new FastOutLinearInInterpolator())
+                    .setDuration(600)
+                    .start();
+        }
+    }
+
+    private void specialPickupNotification(Intent intent, boolean showNotification) {
+        if(widgetView != null && intent != null ) {
+            ImageView notificationDotView = widgetView.findViewById(R.id.notification_dot);
+            if (showNotification) {
+                try {
+                    TextView messageView = widgetView.findViewById(R.id.ride_fare);
+                    TextView messageView2 = widgetView.findViewById(R.id.distance_to_pickup);
+                    ImageView dotView = widgetView.findViewById(R.id.dot_view);
+
+                    MediaPlayer mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.silent_mode_notification_sound);
+                    if (mediaPlayer != null)
+                        mediaPlayer.start();
+
+                    String specialPickupMessage = intent.getStringExtra("specialPickupMessage");
+
+                    if (messageView != null && specialPickupMessage != null && notificationDotView != null) {
+                        messageView.setText(specialPickupMessage);
+                        messageView.setVisibility(View.VISIBLE);
+                        messageView2.setVisibility(View.GONE);
+                        dotView.setVisibility(View.GONE);
+                    }
+
+                    silentRideRequest = widgetView.findViewById(R.id.silent_ride_request_background);
+                    showViewWithAnimation(silentRideRequest);
+
+                    dismissRequest = widgetView.findViewById(R.id.dismiss_silent_reqID);
+                    showViewWithAnimation(dismissRequest);
+
+                    progressBar = widgetView.findViewById(R.id.silent_progress_indicator);
+                    if (progressBar != null) {
+                        progressBar.setIndicatorColor(getColor(R.color.green900));
+                        showViewWithAnimation(progressBar);
+                    }
+
+                    widgetView.post(() -> {
+                        try {
+                            int calculatedWidth = (widgetView.getWidth() / 100) * 85;
+                            int[] ar = new int[100];
+                            for (int i = ar.length - 1, j = 1; i >= 0 && j <= ar.length; i--, j++) {
+                                ar[i] = (calculatedWidth / 100) * j;
+                            }
+
+                            ValueAnimator anim = ValueAnimator.ofInt(ar);
+                            anim.addUpdateListener(valueAnimator -> {
+                                if (progressBar != null) {
+                                    int val = (Integer) valueAnimator.getAnimatedValue();
+                                    ViewGroup.LayoutParams layoutParams = progressBar.getLayoutParams();
+                                    progressBar.setIndicatorColor(getColor(R.color.green900));
+                                    layoutParams.width = val;
+                                    progressBar.setLayoutParams(layoutParams);
+                                } else {
+                                    anim.end();
+                                }
+                            });
+                            anim.setDuration(5000);
+                            anim.start();
+
+                        } catch (Exception e) {
+                            Log.e("WidgetService", "Error in specialPickupNotification " + e);
+                            mFirebaseAnalytics.logEvent("Exception_in_specialPickupNotification", null);
+                        }
+                    });
+
+                    dismissRequest.setOnClickListener(view -> {
+                        hideViewWithAnimation(dismissRequest);
+                        silentRideRequest.setVisibility(View.GONE);
+                        if (progressBar != null) progressBar.setVisibility(View.GONE);
+                        view.setVisibility(View.GONE);
+                    });
+
+                    Handler handler = new Handler();
+                    handler.postDelayed(() -> {
+                        hideViewWithAnimation(silentRideRequest);
+                        silentRideRequest.setVisibility(View.GONE);
+                        if (progressBar != null) progressBar.setVisibility(View.GONE);
+                        if (dismissRequest != null) dismissRequest.setVisibility(View.GONE);
+                        if (notificationDotView != null) notificationDotView.setVisibility(View.VISIBLE);
+                    }, getResources().getInteger(R.integer.DURATION_OF_SHOWING_MESSAGE));
+
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else {
+                if (notificationDotView != null) notificationDotView.setVisibility(View.GONE);
+            }
+        } else return;
+    }
+
     private void showSilentNotification(Intent intent) {
         if(widgetView == null) return;
         animationRunnable = null;
@@ -119,6 +233,7 @@ public class WidgetService extends Service {
             // Fetch TextView for fare and distanceToPickup
             TextView fareTextView = widgetView.findViewById(R.id.ride_fare);
             TextView distanceTextView = widgetView.findViewById(R.id.distance_to_pickup);
+            ImageView dotView = widgetView.findViewById(R.id.dot_view);
 
             // Get Current Time in UTC
             final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en"));
@@ -142,6 +257,7 @@ public class WidgetService extends Service {
                 // Fetch data from entity_payload
                 int fare = entity_payload.getInt("baseFare");
                 int distanceToPickup = entity_payload.getInt("distanceToPickup");
+
                 String searchRequestValidTill = entity_payload.getString("searchRequestValidTill");
 
 
@@ -154,7 +270,6 @@ public class WidgetService extends Service {
                 // Update text for fare and distanceToPickup
                 SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                 String fareText = sharedPref.getString("CURRENCY", "₹") + fare;
-                fareTextView.setText(fareText);
                 String distanceText;
                 if (distanceToPickup > 1000) {
                     distanceText = (df.format(distanceToPickup / 1000)) + " km pickup";
@@ -165,15 +280,8 @@ public class WidgetService extends Service {
 
                 silentRideRequest = widgetView.findViewById(R.id.silent_ride_request_background);
                 if (silentRideRequest != null){
-                    // Add silentRideRequest view
-                    silentRideRequest.setVisibility(View.VISIBLE);
-
                     // Start Slide-in animation
-                    silentRideRequest.setTranslationX(-1500);
-                    silentRideRequest.animate().translationX(0)
-                            .setInterpolator(new FastOutLinearInInterpolator())
-                            .setDuration(600)
-                            .start();
+                    showViewWithAnimation(silentRideRequest);
 
                     //onClick Listener for rideRequest
                     silentRideRequest.setOnClickListener(view -> {
@@ -189,26 +297,14 @@ public class WidgetService extends Service {
 
                 dismissRequest = widgetView.findViewById(R.id.dismiss_silent_reqID);
                 if (dismissRequest != null) {
-                    dismissRequest.setVisibility(View.VISIBLE);
-
-                    dismissRequest.setTranslationX(-1500);
-                    dismissRequest.animate().translationX(0)
-                            .setInterpolator(new FastOutLinearInInterpolator())
-                            .setDuration(600)
-                            .start();
+                    showViewWithAnimation(dismissRequest);
                 }
 
                 progressBar = widgetView.findViewById(R.id.silent_progress_indicator);
                 if (progressBar != null) {
                     //Start progress bar :-
-                    progressBar.setVisibility(View.VISIBLE);
+                    showViewWithAnimation(progressBar);
                     progressBar.setIndicatorColor(getColor(R.color.green900));
-
-                    progressBar.setTranslationX(-1500);
-                    progressBar.animate().translationX(0)
-                            .setInterpolator(new FastOutLinearInInterpolator())
-                            .setDuration(600)
-                            .start();
                 }
 
 

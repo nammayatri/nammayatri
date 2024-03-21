@@ -199,6 +199,24 @@ let superPositionConfig =
         }
       : { host : Text, interval : Natural, tenants : List Text }
 
+let kafkaClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "localhost"
+      , port = 8123
+      , password = sec.clickHousePassword
+      , database = "atlas_kafka"
+      , tls = False
+      }
+
+let riderClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "localhost"
+      , port = 8123
+      , password = sec.clickHousePassword
+      , database = "atlas_app"
+      , tls = False
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
@@ -269,4 +287,6 @@ in  { esqDBCfg
     , cacConfig
     , superPositionConfig
     , collectRouteData = True
+    , kafkaClickhouseCfg
+    , riderClickhouseCfg
     }

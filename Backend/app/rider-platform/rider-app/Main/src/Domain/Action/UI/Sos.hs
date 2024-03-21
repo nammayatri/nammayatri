@@ -122,11 +122,12 @@ postSosCreate (mbPersonId, merchantId) req = do
         { userName = SLP.getName person,
           rideLink = trackLink
         }
-  emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-  when (shouldSendSms person) $ do
-    void $ QPDEN.updateShareRideForAll personId (Just True)
-    enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers riderConfig
-    SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just message) True emergencyContacts.defaultEmergencyNumbers
+  when (req.isRideEnded /= Just True) $ do
+    emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
+    when (shouldSendSms person) $ do
+      void $ QPDEN.updateShareRideForAll personId (Just True)
+      enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers riderConfig
+      SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just message) True emergencyContacts.defaultEmergencyNumbers
   return $
     SosRes
       { sosId = sosId
@@ -155,7 +156,7 @@ createTicketForNewSos person ride riderConfig trackLink req kaptureDisposition =
     Just sosDetails -> do
       void $ QSos.updateStatus DSos.Pending sosDetails.id
       void $ callUpdateTicket person sosDetails $ Just "SOS Re-Activated"
-      void $ CQSos.clearCache sosDetails.rideId
+      CQSos.cacheSosIdByRideId ride.id $ sosDetails {DSos.status = DSos.Pending}
       return sosDetails.id
     Nothing -> do
       phoneNumber <- mapM decrypt person.mobileNumber
@@ -202,8 +203,8 @@ postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
       when (sosDetails.status == DSos.Resolved) $ throwError $ InvalidRequest "Sos already resolved."
       void $ callUpdateTicket person sosDetails $ Just "Mark Ride as Safe"
       void $ QSos.updateStatus DSos.Resolved sosId
-      void $ CQSos.clearCache sosDetails.rideId
-      when (person.shareEmergencyContacts) $ do
+      CQSos.cacheSosIdByRideId sosDetails.rideId $ sosDetails {DSos.status = DSos.Resolved}
+      when (person.shareEmergencyContacts && isRideEnded /= Just True) $ do
         SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_RESOLVED Nothing False emergencyContacts.defaultEmergencyNumbers
       pure APISuccess.Success
   where
@@ -211,7 +212,7 @@ postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
       SLP.getName person_
         <> if fromMaybe False isMock
           then " has marked ride as safe in test safety drill. This is a practice exercise, not a real emergency situation."
-          else SLP.getName person_ <> " has marked the ride as safe. Tap to view the ride details"
+          else " has marked the ride as safe. Tap to view the ride details"
     notificationTitle = if fromMaybe False isMock then "Test Safety Drill Alert" else "Ride Safe"
 
 postSosCreateMockSos :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> MockSosReq -> Flow APISuccess.APISuccess

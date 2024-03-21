@@ -66,6 +66,7 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
@@ -354,7 +355,9 @@ buildPerson req mobileNumber notificationToken bundleVersion clientVersion merch
         registrationLat = req.registrationLat,
         registrationLon = req.registrationLon,
         useFakeOtp,
-        followsRide = False
+        followsRide = False,
+        falseSafetyAlarmCount = 0,
+        safetyCenterDisabledOnDate = Nothing
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -403,7 +406,8 @@ verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   decPerson <- decrypt updPerson
   customerDisability <- B.runInReplica $ PDisability.findByPersonId person.id
   let tag = customerDisability <&> (.tag)
-  let personAPIEntity = SP.makePersonAPIEntity decPerson tag
+  isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled updPerson
+  let personAPIEntity = SP.makePersonAPIEntity decPerson tag isSafetyCenterDisabled
   unless (decPerson.whatsappNotificationEnrollStatus == whatsappNotificationEnroll && isJust whatsappNotificationEnroll) $ do
     fork "whatsapp_opt_api_call" $ do
       case decPerson.mobileNumber of

@@ -20,7 +20,7 @@ import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -30,6 +30,7 @@ import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import PrestoDOM (BottomSheetState(..), Margin(..))
 import Data.Map as Map 
+import JBridge (Location)
 
 initData :: HomeScreenState
 initData = {
@@ -153,6 +154,7 @@ initData = {
     , contactList : Nothing
     , followers : Nothing
     , vehicleVariant : ""
+    , hotSpotInfo : []
     },
     props: {
       rideRequestFlow : false
@@ -246,7 +248,7 @@ initData = {
     , findingRidesAgain : false
     , routeEndPoints : Nothing
     , findingQuotesProgress : 0.0
-    , confirmLocationCategory : ""
+    , confirmLocationCategory : NOZONE
     , canSendSuggestion : true
     , sheetState : Nothing
     , currentSheetState : COLLAPSED
@@ -257,13 +259,7 @@ initData = {
     , flowWithoutOffers : true
     , showEducationalCarousel : false
     , specialZoneType : ""
-    , currentLocation : {
-        lat : 0.0,
-        lng : 0.0,
-        place : "",
-        address : Nothing,
-        city : Nothing
-      }
+    , currentLocation : dummyLocation
     , isShorterTrip : false
     , locateOnMapLocation : {
           source : ""
@@ -310,8 +306,11 @@ initData = {
           , autoCompleteType : Nothing
         }
     , selectedEstimateHeight : 0
-    , suggestedRideFlow : false
     , isSafetyCenterDisabled : false
+    , suggestedRideFlow : false
+    , locateOnMapProps : { sourceLocationName : Nothing, sourceGeoJson : Nothing, sourceGates : Nothing, isSpecialPickUpGate : false }
+    , showSpecialZoneInfoPopup : false
+    , hotSpot : { selectedSpot : Nothing, centroidPoint : Nothing }
   }
 }
 
@@ -482,9 +481,10 @@ dummyLocationName = PlaceName {
 
 specialLocation :: SpecialLocation
 specialLocation = SpecialLocation{
-    "category" :"",
-     "gates": [],
-     "locationName" : ""
+    "category" : "",
+     "locationName" : "",
+     "gatesInfo" : [],
+     "geoJson" : Nothing
  }
 
 dummyLocation :: Location
@@ -493,7 +493,8 @@ dummyLocation = {
    lat : 0.0,
    lng : 0.0,
    address : Nothing,
-   city : Nothing
+   city : Nothing,
+   isSpecialPickUp : Nothing
  }
 
 

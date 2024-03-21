@@ -77,7 +77,7 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleVariant searchTry.tripCategory jobData.estimatedRideDistance (Just searchReq.transactionId) (Just "transactionId")
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just searchReq.transactionId) (Just "transactionId")
-  (res, _, _) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.driverExtraFeeBounds goHomeCfg
+  (res, _, _) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.driverExtraFeeBounds jobData.driverPickUpCharges goHomeCfg
   return res
 
 sendSearchRequestToDrivers' ::
@@ -105,9 +105,10 @@ sendSearchRequestToDrivers' ::
   SearchTry ->
   Merchant ->
   Maybe DFP.DriverExtraFeeBounds ->
+  Maybe Money ->
   GoHomeConfig ->
   m (ExecutionResult, PoolType, Maybe Seconds)
-sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg = do
+sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds driverPickUpCharges goHomeCfg = do
   -- In case of static offer flow we will have booking created before driver ride request is sent
   mbBooking <- if DTC.isDynamicOfferTrip searchTry.tripCategory then pure Nothing else QRB.findByQuoteId searchTry.estimateId
   handler (handle mbBooking) goHomeCfg
@@ -117,7 +118,7 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driver
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
           getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchTry,
-          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolConfig,
+          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPickUpCharges driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
           setBatchDurationLock = I.setBatchDurationLock searchTry.id driverPoolConfig.singleBatchProcessTime,
           createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTime,

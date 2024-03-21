@@ -36,7 +36,7 @@ import Data.Show (show)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (setRefreshing, setEnabled, parseFloat, getRideLabelData, convertUTCtoISC, getRequiredTag, incrementValueOfLocalStoreKey)
+import Helpers.Utils (checkSpecialPickupZone, setRefreshing, setEnabled, parseFloat, getRideLabelData, convertUTCtoISC, getRequiredTag, incrementValueOfLocalStoreKey)
 import JBridge (cleverTapCustomEvent, metaLogEvent, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -241,7 +241,8 @@ rideHistoryListTransformer list = (map (\(RidesInfo ride) ->
       specialZoneLayoutBackground : toPropValue $ specialLocationConfig.backgroundColor,
       gotoTagVisibility : toPropValue if isJust ride.driverGoHomeRequestId then "visible" else "gone",
       purpleTagVisibility : toPropValue if isJust ride.disabilityTag then "visible" else "gone",
-      tipTagVisibility : toPropValue if isJust ride.customerExtraFee then "visible" else "gone"
+      tipTagVisibility : toPropValue if isJust ride.customerExtraFee then "visible" else "gone",
+      specialZonePickup : toPropValue if (checkSpecialPickupZone ride.specialLocationTag) then "visible" else "gone"
     }) list )
 
 getDisabilityType :: Maybe String -> Maybe DisabilityType
@@ -286,7 +287,8 @@ rideListResponseTransformer list =
         spLocTagVisibility : ride.specialLocationTag /= Nothing && (getRequiredTag ride.specialLocationTag) /= Nothing,
         specialZoneLayoutBackground : specialLocationConfig.backgroundColor,
         specialZoneImage : specialLocationConfig.imageUrl,
-        specialZoneText : specialLocationConfig.text
+        specialZoneText : specialLocationConfig.text,
+        specialZonePickup : checkSpecialPickupZone ride.specialLocationTag
       }) list
 
 
@@ -323,5 +325,6 @@ dummyCard =  {
     spLocTagVisibility : false,
     specialZoneLayoutBackground : "",
     specialZoneImage : "",
-    specialZoneText : ""
+    specialZoneText : "",
+    specialZonePickup : false
   }

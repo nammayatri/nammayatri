@@ -220,10 +220,6 @@ export const currentPosition = function (str) {
   }
 }
 
-export const toStringJSON = function (attr) {
-  return JSON.stringify(attr);
-};
-
 export const getTime = function (unit){
   return Date.now();
 }
@@ -261,6 +257,21 @@ export const storeCallBackTime = function (cb) {
         console.log("Error occurred in storeCallBackTime ------", error);
       }
     }
+  }
+}
+
+export const onMarkerClickCallbackMapper = function (cb) {
+  return function (action) {
+    try {
+      const callback = callbackMapper.map(function (tag, lat, lng) {
+        cb(action(tag)(lat)(lng))();
+      });
+      return callback;
+    }
+    catch (error){
+      console.log("Error occurred in onMarkerClickCallbackMapper ------", error);
+    }
+    return "";
   }
 }
 

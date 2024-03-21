@@ -23,6 +23,7 @@ import qualified Domain.Types.FarePolicy as DFarePolicy
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
+import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle as DVeh
 import Kernel.Prelude
@@ -93,7 +94,7 @@ initiateDriverSearchBatch ::
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
-  (DriverPoolConfig -> DSR.SearchRequest -> DST.SearchTry -> DM.Merchant -> Maybe DFP.DriverExtraFeeBounds -> GoHomeConfig -> m (ExecutionResult, PoolType, Maybe Seconds)) ->
+  (DriverPoolConfig -> DSR.SearchRequest -> DST.SearchTry -> DM.Merchant -> Maybe DFP.DriverExtraFeeBounds -> Maybe Money -> GoHomeConfig -> m (ExecutionResult, PoolType, Maybe Seconds)) ->
   DM.Merchant ->
   DSR.SearchRequest ->
   DTC.TripCategory ->
@@ -109,29 +110,31 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleVariant searchTry.tripCategory searchReq.estimatedDistance (Just searchReq.transactionId) (Just "transactionId")
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just searchReq.transactionId) (Just "transactionId")
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
+  let driverPickUpCharges = extractDriverPickupCharges farePolicy.farePolicyDetails
   if not searchTry.isScheduled
     then do
-      (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg
+      (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds driverPickUpCharges goHomeCfg
       let inTime = maybe (fromIntegral driverPoolConfig.singleBatchProcessTime) fromIntegral mbNewScheduleTimeIn
       case res of
-        ReSchedule _ -> scheduleBatching searchTry driverExtraFeeBounds inTime
+        ReSchedule _ -> scheduleBatching searchTry driverExtraFeeBounds driverPickUpCharges inTime
         _ -> return ()
     else do
       mbScheduleTime <- getNextScheduleTime driverPoolConfig searchReq
       case mbScheduleTime of
-        Just scheduleTime -> scheduleBatching searchTry driverExtraFeeBounds scheduleTime
+        Just scheduleTime -> scheduleBatching searchTry driverExtraFeeBounds driverPickUpCharges scheduleTime
         Nothing -> do
           booking <- QRB.findByQuoteId estOrQuoteId >>= fromMaybeM (BookingDoesNotExist estOrQuoteId)
           QST.updateStatus searchTry.id DST.CANCELLED
           SBooking.cancelBooking booking Nothing merchant
   where
-    scheduleBatching searchTry driverExtraFeeBounds inTime = do
+    scheduleBatching searchTry driverExtraFeeBounds driverPickUpCharges inTime = do
       maxShards <- asks (.maxShards)
       JC.createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
         SendSearchRequestToDriverJobData
           { searchTryId = searchTry.id,
             estimatedRideDistance = searchReq.estimatedDistance,
-            driverExtraFeeBounds = driverExtraFeeBounds
+            driverExtraFeeBounds = driverExtraFeeBounds,
+            driverPickUpCharges = driverPickUpCharges
           }
 
     createNewSearchTry farePolicy customerCancellationDues = do

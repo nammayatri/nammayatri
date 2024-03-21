@@ -27,13 +27,10 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.Sos as Queries
 
 findByRideId :: (CacheFlow m r, EsqDBFlow m r) => Id Ride -> m (Maybe DSos.Sos)
 findByRideId rideId = do
-  Hedis.safeGet (makeIdKey rideId) >>= \case
-    Just a -> pure a
-    Nothing -> flip whenJust (cacheSosIdByRideId rideId) /=<< Queries.findByRideId rideId
+  Hedis.safeGet $ makeIdKey rideId
 
 cacheSosIdByRideId :: (CacheFlow m r) => Id Ride -> DSos.Sos -> m ()
 cacheSosIdByRideId rideId sos = do

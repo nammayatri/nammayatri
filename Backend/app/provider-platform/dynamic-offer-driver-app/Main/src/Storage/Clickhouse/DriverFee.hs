@@ -78,7 +78,7 @@ data DriverFeeAggregated = DriverFeeAggregated
 
 -- up to 5 columns supported now
 findAllByStatus ::
-  CH.HasClickhouseEnv CH.ATLAS_DRIVER_OFFER_BPP m =>
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Id DM.Merchant ->
   [Common.DriverFeeStatus] ->
   Maybe UTCTime ->
@@ -108,14 +108,14 @@ findAllByStatus merchantId statuses mbFrom mbTo = do
                 CH.&&. CH.whenJust_ mbFrom (\from -> driverFee.collectedAt >=. CH.DateTime from)
                 CH.&&. CH.whenJust_ mbTo (\to -> driverFee.collectedAt <=. CH.DateTime to)
           )
-          (CH.all_ @CH.ATLAS_DRIVER_OFFER_BPP driverFeeTTable)
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverFeeTTable)
   pure $ mkDriverFeeByStatus <$> driverFeeTuple
 
 -- up to 5 columns supported now
 -- mbCollBy = Just [] ---> condition = False
 -- mbCollBy = Nothing ---> condition = True
 findAllByDate ::
-  CH.HasClickhouseEnv CH.ATLAS_DRIVER_OFFER_BPP m =>
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Id DM.Merchant ->
   [Common.DriverFeeStatus] ->
   Maybe UTCTime ->
@@ -151,7 +151,7 @@ findAllByDate merchantId statuses mbFrom mbTo dayBasis mbCollBy = do
                   CH.&&. CH.whenJust_ mbTo (\to -> driverFee.collectedAt <=. CH.DateTime to)
                   CH.&&. CH.whenJust_ mbCollBy (\collBy -> driverFee.collectedBy `in_` (Just <$> collBy))
             )
-            $ CH.all_ @CH.ATLAS_DRIVER_OFFER_BPP driverFeeTTable
+            $ CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverFeeTTable
   pure $ mkDriverFeeByDate <$> driverFeeTuple
 
 mkDriverFeeByStatus :: (Maybe Common.DriverFeeStatus, Maybe Int, Int, Maybe Centesimal, Maybe Centesimal) -> DriverFeeAggregated

@@ -55,7 +55,6 @@ import Data.Function.Uncurried (runFn1)
 import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Int (ceil, floor, fromNumber, fromString, toNumber)
 import Data.Lens ((^.))
-import Data.Map as Map
 import Data.Number as NUM
 import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))

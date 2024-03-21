@@ -61,11 +61,11 @@ findFarePolicyFromCAC id toss txnId idName = do
 
 getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Int -> m (Maybe FarePolicy)
 getConfigFromInMemory id toss = do
-  fp <- L.getOption DTC.FarePolicy
+  fp <- L.getOption (DTC.FarePolicy id.getId)
   maybe
     ( findFarePolicyFromCAC id toss Nothing Nothing
         >>= ( \config -> do
-                L.setOption DTC.FarePolicy (fromJust config)
+                L.setOption (DTC.FarePolicy id.getId) (fromJust config)
                 pure config
             )
     )
@@ -74,7 +74,7 @@ getConfigFromInMemory id toss = do
         if isUpdateReq
           then do
             config <- findFarePolicyFromCAC id toss Nothing Nothing
-            L.setOption DTC.FarePolicy (fromJust config)
+            L.setOption (DTC.FarePolicy id.getId) (fromJust config)
             pure config
           else pure $ Just config'
     )

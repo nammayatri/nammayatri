@@ -143,11 +143,11 @@ getConfig id toss stickId idName = do
 
 getConfigFromMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m TransporterConfig
 getConfigFromMemory id toss = do
-  value <- L.getOption DTC.TransporterConfig
+  value <- L.getOption (DTC.TransporterConfig id.getId)
   maybe
     ( getConfig id toss Nothing Nothing
         >>= ( \config -> do
-                L.setOption DTC.TransporterConfig config
+                L.setOption (DTC.TransporterConfig id.getId) config
                 pure config
             )
     )
@@ -156,7 +156,7 @@ getConfigFromMemory id toss = do
         if isUpdateReq
           then do
             config <- getConfig id toss Nothing Nothing
-            L.setOption DTC.TransporterConfig config
+            L.setOption (DTC.TransporterConfig id.getId) config
             pure config
           else pure config'
     )

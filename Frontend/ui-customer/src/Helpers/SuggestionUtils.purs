@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module SuggestionUtils where
 
 import Data.Map (Map, insert, update, lookup, member, delete, keys, isEmpty, empty)
@@ -45,9 +44,8 @@ import Data.Lens((^.))
 import Accessor (_contents, _lat, _lon, _toLocation, _otpCode)
 import Data.String as DS
 import Data.Array as DA
+import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
 
-foreign import encodeGeohash :: Fn3 Number Number Int String
-foreign import geohashNeighbours :: String -> Array String
 foreign import setSuggestionsMapInJson :: Json -> Json
 foreign import getSuggestedDestinationsJsonFromLocal :: String -> Json
 fetchSuggestionsFromLocal :: String -> Either JsonDecodeError SuggestionsMap
