@@ -1528,7 +1528,7 @@ estimatedFareView push state =
           [ width (V 15)
           , height (V 15)
           , margin (MarginRight 6)
-          , imageWithFallback $ fetchImage FF_ASSET tagConfig.icon
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET tagConfig.icon
           ]
         , textView
           [ width WRAP_CONTENT
@@ -1542,7 +1542,7 @@ estimatedFareView push state =
           , height (V 18)
           , visibility if isJust tagConfig.infoPopUpConfig then VISIBLE else GONE
           , margin (MarginLeft 6)
-          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_white_info"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_info"
           ]
         ]
     , linearLayout
@@ -2159,8 +2159,9 @@ locationTrackingData lazyCheck =
 confirmPickUpLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 confirmPickUpLocationView push state =
   let zonePadding = if os == "IOS" then 0 else (ceil (toNumber (screenWidth unit))/8)
-      confirmLocationCategory = if state.props.locateOnMapProps.isSpecialPickUpGate then SPECIAL_PICKUP else state.props.confirmLocationCategory
+      confirmLocationCategory = getConfirmLocationCategory state
       tagConfig = specialZoneTagConfig confirmLocationCategory
+      tagVisibility = confirmLocationCategory /= NOZONE && (not (DS.null state.props.defaultPickUpPoint) || any (_ == confirmLocationCategory) [HOTSPOT true, HOTSPOT false])
   in
   linearLayout
     [ orientation VERTICAL
@@ -2190,14 +2191,14 @@ confirmPickUpLocationView push state =
             , gravity CENTER
             , padding (Padding zonePadding 4 zonePadding 4)
             , cornerRadii $ Corners 24.0 true true false false
-            , visibility if confirmLocationCategory /= NOZONE && not (DS.null state.props.defaultPickUpPoint) then VISIBLE else GONE
+            , visibility $ boolToVisibility tagVisibility
             , clickable $ isJust tagConfig.infoPopUpConfig
             , onClick push $ const $ SpecialZoneInfoTag
             ] [ imageView
                 [ width (V 15)
                 , height (V 15)
                 , margin (MarginRight 6)
-                , imageWithFallback $ fetchImage FF_ASSET tagConfig.icon
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET tagConfig.icon
                 ]
               , textView
                 [ width if os == "IOS" && confirmLocationCategory == AUTO_BLOCKED then (V 230) else WRAP_CONTENT
@@ -2212,7 +2213,7 @@ confirmPickUpLocationView push state =
                 , height (V 18)
                 , visibility if isJust tagConfig.infoPopUpConfig then VISIBLE else GONE
                 , margin (MarginLeft 6)
-                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_white_info"
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_info"
                 ]
               ]
         , linearLayout
@@ -4207,3 +4208,12 @@ specialZoneInfoPopup push state =
                 , width MATCH_PARENT
                 ][ RequestInfoCard.view (push <<< RequestInfoCardAction) (specialZoneInfoPopupConfig infoPopUpConfig) ]
         Nothing -> emptyTextView state
+
+getConfirmLocationCategory :: HomeScreenState -> ZoneType
+getConfirmLocationCategory state = 
+  if state.props.locateOnMapProps.isSpecialPickUpGate then 
+    SPECIAL_PICKUP 
+  else if isJust state.props.hotSpot.centroidPoint then
+    HOTSPOT (isJust state.props.hotSpot.selectedSpot)
+  else 
+    state.props.confirmLocationCategory

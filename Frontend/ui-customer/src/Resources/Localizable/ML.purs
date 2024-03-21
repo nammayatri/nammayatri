@@ -1041,3 +1041,6 @@ getML stringKey =
         DRIVER_AT_PICKUP_LOCATION -> "നിങ്ങളുടെ ഡ്രൈവർ പിക്കപ്പ് സ്ഥലത്താണ്"
         DRIVER_IS_ON_THE_WAY -> "നിങ്ങളുടെ ഡ്രൈവർ വഴിയിലാണ്"
         DRIVER_IS_WAITING_AT_PICKUP -> "നിങ്ങളുടെ ഡ്രൈവർ പിക്കപ്പിൽ കാത്തിരിക്കുന്നു"
+        IS_AT_PICKUP_LOCATION -> "പിക്കപ്പ് സ്ഥലത്തില്‍ ഉള്ളു"
+        GO_TO_SELECTED_SPOT_FOR_PICKUP -> "പിക്കപ്പിന് തിരഞ്ഞെടുത്ത സ്ഥലത്തിലേക്ക് പോകുക"
+        SELECT_POPULAR_SPOT_FOR_HASSLE_FREE_PICKUP -> "തിരഞ്ഞെടുത്ത വിശേഷിപ്പിച്ച പിക്കപ്പിന് കൊടുങ്കല്ല് ഒരു പ്രശസ്ത സ്ഥലം തിരഞ്ഞെടുക്കുക"

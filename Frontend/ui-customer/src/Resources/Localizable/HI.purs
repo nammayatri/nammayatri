@@ -1041,3 +1041,6 @@ getHI stringKey =
         SEARCH_AGAIN -> "फिर से खोजो"
         DRIVER_IS_ON_THE_WAY -> "आपका ड्राइवर रास्ते में है"
         DRIVER_IS_WAITING_AT_PICKUP -> "आपका ड्राइवर पिकअप का इंतजार कर रहा है"
+        IS_AT_PICKUP_LOCATION -> "पिकअप स्थान पर है"
+        GO_TO_SELECTED_SPOT_FOR_PICKUP -> "पिकअप के लिए चयनित स्थान पर जाएं"
+        SELECT_POPULAR_SPOT_FOR_HASSLE_FREE_PICKUP -> "परेशानी मुक्त पिकअप के लिए लोकप्रिय स्थान का चयन करें"

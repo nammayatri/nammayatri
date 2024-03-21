@@ -591,7 +591,7 @@ driverInfoView push state =
                   , height (V 18)
                   , visibility $ boolToVisibility $ isJust tagConfig.infoPopUpConfig
                   , margin (MarginLeft 6)
-                  , imageWithFallback $ fetchImage FF_ASSET "ny_ic_white_info"
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_info"
                   ]
                 ]
               , linearLayout

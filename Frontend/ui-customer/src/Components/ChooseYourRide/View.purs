@@ -444,7 +444,7 @@ chooseYourRideView push config isSingleEstimate =
             [ width (V 20)
             , height (V 20)
             , margin (MarginRight 6)
-            , imageWithFallback $ HU.fetchImage HU.FF_ASSET tagConfig.icon
+            , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET tagConfig.icon
             ]
           , textView
             [ width if EHC.os == "IOS" && config.zoneType == AUTO_BLOCKED then (V 230) else WRAP_CONTENT
@@ -459,7 +459,7 @@ chooseYourRideView push config isSingleEstimate =
             , height (V 18)
             , visibility $ boolToVisibility $ isJust tagConfig.infoPopUpConfig
             , margin (MarginLeft 6)
-            , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_white_info"
+            , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_white_info"
             ]
           ] 
       , linearLayout

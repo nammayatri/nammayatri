@@ -1039,3 +1039,6 @@ getEN stringKey =
         SEARCH_AGAIN -> "Search Again"
         DRIVER_IS_ON_THE_WAY -> "Your driver is on the way"
         DRIVER_IS_WAITING_AT_PICKUP -> "Your driver is waiting at pickup"
+        IS_AT_PICKUP_LOCATION -> "is at pickup location"
+        GO_TO_SELECTED_SPOT_FOR_PICKUP -> "Go to selected spot for pickup"
+        SELECT_POPULAR_SPOT_FOR_HASSLE_FREE_PICKUP -> "Select a popular spot for hassle free pickup"

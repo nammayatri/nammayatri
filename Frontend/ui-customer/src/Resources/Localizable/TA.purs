@@ -1057,3 +1057,6 @@ getTA stringKey =
     CONTINUE_SEARCH_WITH_NO_TIP -> "டிப்ஸ் இல்லாமல் தேடலைத் தொடரவும்"
     SEARCHING_WITH_NO_TIP -> "டிப்ஸ் இல்லாமல் தேடுதல்"
     SEARCH_AGAIN -> "மீண்டும் தேடு"
+    IS_AT_PICKUP_LOCATION -> "பிக்‌அப் இடத்தில் உள்ளது"
+    GO_TO_SELECTED_SPOT_FOR_PICKUP -> "பிக்கப் கோரிக்கைக்கு தேர்ந்தெடுக்கப்பட்ட இடத்திற்கு செல்லுங்கள்"
+    SELECT_POPULAR_SPOT_FOR_HASSLE_FREE_PICKUP -> "சுற்றுச்சூழலிலிருந்து புதுமையான தொடர்புறுப்புக்கு மாதிரி பிக்கப்பிற்கான பிரபலமான இடத்தைத் தேர்ந்தெடுக்கவும்"

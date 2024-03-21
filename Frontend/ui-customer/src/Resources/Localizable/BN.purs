@@ -1041,3 +1041,6 @@ getBN stringKey =
         CONTINUE_SEARCH_WITH_NO_TIP -> "কোন টিপ ছাড়া অনুসন্ধান চালিয়ে যান"
         SEARCHING_WITH_NO_TIP -> "কোন টিপ ছাড়াই অনুসন্ধান করা হচ্ছে"
         SEARCH_AGAIN -> "আবার খুঁজুন"
+        IS_AT_PICKUP_LOCATION -> "পিকআপ স্থানে রয়েছে"
+        GO_TO_SELECTED_SPOT_FOR_PICKUP -> "পিকআপের জন্য নির্বাচিত স্পটে যান"
+        SELECT_POPULAR_SPOT_FOR_HASSLE_FREE_PICKUP -> "ঝামেলা বিহীন পিকআপের জন্য জনপ্রিয় স্পট নির্বাচন করুন"
