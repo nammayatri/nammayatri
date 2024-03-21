@@ -51,7 +51,6 @@ import PrestoDOM.Core (getPushFn)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types (RentalScreenStage(..), RentalScreenState)
 import Services.API (GetQuotesRes(..), RideBookingRes(..), OfferRes(..), QuoteAPIEntity(..), QuoteAPIContents(..), RentalQuoteAPIDetails(..))
-import Debug (spy)
 import Data.Number (fromString)
 import Data.Lens
 import Accessor
@@ -200,7 +199,6 @@ eval (GenericHeaderAC GenericHeaderController.PrefixImgOnClick) state = genericB
 eval (ChooseVehicleAC (ChooseVehicleController.OnSelect variant)) state =
   let updatedQuotes = map (\item -> 
                               item {activeIndex = variant.index , quoteDetails {activeIndex = variant.index}}) state.data.rentalsQuoteList
-      _ = spy "updatedQuotes" updatedQuotes
   in  continue state { data { rentalsQuoteList = updatedQuotes }}
 
 eval (ChooseVehicleAC (ChooseVehicleController.ShowRateCard _)) state = 

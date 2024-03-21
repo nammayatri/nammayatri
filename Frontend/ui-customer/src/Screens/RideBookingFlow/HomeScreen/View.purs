@@ -74,7 +74,7 @@ import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getCityConfig)
 import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, differenceBetweenTwoUTC)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -3192,93 +3192,96 @@ homeScreenView push state =
 
 homeScreenViewV2 :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 homeScreenViewV2 push state = 
-  relativeLayout
-    [ height $ V (screenHeight unit)
-    , width $ V (screenWidth unit)
-    ][ linearLayout
-        [ height $ V ((screenHeight unit)/ 3)
+  let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
+      showAdditionalServices = (state.data.config.feature.enableAdditionalServices || cityConfig.enableRentals || cityConfig.enableIntercity) && state.props.currentStage == HomeScreen
+  in 
+    relativeLayout
+      [ height $ V (screenHeight unit)
+      , width $ V (screenWidth unit)
+      ][ linearLayout
+          [ height $ V ((screenHeight unit)/ 3)
+          , width MATCH_PARENT
+          , background state.data.config.homeScreen.primaryBackground 
+          , padding $ (PaddingTop (safeMarginTop))
+          ][] 
+        , homescreenHeader push state
+        , linearLayout 
+            [ width MATCH_PARENT
+            , height MATCH_PARENT
+            , margin $ MarginTop 20
+            , orientation VERTICAL
+            ][ coordinatorLayout
+                [ height MATCH_PARENT
+                , width MATCH_PARENT
+                ][ bottomSheetLayout
+                    [ height MATCH_PARENT
+                    , width MATCH_PARENT
+                    , peakHeight $ if state.data.peekHeight == 0 || state.data.peekHeight == 500 then getPeekHeight state else state.data.peekHeight
+                    , halfExpandedRatio 0.99
+                    , sheetState state.props.homeScreenSheetState
+                    , enableShift false
+                    , onSlide 
+                      ( \action -> do
+                          case action of 
+                            Scroll val -> if ((state.props.currSlideIndex < truncate 1 val) && not state.props.isHomescreenExpanded) || ((state.props.currSlideIndex > truncate 1 val) && state.props.isHomescreenExpanded) then push (Scroll (truncate 1 val)) 
+                                          else pure unit 
+                            _ -> push action
+                          pure unit
+                          )
+                      (Scroll)
+                    ][ relativeLayout
+                        [ width MATCH_PARENT
+                        , height MATCH_PARENT
+                        , orientation VERTICAL
+                        , clipChildren false
+                        ][ linearLayout
+                            [ height MATCH_PARENT
+                            , width WRAP_CONTENT
+                            , background Color.white900
+                            , margin $ MarginTop 32 
+                            , padding $ PaddingTop 30
+                            , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
+                            , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.white900, Color.grey700]) else (Linear 180.0 [Color.white900 , Color.white900, Color.grey700])
+                            ][ scrollView
+                                [ height $ if os == "IOS" then (V (getHeightFromPercent 90)) else MATCH_PARENT
+                                , width MATCH_PARENT
+                                , padding $ PaddingBottom 70
+                                , nestedScrollView true
+                                , scrollBarY false
+                                ][ linearLayout
+                                    [ width $ V (screenWidth unit)
+                                    , height WRAP_CONTENT
+                                    , orientation VERTICAL
+                                    ] $ [savedLocationsView state push] <> 
+                                      (if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
+                                        [locationUnserviceableView push state]
+                                      else 
+                                        ( [if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" else emptyTextView state]
+                                        <> (maybe [] (\item -> [bannersCarousal item state push]) state.data.bannerData.bannerItem)
+                                        <> [ shimmerView state
+                                        , checkoutRentalBannerView push state
+                                        , if showAdditionalServices then additionalServicesView push state else emptyTextView state
+                                        , suggestionsView push state
+                                        , emptySuggestionsBanner state push
+                                        , footerView push state]))
+                                ]
+                            ]
+                          , whereToButtonView push state
+                        ]
+                      ]  
+                  ]
+              ]
+        ]
+    where
+      checkoutRentalBannerView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+      checkoutRentalBannerView push state = 
+        linearLayout
+        [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , background state.data.config.homeScreen.primaryBackground 
-        , padding $ (PaddingTop (safeMarginTop))
-        ][] 
-      , homescreenHeader push state
-      , linearLayout 
-          [ width MATCH_PARENT
-          , height MATCH_PARENT
-          , margin $ MarginTop 20
-          , orientation VERTICAL
-          ][ coordinatorLayout
-              [ height MATCH_PARENT
-              , width MATCH_PARENT
-              ][ bottomSheetLayout
-                  [ height MATCH_PARENT
-                  , width MATCH_PARENT
-                  , peakHeight $ if state.data.peekHeight == 0 || state.data.peekHeight == 500 then getPeekHeight state else state.data.peekHeight
-                  , halfExpandedRatio 0.99
-                  , sheetState state.props.homeScreenSheetState
-                  , enableShift false
-                  , onSlide 
-                    ( \action -> do
-                        case action of 
-                          Scroll val -> if ((state.props.currSlideIndex < truncate 1 val) && not state.props.isHomescreenExpanded) || ((state.props.currSlideIndex > truncate 1 val) && state.props.isHomescreenExpanded) then push (Scroll (truncate 1 val)) 
-                                        else pure unit 
-                          _ -> push action
-                        pure unit
-                        )
-                    (Scroll)
-                  ][ relativeLayout
-                      [ width MATCH_PARENT
-                      , height MATCH_PARENT
-                      , orientation VERTICAL
-                      , clipChildren false
-                      ][ linearLayout
-                          [ height MATCH_PARENT
-                          , width WRAP_CONTENT
-                          , background Color.white900
-                          , margin $ MarginTop 32 
-                          , padding $ PaddingTop 30
-                          , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
-                          , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.white900, Color.grey700]) else (Linear 180.0 [Color.white900 , Color.white900, Color.grey700])
-                          ][ scrollView
-                              [ height $ if os == "IOS" then (V (getHeightFromPercent 90)) else MATCH_PARENT
-                              , width MATCH_PARENT
-                              , padding $ PaddingBottom 70
-                              , nestedScrollView true
-                              , scrollBarY false
-                              ][ linearLayout
-                                  [ width $ V (screenWidth unit)
-                                  , height WRAP_CONTENT
-                                  , orientation VERTICAL
-                                  ] $ [savedLocationsView state push] <> 
-                                    (if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
-                                      [locationUnserviceableView push state]
-                                    else 
-                                      ( [if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" else emptyTextView state]
-                                      <> (maybe [] (\item -> [bannersCarousal item state push]) state.data.bannerData.bannerItem)
-                                      <> [ shimmerView state
-                                      , checkoutRentalBannerView push state
-                                      , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
-                                      , suggestionsView push state
-                                      , emptySuggestionsBanner state push
-                                      , footerView push state]))
-                              ]
-                          ]
-                        , whereToButtonView push state
-                      ]
-                    ]  
-                ]
-            ]
-      ]
-  where
-    checkoutRentalBannerView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-    checkoutRentalBannerView push state = 
-      linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , visibility $ boolToVisibility state.data.config.showCheckoutRentalBanner
-      , padding $ PaddingHorizontal 16 16
-      ]
-      [Banner.view (\_ -> pure unit) (checkoutRentalBannerConfig state)]
+        , visibility $ boolToVisibility state.data.config.showCheckoutRentalBanner
+        , padding $ PaddingHorizontal 16 16
+        ]
+        [Banner.view (\_ -> pure unit) (checkoutRentalBannerConfig state)]
 
 isHomeScreenView :: HomeScreenState -> Boolean
 isHomeScreenView state = state.props.currentStage == HomeScreen
@@ -4289,7 +4292,6 @@ createRouteHelper routeState startLat startLon endLat endLon = do
             pure $ {points : Just newPts, route : Just (Route newRoute), routeDuration : Just $ route.duration, routeDistance : Just $ route.distance}
           Nothing -> pure $ {points : Nothing, route : Nothing, routeDuration : Nothing, routeDistance : Nothing}
       Left err -> do 
-        let _ = spy "Error in getRoute API Call" err
         pure $ {points : Nothing, route : Nothing, routeDuration : Nothing, routeDistance : Nothing}
     else pure $ {points : Nothing, route : Nothing, routeDuration : Nothing, routeDistance : Nothing}
 

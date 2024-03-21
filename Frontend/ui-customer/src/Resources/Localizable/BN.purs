@@ -1099,3 +1099,8 @@ getBN stringKey =
         RENTALS_INTERCITY_AVAILABLE -> "রেন্টাল এবং অন্তহণ্ড ট্রিপ, এখন Yatri Sathi-তে উপলব্ধ"
         CHECK_IT_OUT -> "এটি চেক করুন"
         FAILED_TO_CANCEL -> "যাত্রা বাতিল করতে ব্যর্থ হয়েছে"
+        SCHEDULING_ALLOWED_IN_INTERCITY_RENTAL -> "আন্তঃনগর বা ভাড়া চালনায় শিডিউলিং কেবল অনুমোদিত।"
+        SPECIAL_ZONE_INTERCITY_INELIGIBLE -> "বিশেষ অঞ্চলের মধ্যে অবস্থিত স্থানগুলো আন্তঃনগর চালনার জন্য অযোগ্য।"
+        NO_RIDES_SCHEDULED_YET -> "এখনো কোনো চালনা শিডিউল করা হয়নি!"
+        RIDE_BOOKING -> "রাইড বুকিং।"
+        SPECIAL_ZONE_RENTAL_INELIGIBLE -> "বিশেষ অঞ্চলের মধ্যে অবস্থিত স্থানগুলো ভাড়া চালনার জন্য অযোগ্য।"

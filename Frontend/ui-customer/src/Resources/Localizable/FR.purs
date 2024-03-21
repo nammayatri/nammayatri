@@ -1101,3 +1101,8 @@ getFR stringKey =
         RENTALS_INTERCITY_AVAILABLE -> "Locations et voyages interurbains, désormais disponibles sur Yatri Sathi"
         CHECK_IT_OUT -> "Vérifiez-le"
         FAILED_TO_CANCEL -> "Échec de l'annulation de la course"
+        SCHEDULING_ALLOWED_IN_INTERCITY_RENTAL -> "La planification est autorisée uniquement pour les trajets interurbains ou les locations."
+        SPECIAL_ZONE_INTERCITY_INELIGIBLE -> "Les lieux situés dans une zone spéciale ne sont pas éligibles pour les trajets interurbains."
+        NO_RIDES_SCHEDULED_YET -> "Aucun trajet n'est programmé pour le moment!"
+        RIDE_BOOKING -> "Réservation de trajet."
+        SPECIAL_ZONE_RENTAL_INELIGIBLE -> "Les lieux situés dans une zone spéciale ne sont pas éligibles pour les locations."
