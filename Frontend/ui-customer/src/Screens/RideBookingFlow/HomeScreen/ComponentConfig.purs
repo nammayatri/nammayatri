@@ -1869,8 +1869,8 @@ locationTagBarConfig state  = let
       map 
         (\item -> 
           { imageConfig : 
-              { height : V 16
-              , width : V 16
+              { height : V 20
+              , width : V 20
               , imageWithFallback : item.image
               } ,
             textConfig : 
@@ -1879,9 +1879,9 @@ locationTagBarConfig state  = let
               , fontSize : FontSize.a_14
               , color : Color.black800
               },
-            stroke : "0," <> Color.blue600 ,
+            stroke : "1," <> Color.grey700 ,
             cornerRadius : Corners 19.0 true true true true ,
-            background : Color.blue600 ,
+            background : Color.transparent ,
             height : WRAP_CONTENT ,
             width : WRAP_CONTENT,
             padding : Padding 8 8 8 8 ,
