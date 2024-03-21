@@ -697,7 +697,7 @@ getBN stringKey =
         ENJOY_THE_RIDE -> "আপনার গন্তব্যে রাইড উপভোগ করুন!"
         RIDE_STARTED -> "রাইড শুরু"
         DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "আপনার জন্য কাস্টমাইজড স্পট আবিষ্কার করুন!"
-        ONE_CLICK -> "1 ক্লিক"
+        ONE_CLICK -> "1 ক্লিক বুকিং"
         SMART -> "স্মার্ট"
         NOT_SERVICEABLE -> "পরিষেবাযোগ্য নয়"
         WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "আমরা এখনও আপনার এলাকায় বাস করিনি! \nআপনি উপরে বাম দিকের মেনু থেকে রাইডের ইতিহাস এবং অন্যান্য \nসেটিংস অ্যাক্সেস করতে পারেন।"
@@ -1076,3 +1076,4 @@ getBN stringKey =
         RECENT_RIDE_ISSUE_DESC -> "যদি আপনার সাম্প্রতিক রাইডে সমস্যা থাকে তবে নিচের অপশনটি নির্বাচন করুন।"
         I_NEED_HELP_WITH_MY_RECENT_RIDE -> "আমার সাম্প্রতিক রাইডে সাহায্য প্রয়োজন"
         CONTINUE_WITH_SAFETY_SETTINGS -> "নিরাপত্তা সেটিংস চালিয়ে যান"
+        TAP_WHERE_TO_TO_BOOK_RIDE -> "আপনার রাইড বুক করতে 'কোথায় যাবেন?' ট্যাপ করুন!"

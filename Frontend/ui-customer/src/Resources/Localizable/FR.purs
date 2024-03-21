@@ -698,7 +698,7 @@ getFR stringKey =
         ENJOY_THE_RIDE -> "Bon voyage jusqu'à votre destination !"
         RIDE_STARTED -> "Le trajet a commencé"
         DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "Découvrez des endroits géniaux adaptés à vos besoins"
-        ONE_CLICK -> "1 clic"
+        ONE_CLICK -> "Réservation en 1 clic"
         SMART -> "Intelligent"
         NOT_SERVICEABLE -> "Non réparable"
         WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "Nous ne sommes pas encore en ligne dans votre région ! \nVous pouvez accéder à l'historique des courses et à d'autres \nparamètres à partir du menu en haut à gauche."
@@ -1077,3 +1077,4 @@ getFR stringKey =
         RECENT_RIDE_ISSUE_DESC -> "Nous avons remarqué que vous avez signalé un problème lors de votre trajet récent. "
         I_NEED_HELP_WITH_MY_RECENT_RIDE -> "J'ai besoin d'aide avec mon trajet récent"
         CONTINUE_WITH_SAFETY_SETTINGS -> "Continuer avec les paramètres de sécurité"
+        TAP_WHERE_TO_TO_BOOK_RIDE -> "Appuyez sur 'Où aller ?' pour réserver votre trajet !"

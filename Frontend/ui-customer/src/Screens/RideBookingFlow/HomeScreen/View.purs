@@ -73,7 +73,7 @@ import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getCityConfig)
 import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -193,8 +193,6 @@ screen initialState =
                   pure unit
                 when (isJust initialState.data.rideHistoryTrip) $ do 
                   push $ RepeatRide 0 (fromMaybe HomeScreenData.dummyTrip initialState.data.rideHistoryTrip)
-                when (initialState.props.autoScroll) $ 
-                  startTimer initialState.data.config.suggestedTripsAndLocationConfig.autoScrollTime "autScroll" "1" push AutoScrollCountDown
                 _ <- pure $ setValueToLocalStore SESSION_ID (generateSessionId unit)
                 _ <- pure $ removeAllPolylines ""
                 _ <- pure $ enableMyLocation true
@@ -1106,7 +1104,7 @@ bannersCarousal view state push =
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , margin $ MarginTop 12
+        , margin $ MarginTop 24
         ][CarouselHolder.carouselView push $ getCarouselConfig view state banners]
       else dummyView state
       
@@ -1119,46 +1117,37 @@ emptySuggestionsBanner state push =
     , width MATCH_PARENT
     , cornerRadius 12.0
     , margin $ Margin 16 10 16 10
-    , background Color.white900
-    , gravity CENTER_VERTICAL
+    , gravity CENTER_HORIZONTAL
+    , orientation VERTICAL
     , visibility $ boolToVisibility $ (not (suggestionViewVisibility state)) && not (state.props.showShimmer && null state.data.tripSuggestions) && state.data.config.homeScreen.bannerViewVisibility
-    ][ linearLayout
-        [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , gravity CENTER_VERTICAL
-          , padding $ PaddingVertical 5 5
-        ][ imageView
-            [ height $ V 82
-            , width $ V 130
-            , margin $ MarginRight 5
-            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_empty_suggestions"
-            ]
-          ]
-      , linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , padding $ PaddingLeft 20
-        , orientation VERTICAL
-        , weight 1.0
-        , gravity CENTER_VERTICAL
-        ][ textView $
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , gravity LEFT
-            , text $ getVarString WELCOME_TEXT $ Arr.singleton appName
-            , color Color.black800
-            , padding $ PaddingBottom 2
-            ] <> (FontStyle.body2 LanguageStyle)
-          ,  textView $
-              [ height WRAP_CONTENT
-              , width WRAP_CONTENT
-              , gravity LEFT
-              , text $ getString YOUR_SUGGESTED_DESTINATIONS_AND_RECENT_RIDES_WILL_APPEAR_HERE
-              , color Color.black700
-              , padding $ PaddingBottom 2
-              ] <> (FontStyle.body3 LanguageStyle)
-          ]
+    ][  textView $
+        [ text $ getVarString WELCOME_TEXT $ Arr.singleton appName
+        , gravity CENTER
+        , width MATCH_PARENT 
+        , margin $ MarginBottom 12
+        , color Color.black900
+        ] <> (FontStyle.subHeading1 LanguageStyle)
+      , imageView 
+        [ height $ V 236
+        , width $ V 260 
+        , imageWithFallback $ fetchImage FF_ASSET $ getHomeScreenIllustration state
+        ]
+      , textView $
+        [ text $ getString TAP_WHERE_TO_TO_BOOK_RIDE
+        , height WRAP_CONTENT
+        , gravity CENTER
+        , width MATCH_PARENT 
+        , color Color.black700
+        ] <> (FontStyle.body1 LanguageStyle)
      ]
+    where 
+      getHomeScreenIllustration :: HomeScreenState -> String
+      getHomeScreenIllustration state = let 
+        cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
+        in (if state.data.config.autoVariantEnabled && cityConfig.enableCabs then "ny_ic_home_illustration_auto_cab"
+          else if state.data.config.autoVariantEnabled then "ny_ic_home_illustration_auto"
+          else if cityConfig.enableCabs then "ny_ic_home_illustration_cab"
+          else "ny_ic_home_illustration_auto")
 
 savedLocationsView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 savedLocationsView state push =
@@ -3152,73 +3141,45 @@ homeScreenViewV2 push state =
         , background state.data.config.homeScreen.primaryBackground 
         , padding $ (PaddingTop (safeMarginTop))
         ][] 
-      , homescreenHeader push state
       , linearLayout 
           [ width MATCH_PARENT
           , height MATCH_PARENT
-          , margin $ MarginTop 20
           , orientation VERTICAL
-          ][ coordinatorLayout
+          ][  homescreenHeader push state 
+            , linearLayout
               [ height MATCH_PARENT
-              , width MATCH_PARENT
-              ][ bottomSheetLayout
-                  [ height MATCH_PARENT
+              , width WRAP_CONTENT
+              , background Color.white900
+              , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
+              , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.white900, Color.grey700]) else (Linear 180.0 [Color.white900 , Color.white900,  Color.grey700])
+              ][ scrollView
+                  [ height $ if os == "IOS" then (V (getHeightFromPercent 90)) else MATCH_PARENT
                   , width MATCH_PARENT
-                  , peakHeight $ if state.data.peekHeight == 0 || state.data.peekHeight == 500 then getPeekHeight state else state.data.peekHeight
-                  , halfExpandedRatio 0.99
-                  , sheetState state.props.homeScreenSheetState
-                  , enableShift false
-                  , onSlide 
-                    ( \action -> do
-                        case action of 
-                          Scroll val -> if ((state.props.currSlideIndex < truncate 1 val) && not state.props.isHomescreenExpanded) || ((state.props.currSlideIndex > truncate 1 val) && state.props.isHomescreenExpanded) then push (Scroll (truncate 1 val)) 
-                                        else pure unit 
-                          _ -> push action
-                        pure unit
-                        )
-                    (Scroll)
-                  ][ relativeLayout
-                      [ width MATCH_PARENT
-                      , height MATCH_PARENT
+                  , padding $ PaddingBottom 70
+                  , nestedScrollView true
+                  , scrollBarY false
+                  ][ linearLayout
+                      [ width $ V (screenWidth unit)
+                      , height WRAP_CONTENT
                       , orientation VERTICAL
-                      , clipChildren false
-                      ][ linearLayout
-                          [ height MATCH_PARENT
-                          , width WRAP_CONTENT
-                          , background Color.white900
-                          , margin $ MarginTop 32 
-                          , padding $ PaddingTop 30 
-                          , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
-                          , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.grey700]) else (Linear 180.0 [Color.white900 , Color.grey700])
-                          ][ scrollView
-                              [ height $ if os == "IOS" then (V (getHeightFromPercent 90)) else MATCH_PARENT
-                              , width MATCH_PARENT
-                              , padding $ PaddingBottom 70
-                              , nestedScrollView true
-                              , scrollBarY false
-                              ][ linearLayout
-                                  [ width $ V (screenWidth unit)
-                                  , height WRAP_CONTENT
-                                  , orientation VERTICAL
-                                  ] $ [savedLocationsView state push] <> 
-                                    (if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
-                                      [locationUnserviceableView push state]
-                                    else 
-                                      [if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" else emptyTextView state]
-                                      <> (maybe [] (\item -> [bannersCarousal item state push]) state.data.bannerData.bannerItem)
-                                      <> [ shimmerView state
-                                      , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
-                                      , suggestionsView push state
-                                      , emptySuggestionsBanner state push
-                                      , footerView push state])
-                              ]
-                          ]
-                        , whereToButtonView push state
-                      ]
-                    ]  
-                ]
-            ]
-      ]
+                      ] $ [savedLocationsView state push] <> 
+                        (if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
+                          [locationUnserviceableView push state]
+                        else 
+                          []
+                          <> (maybe (if isHomeScreenView state && state.props.isBannerDataComputed then [mapView push state "CustomerHomeScreenMap"] else [emptyTextView state ]) (\item -> [bannersCarousal item state push]) state.data.bannerData.bannerItem)
+                          <> [ shimmerView state
+                          , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
+                          , suggestionsView push state
+                          , emptySuggestionsBanner state push
+                          ])
+                  ]
+              ]
+          ]
+        ]  
+
+showMapOnHomeScreen :: HomeScreenState -> Boolean
+showMapOnHomeScreen state = isHomeScreenView state && isNothing state.data.bannerData.bannerItem
 
 isHomeScreenView :: HomeScreenState -> Boolean
 isHomeScreenView state = state.props.currentStage == HomeScreen
@@ -3295,97 +3256,6 @@ homescreenHeader push state =
     , afterRender push $ const UpdatePeekHeight
     ][ pickupLocationView push state]
 
-whereToButtonView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-whereToButtonView push state  =
-  let whereToButtonConfig = state.data.config.homeScreen.whereToButton
-  in
-  linearLayout  
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation HORIZONTAL
-      , background Color.white900
-      , margin $ getMarginFromConfig whereToButtonConfig.margin 
-      , cornerRadii $ Corners 8.0 true true true true
-      , shadow $ getShadowFromConfig whereToButtonConfig.shadow
-      ][
-        PrestoAnim.animationSet (if os == "IOS" then [] else [Anim.fadeIn state.props.isHomescreenExpanded, Anim.fadeOut (not state.props.isHomescreenExpanded)]) $ 
-        linearLayout
-          [ width WRAP_CONTENT
-          , height MATCH_PARENT
-          , margin $ if os == "IOS" then Margin 16 16 0 0 else MarginLeft 16
-          , gravity CENTER_VERTICAL
-          , accessibilityHint "Menu Button"
-          , visibility $ boolToVisibility state.props.isHomescreenExpanded
-          , onClick push $ const OpenSettings
-          , rippleColor Color.rippleShade
-          ][ imageView
-            [ height $ V 20
-            , width $ V 20 
-            , visibility $ boolToVisibility state.props.isHomescreenExpanded
-            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_menu_dark"
-            ]
-          , linearLayout
-                [ width $ V 1
-                , height $ V 20
-                , margin $ MarginLeft 12
-                , visibility $ boolToVisibility state.props.isHomescreenExpanded
-                , background Color.grey900
-                ][]
-          ] 
-        , PrestoAnim.animationSet (
-          if os == "IOS" then [] else [ 
-            translateInXAnim animConfig{ 
-              fromX =  10
-            , toX =  0
-            , duration = 300
-            , ifAnim = not state.props.isHomescreenExpanded 
-            }
-          , translateOutXAnim animConfig{
-              toX = 5
-            , duration = 300
-            , ifAnim = state.props.isHomescreenExpanded 
-            }
-          ] 
-        )$ 
-        linearLayout
-          [ height WRAP_CONTENT
-          , weight 1.0
-          , onClick push $ const WhereToClick
-          , padding $ Padding (if state.props.isHomescreenExpanded then 0 else 16) 16 0 16
-          , margin $ MarginRight $ if state.props.isHomescreenExpanded then 10 else 0
-          , gravity CENTER_VERTICAL
-          , accessibilityHint "Where To Button"
-          , rippleColor Color.rippleShade
-          , clickable $ state.props.isSrcServiceable
-          , alpha if state.props.isSrcServiceable then 1.0 else 0.4 
-          , cornerRadius 8.0
-          ][ 
-            imageView
-              [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_destination"
-              , height $ V 20
-              , width $ V 20
-              , margin $ MarginHorizontal 5 6
-              , accessibility DISABLE
-              , onClick push $ if state.props.isSrcServiceable then (const $ OpenSearchLocation) else (const $ NoAction)
-              , gravity BOTTOM
-              ]
-            , textView $
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , text $ getString WHERE_TO
-                , color Color.black900
-                ] <> FontStyle.subHeading1 TypoGraphy
-          ]
-      ]
-    where
-      getMarginFromConfig :: MarginConfig -> Margin
-      getMarginFromConfig marginConfig = 
-        Margin marginConfig.left marginConfig.top marginConfig.right marginConfig.bottom
-
-      getShadowFromConfig :: ShadowConfig -> Shadow
-      getShadowFromConfig shadowConfig = 
-        Shadow shadowConfig.x shadowConfig.y shadowConfig.blur shadowConfig.spread shadowConfig.color shadowConfig.opacity
-
 
 pickupLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 pickupLocationView push state = 
@@ -3393,17 +3263,13 @@ pickupLocationView push state =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , padding (Padding 16 20 16 16)
       ][
-        PrestoAnim.animationSet
-        [ Anim.fadeIn  (not state.props.isHomescreenExpanded) 
-        , Anim.fadeOut state.props.isHomescreenExpanded 
-        ] $ 
         linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation HORIZONTAL
           , margin $ MarginBottom 8
+          , padding (Padding 16 20 16 0)
           , gravity CENTER
           ][
             linearLayout
@@ -3413,7 +3279,6 @@ pickupLocationView push state =
               , disableClickFeedback true
               , clickable $ not (state.props.currentStage == SearchLocationModel)
               , visibility if not state.data.config.terminateBtnConfig.visibility then GONE
-                           else if state.props.isHomescreenExpanded then INVISIBLE 
                            else VISIBLE
               , onClick push (const TerminateApp)
               , margin $ MarginRight 8
@@ -3434,7 +3299,6 @@ pickupLocationView push state =
               , gravity CENTER_VERTICAL
               , disableClickFeedback true
               , clickable $ not (state.props.currentStage == SearchLocationModel)
-              , visibility if state.props.isHomescreenExpanded then INVISIBLE else VISIBLE
               , onClick push $ const OpenSettings
               , padding $ Padding 8 8 8 8 
               , background $ state.data.config.homeScreen.header.menuButtonBackground
@@ -3455,7 +3319,6 @@ pickupLocationView push state =
                 , weight 1.0
                 , gravity CENTER_VERTICAL
                 , layoutGravity "center_vertical"
-                , visibility if state.props.isHomescreenExpanded then INVISIBLE else VISIBLE
                 ][ imageView
                     [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_logo_light"
                     , height $ V 50
@@ -3479,7 +3342,7 @@ pickupLocationView push state =
                 , gravity CENTER_VERTICAL
                 , cornerRadius 8.0
                 , layoutGravity "center_vertical"
-                , visibility $ boolToVisibility $ not $ (not state.data.config.feature.enableReferral) || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide || state.props.currentSheetState == EXPANDED)
+                , visibility $ boolToVisibility $ not $ (not state.data.config.feature.enableReferral) || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide)
                 , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
                 ][ textView
                     [ text $ if not state.props.isReferred then  getString HAVE_A_REFFERAL else (getString REFERRAL_CODE_APPLIED)
@@ -3488,45 +3351,39 @@ pickupLocationView push state =
                     ]
                 ]
             ]
-        , 
-        PrestoAnim.animationSet
-        [ Anim.fadeIn  (not state.props.isHomescreenExpanded) 
-        , Anim.fadeOut state.props.isHomescreenExpanded 
-        ] $ 
-        linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , orientation HORIZONTAL
-            , background $ state.data.config.homeScreen.pickUpViewColor
-            , padding $ Padding 16 7 16 7
-            , cornerRadii $ Corners 8.0 true true true true
-            , gravity CENTER_VERTICAL
-            , visibility if state.props.isHomescreenExpanded then INVISIBLE else VISIBLE
-            , onClick push $ if state.props.isSrcServiceable then (const $ OpenSearchLocation) else (const $ NoAction)
-            ][ imageView
-                  [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_circle"
-                  , height $ V 12
-                  , width $ V 12
-                  , margin (Margin 10 5 9 5)
-                  , accessibility DISABLE
-                  , onClick push $ if state.props.isSrcServiceable then (const $ OpenSearchLocation) else (const $ NoAction)
-                  , gravity BOTTOM
+          , linearLayout[
+              height WRAP_CONTENT
+            , width MATCH_PARENT
+            , padding $ Padding 16 8 16 16
+            ][  linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT 
+                , padding $ Padding 14 16 14 16 
+                , stroke $ "1,#373B49"
+                , onClick push $ const WhereToClick
+                , gravity CENTER_VERTICAL
+                , background Color.black900
+                , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.black 0.2 
+                , cornerRadius $ 8.0 
+                ][  imageView 
+                    [ height $ V 20 
+                    , width $ V 20 
+                    , margin $ MarginRight 8
+                    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_yellow_loc_tag"
+                    ]
+                  , textView $
+                    [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , text $ getString WHERE_TO
+                    , color Color.yellow900
+                    ] <> FontStyle.subHeading1 TypoGraphy
                   ]
-              , let pickupLoc = if state.props.isSrcServiceable then
-                                  (if state.data.source /= "" then state.data.source else (getString PICKUP_ <> getString CURRENT_LOCATION))
-                                else
-                                  getString APP_NOT_SERVICEABLE
-                in 
-                textView $
-                  [ height WRAP_CONTENT
-                  , width WRAP_CONTENT
-                  , text pickupLoc
-                  , maxLines 1
-                  , ellipsize true
-                  , color state.data.config.homeScreen.pickupLocationTextColor
-                  ] <> FontStyle.paragraphText TypoGraphy
-            ]
+                ]
         ]
+      where 
+        getShadowFromConfig :: ShadowConfig -> Shadow
+        getShadowFromConfig shadowConfig = 
+          Shadow shadowConfig.x shadowConfig.y shadowConfig.blur shadowConfig.spread shadowConfig.color shadowConfig.opacity
 
 mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> PrestoDOM (Effect Unit) w
 mapView push state idTag = 
@@ -3639,7 +3496,7 @@ getMapDimensions state =
   let mapHeight = if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver ] && os /= "IOS") then 
                     getMapHeight state
                   else if (isHomeScreenView state) then
-                    V (getHeightFromPercent 27)
+                    V 100
                   else
                     MATCH_PARENT
       mapWidth =  if state.props.currentStage /= HomeScreen then MATCH_PARENT else V ((screenWidth unit)-32)
@@ -3729,20 +3586,6 @@ shimmerView state =
         , orientation VERTICAL
         ]
         [ linearLayout
-            [ width $ V 200
-            , height $ V 20
-            , margin $ Margin 16 10 16 0
-            , background Color.greyDark
-            ]
-            []
-        , linearLayout
-            [ width $ V 300
-            , height $ V 20
-            , margin $ Margin 16 7 16 0
-            , background Color.greyDark
-            ]
-            []
-        , linearLayout
             [ width MATCH_PARENT
             , height $ V 80
             , margin $ Margin 16 16 16 10
@@ -4095,7 +3938,7 @@ additionalServicesView push state =
     , padding $ PaddingHorizontal 16 16
     , margin $ MarginTop 20
     ][  textView $
-          [ text "More Services"
+          [ text "Namma Services"
           , color Color.black900
           ] <> FontStyle.subHeading1 TypoGraphy
       , linearLayout

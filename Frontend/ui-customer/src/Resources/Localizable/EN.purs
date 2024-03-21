@@ -698,7 +698,7 @@ getEN stringKey =
         THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "The ride had to be cancelled, we’re finding you another"
         ENJOY_THE_RIDE -> "Enjoy the ride to your destination!"
         RIDE_STARTED -> "Ride started"
-        ONE_CLICK -> "1 Click"
+        ONE_CLICK -> "1 Click Booking"
         SMART -> "Smart"
         NOT_SERVICEABLE -> "Not Serviceable"
         WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "We are not live in your area yet! \nYou can access ride history and other \nsettings from the menu on the top left."
@@ -1074,3 +1074,4 @@ getEN stringKey =
         RECENT_RIDE_ISSUE_DESC -> "If you have issues with your recent ride please select the below option"
         I_NEED_HELP_WITH_MY_RECENT_RIDE -> "I need help with my recent ride"
         CONTINUE_WITH_SAFETY_SETTINGS -> "Continue with Safety Settings"
+        TAP_WHERE_TO_TO_BOOK_RIDE -> "Tap 'Where to?' to book your ride!"
