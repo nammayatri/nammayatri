@@ -698,7 +698,7 @@ getHI stringKey =
         ENJOY_THE_RIDE -> "अपने गंतव्य तक यात्रा का आनंद लें!"
         RIDE_STARTED -> "सवारी शुरू हुई"
         DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "आपके लिए विशेष रूप से तैयार किए गए शानदार स्पॉट खोजें"
-        ONE_CLICK -> "1 क्लिक"
+        ONE_CLICK -> "1 क्लिक बुकिंग"
         SMART -> "स्मार्ट"
         NOT_SERVICEABLE -> "सेवा योग्य नहीं"
         WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "हम अभी तक आपके क्षेत्र में नहीं रहते हैं! \nआप ऊपर बाईं ओर मेनू से सवारी इतिहास और अन्य \nसेटिंग्स तक पहुंच सकते हैं।"
@@ -1074,3 +1074,4 @@ getHI stringKey =
         RECENT_RIDE_ISSUE_DESC -> "यदि आपके हाल के सवारी में समस्याएं हैं तो कृपया नीचे दिए गए विकल्प का चयन करें।"
         I_NEED_HELP_WITH_MY_RECENT_RIDE -> "मुझे मेरी हाल की सवारी में मदद चाहिए"
         CONTINUE_WITH_SAFETY_SETTINGS -> "सुरक्षा सेटिंग्स के साथ जारी रखें"
+        TAP_WHERE_TO_TO_BOOK_RIDE -> "राइड बुक करने के लिए 'कहाँ जाना है?' टैप करें!"

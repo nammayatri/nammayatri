@@ -951,7 +951,7 @@ eval ReAllocate state =
     updateAndExit updatedState $ ReAllocateRide updatedState
   else continue state
   
-eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerItem = Just bannerItem}}}
+eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerItem = Just bannerItem}}, props{isBannerDataComputed = true}}
 
 eval UpdateBanner state = do
   if state.data.bannerData.bannerScrollState == "1" then continue state
@@ -1376,6 +1376,7 @@ eval BackPressed state = do
                 , currentLocation = state.props.currentLocation
                 , sosBannerType = state.props.sosBannerType 
                 , followsRide = state.props.followsRide
+                , showShimmer = false
                 , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
                 , rideSearchProps { 
                     cachedPredictions = state.props.rideSearchProps.cachedPredictions

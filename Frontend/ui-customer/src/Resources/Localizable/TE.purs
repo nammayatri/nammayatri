@@ -713,7 +713,7 @@ getTE stringKey =
     THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "రైడ్ రద్దు చేయబడాలి, మేము మీ కోసం మరొకరిని కనుగొంటాము"
     ENJOY_THE_RIDE -> "మీ గమ్యస్థానానికి రైడ్‌ను ఆస్వాదించండి!"
     RIDE_STARTED -> "రైడ్ ప్రారంభమైంది"
-    ONE_CLICK -> "1 క్లిక్ చేయండి"
+    ONE_CLICK -> "1 క్లిక్ బుక్ చేయడం"
     SMART -> "తెలివైన"
     NOT_SERVICEABLE -> "ఈ లొకేషన్ లో సేవలు ప్రారంభం కాలేదు"
     WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "మేము ఇంకా మీ ప్రాంతంలో ప్రారంభించలేదు! మీరు ఎగువ ఎడమవైపు ఉన్న మెను నుండి రైడ్ చరిత్ర మరియు ఇతర సెట్టింగ్‌లను యాక్సెస్ చేయవచ్చు.."
@@ -1089,3 +1089,4 @@ getTE stringKey =
     RECENT_RIDE_ISSUE_DESC -> "మీ ఇటీవల రైడ్‌తో సమస్యలు ఉన్నట్లయితే, దయచేసి క్రింది ఎంపికను ఎంచుకోండి."
     I_NEED_HELP_WITH_MY_RECENT_RIDE -> "నా ఇటీవల రైడ్ తో సహాయం కావాలి"
     CONTINUE_WITH_SAFETY_SETTINGS -> "భద్రతా సెట్టింగులతో కొనసాగండి"
+    TAP_WHERE_TO_TO_BOOK_RIDE -> "మీ రైడ్ బుక్ చేయడానికి 'ఎక్కడకు?' ని టాప్ చేయండి!"
