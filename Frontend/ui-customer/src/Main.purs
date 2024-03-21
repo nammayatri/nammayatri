@@ -86,11 +86,12 @@ onConnectivityEvent triggertype = do
                   "LOCATION_DISABLED" -> do
                     modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
                     Flow.permissionScreenFlow
-                  "INTERNET_ACTION" -> do
-                      lift $ lift $ liftFlow $  JBridge.showInAppNotification JBridge.inAppNotificationPayload{title = "No internet connection", message = "Please try again", channelId = "ApproxLoc", showLoader = true, durationInMilliSeconds = 50000}
+                  "INTERNET_ACTION_DISCONNECTED" -> do
+                      lift $ lift $ liftFlow $  JBridge.showInAppNotification JBridge.inAppNotificationPayload{title = "No internet connection", message = "Please try again", channelId = "internetAction", showLoader = true, durationInMilliSeconds = 500000}
                       Flow.baseAppFlow payload' false
-                    -- modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
-                    -- Flow.permissionScreenFlow
+                  "INTERNET_ACTION_CONNECTED" -> do
+                    lift $ lift $ liftFlow $  JBridge.showInAppNotification JBridge.inAppNotificationPayload{title = "You are connected now", message = "Connected", channelId = "internetAction", showLoader = false, durationInMilliSeconds = 5000}
+                    Flow.baseAppFlow payload' false
                   "REFRESH" -> Flow.baseAppFlow payload' false
                   _ -> Flow.baseAppFlow payload' false
                 pure unit

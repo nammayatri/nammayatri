@@ -62,7 +62,7 @@ import MerchantConfig.Types (GeoCodeConfig)
 import Debug
 import Effect.Class (liftEffect)
 import Data.Function.Uncurried (Fn3, runFn3, runFn4, runFn6, runFn2)
-
+import JBridge as JBridge
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
     regToken <- loadS $ show REGISTERATION_TOKEN
@@ -108,6 +108,9 @@ withAPIResult url f flow = do
             void $ pure $ printLog "success resp" res
         Left (err) -> do
             _ <- pure $ toggleBtnLoader "" false
+            if(err.code == -1) then do
+                liftFlow $  JBridge.showInAppNotification JBridge.inAppNotificationPayload{title = "No internet connection", message = "Please try again", channelId = "internetAction", showLoader = true, durationInMilliSeconds = 500000}
+            else pure unit
             let errResp = err.response
             _ <- pure $ printLog "error resp" errResp
             let userMessage = decodeError errResp.errorMessage "errorMessage"
@@ -134,6 +137,9 @@ withAPIResultBT url f errorHandler flow = do
             pure res
         Left err -> do
             _ <- pure $ toggleBtnLoader "" false
+            if(err.code == -1) then do
+                lift $ lift $ liftFlow $JBridge.showInAppNotification JBridge.inAppNotificationPayload{title = "No internet connection", message = "Please try again", channelId = "internetAction", showLoader = true, durationInMilliSeconds = 500000}
+            else pure unit
             let errResp = err.response
             let userMessage = decodeError errResp.errorMessage "errorMessage"
             let codeMessage = decodeError errResp.errorMessage "errorCode"

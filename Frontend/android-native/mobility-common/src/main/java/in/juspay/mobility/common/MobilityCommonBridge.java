@@ -3244,8 +3244,9 @@ public class MobilityCommonBridge extends HyperBridge {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     if (!isNetworkAvailable(bridgeComponents.getContext())) {
-                        invokeOnEvent(bridgeComponents.getJsCallback(), "onInternetChanged");
+                        invokeOnEvent(bridgeComponents.getJsCallback(), "onInternetDisconnected");
                     } else {
+                        invokeOnEvent(bridgeComponents.getJsCallback(), "onInternetReconnected");
                         callInternetActionCallBack(bridgeComponents.getJsCallback(), "true");
                     }
                 }
