@@ -15,7 +15,7 @@
 
 module Screens.SearchLocationScreen.ScreenData where
 
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..))
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..), City(..))
 import ConfigProvider
 import Screens (ScreenName(..), getScreen)
 import Data.Maybe (Maybe(..))
@@ -26,7 +26,9 @@ initData :: SearchLocationScreenState
 initData = {
   data : { srcLoc : Nothing
          , destLoc : Nothing
-         , currentLoc : Nothing 
+         , currentLoc : dummyLocationInfo{
+            address = "Current Location"
+         } 
          , locationList : []
          , fromScreen : getScreen HOME_SCREEN -- getScreen RENTAL_SCREEN
          , saveFavouriteCard : {
@@ -43,6 +45,7 @@ initData = {
         , confirmLocCategory : NOZONE
         , metroStations : []
         , updatedMetroStations : []
+        , predictionSelectedFromHome : locationListStateObj
   } ,
   props : {
     searchLocStage : PredictionsStage ,
@@ -54,7 +57,9 @@ initData = {
     showLoader : false,
     canClearText : false,
     locUnserviceable : false,
-    isAutoComplete : false
+    isSpecialZone : false,
+    isAutoComplete : false,
+    pickUpSelectedOnMap : false
   },
   appConfig : getAppConfig appConfig
 }
@@ -78,7 +83,7 @@ dummyLocationInfo = {
   placeId : Nothing,
   address : "",
   addressComponents : dummyAddress,
-  city : Nothing ,
   stationCode : "",
-  metroInfo : Nothing
+  metroInfo : Nothing,
+  city : AnyCity 
 }

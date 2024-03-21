@@ -46,4 +46,5 @@ type QuoteListModelState = {
   , appConfig :: AppConfig
   , vehicleVariant :: String
   , city :: City
+  , isRentalSearch :: Boolean
 }

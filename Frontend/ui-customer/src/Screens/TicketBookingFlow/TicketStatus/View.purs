@@ -54,7 +54,7 @@ import PaymentPage (consumeBP)
 import Engineering.Helpers.Commons as EHC
 import Data.Ord (comparing)
 import Data.Function.Uncurried (runFn3)
-import Mobility.Prelude (groupAdjacent)
+import Mobility.Prelude (groupAdjacent, boolToVisibility)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Domain.Payments as PP
@@ -67,8 +67,8 @@ screen initialState =
   , globalEvents : [getPlaceDataEvent]
   , eval :
     \action state -> do
-        let _ = spy "ZooTicketBookingFlow action " action
-        let _ = spy "ZooTicketBookingFlow state " state
+        let _ = spy "ZooTicketBookingFlow TicketStatus action " action
+        let _ = spy "ZooTicketBookingFlow TicketStatus state " state
         eval action state
   }
   where
@@ -112,29 +112,20 @@ view push state =
         , visibility if (state.props.currentStage == ST.DescriptionStage && state.props.showShimmer) then GONE else VISIBLE
         , margin $ MarginBottom if state.props.currentStage == ST.BookingConfirmationStage then 0 else 84
         ]
-        [ linearLayout
-          [ height $ V 1 
+        [ separatorView Color.greySmoke
+        , linearLayout
+          [ weight 1.0
           , width MATCH_PARENT
-          , background Color.grey900
-          ] []
-        , separatorView Color.greySmoke
-        , scrollView
-            [ height MATCH_PARENT
-            , width MATCH_PARENT
-            , background Color.white900
-            , afterRender push $ const AfterRender
-            , fillViewport true
+          , background Color.white900
+          ][  linearLayout
+              [ height MATCH_PARENT
+              , width MATCH_PARENT
+              , gravity CENTER
+              , background Color.purple
+              , orientation VERTICAL
+              ][ bookingStatusView state push state.props.paymentStatus ]
             ]
-            [ linearLayout
-                [ height MATCH_PARENT
-                , width MATCH_PARENT
-                , gravity CENTER
-                , orientation VERTICAL
-                ]
-                [ bookingStatusView state push state.props.paymentStatus ]
-            ]
-        ]
-    , linearLayout [ visibility GONE ] []
+          ]
     , bookingConfirmationActions state push state.props.paymentStatus
     ]
 
@@ -312,14 +303,24 @@ bookingStatusBody state push paymentStatus =
 
 bookingConfirmationActions :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
 bookingConfirmationActions state push paymentStatus = 
+  let isBookingConfirmationStage = state.props.currentStage == ST.BookingConfirmationStage
+  in 
+  linearLayout[
+    height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.transparent
+  , visibility $ boolToVisibility $ isBookingConfirmationStage
+  , gravity BOTTOM
+  ][
   linearLayout
   [ width MATCH_PARENT
   , gravity CENTER
   , orientation VERTICAL
+  , height WRAP_CONTENT
   , padding $ PaddingBottom 20
   , alignParentBottom "true,-1"
   , background Color.white900
-  , visibility if (state.props.currentStage == ST.BookingConfirmationStage) then VISIBLE else GONE
+  , visibility $ boolToVisibility $ isBookingConfirmationStage
   ][ linearLayout
       [ width MATCH_PARENT
       , height $ V 1
@@ -332,7 +333,7 @@ bookingConfirmationActions state push paymentStatus =
      , onClick push $ const GoHome
      , gravity CENTER
      ][commonTV push secondaryButtonText Color.black900 (FontStyle.subHeading1 TypoGraphy) 5 CENTER GoHome]
-  ]
+  ]]
   where primaryButtonText = case paymentStatus of
                               PP.Success -> "View Ticket"
                               PP.Failed -> "Try Again"
@@ -343,7 +344,7 @@ bookingConfirmationActions state push paymentStatus =
 
 paymentStatusHeader :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
 paymentStatusHeader state push paymentStatus = 
-  let transcationConfig = getTransactionConfig paymentStatus
+  let transactionConfig = getTransactionConfig paymentStatus
   in
     linearLayout
     [ width MATCH_PARENT
@@ -368,12 +369,12 @@ paymentStatusHeader state push paymentStatus =
         ][ imageView
           [ width $ V 65
           , height $ V 65
-          , imageWithFallback transcationConfig.image
+          , imageWithFallback transactionConfig.image
           ]
         ]
       ]
-      , commonTV push transcationConfig.title Color.black900 (FontStyle.h2 TypoGraphy) 14 CENTER NoAction
-      , commonTV push transcationConfig.statusTimeDesc Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER NoAction
+      , commonTV push transactionConfig.title Color.black900 (FontStyle.h2 TypoGraphy) 14 CENTER NoAction
+      , commonTV push transactionConfig.statusTimeDesc Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER NoAction
       , copyTransactionIdView state push $ paymentStatus == PP.Failed
       , if (paymentStatus == PP.Success) then (linearLayout [][]) else (PrimaryButton.view (push <<< RefreshStatusAC) (refreshStatusButtonConfig state))
 

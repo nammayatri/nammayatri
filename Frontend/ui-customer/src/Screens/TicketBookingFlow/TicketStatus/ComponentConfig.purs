@@ -14,6 +14,8 @@ import Data.Lens ((^.))
 import Screens.Types as ST
 import Data.Array as DA
 import JBridge as JB
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 genericHeaderConfig :: ST.TicketBookingScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
@@ -35,7 +37,7 @@ genericHeaderConfig state = let
                                             Just placeInfo -> placeInfo ^._name
                                             Nothing -> "Book Tickets"
                   ST.ChooseTicketStage -> "Choose Tickets"
-                  ST.ViewTicketStage -> if DA.null state.props.ticketBookingList.booked && DA.null state.props.ticketBookingList.pendingBooking then "My Tickets" else "Choose Tickets"
+                  ST.ViewTicketStage -> if DA.null state.props.ticketBookingList.booked && DA.null state.props.ticketBookingList.pendingBooking then (getString MY_TICKETS) else "Choose Tickets"
                   ST.TicketInfoStage -> state.props.selectedBookingInfo.ticketPlaceName
                   _ -> ""
       , color = Color.darkCharcoal
@@ -125,7 +127,7 @@ refreshStatusButtonConfig state = PrimaryButton.config
       }
       , height = WRAP_CONTENT
       , gravity = CENTER
-      , cornerRadius = 32.0
+      , cornerRadius = 16.0
       , width = MATCH_PARENT
       , padding =  Padding 0 13 0 13
       , margin = Margin 16 16 16 0
