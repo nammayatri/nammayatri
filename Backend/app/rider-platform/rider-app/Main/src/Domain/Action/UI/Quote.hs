@@ -117,9 +117,8 @@ processActiveBooking booking cancellationStage = do
     Just _ -> throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
     Nothing -> do
       now <- getCurrentTime
-      if addUTCTime 900 booking.startTime >= now
-        then throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT") -- 15 mins buffer
-        else do
+      if (addUTCTime 900 booking.startTime < now || not (isRentalOrInterCity booking.bookingDetails))
+        then do
           let cancelReq =
                 DCancel.CancelReq
                   { reasonCode = CancellationReasonCode "Active booking",
@@ -129,6 +128,13 @@ processActiveBooking booking cancellationStage = do
           fork "active booking processing" $ do
             dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
             void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+        else throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
+
+isRentalOrInterCity :: BookingDetails -> Bool
+isRentalOrInterCity bookingDetails = case bookingDetails of
+  RentalDetails _ -> True
+  InterCityDetails _ -> True
+  _ -> False
 
 getOffers :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
 getOffers searchRequest = do
