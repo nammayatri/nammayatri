@@ -26,6 +26,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.Metrics as Metrics
 
 type API = Spec.OnSearchAPI
 
@@ -44,6 +45,8 @@ onSearch _ req = withFlowHandlerAPI $ do
     onSearchReq <- ACL.buildOnSearchReq req
     Redis.whenWithLockRedis (onSearchLockKey message_id) 60 $ do
       (merchant, search) <- DOnSearch.validateRequest onSearchReq
+      let merchantOperatingCityID = maybe "" (.getId) search.merchantOperatingCityId
+      Metrics.finishMetrics Metrics.SEARCH merchant.name transaction_id merchantOperatingCityID
       fork "FRFS on_search processing" $ do
         Redis.whenWithLockRedis (onSearchProcessingLockKey message_id) 60 $
           DOnSearch.onSearch onSearchReq merchant search
