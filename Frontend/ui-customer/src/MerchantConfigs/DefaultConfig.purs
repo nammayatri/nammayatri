@@ -262,7 +262,7 @@ config =
           }
       , labelTextSize : 30
       , animationDuration : 500
-      , vehicleMarkerSize: 90
+      , vehicleMarkerSize: 240
       }
   , metroTicketingConfig : {
     metroStationTtl : 10080 -- in Minutes
