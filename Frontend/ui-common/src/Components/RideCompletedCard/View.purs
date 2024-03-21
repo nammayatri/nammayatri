@@ -691,7 +691,7 @@ contactSupportPopUpView config push =
 
 ---------------------------------------------- (Driver Card 7) rentalRideDetailsView  ------------------------------------------------------------------------------------------------------------------------------------------
 
-rentalTripDetailsView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w -- TODO-codex : Refactor for generic use
+rentalTripDetailsView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 rentalTripDetailsView config push =
   let rentalRowDetails = config.rentalRowDetails
   in 

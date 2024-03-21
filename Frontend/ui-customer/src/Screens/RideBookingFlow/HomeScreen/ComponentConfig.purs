@@ -405,7 +405,7 @@ rentalBannerConfig state =
       , imageHeight = V 43
       , imageWidth = V 66
       , imagePadding = PaddingVertical 0 0
-      , title = "Ride Booking " <> (maybe "" (\rentalsInfo -> -- TODO-codex : translation
+      , title = getString RIDE_BOOKING <> (maybe "" (\rentalsInfo ->
                                                       let timeUTC = rentalsInfo.rideScheduledAtUTC
                                                           currentUTC = EHC.getCurrentUTC ""
                                                           date = if EHC.convertUTCtoISC timeUTC "Do" == EHC.convertUTCtoISC currentUTC "Do" then "at " else "on " <>  EHC.convertUTCtoISC timeUTC "ddd" <> ", "
@@ -2255,7 +2255,7 @@ intercityInSpecialZonePopupConfig state = let
       margin = MarginTop 16
       },
     secondaryText { 
-      text = if state.props.showNormalRideNotSchedulablePopUp then "Scheduling is only allowed in Intercity or Rental Rides" else "Locations within special zone are not eligible for intercity rides", -- TODO-codex : Add Translation
+      text = getString $ if state.props.showNormalRideNotSchedulablePopUp then SCHEDULING_ALLOWED_IN_INTERCITY_RENTAL else SPECIAL_ZONE_INTERCITY_INELIGIBLE,
       margin = MarginTop 4
       },
     option1 {

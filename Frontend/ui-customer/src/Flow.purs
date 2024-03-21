@@ -623,8 +623,7 @@ homeScreenFlow = do
         $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData{data{srcLoc = Just sourceLoc, currentLoc = currentLoc, destLoc = destLoc , locationList = globalState.globalProps.cachedSearches  }
             , props{focussedTextField = if isSource then Just SearchLocPickup else Just SearchLocDrop , actionType = SearchLocationAction , areBothLocMandatory = true}})
       searchLocationFlow
-    ADD_STOP state -> do 
-      let _ = spy "ADD_STOP" state
+    ADD_STOP state -> do
       (GlobalState globalState) <- getState
       let updatedState = {lat : Just state.data.driverInfoCardState.sourceLat , lon : Just state.data.driverInfoCardState.sourceLng , city : state.props.city, addressComponents : encodeAddress state.data.driverInfoCardState.source [] Nothing state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng , placeId : Nothing , address : state.data.driverInfoCardState.source, metroInfo : Nothing, stationCode : ""} 
       modifyScreenState 
@@ -678,8 +677,8 @@ homeScreenFlow = do
           destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = state.data.destination, labelImage = zoneLabelIcon state.props.zoneType.destinationTag }
       void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show updatedState.props.sourceLat) <> " long: " <> (show updatedState.props.sourceLong))},
                                           {key : "Latest Search", value : (unsafeToForeign $ currentDate <> " " <> currentTime)}]
-      (ServiceabilityRes sourceServiceabilityRespDest) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.props.destinationLat state.props.destinationLong) DESTINATION -- TODO-codex : Refactor
-      let isIntercity = any (_ == "*") [(fromMaybe "" sourceServiceabilityResp.currentCity), (fromMaybe "" sourceServiceabilityRespDest.currentCity)]
+      (ServiceabilityRes sourceServiceabilityRespDest) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.props.destinationLat state.props.destinationLong) DESTINATION
+      let isIntercity = any (_ == (Just "*")) [sourceServiceabilityResp.currentCity, sourceServiceabilityRespDest.currentCity]
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{fareProductType = if isIntercity then FPT.INTER_CITY else homeScreen.data.fareProductType}})
       when (isJust sourceServiceabilityResp.specialLocation && (fromMaybe "1" sourceServiceabilityResp.currentCity) /= (fromMaybe "" sourceServiceabilityRespDest.currentCity)) do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{props{showIntercityUnserviceablePopUp = true}})
@@ -710,7 +709,6 @@ homeScreenFlow = do
           --   homeScreenFlow
           if ( (response.distance < 500  || isDistMoreThanThreshold )&& Arr.all (_ == false ) [ isLocalStageOn PickUpFarFromCurrentLocation , isLocalStageOn ShortDistance]) then do 
               let currentStage = if isDistMoreThanThreshold then PickUpFarFromCurrentLocation else ShortDistance
-                  _ = spy "sdfhjsdgaf" "sjkdlfskljh"
               updateLocalStage currentStage
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = currentStage ,rideRequestFlow = true, isSearchLocation = SearchLocation, distance = response.distance, isShorterTrip = response.distance < 500, findingQuotesProgress = 0.0}})
               homeScreenFlow
@@ -2457,8 +2455,7 @@ addNewAddressScreenFlow input = do
 
         case state.props.fromScreen of
           homeScreen -> homeScreenFlow
-          searchLocationScreen -> do 
-            let _ = spy "Inside searchlocationScreen" state
+          searchLocationScreen -> do
             searchLocationFlow
           _ -> homeScreenFlow
       else savedLocationFlow
@@ -3631,8 +3628,7 @@ searchLocationFlow = do
     SearchLocationController.MetroTicketBookingScreen state -> metroTicketBookingFlow
     SearchLocationController.RideScheduledScreen state -> rideScheduledFlow
     _ -> pure unit
-  where 
-  
+  where
     locSelectedOnMapFlow :: SearchLocationScreenState -> FlowBT String Unit
     locSelectedOnMapFlow state = do 
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
@@ -4322,12 +4318,10 @@ rentalScreenFlow = do
   action <- lift $ lift $ runScreen $ UI.rentalScreen currentState.rentalScreen 
   case action of
     RentalScreenController.DoRentalSearch state -> do
-      let _ = spy "Inside DoRentalSearch" state
       let dropLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.dropLoc
           pickupLoc = state.data.pickUpLoc
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq (fromMaybe 0.0 pickupLoc.lat) (fromMaybe 0.0 pickupLoc.lon)) ORIGIN
       if (isJust sourceServiceabilityResp.specialLocation) then do
-        -- void $ pure $ toast $ "Rental Booking Not Allowed from this location" -- TODO-codex : Translations
         modifyScreenState $ RentalScreenStateType (\_ -> state {data {currentStage = RENTAL_SELECT_PACKAGE}, props{showPrimaryButton = true, showPopUpModal = true}})
         rentalScreenFlow 
       else do
@@ -4355,7 +4349,6 @@ rentalScreenFlow = do
       modifyScreenState
         $ RentalScreenStateType (\rentalScreen -> updatedState)
       (GlobalState globalState) <- getState
-      let _ = spy "Going to searchLocationFlow" globalState
       modifyScreenState
         $ SearchLocationScreenStateType 
             (\_ -> SearchLocationScreenData.initData{data{locationList = globalState.globalProps.cachedSearches, fromScreen = (Screen.getScreen Screen.RENTAL_SCREEN), srcLoc = Just updatedState.data.pickUpLoc , destLoc = updatedState.data.dropLoc}
