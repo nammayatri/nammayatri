@@ -134,7 +134,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
             SpecialZoneQueuePool -> do
               (driversInQueue, _) <- splitDriverFromGateAndRest allDriversNotOnRide
               logDebug $ "SpecialPickupZonePoolBatch DriversInQueue -" <> show driversInQueue
-              goHomeDriversInQueue <-
+              (goHomeDriversInQueue, goHomeInQueueNotToDestination) <-
                 case searchReq.toLocation of
                   Just toLoc | isGoHomeAvailable searchTry.tripCategory -> do
                     let goHomeReq =
@@ -149,7 +149,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
                               isRental = isRentalTrip searchTry.tripCategory
                             }
                     filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False) driversInQueue) goHomeReq merchantOpCityId_
-                  _ -> pure []
+                  _ -> pure ([], [])
               logDebug $ "SpecialPickupZonePoolBatch goHomeDriversInQueue -" <> show goHomeDriversInQueue
               let goHomeDriversInQueueId = map (\d -> d.driverPoolResult.driverId) goHomeDriversInQueue
               let normalDriversInQueue = filter (\d -> not (d.driverPoolResult.driverId `elem` goHomeDriversInQueueId)) driversInQueue
@@ -158,7 +158,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
                     if notNull goHomeDriversInQueue
                       then (addKeepHiddenInSeconds goHomeConfig.goHomeBatchDelay normalDriversInQueueBatch, Seconds 2 * goHomeConfig.goHomeBatchDelay)
                       else (normalDriversInQueueBatch, goHomeConfig.goHomeBatchDelay)
-                  specialPickupZonePoolBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` blockListedDrivers) $ goHomeDriversInQueue <> finalNormalDriversInQueue
+                  specialPickupZonePoolBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` (blockListedDrivers <> goHomeInQueueNotToDestination)) $ goHomeDriversInQueue <> finalNormalDriversInQueue
               logDebug $ "SpecialPickupZonePoolBatch-" <> show specialPickupZonePoolBatch
               pure . (,poolType,Just scheduleIn) . addSpecialZoneInfo searchReq.driverDefaultExtraFee $ specialPickupZonePoolBatch
             SpecialDriversPool -> do

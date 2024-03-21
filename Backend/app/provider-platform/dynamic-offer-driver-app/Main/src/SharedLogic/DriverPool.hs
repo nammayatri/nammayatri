@@ -514,7 +514,7 @@ calculateGoHomeDriverPool (req@CalculateGoHomeDriverPoolReq {..}) merchantOpCity
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   randomDriverPool <- liftIO $ take goHomeCfg.numDriversForDirCheck <$> Rnd.randomizeList driversWithLessThanNParallelRequests
   logDebug $ "random driver pool" <> show randomDriverPool
-  filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool req merchantOpCityId
+  fst <$> filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool req merchantOpCityId
   where
     getParallelSearchRequestCount now dObj = getValidSearchRequestCount merchantId (dObj.driverId) now
 
@@ -537,7 +537,7 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
   [QP.NearestGoHomeDriversResult] ->
   CalculateGoHomeDriverPoolReq a ->
   Id DMOC.MerchantOperatingCity ->
-  m [DriverPoolWithActualDistResult]
+  m ([DriverPoolWithActualDistResult], [Id DP.Driver])
 filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
   goHomeRequests <-
     mapMaybeM
@@ -570,9 +570,10 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
               any (\wp -> highPrecMetersToMeters (distanceBetweenInMeters (getCoordinates toLocation) wp) <= goHomeCfg.goHomeWayPointRadius) driverRoute.points
           )
           driversRoutes
-
+  let goHomeDriverIdsToDest = map (\(driver, _, _, _) -> driver.driverId) driversOnWayToHome
+  let goHomeDriverIdsNotToDest = map (\(_, driver, _) -> driver.driverId) $ filter (\(_, driver, _) -> driver.driverId `notElem` goHomeDriverIdsToDest) driverGoHomePoolWithActualDistance
   let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult transporterConfig <$> driversOnWayToHome
-  return $ take driverPoolCfg.driverBatchSize goHomeDriverPoolWithActualDist
+  return $ (take driverPoolCfg.driverBatchSize goHomeDriverPoolWithActualDist, goHomeDriverIdsNotToDest)
   where
     filterFunc threshold estDist distanceToPickup =
       case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
