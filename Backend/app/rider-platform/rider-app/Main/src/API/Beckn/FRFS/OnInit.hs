@@ -26,6 +26,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.Metrics as Metrics
 
 type API = Spec.OnInitAPI
 
@@ -43,6 +44,8 @@ onInit _ req = withFlowHandlerAPI $ do
     onInitReq <- ACL.buildOnInitReq req
     Redis.whenWithLockRedis (onInitLockKey onInitReq.messageId) 60 $ do
       (merchant, booking) <- DOnInit.validateRequest onInitReq
+      let merchantOperatingCityID = maybe "" (.getId) booking.merchantOperatingCityId
+      Metrics.finishMetrics Metrics.INIT merchant.name transaction_id merchantOperatingCityID
       fork "FRFS on_init processing" $ do
         Redis.whenWithLockRedis (onInitProcessingLockKey onInitReq.messageId) 60 $
           DOnInit.onInit onInitReq merchant booking

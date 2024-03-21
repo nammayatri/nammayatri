@@ -69,6 +69,7 @@ import qualified Storage.Queries.Station as QS
 import qualified Storage.Queries.Station as QStation
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Metrics as Metrics
 import qualified Tools.Payment as Payment
 
 getFrfsStations :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Station.FRFSVehicleType -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSStationAPI]
@@ -119,6 +120,7 @@ postFrfsSearch (mbPersonId, merchantId) vehicleType_ FRFSSearchAPIReq {..} = do
   fork "FRFS SearchReq" $ do
     bknSearchReq <- ACL.buildSearchReq searchReq bapConfig fromStation toStation merchantOperatingCity.city
     logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
+    Metrics.startMetrics Metrics.SEARCH merchant.name searchReqId.getId merchantOperatingCity.id.getId
     void $ CallBPP.search bapConfig.gatewayUrl bknSearchReq
   return $ FRFSSearchAPIRes searchReqId
 
@@ -167,6 +169,7 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
     let dConfirmRes' = dConfirmRes {DFRFSTicketBooking.validTill = validTill}
     bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) dConfirmRes' bapConfig Utils.BppData {bppId = dConfirmRes.bppSubscriberId, bppUri = dConfirmRes.bppSubscriberUrl} merchantOperatingCity.city
     logDebug $ "FRFS InitReq " <> encodeToText bknInitReq
+    Metrics.startMetrics Metrics.INIT merchant.name dConfirmRes.searchId.getId merchantOperatingCity.id.getId
     void $ CallBPP.init providerUrl bknInitReq
   return $ makeBookingStatusAPI dConfirmRes stations merchantOperatingCity.city
   where
@@ -312,6 +315,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                 mRiderNumber <- mapM decrypt person.mobileNumber
                 bknConfirmReq <- ACL.buildConfirmReq (mRiderName, mRiderNumber) updatedBooking bapConfig txnId.getId Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} merchantOperatingCity.city
                 logDebug $ "FRFS ConfirmReq " <> encodeToText bknConfirmReq
+                Metrics.startMetrics Metrics.CONFIRM merchant.name booking.searchId.getId merchantOperatingCity.id.getId
                 void $ CallBPP.confirm providerUrl bknConfirmReq
               buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
             else do
