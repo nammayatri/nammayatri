@@ -1436,6 +1436,9 @@ eval BackPressed state = do
                 , sosBannerType = state.props.sosBannerType 
                 , followsRide = state.props.followsRide
                 , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
+                , rideSearchProps { 
+                    cachedPredictions = state.props.rideSearchProps.cachedPredictions
+                  }
                 }
               }
     SettingPrice -> do

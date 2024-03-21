@@ -45,6 +45,7 @@ import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
 import PrestoDOM.List
 import JBridge (Location)
+import Data.HashMap as DHM
 
 type Contacts = {
   name :: String,
@@ -2198,6 +2199,7 @@ type RideSearchProps = {
   , destManuallyMoved :: Boolean
   , autoCompleteType :: Maybe AutoCompleteReqType
   , sourceSelectType :: LocationSelectType
+  , cachedPredictions :: DHM.HashMap String (Array LocationListItemState)
 }
 
 data AutoCompleteReqType = PICKUP | DROP
