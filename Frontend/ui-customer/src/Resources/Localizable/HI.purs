@@ -1146,7 +1146,6 @@ getHI stringKey =
         NO_RIDES_SCHEDULED_YET -> "अभी तक कोई सवारियाँ शेड्यूल नहीं की गई हैं!"
         RIDE_BOOKING -> "राइड बुकिंग।"
         SPECIAL_ZONE_RENTAL_INELIGIBLE -> "विशेष क्षेत्र के भीतर के स्थान किराये की सवारियों के लिए अयोग्य हैं।"
-        TAP_WHERE_TO_TO_BOOK_RIDE -> "राइड बुक करने के लिए 'कहाँ जाना है?' टैप करें!"
         YATRI_SERVICES -> "यात्री सेवाएं"
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "आपके पास " <> bookingTime <> " को आगामी किराये की बुकिंग हैं।"
         SCHEDULED -> "शेड्यूल किया गया"

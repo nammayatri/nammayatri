@@ -338,7 +338,7 @@ config =
   }
   , logFunctionCalls : false
   , locationTagBar : {
-    cornerRadius : 24.0
+    cornerRadius : 18.0
   , textColor : "#454545"
   , stroke: "1,#E5E7EB"
   }
@@ -361,8 +361,8 @@ config =
             { radius : 50000
             , strictBounds : true
             }
-        , enableRentals : false 
-        , enableIntercity : false
+        , enableRentals : true 
+        , enableIntercity : true
         , enableCabs : false
         },
         { cityCode : "std:033"

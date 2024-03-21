@@ -75,7 +75,7 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getCityConfig, getVehicleVariantImage, getImageBasedOnCity)
-import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition, differenceBetweenTwoUTC)
+import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, differenceBetweenTwoUTC)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -1182,7 +1182,7 @@ emptySuggestionsBanner state push =
       getHomeScreenIllustration :: HomeScreenState -> String
       getHomeScreenIllustration state = let 
         cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
-        in (if state.data.config.autoVariantEnabled && cityConfig.enableCabs then "ny_ic_home_illustration_auto_cab"
+        in (if state.data.config.autoVariantEnabled && cityConfig.enableCabs then "ny_ic_home_illustration_cab_auto"
           else if state.data.config.autoVariantEnabled then "ny_ic_home_illustration_auto"
           else if cityConfig.enableCabs then "ny_ic_home_illustration_cab"
           else "ny_ic_home_illustration_auto")
@@ -1196,12 +1196,22 @@ savedLocationsView state push =
     , visibility $ boolToVisibility $ not $ state.props.showShimmer
     , padding $ PaddingHorizontal 16 16
     ]
-    [ linearLayout
+    [ PrestoAnim.animationSet [ fadeIn true ] $
+      linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , margin $ MarginTop 16
         , alpha if state.props.isSrcServiceable then 1.0 else 0.4
         , onClick push (const NoAction)
+        , onAnimationEnd
+             ( \action -> do
+                 _ <- push action
+                 _ <- getCurrentPosition push CurrentLocation
+                 case state.props.currentStage of
+                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
+                   _ -> pure unit
+                 pure unit
+             )(const MapReadyAction)
         ]
         [ LocationTagBar.view (push <<< SavedAddressClicked) { savedLocations: state.data.savedLocations } ]
     ]
@@ -3237,15 +3247,6 @@ homeScreenViewV2 push state =
          , width MATCH_PARENT 
          , margin $ MarginTop 16
          , visibility $ boolToVisibility (state.props.showShimmer)
-         , onAnimationEnd
-             ( \action -> do
-                 _ <- push action
-                 _ <- getCurrentPosition push CurrentLocation
-                 case state.props.currentStage of
-                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
-                   _ -> pure unit
-                 pure unit
-             )(const MapReadyAction)
          ][ tagShimmerView state]
         ]
         else
@@ -3440,7 +3441,7 @@ pickupLocationView push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT 
                 , padding $ Padding 14 16 14 16 
-                , stroke $ "1,#373B49"
+                , stroke $ "1," <> Color.mountainFig
                 , onClick push $ const WhereToClick
                 , gravity CENTER_VERTICAL
                 , background Color.black900
@@ -3840,8 +3841,8 @@ repeatRideCard push state index trip =
         , margin $ MarginRight 4
         ][ imageView
             [ imageWithFallback $ fetchImage FF_ASSET $ getVehicleVariantImage trip.vehicleVariant
-            , height $ V 50
-            , width $ V 30
+            , height $ V 30
+            , width $ V 50
             ]
         ]
       , linearLayout
@@ -4191,7 +4192,7 @@ getConfirmLocationCategory state =
 newView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 newView push state = 
   textView $
-    [ text $ "✨ " <> getString NEW
+    [ text $ "✨ " <> getString NEW_
     , color Color.white900
     , cornerRadius 16.0
     , background Color.blue900

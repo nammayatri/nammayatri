@@ -1163,7 +1163,6 @@ getTA stringKey =
     NO_RIDES_SCHEDULED_YET -> "இதுவரை எந்த சவாரிகளும் திட்டமிடப்படவில்லை!"
     RIDE_BOOKING -> "சவாரி முன்பதிவு."
     SPECIAL_ZONE_RENTAL_INELIGIBLE -> "சிறப்பு மண்டலத்தில் உள்ள இடங்கள் வாடகை சவாரிகளுக்கு தகுதியற்றவை."
-    TAP_WHERE_TO_TO_BOOK_RIDE -> "உங்கள் சயம் பதிகை செய்ய 'எங்கே?' அழுத்தவும்!"
     YATRI_SERVICES -> "பயணியர் சேவைகள்"
     YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> bookingTime <> " அன்று உங்களுக்கு வாடகை முன்பதிவு உள்ளது"
     SCHEDULED -> "அட்டவணைச் செய்யப்பட்டது"

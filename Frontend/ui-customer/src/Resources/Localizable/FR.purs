@@ -1147,7 +1147,6 @@ getFR stringKey =
         NO_RIDES_SCHEDULED_YET -> "Aucun trajet n'est programmé pour le moment!"
         RIDE_BOOKING -> "Réservation de trajet."
         SPECIAL_ZONE_RENTAL_INELIGIBLE -> "Les lieux situés dans une zone spéciale ne sont pas éligibles pour les locations."
-        TAP_WHERE_TO_TO_BOOK_RIDE -> "Appuyez sur 'Où aller ?' pour réserver votre trajet !"
         YATRI_SERVICES -> "Services de voyageurs"
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "Vous avez une réservation de location à venir le " <> bookingTime
         SCHEDULED -> "Planifié"

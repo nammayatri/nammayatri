@@ -1161,7 +1161,6 @@ getTE stringKey =
     NO_RIDES_SCHEDULED_YET -> "ఇంకా ఎటువంటి సవారులు షెడ్యూల్ చేయబడలేదు!"
     RIDE_BOOKING -> "రైడ్ బుకింగ్."
     SPECIAL_ZONE_RENTAL_INELIGIBLE -> "ప్రత్యేక వార్తలో ఉన్న స్థలాలు రెంటల్ రైడ్‌లకు అనుమతించబడవు."
-    TAP_WHERE_TO_TO_BOOK_RIDE -> "మీ రైడ్ బుక్ చేయడానికి 'ఎక్కడకు?' ని టాప్ చేయండి!"
     YATRI_SERVICES -> "యాత్రి సేవలు"
     YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "మీకు " <> bookingTime <>  "కి రాబోయే అద్దె బుకింగ్ ఉంది"
     SCHEDULED -> "షెడ్యూల్ చేయబడింది"

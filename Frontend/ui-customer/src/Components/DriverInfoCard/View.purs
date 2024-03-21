@@ -691,7 +691,7 @@ driverInfoView push state =
                   [ gravity CENTER
                   , background Color.transparentGrey
                   , height $ V 4
-                  , width MATCH_PARENT
+                  , width $ V 34
                   , accessibility ENABLE
                   , accessibilityHint $ "Bottom Sheet : Scrollable element : " <> if state.data.bottomSheetState == EXPANDED then "Scroll down to collapse details" else  "Scroll up to expand for more ride actions"
                   , margin $ MarginTop 8
@@ -1391,7 +1391,7 @@ driverPickUpStatusText state _ =
 rideNotStarted :: DriverInfoCardState -> Boolean
 rideNotStarted state = 
   let lastStage = if state.props.isChatWithEMEnabled then RideStarted else RideAccepted
-  in Array.any (_ == state.props.currentStage) [RideAccepted, ChatWithDriver] && lastStage == RideAccepted
+  in Array.any (_ == state.props.currentStage) [RideAccepted, ChatWithDriver] && (lastStage == RideAccepted || state.props.stageBeforeChatScreen == RideAccepted)
 rentalDetailsView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 rentalDetailsView push state =
   linearLayout

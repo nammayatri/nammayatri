@@ -1146,7 +1146,6 @@ getBN stringKey =
         NO_RIDES_SCHEDULED_YET -> "এখনো কোনো চালনা শিডিউল করা হয়নি!"
         RIDE_BOOKING -> "রাইড বুকিং।"
         SPECIAL_ZONE_RENTAL_INELIGIBLE -> "বিশেষ অঞ্চলের মধ্যে অবস্থিত স্থানগুলো ভাড়া চালনার জন্য অযোগ্য।"
-        TAP_WHERE_TO_TO_BOOK_RIDE -> "আপনার রাইড বুক করতে 'কোথায় যাবেন?' ট্যাপ করুন!"
         YATRI_SERVICES -> "যাত্রী সেবা"
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "আপনার আসন্ন ভাড়া বুকিং " <> bookingTime <> "-এ আছে"
         UPCOMING_BOOKINGS -> "আপনার আসন্ন বুকিং রয়েছে"

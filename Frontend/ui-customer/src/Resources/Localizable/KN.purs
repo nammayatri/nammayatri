@@ -1147,7 +1147,6 @@ getKN stringKey =
         NO_RIDES_SCHEDULED_YET -> "ಈವರೆಗೆ ಯಾವುದೇ ಸವಾರಿಗಳು ಶೆಡ್ಯೂಲ್ ಮಾಡಲಾಗಿಲ್ಲ!"
         RIDE_BOOKING -> "ರೈಡ್ ಬುಕಿಂಗ್."
         SPECIAL_ZONE_RENTAL_INELIGIBLE -> "ವಿಶೇಷ ಝೋನ್‌ನಲ್ಲಿರುವ ಸ್ಥಳಗಳು ಬಾಡಿಗೆ ಸವಾರಿಗಳಿಗೆ ಅನರ್ಹವಾಗಿವೆ."
-        TAP_WHERE_TO_TO_BOOK_RIDE -> "ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ಬುಕ್ ಮಾಡಲು 'ಎಲ್ಲಿಗೆ?' ಗೆ ಟ್ಯಾಪ್ ಮಾಡಿ!"
         YATRI_SERVICES -> "ಯಾತ್ರಿ ಸೇವೆಗಳು"
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "ನೀವು ಮುಂಬರುವ ಬಾಡಿಗೆ ಬುಕಿಂಗ್ ಅನ್ನು " <> bookingTime <> " ರಂದು ಹೊಂದಿದ್ದೀರಿ"
         SCHEDULED -> "ಷೆಡ್ಯೂಲ್ ಮಾಡಲಾಗಿದೆ"

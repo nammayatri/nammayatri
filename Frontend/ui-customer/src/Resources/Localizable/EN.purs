@@ -1146,7 +1146,6 @@ getEN stringKey =
         NO_RIDES_SCHEDULED_YET -> "No rides scheduled yet!"
         RIDE_BOOKING -> "Ride Booking"
         SPECIAL_ZONE_RENTAL_INELIGIBLE -> "Locations within special zone are not eligible for rental rides."
-        TAP_WHERE_TO_TO_BOOK_RIDE -> "Tap 'Where to?' to book your ride!"
         YATRI_SERVICES -> "Yatri Services"
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "You have an upcoming rental booking on " <> bookingTime 
         SCHEDULED -> "Scheduled"
