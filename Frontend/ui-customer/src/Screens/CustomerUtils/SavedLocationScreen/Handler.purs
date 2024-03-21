@@ -15,7 +15,7 @@
 
 module Screens.SavedLocationScreen.Handler where
 
-import Prelude ( bind, discard, ($), (<$>), pure)
+import Prelude 
 import Engineering.Helpers.BackTrack (getState)
 import Screens.SavedLocationScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
@@ -26,11 +26,19 @@ import Types.App (FlowBT, GlobalState(..), SAVED_LOCATION_SCREEN_OUTPUT(..))
 import ModifyScreenState (modifyScreenState)
 import Storage (setValueToLocalStore,KeyStore(..))
 import Types.App(ScreenType(..))
+import Engineering.Helpers.Utils as EHU
+import Services.FlowCache as FlowCache
+import Services.API
 
 savedLocationScreen :: FlowBT String SAVED_LOCATION_SCREEN_OUTPUT
 savedLocationScreen = do 
   (GlobalState state) <- getState 
-  act <- lift $ lift $ runScreen $ SavedLocationScreen.screen state.savedLocationScreen (GlobalState state)
+
+  void $ lift $ lift $ EHU.toggleLoader true
+  (SavedLocationsListRes savedLocationResp ) <- FlowCache.updateAndFetchSavedLocations false
+  void $ lift $ lift $ EHU.toggleLoader false
+
+  act <- lift $ lift $ runScreen $ SavedLocationScreen.screen state.savedLocationScreen (SavedLocationsListRes savedLocationResp)
   case act of 
     AddLocation updatedState -> do 
       modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreenState → updatedState)

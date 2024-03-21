@@ -99,7 +99,7 @@ data Action = BackPressed Boolean
             | NoAction
             | GenericHeaderAC GenericHeaderController.Action
             | SavedLocationCardAction SavedLocationCardController.Action
-            | SavedLocationListAPIResponseAction (SavedLocationsListRes)
+            | SavedLocationListAPIResponseAction SavedLocationsListRes
             | PrimaryButtonAC PrimaryButtonController.Action
             | ErrorModalAC ErrorModalController.Action
             | PopUpModalAction PopUpModal.Action
