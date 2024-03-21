@@ -154,6 +154,7 @@ public class WidgetService extends Service {
                     if (messageView != null && specialPickupMessage != null && notificationDotView != null) {
                         messageView.setText(specialPickupMessage);
                         messageView.setVisibility(View.VISIBLE);
+                        messageView.setTextSize(13);
                         messageView2.setVisibility(View.GONE);
                         dotView.setVisibility(View.GONE);
                     }
@@ -233,7 +234,6 @@ public class WidgetService extends Service {
             // Fetch TextView for fare and distanceToPickup
             TextView fareTextView = widgetView.findViewById(R.id.ride_fare);
             TextView distanceTextView = widgetView.findViewById(R.id.distance_to_pickup);
-            ImageView dotView = widgetView.findViewById(R.id.dot_view);
 
             // Get Current Time in UTC
             final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en"));
@@ -270,6 +270,7 @@ public class WidgetService extends Service {
                 // Update text for fare and distanceToPickup
                 SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                 String fareText = sharedPref.getString("CURRENCY", "₹") + fare;
+                fareTextView.setText(fareText);
                 String distanceText;
                 if (distanceToPickup > 1000) {
                     distanceText = (df.format(distanceToPickup / 1000)) + " km pickup";
