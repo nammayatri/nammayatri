@@ -1033,4 +1033,6 @@ getBN stringKey =
         SPECIAL_PICKUP_ZONE_RIDE -> "বিশেষ পিকআপ জোন রাইড"
         WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "আমরা আপনাকে সর্বনিকটার বিশেষ পিকআপ জোনের ড্রাইভারের সাথে সংযোগ করার চেষ্টা করব"
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "এটি আপনাকে তাৎক্ষণিক পিকআপ অভিজ্ঞতা প্রদান করে।"
-        IS_AT_PICKUP_LOCATION -> "পিকআপ স্থানে রয়েছে"
+        DRIVER_AT_PICKUP_LOCATION -> "আপনার ড্রাইভার পিকআপ অবস্থানে আছে"
+        DRIVER_IS_ON_THE_WAY -> "আপনার ড্রাইভার পথে আছে"
+        DRIVER_IS_WAITING_AT_PICKUP -> "আপনার ড্রাইভার পিকআপের জন্য অপেক্ষা করছে"

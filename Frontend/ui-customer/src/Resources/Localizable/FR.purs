@@ -1035,4 +1035,8 @@ getFR stringKey =
         SPECIAL_PICKUP_ZONE_RIDE -> "Ride en zone de ramassage spéciale"
         WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "Nous essaierons de vous connecter avec un chauffeur dans la zone de ramassage spéciale la plus proche."
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "Cela vous offre une expérience de ramassage instantanée."
-        IS_AT_PICKUP_LOCATION -> "est au lieu de ramassage"
+        DRIVER_AT_PICKUP_LOCATION -> "est au lieu de ramassage"
+        DRIVER_AT_PICKUP_LOCATION -> "Votre chauffeur est au lieu de prise en charge"
+        DRIVER_IS_ON_THE_WAY -> "Votre chauffeur est en route"
+        DRIVER_IS_WAITING_AT_PICKUP -> "Votre chauffeur attend au moment du ramassage"
+

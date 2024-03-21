@@ -1034,4 +1034,6 @@ getKN stringKey =
         SPECIAL_PICKUP_ZONE_RIDE -> "ವಿಶೇಷ ಪಿಕಪ್ ವಿಭಾಗ ರೈಡ್"
         WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "ನಾವು ನಿಕಟವಾದ ವಿಶೇಷ ಪಿಕಪ್ ವಿಭಾಗದಲ್ಲಿರುವ ಚಾಲಕನೊಂದಿಗೆ ನೀವನ್ನು ಸಂಪರ್ಕಿಸಲು ಪ್ರಯತ್ನಿಸುತ್ತಿದ್ದೇವೆ."
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "ಇದು ನಿಮಗೆ ತತ್ಕಾಲದ ಪಿಕಪ್ ಅನುಭವವನ್ನು ಒದಗಿಸುತ್ತದೆ."
-        IS_AT_PICKUP_LOCATION -> "ಪಿಕಪ್ ಸ್ಥಳದಲ್ಲಿದೆ"
+        DRIVER_AT_PICKUP_LOCATION -> "ನಿಮ್ಮ ಚಾಲಕ ಪಿಕಪ್ ಸ್ಥಳದಲ್ಲಿದ್ದಾರೆ"
+        DRIVER_IS_ON_THE_WAY -> "ನಿಮ್ಮ ಡ್ರೈವರ್ ದಾರಿಯಲ್ಲಿದ್ದಾರೆ"
+        DRIVER_IS_WAITING_AT_PICKUP -> "ನಿಮ್ಮ ಚಾಲಕ ಪಿಕಪ್‌ನಲ್ಲಿ ಕಾಯುತ್ತಿದ್ದಾನೆ"

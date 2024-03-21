@@ -1033,4 +1033,6 @@ getHI stringKey =
         SPECIAL_PICKUP_ZONE_RIDE -> "विशेष पिकअप जोन राइड"
         WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "हम आपको निकटतम विशेष पिकअप जोन में ड्राइवर से जोड़ने की कोशिश करेंगे।"
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "यह आपको तत्काल पिकअप अनुभव प्रदान करता है।"
-        IS_AT_PICKUP_LOCATION -> "पिकअप स्थान पर है"
+        DRIVER_AT_PICKUP_LOCATION -> "आपका ड्राइवर पिकअप स्थान पर है"
+        DRIVER_IS_ON_THE_WAY -> "आपका ड्राइवर रास्ते में है"
+        DRIVER_IS_WAITING_AT_PICKUP -> "आपका ड्राइवर पिकअप का इंतजार कर रहा है"

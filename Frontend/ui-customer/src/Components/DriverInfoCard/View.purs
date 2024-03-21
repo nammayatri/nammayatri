@@ -772,27 +772,16 @@ contactView push state =
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation VERTICAL
+        , gravity CENTER_VERTICAL
         ][ linearLayout
             [ width (V (((screenWidth unit)/3 * 2)-27))
             , height WRAP_CONTENT
             , accessibilityHint $ "Ride Status : " <> if eta /= "--" then (state.data.driverName <> " is " <> eta <> " Away") else if state.data.waitingTime == "--" then (state.data.driverName <> " is on the way") else (state.data.driverName <> " is waiting for you.") 
             , accessibility ENABLE
-            , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
             ][  textView $
-                [ text $ state.data.driverName <> " "
+                [ text $ driverPickUpStatusText state eta
                 , color Color.black900
-                , ellipsize true
-                , singleLine true
                 ] <> FontStyle.body7 TypoGraphy
-              , linearLayout
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , orientation HORIZONTAL
-                ][ textView $
-                    [ text $ driverPickUpStatusText state eta
-                    , color Color.black900
-                    ] <> FontStyle.body7 TypoGraphy
-                  ]
               ]
           , textView $
             [ width WRAP_CONTENT
@@ -1267,9 +1256,7 @@ getTripDetails state = {
 }
 
 driverPickUpStatusText :: DriverInfoCardState -> String -> String
-driverPickUpStatusText state eta = 
+driverPickUpStatusText state _ = 
   case state.props.zoneType of
-    SPECIAL_PICKUP -> getString IS_AT_PICKUP_LOCATION
-    _ -> case eta of
-          "--" -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_AT_PICKUP
-          _    -> "is " <> eta <> getString AWAY
+    SPECIAL_PICKUP -> getString DRIVER_AT_PICKUP_LOCATION
+    _ -> if state.data.waitingTime == "--" then getString DRIVER_IS_ON_THE_WAY else getString DRIVER_IS_WAITING_AT_PICKUP 
