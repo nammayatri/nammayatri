@@ -27,6 +27,10 @@ import Kernel.Types.Common
 import Prometheus as P
 import Tools.Metrics.BAPMetrics.Types as Reexport
 
+data ActionFRFS = SEARCH | INIT | CONFIRM | CANCEL
+
+deriving instance Show ActionFRFS
+
 startSearchMetrics :: (Redis.HedisFlow m r, HasBAPMetrics m r) => Text -> Text -> m ()
 startSearchMetrics merchantName txnId = do
   bmContainer <- asks (.bapMetrics)
@@ -38,6 +42,18 @@ finishSearchMetrics merchantName txnId = do
   bmContainer <- asks (.bapMetrics)
   version <- asks (.version)
   finishSearchMetrics' bmContainer merchantName version txnId
+
+startMetrics :: (Redis.HedisFlow m r, HasBAPMetrics m r) => ActionFRFS -> Text -> Text -> Text -> m ()
+startMetrics actionFRFS merchantName txnId merchantOperatingCityId = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  startMetrics' bmContainer actionFRFS merchantName version txnId merchantOperatingCityId
+
+finishMetrics :: (Redis.HedisFlow m r, HasBAPMetrics m r) => ActionFRFS -> Text -> Text -> Text -> m ()
+finishMetrics actionFRFS merchantName txnId merchantOperatingCityId = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  finishMetrics' bmContainer actionFRFS merchantName version txnId merchantOperatingCityId
 
 incrementRideCreatedRequestCount :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
 incrementRideCreatedRequestCount merchantId merchantOperatingCityId category = do
@@ -70,6 +86,15 @@ searchDurationKey txnId = "beckn:" <> txnId <> ":on_search:received"
 searchDurationLockKey :: Text -> Text
 searchDurationLockKey txnId = txnId <> ":on_search"
 
+putDuration :: MonadIO m => P.Vector P.Label3 P.Histogram -> Text -> DeploymentVersion -> Text -> Double -> m ()
+putDuration durationHistogram merchantName version merchantOperatingCityId duration = liftIO $ P.withLabel durationHistogram (merchantName, version.getDeploymentVersion, merchantOperatingCityId) (`P.observe` duration)
+
+durationKeyFRFS :: Text -> ActionFRFS -> Text
+durationKeyFRFS txnId action = "beckn:" <> txnId <> ":on_" <> show action <> "_frfs:received"
+
+durationLockKeyFRFS :: Text -> ActionFRFS -> Text
+durationLockKeyFRFS txnId action = txnId <> ":on_" <> show action <> "_frfs"
+
 startSearchMetrics' :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => BAPMetricsContainer -> Text -> DeploymentVersion -> Text -> m ()
 startSearchMetrics' bmContainer merchantName version txnId = do
   let (_, failureCounter) = bmContainer.searchDuration
@@ -96,4 +121,40 @@ finishSearchMetrics' bmContainer merchantName version txnId = do
       Just startTime -> do
         void $ Redis.del (searchDurationKey txnId)
         putSearchDuration searchDurationHistogram merchantName version . realToFrac . diffUTCTime endTime $ startTime
+      Nothing -> return ()
+
+startMetrics' :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => BAPMetricsContainer -> ActionFRFS -> Text -> DeploymentVersion -> Text -> Text -> m ()
+startMetrics' bmContainer actionFRFS merchantName version txnId merchantOperatingCityId = do
+  let (_, failureCounter) = case actionFRFS of
+        SEARCH -> bmContainer.searchDurationFRFS
+        INIT -> bmContainer.initDurationFRFS
+        CONFIRM -> bmContainer.confirmDurationFRFS
+        CANCEL -> bmContainer.cancelDurationFRFS
+      redisExTime = getSeconds bmContainer.searchDurationTimeout
+  startTime <- getCurrentTime
+  Redis.setExp (durationKeyFRFS txnId actionFRFS) startTime (redisExTime + 1) -- a bit more time to
+  -- allow forked thread to handle failure
+  fork "Gateway Search Metrics" $ do
+    liftIO $ threadDelay $ redisExTime * 1000000
+    Redis.whenWithLockRedis (durationLockKeyFRFS txnId actionFRFS) redisExTime $ do
+      Redis.get (durationKeyFRFS txnId actionFRFS) >>= \case
+        Just (_ :: UTCTime) -> do
+          void $ Redis.del (durationKeyFRFS txnId actionFRFS)
+          liftIO $ P.withLabel failureCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId) P.incCounter
+        Nothing -> return ()
+
+finishMetrics' :: (Redis.HedisFlow m r, MonadTime m, MonadMask m) => BAPMetricsContainer -> ActionFRFS -> Text -> DeploymentVersion -> Text -> Text -> m ()
+finishMetrics' bmContainer actionFRFS merchantName version txnId merchantOperatingCityId = do
+  let (durationHistogram, _) = case actionFRFS of
+        SEARCH -> bmContainer.searchDurationFRFS
+        INIT -> bmContainer.initDurationFRFS
+        CONFIRM -> bmContainer.confirmDurationFRFS
+        CANCEL -> bmContainer.cancelDurationFRFS
+      redisExTime = getSeconds bmContainer.searchDurationTimeout
+  endTime <- getCurrentTime
+  Redis.whenWithLockRedis (durationLockKeyFRFS txnId actionFRFS) redisExTime $ do
+    Redis.get (durationKeyFRFS txnId actionFRFS) >>= \case
+      Just startTime -> do
+        void $ Redis.del (durationKeyFRFS txnId actionFRFS)
+        putDuration durationHistogram merchantName version merchantOperatingCityId . realToFrac . diffUTCTime endTime $ startTime
       Nothing -> return ()

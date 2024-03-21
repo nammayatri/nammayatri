@@ -16,6 +16,7 @@ module Tools.Metrics.BAPMetrics.Types
   ( HasBAPMetrics,
     BAPMetricsContainer (..),
     registerBAPMetricsContainer,
+    registerDurationMetricFRFS,
   )
 where
 
@@ -30,7 +31,11 @@ data BAPMetricsContainer = BAPMetricsContainer
   { searchRequestCounter :: SearchRequestCounterMetric,
     rideCreatedCounter :: RideCreatedCounterMetric,
     searchDurationTimeout :: Seconds,
-    searchDuration :: SearchDurationMetric
+    searchDuration :: SearchDurationMetric,
+    searchDurationFRFS :: DurationMetricFRFS,
+    initDurationFRFS :: DurationMetricFRFS,
+    confirmDurationFRFS :: DurationMetricFRFS,
+    cancelDurationFRFS :: DurationMetricFRFS
   }
 
 type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
@@ -39,11 +44,17 @@ type RideCreatedCounterMetric = P.Vector P.Label4 P.Counter
 
 type SearchDurationMetric = (P.Vector P.Label2 P.Histogram, P.Vector P.Label2 P.Counter)
 
+type DurationMetricFRFS = (P.Vector P.Label3 P.Histogram, P.Vector P.Label3 P.Counter)
+
 registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
   searchRequestCounter <- registerSearchRequestCounterMetric
   rideCreatedCounter <- registerRideCreatedCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
+  searchDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_search_frfs_round_trip" "beckn_search_frfs_round_trip_failure_counter"
+  initDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_init_frfs_round_trip" "beckn_init_frfs_round_trip_failure_counter"
+  confirmDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_confirm_frfs_round_trip" "beckn_confirm_frfs_round_trip_failure_counter"
+  cancelDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_cancel_frfs_round_trip" "beckn_cancel_frfs_round_trip_failure_counter"
   return $ BAPMetricsContainer {..}
 
 registerSearchRequestCounterMetric :: IO SearchRequestCounterMetric
@@ -58,3 +69,10 @@ registerSearchDurationMetric searchDurationTimeout = do
   searchDurationHistogram <- P.register . P.vector ("merchant_name", "version") . P.histogram (P.Info "beckn_search_round_trip" "") $ P.linearBuckets 0 0.5 bucketsCount
   failureCounter <- P.register . P.vector ("merchant_name", "version") $ P.counter $ P.Info "beckn_search_round_trip_failure_counter" ""
   return (searchDurationHistogram, failureCounter)
+
+registerDurationMetricFRFS :: Seconds -> Text -> Text -> Text -> Text -> Text -> IO DurationMetricFRFS
+registerDurationMetricFRFS durationTimeout merchantName version merchantOperatingCityId roundTrip roundTripFailureCounter = do
+  let bucketsCount = (getSeconds durationTimeout + 1) * 2
+  durationHistogram <- P.register . P.vector (merchantName, version, merchantOperatingCityId) . P.histogram (P.Info roundTrip "") $ P.linearBuckets 0 0.5 bucketsCount
+  failureCounter <- P.register . P.vector (merchantName, version, merchantOperatingCityId) $ P.counter $ P.Info roundTripFailureCounter ""
+  return (durationHistogram, failureCounter)

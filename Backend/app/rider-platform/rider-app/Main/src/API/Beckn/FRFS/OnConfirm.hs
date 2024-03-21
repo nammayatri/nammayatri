@@ -26,6 +26,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.Metrics as Metrics
 
 type API = Spec.OnConfirmAPI
 
@@ -43,6 +44,8 @@ onConfirm _ req = withFlowHandlerAPI $ do
     dOnConfirmReq <- ACL.buildOnConfirmReq req
     Redis.whenWithLockRedis (onConfirmLockKey dOnConfirmReq.bppOrderId) 60 $ do
       (merchant, booking) <- DOnConfirm.validateRequest dOnConfirmReq
+      let merchantOperatingCityID = maybe "" (.getId) booking.merchantOperatingCityId
+      Metrics.finishMetrics Metrics.CONFIRM merchant.name transaction_id merchantOperatingCityID
       fork "onConfirm request processing" $
         Redis.whenWithLockRedis (onConfirmProcessingLockKey dOnConfirmReq.bppOrderId) 60 $
           DOnConfirm.onConfirm merchant booking dOnConfirmReq
