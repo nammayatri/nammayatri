@@ -39,7 +39,6 @@ import Styles.Colors as Color
 import Data.String
 import JBridge 
 import Data.Int (fromString)
-import Debug (spy)
 import PrestoDOM.Types.DomAttributes as PTD
 import Resources.Localizable.EN (getEN)
 import ConfigProvider
@@ -213,29 +212,6 @@ mapInputViewConfig state =
         }
       ]
 
-    getDateString :: DateTimeConfig -> Boolean -> String -- TODO-codex : remove DateTimeConfig and use UTC
-    getDateString dateTimeConfig isShort = 
-      let
-        currentUTC = EHC.getCurrentUTC ""
-        minutee = if dateTimeConfig.minute == 0 then getFromUTC currentUTC "MINUTE" else show dateTimeConfig.minute
-        day = if dateTimeConfig.day == 0 then getFromUTC currentUTC "DAY" else show dateTimeConfig.day
-        month = if dateTimeConfig.month == 0 then getFromUTC currentUTC "MONTH" else show (dateTimeConfig.month + 1)
-        year = if dateTimeConfig.year == 0 then getFromUTC currentUTC "YEAR" else show dateTimeConfig.year
-        minute = if MB.fromMaybe 0 (fromString minutee) < 10 then "0" <> minutee else  minutee
-        hour = if dateTimeConfig.hour == 0 then getFromUTC currentUTC "HOUR" else show dateTimeConfig.hour
-        hourInNum = MB.fromMaybe 0 (fromString hour)
-        hourAndMinute = if (hourInNum > 12) then show (hourInNum - 12) <> ":" <> minute <> " PM" else hour <> ":" <> minute <> " AM"
-      in
-        if year == "" then getString NOW 
-        else if isShort then hourAndMinute <> ", " <> getShortMonthFromInt month <> " " <> day
-        else day <> " " <> getFullMonthFromInt month <> " " <>  year <> ", " <> hour <> ":" <> minute
-
-    getShortMonthFromInt :: String -> String
-    getShortMonthFromInt month = MB.fromMaybe "" $ ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"] !! ((MB.fromMaybe 1 (fromString month)) - 1)
-
-    getFullMonthFromInt :: String -> String
-    getFullMonthFromInt month = MB.fromMaybe "" $ map getString [JANUARY, FEBRUARY, MARCH, APRIL, MAY, JUNE, JULY, AUGUST, SEPTEMBER, OCTOBER, NOVEMBER, DECEMBER] !! ((MB.fromMaybe 0 (fromString month)) - 1)
-
     getHeaderText :: RentalScreenStage -> String
     getHeaderText stage = case stage of
       RENTAL_SELECT_PACKAGE -> getString TRIP_DETAILS_
@@ -284,7 +260,7 @@ locUnserviceablePopUpConfig state = let
       margin = MarginTop 16
       },
     secondaryText { 
-      text = "Locations within special zone are not eligible for rental rides", -- TODO-codex : Add Translation
+      text = getString SPECIAL_ZONE_INTERCITY_INELIGIBLE,
       margin = MarginTop 4
       },
     option1 {

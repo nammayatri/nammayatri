@@ -38,6 +38,8 @@ import Data.Lens ((^.))
 import Resources.Constants (getAddressFromBooking, decodeAddress, DecodeAddress(..))
 import Screens.HomeScreen.Transformer (getFareProductType)
 import Screens.Types (FareProductType(..)) as FPT
+import Language.Strings (getString)
+import Language.Types as STR
 
 instance showAction :: Show Action where
   show _ = ""
@@ -127,7 +129,7 @@ eval (GetBookingList resp) state =
       }
 
 eval CheckFlowStatusAction state = do
-  void $ pure $ toast "No rides scheduled yet!" -- TODO-codex : Translation
+  void $ pure $ toast$ getString STR.NO_RIDES_SCHEDULED_YET
   continue state
 
 eval _ state = continue state

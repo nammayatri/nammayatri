@@ -1097,4 +1097,8 @@ getEN stringKey =
         RENTALS_INTERCITY_AVAILABLE -> "Rentals and Intercity trips, now on Yatri Sathi"
         CHECK_IT_OUT -> "Check it out"
         FAILED_TO_CANCEL -> "Failed To Cancel Ride"
-        
+        SCHEDULING_ALLOWED_IN_INTERCITY_RENTAL -> "Scheduling is only allowed in Intercity or Rental Rides."
+        SPECIAL_ZONE_INTERCITY_INELIGIBLE -> "Locations within special zone are not eligible for intercity rides."
+        NO_RIDES_SCHEDULED_YET -> "No rides scheduled yet!"
+        RIDE_BOOKING -> "Ride Booking."
+        SPECIAL_ZONE_RENTAL_INELIGIBLE -> "Locations within special zone are not eligible for rental rides."

@@ -1099,3 +1099,8 @@ getHI stringKey =
         RENTALS_INTERCITY_AVAILABLE -> "रेंटल और इंटरसिटी ट्रिप, अब Yatri साथी पर उपलब्ध"
         CHECK_IT_OUT -> "इसे चेक करें"
         FAILED_TO_CANCEL -> "यात्रा रद्द करने में विफल रहा"
+        SCHEDULING_ALLOWED_IN_INTERCITY_RENTAL -> "अंतरशहरी या किराये की सवारियों में ही शेड्यूलिंग की अनुमति है।"
+        SPECIAL_ZONE_INTERCITY_INELIGIBLE -> "विशेष क्षेत्र के भीतर के स्थान अंतरशहरी सवारियों के लिए अयोग्य हैं।"
+        NO_RIDES_SCHEDULED_YET -> "अभी तक कोई सवारियाँ शेड्यूल नहीं की गई हैं!"
+        RIDE_BOOKING -> "राइड बुकिंग।"
+        SPECIAL_ZONE_RENTAL_INELIGIBLE -> "विशेष क्षेत्र के भीतर के स्थान किराये की सवारियों के लिए अयोग्य हैं।"
