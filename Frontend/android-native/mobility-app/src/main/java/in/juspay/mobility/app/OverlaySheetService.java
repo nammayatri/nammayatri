@@ -96,7 +96,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private WindowManager windowManager;
     private SharedPreferences sharedPref;
     private MediaPlayer mediaPlayer;
-    private int time = 0, retryAddViewCount = 31;;
+    private int time = 0, retryAddViewCount = 10;;
     private View progressDialog, apiLoader, floatyView;
     private CountDownTimer rideStatusListener;
     private WindowManager.LayoutParams params;
@@ -1116,9 +1116,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             tipsList = new ArrayList<>(Arrays.asList(indicatorTip1, indicatorTip2, indicatorTip3));
             shimmerTipList = new ArrayList<>(Arrays.asList(shimmerTip1, shimmerTip2, shimmerTip3));
             for (int i = 0; i < 3; i++) {
-                updateTopBarBackground(i);
                 if (i < sheetArrayList.size()) {
-//                    handleIndicatorVariant(i); // Not needed @Rohit
+                    updateTopBarBackground(i);
+                    //handleIndicatorVariant(i); // Not needed @Rohit
                     vehicleVariantList.get(i).setVisibility(View.GONE);
                     indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "₹") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);

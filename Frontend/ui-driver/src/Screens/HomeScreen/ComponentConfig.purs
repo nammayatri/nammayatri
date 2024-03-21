@@ -1803,6 +1803,7 @@ bgLocPopup state =
       , strokeColor = Color.transparent
       , textStyle = FontStyle.SubHeading1
       , width = MATCH_PARENT
+      , enableRipple = true
       },
       option2 {
       visibility = false
