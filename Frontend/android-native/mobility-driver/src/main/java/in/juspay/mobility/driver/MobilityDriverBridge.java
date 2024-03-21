@@ -636,7 +636,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 }
                 break;
             case BACKGROUND_LOCATION_REQ_CODE :
-                Utils.checkPermissionRationale(permissions[0], bridgeComponents.getContext(), bridgeComponents.getActivity());
+                if (grantResults.length > 0 && bridgeComponents != null){
+                    Utils.checkPermissionRationale(permissions[0], bridgeComponents.getContext(), bridgeComponents.getActivity());
+                }
                 break;
         }
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);

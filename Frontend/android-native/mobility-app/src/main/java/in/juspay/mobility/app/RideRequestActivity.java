@@ -550,10 +550,9 @@ public class RideRequestActivity extends AppCompatActivity {
                     findViewById(R.id.indicator3)));
 
             for (int i = 0; i < 3; i++) {
-                updateTopBarBackground(i);
                 if (i < sheetArrayList.size()) {
+                    updateTopBarBackground(i);
                     indicatorTextList.get(i).setText(
-                            (sheetArrayList.get(i).getRequestedVehicleVariant().equals(NotificationUtils.NO_VARIANT) ? "" : (sheetArrayList.get(i).getRequestedVehicleVariant() + "\n")) +
                             (sharedPref.getString("CURRENCY", "₹")) +
                             (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
