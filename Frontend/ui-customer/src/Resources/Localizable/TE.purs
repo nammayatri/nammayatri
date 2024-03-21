@@ -1148,3 +1148,8 @@ getTE stringKey =
     RENTALS_INTERCITY_AVAILABLE -> "అద్దెలు మరియు నగరాల మధ్య ప్రయాణాలు, ఇప్పుడు యాత్రి సతిలో ఉన్నాయి"
     CHECK_IT_OUT -> "చెక్ అవుట్"
     FAILED_TO_CANCEL -> "రైడ్‌ని రద్దు చేయడంలో విఫలమైంది"
+    SCHEDULING_ALLOWED_IN_INTERCITY_RENTAL -> "షెడ్యూలింగ్ కేవలం ఇంటర్‌సిటీ లేదా రెంటల్ రైడ్‌లో మాత్రమే అనుమతించబడుతుంది."
+    SPECIAL_ZONE_INTERCITY_INELIGIBLE -> "ప్రత్యేక వార్తలో ఉన్న స్థలాలు ఇంటర్‌సిటీ రైడ్‌లకు అనుమతించబడవు."
+    NO_RIDES_SCHEDULED_YET -> "ఇంకా ఎటువంటి సవారులు షెడ్యూల్ చేయబడలేదు!"
+    RIDE_BOOKING -> "రైడ్ బుకింగ్."
+    SPECIAL_ZONE_RENTAL_INELIGIBLE -> "ప్రత్యేక వార్తలో ఉన్న స్థలాలు రెంటల్ రైడ్‌లకు అనుమతించబడవు."

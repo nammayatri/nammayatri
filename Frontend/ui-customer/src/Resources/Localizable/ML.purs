@@ -1135,3 +1135,8 @@ getML stringKey =
         RENTALS_INTERCITY_AVAILABLE -> "റെന്റലുകൾ മറ്റ് ഇന്റർസിറ്റി ട്രിപ്പുകൾ, ഇപ്പോൾ Yatri Sathi യിൽ ലഭ്യമാണ്"
         CHECK_IT_OUT -> "അത് ചെക്ക് ചെയ്യുക"
         FAILED_TO_CANCEL -> "പയന്നതിന്‌ പരാജയപ്പെട്ടു"
+        SCHEDULING_ALLOWED_IN_INTERCITY_RENTAL -> "അന്തർനഗര അല്ലെങ്കിൽ വാടക യാത്രകളിൽ മാത്രമേ ഷെഡ്യൂലിംഗ് അനുവദനീയമാണ്."
+        SPECIAL_ZONE_INTERCITY_INELIGIBLE -> "പ്രത്യേക മേഖലയിലുള്ള സ്ഥലങ്ങൾ അന്തർനഗര യാത്രകൾക്ക് അയോഗ്യമാണ്."
+        NO_RIDES_SCHEDULED_YET -> "ഇതുവരെ യാതൊരു യാത്രകളും ഷെഡ്യൂൾ ചെയ്തിട്ടില്ല!"
+        RIDE_BOOKING -> "റൈഡ് ബുക്കിംഗ്."
+        SPECIAL_ZONE_RENTAL_INELIGIBLE -> "പ്രത്യേക മേഖലയിലുള്ള സ്ഥലങ്ങൾ വാടക യാത്രകൾക്ക് അയോഗ്യമാണ്."

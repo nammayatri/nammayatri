@@ -284,7 +284,6 @@ eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textFie
     getAddress location = MB.maybe "" (\loc -> loc.address) location
 
 eval (InputViewAC _ (InputViewController.AutoCompleteCallBack value pickUpchanged)) state = do 
-  let _ = spy "Inside AutoCompleteCallBack" "ABCD" 
   if state.props.isAutoComplete then -- so that selecting from favourites doesn't trigger autocomplete
     autoCompleteAPI state value $ if pickUpchanged then SearchLocPickup else SearchLocDrop
     else continue state

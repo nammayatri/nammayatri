@@ -1150,3 +1150,8 @@ getTA stringKey =
     RENTALS_INTERCITY_AVAILABLE -> "வாடகை மற்றும் நகரங்களுக்கு இடையேயான பயணங்கள், இப்போது யாத்ரி சதியில்"
     CHECK_IT_OUT -> "பாருங்கள்"
     FAILED_TO_CANCEL -> " பயணத்தை ரத்து செய்ய தோல்வியடைந்தது"
+    SCHEDULING_ALLOWED_IN_INTERCITY_RENTAL -> "இடைநகர அல்லது வாடகை சவாரிகளில் மட்டுமே அட்டவணைப்பு அனுமதிக்கப்படும்."
+    SPECIAL_ZONE_INTERCITY_INELIGIBLE -> "சிறப்பு மண்டலத்தில் உள்ள இடங்கள் இடைநகர பயணங்களுக்கு தகுதியற்றவை."
+    NO_RIDES_SCHEDULED_YET -> "இதுவரை எந்த சவாரிகளும் திட்டமிடப்படவில்லை!"
+    RIDE_BOOKING -> "சவாரி முன்பதிவு."
+    SPECIAL_ZONE_RENTAL_INELIGIBLE -> "சிறப்பு மண்டலத்தில் உள்ள இடங்கள் வாடகை சவாரிகளுக்கு தகுதியற்றவை."

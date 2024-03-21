@@ -1134,3 +1134,8 @@ getKN stringKey =
         RENTALS_INTERCITY_AVAILABLE -> "ರೆಂಟಲ್ಸ್ ಮತ್ತು ಇಂಟರ್‌ಸಿಟಿ ಟ್ರಿಪ್‌ಗಳು, ಈಗ Yatri Sathi ಗೆ ಲಭ್ಯವಿದೆ"
         CHECK_IT_OUT -> "ಇದನ್ನು ಪರಿಶೀಲಿಸಿ"
         FAILED_TO_CANCEL -> "ಸರಿಯಾಗಿ ಸಂಪಾದಿಸಲು ವಿಫಲವಾಯಿತು"
+        SCHEDULING_ALLOWED_IN_INTERCITY_RENTAL -> "ಅಂತರ್ನಗರ ಅಥವಾ ಬಾಡಿಗೆ ಸವಾರಿಗಳಲ್ಲಿ ಮಾತ್ರ ಶೆಡ್ಯೂಲಿಂಗ್ ಅನುಮತಿಸಲಾಗಿದೆ."
+        SPECIAL_ZONE_INTERCITY_INELIGIBLE -> "ವಿಶೇಷ ಝೋನ್‌ನಲ್ಲಿರುವ ಸ್ಥಳಗಳು ಅಂತರ್ನಗರ ಸವಾರಿಗಳಿಗೆ ಅನರ್ಹವಾಗಿವೆ."
+        NO_RIDES_SCHEDULED_YET -> "ಈವರೆಗೆ ಯಾವುದೇ ಸವಾರಿಗಳು ಶೆಡ್ಯೂಲ್ ಮಾಡಲಾಗಿಲ್ಲ!"
+        RIDE_BOOKING -> "ರೈಡ್ ಬುಕಿಂಗ್."
+        SPECIAL_ZONE_RENTAL_INELIGIBLE -> "ವಿಶೇಷ ಝೋನ್‌ನಲ್ಲಿರುವ ಸ್ಥಳಗಳು ಬಾಡಿಗೆ ಸವಾರಿಗಳಿಗೆ ಅನರ್ಹವಾಗಿವೆ."
