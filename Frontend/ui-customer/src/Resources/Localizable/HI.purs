@@ -698,7 +698,7 @@ getHI stringKey =
         ENJOY_THE_RIDE -> "अपने गंतव्य तक यात्रा का आनंद लें!"
         RIDE_STARTED -> "सवारी शुरू हुई"
         DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "आपके लिए विशेष रूप से तैयार किए गए शानदार स्पॉट खोजें"
-        ONE_CLICK -> "1 क्लिक"
+        ONE_CLICK -> "1 क्लिक बुकिंग"
         SMART -> "स्मार्ट"
         NOT_SERVICEABLE -> "सेवा योग्य नहीं"
         WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "हम अभी तक आपके क्षेत्र में नहीं रहते हैं! \nआप ऊपर बाईं ओर मेनू से सवारी इतिहास और अन्य \nसेटिंग्स तक पहुंच सकते हैं।"
@@ -1034,3 +1034,4 @@ getHI stringKey =
         WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "हम आपको निकटतम विशेष पिकअप जोन में ड्राइवर से जोड़ने की कोशिश करेंगे।"
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "यह आपको तत्काल पिकअप अनुभव प्रदान करता है।"
         IS_AT_PICKUP_LOCATION -> "पिकअप स्थान पर है"
+        TAP_WHERE_TO_TO_BOOK_RIDE -> "राइड बुक करने के लिए 'कहाँ जाना है?' टैप करें!"

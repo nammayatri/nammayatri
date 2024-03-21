@@ -715,7 +715,7 @@ getTA stringKey =
     THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "சவாரி ரத்து செய்யப்பட வேண்டும், நாங்கள் உங்களை வேறொன்றைக் கண்டுபிடிக்கிறோம்"
     ENJOY_THE_RIDE -> "பயணத்தை அனுபவிக்கவும்"
     RIDE_STARTED -> "சவாரி தொடங்கியது"
-    ONE_CLICK -> "1 கிளிக்"
+    ONE_CLICK -> "1 கிளிக் புக்கிங்"
     SMART -> "ஸ்மார்ட்"
     NOT_SERVICEABLE -> "சேவை செய்ய முடியாது"
     WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "நாங்கள் இன்னும் உங்கள் பகுதியில் வசிக்கவில்லை! \nமேல் இடதுபுறத்தில் உள்ள மெனுவிலிருந்து சவாரி வரலாறு மற்றும் பிற \nsஅமைப்புகளை நீங்கள் அணுகலாம்."
@@ -1050,3 +1050,4 @@ getTA stringKey =
     WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "நாங்கள் உங்களை அருகிலுள்ள சிறப்பு பிக் அவுட் மேல் இருந்து ஓட்டாளி உடைய சாகாளருடன் இணைக்க முயற்சிக்குகிறோம்."
     THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "இது உங்களுக்கு உடனடியாக பிக் அப் அனுபவம் வழங்குகிறது."
     IS_AT_PICKUP_LOCATION -> "பிக்‌அப் இடத்தில் உள்ளது"
+    TAP_WHERE_TO_TO_BOOK_RIDE -> "உங்கள் சயம் பதிகை செய்ய 'எங்கே?' அழுத்தவும்!"

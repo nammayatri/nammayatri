@@ -698,7 +698,7 @@ getKN stringKey =
         ENJOY_THE_RIDE -> "ನಿಮ್ಮ ಗಮ್ಯಸ್ಥಾನಕ್ಕೆ ಸವಾರಿಯನ್ನು ಆನಂದಿಸಿ!"
         RIDE_STARTED -> "ಸವಾರಿ ಪ್ರಾರಂಭವಾಯಿತು"
         DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "ನಿಮಗೆ ಸರಿಹೊಂದಿದ ಅದ್ಭುತ ಸ್ಥಳಗಳನ್ನು ಕಂಡುಕೊಳ್ಳಿ"
-        ONE_CLICK -> "ಒಂದು ಕ್ಲಿಕ್"
+        ONE_CLICK -> "1 ಕ್ಲಿಕ್ ಬುಕ್ ಮಾಡಿಕೊಳ್ಳಿ"
         SMART -> "ಸ್ಮಾರ್ಟ್"
         NOT_SERVICEABLE -> "ಸೇವೆಯಿಲ್ಲ"
         WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "ನಿಮ್ಮ ಪ್ರದೇಶದಲ್ಲಿ ನಾವು ಇನ್ನೂ ಲಭ್ಯವಿಲ್ಲ! \nನೀವು ಮೇಲಿನ ಎಡಭಾಗದಲ್ಲಿರುವ ಮೆನುವಿನಿಂದ ಸವಾರಿ ಇತಿಹಾಸ ಮತ್ತು ಇತರ \nsಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಪ್ರವೇಶಿಸಬಹುದು."
@@ -1035,3 +1035,4 @@ getKN stringKey =
         WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "ನಾವು ನಿಕಟವಾದ ವಿಶೇಷ ಪಿಕಪ್ ವಿಭಾಗದಲ್ಲಿರುವ ಚಾಲಕನೊಂದಿಗೆ ನೀವನ್ನು ಸಂಪರ್ಕಿಸಲು ಪ್ರಯತ್ನಿಸುತ್ತಿದ್ದೇವೆ."
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "ಇದು ನಿಮಗೆ ತತ್ಕಾಲದ ಪಿಕಪ್ ಅನುಭವವನ್ನು ಒದಗಿಸುತ್ತದೆ."
         IS_AT_PICKUP_LOCATION -> "ಪಿಕಪ್ ಸ್ಥಳದಲ್ಲಿದೆ"
+        TAP_WHERE_TO_TO_BOOK_RIDE -> "ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ಬುಕ್ ಮಾಡಲು 'ಎಲ್ಲಿಗೆ?' ಗೆ ಟ್ಯಾಪ್ ಮಾಡಿ!"
