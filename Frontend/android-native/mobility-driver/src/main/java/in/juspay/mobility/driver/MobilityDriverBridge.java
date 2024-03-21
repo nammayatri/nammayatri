@@ -94,6 +94,7 @@ import java.util.concurrent.TimeUnit;
 
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.mobility.app.CheckPermissionOverlay;
 import in.juspay.mobility.app.LocationUpdateService;
@@ -174,7 +175,10 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
                     storeUpdateTimeCallBack, time, lat, lng);
             Log.d(CALLBACK, javascript);
-            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+            JsCallback jsCallback = bridgeComponents.getJsCallback();
+            if (jsCallback != null) {
+                jsCallback.addJsToWebView(javascript);
+            }
         }
     }
 
