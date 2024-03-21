@@ -1,4 +1,3 @@
-ALTER TABLE atlas_app.ride ADD COLUMN driver_mobile_country_code text;
 
 --- run this query before deployment to update the previous data
 

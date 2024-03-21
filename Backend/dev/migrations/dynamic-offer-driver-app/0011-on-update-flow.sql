@@ -13,10 +13,6 @@ ALTER TABLE atlas_driver_offer_bpp.driver_quote DROP COLUMN extra_fare_selected;
 
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN fare_parameters_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.fare_parameters(id);
 
--- ride
-ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN trip_start_time timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN trip_end_time timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
-
 -- ride booking
 ALTER TABLE atlas_driver_offer_bpp.ride_booking DROP COLUMN estimated_fare;
 

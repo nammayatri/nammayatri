@@ -1992,11 +1992,11 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1710756758,
-        "narHash": "sha256-OHd6xij5WxpQa4MMyusuZyyydqZdI3flFnn3GBnRAqg=",
+        "lastModified": 1711470082,
+        "narHash": "sha256-WLBgcrpfkL99fuqpYk23p59/htuQMPMRPtf4f2U86b0=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "ff143d6331309fe30ba3d7bc6a0d106d9c7a2575",
+        "rev": "10a5f92d8c907700c66f8e54dbbe483d42fe753d",
         "type": "github"
       },
       "original": {

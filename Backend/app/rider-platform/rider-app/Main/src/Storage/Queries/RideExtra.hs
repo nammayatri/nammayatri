@@ -1,22 +1,8 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Queries.Ride where
+module Storage.Queries.RideExtra where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
-import Data.Ord
 import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
 import Database.Beam.Backend (autoSqlValueSyntax)
@@ -36,18 +22,17 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Ride as BeamR
-import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
+import Storage.Queries.OrphanInstances.Ride ()
 import Storage.Queries.Person ()
-import Tools.Error
 
 createRide' :: (MonadFlow m, EsqDBFlow m r) => Ride -> m ()
 createRide' = createWithKV
@@ -102,12 +87,6 @@ updateRideRating rideId rideRating = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Ride -> m (Maybe Ride)
-findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
-
-findByBPPRideId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BPPRide -> m (Maybe Ride)
-findByBPPRideId bppRideId_ = findOneWithKV [Se.Is BeamR.bppRideId $ Se.Eq $ getId bppRideId_]
-
 updateMultiple :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Ride -> m ()
 updateMultiple rideId ride = do
   now <- getCurrentTime
@@ -127,9 +106,6 @@ updateMultiple rideId ride = do
 
 findActiveByRBId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
-
-findByRBId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> m (Maybe Ride)
-findByRBId (Id bookingId) = findOneWithKV [Se.Is BeamR.bookingId $ Se.Eq bookingId]
 
 findLatestCompletedRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Ride)
 findLatestCompletedRide riderId = do
@@ -351,9 +327,6 @@ countRidesFromDateToNowByRiderId riderId date = do
   booking <- findAllWithKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId]
   findAllWithKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED, Se.Is BeamR.createdAt $ Se.GreaterThan date]] <&> length
 
-findRideByRideShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ShortId Ride -> m (Maybe Ride)
-findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
-
 updateEditLocationAttempts :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Maybe Int -> m ()
 updateEditLocationAttempts rideId attempts = do
   now <- getCurrentTime
@@ -362,89 +335,3 @@ updateEditLocationAttempts rideId attempts = do
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
-
-createMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m (DLM.LocationMapping, Maybe DLM.LocationMapping)
-createMapping bookingId rideId merchantId merchantOperatingCityId = do
-  fromLocationMapping <- QLM.getLatestStartByEntityId bookingId >>= fromMaybeM (FromLocationMappingNotFound bookingId)
-  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocationMapping.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)
-
-  mbToLocationMapping <- QLM.getLatestEndByEntityId bookingId
-  mbToLocationRideMapping <- (\toLocMap -> SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)) `mapM` mbToLocationMapping
-
-  QLM.create fromLocationRideMapping
-  whenJust mbToLocationRideMapping QLM.create
-  return (fromLocationRideMapping, mbToLocationRideMapping)
-
-instance FromTType' BeamR.Ride Ride where
-  fromTType' BeamR.RideT {..} = do
-    mappings <- QLM.findByEntityId id
-    (fromLocationMapping, mbToLocationMapping) <-
-      if null mappings
-        then do
-          void $ QBooking.findById (Id bookingId)
-          createMapping bookingId id merchantId merchantOperatingCityId
-        else do
-          fromLocationMapping' <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
-          mbToLocationMapping' <- QLM.getLatestEndByEntityId id
-          return (fromLocationMapping', mbToLocationMapping')
-
-    fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
-    toLocation <- maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
-
-    tUrl <- parseBaseUrl `mapM` trackingUrl
-    pure $
-      Just
-        Ride
-          { id = Id id,
-            bppRideId = Id bppRideId,
-            bookingId = Id bookingId,
-            shortId = ShortId shortId,
-            merchantId = Id <$> merchantId,
-            clientId = Id <$> clientId,
-            merchantOperatingCityId = Id <$> merchantOperatingCityId,
-            trackingUrl = tUrl,
-            fare = roundToIntegral <$> fare,
-            totalFare = roundToIntegral <$> totalFare,
-            ..
-          }
-
-instance ToTType' BeamR.Ride Ride where
-  toTType' Ride {..} =
-    BeamR.RideT
-      { BeamR.id = getId id,
-        BeamR.bppRideId = getId bppRideId,
-        BeamR.bookingId = getId bookingId,
-        BeamR.shortId = getShortId shortId,
-        BeamR.merchantId = getId <$> merchantId,
-        BeamR.clientId = getId <$> clientId,
-        BeamR.merchantOperatingCityId = getId <$> merchantOperatingCityId,
-        BeamR.status = status,
-        BeamR.driverName = driverName,
-        BeamR.driverRating = driverRating,
-        BeamR.driverMobileNumber = driverMobileNumber,
-        BeamR.driverRegisteredAt = driverRegisteredAt,
-        BeamR.vehicleNumber = vehicleNumber,
-        BeamR.vehicleModel = vehicleModel,
-        BeamR.vehicleColor = vehicleColor,
-        BeamR.vehicleVariant = vehicleVariant,
-        BeamR.otp = otp,
-        BeamR.endOtp = endOtp,
-        BeamR.trackingUrl = showBaseUrl <$> trackingUrl,
-        BeamR.fare = realToFrac <$> fare,
-        BeamR.totalFare = realToFrac <$> totalFare,
-        BeamR.chargeableDistance = chargeableDistance,
-        BeamR.traveledDistance = traveledDistance,
-        BeamR.driverArrivalTime = driverArrivalTime,
-        BeamR.rideStartTime = rideStartTime,
-        BeamR.rideEndTime = rideEndTime,
-        BeamR.rideRating = rideRating,
-        BeamR.createdAt = createdAt,
-        BeamR.updatedAt = updatedAt,
-        BeamR.driverMobileCountryCode = driverMobileCountryCode,
-        BeamR.startOdometerReading = startOdometerReading,
-        BeamR.endOdometerReading = endOdometerReading,
-        BeamR.driverImage = driverImage,
-        BeamR.safetyCheckStatus = safetyCheckStatus,
-        BeamR.allowedEditLocationAttempts = allowedEditLocationAttempts,
-        BeamR.isFreeRide = isFreeRide
-      }

@@ -24,7 +24,7 @@ import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Location as SLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as Person
-import Domain.Types.Ride (Ride, RideAPIEntity, makeRideAPIEntity)
+import Domain.Types.Ride (Ride (..), RideAPIEntity (..))
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.Sos as DSos
 import EulerHS.Prelude hiding (id, null)
@@ -238,3 +238,20 @@ buildBookingAPIEntity booking personId = do
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) fareBreakups mbExoPhone mbPaymentMethod person.hasDisability False mbSosStatus bppDetails isValueAddNP
+
+makeRideAPIEntity :: Ride -> RideAPIEntity
+makeRideAPIEntity Ride {..} =
+  let driverMobileNumber' = if status == DRide.NEW then Just driverMobileNumber else Just "xxxx"
+      oneYearAgo = - (365 * 24 * 60 * 60)
+      driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt
+      driverRating' = driverRating <|> Just (toCentesimal 500) -- TODO::remove this default value
+   in RideAPIEntity
+        { shortRideId = shortId,
+          driverNumber = driverMobileNumber',
+          driverRatings = driverRating',
+          driverRegisteredAt = Just driverRegisteredAt',
+          rideOtp = otp,
+          computedPrice = totalFare,
+          chargeableRideDistance = chargeableDistance,
+          ..
+        }

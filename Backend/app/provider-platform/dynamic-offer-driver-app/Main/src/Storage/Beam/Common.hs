@@ -39,7 +39,7 @@ import Storage.Beam.Notification
 import Storage.Beam.Person
 import Storage.Beam.Quote
 import Storage.Beam.Rating (RatingT, ratingTable)
-import Storage.Beam.Ride.Table
+import Storage.Beam.Ride
 import Storage.Beam.RideDetails
 import Storage.Beam.RiderDetails
 import Storage.Beam.Vehicle

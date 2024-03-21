@@ -1,0 +1,158 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Location: Domain.Types.Location
+  Centesimal: Kernel.Types.Common
+  Money: Kernel.Types.Common
+  BaseUrl: Kernel.Types.Common
+  VehicleVariant: Domain.Types.VehicleVariant
+  Booking: Domain.Types.Booking.Type
+  Client: Domain.Types.Client
+
+Ride:
+  tableName: ride
+  derives: "Generic,Show"
+  types:
+    RideStatus:
+      enum: "NEW,INPROGRESS,COMPLETED,CANCELLED"
+      derive: "HttpInstance"
+    BPPRide: {}
+    RideAPIEntity:
+      id: Id Ride
+      shortRideId: ShortId Ride
+      status: RideStatus
+      driverName: Text
+      driverNumber: Maybe Text
+      driverRatings: Maybe Centesimal
+      driverRegisteredAt: Maybe UTCTime
+      driverImage: Maybe Text
+      vehicleNumber: Text
+      vehicleColor: Text
+      vehicleVariant: VehicleVariant
+      vehicleModel: Text
+      rideOtp: Text
+      endOtp: Maybe Text
+      computedPrice: Maybe Money
+      chargeableRideDistance: Maybe HighPrecMeters
+      driverArrivalTime: Maybe UTCTime
+      rideStartTime: Maybe UTCTime
+      rideEndTime: Maybe UTCTime
+      rideRating: Maybe Int
+      isFreeRide: Maybe Bool
+      startOdometerReading: Maybe Centesimal
+      endOdometerReading: Maybe Centesimal
+      createdAt: UTCTime
+      updatedAt: UTCTime
+      bppRideId: Id BPPRide
+  fields:
+    id: Id Ride
+    bppRideId: Id BPPRide
+    bookingId: Id Booking
+    shortId: ShortId Ride
+    merchantId: Maybe (Id Merchant)
+    clientId: Maybe (Id Client)
+    fromLocation: Location
+    toLocation: Maybe Location
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    status: RideStatus
+    driverName: Text
+    driverRating: Maybe Centesimal
+    driverMobileNumber: Text
+    driverMobileCountryCode: Maybe Text
+    driverRegisteredAt: Maybe UTCTime
+    driverImage: Maybe Text
+    vehicleNumber: Text
+    vehicleModel: Text
+    vehicleColor: Text
+    vehicleVariant: VehicleVariant|NoRelation
+    otp: Text
+    endOtp: Maybe Text
+    trackingUrl: Maybe BaseUrl
+    fare: Maybe Money
+    totalFare: Maybe Money
+    chargeableDistance: Maybe HighPrecMeters
+    traveledDistance: Maybe HighPrecMeters
+    driverArrivalTime: Maybe UTCTime
+    rideStartTime: Maybe UTCTime
+    rideEndTime: Maybe UTCTime
+    rideRating: Maybe Int
+    allowedEditLocationAttempts: Maybe Int
+    startOdometerReading: Maybe Centesimal
+    endOdometerReading: Maybe Centesimal
+    isFreeRide: Maybe Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    safetyCheckStatus : Maybe Bool
+
+  sqlType:
+    allowedEditLocationAttempts: int
+    bookingId: character(36)
+    bppRideId: character(36)
+    chargeableDistance: numeric(30,2)
+    driverMobileNumber: character varying(255)
+    driverName: character varying(255)
+    driverRating: numeric(10,2)
+    endOdometerReading: double precision
+    fare: numeric(30,2)
+    id: character(36)
+    merchantId: character(36)
+    merchantOperatingCityId: character(36)
+    otp: character(4)
+    rideRating: bigint
+    startOdometerReading: double precision
+    status: character varying(255)
+    totalFare: numeric(30,2)
+    trackingUrl: character varying(255)
+    traveledDistance: numeric(30,2)
+    vehicleColor: character varying(255)
+    vehicleModel: character varying(255)
+    vehicleNumber: character varying(255)
+    vehicleVariant: character varying(60)
+
+  beamFields:
+    toLocation: {}
+    fromLocation: {}
+
+  fromTType:
+    toLocation: Storage.Queries.Extra.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
+    fromLocation: Storage.Queries.Extra.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId|IM
+    fare: Kernel.Prelude.fmap Kernel.Prelude.roundToIntegral|I
+    totalFare: Kernel.Prelude.fmap Kernel.Prelude.roundToIntegral|I
+    trackingUrl: Kernel.Prelude.mapM Kernel.Prelude.parseBaseUrl|IM
+
+  toTType:
+    fare: Kernel.Prelude.fmap Kernel.Prelude.realToFrac|I
+    totalFare: Kernel.Prelude.fmap Kernel.Prelude.realToFrac|I
+    trackingUrl: Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl|I
+
+  beamType:
+    fare: Maybe HighPrecMoney
+    totalFare: Maybe HighPrecMoney
+    trackingUrl: Maybe Text
+
+  constraints:
+    id: PrimaryKey
+    bppRideId: SecondaryKey
+    bookingId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByBPPRideId:
+      kvFunction: findOneWithKV
+      where: bppRideId
+    findByRBId:
+      kvFunction: findOneWithKV
+      where: bookingId
+    findRideByRideShortId:
+      kvFunction: findOneWithKV
+      where: shortId
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

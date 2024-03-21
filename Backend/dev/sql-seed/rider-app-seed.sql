@@ -387,37 +387,6 @@ ALTER TABLE atlas_app.ride_booking OWNER TO atlas_app_user;
 
 
 
-CREATE TABLE atlas_app.ride (
-id character(36) NOT NULL,
-booking_id character(36) NOT NULL,
-short_id character varying(36) NOT NULL,
-status character varying(255) NOT NULL,
-driver_name character varying(255) NOT NULL,
-driver_rating double precision,
-driver_mobile_number character varying(255) NOT NULL,
-driver_registered_at timestamp with time zone NOT NULL,
-vehicle_number character varying(255) NOT NULL,
-vehicle_model character varying(255) NOT NULL,
-vehicle_color character varying(255) NOT NULL,
-otp character(4) NOT NULL,
-tracking_url character varying(255) NOT NULL,
-fare double precision,
-total_fare numeric(30,2),
-chargeable_distance double precision,
-vehicle_variant character varying(60) NOT NULL,
-created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-bpp_ride_id character(36) NOT NULL
-,CONSTRAINT  ride_pkey PRIMARY KEY (id)
-,CONSTRAINT  ride_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES atlas_app.ride_booking(id)
-);
-ALTER TABLE atlas_app.ride OWNER TO atlas_app_user;
-
-
-
-
-
-
 
 CREATE TABLE atlas_app.ride_cancellation_reason (
 ride_booking_id character(36) NOT NULL,

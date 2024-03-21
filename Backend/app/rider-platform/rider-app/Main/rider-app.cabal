@@ -243,7 +243,6 @@ library
       Domain.Types.Rating
       Domain.Types.RegistrationToken
       Domain.Types.RentalDetails
-      Domain.Types.Ride
       Domain.Types.SavedReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
@@ -318,7 +317,6 @@ library
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
       Storage.Beam.RentalDetails
-      Storage.Beam.Ride
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequest.SearchReqLocation
@@ -370,6 +368,7 @@ library
       Storage.Queries.Estimate
       Storage.Queries.EstimateBreakup
       Storage.Queries.Exophone
+      Storage.Queries.Extra.Transformers.Ride
       Storage.Queries.FareBreakup
       Storage.Queries.FeedbackForm
       Storage.Queries.FRFSTicketBokingPayment
@@ -396,7 +395,7 @@ library
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
       Storage.Queries.RentalDetails
-      Storage.Queries.Ride
+      Storage.Queries.RideExtra
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequest.SearchReqLocation
@@ -448,6 +447,7 @@ library
       Domain.Types.MerchantOperatingCity
       Domain.Types.MerchantState
       Domain.Types.NotificationSoundsConfig
+      Domain.Types.Ride
       Domain.Types.RiderConfig
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
@@ -476,6 +476,7 @@ library
       Storage.Beam.MerchantOperatingCity
       Storage.Beam.MerchantState
       Storage.Beam.NotificationSoundsConfig
+      Storage.Beam.Ride
       Storage.Beam.RiderConfig
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
@@ -504,6 +505,8 @@ library
       Storage.Queries.MerchantOperatingCity
       Storage.Queries.MerchantState
       Storage.Queries.NotificationSoundsConfig
+      Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.Ride
       Storage.Queries.RiderConfig
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory

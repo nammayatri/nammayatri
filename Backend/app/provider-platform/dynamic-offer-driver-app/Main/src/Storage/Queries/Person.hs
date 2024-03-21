@@ -56,7 +56,7 @@ import qualified Storage.Beam.DriverOnboarding.DriverRCAssociation as BeamDRCA
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import qualified Storage.Beam.Person as BeamP
-import qualified Storage.Beam.Ride.Table as BeamR
+import qualified Storage.Beam.Ride as BeamR
 import qualified Storage.Beam.Vehicle as BeamV
 import Storage.Queries.Booking ()
 import qualified Storage.Queries.DriverInformation.Internal as Int

@@ -1,8 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN trip_start_lat double precision;
-ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN trip_start_lon double precision;
-ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN trip_end_lat double precision;
-ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN trip_end_lon double precision;
-
 CREATE TABLE atlas_driver_offer_bpp.transporter_config (
 organization_id character(36) NOT NULL,
 pickup_loc_threshold bigint,

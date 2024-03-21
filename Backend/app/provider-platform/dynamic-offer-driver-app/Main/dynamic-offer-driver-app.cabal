@@ -284,7 +284,6 @@ library
       Domain.Types.Quote
       Domain.Types.RegistrationToken
       Domain.Types.RegistryMapFallback
-      Domain.Types.Ride
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
       Domain.Types.RideRoute
@@ -432,7 +431,6 @@ library
       Storage.Beam.Quote
       Storage.Beam.RegistrationToken
       Storage.Beam.RegistryMapFallback
-      Storage.Beam.Ride.Table
       Storage.Beam.RideDetails
       Storage.Beam.RiderDetails
       Storage.Beam.SearchRequest
@@ -563,8 +561,8 @@ library
       Storage.Queries.RatingExtra
       Storage.Queries.RegistrationToken
       Storage.Queries.RegistryMapFallback
-      Storage.Queries.Ride
       Storage.Queries.RideDetails
+      Storage.Queries.RideExtra
       Storage.Queries.RiderDetails
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequest.SearchReqLocation
@@ -573,6 +571,7 @@ library
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.QuestionInformation
       Storage.Queries.Transformers.ReelsData
+      Storage.Queries.Transformers.Ride
       Storage.Queries.TranslationsExtra
       Storage.Queries.Vehicle
       Storage.Queries.Vehicle.Internal
@@ -626,6 +625,7 @@ library
       Domain.Types.QuestionModuleMapping
       Domain.Types.Rating
       Domain.Types.ReelsData
+      Domain.Types.Ride
       Domain.Types.SubscriptionConfig
       Domain.Types.Translations
       Domain.Types.ValueAddNP
@@ -654,6 +654,7 @@ library
       Storage.Beam.QuestionModuleMapping
       Storage.Beam.Rating
       Storage.Beam.ReelsData
+      Storage.Beam.Ride
       Storage.Beam.SubscriptionConfig
       Storage.Beam.Translations
       Storage.Beam.ValueAddNP
@@ -681,6 +682,7 @@ library
       Storage.Queries.OrphanInstances.DriverReferral
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.Rating
+      Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.Volunteer
       Storage.Queries.PlanTranslation
@@ -688,6 +690,7 @@ library
       Storage.Queries.QuestionModuleMapping
       Storage.Queries.Rating
       Storage.Queries.ReelsData
+      Storage.Queries.Ride
       Storage.Queries.SubscriptionConfig
       Storage.Queries.Translations
       Storage.Queries.ValueAddNP
