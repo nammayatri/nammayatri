@@ -284,7 +284,7 @@ makeSearchLocationReq input lat lng language components geoCodeConfig autoComple
             "lon" : lng
             },
     "sessionToken" : Just sessionToken,
-    "autoCompleteType" : spy "debug search makeSearchLocationReq" (show <$> autoCompleteType)
+    "autoCompleteType" : (show <$> autoCompleteType)
     }
 
 ------------------------------------------------------------------------ OnCallBT Function ------------------------------------------------------------------------------------

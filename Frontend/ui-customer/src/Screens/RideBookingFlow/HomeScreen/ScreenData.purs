@@ -31,6 +31,7 @@ import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import PrestoDOM (BottomSheetState(..), Margin(..))
 import Data.Map as Map 
 import JBridge (Location)
+import Data.HashMap as DHM
 
 initData :: HomeScreenState
 initData = {
@@ -304,6 +305,7 @@ initData = {
           , destManuallyMoved : false
           , autoCompleteType : Nothing
           , sourceSelectType : SEARCH
+          , cachedPredictions : DHM.empty
         }
     , selectedEstimateHeight : 0
     , isSafetyCenterDisabled : false
