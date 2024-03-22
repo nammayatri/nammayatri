@@ -2595,6 +2595,8 @@ public class MobilityCommonBridge extends HyperBridge {
             ExecutorManager.runOnMainThread(() -> {
                 if (bridgeComponents.getActivity() != null) {
                     try {
+                        View view = bridgeComponents.getActivity().findViewById(Integer.parseInt(pureScriptId));
+                        if (view == null) return;
                         JSONObject googleMapConfig = new JSONObject(mapConfig);
                         animationDuration = googleMapConfig.optInt("animationDuration", 400);
                         locateOnMapConfig = googleMapConfig.optJSONObject("locateOnMapConfig");

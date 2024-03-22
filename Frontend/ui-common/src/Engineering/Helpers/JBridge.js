@@ -680,7 +680,7 @@ export const storeCallBackMessageUpdated = function (cb) {
                 delay: 0
               }
               window.chatMessages = window.chatMessages || [];
-              if (sentBy != window.currentUser) window.didReceiverMessage = true;
+              if (sentBy != chatUserId) window.didReceiverMessage = true;
               window.chatMessages.push(messageObj);
               if (window.chatMessages.length - 1 == messagesSize || messagesSize === "-1") {
                 cb(action(message)(sentBy)(timeStamp)(messagesSize))();
@@ -697,11 +697,6 @@ export const storeCallBackMessageUpdated = function (cb) {
     };
   };
 };
-
-export const setCurrentUser = function(_id) {
-  window.currentUser = _id
-  return _id;
-}
 
 export const storeKeyBoardCallback = function (cb, action) {
   const keyBoardCallback = function (state) {
