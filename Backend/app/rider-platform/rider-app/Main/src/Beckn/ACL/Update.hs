@@ -12,12 +12,15 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE OverloadedLabels #-}
-{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
-{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Beckn.ACL.Update
   ( buildUpdateReq,
     UpdateBuildReq (..),
+    UpdateBuildReqDetails (..),
+    PaymentCompletedBuildReqDetails (..),
+    EditLocationBuildReqDetails (..),
+    AddStopBuildReqDetails (..),
+    EditStopBuildReqDetails (..),
   )
 where
 
@@ -41,46 +44,40 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 
-data UpdateBuildReq
-  = PaymentCompletedBuildReq
-      { bppBookingId :: Id DBooking.BPPBooking,
-        bppRideId :: Id DRide.BPPRide,
-        paymentMethodInfo :: DMPM.PaymentMethodInfo,
-        bppId :: Text,
-        bppUrl :: BaseUrl,
-        transactionId :: Text,
-        merchant :: DM.Merchant,
-        city :: Context.City -- Booking city, not merchant default city
-      }
-  | EditLocationBuildReq
-      { bppBookingId :: Id DBooking.BPPBooking,
-        bppRideId :: Id DRide.BPPRide,
-        origin :: Maybe Location,
-        destination :: Maybe Location,
-        bppId :: Text,
-        bppUrl :: BaseUrl,
-        transactionId :: Text,
-        city :: Context.City,
-        merchant :: DM.Merchant
-      }
-  | AddStopBuildReq
-      { bppBookingId :: Id DBooking.BPPBooking,
-        stops :: [Location],
-        bppId :: Text,
-        bppUrl :: BaseUrl,
-        transactionId :: Text,
-        city :: Context.City,
-        merchant :: DM.Merchant
-      }
-  | EditStopBuildReq
-      { bppBookingId :: Id DBooking.BPPBooking,
-        stops :: [Location],
-        bppId :: Text,
-        bppUrl :: BaseUrl,
-        transactionId :: Text,
-        city :: Context.City,
-        merchant :: DM.Merchant
-      }
+data UpdateBuildReq = UpdateBuildReq
+  { bppBookingId :: Id DBooking.BPPBooking,
+    bppId :: Text,
+    bppUrl :: BaseUrl,
+    transactionId :: Text,
+    merchant :: DM.Merchant,
+    city :: Context.City, -- Booking city, not merchant default city
+    details :: UpdateBuildReqDetails
+  }
+
+data UpdateBuildReqDetails
+  = UPaymentCompletedBuildReqDetails PaymentCompletedBuildReqDetails
+  | UEditLocationBuildReqDetails EditLocationBuildReqDetails
+  | UAddStopBuildReqDetails AddStopBuildReqDetails
+  | UEditStopBuildReqDetails EditStopBuildReqDetails
+
+data PaymentCompletedBuildReqDetails = PaymentCompletedBuildReqDetails
+  { bppRideId :: Id DRide.BPPRide,
+    paymentMethodInfo :: DMPM.PaymentMethodInfo
+  }
+
+data EditLocationBuildReqDetails = EditLocationBuildReqDetails
+  { bppRideId :: Id DRide.BPPRide,
+    origin :: Maybe Location,
+    destination :: Maybe Location
+  }
+
+newtype AddStopBuildReqDetails = AddStopBuildReqDetails
+  { stops :: [Location]
+  }
+
+newtype EditStopBuildReqDetails = EditStopBuildReqDetails
+  { stops :: [Location]
+  }
 
 buildUpdateReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
@@ -91,12 +88,13 @@ buildUpdateReq res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
   context <- buildTaxiContext Context.UPDATE messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country False
-  pure $ BecknReq context $ mkUpdateMessage res
+  pure $ BecknReq context $ mkUpdateMessage res res.details
 
 mkUpdateMessage ::
   UpdateBuildReq ->
+  UpdateBuildReqDetails ->
   Update.UpdateMessage
-mkUpdateMessage req@PaymentCompletedBuildReq {} = do
+mkUpdateMessage req (UPaymentCompletedBuildReqDetails details) = do
   Update.UpdateMessage $
     Update.PaymentCompleted
       PaymentCompletedU.PaymentCompletedEvent
@@ -104,17 +102,17 @@ mkUpdateMessage req@PaymentCompletedBuildReq {} = do
           update_target = "fulfillment.state.code,payment.status",
           payment =
             PaymentCompletedU.Payment
-              { collected_by = Common.castDPaymentCollector req.paymentMethodInfo.collectedBy,
-                _type = Common.castDPaymentType req.paymentMethodInfo.paymentType,
-                instrument = Common.castDPaymentInstrument req.paymentMethodInfo.paymentInstrument,
+              { collected_by = Common.castDPaymentCollector details.paymentMethodInfo.collectedBy,
+                _type = Common.castDPaymentType details.paymentMethodInfo.paymentType,
+                instrument = Common.castDPaymentInstrument details.paymentMethodInfo.paymentInstrument,
                 status = PaymentCompletedU.PAID
               },
           fulfillment =
             PaymentCompletedU.FulfillmentInfo
-              { id = req.bppRideId.getId
+              { id = details.bppRideId.getId
               }
         }
-mkUpdateMessage req@EditLocationBuildReq {..} = do
+mkUpdateMessage req (UEditLocationBuildReqDetails details) = do
   Update.UpdateMessage $
     Update.EditLocation
       EditLocationU.EditLocationEvent
@@ -122,19 +120,19 @@ mkUpdateMessage req@EditLocationBuildReq {..} = do
           update_target = "fulfillment.state.code,fufillment.start,fufillment.end",
           fulfillment =
             EditLocationU.FulfillmentInfo
-              { id = req.bppRideId.getId,
+              { id = details.bppRideId.getId,
                 origin =
                   EditLocationU.StartInfo
-                    { location = origin
+                    { location = details.origin
                     },
                 destination =
                   Just $
                     EditLocationU.EndInfo
-                      { location = destination
+                      { location = details.destination
                       }
               }
         }
-mkUpdateMessage req@AddStopBuildReq {} = do
+mkUpdateMessage req (UAddStopBuildReqDetails details) = do
   Update.UpdateMessage $
     Update.AddStop
       AddStopU.AddStopEvent
@@ -143,10 +141,10 @@ mkUpdateMessage req@AddStopBuildReq {} = do
           fulfillment =
             AddStopU.FulfillmentInfo
               { id = req.bppBookingId.getId,
-                stops = req.stops
+                stops = details.stops
               }
         }
-mkUpdateMessage req@EditStopBuildReq {} = do
+mkUpdateMessage req (UEditStopBuildReqDetails details) = do
   Update.UpdateMessage $
     Update.EditStop
       EditStopU.EditStopEvent
@@ -155,6 +153,6 @@ mkUpdateMessage req@EditStopBuildReq {} = do
           fulfillment =
             EditStopU.FulfillmentInfo
               { id = req.bppBookingId.getId,
-                stops = req.stops
+                stops = details.stops
               }
         }

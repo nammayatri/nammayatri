@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Domain.Action.Beckn.OnStatus
   ( onStatus,
@@ -22,6 +21,7 @@ module Domain.Action.Beckn.OnStatus
     RideStartedInfo (..),
     RideCompletedInfo (..),
     ValidatedOnStatusReq (..),
+    BookingReallocationReq (..),
     validateRequest,
   )
 where
@@ -92,10 +92,7 @@ data RideDetails
   | RideStartedDetails DCommon.RideStartedReq
   | RideCompletedDetails DCommon.RideCompletedReq
   | BookingCancelledDetails DCommon.BookingCancelledReq
-  | BookingReallocationDetails
-      { bookingDetails :: DCommon.BookingDetails,
-        reallocationSource :: DBCR.CancellationSource
-      }
+  | BookingReallocationDetails BookingReallocationReq
   | DriverArrivedDetails DCommon.DriverArrivedReq
 
 data ValidatedRideDetails
@@ -104,11 +101,15 @@ data ValidatedRideDetails
   | ValidatedRideStartedDetails DCommon.ValidatedRideStartedReq
   | ValidatedRideCompletedDetails DCommon.ValidatedRideCompletedReq
   | ValidatedBookingCancelledDetails DCommon.ValidatedBookingCancelledReq
-  | ValidatedBookingReallocationDetails
-      { bookingDetails :: DCommon.BookingDetails,
-        reallocationSource :: DBCR.CancellationSource
-      }
+  | ValidatedBookingReallocationDetails ValidatedBookingReallocationReq
   | ValidatedDriverArrivedDetails DCommon.ValidatedDriverArrivedReq
+
+data BookingReallocationReq = BookingReallocationReq
+  { bookingDetails :: DCommon.BookingDetails,
+    reallocationSource :: DBCR.CancellationSource
+  }
+
+type ValidatedBookingReallocationReq = BookingReallocationReq
 
 -- the same as OnUpdateFareBreakup
 data OnStatusFareBreakup = OnStatusFareBreakup
@@ -116,14 +117,12 @@ data OnStatusFareBreakup = OnStatusFareBreakup
     description :: Text
   }
 
-data RideEntity
-  = UpdatedRide
-      { ride :: DRide.Ride,
-        rideOldStatus :: DRide.RideStatus
-      }
-  | RenewedRide
-      { ride :: DRide.Ride
-      }
+data RideEntity = UpdatedRide DUpdatedRide | RenewedRide DRide.Ride
+
+data DUpdatedRide = DUpdatedRide
+  { ride :: DRide.Ride,
+    rideOldStatus :: DRide.RideStatus
+  }
 
 buildRideEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DB.Booking -> (DRide.Ride -> DRide.Ride) -> DCommon.BookingDetails -> m RideEntity
 buildRideEntity booking updRide newRideInfo = do
@@ -135,14 +134,14 @@ buildRideEntity booking updRide newRideInfo = do
       pure $ RenewedRide (updRide newRide)
     Just existingRide -> do
       unless (existingRide.bookingId == booking.id) $ throwError (InvalidRequest "Invalid rideId")
-      pure $ UpdatedRide {ride = updRide existingRide, rideOldStatus = existingRide.status}
+      pure $ UpdatedRide $ DUpdatedRide {ride = updRide existingRide, rideOldStatus = existingRide.status}
 
 rideBookingTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DB.BookingStatus -> DRide.RideStatus -> DB.Booking -> RideEntity -> m ()
 rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity = do
   unless (booking.status == bookingNewStatus) $ do
     QB.updateStatus booking.id bookingNewStatus
   case rideEntity of
-    UpdatedRide {ride, rideOldStatus} -> do
+    UpdatedRide (DUpdatedRide {ride, rideOldStatus}) -> do
       unless (rideOldStatus == rideNewStatus) $ do
         QRide.updateMultiple ride.id ride
     RenewedRide renewedRide -> do
@@ -152,7 +151,7 @@ isStatusChanged :: DB.BookingStatus -> DB.BookingStatus -> RideEntity -> Bool
 isStatusChanged bookingOldStatus bookingNewStatus rideEntity = do
   let bookingStatusChanged = bookingOldStatus == bookingNewStatus
   let rideStatusChanged = case rideEntity of
-        UpdatedRide {ride, rideOldStatus} -> rideOldStatus == ride.status
+        UpdatedRide (DUpdatedRide {ride, rideOldStatus}) -> rideOldStatus == ride.status
         RenewedRide {} -> True
   bookingStatusChanged || rideStatusChanged
 
@@ -191,11 +190,11 @@ onStatus req = do
     ValidatedRideStartedDetails request -> DCommon.rideStartedReqHandler request
     ValidatedRideCompletedDetails request -> DCommon.rideCompletedReqHandler request
     ValidatedBookingCancelledDetails request -> DCommon.bookingCancelledReqHandler request
-    ValidatedBookingReallocationDetails {bookingDetails, reallocationSource} -> do
+    ValidatedBookingReallocationDetails BookingReallocationReq {bookingDetails, reallocationSource} -> do
       rideEntity <- buildRideEntity booking updateReallocatedRide bookingDetails
       let rideId = case rideEntity of
-            UpdatedRide {ride} -> ride.id
-            RenewedRide {ride} -> ride.id
+            UpdatedRide (DUpdatedRide {ride}) -> ride.id
+            RenewedRide ride -> ride.id
       let bookingCancellationReason = mkBookingCancellationReason booking.id (Just rideId) reallocationSource booking.merchantId
       rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity
       when (isStatusChanged booking.status bookingNewStatus rideEntity) $ do
@@ -247,8 +246,8 @@ validateRequest req@DOnStatusReq {..} = do
       rideDetails' <- DCommon.validateBookingCancelledReq request
       let validatedRideDetails = ValidatedBookingCancelledDetails rideDetails'
       return ValidatedOnStatusReq {..}
-    BookingReallocationDetails {..} -> do
-      let validatedRideDetails = ValidatedBookingReallocationDetails {..}
+    BookingReallocationDetails request -> do
+      let validatedRideDetails = ValidatedBookingReallocationDetails request
       return ValidatedOnStatusReq {..}
 
 buildNewRide :: MonadFlow m => Maybe DM.Merchant -> DB.Booking -> DCommon.BookingDetails -> m DRide.Ride
