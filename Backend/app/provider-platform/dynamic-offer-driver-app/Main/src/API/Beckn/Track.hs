@@ -16,35 +16,32 @@ module API.Beckn.Track (API, handler) where
 
 import qualified Beckn.ACL.OnTrack as ACL
 import qualified Beckn.ACL.Track as ACL
-import Beckn.Core (withCallback')
 import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnTrack as OnTrack
 import qualified Beckn.Types.Core.Taxi.API.Track as Track
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import qualified Data.Aeson as A
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
 import qualified Domain.Action.Beckn.Track as DTrack
 import qualified Domain.Types.Merchant as DM
 import Environment
-import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Domain as Domain
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
-import Tools.Error (GenericError (InvalidRequest))
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import TransactionLogs.PushLogs
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
     :> SignatureAuth 'Domain.MOBILITY "Authorization"
-    :> Track.TrackAPI
+    :> Track.TrackAPIV2
 
 handler :: FlowServer API
 handler = track
@@ -52,61 +49,42 @@ handler = track
 track ::
   Id DM.Merchant ->
   SignatureAuthResult ->
-  -- Track.TrackReq ->
-  ByteString ->
+  Track.TrackReqV2 ->
   FlowHandler AckResponse
-track transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerBecknAPI do
-  req <- decodeReq reqBS
-  (dTrackReq, callbackUrl, bapId, msgId, city, country, txnId, bppId, bppUri) <- case req of
-    Right reqV2 -> do
-      transactionId <- Utils.getTransactionId reqV2.trackReqContext
-      Utils.withTransactionIdLogTag transactionId $ do
-        logTagInfo "track APIV2 Flow" "Reached"
-        dTrackReq <- ACL.buildTrackReqV2 subscriber reqV2
-        let context = reqV2.trackReqContext
-        callbackUrl <- Utils.getContextBapUri context
-        bppUri <- Utils.getContextBppUri context
-        messageId <- Utils.getMessageId context
-        bapId <- Utils.getContextBapId context
-        city <- Utils.getContextCity context
-        country <- Utils.getContextCountry context
-        pure (dTrackReq, callbackUrl, bapId, messageId, city, country, Just transactionId, context.contextBppId, bppUri)
-    Left reqV1 -> do
-      logTagInfo "track API Flow" "Reached"
-      dTrackReq <- ACL.buildTrackReq subscriber reqV1
-      pure (dTrackReq, reqV1.context.bap_uri, reqV1.context.bap_id, reqV1.context.message_id, reqV1.context.city, reqV1.context.country, reqV1.context.transaction_id, reqV1.context.bpp_id, reqV1.context.bpp_uri)
+track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI do
+  transactionId <- Utils.getTransactionId reqV2.trackReqContext
+  Utils.withTransactionIdLogTag transactionId $ do
+    logTagInfo "track APIV2 Flow" "Reached"
+    dTrackReq <- ACL.buildTrackReqV2 subscriber reqV2
+    let context = reqV2.trackReqContext
+    callbackUrl <- Utils.getContextBapUri context
+    bppUri <- Utils.getContextBppUri context
+    msgId <- Utils.getMessageId context
+    bapId <- Utils.getContextBapId context
+    city <- Utils.getContextCity context
+    country <- Utils.getContextCountry context
 
-  dTrackRes <- DTrack.track transporterId dTrackReq
+    dTrackRes <- DTrack.track transporterId dTrackReq
 
-  internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-  if isBecknSpecVersion2
-    then do
-      logTagInfo "track APIV2 Flow" "Sending OnTrack APIV2"
-      context <- ContextV2.buildContextV2 Context.ON_TRACK Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
-      Callback.withCallback dTrackRes.transporter "TRACK" OnTrack.onTrackAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $
-        -- there should be DOnTrack.onTrack, but it is empty anyway
-        pure $
-          Spec.OnTrackReq
-            { onTrackReqContext = context,
-              onTrackReqError = Nothing,
-              onTrackReqMessage = Just $ ACL.mkOnTrackMessageV2 dTrackRes
-            }
-    else do
-      logTagInfo "track API Flow" "Sending OnTrack API"
-      context <- buildTaxiContext Context.SEARCH msgId txnId bapId callbackUrl bppId bppUri city country False
-      withCallback' withShortRetry dTrackRes.transporter Context.TRACK OnTrack.onTrackAPIV1 context callbackUrl internalEndPointHashMap $
-        -- there should be DOnTrack.onTrack, but it is empty anyway
-        pure $ ACL.mkOnTrackMessage dTrackRes
+    internalEndPointHashMap <- asks (.internalEndPointHashMap)
+    fork "track received pushing ondc logs" do
+      becknConfig <- QBC.findByMerchantIdDomainAndVehicle transporterId "MOBILITY" (Utils.mapVariantToVehicle dTrackRes.booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+      void $ pushLogs "track" (toJSON reqV2) becknConfig.logsToken becknConfig.logsUrl
+    logTagInfo "track APIV2 Flow" "Sending OnTrack APIV2"
+    context' <- ContextV2.buildContextV2 Context.ON_TRACK Context.MOBILITY msgId (Just transactionId) bapId callbackUrl context.contextBppId bppUri city country (Just "PT2M")
+    let onTrackBecknReq = mkOnTrackRequest context (ACL.mkOnTrackMessageV2 dTrackRes)
+    fork "sending on track, pushing ondc logs" do
+      becknConfig <- QBC.findByMerchantIdDomainAndVehicle transporterId "MOBILITY" (Utils.mapVariantToVehicle dTrackRes.booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+      void $ pushLogs "on_track" (toJSON onTrackBecknReq) becknConfig.logsToken becknConfig.logsUrl
+    Callback.withCallback dTrackRes.transporter "TRACK" OnTrack.onTrackAPIV2 callbackUrl internalEndPointHashMap (errHandler context') $ pure onTrackBecknReq
 
-decodeReq :: MonadFlow m => ByteString -> m (Either Track.TrackReq Track.TrackReqV2)
-decodeReq reqBS =
-  case A.eitherDecodeStrict reqBS of
-    Right reqV1 -> pure $ Left reqV1
-    Left _ ->
-      case A.eitherDecodeStrict reqBS of
-        Right reqV2 -> pure $ Right reqV2
-        Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS
+mkOnTrackRequest :: Spec.Context -> Spec.OnTrackReqMessage -> Spec.OnTrackReq
+mkOnTrackRequest context message =
+  Spec.OnTrackReq
+    { onTrackReqContext = context,
+      onTrackReqError = Nothing,
+      onTrackReqMessage = Just message
+    }
 
 errHandler :: Spec.Context -> BecknAPIError -> Spec.OnTrackReq
 errHandler context (BecknAPIError err) =

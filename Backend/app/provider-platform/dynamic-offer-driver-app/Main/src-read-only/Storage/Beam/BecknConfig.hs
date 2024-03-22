@@ -20,6 +20,8 @@ data BecknConfigT f = BecknConfigT
     domain :: B.C f Kernel.Prelude.Text,
     gatewayUrl :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    logsToken :: B.C f Kernel.Prelude.Text,
+    logsUrl :: B.C f Kernel.Prelude.Text,
     onConfirmTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onInitTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onSearchTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

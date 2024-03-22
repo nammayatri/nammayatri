@@ -24,11 +24,14 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Domain as Domain
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import TransactionLogs.PushLogs
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -54,6 +57,9 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
       fork "select request processing" $ do
         Redis.whenWithLockRedis (selectProcessingLockKey dSelectReq.messageId) 60 $
           DSelect.handler merchant dSelectReq estimate
+      fork "select received pushing ondc logs" do
+        becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle estimate.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+        void $ pushLogs "select" (toJSON reqV2) becknConfig.logsToken becknConfig.logsUrl
     pure Ack
 
 selectLockKey :: Text -> Text

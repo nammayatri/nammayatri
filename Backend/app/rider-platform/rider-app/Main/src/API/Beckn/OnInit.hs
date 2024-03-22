@@ -17,6 +17,7 @@ module API.Beckn.OnInit (API, handler) where
 import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnInit as TaxiACL
+import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified BecknV2.OnDemand.Utils.Common as Common
@@ -32,6 +33,8 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import TransactionLogs.PushLogs
 
 type API = OnInit.OnInitAPIV2
 
@@ -50,8 +53,14 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
       Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $
         fork "oninit request processing" $ do
           (onInitRes, booking) <- DOnInit.onInit onInitReq
-          handle (errHandler booking) . void . withShortRetry $
-            CallBPP.confirmV2 onInitRes.bppUrl =<< ACL.buildConfirmReqV2 onInitRes
+          becknConfig <- QBC.findByMerchantIdDomainAndVehicle onInitRes.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle onInitRes.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+          fork "on init received pushing ondc logs" do
+            void $ pushLogs "on_init" (toJSON reqV2) becknConfig.logsToken becknConfig.logsUrl
+          handle (errHandler booking) . void . withShortRetry $ do
+            confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
+            fork "sending confirm, pushing ondc logs" do
+              void $ pushLogs "confirm" (toJSON confirmBecknReq) becknConfig.logsToken becknConfig.logsUrl
+            CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq
     pure Ack
   where
     errHandler booking exc

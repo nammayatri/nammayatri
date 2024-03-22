@@ -22,6 +22,8 @@ data BecknConfigT f = BecknConfigT
     gatewayUrl :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     initTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    logsToken :: B.C f Kernel.Prelude.Text,
+    logsUrl :: B.C f Kernel.Prelude.Text,
     paymentParamsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     registryUrl :: B.C f Kernel.Prelude.Text,
     searchTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

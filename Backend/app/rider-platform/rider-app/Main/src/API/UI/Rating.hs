@@ -20,18 +20,22 @@ module API.UI.Rating
 where
 
 import qualified Beckn.ACL.Rating as ACL
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.UI.Feedback as DFeedback
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Environment as App
 import EulerHS.Prelude hiding (product)
 import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import Tools.Auth
+import TransactionLogs.PushLogs
 
 -------- Feedback Flow ----------
 type API =
@@ -48,12 +52,9 @@ handler = rating
 rating :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> App.FlowHandler APISuccess
 rating (personId, _) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   dFeedbackRes <- DFeedback.feedback request
-  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-  if isBecknSpecVersion2
-    then do
-      becknReq <- ACL.buildRatingReqV2 dFeedbackRes
-      void $ withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq
-    else do
-      becknReq <- ACL.buildRatingReq dFeedbackRes
-      void $ withLongRetry $ CallBPP.feedback dFeedbackRes.providerUrl becknReq
+  becknReq <- ACL.buildRatingReqV2 dFeedbackRes
+  fork "sending rating, pushing ondc logs" do
+    becknConfig <- QBC.findByMerchantIdDomainAndVehicle dFeedbackRes.booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle dFeedbackRes.booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+    void $ pushLogs "rating" (toJSON becknReq) becknConfig.logsToken becknConfig.logsUrl
+  void $ withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq
   pure Success

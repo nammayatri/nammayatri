@@ -54,6 +54,7 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
 import Tools.Error
+import TransactionLogs.PushLogs
 
 -------- Select Flow --------
 type API =
@@ -91,32 +92,38 @@ handler =
     :<|> cancelSearch
 
 select :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler DSelect.DSelectResultRes
-select (personId, _) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+select (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchantId "MOBILITY" (UCommon.mapVariantToVehicle estimate.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
+    fork "sending select, pushing ondc logs" do
+      void $ pushLogs "select" (toJSON becknReq) becknConfig.logsToken becknConfig.logsUrl
     void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq
-  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   autoAssignEnabled <- searchRequest.autoAssignEnabled & fromMaybeM (InternalError "Invalid autoAssignEnabled")
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle searchRequest.merchantId "MOBILITY" (UCommon.mapVariantToVehicle estimate.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
-  selectTtl <- bapConfig.selectTTLSec & fromMaybeM (InternalError "Invalid ttl")
+  selectTtl <- becknConfig.selectTTLSec & fromMaybeM (InternalError "Invalid ttl")
   ttlInInt <-
     if autoAssignEnabled
       then do
-        initTtl <- bapConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl")
-        confirmTtl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
-        confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
+        initTtl <- becknConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl")
+        confirmTtl <- becknConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
+        confirmBufferTtl <- becknConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
         pure (selectTtl + initTtl + confirmTtl + confirmBufferTtl)
       else pure selectTtl
   pure DSelect.DSelectResultRes {selectTtl = ttlInInt}
 
 select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler APISuccess
-select2 (personId, _) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+select2 (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select2 personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
+    fork "sending select, pushing ondc logs" do
+      estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+      becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchantId "MOBILITY" (UCommon.mapVariantToVehicle estimate.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+      void $ pushLogs "select" (toJSON becknReq) becknConfig.logsToken becknConfig.logsUrl
     void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq
   pure Success
 
@@ -127,7 +134,7 @@ selectResult :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estima
 selectResult (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectResult
 
 cancelSearch :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
-cancelSearch (personId, _) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+cancelSearch (personId, merchantId) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   activeBooking <- B.runInReplica $ QRB.findBookingIdAssignedByEstimateId estimateId activeBookingStatus
   -- activeBooking <- QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
   if isJust activeBooking
@@ -140,7 +147,12 @@ cancelSearch (personId, _) estimateId = withFlowHandlerAPI . withPersonIdLogTag 
       result <-
         try @_ @SomeException $
           when sendToBpp . void . withShortRetry $ do
-            CallBPP.cancelV2 dCancelSearch.providerUrl =<< CACL.buildCancelSearchReqV2 dCancelSearch
+            cancelBecknReq <- CACL.buildCancelSearchReqV2 dCancelSearch
+            fork "sending cancel, pushing ondc logs" do
+              estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+              becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchantId "MOBILITY" (UCommon.mapVariantToVehicle estimate.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+              void $ pushLogs "cancel" (toJSON cancelBecknReq) becknConfig.logsToken becknConfig.logsUrl
+            CallBPP.cancelV2 dCancelSearch.providerUrl cancelBecknReq
       case result of
         Left err -> do
           logTagInfo "Failed to cancel" $ show err

@@ -41,6 +41,7 @@ import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.FarePolicy as SFP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import TransactionLogs.PushLogs
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -84,6 +85,8 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
           internalEndPointHashMap <- asks (.internalEndPointHashMap)
           let vehicleCategory = Utils.mapVariantToVehicle dInitRes.booking.vehicleVariant
           bppConfig <- QBC.findByMerchantIdDomainAndVehicle dInitRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+          fork "init received pushing ondc logs" do
+            void $ pushLogs "init" (toJSON reqV2) bppConfig.logsToken bppConfig.logsUrl
           ttlInInt <- bppConfig.onInitTTLSec & fromMaybeM (InternalError "Invalid ttl")
           let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
               ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
@@ -92,6 +95,8 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
             Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
               mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dInitRes.booking.quoteId
               let onInitMessage = ACL.mkOnInitMessageV2 dInitRes bppConfig mbFarePolicy
+              fork "sending on init, pushing ondc logs" do
+                void $ pushLogs "on_init" (toJSON (Spec.OnInitReq context Nothing (Just onInitMessage))) bppConfig.logsToken bppConfig.logsUrl
               pure $
                 Spec.OnInitReq
                   { onInitReqContext = context,

@@ -15,6 +15,7 @@
 module API.Beckn.OnConfirm (API, handler) where
 
 import qualified Beckn.ACL.OnConfirm as ACL
+import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
 import qualified BecknV2.OnDemand.Utils.Common as Utils
@@ -24,10 +25,14 @@ import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
+import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.Queries.Booking as QRB
+import TransactionLogs.PushLogs
 
 type API = OnConfirm.OnConfirmAPIV2
 
@@ -50,6 +55,12 @@ onConfirm _ reqV2 = withFlowHandlerBecknAPI do
             DOnConfirm.BookingConfirmed bookingConfirmedReq -> bookingConfirmedReq.bppBookingId
       Redis.whenWithLockRedis (onConfirmLockKey bppBookingId.getId) 60 $ do
         validatedReq <- DOnConfirm.validateRequest onConfirmReq
+        fork "on confirm received pushing ondc logs" do
+          (variant, merchantId) <- do
+            booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
+            return (booking.vehicleVariant, booking.merchantId)
+          becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchantId "MOBILITY" (UCommon.mapVariantToVehicle variant) >>= fromMaybeM (InternalError "Beckn Config not found")
+          void $ pushLogs "on_confirm" (toJSON reqV2) becknConfig.logsToken becknConfig.logsUrl
         fork "onConfirm request processing" $
           Redis.whenWithLockRedis (onConfirmProcessingLockKey bppBookingId.getId) 60 $
             DOnConfirm.onConfirm validatedReq

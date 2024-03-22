@@ -26,7 +26,9 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import Tools.Error
+import TransactionLogs.PushLogs
 
 type API = OnCancel.OnCancelAPIV2
 
@@ -55,6 +57,9 @@ onCancel _ req = withFlowHandlerBecknAPI do
         fork "on cancel processing" $ do
           Redis.whenWithLockRedis (onCancelProcessingLockKey messageId) 60 $
             DOnCancel.onCancel validatedOnCancelReq
+        fork "on cancel received pushing ondc logs" do
+          becknConfig <- QBC.findByMerchantIdDomainAndVehicle validatedOnCancelReq.booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle validatedOnCancelReq.booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+          void $ pushLogs "on_cancel" (toJSON req) becknConfig.logsToken becknConfig.logsUrl
   pure Ack
 
 onCancelLockKey :: Text -> Text

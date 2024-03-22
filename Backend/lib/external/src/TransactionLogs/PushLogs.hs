@@ -1,0 +1,34 @@
+{-
+ Copyright 2022-23, Juspay India Pvt Ltd
+
+ This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+
+ as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+
+ is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+
+ the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
+module TransactionLogs.PushLogs where
+
+import BecknV2.Utils
+import qualified Data.Aeson as A
+import EulerHS.Prelude hiding (state)
+import KafkaLogs.TransactionLogs
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import Kernel.Types.Common
+import Kernel.Utils.Common
+import TransactionLogs.Interface
+import TransactionLogs.Interface.Types
+import TransactionLogs.ONDC.Types as ONDC
+
+pushLogs :: (CoreMetrics m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]) => Text -> A.Value -> Text -> BaseUrl -> m ONDC.ONDCRequest
+pushLogs requestType requestData logsToken logsUrl = do
+  let kafkaLog = TransactionLog requestType requestData
+  pushBecknLogToKafka kafkaLog
+  let transactionLog = TransactionLogReq requestType (maskSensitiveData requestData)
+  pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = logsToken, url = logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?

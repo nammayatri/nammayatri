@@ -57,7 +57,8 @@ data FeedbackRes = FeedbackRes
     merchant :: DM.Merchant,
     wasOfferedAssistance :: Maybe Bool,
     city :: Context.City,
-    issueId :: Maybe Text
+    issueId :: Maybe Text,
+    booking :: DBooking.Booking
   }
 
 feedback :: FeedbackReq -> App.Flow FeedbackRes
@@ -91,6 +92,7 @@ feedback request = do
         providerUrl = booking.providerUrl,
         transactionId = booking.transactionId,
         issueId = issueId',
+        booking,
         ..
       }
   where

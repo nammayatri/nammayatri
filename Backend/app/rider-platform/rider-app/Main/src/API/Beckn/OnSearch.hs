@@ -20,12 +20,16 @@ import Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
+import Domain.Types.BecknConfig
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import TransactionLogs.PushLogs
 
 type API = OnSearch.OnSearchAPIV2
 
@@ -46,6 +50,9 @@ onSearch _ reqV2 = withFlowHandlerBecknAPI do
     whenJust mbDOnSearchReq $ \request -> do
       Redis.whenWithLockRedis (onSearchLockKey messageId) 60 $ do
         validatedRequest <- DOnSearch.validateRequest request
+        fork "on search received pushing ondc logs" do
+          becknConfig <- QBC.findByMerchantIdDomainAndVehicle validatedRequest.merchant.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError "Beckn Config not found")
+          void $ pushLogs "on_search" (toJSON reqV2) becknConfig.logsToken becknConfig.logsUrl
         fork "on search processing" $ do
           Redis.whenWithLockRedis (onSearchProcessingLockKey messageId) 60 $
             DOnSearch.onSearch messageId validatedRequest

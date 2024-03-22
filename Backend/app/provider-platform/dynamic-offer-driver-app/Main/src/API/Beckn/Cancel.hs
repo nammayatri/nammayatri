@@ -41,9 +41,11 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.Queries.Booking as QRB
 import Tools.Error
+import TransactionLogs.PushLogs
 
 type API =
   Capture "merchantId" (Id Merchant)
@@ -79,6 +81,9 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
       internalEndPointHashMap <- asks (.internalEndPointHashMap)
       merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
       booking <- QRB.findById cancelReq.bookingId >>= fromMaybeM (BookingDoesNotExist cancelReq.bookingId.getId)
+      fork "cancel received pushing ondc logs" do
+        becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+        void $ pushLogs "cancel" (toJSON reqV2) becknConfig.logsToken becknConfig.logsUrl
       let onCancelBuildReq =
             OC.DBookingCancelledReqV2
               { booking = booking,
@@ -93,11 +98,17 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
             fork ("cancelBooking:" <> cancelReq.bookingId.getId) $ do
               DCancel.cancel cancelReq merchant booking
               buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
+              fork "sending on cancel, pushing ondc logs" do
+                becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+                void $ pushLogs "on_cancel" (toJSON buildOnCancelMessageV2) becknConfig.logsToken becknConfig.logsUrl
               void $
                 Callback.withCallback merchant "CANCEL" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
                   pure buildOnCancelMessageV2
         Just Enums.SOFT_CANCEL -> do
           buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
+          fork "sending on cancel, pushing ondc logs" do
+            becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+            void $ pushLogs "on_cancel" (toJSON buildOnCancelMessageV2) becknConfig.logsToken becknConfig.logsUrl
           void $
             Callback.withCallback merchant "CANCEL" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
               pure buildOnCancelMessageV2

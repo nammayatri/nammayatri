@@ -38,7 +38,8 @@ newtype DTrackReq = TrackReq
 data DTrackRes = TrackRes
   { url :: BaseUrl,
     transporter :: DM.Merchant,
-    isRideCompleted :: Bool
+    isRideCompleted :: Bool,
+    booking :: DBooking.Booking
   }
 
 track ::

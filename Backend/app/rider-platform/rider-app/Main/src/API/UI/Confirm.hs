@@ -39,6 +39,7 @@ import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import Tools.Auth
+import TransactionLogs.PushLogs
 
 type API =
   "rideSearch"
@@ -71,12 +72,14 @@ confirm (personId, _) quoteId mbPaymentMethodId =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
     dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId
     becknInitReq <- ACL.buildInitReqV2 dConfirmRes
-    bapConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle dConfirmRes.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
-    initTtl <- bapConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl")
-    confirmTtl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
-    confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
+    becknConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle dConfirmRes.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+    initTtl <- becknConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl")
+    confirmTtl <- becknConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
+    confirmBufferTtl <- becknConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
     let ttlInInt = initTtl + confirmTtl + confirmBufferTtl
-    handle (errHandler dConfirmRes.booking) $
+    handle (errHandler dConfirmRes.booking) $ do
+      fork "sending init, pushing ondc logs" do
+        void $ pushLogs "init" (toJSON becknInitReq) becknConfig.logsToken becknConfig.logsUrl
       void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq
 
     return $

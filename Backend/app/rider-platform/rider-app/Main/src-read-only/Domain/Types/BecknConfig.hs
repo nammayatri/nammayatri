@@ -21,6 +21,8 @@ data BecknConfig = BecknConfig
     gatewayUrl :: Servant.Client.Core.BaseUrl,
     id :: Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig,
     initTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    logsToken :: Kernel.Prelude.Text,
+    logsUrl :: Servant.Client.Core.BaseUrl,
     paymentParamsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     registryUrl :: Servant.Client.Core.BaseUrl,
     searchTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

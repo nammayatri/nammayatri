@@ -1,18 +1,20 @@
-name: rider-app
+name: external
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
 license: AllRightsReserved
 author: "nammayatri"
 maintainer: "nammayatri"
-copyright: "2023 Juspay Technologies Private Limited"
-
-synopsis: The nammayatri rider application
+copyright: "2024 Juspay Technologies Private Limited"
 
 flags:
   Local:
     description: Enable this flag for faster compile times
     manual: true
     default: false
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
@@ -37,13 +39,13 @@ default-extensions:
   - MultiWayIf
   - NamedFieldPuns
   - NoImplicitPrelude
+  - OverloadedLabels
   - OverloadedStrings
   - PatternSynonyms
   - PolyKinds
   - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
-  - StandaloneDeriving
   - TupleSections
   - TypeApplications
   - TypeFamilies
@@ -52,89 +54,103 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
-  - PackageImports
-  - TemplateHaskell
 
 dependencies:
   - aeson
-  - amazonka
-  - amazonka-core
-  - amazonka-ses
+  - deriving-aeson
+  - aeson-casing
   - base >= 4.7 && < 5
-  - base64-bytestring
+  - mobility-core
+  - binary
   - bytestring
+  - clock
+  - case-insensitive
+  - containers
   - cryptonite
-  - cryptostore >= 0.2.3.0
-  - x509
+  - data-default-class
+  - double-conversion
+  - exceptions
   - euler-hs
-  - lens
-  - memory
+  - hex-text
+  - hspec
+  - http-media
+  - kleene
+  - lattices
   - prometheus-client
+  - prometheus-proc
   - wai-middleware-prometheus
   - prometheus-metrics-ghc
-  - unliftio-core
+  - jwt
+  - lens
+  - memory
+  - network
+  - parsec
+  - passetto-client
+  - pureMD5
+  - regex-applicative
+  - safe-exceptions
   - servant
   - servant-client
   - servant-client-core
+  - servant-multipart
   - servant-server
-  - http-media
+  - servant-openapi3
+  - syb
   - text
   - wai
-  - uuid
-  - wai-extra
-  - http-types
   - warp
   - time
+  - time-units
+  - template-haskell
+  - generic-lens
+  - base64-bytestring
+  - unordered-containers
+  - utf8-string
+  - beckn-spec
+  - geojson
+  - safe-money
+  - dhall
+  - tasty
+  - tasty-hunit
+  - either
+  - uuid
+  - stm
+  - unix
   - record-hasfield
   - record-dot-preprocessor
-  - servant-openapi3
   - openapi3
+  - fast-logger
   - persistent
-  - extra
-  - text-conversions
-  - dashboard-helper-api
-  - data-default-class
-  - http-types
-  - containers
-  - geohash == 1.0.1
-  - euler-hs
-  - unordered-containers
+  - persistent-postgresql
+  - esqueleto
+  - monad-logger
+  - resourcet
+  - resource-pool
+  - universum
+  - scientific
   - vector
-  - cereal
-  - beam-core
-  - beam-mysql
-  - beam-postgres
-  - template-haskell
-  - sequelize
-  - casing
-  - postgresql-simple
-  - random
-  - raw-strings-qq
-  - directory
-  - filepath
-  - scheduler
-  - singletons
-  - singletons-th
-  - regex-posix
-  - pureMD5
-  - lens-aeson
+  - relude
+  - unliftio
+  - string-conversions
+  - hedis
+  - transformers
+  - extra
+  - hw-kafka-client
 
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -fhide-source-paths
+  - -Werror
   - -fplugin=RecordDotPreprocessor
+  - -Wwarn=ambiguous-fields
 
 library:
   source-dirs:
     - src
-    - src-read-only
-  ghc-options:
-    - -Wall
-    - -Wcompat
-    - -Widentities
-    - -fhide-source-paths
-    - -Werror
-    - -Wwarn=ambiguous-fields
   when:
     - condition: flag(Local)
       then:
@@ -149,43 +165,3 @@ library:
         ghc-options:
           - -O2
           - -j4
-  dependencies:
-    - mobility-core
-    - haskell-cac
-    - beckn-spec
-    - beckn-services
-    - special-zone-a
-    - special-zone
-    - payment
-    - sessionizer-metrics
-    - beckn-services
-    - shared-services
-    - utils
-    - external
-
-executables:
-  rider-app-exe:
-    main: Main.hs
-    source-dirs: server
-    ghc-options:
-      - -threaded
-      - -rtsopts
-      - '"-with-rtsopts=-N -T"'
-    when:
-    - condition: flag(Local)
-      then:
-        ghc-options:
-          - -O0
-          - -funfolding-use-threshold20
-          - -fno-cse
-          - -fmax-simplifier-iterations1
-          - -fno-specialise-aggressively
-          - -j4
-      else:
-        ghc-options:
-          - -O2
-          - -j4
-    dependencies:
-      - rider-app
-      - mobility-core
-      - beckn-spec

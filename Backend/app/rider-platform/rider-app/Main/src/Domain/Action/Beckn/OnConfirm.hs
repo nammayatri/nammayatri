@@ -18,6 +18,9 @@ module Domain.Action.Beckn.OnConfirm
     OnConfirmReq (..),
     RideAssignedInfo (..),
     BookingConfirmedInfo (..),
+    ValidatedOnConfirmReq (..),
+    ValidatedBookingConfirmedReq (..),
+    DCommon.RideAssignedReq (..),
   )
 where
 

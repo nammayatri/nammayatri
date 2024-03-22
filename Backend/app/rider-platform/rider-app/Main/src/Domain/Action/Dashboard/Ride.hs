@@ -27,6 +27,7 @@ where
 
 import qualified Beckn.ACL.Common as Common
 import Beckn.ACL.Status
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
@@ -58,6 +59,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -68,6 +70,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearch
+import TransactionLogs.PushLogs
 
 data BookingCancelledReq = BookingCancelledReq
   { bookingId :: Id DTB.Booking,
@@ -459,6 +462,9 @@ rideSync merchant reqRideId = do
     Just merchantOperatingCityId -> CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   let dStatusReq = DStatusReq {booking, merchant, city}
   becknStatusReq <- buildStatusReqV2 dStatusReq
+  fork "sending status, pushing ondc logs" do
+    becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+    void $ pushLogs "status" (toJSON becknStatusReq) becknConfig.logsToken becknConfig.logsUrl
   messageId <- Utils.getMessageId becknStatusReq.statusReqContext
   Hedis.setExp (Common.makeContextMessageIdStatusSyncKey messageId) True 3600
   void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq

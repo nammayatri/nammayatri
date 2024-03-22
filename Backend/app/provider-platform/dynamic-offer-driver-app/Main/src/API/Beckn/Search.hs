@@ -25,6 +25,7 @@ import qualified Data.Aeson.Text as A
 import Data.List.Extra (notNull)
 import qualified Data.Text.Lazy as TL
 import qualified Domain.Action.Beckn.Search as DSearch
+import Domain.Types.BecknConfig
 import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -32,12 +33,15 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Domain as Domain
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import Storage.CachedQueries.ValueAddNP as VNP
+import TransactionLogs.PushLogs
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -69,6 +73,9 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
 
     Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
       validatedSReq <- DSearch.validateRequest transporterId dSearchReq
+      fork "search received pushing ondc logs" do
+        becknConfig <- QBC.findByMerchantIdDomainAndVehicle validatedSReq.merchant.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError "Beckn Config not found")
+        void $ pushLogs "search" (toJSON reqV2) becknConfig.logsToken becknConfig.logsUrl
       let bppId = validatedSReq.merchant.subscriberId.getShortId
       bppUri <- Utils.mkBppUri transporterId.getId
       fork "search request processing" $
@@ -82,9 +89,10 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
               onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri (Just bppId) (Just bppUri) city country
               let context' = onSearchReq.onSearchReqContext
               logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
-              void $
-                Callback.withCallback dSearchRes.provider "SEARCH" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
-                  pure onSearchReq
+              fork "sending on search, pushing ondc logs" do
+                becknConfig <- QBC.findByMerchantIdDomainAndVehicle validatedSReq.merchant.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError "Beckn Config not found")
+                void $ pushLogs "on_search" (toJSON onSearchReq) becknConfig.logsToken becknConfig.logsUrl
+              void $ Callback.withCallback dSearchRes.provider "SEARCH" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ pure onSearchReq
             else pure ()
   pure Ack
 
