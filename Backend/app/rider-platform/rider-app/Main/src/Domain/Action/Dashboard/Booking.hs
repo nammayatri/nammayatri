@@ -155,7 +155,7 @@ bookingSync merchant merchantOpCityId reqBookingId = do
           dStatusReq = DStatusReq {booking = updBooking, merchant, city}
       becknStatusReq <- buildStatusReqV2 dStatusReq
       logTagDebug ("bookingId:-" <> bookingId.getId) $ "bookingSync:-becknStatusReqV2:-" <> show becknStatusReq
-      void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq
+      void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId
     Nothing -> do
       cancellationReason <- mkBookingCancellationReason merchant.id Common.syncBookingCodeWithNoRide Nothing bookingId
       QBooking.updateStatus bookingId DBooking.CANCELLED
@@ -164,4 +164,4 @@ bookingSync merchant merchantOpCityId reqBookingId = do
           dStatusReq = DStatusReq {booking = updBooking, merchant, city}
       becknStatusReq <- buildStatusReqV2 dStatusReq
       logTagDebug ("bookingId:-" <> bookingId.getId) $ "bookingSync:-becknStatusReqv2:-" <> show becknStatusReq
-      void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq
+      void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId

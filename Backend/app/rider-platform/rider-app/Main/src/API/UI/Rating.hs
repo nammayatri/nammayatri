@@ -47,10 +47,10 @@ handler :: App.FlowServer API
 handler = rating
 
 rating :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> App.FlowHandler APISuccess
-rating (personId, _) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+rating (personId, merchantId) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   dFeedbackRes <- DFeedback.feedback request
   becknReq <- ACL.buildRatingReqV2 dFeedbackRes
   fork "call bpp rating api" $ do
     isValueAddNP <- CQVAN.isValueAddNP dFeedbackRes.providerId
-    when isValueAddNP . void . withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq
+    when isValueAddNP . void . withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq merchantId
   pure Success

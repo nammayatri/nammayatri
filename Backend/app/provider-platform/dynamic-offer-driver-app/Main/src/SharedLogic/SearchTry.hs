@@ -15,6 +15,7 @@
 module SharedLogic.SearchTry where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
@@ -27,6 +28,7 @@ import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -92,7 +94,9 @@ initiateDriverSearchBatch ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DriverSearchBatchInput m ->
   m ()

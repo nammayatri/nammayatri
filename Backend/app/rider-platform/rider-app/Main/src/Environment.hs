@@ -67,6 +67,7 @@ import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import System.Environment as SE
 import Tools.Metrics
 import Tools.Streaming.Kafka
+import TransactionLogs.Types
 
 data CacConfig = CacConfig
   { host :: String,
@@ -148,7 +149,8 @@ data AppCfg = AppCfg
     hotSpotExpiry :: Seconds,
     collectRouteData :: Bool,
     cacConfig :: CacConfig,
-    superPositionConfig :: SuperPositionConfig
+    superPositionConfig :: SuperPositionConfig,
+    ondcTokenMap :: M.Map Text TokenConfig
   }
   deriving (Generic, FromDhall)
 
@@ -223,7 +225,8 @@ data AppEnv = AppEnv
     collectRouteData :: Bool,
     shouldLogRequestId :: Bool,
     requestId :: Maybe Text,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    ondcTokenHashMap :: HM.HashMap Text (Text, BaseUrl)
   }
   deriving (Generic)
 
@@ -260,6 +263,8 @@ buildAppEnv cfg@AppCfg {..} = do
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   serviceClickhouseEnv <- createConn riderClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
+  let tokenMap :: (M.Map Text (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
+  let ondcTokenHashMap = HM.fromList $ M.toList tokenMap
   return AppEnv {minTripDistanceForReferralCfg = highPrecMetersToDistance <$> minTripDistanceForReferralCfg, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

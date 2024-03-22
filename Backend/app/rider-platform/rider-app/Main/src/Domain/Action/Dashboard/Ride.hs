@@ -474,5 +474,5 @@ rideSync merchant reqRideId = do
   becknStatusReq <- buildStatusReqV2 dStatusReq
   messageId <- Utils.getMessageId becknStatusReq.statusReqContext
   Hedis.setExp (Common.makeContextMessageIdStatusSyncKey messageId) True 3600
-  void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq
+  void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId
   pure Success

@@ -81,7 +81,7 @@ bookingStatus bookingId _ = do
       ttlUtcTime = addDurationToUTCTime booking.createdAt ttlToNominalDiffTime
   when (booking.status == SRB.NEW && (ttlUtcTime < now)) do
     dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-    void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+    void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
     throwError $ RideInvalidStatus "Booking Invalid"
   SRB.buildBookingAPIEntity booking booking.riderId
   where
@@ -106,7 +106,7 @@ checkBookingsForStatus (currBooking : bookings) = do
         city <- CQMOC.findById currBooking.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound currBooking.merchantOperatingCityId.getId)
         let dStatusReq = StatusACL.DStatusReq currBooking merchant city
         becknStatusReq <- StatusACL.buildStatusReqV2 dStatusReq
-        void $ withShortRetry $ CallBPP.callStatusV2 currBooking.providerUrl becknStatusReq
+        void $ withShortRetry $ CallBPP.callStatusV2 currBooking.providerUrl becknStatusReq merchant.id
         checkBookingsForStatus bookings
     (_, _) -> logError "Nothing values for time diff threshold or booking end duration"
 checkBookingsForStatus [] = pure ()

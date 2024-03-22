@@ -23,6 +23,7 @@ import qualified Beckn.Types.Core.Taxi.API.Track as Track
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified Data.HashMap.Strict as HMS
 import qualified Domain.Action.Beckn.Track as DTrack
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -30,6 +31,7 @@ import Kernel.Prelude
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Domain as Domain
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
@@ -37,7 +39,8 @@ import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.Booking as QRB
-import Tools.Error
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -75,11 +78,14 @@ track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBe
     booking <- QRB.findById dTrackReq.bookingId >>= fromMaybeM (BookingNotFound dTrackReq.bookingId.getId)
     let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporterId (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+    fork "track received pushing ondc logs" do
+      ondcTokenHashMap <- asks (.ondcTokenHashMap)
+      let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup transporterId.getId ondcTokenHashMap
+      void $ pushLogs "track" (toJSON reqV2) tokenConfig
     ttl <- bppConfig.onTrackTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
     onTrackContext <- ContextV2.buildContextV2 Context.ON_TRACK Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttl)
-    Callback.withCallback dTrackRes.transporter "TRACK" OnTrack.onTrackAPIV2 callbackUrl internalEndPointHashMap (errHandler onTrackContext) $
-      -- there should be DOnTrack.onTrack, but it is empty anyway
-      pure $
+    Callback.withCallback dTrackRes.transporter "on_track" OnTrack.onTrackAPIV2 callbackUrl internalEndPointHashMap (errHandler onTrackContext) $
+      pure
         Spec.OnTrackReq
           { onTrackReqContext = onTrackContext,
             onTrackReqError = Nothing,
