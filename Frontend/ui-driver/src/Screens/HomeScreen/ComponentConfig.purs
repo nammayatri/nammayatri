@@ -946,7 +946,7 @@ accessibilityPopUpConfig state =
         , margin = Margin 16 16 16 0
         },
         coverMediaConfig {
-          visibility = if popupData.videoUrl /= "" && (state.data.config.purpleRideConfig.showPurpleVideos || (popupData.mediaType == "Audio")) then VISIBLE else GONE 
+          visibility = boolToVisibility $ state.data.activeRide.disabilityTag == Just ST.SAFETY || (popupData.videoUrl /= "" && (state.data.config.purpleRideConfig.showPurpleVideos || (popupData.mediaType == "Audio")))
         , width = WRAP_CONTENT
         , padding = if popupData.mediaType == "Audio" then Padding 6 6 6 6 else Padding 16 16 16 0
         , mediaType = popupData.mediaType
@@ -1105,8 +1105,8 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
                                     secondaryText = "",
                                     coverMediaText = getString CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE, 
                                     imageUrl = if  driverLocation == "bangalore" then fetchImage FF_COMMON_ASSET "ny_ic_bangalure_city_police" else fetchImage FF_COMMON_ASSET "ny_ic_general_safety" ,
-                                    videoUrl = videoUrl',
-                                    mediaType = "Audio",
+                                    videoUrl = "",
+                                    mediaType = "",
                                     videoId = ""
                                   }
       Just ST.SPECIAL_ZONE_PICKUP, _ -> accessibilityConfig' 
