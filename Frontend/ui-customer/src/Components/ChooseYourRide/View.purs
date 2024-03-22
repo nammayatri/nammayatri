@@ -306,7 +306,7 @@ chooseYourRideView push config isSingleEstimate =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , background tagConfig.backgroundColor
+      , background Color.white900
       , cornerRadii $ Corners 24.0 true true false false
       ]
       [ linearLayout
