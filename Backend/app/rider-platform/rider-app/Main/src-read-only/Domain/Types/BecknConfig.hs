@@ -22,6 +22,8 @@ data BecknConfig = BecknConfig
     gatewayUrl :: Servant.Client.Core.BaseUrl,
     id :: Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig,
     initTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    logsToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    logsUrl :: Servant.Client.Core.BaseUrl,
     paymentParamsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ratingTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     registryUrl :: Servant.Client.Core.BaseUrl,
@@ -47,6 +49,6 @@ data PaymentCollectedBy = BAP | BPP deriving (Eq, Ord, Show, Read, Generic, ToJS
 
 data VehicleCategory = CAB | AUTO_RICKSHAW | METRO deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentCollectedBy)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentCollectedBy))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleCategory)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VehicleCategory))

@@ -159,6 +159,7 @@ library:
     - payment
     - sessionizer-metrics
     - utils
+    - external
   extra-libraries:
     - cac_client
 

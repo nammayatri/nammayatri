@@ -15,10 +15,12 @@ module BecknV2.Utils where
 
 import BecknV2.OnDemand.Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Data.Time
 import Data.Time.Format.ISO8601
 import EulerHS.Prelude
+import Text.Regex.Posix ((=~))
 
 getTagV2 :: TagGroup -> Tag -> Maybe [Spec.TagGroup] -> Maybe Text
 getTagV2 tagGroupCode tagCode mbTagGroups = do
@@ -46,3 +48,32 @@ formatTimeDifference duration = T.pack $ iso8601Show $ calendarTimeTime duration
 
 addDurationToUTCTime :: UTCTime -> NominalDiffTime -> UTCTime
 addDurationToUTCTime time duration = addUTCTime duration time
+
+maskNumber :: Text -> Text
+maskNumber billingNumber = do
+  let startingDigitLen = 2
+  let trailingDigitLen = 2
+  let totalDigitLen = startingDigitLen + trailingDigitLen
+  if T.length billingNumber <= totalDigitLen
+    then billingNumber
+    else
+      T.take startingDigitLen billingNumber
+        <> T.replicate (T.length billingNumber - totalDigitLen) "*"
+        <> T.drop (T.length billingNumber - trailingDigitLen) billingNumber
+
+maskSensitiveData :: A.Value -> A.Value
+maskSensitiveData (A.String t) = A.String $ maskSensitiveText t
+maskSensitiveData (A.Array arr) = A.Array $ fmap maskSensitiveData arr
+maskSensitiveData (A.Object obj) = A.Object $ fmap maskSensitiveData obj
+maskSensitiveData v = v
+
+maskSensitiveText :: Text -> Text
+maskSensitiveText text = do
+  let str = T.unpack text
+      regexPattern = "^[0-9]{10}$" :: String
+      hit = str =~ regexPattern :: (String, String, String)
+   in case hit of
+        (before, match, after) ->
+          if null match
+            then text
+            else T.concat [T.pack before, maskNumber (T.pack match), T.pack after]

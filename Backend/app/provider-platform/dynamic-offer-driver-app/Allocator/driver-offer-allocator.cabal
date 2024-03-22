@@ -81,6 +81,7 @@ library
     , either
     , euler-hs
     , exceptions
+    , external
     , extra
     , generic-lens
     , haskell-cac
@@ -168,6 +169,7 @@ executable driver-offer-allocator-exe
     , either
     , euler-hs
     , exceptions
+    , external
     , extra
     , generic-lens
     , haskell-cac

@@ -172,6 +172,7 @@ onStatus ::
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
     HasField "hotSpotExpiry" r Seconds
   ) =>
   ValidatedOnStatusReq ->

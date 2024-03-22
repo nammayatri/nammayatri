@@ -18,16 +18,21 @@ import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified Data.HashMap.Strict as HM
 import Data.Text as T
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
+import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.Queries.Booking as QRB
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 type API = OnConfirm.OnConfirmAPIV2
 
@@ -50,6 +55,11 @@ onConfirm _ reqV2 = withFlowHandlerBecknAPI do
             DOnConfirm.BookingConfirmed bookingConfirmedReq -> bookingConfirmedReq.bppBookingId
       Redis.whenWithLockRedis (onConfirmLockKey bppBookingId.getId) 60 $ do
         validatedReq <- DOnConfirm.validateRequest onConfirmReq transactionId
+        fork "on confirm received pushing ondc logs" do
+          booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
+          ondcTokenHashMap <- asks (.ondcTokenHashMap)
+          let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HM.lookup booking.merchantId.getId ondcTokenHashMap
+          void $ pushLogs "on_confirm" (toJSON reqV2) tokenConfig
         fork "onConfirm request processing" $
           Redis.whenWithLockRedis (onConfirmProcessingLockKey bppBookingId.getId) 60 $
             DOnConfirm.onConfirm validatedReq

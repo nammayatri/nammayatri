@@ -27,6 +27,7 @@ module Domain.Action.Beckn.OnUpdate
     NewMessageReq (..),
     SafetyAlertReq (..),
     StopArrivedReq (..),
+    ValidatedOnUpdateReq (..),
   )
 where
 
@@ -210,6 +211,7 @@ onUpdate ::
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
     HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
     HasBAPMetrics m r,
     EventStreamFlow m r,
     HasField "hotSpotExpiry" r Seconds

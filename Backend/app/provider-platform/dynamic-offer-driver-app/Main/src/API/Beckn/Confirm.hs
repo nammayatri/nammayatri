@@ -19,6 +19,7 @@ import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified Data.HashMap.Strict as HMS
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -41,6 +42,8 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Tools.Error
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -99,6 +102,10 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
       let vehicleCategory = Utils.mapServiceTierToCategory dConfirmRes.booking.vehicleServiceTier
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+      fork "confirm received pushing ondc logs" do
+        ondcTokenHashMap <- asks (.ondcTokenHashMap)
+        let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup dConfirmRes.transporter.id.getId ondcTokenHashMap
+        void $ pushLogs "confirm" (toJSON reqV2) tokenConfig
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dConfirmRes.booking.quoteId
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId dConfirmRes.booking.vehicleServiceTier dConfirmRes.booking.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show dConfirmRes.booking.vehicleServiceTier))
       let pricing = Utils.convertBookingToPricing vehicleServiceTierItem dConfirmRes.booking

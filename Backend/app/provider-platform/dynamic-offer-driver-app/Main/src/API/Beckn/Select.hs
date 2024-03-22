@@ -17,6 +17,7 @@ module API.Beckn.Select (API, handler) where
 import qualified Beckn.ACL.Select as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
+import qualified Data.HashMap.Strict as HMS
 import qualified Domain.Action.Beckn.Select as DSelect
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -29,6 +30,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -54,6 +57,10 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
       fork "select request processing" $ do
         Redis.whenWithLockRedis (selectProcessingLockKey dSelectReq.messageId) 60 $
           DSelect.handler merchant dSelectReq searchRequest estimates
+      fork "select received pushing ondc logs" do
+        ondcTokenHashMap <- asks (.ondcTokenHashMap)
+        let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup merchant.id.getId ondcTokenHashMap
+        void $ pushLogs "select" (toJSON reqV2) tokenConfig
     pure Ack
 
 selectLockKey :: Text -> Text

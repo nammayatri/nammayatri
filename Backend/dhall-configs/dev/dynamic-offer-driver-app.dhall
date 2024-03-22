@@ -342,4 +342,5 @@ in  { esqDBCfg
     , cacConfig
     , superPositionConfig
     , maxStraightLineRectificationThreshold = +800
+    , ondcTokenMap = sec.ondcTokenMap
     }

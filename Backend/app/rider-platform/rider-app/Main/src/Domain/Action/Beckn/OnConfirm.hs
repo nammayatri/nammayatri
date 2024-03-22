@@ -18,6 +18,9 @@ module Domain.Action.Beckn.OnConfirm
     OnConfirmReq (..),
     RideAssignedInfo (..),
     BookingConfirmedInfo (..),
+    ValidatedOnConfirmReq (..),
+    ValidatedBookingConfirmedReq (..),
+    DCommon.RideAssignedReq (..),
   )
 where
 
@@ -88,6 +91,7 @@ onConfirm ::
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
     HasBAPMetrics m r,
     EventStreamFlow m r
   ) =>

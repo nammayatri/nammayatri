@@ -161,6 +161,7 @@ library:
     - beckn-services
     - shared-services
     - utils
+    - external
 
 executables:
   rider-app-exe:

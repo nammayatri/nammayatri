@@ -4,6 +4,8 @@ let sec = ./secrets/rider-app.dhall
 
 let globalCommon = ../generic/common.dhall
 
+let ondcUrl = "https://analytics-api.aws.ondc.org/v1/api/push-txn-logs"
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -294,4 +296,5 @@ in  { esqDBCfg
     , collectRouteData = True
     , kafkaClickhouseCfg
     , riderClickhouseCfg
+    , ondcTokenMap = sec.ondcTokenMap
     }

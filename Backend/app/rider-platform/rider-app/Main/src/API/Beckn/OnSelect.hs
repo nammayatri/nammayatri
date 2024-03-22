@@ -18,6 +18,7 @@ import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified Data.HashMap.Strict as HM
 import Data.Text as T
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Environment
@@ -27,6 +28,8 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 type API = OnSelect.OnSelectAPIV2
 
@@ -45,6 +48,10 @@ onSelect _ reqV2 = withFlowHandlerBecknAPI do
     whenJust mbDOnSelectReq $ \onSelectReq ->
       Redis.whenWithLockRedis (onSelectLockKey messageId) 60 $ do
         validatedOnSelectReq <- DOnSelect.validateRequest onSelectReq
+        fork "on select received pushing ondc logs" do
+          ondcTokenHashMap <- asks (.ondcTokenHashMap)
+          let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HM.lookup validatedOnSelectReq.searchRequest.merchantId.getId ondcTokenHashMap
+          void $ pushLogs "on_select" (toJSON reqV2) tokenConfig
         fork "on select processing" $ do
           Redis.whenWithLockRedis (onSelectProcessingLockKey messageId) 60 $
             DOnSelect.onSelect validatedOnSelectReq

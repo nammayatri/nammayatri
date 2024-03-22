@@ -22,6 +22,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson.Text as A
+import qualified Data.HashMap.Strict as HMS
 import Data.List.Extra (notNull)
 import qualified Data.Text.Lazy as TL
 import qualified Domain.Action.Beckn.Search as DSearch
@@ -38,6 +39,8 @@ import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as VNP
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -69,6 +72,10 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
 
     Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
       validatedSReq <- DSearch.validateRequest transporterId dSearchReq
+      fork "search received pushing ondc logs" do
+        ondcTokenHashMap <- asks (.ondcTokenHashMap)
+        let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup validatedSReq.merchant.id.getId ondcTokenHashMap
+        void $ pushLogs "search" (toJSON reqV2) tokenConfig
       let bppId = validatedSReq.merchant.subscriberId.getShortId
       bppUri <- Utils.mkBppUri transporterId.getId
       fork "search request processing" $
@@ -86,9 +93,9 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
             let context' = onSearchReq.onSearchReqContext
             logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
             void $
-              Callback.withCallback dSearchRes.provider "SEARCH" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
+              Callback.withCallback dSearchRes.provider "on_search" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
                 pure onSearchReq
-    pure Ack
+  pure Ack
 
 searchLockKey :: Text -> Text -> Text
 searchLockKey id mId = "Driver:Search:MessageId-" <> id <> ":" <> mId

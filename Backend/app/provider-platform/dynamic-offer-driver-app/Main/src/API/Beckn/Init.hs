@@ -23,6 +23,7 @@ import Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified Data.HashMap.Strict as HMS
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -41,6 +42,8 @@ import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.FarePolicy as SFP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -83,10 +86,14 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
           internalEndPointHashMap <- asks (.internalEndPointHashMap)
           let vehicleCategory = Utils.mapServiceTierToCategory dInitRes.booking.vehicleServiceTier
           bppConfig <- QBC.findByMerchantIdDomainAndVehicle dInitRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+          fork "init received pushing ondc logs" do
+            ondcTokenHashMap <- asks (.ondcTokenHashMap)
+            let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup transporterId.getId ondcTokenHashMap
+            void $ pushLogs "init" (toJSON reqV2) tokenConfig
           ttl <- bppConfig.onInitTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
           context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country (Just ttl)
           void . handle (errHandler dInitRes.booking dInitRes.transporter) $
-            Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
+            Callback.withCallback dInitRes.transporter "on_init" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
               mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dInitRes.booking.quoteId
               let onInitMessage = ACL.mkOnInitMessageV2 dInitRes bppConfig mbFarePolicy
               pure $

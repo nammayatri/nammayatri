@@ -602,6 +602,7 @@ library
     , data-default-class
     , directory
     , euler-hs
+    , external
     , extra
     , filepath
     , geohash ==1.0.1

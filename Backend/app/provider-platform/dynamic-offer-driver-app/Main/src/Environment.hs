@@ -57,6 +57,7 @@ import Storage.CachedQueries.RegistryMapFallback as CRM
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import System.Environment (lookupEnv)
 import Tools.Metrics
+import TransactionLogs.Types
 
 data CacConfig = CacConfig
   { host :: String,
@@ -145,7 +146,8 @@ data AppCfg = AppCfg
     _version :: Text,
     cacConfig :: CacConfig,
     superPositionConfig :: SuperPositionConfig,
-    maxStraightLineRectificationThreshold :: HighPrecMeters
+    maxStraightLineRectificationThreshold :: HighPrecMeters,
+    ondcTokenMap :: M.Map Text TokenConfig
   }
   deriving (Generic, FromDhall)
 
@@ -228,7 +230,8 @@ data AppEnv = AppEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    maxStraightLineRectificationThreshold :: HighPrecMeters
+    maxStraightLineRectificationThreshold :: HighPrecMeters,
+    ondcTokenHashMap :: HMS.HashMap Text (Text, BaseUrl)
   }
   deriving (Generic)
 
@@ -271,6 +274,8 @@ buildAppEnv cfg@AppCfg {..} = do
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
   let internalEndPointHashMap = HMS.fromList $ M.toList internalEndPointMap
+  let tokenMap :: (M.Map Text (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
+  let ondcTokenHashMap = HMS.fromList $ M.toList tokenMap
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

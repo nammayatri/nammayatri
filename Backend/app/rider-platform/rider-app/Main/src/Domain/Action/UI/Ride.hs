@@ -47,6 +47,7 @@ import Kernel.Prelude hiding (HasField)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -101,7 +102,9 @@ getDriverLoc ::
     EsqDBFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     EsqDBReplicaFlow m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasLongDurationRetryCfg r c
   ) =>
   Id SRide.Ride ->

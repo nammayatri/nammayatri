@@ -293,18 +293,6 @@ mkStops' origin mDestination =
                   }
           ]
 
-maskBillingNumber :: Text -> Text
-maskBillingNumber billingNumber = do
-  let startingDigitLen = 2
-  let trailingDigitLen = 2
-  let totalDigitLen = startingDigitLen + trailingDigitLen
-  if T.length billingNumber <= totalDigitLen
-    then billingNumber
-    else
-      T.take startingDigitLen billingNumber
-        <> T.replicate (T.length billingNumber - totalDigitLen) "*"
-        <> T.drop (T.length billingNumber - trailingDigitLen) billingNumber
-
 mapVariantToVehicle :: VehVar.VehicleVariant -> VehicleCategory
 mapVariantToVehicle variant = do
   case variant of

@@ -190,6 +190,7 @@ rideAssignedReqHandler ::
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r

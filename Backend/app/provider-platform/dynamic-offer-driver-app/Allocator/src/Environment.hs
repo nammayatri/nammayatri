@@ -49,6 +49,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
 import Tools.Metrics
+import TransactionLogs.Types
 
 data HandlerCfg = HandlerCfg
   { schedulerConfig :: SchedulerConfig,
@@ -96,7 +97,8 @@ data HandlerEnv = HandlerEnv
     schedulerType :: SchedulerType,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    ondcTokenHashMap :: HMS.HashMap Text (Text, BaseUrl)
   }
   deriving (Generic)
 
@@ -127,6 +129,8 @@ buildHandlerEnv HandlerCfg {..} = do
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
+  let tokenMap :: (M.Map Text (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
+  let ondcTokenHashMap = HMS.fromList $ M.toList tokenMap
   return HandlerEnv {..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()

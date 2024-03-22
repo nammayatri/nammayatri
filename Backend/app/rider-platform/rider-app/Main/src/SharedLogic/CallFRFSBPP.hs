@@ -17,87 +17,123 @@ module SharedLogic.CallFRFSBPP where
 import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified Data.HashMap.Strict as HM
+import qualified Domain.Types.Merchant as Merchant
 import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
 import Kernel.Prelude
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
 import Tools.Metrics (CoreMetrics)
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 search ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    EsqDBFlow m r
   ) =>
   BaseUrl ->
   Spec.SearchReq ->
+  Id Merchant.Merchant ->
   m Spec.AckResponse
-search gatewayUrl req = do
+search gatewayUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.searchReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature bapId "search" Spec.searchAPI gatewayUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' merchantId bapId "search" Spec.searchAPI gatewayUrl internalEndPointHashMap req
 
 init ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    EsqDBFlow m r
   ) =>
   BaseUrl ->
   Spec.InitReq ->
+  Id Merchant.Merchant ->
   m Spec.AckResponse
-init providerUrl req = do
+init providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.initReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature bapId "init" Spec.initAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' merchantId bapId "init" Spec.initAPI providerUrl internalEndPointHashMap req
 
 confirm ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    EsqDBFlow m r
   ) =>
   BaseUrl ->
   Spec.ConfirmReq ->
+  Id Merchant.Merchant ->
   m Spec.AckResponse
-confirm providerUrl req = do
+confirm providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.confirmReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature bapId "confirm" Spec.confirmAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' merchantId bapId "confirm" Spec.confirmAPI providerUrl internalEndPointHashMap req
 
 status ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    EsqDBFlow m r
   ) =>
   BaseUrl ->
   Spec.StatusReq ->
+  Id Merchant.Merchant ->
   m Spec.AckResponse
-status providerUrl req = do
+status providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.statusReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature bapId "status" Spec.statusAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' merchantId bapId "status" Spec.statusAPI providerUrl internalEndPointHashMap req
 
 cancel ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    EsqDBFlow m r
   ) =>
   BaseUrl ->
   Spec.CancelReq ->
+  Id Merchant.Merchant ->
   m Spec.AckResponse
-cancel providerUrl req = do
+cancel providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.cancelReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature bapId "cancel" Spec.cancelAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' merchantId bapId "cancel" Spec.cancelAPI providerUrl internalEndPointHashMap req
 
-callBecknAPIWithSignature ::
+callBecknAPIWithSignature' ::
   ( MonadFlow m,
     CoreMetrics m,
     IsBecknAPI api req res,
-    SanitizedUrl api
+    SanitizedUrl api,
+    ToJSON req,
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    EsqDBFlow m r
   ) =>
+  Id Merchant.Merchant ->
   Text ->
   Text ->
   Proxy api ->
@@ -105,4 +141,9 @@ callBecknAPIWithSignature ::
   HM.HashMap BaseUrl BaseUrl ->
   req ->
   m res
-callBecknAPIWithSignature a = callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing
+callBecknAPIWithSignature' merchantId a b c d e req' = do
+  fork ("sending " <> show b <> ", pushing ondc logs") $ do
+    ondcTokenHashMap <- asks (.ondcTokenHashMap)
+    let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HM.lookup merchantId.getId ondcTokenHashMap
+    void $ pushLogs b (toJSON req') tokenConfig
+  callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'

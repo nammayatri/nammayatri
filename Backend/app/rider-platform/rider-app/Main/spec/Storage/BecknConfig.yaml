@@ -33,6 +33,8 @@ BecknConfig:
     trackTTLSec: Maybe Int
     ratingTTLSec: Maybe Int
     cancelTTLSec: Maybe Int
+    logsUrl: BaseUrl
+    logsToken: Maybe Text
 
   types:
     VehicleCategory:
@@ -44,6 +46,7 @@ BecknConfig:
   default:
     vehicleCategory: "'CAB'"
     collectedBy: "'BPP'"
+    logsUrl: "'https://analytics-api.aws.ondc.org/v1/api/push-txn-logs'"
 
   queries:
     findByMerchantIdDomainAndVehicle:
@@ -63,15 +66,18 @@ BecknConfig:
     gatewayUrl: Text
     registryUrl: Text
     staticTermsUrl: Maybe Text
+    logsUrl: Text
 
   toTType:
     subscriberUrl: showBaseUrl|I
     gatewayUrl: showBaseUrl|I
     registryUrl: showBaseUrl|I
     staticTermsUrl: (Kernel.Prelude.fmap showBaseUrl)|I
+    logsUrl: showBaseUrl|I
 
   fromTType:
     subscriberUrl: parseBaseUrl|MI
     gatewayUrl: parseBaseUrl|IM
     registryUrl: parseBaseUrl|MI
     staticTermsUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
+    logsUrl: parseBaseUrl|MI

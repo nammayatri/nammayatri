@@ -100,6 +100,7 @@ confirm ::
     EventStreamFlow m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     EncFlow m r
   ) =>

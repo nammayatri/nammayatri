@@ -9,6 +9,7 @@ import qualified Beckn.OnDemand.Utils.Init
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.OnDemand.Utils.Context
+import BecknV2.Utils (maskNumber)
 import qualified Data.List
 import qualified Data.Text
 import qualified Domain.Types.BecknConfig as DBC
@@ -61,7 +62,7 @@ tfOrder uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP bapConfig = d
 
 tfOrderBilling :: Maybe Data.Text.Text -> Maybe Data.Text.Text -> BecknV2.OnDemand.Types.Billing
 tfOrderBilling mbPhoneNumber mbRiderName = do
-  let billingPhone_ = mbPhoneNumber <&> Utils.maskBillingNumber
+  let billingPhone_ = mbPhoneNumber <&> maskNumber
   BecknV2.OnDemand.Types.Billing {billingPhone = billingPhone_, billingName = mbRiderName}
 
 tfOrderFulfillments :: SharedLogic.Confirm.DConfirmRes -> Data.Text.Text -> Maybe Data.Text.Text -> Bool -> BecknV2.OnDemand.Types.Fulfillment
