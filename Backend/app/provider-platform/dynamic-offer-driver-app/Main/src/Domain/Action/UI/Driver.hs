@@ -82,7 +82,9 @@ import qualified Data.List as DL
 import qualified Data.Map as M
 import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
+import Network.HTTP.Client.TLS (tlsManagerSettings)
 import qualified Data.Text as T
+import Control.Concurrent.MVar as CCMVar
 import Data.Time (Day, fromGregorian)
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
@@ -97,6 +99,8 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
 import Domain.Types.DriverStats
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
@@ -115,27 +119,34 @@ import Domain.Types.Vehicle (VehicleAPIEntity)
 import qualified Domain.Types.Vehicle as SV
 import Environment
 import EulerHS.Prelude hiding (id, state)
-import qualified EulerHS.Types as Euler
 import qualified GHC.List as GHCL
 import GHC.Records.Extra
 import qualified IssueManagement.Domain.Types.MediaFile as Domain
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
+import Data.ByteString.Builder (toLazyByteString)
+import Network.HTTP.Media (renderHeader)
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
+import Network.HTTP.Types (hContentType)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
 import Kernel.Prelude (NominalDiffTime)
-import Kernel.ServantMultipart
+import Servant.Multipart
+import Servant.Client
+import Servant.Client.Core
+import Servant.API
+import Servant.Multipart.API
 import Kernel.Serviceability (rideServiceable)
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.APISuccess (APISuccess (Success))
+import qualified Network.HTTP.Client as Client
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -143,7 +154,8 @@ import Kernel.Types.Predicate
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (callAPI)
+import qualified Servant.Types.SourceT as S
 import Kernel.Utils.GenericPretty (PrettyShow)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
@@ -154,8 +166,6 @@ import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
-import Servant hiding (Unauthorized, throwError)
-import Servant.Client
 import SharedLogic.CallBAP (sendDriverOffer, sendRideAssignedUpdateToBAP)
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
@@ -204,6 +214,7 @@ import Tools.Error
 import Tools.Event
 import Tools.SMS as Sms hiding (Success)
 import Tools.Verification
+
 
 data DriverInformationRes = DriverInformationRes
   { id :: Id Person,
@@ -1659,37 +1670,39 @@ defBaseUrl :: BaseUrl
 defBaseUrl =
   BaseUrl
     { baseUrlScheme = Https,
-      baseUrlHost = "sgp.idv.hyperverge.co",
+      baseUrlHost = "HV",
       baseUrlPort = 443,
       baseUrlPath = T.unpack ""
     }
 
 type FaceValidationAPI =
-  "v1"
-    :> "checkLiveness"
-    :> Header "Content-Type" Text
-    :> Header "transacrionId" Text
+  Header "Content-Type" Text
+    :> Header "transactionId" Text
     :> Header "appId" Text
     :> Header "appKey" Text
     :> MultipartForm Tmp DriverPhotoUploadReq
+    :> "v1"
+    :> "checkLiveness"
     :> Post '[JSON] (Either String A.Object)
 
-faceValidationClient ::
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  (BL.ByteString, DriverPhotoUploadReq) ->
-  Euler.EulerClient (Either String A.Object)
-faceValidationClient = Euler.client (Proxy :: Proxy FaceValidationAPI)
+
+api :: Proxy FaceValidationAPI
+api = Proxy
+
+clientFunction :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> (BL.ByteString, DriverPhotoUploadReq) -> ClientM (Either String A.Object)
+clientFunction = client api
+
+callAPI :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text ->  DriverPhotoUploadReq -> ClientM (Either String A.Object)
+callAPI contentType' transactionId appId appKey formData = clientFunction contentType' transactionId appId appKey ("xxxxxx",formData)
 
 callFaceVerificationAPI ::
   (MonadFlow m, CoreMetrics m) =>
   DriverPhotoUploadReq ->
   m (Either String A.Object)
 callFaceVerificationAPI req = do
+  manager <- liftIO $ Client.newManager tlsManagerSettings
   logDebug $ "The request is : " <> (show req)
-  r <- callAPI defBaseUrl (faceValidationClient (Just "multipart/form-data; boundary=xx00xx") (Just "abcd1234") (Just "dummy") (Just "dummy") ("xx00xx", (DriverPhotoUploadReq req.image req.fileType req.reqContentType req.brisqueFeatures req.file))) "validateFaceImage" (Proxy @FaceValidationAPI)
+  r <- liftIO $ runClientM (callAPI (Just "multipart/form-data;") (Just "abcd12345") (Just "dummy") (Just "dummy") (DriverPhotoUploadReq req.image req.fileType req.reqContentType req.brisqueFeatures req.file)) (ClientEnv manager defBaseUrl Nothing modifiedMakeClientRequest)
   _ <- logDebug $ "Response from HyperVerge: " <> show (fromRight (Left "error occured didnt get response") r)
   case r of
     Left e -> do
@@ -1697,3 +1710,66 @@ callFaceVerificationAPI req = do
     Right r' -> do
       logDebug $ "Response from HyperVerge: " <> show r'
   return $ fromRight (Left "") r
+
+modifiedMakeClientRequest :: BaseUrl -> Request -> Client.Request
+modifiedMakeClientRequest burl r = Client.defaultRequest
+    { Client.method = requestMethod r
+    , Client.host = fromString $ baseUrlHost burl
+    , Client.port = baseUrlPort burl
+    , Client.path = BSL.toStrict
+                  $ fromString (baseUrlPath burl)
+                 <> toLazyByteString (requestPath r)
+    , Client.queryString = buildQueryString . toList $ requestQueryString r
+    , Client.requestHeaders =
+      maybeToList acceptHdr ++ maybeToList contentTypeHdr ++ headers
+    , Client.requestBody = body
+    , Client.secure = isSecure
+    }
+  where
+    -- Content-Type and Accept are specified by requestBody and requestAccept
+    headers = filter (\(h, _) -> h /= "Accept" && h /= "Content-Type") $
+        toList $ requestHeaders r
+
+    acceptHdr
+        | null hs   = Nothing
+        | otherwise = Just ("Accept", renderHeader hs)
+      where
+        hs = toList $ requestAccept r
+
+    convertBody bd = case bd of
+        RequestBodyLBS body'       -> Client.RequestBodyLBS body'
+        RequestBodyBS body'        -> Client.RequestBodyBS body'
+        RequestBodySource sourceIO -> Client.RequestBodyStreamChunked givesPopper
+          where
+            givesPopper :: (IO BS.ByteString -> IO ()) -> IO ()
+            givesPopper needsPopper = S.unSourceT sourceIO $ \step0 -> do
+                ref <- CCMVar.newMVar step0
+
+                -- Note sure we need locking, but it's feels safer.
+                let popper :: IO BS.ByteString
+                    popper = CCMVar.modifyMVar ref nextBs
+
+                needsPopper popper
+
+            nextBs S.Stop          = return (S.Stop, BS.empty)
+            nextBs (S.Error err)   = fail err
+            nextBs (S.Skip s)      = nextBs s
+            nextBs (S.Effect ms)   = ms >>= nextBs
+            nextBs (S.Yield lbs s) = case BSL.toChunks lbs of
+                []     -> nextBs s
+                (x:xs) | BS.null x -> nextBs step'
+                       | otherwise -> return (step', x)
+                    where
+                      step' = S.Yield (BSL.fromChunks xs) s
+
+    (body, contentTypeHdr) = case requestBody r of
+        Nothing           -> (Client.RequestBodyBS "", Nothing)
+        Just (body', typ) -> (convertBody body', Just (hContentType, renderHeader typ))
+
+    isSecure = case baseUrlScheme burl of
+        Http -> False
+        Https -> True
+
+    -- Query string builder which does not do any encoding
+    buildQueryString [] = mempty
+    buildQueryString _ = ""

@@ -69,12 +69,16 @@ dependencies:
   - exceptions
   - hspec
   - http-client
+  - http-client-tls
+  - http-media
   - lens
   - servant
   - servant-client
   - servant-client-core
   - servant-server
   - servant-multipart
+  - servant-multipart-api
+  - servant-multipart-client
   - text
   - wai
   - wai-extra

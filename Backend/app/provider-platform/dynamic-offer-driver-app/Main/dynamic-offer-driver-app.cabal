@@ -749,6 +749,8 @@ library
     , geohash ==1.0.1
     , hspec
     , http-client
+    , http-client-tls
+    , http-media
     , http-types
     , lens
     , location-updates
@@ -768,6 +770,8 @@ library
     , servant-client
     , servant-client-core
     , servant-multipart
+    , servant-multipart-api
+    , servant-multipart-client
     , servant-openapi3
     , servant-server
     , sessionizer-metrics
@@ -863,6 +867,8 @@ executable dynamic-offer-driver-app-exe
     , geohash ==1.0.1
     , hspec
     , http-client
+    , http-client-tls
+    , http-media
     , http-types
     , lens
     , mobility-core
@@ -880,6 +886,8 @@ executable dynamic-offer-driver-app-exe
     , servant-client
     , servant-client-core
     , servant-multipart
+    , servant-multipart-api
+    , servant-multipart-client
     , servant-openapi3
     , servant-server
     , shared-services

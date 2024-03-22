@@ -1,0 +1,49 @@
+{
+  "status": "success",
+  "statusCode": 200,
+  "metadata": {
+    "requestId": "1711137591239-7a2e0ea4-f8e6-4de4-ae99-d310134e71a7",
+    "transactionId": "abcd12345"
+  },
+  "result": {
+    "details": {
+      "liveFace": {
+        "value": "yes",
+        "confidence": "high"
+      },
+      "qualityChecks": {
+        "blur": {
+          "value": "no",
+          "confidence": "high"
+        },
+        "eyesClosed": {
+          "value": "no",
+          "confidence": "high"
+        },
+        "faceOccluded": {
+          "value": "no",
+          "confidence": "high"
+        },
+        "multipleFaces": {
+          "value": "no",
+          "confidence": "high"
+        },
+        "sunglasses": {
+          "value": "yes",
+          "confidence": "high"
+        }
+      }
+    },
+    "summary": {
+      "action": "pass",
+      "details": []
+    }
+  }
+}
+
+
+
+NOTES:-
+0. Use tlsManagerSettings not defaultManagerSettings as defaultManagerSettings does not support https
+1. path should end with ? or / example /v1/checkLiveness? or /v1/checkLiveness/ or /v1/checkLiveness/? (This causes 500)
+2. content-Type should be like this : multipart/form-data;boundary=xxxx, if boundary missing this will cause 400
