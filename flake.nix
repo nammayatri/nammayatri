@@ -71,6 +71,7 @@
       ];
 
       flake = {
+        # Configuration for https://github.com/juspay/nix-browser/tree/main/crates/nix_health#nix-health
         nix-health.default = {
           caches.required = [ "https://nammayatri.cachix.org" ];
           direnv.required = true;
