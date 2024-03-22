@@ -706,6 +706,7 @@ homeScreenFlow = do
         void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
         void $ lift $ lift $ toggleLoader true
         (GlobalState newState) <- getState
+        updateCurrentLocation ""
         let state = newState.homeScreen
             searchWithoutPlaceName = any (_ == state.props.rideSearchProps.sourceSelectType) [ST.MAP, ST.FAVOURITE, ST.RETRY_SEARCH, ST.SUGGESTION] && state.props.isSource == Just true
         case searchWithoutPlaceName of
@@ -1191,6 +1192,7 @@ homeScreenFlow = do
             { locateOnMapLocation
               { sourceLat = sourceLat
               , sourceLng = sourceLong
+              , source = if os == "IOS" then (getString STR.CURRENT_LOCATION) else homeScreen.props.locateOnMapLocation.source
               }
             , sourceLat = sourceLat
             , sourceLong = sourceLong
@@ -1366,6 +1368,7 @@ homeScreenFlow = do
     UPDATE_SAVED_LOCATION -> do
       (SavedLocationsListRes savedLocationResp) <- FlowCache.updateAndFetchSavedLocations false
       updateSourceLocation ""
+      updateCurrentLocation ""
       fetchAndModifyLocationLists $ AddNewAddress.getSavedLocations savedLocationResp.list
       homeScreenFlow
 
@@ -1798,7 +1801,7 @@ rideSearchFlow flowType = do
                     else do
                       if flowType == "REPEAT_RIDE_FLOW" then liftFlowBT $ logEventWithParams logField_ "ny_user_repeat_ride_flow" "searchId" rideSearchRes.searchId else pure unit
                       void $ pure $ updateLocalStage FindingEstimate
-                      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isRepeatRide = true, searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, isShorterTrip = false}, data {source = finalState.data.source, sourceAddress = finalState.data.sourceAddress, nearByDrivers = Nothing}})
+                      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isRepeatRide = (flowType == "REPEAT_RIDE_FLOW"), searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, isShorterTrip = false}, data {source = finalState.data.source, sourceAddress = finalState.data.sourceAddress, nearByDrivers = Nothing}})
                   void $ lift $ lift $ toggleLoader false
 
                 Nothing -> pure unit
@@ -2871,6 +2874,16 @@ updateSourceLocation _ = do
       Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
     pure unit
   pure unit 
+
+updateCurrentLocation :: String -> FlowBT String Unit
+updateCurrentLocation _ = do
+  (GlobalState currentState) <- getState
+  currentAddress <- getPlaceName currentState.homeScreen.props.currentLocation.lat currentState.homeScreen.props.currentLocation.lng HomeScreenData.dummyLocation false
+  case currentAddress of
+    Just (PlaceName address) -> do 
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentLocation{place = address.formattedAddress}}})
+    Nothing -> pure unit
+  pure unit
 
 updateUserInfoToState :: HomeScreenState -> FlowBT String Unit
 updateUserInfoToState state =

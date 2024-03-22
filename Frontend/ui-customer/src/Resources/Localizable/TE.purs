@@ -1046,4 +1046,6 @@ getTE stringKey =
     SPECIAL_PICKUP_ZONE_RIDE -> "ప్రత్యేక పికప్ జోన్ రైడ్"
     WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "మీకు తక్కువ పికప్ జోన్‌లో డ్రైవర్‌తో కనెక్ట్ చేయడానికి ప్రయత్నిస్తాం."
     THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "ఇది మీకు తక్కువ సమయంలో పికప్ అనుభవాన్ని అందిస్తుంది."
-    IS_AT_PICKUP_LOCATION -> "పికప్ లొకేషన్‌లో ఉంది"
+    DRIVER_AT_PICKUP_LOCATION -> "మీ డ్రైవర్ పికప్ స్థానంలో ఉన్నాడు"
+    DRIVER_IS_ON_THE_WAY -> "మీ డ్రైవర్ దారిలో ఉన్నాడు"
+    DRIVER_IS_WAITING_AT_PICKUP -> "మీ డ్రైవర్ పికప్ వద్ద వేచి ఉన్నాడు"

@@ -1097,11 +1097,10 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
     then do
       planToAssign <- getPlanId mbPlanToAssign
       case autoPayStatus of
-        Nothing -> callSubscribeFlowForDriver planToAssign
-        Just DrInfo.PENDING -> callSubscribeFlowForDriver planToAssign
-        Just DrInfo.ACTIVE -> QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName driverId toToggle serviceName
-        _ -> pure ()
+        Just DrInfo.ACTIVE -> pure ()
+        _ -> callSubscribeFlowForDriver planToAssign
       QDP.updatesubscriptionServiceRelatedDataInDriverPlan driverId (DDPlan.RentedVehicleNumber vehicleNo) serviceName
+      QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName driverId toToggle serviceName
       fork "notify rental event" $ do
         notifyYatriRentalEventsToDriver vehicleNo WHATSAPP_VEHICLE_LINKED_MESSAGE driverId transporterConfig Nothing WHATSAPP
     else do

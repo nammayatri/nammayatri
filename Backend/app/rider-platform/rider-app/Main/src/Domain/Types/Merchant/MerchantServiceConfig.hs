@@ -45,6 +45,7 @@ data ServiceName
   | CallService Call.CallService
   | NotificationService Notification.NotificationService
   | PaymentService Payment.PaymentService
+  | MetroPaymentService Payment.PaymentService
   | IssueTicketService Ticket.IssueTicketService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -59,6 +60,7 @@ instance Show ServiceName where
   show (CallService s) = "Call_" <> show s
   show (NotificationService s) = "Notification_" <> show s
   show (PaymentService s) = "Payment_" <> show s
+  show (MetroPaymentService s) = "MetroPayment_" <> show s
   show (IssueTicketService s) = "Ticket_" <> show s
 
 instance Read ServiceName where
@@ -94,6 +96,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Payment_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (MetroPaymentService v1, r2)
+                 | r1 <- stripPrefix "MetroPayment_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (IssueTicketService v1, r2)
                  | r1 <- stripPrefix "Ticket_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -111,6 +117,7 @@ data ServiceConfigD (s :: UsageSafety)
   | CallServiceConfig !CallServiceConfig
   | NotificationServiceConfig !NotificationServiceConfig
   | PaymentServiceConfig !PaymentServiceConfig
+  | MetroPaymentServiceConfig !PaymentServiceConfig
   | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
   deriving (Generic, Eq)
 
@@ -157,6 +164,8 @@ getServiceName msc = case msc.serviceConfig of
     Notification.GRPCConfig _ -> NotificationService Notification.GRPC
   PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> PaymentService Payment.Juspay
+  MetroPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> MetroPaymentService Payment.Juspay
   IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
 

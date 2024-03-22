@@ -54,7 +54,7 @@ buildOnStatusMessage ::
   (EsqDBFlow m r, EncFlow m r) =>
   DStatus.OnStatusBuildReq ->
   m OnStatus.OnStatusMessage
-buildOnStatusMessage (DStatus.NewBookingBuildReq {bookingId}) = do
+buildOnStatusMessage (DStatus.NewBookingBuildReq (DNewBookingBuildReq bookingId)) = do
   return $
     OnStatus.OnStatusMessage
       { order =
@@ -130,7 +130,7 @@ buildOnStatusMessage (DStatus.BookingCancelledReq Common.DBookingCancelledReq {.
                 fulfillment
               }
       }
-buildOnStatusMessage DStatus.BookingReallocationBuildReq {bookingReallocationInfo, bookingDetails} = do
+buildOnStatusMessage (DStatus.BookingReallocationBuildReq DStatus.DBookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) = do
   let DStatus.BookingCancelledInfo {cancellationSource} = bookingReallocationInfo
   let Common.BookingDetails {..} = bookingDetails
   let image = Nothing
@@ -207,7 +207,7 @@ mkOnStatusMessageV2 res mbFarePolicy bppConfig = do
       }
 
 tfOrder :: (MonadFlow m, EncFlow m r) => DStatus.OnStatusBuildReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
-tfOrder (DStatus.NewBookingBuildReq {bookingId}) _ becknConfig =
+tfOrder (DStatus.NewBookingBuildReq DNewBookingBuildReq {bookingId}) _ becknConfig =
   pure
     Spec.Order
       { orderId = Just bookingId.getId,
@@ -227,7 +227,7 @@ tfOrder (DStatus.RideAssignedReq req) mbFarePolicy becknConfig = Common.tfAssign
 tfOrder (DStatus.RideStartedReq req) mbFarePolicy becknConfig = Common.tfStartReqToOrder req mbFarePolicy becknConfig
 tfOrder (DStatus.RideCompletedReq req) mbFarePolicy becknConfig = Common.tfCompleteReqToOrder req mbFarePolicy becknConfig
 tfOrder (DStatus.BookingCancelledReq req) _ becknConfig = Common.tfCancelReqToOrder req becknConfig
-tfOrder (DStatus.BookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) _ becknConfig = do
+tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) _ becknConfig = do
   let DStatus.BookingCancelledInfo {cancellationSource} = bookingReallocationInfo
   let Common.BookingDetails {driver, vehicle, booking, ride, isValueAddNP} = bookingDetails
   let image = Nothing

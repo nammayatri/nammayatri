@@ -195,6 +195,8 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
                 updatedAt = now,
                 merchantId = Just merchantId_,
                 price = HighPrecMoney $ (quote.price.getHighPrecMoney) * (toRational quote.quantity),
+                estimatedPrice = HighPrecMoney $ (quote.price.getHighPrecMoney) * (toRational quote.quantity),
+                finalPrice = Nothing,
                 paymentTxnId = Nothing,
                 bppBankAccountNumber = Nothing,
                 bppBankCode = Nothing,
@@ -220,6 +222,14 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
 
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
+
+webhookHandlerFRFSTicket :: Kernel.Types.Id.ShortId DPaymentOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Environment.Flow ()
+webhookHandlerFRFSTicket paymentOrderId merchantId = do
+  logDebug $ "frfs ticket order bap webhookc call" <> paymentOrderId.getShortId
+  order <- QPaymentOrder.findByShortId paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getShortId)
+  bookingByOrderId <- QFRFSTicketBookingPayment.findByPaymentOrderId order.id >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
+  booking' <- B.runInReplica $ QFRFSTicketBooking.findById bookingByOrderId.frfsTicketBookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+  void $ getFrfsBookingStatus (Just booking'.riderId, merchantId) booking'.id
 
 getFrfsBookingStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
@@ -345,8 +355,8 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
               }
       DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
 
-    createOrderCall = Payment.createOrder merchantId_ Nothing
-    orderStatusCall = Payment.orderStatus merchantId_ Nothing
+    createOrderCall = Payment.createOrder merchantId_ Nothing Payment.FRFSBooking
+    orderStatusCall = Payment.orderStatus merchantId_ Nothing Payment.FRFSBooking
     commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId_
 
     makeUpdatedBooking DFRFSTicketBooking.FRFSTicketBooking {..} updatedStatus mTTL =

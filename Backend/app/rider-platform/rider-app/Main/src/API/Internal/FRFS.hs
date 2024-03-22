@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -14,24 +12,25 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.WhiteListOrg where
+module API.Internal.FRFS where
 
-import Data.Aeson
-import Domain.Types.Common
-import Kernel.Prelude
-import Kernel.Types.Beckn.Domain (Domain (..))
-import Kernel.Types.Id
-import Kernel.Types.Registry (Subscriber)
+import qualified Domain.Action.Internal.FRFS as Domain
+import Environment
+import EulerHS.Prelude hiding (id)
+import Kernel.Types.APISuccess
+import Kernel.Utils.Common
+import Servant
+import Storage.Beam.SystemConfigs ()
 
-data WhiteListOrgD (s :: UsageSafety) = WhiteListOrg
-  { id :: Id WhiteListOrg,
-    subscriberId :: ShortId Subscriber,
-    domain :: Domain
-  }
-  deriving (Generic)
+type API =
+  "frfs"
+    :> "statusUpdate"
+    :> ReqBody '[JSON] Domain.FRFSStatusUpdateReq
+    :> Post '[JSON] APISuccess
 
-type WhiteListOrg = WhiteListOrgD 'Safe
+handler :: FlowServer API
+handler =
+  frfsStatusUpdate
 
-instance FromJSON (WhiteListOrgD 'Unsafe)
-
-instance ToJSON (WhiteListOrgD 'Unsafe)
+frfsStatusUpdate :: Domain.FRFSStatusUpdateReq -> FlowHandler APISuccess
+frfsStatusUpdate = withFlowHandlerAPI . Domain.frfsStatusUpdate

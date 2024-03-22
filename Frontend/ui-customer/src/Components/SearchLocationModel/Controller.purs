@@ -64,6 +64,7 @@ type SearchLocationModelState = {
   , showLoader :: Boolean
   , prevLocation :: String
   , findPlaceIllustration :: Boolean
+  , currentLocationText :: String
 }
 
 dummy_data :: Array LocationListItemState

@@ -1049,4 +1049,7 @@ getTA stringKey =
     SPECIAL_PICKUP_ZONE_RIDE -> "சிறப்பு பிக் அவுட் மேல் ஓடு"
     WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "நாங்கள் உங்களை அருகிலுள்ள சிறப்பு பிக் அவுட் மேல் இருந்து ஓட்டாளி உடைய சாகாளருடன் இணைக்க முயற்சிக்குகிறோம்."
     THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "இது உங்களுக்கு உடனடியாக பிக் அப் அனுபவம் வழங்குகிறது."
-    IS_AT_PICKUP_LOCATION -> "பிக்‌அப் இடத்தில் உள்ளது"
+    DRIVER_AT_PICKUP_LOCATION -> "உங்கள் டிரைவர் பிக்அப் இடத்தில் இருக்கிறார்"
+    DRIVER_IS_ON_THE_WAY -> "உங்கள் டிரைவர் வந்துகொண்டிருக்கிறார்"
+    DRIVER_IS_WAITING_AT_PICKUP -> "உங்கள் டிரைவர் பிக்அப்பில் காத்திருக்கிறார்"
+

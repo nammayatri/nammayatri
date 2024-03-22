@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Domain.Types.Merchant.MerchantPaymentMethod where

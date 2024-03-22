@@ -193,7 +193,7 @@ public class RideRequestUtils {
             channel.setVibrationPattern(vibrationPattern);
             channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
             channel.setImportance(NotificationManager.IMPORTANCE_HIGH);
-            channel.setGroup("ride_related");
+            channel.setGroup("2_ride_related");
             NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
         }

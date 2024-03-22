@@ -99,11 +99,12 @@ parseNewMessageEvent order = do
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in NewMessage Event.")
   message <- Utils.getTagV2 Tag.DRIVER_NEW_MESSAGE Tag.MESSAGE (Just tagGroups) & fromMaybeM (InvalidRequest "driver_new_message tag is not present in NewMessage Event.")
   return $
-    DOnUpdate.NewMessageReq
-      { bppBookingId = Id bppBookingId,
-        bppRideId = Id bppRideId,
-        message = message
-      }
+    DOnUpdate.OUNewMessageReq $
+      DOnUpdate.NewMessageReq
+        { bppBookingId = Id bppBookingId,
+          bppRideId = Id bppRideId,
+          message = message
+        }
 
 parseEstimateRepetitionEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
 parseEstimateRepetitionEvent transactionId order = do
@@ -113,13 +114,14 @@ parseEstimateRepetitionEvent transactionId order = do
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in EstimateRepetition Event.")
   cancellationSource <- Utils.getTagV2 Tag.PREVIOUS_CANCELLATION_REASONS Tag.CANCELLATION_REASON (Just tagGroups) & fromMaybeM (InvalidRequest "previous_cancellation_reasons tag is not present in EstimateRepetition Event.")
   return $
-    DOnUpdate.EstimateRepetitionReq
-      { searchRequestId = Id transactionId,
-        bppEstimateId = Id bppEstimateId,
-        bppBookingId = Id bppBookingId,
-        bppRideId = Id bppRideId,
-        cancellationSource = Utils.castCancellationSourceV2 cancellationSource
-      }
+    DOnUpdate.OUEstimateRepetitionReq
+      DOnUpdate.EstimateRepetitionReq
+        { searchRequestId = Id transactionId,
+          bppEstimateId = Id bppEstimateId,
+          bppBookingId = Id bppBookingId,
+          bppRideId = Id bppRideId,
+          cancellationSource = Utils.castCancellationSourceV2 cancellationSource
+        }
 
 parseSafetyAlertEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
 parseSafetyAlertEvent order = do
@@ -128,17 +130,19 @@ parseSafetyAlertEvent order = do
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in SafetyAlert Event.")
   deviation <- Utils.getTagV2 Tag.SAFETY_ALERT Tag.DEVIATION (Just tagGroups) & fromMaybeM (InvalidRequest "safety_alert tag is not present in SafetyAlert Event.")
   return $
-    DOnUpdate.SafetyAlertReq
-      { bppBookingId = Id bppBookingId,
-        bppRideId = Id bppRideId,
-        reason = deviation,
-        code = "deviation"
-      }
+    DOnUpdate.OUSafetyAlertReq
+      DOnUpdate.SafetyAlertReq
+        { bppBookingId = Id bppBookingId,
+          bppRideId = Id bppRideId,
+          reason = deviation,
+          code = "deviation"
+        }
 
 parseStopArrivedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
 parseStopArrivedEvent order = do
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in StopArrived Event.")
   return $
-    DOnUpdate.StopArrivedReq
-      { bppRideId = Id bppRideId
-      }
+    DOnUpdate.OUStopArrivedReq $
+      DOnUpdate.StopArrivedReq
+        { bppRideId = Id bppRideId
+        }

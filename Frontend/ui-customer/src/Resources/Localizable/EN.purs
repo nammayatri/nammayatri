@@ -1031,4 +1031,6 @@ getEN stringKey =
         SPECIAL_PICKUP_ZONE_RIDE -> "Special Pickup Zone Ride"
         WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "We will try to connect you with a driver in the closest special pickup zone."
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "This provides you an instant pickup experience."
-        IS_AT_PICKUP_LOCATION -> "is at pickup location"
+        DRIVER_AT_PICKUP_LOCATION -> "Your driver is at pickup location"
+        DRIVER_IS_ON_THE_WAY -> "Your driver is on the way"
+        DRIVER_IS_WAITING_AT_PICKUP -> "Your driver is waiting at pickup"

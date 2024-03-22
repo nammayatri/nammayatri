@@ -1265,6 +1265,7 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , showLoader: state.props.searchLocationModelProps.showLoader
                                     , prevLocation: state.data.searchLocationModelData.prevLocation
                                     , findPlaceIllustration : state.props.searchLocationModelProps.findPlaceIllustration
+                                    , currentLocationText : state.props.currentLocation.place 
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState

@@ -75,7 +75,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, zoneLabelIcon)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo)
@@ -1394,22 +1394,49 @@ eval (DriverInfoCardActionController (DriverInfoCardController.SpecialZoneInfoTa
 eval DirectSearch state =continue state{props{currentStage = SearchLocationModel}}
 
 eval BackPressed state = do
-  _ <- pure $ toggleBtnLoader "" false
+  void $ pure $ toggleBtnLoader "" false
   case state.props.currentStage of
     SearchLocationModel -> do
       if state.props.isSaveFavourite then 
         continueWithCmd state [pure $ (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose))]
       else do
         if state.props.isSearchLocation == LocateOnMap then do
-          _ <- pure $ exitLocateOnMap ""
-          _ <- pure $ hideKeyboardOnNavigation true
+          void $ pure $ exitLocateOnMap ""
+          void $ pure $ hideKeyboardOnNavigation true
           continue state{props{isSearchLocation = SearchLocation, locateOnMap = false}}
         else do
           if (getSearchType unit) == "direct_search" then
             pure $ terminateApp state.props.currentStage false
           else 
             pure unit
-          updateAndExit state{props{autoScroll = false, currentStage = HomeScreen, homeScreenSheetState = COLLAPSED, showShimmer = true, isSearchLocation = NoView}} $ GoToHome state{data{tripSuggestions = state.data.tripSuggestions, destinationSuggestions = state.data.destinationSuggestions}}
+          void $ pure $ removeAllPolylines ""
+          void $ pure $ updateLocalStage HomeScreen
+          void $ pure $ setValueToLocalStore SESSION_ID (generateSessionId unit)
+          void $ pure $ enableMyLocation true
+          void $ pure $ setValueToLocalStore NOTIFIED_CUSTOMER "false"
+          recenterCurrentLocation $ 
+            HomeScreenData.initData
+              { data
+                { disability = state.data.disability
+                , settingSideBar
+                  { gender = state.data.settingSideBar.gender
+                  , email = state.data.settingSideBar.email
+                  , hasCompletedSafetySetup = state.data.settingSideBar.hasCompletedSafetySetup
+                  }
+                  , destinationSuggestions = state.data.destinationSuggestions
+                  , tripSuggestions = state.data.tripSuggestions
+                  , followers = state.data.followers
+                }
+              , props { 
+                  isBanner = state.props.isBanner
+                , sourceLat = state.props.sourceLat
+                , sourceLong = state.props.sourceLong
+                , currentLocation = state.props.currentLocation
+                , sosBannerType = state.props.sosBannerType 
+                , followsRide = state.props.followsRide
+                , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
+                }
+              }
     SettingPrice -> do
       _ <- pure $ performHapticFeedback unit
       void $ pure $ clearTimerWithId state.props.repeatRideTimerId
@@ -1673,11 +1700,11 @@ eval OpenLiveDashboard state = do
   void $ pure $ setValueToLocalStore LIVE_DASHBOARD "LIVE_DASHBOARD_SELECTED"
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_live_stats_dashboard"
   if os == "IOS" then do
-    continueWithCmd state [do
+    continueWithCmd state{props{showShimmer = false}} [do
       void $ openUrlInApp state.data.config.dashboard.url
       pure NoAction
     ]
-  else continue state {props {showLiveDashboard = true}}
+  else continue state {props {showShimmer = false,showLiveDashboard = true}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1690,7 +1717,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
       HomeScreen   -> do
         _ <- pure $ performHapticFeedback unit
         let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-        exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}}
+        exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}, data{source= state.data.source}}
       ConfirmingLocation -> do
         _ <- pure $ performHapticFeedback unit
         _ <- pure $ exitLocateOnMap ""
@@ -1710,7 +1737,7 @@ eval WhereToClick state = do
   _ <- pure $ performHapticFeedback unit
   let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.DestinationSearch" "true"
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-  exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }, rideSearchProps{sessionId = generateSessionId unit}}, data{source= if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source}}
+  exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }, rideSearchProps{sessionId = generateSessionId unit}}, data{source= if state.data.source == "" then getString CURRENT_LOCATION else state.data.source}}
   
 eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = 
   case state.data.ratingViewState.issueFacedView of
@@ -1942,12 +1969,12 @@ eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.Bu
 
 eval (PredictionClickedAction (LocationListItemController.OnClick item)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_prediction_list_item"
-  locationSelected item false state{props{isSource = Just false}}
+  locationSelected item false state{data{source = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source}, props{isSource = Just false}}
 
 eval (SuggestedDestinationClicked item) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_sd_list_item"
   let _ = unsafePerformEffect $ Events.addEventData "External.OneClick.SuggestedDestinationClicked" "true"
-  locationSelected item true state{data{nearByPickUpPoints = [], polygonCoordinates = ""}, props{isSource = Just false, rideSearchProps{sessionId = generateSessionId unit}}}
+  locationSelected item true state{props{isSource = Just false, rideSearchProps{sessionId = generateSessionId unit}, suggestedRideFlow = true}, data{source = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source, nearByPickUpPoints = [], polygonCoordinates = ""}}
 
 eval (PredictionClickedAction (LocationListItemController.FavClick item)) state = do
   if (length state.data.savedLocations >= 20) then do
@@ -1983,7 +2010,7 @@ eval (FavouriteLocationModelAC (FavouriteLocationModelController.FavouriteLocati
 eval (SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem)) state = if not state.props.isSrcServiceable then continue state else do 
   _ <- pure $ firebaseLogEvent ("ny_user_savedLoc_" <> show savedAddressType)
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.SavedLocation." <> show savedAddressType) "true"
-  tagClickEvent savedAddressType arrItem state{props{isSource = Just false}}
+  tagClickEvent savedAddressType arrItem state{data{source = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source},props{isSource = Just false}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem))) state = tagClickEvent savedAddressType arrItem state
 
@@ -2072,8 +2099,8 @@ eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)
 eval (SearchLocationModelActionController (SearchLocationModelController.SetCurrentLocation)) state = do
   _ <- pure $ currentPosition ""
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_currentlocation_click"
-  pure $ setText (getNewIDWithTag "SourceEditText") (state.data.source)
-  continue state{ props{ rideSearchProps{ sourceSelectType = if state.props.isSource == Just true then ST.SEARCH else state.props.rideSearchProps.sourceSelectType }, searchLocationModelProps{isAutoComplete = false}}}
+  pure $ setText (getNewIDWithTag "SourceEditText") (if (state.data.source == "") then (getString CURRENT_LOCATION) else state.data.source)
+  continue state{ props{ rideSearchProps{ sourceSelectType = if state.props.isSource == Just true then ST.SEARCH else state.props.rideSearchProps.sourceSelectType }, searchLocationModelProps{isAutoComplete = false}}, data{source = if state.props.currentLocation.place /= "" then state.props.currentLocation.place else (getString CURRENT_LOCATION)}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SetLocationOnMap)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -2087,7 +2114,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon state.props.confirmLocationCategory }}
   pure $ unsafePerformEffect $ logEvent state.data.logField if state.props.isSource == Just true  then "ny_user_src_set_location_on_map" else "ny_user_dest_set_location_on_map"
-  let srcValue = state.data.source
+  let srcValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source
   when (state.data.destination == "") $ do
     pure $ setText (getNewIDWithTag "DestinationEditText") ""
   let newState = state
@@ -2115,7 +2142,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
 eval (SearchLocationModelActionController (SearchLocationModelController.UpdateSource lat lng name)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   if state.props.isSource == Just true then do
-    let newState = state{data{sourceAddress = encodeAddress name [] Nothing lat lng},props{ sourceLat= lat,  sourceLong = lng, sourcePlaceId = Nothing, searchLocationModelProps{isAutoComplete = false}}}
+    let newState = state{data{source = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source, sourceAddress = encodeAddress name [] Nothing lat lng},props{ sourceLat= lat,  sourceLong = lng, sourcePlaceId = Nothing, searchLocationModelProps{isAutoComplete = false}}}
     updateAndExit newState $ LocationSelected (fromMaybe dummyListItem newState.data.selectedLocationListItem) false newState
     else do
       let newState = state{data{destination = name,destinationAddress = encodeAddress name [] Nothing lat lng},props{ destinationLat = lat,  destinationLong = lng, destinationPlaceId = Nothing}}

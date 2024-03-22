@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Domain.Action.Beckn.OnUpdate
   ( onUpdate,
@@ -24,18 +23,22 @@ module Domain.Action.Beckn.OnUpdate
     DEstimate.FareRange (..),
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
+    EstimateRepetitionReq (..),
+    NewMessageReq (..),
+    SafetyAlertReq (..),
+    StopArrivedReq (..),
   )
 where
 
 import qualified Data.HashMap.Strict as HM
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Beckn.Common as Common
-import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
-import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
 import Environment ()
@@ -62,77 +65,98 @@ data OnUpdateReq
   | OURideStartedReq Common.RideStartedReq
   | OURideCompletedReq Common.RideCompletedReq
   | OUBookingCancelledReq Common.BookingCancelledReq
-  | BookingReallocationReq
-      { bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide,
-        reallocationSource :: SBCR.CancellationSource
-      }
+  | OUBookingReallocationReq BookingReallocationReq -- not used
   | OUDriverArrivedReq Common.DriverArrivedReq
-  | EstimateRepetitionReq
-      { searchRequestId :: Id DSR.SearchRequest,
-        bppEstimateId :: Id DEstimate.BPPEstimate,
-        bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide,
-        cancellationSource :: SBCR.CancellationSource
-      }
-  | NewMessageReq
-      { bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide,
-        message :: Text
-      }
-  | SafetyAlertReq
-      { bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide,
-        reason :: Text,
-        code :: Text
-      }
-  | StopArrivedReq
-      { bppRideId :: Id SRide.BPPRide
-      }
+  | OUEstimateRepetitionReq EstimateRepetitionReq
+  | OUNewMessageReq NewMessageReq
+  | OUSafetyAlertReq SafetyAlertReq
+  | OUStopArrivedReq StopArrivedReq
 
 data ValidatedOnUpdateReq
-  = ValidatedRideAssignedReq Common.ValidatedRideAssignedReq
-  | ValidatedRideStartedReq Common.ValidatedRideStartedReq
-  | ValidatedRideCompletedReq Common.ValidatedRideCompletedReq
-  | ValidatedBookingCancelledReq Common.ValidatedBookingCancelledReq
-  | ValidatedBookingReallocationReq
-      { bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide,
-        reallocationSource :: SBCR.CancellationSource,
-        booking :: SRB.Booking,
-        ride :: SRide.Ride
-      }
-  | ValidatedDriverArrivedReq Common.ValidatedDriverArrivedReq
-  | ValidatedEstimateRepetitionReq
-      { searchRequestId :: Id DSR.SearchRequest,
-        bppEstimateId :: Id DEstimate.BPPEstimate,
-        bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide,
-        cancellationSource :: SBCR.CancellationSource,
-        booking :: SRB.Booking,
-        ride :: SRide.Ride,
-        searchReq :: DSR.SearchRequest,
-        estimate :: DEstimate.Estimate
-      }
-  | ValidatedNewMessageReq
-      { bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide,
-        message :: Text,
-        booking :: SRB.Booking,
-        ride :: SRide.Ride
-      }
-  | ValidatedSafetyAlertReq
-      { bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide,
-        booking :: SRB.Booking,
-        ride :: SRide.Ride,
-        code :: Text,
-        reason :: Text
-      }
-  | ValidatedStopArrivedReq
-      { booking :: SRB.Booking,
-        ride :: SRide.Ride
-      }
+  = OUValidatedRideAssignedReq Common.ValidatedRideAssignedReq
+  | OUValidatedRideStartedReq Common.ValidatedRideStartedReq
+  | OUValidatedRideCompletedReq Common.ValidatedRideCompletedReq
+  | OUValidatedBookingCancelledReq Common.ValidatedBookingCancelledReq
+  | OUValidatedBookingReallocationReq ValidatedBookingReallocationReq
+  | OUValidatedDriverArrivedReq Common.ValidatedDriverArrivedReq
+  | OUValidatedEstimateRepetitionReq ValidatedEstimateRepetitionReq
+  | OUValidatedNewMessageReq ValidatedNewMessageReq
+  | OUValidatedSafetyAlertReq ValidatedSafetyAlertReq
+  | OUValidatedStopArrivedReq ValidatedStopArrivedReq
+
+data BookingReallocationReq = BookingReallocationReq
+  { bppBookingId :: Id DRB.BPPBooking,
+    bppRideId :: Id DRide.BPPRide,
+    reallocationSource :: DBCR.CancellationSource
+  }
+
+data ValidatedBookingReallocationReq = ValidatedBookingReallocationReq
+  { bppBookingId :: Id DRB.BPPBooking,
+    bppRideId :: Id DRide.BPPRide,
+    reallocationSource :: DBCR.CancellationSource,
+    booking :: DRB.Booking,
+    ride :: DRide.Ride
+  }
+
+data EstimateRepetitionReq = EstimateRepetitionReq
+  { searchRequestId :: Id DSR.SearchRequest,
+    bppEstimateId :: Id DEstimate.BPPEstimate,
+    bppBookingId :: Id DRB.BPPBooking,
+    bppRideId :: Id DRide.BPPRide,
+    cancellationSource :: DBCR.CancellationSource
+  }
+
+data ValidatedEstimateRepetitionReq = ValidatedEstimateRepetitionReq
+  { searchRequestId :: Id DSR.SearchRequest,
+    bppEstimateId :: Id DEstimate.BPPEstimate,
+    bppBookingId :: Id DRB.BPPBooking,
+    bppRideId :: Id DRide.BPPRide,
+    cancellationSource :: DBCR.CancellationSource,
+    booking :: DRB.Booking,
+    ride :: DRide.Ride,
+    searchReq :: DSR.SearchRequest,
+    estimate :: DEstimate.Estimate
+  }
+
+data NewMessageReq = NewMessageReq
+  { bppBookingId :: Id DRB.BPPBooking,
+    bppRideId :: Id DRide.BPPRide,
+    message :: Text
+  }
+
+data ValidatedNewMessageReq = ValidatedNewMessageReq
+  { bppBookingId :: Id DRB.BPPBooking,
+    bppRideId :: Id DRide.BPPRide,
+    message :: Text,
+    booking :: DRB.Booking,
+    ride :: DRide.Ride
+  }
+
+data SafetyAlertReq = SafetyAlertReq
+  { bppBookingId :: Id DRB.BPPBooking,
+    bppRideId :: Id DRide.BPPRide,
+    reason :: Text,
+    code :: Text
+  }
+
+data ValidatedSafetyAlertReq = ValidatedSafetyAlertReq
+  { bppBookingId :: Id DRB.BPPBooking,
+    bppRideId :: Id DRide.BPPRide,
+    reason :: Text,
+    code :: Text,
+    booking :: DRB.Booking,
+    ride :: DRide.Ride
+  }
+
+newtype StopArrivedReq = StopArrivedReq
+  { bppRideId :: Id DRide.BPPRide
+  }
+
+data ValidatedStopArrivedReq = ValidatedStopArrivedReq
+  { bppRideId :: Id DRide.BPPRide,
+    booking :: DRB.Booking,
+    ride :: DRide.Ride
+  }
 
 data OnUpdateFareBreakup = OnUpdateFareBreakup
   { amount :: HighPrecMoney,
@@ -193,33 +217,33 @@ onUpdate ::
   ValidatedOnUpdateReq ->
   m ()
 onUpdate = \case
-  ValidatedRideAssignedReq req -> Common.rideAssignedReqHandler req
-  ValidatedRideStartedReq req -> Common.rideStartedReqHandler req
-  ValidatedRideCompletedReq req -> Common.rideCompletedReqHandler req
-  ValidatedBookingCancelledReq req -> Common.bookingCancelledReqHandler req
-  ValidatedBookingReallocationReq {..} -> do
+  OUValidatedRideAssignedReq req -> Common.rideAssignedReqHandler req
+  OUValidatedRideStartedReq req -> Common.rideStartedReqHandler req
+  OUValidatedRideCompletedReq req -> Common.rideCompletedReqHandler req
+  OUValidatedBookingCancelledReq req -> Common.bookingCancelledReqHandler req
+  OUValidatedBookingReallocationReq ValidatedBookingReallocationReq {..} -> do
     mbRide <- QRide.findActiveByRBId booking.id
     let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
-    _ <- QRB.updateStatus booking.id SRB.AWAITING_REASSIGNMENT
-    _ <- QRide.updateStatus ride.id SRide.CANCELLED
+    _ <- QRB.updateStatus booking.id DRB.AWAITING_REASSIGNMENT
+    _ <- QRide.updateStatus ride.id DRide.CANCELLED
     QBCR.upsert bookingCancellationReason
     Notify.notifyOnBookingReallocated booking
-  ValidatedDriverArrivedReq req -> Common.driverArrivedReqHandler req
-  ValidatedNewMessageReq {..} -> Notify.notifyOnNewMessage booking message
-  ValidatedEstimateRepetitionReq {..} -> do
+  OUValidatedDriverArrivedReq req -> Common.driverArrivedReqHandler req
+  OUValidatedNewMessageReq ValidatedNewMessageReq {..} -> Notify.notifyOnNewMessage booking message
+  OUValidatedEstimateRepetitionReq ValidatedEstimateRepetitionReq {..} -> do
     let bookingCancellationReason = mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
     logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
 
     _ <- QEstimate.updateStatus estimate.id DEstimate.DRIVER_QUOTE_REQUESTED
-    _ <- QRB.updateStatus booking.id SRB.REALLOCATED
-    _ <- QRide.updateStatus ride.id SRide.CANCELLED
+    _ <- QRB.updateStatus booking.id DRB.REALLOCATED
+    _ <- QRide.updateStatus ride.id DRide.CANCELLED
     _ <- QBCR.upsert bookingCancellationReason
     _ <- QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, validTill = searchReq.validTill}
     QPFS.clearCache searchReq.riderId
     -- notify customer
     Notify.notifyOnEstimatedReallocated booking estimate.id
-  ValidatedSafetyAlertReq {..} -> Notify.notifySafetyAlert booking code
-  ValidatedStopArrivedReq {..} -> do
+  OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> Notify.notifySafetyAlert booking code
+  OUValidatedStopArrivedReq ValidatedStopArrivedReq {..} -> do
     QRB.updateStop booking Nothing
     Notify.notifyOnStopReached booking ride
 
@@ -236,64 +260,63 @@ validateRequest ::
 validateRequest = \case
   OURideAssignedReq req -> do
     validatedRequest <- Common.validateRideAssignedReq req
-    return $ ValidatedRideAssignedReq validatedRequest
+    return $ OUValidatedRideAssignedReq validatedRequest
   OURideStartedReq req -> do
     validatedRequest <- Common.validateRideStartedReq req
-    return $ ValidatedRideStartedReq validatedRequest
+    return $ OUValidatedRideStartedReq validatedRequest
   OURideCompletedReq req -> do
     validatedRequest <- Common.validateRideCompletedReq req
-    return $ ValidatedRideCompletedReq validatedRequest
+    return $ OUValidatedRideCompletedReq validatedRequest
   OUBookingCancelledReq req -> do
     validatedRequest <- Common.validateBookingCancelledReq req
-    return $ ValidatedBookingCancelledReq validatedRequest
-  BookingReallocationReq {..} -> do
+    return $ OUValidatedBookingCancelledReq validatedRequest
+  OUBookingReallocationReq BookingReallocationReq {..} -> do
     booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
-    return $ ValidatedBookingReallocationReq {..}
+    return $ OUValidatedBookingReallocationReq ValidatedBookingReallocationReq {..}
   OUDriverArrivedReq req -> do
     validatedRequest <- Common.validateDriverArrivedReq req
-    return $ ValidatedDriverArrivedReq validatedRequest
-  NewMessageReq {..} -> do
+    return $ OUValidatedDriverArrivedReq validatedRequest
+  OUNewMessageReq NewMessageReq {..} -> do
     booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
     unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus "The ride has already started."
-    return $ ValidatedNewMessageReq {..}
+    return $ OUValidatedNewMessageReq ValidatedNewMessageReq {..}
     where
-      isValidRideStatus status = status == SRide.NEW
-  EstimateRepetitionReq {..} -> do
+      isValidRideStatus status = status == DRide.NEW
+  OUEstimateRepetitionReq EstimateRepetitionReq {..} -> do
     booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
     searchReq <- QSR.findById searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
     estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist bppEstimateId.getId)
-    return $ ValidatedEstimateRepetitionReq {..}
-  SafetyAlertReq {..} -> do
+    return $ OUValidatedEstimateRepetitionReq ValidatedEstimateRepetitionReq {..}
+  OUSafetyAlertReq SafetyAlertReq {..} -> do
     booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
-    unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
+    unless (booking.status == DRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
-    unless (ride.status == SRide.INPROGRESS) $ throwError (BookingInvalidStatus "$ show booking.status")
-    return ValidatedSafetyAlertReq {..}
-  StopArrivedReq {..} -> do
+    unless (ride.status == DRide.INPROGRESS) $ throwError (BookingInvalidStatus "$ show booking.status")
+    return $ OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..}
+  OUStopArrivedReq StopArrivedReq {..} -> do
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
     booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
-    unless (ride.status == SRide.INPROGRESS) $ throwError $ RideInvalidStatus ("This ride-(" <> ride.id.getId <> ") is not in progress")
+    unless (ride.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus ("This ride-(" <> ride.id.getId <> ") is not in progress")
     case booking.bookingDetails of
-      SRB.OneWayDetails _ -> throwError $ InvalidRequest "Stops are not present in static offer on demand rides"
-      SRB.DriverOfferDetails _ -> throwError $ InvalidRequest "Stops are not present in dynamic offer on demand rides"
-      SRB.OneWaySpecialZoneDetails _ -> throwError $ InvalidRequest "Stops are not present in on ride otp rides"
-      SRB.InterCityDetails _ -> throwError $ InvalidRequest "Stops are not present in intercity rides"
-      SRB.RentalDetails SRB.RentalBookingDetails {..} -> do
+      DRB.OneWayDetails _ -> throwError $ InvalidRequest "Stops are not present in static offer on demand rides"
+      DRB.DriverOfferDetails _ -> throwError $ InvalidRequest "Stops are not present in dynamic offer on demand rides"
+      DRB.OneWaySpecialZoneDetails _ -> throwError $ InvalidRequest "Stops are not present in on ride otp rides"
+      DRB.InterCityDetails _ -> throwError $ InvalidRequest "Stops are not present in intercity rides"
+      DRB.RentalDetails DRB.RentalBookingDetails {..} -> do
         unless (isJust stopLocation) $ throwError (InvalidRequest $ "Can't find stop to be reached for bpp ride " <> bppRideId.getId)
-        return $ ValidatedStopArrivedReq {..}
+        return $ OUValidatedStopArrivedReq ValidatedStopArrivedReq {..}
 
 mkBookingCancellationReason ::
-  Id SRB.Booking ->
-  Maybe (Id SRide.Ride) ->
-  SBCR.CancellationSource ->
+  Id DRB.Booking ->
+  Maybe (Id DRide.Ride) ->
+  DBCR.CancellationSource ->
   Id DMerchant.Merchant ->
-  SBCR.BookingCancellationReason
+  DBCR.BookingCancellationReason
 mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId =
-  -- cancellationSource merchantId =
-  SBCR.BookingCancellationReason
+  DBCR.BookingCancellationReason
     { bookingId = bookingId,
       rideId = mbRideId,
       merchantId = Just merchantId,
