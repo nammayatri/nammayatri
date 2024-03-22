@@ -802,53 +802,53 @@ homeScreenFlow = do
                               filterHotSpots bothLocationChangedState sourceServiceabilityResp.hotSpotInfo bothLocationChangedState.props.sourceLat bothLocationChangedState.props.sourceLong
                            else
                               mapSpecialZoneGates srcSpecialLocation.gatesInfo
-      (ServiceabilityRes destServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq bothLocationChangedState.props.destinationLat bothLocationChangedState.props.destinationLong) DESTINATION
-      let destServiceable = destServiceabilityResp.serviceable
-      let pickUpLoc = if length pickUpPoints > 0 then (if state.props.defaultPickUpPoint == "" then fetchDefaultPickupPoint pickUpPoints state.props.sourceLat state.props.sourceLong else state.props.defaultPickUpPoint) else (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place
-      setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
-      let geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = geoJson,nearByPickUpPoints=pickUpPoints},props{city = getCityNameFromCode sourceServiceabilityResp.city , isSpecialZone = isJust srcSpecialLocation.geoJson, confirmLocationCategory = if length pickUpPoints > 0 then state.props.confirmLocationCategory else NOZONE, findingQuotesProgress = 0.0 }})
-      when (addToRecents) $ do
-        addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
-        fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
-      (GlobalState globalState) <- getState
-      let updateScreenState = globalState.homeScreen
-          recentList = 
-              updateLocListWithDistance 
-                updateScreenState.data.recentSearchs.predictionArray 
-                updateScreenState.props.sourceLat 
-                updateScreenState.props.sourceLong 
-                true 
-                state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
-      if (not srcServiceable && (updateScreenState.props.sourceLat /= -0.1 && updateScreenState.props.sourceLong /= -0.1) && (updateScreenState.props.sourceLat /= 0.0 && updateScreenState.props.sourceLong /= 0.0)) then do
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{isSrcServiceable = false, isRideServiceable= false, isSource = Just true}, data {recentSearchs {predictionArray = recentList}}})
-        homeScreenFlow
-      else if ((not destServiceable) && (updateScreenState.props.destinationLat /= 0.0 && updateScreenState.props.destinationLat /= -0.1) && (updateScreenState.props.destinationLong /= 0.0 && bothLocationChangedState.props.destinationLong /= -0.1)) then do
-        if (getValueToLocalStore LOCAL_STAGE == "HomeScreen") then do
-          _ <- pure $ toast (getString STR.LOCATION_UNSERVICEABLE)
-          pure unit
-          else pure unit
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{isDestServiceable = false, isRideServiceable = false,isSource = Just false, isSrcServiceable = true}, data {recentSearchs {predictionArray = recentList}}})
-        homeScreenFlow
-      else 
-        modifyScreenState $ 
-          HomeScreenStateType 
-            (\homeScreen -> 
-              updateScreenState
-                { props
-                    { isRideServiceable = true
-                    , isSrcServiceable = true
-                    , isDestServiceable = true
-                    }
-                , data 
-                    { recentSearchs 
-                        { predictionArray = 
-                            recentList
-                        }
-                    }
-                }
-            )
-      rideSearchFlow "NORMAL_FLOW"
+        (ServiceabilityRes destServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq bothLocationChangedState.props.destinationLat bothLocationChangedState.props.destinationLong) DESTINATION
+        let destServiceable = destServiceabilityResp.serviceable
+        let pickUpLoc = if length pickUpPoints > 0 then (if state.props.defaultPickUpPoint == "" then fetchDefaultPickupPoint pickUpPoints state.props.sourceLat state.props.sourceLong else state.props.defaultPickUpPoint) else (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place
+        setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
+        let geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = geoJson,nearByPickUpPoints=pickUpPoints},props{city = getCityNameFromCode sourceServiceabilityResp.city , isSpecialZone = isJust srcSpecialLocation.geoJson, confirmLocationCategory = if length pickUpPoints > 0 then state.props.confirmLocationCategory else NOZONE, findingQuotesProgress = 0.0 }})
+        when (addToRecents) $ do
+          addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
+          fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
+        (GlobalState globalState) <- getState
+        let updateScreenState = globalState.homeScreen
+            recentList = 
+                updateLocListWithDistance 
+                  updateScreenState.data.recentSearchs.predictionArray 
+                  updateScreenState.props.sourceLat 
+                  updateScreenState.props.sourceLong 
+                  true 
+                  state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
+        if (not srcServiceable && (updateScreenState.props.sourceLat /= -0.1 && updateScreenState.props.sourceLong /= -0.1) && (updateScreenState.props.sourceLat /= 0.0 && updateScreenState.props.sourceLong /= 0.0)) then do
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{isSrcServiceable = false, isRideServiceable= false, isSource = Just true}, data {recentSearchs {predictionArray = recentList}}})
+          homeScreenFlow
+        else if ((not destServiceable) && (updateScreenState.props.destinationLat /= 0.0 && updateScreenState.props.destinationLat /= -0.1) && (updateScreenState.props.destinationLong /= 0.0 && bothLocationChangedState.props.destinationLong /= -0.1)) then do
+          if (getValueToLocalStore LOCAL_STAGE == "HomeScreen") then do
+            _ <- pure $ toast (getString STR.LOCATION_UNSERVICEABLE)
+            pure unit
+            else pure unit
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{isDestServiceable = false, isRideServiceable = false,isSource = Just false, isSrcServiceable = true}, data {recentSearchs {predictionArray = recentList}}})
+          homeScreenFlow
+        else 
+          modifyScreenState $ 
+            HomeScreenStateType 
+              (\homeScreen -> 
+                updateScreenState
+                  { props
+                      { isRideServiceable = true
+                      , isSrcServiceable = true
+                      , isDestServiceable = true
+                      }
+                  , data 
+                      { recentSearchs 
+                          { predictionArray = 
+                              recentList
+                          }
+                      }
+                  }
+              )
+        rideSearchFlow "NORMAL_FLOW"
 
     SEARCH_LOCATION input state -> do
       let cityConfig = case state.props.isSource of
@@ -4432,8 +4432,7 @@ enterRideSearchFLow = do
           , nearByPickUpPoints = slsState.data.nearByGates
           }
         , props {
-            sourceSelectedOnMap = true 
-          , sourceLat = srcLat
+            sourceLat = srcLat
           , sourceLong = srcLon
           , city = srcCity 
           , destCity = if destCity == AnyCity then Nothing else Just destCity
