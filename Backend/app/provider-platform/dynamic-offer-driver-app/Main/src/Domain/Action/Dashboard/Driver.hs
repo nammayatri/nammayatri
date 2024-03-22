@@ -902,8 +902,8 @@ getFleetDriverVehicleAssociation _merchantShortId _opCity fleetOwnerId mbLimit m
             decryptedVehicleRC <- decrypt vrca.certificateNumber
             rcAssociation <- QRCAssociation.findLinkedByRCIdAndDriverId driverId vrca.id now
             let vehicleType = castVehicleVariantDashboard vrca.vehicleVariant
-            completedRides <- QRD.totalRidesByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) decryptedVehicleRC driverId
-            earning <- QRide.totalEarningsByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) decryptedVehicleRC driverId
+            completedRides <- if _merchantShortId.getShortId == "NAMMA_YATRI_PARTNER" then pure 0 else QRD.totalRidesByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) decryptedVehicleRC driverId
+            earning <- if _merchantShortId.getShortId == "NAMMA_YATRI_PARTNER" then pure 0 else QRide.totalEarningsByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) decryptedVehicleRC driverId
             let isDriverActive = fda.isActive
             let isRcAssociated = isJust rcAssociation
             let driverPhoneNo = driver.unencryptedMobileNumber
@@ -961,8 +961,8 @@ getFleetDriverAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffset
         let driverName = Just driver.firstName
         let driverPhoneNo = driver.unencryptedMobileNumber
         driverInfo' <- QDriverInfo.findById fda.driverId >>= fromMaybeM DriverInfoNotFound
-        completedRides <- QRD.totalRidesByFleetOwnerPerDriver (Just fleetOwnerId) driver.id
-        earning <- QRide.totalEarningsByFleetOwnerPerDriver (Just fleetOwnerId) driver.id
+        completedRides <- if _merchantShortId.getShortId == "NAMMA_YATRI_PARTNER" then pure 0 else QRD.totalRidesByFleetOwnerPerDriver (Just fleetOwnerId) driver.id
+        earning <- if _merchantShortId.getShortId == "NAMMA_YATRI_PARTNER" then pure 0 else QRide.totalEarningsByFleetOwnerPerDriver (Just fleetOwnerId) driver.id
         let driverStatus = if isNothing vehicleNo then Nothing else Just $ castDriverStatus driverInfo'.mode
         let isRcAssociated = isJust vehicleNo
         let isDriverActive = fda.isActive
@@ -1007,8 +1007,8 @@ getFleetVehicleAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffse
       now <- getCurrentTime
       forM vrcList $ \vrc -> do
         decryptedVehicleRC <- decrypt vrc.certificateNumber
-        completedRides <- QRD.totalRidesByFleetOwnerPerVehicle (Just fleetOwnerId) decryptedVehicleRC
-        earning <- QRide.totalEarningsByFleetOwnerPerVehicle (Just fleetOwnerId) decryptedVehicleRC
+        completedRides <- if _merchantShortId.getShortId == "NAMMA_YATRI_PARTNER" then pure 0 else QRD.totalRidesByFleetOwnerPerVehicle (Just fleetOwnerId) decryptedVehicleRC
+        earning <- if _merchantShortId.getShortId == "NAMMA_YATRI_PARTNER" then pure 0 else QRide.totalEarningsByFleetOwnerPerVehicle (Just fleetOwnerId) decryptedVehicleRC
         currentActiveAssociation <- QRCAssociation.findActiveAssociationByRC vrc.id
         (currentActiveDriver, status) <- case currentActiveAssociation of
           Just activeAssociation -> do
