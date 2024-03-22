@@ -137,7 +137,7 @@ public class WidgetService extends Service {
     }
 
     private void specialPickupNotification(Intent intent, boolean showNotification) {
-        if(widgetView != null && intent != null ) {
+        if (widgetView != null && intent != null) {
             ImageView notificationDotView = widgetView.findViewById(R.id.notification_dot);
             if (showNotification) {
                 try {
@@ -146,8 +146,10 @@ public class WidgetService extends Service {
                     ImageView dotView = widgetView.findViewById(R.id.dot_view);
 
                     MediaPlayer mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.silent_mode_notification_sound);
-                    if (mediaPlayer != null)
+                    if (mediaPlayer != null) {
                         mediaPlayer.start();
+                        mediaPlayer.setOnCompletionListener(MediaPlayer::release);
+                    }
 
                     String specialPickupMessage = intent.getStringExtra("specialPickupMessage");
 
@@ -203,28 +205,28 @@ public class WidgetService extends Service {
 
                     dismissRequest.setOnClickListener(view -> {
                         hideViewWithAnimation(dismissRequest);
-                        silentRideRequest.setVisibility(View.GONE);
+                        if (silentRideRequest != null) silentRideRequest.setVisibility(View.GONE);
                         if (progressBar != null) progressBar.setVisibility(View.GONE);
                         view.setVisibility(View.GONE);
                     });
 
                     Handler handler = new Handler();
                     handler.postDelayed(() -> {
-                        hideViewWithAnimation(silentRideRequest);
-                        silentRideRequest.setVisibility(View.GONE);
+                        if (silentRideRequest != null) hideViewWithAnimation(silentRideRequest);
+                        if (silentRideRequest != null) silentRideRequest.setVisibility(View.GONE);
                         if (progressBar != null) progressBar.setVisibility(View.GONE);
                         if (dismissRequest != null) dismissRequest.setVisibility(View.GONE);
                         if (notificationDotView != null) notificationDotView.setVisibility(View.VISIBLE);
                     }, getResources().getInteger(R.integer.DURATION_OF_SHOWING_MESSAGE));
 
-
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Log.e("WidgetService", "Error in specialPickupNotification " + e);
+                    mFirebaseAnalytics.logEvent("Exception_in_specialPickupNotification", null);
                 }
             } else {
                 if (notificationDotView != null) notificationDotView.setVisibility(View.GONE);
             }
-        } else return;
+        }
     }
 
     private void showSilentNotification(Intent intent) {
