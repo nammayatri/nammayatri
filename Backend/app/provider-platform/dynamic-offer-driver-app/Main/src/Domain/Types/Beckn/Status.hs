@@ -23,13 +23,8 @@ import Kernel.Types.Id
 import SharedLogic.Beckn.Common as Common
 
 data OnStatusBuildReq
-  = NewBookingBuildReq
-      { bookingId :: Id DBooking.Booking
-      }
-  | BookingReallocationBuildReq
-      { bookingReallocationInfo :: BookingReallocationInfo,
-        bookingDetails :: Common.BookingDetails
-      }
+  = NewBookingBuildReq DNewBookingBuildReq
+  | BookingReallocationBuildReq DBookingReallocationBuildReq
   | RideAssignedReq Common.DRideAssignedReq
   | RideStartedReq Common.DRideStartedReq
   | RideCompletedReq Common.DRideCompletedReq
@@ -50,4 +45,13 @@ type BookingReallocationInfo = BookingCancelledInfo
 
 newtype BookingCancelledInfo = BookingCancelledInfo
   { cancellationSource :: DBCR.CancellationSource
+  }
+
+newtype DNewBookingBuildReq = DNewBookingBuildReq
+  { bookingId :: Id DBooking.Booking
+  }
+
+data DBookingReallocationBuildReq = DBookingReallocationBuildReq
+  { bookingReallocationInfo :: BookingReallocationInfo,
+    bookingDetails :: Common.BookingDetails
   }

@@ -90,7 +90,7 @@ parseRideBookingReallocationOrder order messageId = do
   bookingDetails <- Common.parseBookingDetails order messageId
   reallocationSourceText <- order.orderCancellation >>= (.cancellationCancelledBy) & fromMaybeM (InvalidRequest "order.cancellation.,cancelled_by is not present in on_status BookingReallocationEvent request.")
   let reallocationSource = Utils.castCancellationSourceV2 reallocationSourceText
-  pure $ DOnStatus.BookingReallocationDetails {..}
+  pure $ DOnStatus.BookingReallocationDetails DOnStatus.BookingReallocationReq {..}
 
 handleErrorV2 ::
   (MonadFlow m) =>

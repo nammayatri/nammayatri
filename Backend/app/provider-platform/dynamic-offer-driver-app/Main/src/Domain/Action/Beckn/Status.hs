@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Domain.Action.Beckn.Status
   ( handler,
@@ -77,7 +76,7 @@ handler transporterId req = do
             DBooking.REALLOCATED -> do
               bookingDetails <- SyncRide.fetchBookingDetails ride booking
               bookingReallocationInfo <- SyncRide.fetchBookingReallocationInfo (Just ride) booking
-              pure $ BookingReallocationBuildReq {bookingDetails, bookingReallocationInfo}
+              pure $ BookingReallocationBuildReq DBookingReallocationBuildReq {bookingDetails, bookingReallocationInfo}
             _ -> do
               bookingDetails <- SyncRide.fetchBookingDetails ride booking
               SyncRide.BookingCancelledInfo {..} <- SyncRide.fetchBookingCancelledInfo (Just ride)
@@ -85,7 +84,7 @@ handler transporterId req = do
     Nothing -> do
       case booking.status of
         DBooking.NEW -> do
-          pure $ NewBookingBuildReq {bookingId = booking.id}
+          pure $ NewBookingBuildReq (DNewBookingBuildReq booking.id)
         DBooking.TRIP_ASSIGNED -> do
           throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
         DBooking.COMPLETED -> do

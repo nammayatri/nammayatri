@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Domain.Types.Invoice where
 
 import Data.Aeson

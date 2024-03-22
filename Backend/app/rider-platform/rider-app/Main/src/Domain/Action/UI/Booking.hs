@@ -86,26 +86,26 @@ processStop bookingId loc merchantId isEdit = do
   QRB.updateStop booking (Just location)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  let dUpdateReq =
+  let details =
         if isEdit
           then
-            ACL.EditStopBuildReq
-              { bppId = booking.providerId,
-                bppUrl = booking.providerUrl,
-                transactionId = booking.transactionId,
-                stops = [mkDomainLocation location],
-                city = merchant.defaultCity, -- TODO: Correct during interoperability
-                ..
-              }
+            ACL.UEditStopBuildReqDetails $
+              ACL.EditStopBuildReqDetails
+                { stops = [mkDomainLocation location]
+                }
           else
-            ACL.AddStopBuildReq
-              { bppId = booking.providerId,
-                bppUrl = booking.providerUrl,
-                transactionId = booking.transactionId,
-                stops = [mkDomainLocation location],
-                city = merchant.defaultCity, -- TODO: Correct during interoperability
-                ..
-              }
+            ACL.UAddStopBuildReqDetails $
+              ACL.AddStopBuildReqDetails
+                { stops = [mkDomainLocation location]
+                }
+  let dUpdateReq =
+        ACL.UpdateBuildReq
+          { bppId = booking.providerId,
+            bppUrl = booking.providerUrl,
+            transactionId = booking.transactionId,
+            city = merchant.defaultCity, -- TODO: Correct during interoperability
+            ..
+          }
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
   void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
 
