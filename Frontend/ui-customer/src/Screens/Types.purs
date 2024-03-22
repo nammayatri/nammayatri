@@ -792,6 +792,7 @@ type HomeScreenStateProps =
   , locateOnMapProps :: LocateOnMapProps
   , showSpecialZoneInfoPopup :: Boolean
   , hotSpot :: HotSpotProps
+  , isBannerDataComputed :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

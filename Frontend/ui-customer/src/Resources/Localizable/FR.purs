@@ -698,7 +698,7 @@ getFR stringKey =
         ENJOY_THE_RIDE -> "Bon voyage jusqu'à votre destination !"
         RIDE_STARTED -> "Le trajet a commencé"
         DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "Découvrez des endroits géniaux adaptés à vos besoins"
-        ONE_CLICK -> "1 clic"
+        ONE_CLICK -> "Réservation en 1 clic"
         SMART -> "Intelligent"
         NOT_SERVICEABLE -> "Non réparable"
         WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "Nous ne sommes pas encore en ligne dans votre région ! \nVous pouvez accéder à l'historique des courses et à d'autres \nparamètres à partir du menu en haut à gauche."
@@ -1036,3 +1036,4 @@ getFR stringKey =
         WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "Nous essaierons de vous connecter avec un chauffeur dans la zone de ramassage spéciale la plus proche."
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "Cela vous offre une expérience de ramassage instantanée."
         IS_AT_PICKUP_LOCATION -> "est au lieu de ramassage"
+        TAP_WHERE_TO_TO_BOOK_RIDE -> "Appuyez sur 'Où aller ?' pour réserver votre trajet !"
