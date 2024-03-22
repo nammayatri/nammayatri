@@ -532,6 +532,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             RideRequestUtils.addRideReceivedEvent(null,null, modelForLogs, "ride_ignored", this);
         }
         try {
+            retryAddViewCount = 10;
             callBack.clear();
             countDownTimer.cancel();
             sheetAdapter.updateSheetList(new ArrayList<>());
@@ -778,7 +779,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         viewPager = floatyView.findViewById(R.id.view_pager);
         sheetAdapter.setViewPager(viewPager);
         viewPager.setAdapter(sheetAdapter);
-        addPagerLayoutToWindow();
+        if(remoteConfigs.hasKey("add_view_fallback") && remoteConfigs.getBoolean("add_view_fallback")) {
+            addPagerLayoutToWindow();
+        }else{
+            windowManager.addView(floatyView, params);
+        }
         setIndicatorClickListener();
         firebaseLogEvent("Overlay_is_popped_up");
         RideRequestUtils.addRideReceivedEvent(null, rideRequestBundle,null,"overlay_is_popped_up", this);
