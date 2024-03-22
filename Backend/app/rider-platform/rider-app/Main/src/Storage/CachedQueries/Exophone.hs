@@ -114,11 +114,11 @@ patternKey :: Text
 patternKey = "CachedQueries:Exophones:*"
 
 -- create :: Exophone -> Esq.SqlDB ()
-create :: (MonadFlow m, EsqDBFlow m r) => Exophone -> m ()
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Exophone -> m ()
 create = Queries.create
 
 updateAffectedPhones :: (MonadFlow m, EsqDBFlow m r) => [Text] -> m ()
 updateAffectedPhones = Queries.updateAffectedPhones
 
-deleteByMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
+deleteByMerchantOperatingCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
 deleteByMerchantOperatingCityId = Queries.deleteByMerchantOperatingCityId

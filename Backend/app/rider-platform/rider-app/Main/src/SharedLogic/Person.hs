@@ -20,7 +20,7 @@ import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Person.PersonStats as DPS
+import qualified Domain.Types.PersonStats as DPS
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBFlow)
@@ -31,7 +31,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Person.PersonStats as QP
+import qualified Storage.Queries.PersonStats as QP
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
@@ -53,6 +53,7 @@ backfillPersonStats personId merchantOpCityid = do
       personStatsValues =
         DPS.PersonStats
           { completedRides = completedRidesCnt,
+            createdAt = now,
             updatedAt = now,
             ..
           }

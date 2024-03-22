@@ -26,7 +26,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.Person as SP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
-import qualified Storage.Queries.Person.PersonStats as QPS
+import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SavedReqLocation as QSRL
 import qualified Storage.Queries.SearchRequest as QSR

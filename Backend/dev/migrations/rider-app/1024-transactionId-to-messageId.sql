@@ -1,1 +1,0 @@
-ALTER TABLE atlas_app.on_search_event RENAME COLUMN transaction_id TO message_id;

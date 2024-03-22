@@ -16,14 +16,6 @@ CREATE TABLE atlas_app.location (
    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-CREATE TABLE atlas_app.location_mapping (
-   id CHARACTER(36) PRIMARY KEY NOT NULL,
-   location_id CHARACTER VARYING(255) NOT NULL,
-   tag CHARACTER VARYING(255) NOT NULL,
-   entity_id CHARACTER VARYING(255) NOT NULL,
-   "order" INTEGER NOT NULL,
-   version CHARACTER VARYING(255) NOT NULL
-);
 
 CREATE INDEX ON atlas_app.location_mapping USING btree (entity_id);
 

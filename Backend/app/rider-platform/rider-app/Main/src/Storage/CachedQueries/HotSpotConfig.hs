@@ -25,7 +25,9 @@ findConfigByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Ma
 findConfigByMerchantId merchantId =
   Hedis.safeGet (makeIdKey merchantId) >>= \case
     Just a -> return a
-    Nothing -> flip whenJust (cacheFindConfigByMerchantId merchantId) /=<< Queries.findConfigByMerchantId merchantId
+    Nothing -> do
+      let hotSpotId :: Id HotSpotConfig = Id (getId merchantId)
+      flip whenJust (cacheFindConfigByMerchantId merchantId) /=<< Queries.findConfigByMerchantId hotSpotId
 
 cacheFindConfigByMerchantId :: CacheFlow m r => Id Merchant -> HotSpotConfig -> m ()
 cacheFindConfigByMerchantId merchantId hotSpotConfig = do

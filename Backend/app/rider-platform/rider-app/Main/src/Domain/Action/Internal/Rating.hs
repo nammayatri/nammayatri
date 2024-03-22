@@ -73,7 +73,7 @@ rating apiKey FeedbackReq {..} = do
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      QRating.updateRating rideRating.id booking.riderId ratingValue feedbackDetails wasOfferedAssistance
+      QRating.updateRating ratingValue feedbackDetails wasOfferedAssistance rideRating.id booking.riderId
   calculateAverageRating booking.riderId merchant.minimumDriverRatesCount ratingValue person.totalRatings person.totalRatingScore
   pure Success
 

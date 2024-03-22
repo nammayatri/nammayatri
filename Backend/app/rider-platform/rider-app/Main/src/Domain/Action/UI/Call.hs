@@ -78,7 +78,21 @@ type CallCallbackRes = AckResponse
 
 type GetDriverMobileNumberResp = Text
 
-type GetCallStatusRes = DCS.CallStatusAPIEntity
+type GetCallStatusRes = CallStatusAPIEntity
+
+data CallStatusAPIEntity = CallStatusAPIEntity
+  { callStatusId :: Id CallStatus,
+    rideId :: Maybe (Id SRide.Ride),
+    status :: CallTypes.CallStatus
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+makeCallStatusAPIEntity :: CallStatus -> CallStatusAPIEntity
+makeCallStatusAPIEntity CallStatus {..} =
+  CallStatusAPIEntity
+    { callStatusId = id,
+      ..
+    }
 
 -- | Try to initiate a call customer -> driver
 initiateCallToDriver ::
@@ -121,14 +135,15 @@ initiateCallToDriver rideId = do
             merchantId = Just booking.merchantId.getId,
             callService = Just Call.Exotel,
             callError = Nothing,
-            createdAt = now
+            createdAt = now,
+            updatedAt = now
           }
 
 callStatusCallback :: (CacheFlow m r, EsqDBFlow m r) => CallCallbackReq -> m CallCallbackRes
 callStatusCallback req = do
   let callStatusId = req.customField.callStatusId
   _ <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
-  void $ QCallStatus.updateCallStatus callStatusId (exotelStatusToInterfaceStatus req.status) req.conversationDuration (Just req.recordingUrl)
+  void $ QCallStatus.updateCallStatus req.conversationDuration (Just req.recordingUrl) (exotelStatusToInterfaceStatus req.status) callStatusId
   return Ack
 
 directCallStatusCallback :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) => Text -> Call.ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
@@ -140,20 +155,20 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
     Just recordUrl -> do
       if recordUrl == ""
         then do
-          void $ updateCallStatus callStatus.id newCallStatus Nothing callDuration
+          void $ updateCallStatus callDuration Nothing newCallStatus callStatus.id
           throwError CallStatusDoesNotExist
         else do
-          updateCallStatus callStatus.id newCallStatus (Just recordUrl) callDuration
+          updateCallStatus callDuration (Just recordUrl) newCallStatus callStatus.id
     Nothing -> do
       if newCallStatus == CallTypes.COMPLETED
         then do
-          void $ updateCallStatus callStatus.id newCallStatus Nothing callDuration
+          void $ updateCallStatus callDuration Nothing newCallStatus callStatus.id
           throwError CallStatusDoesNotExist
-        else updateCallStatus callStatus.id newCallStatus Nothing callDuration
+        else updateCallStatus callDuration Nothing newCallStatus callStatus.id
   DCE.sendCallDataToKafka (Just "EXOTEL") callStatus.rideId (Just "ANONYMOUS_CALLER") (Just callSid) (Just (show dialCallStatus)) System Nothing
   return Ack
   where
-    updateCallStatus id callStatus url callDuration = QCallStatus.updateCallStatus id callStatus (fromMaybe 0 callDuration) url
+    updateCallStatus callDuration = QCallStatus.updateCallStatus (fromMaybe 0 callDuration)
 
 getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r) => Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> Text -> m GetDriverMobileNumberResp
 getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = do
@@ -178,7 +193,7 @@ getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = do
           Nothing -> getDtmfFlow dtmfNumber_ merchantId callSid exophone
           Just activeBooking -> return (Nothing, activeBooking)
   ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= maybe (throwCallError callSid (RideWithBookingIdNotFound $ getId booking.id) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
-  QCallStatus.updateCallStatusInformation callId (Just ride.id) (Just merchantId.getId) (Just exophone.callService) dtmfNumberUsed
+  QCallStatus.updateCallStatusInformation (Just merchantId.getId) (Just ride.id) (Just exophone.callService) dtmfNumberUsed callId
   DCE.sendCallDataToKafka (Just "EXOTEL") (Just ride.id) (Just "ANONYMOUS_CALLER") (Just callSid) Nothing System (Just to)
   return ride.driverMobileNumber
   where
@@ -197,7 +212,8 @@ getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = do
             merchantId = Nothing,
             callService = Nothing,
             callError = Nothing,
-            createdAt = now
+            createdAt = now,
+            updatedAt = now
           }
 
 getDtmfFlow :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Maybe Text -> Id Merchant -> Text -> Exophone -> m (Maybe Text, BT.Booking)
@@ -248,5 +264,6 @@ throwCallError ::
   Maybe Call.CallService ->
   m a
 throwCallError callSid err merchantId callService = do
-  QCallStatus.updateCallError callSid (Just (show err)) merchantId callService
+  let callSId :: Id DCS.CallStatus = Id callSid
+  QCallStatus.updateCallError (Just (show err)) callService merchantId callSId
   throwError err

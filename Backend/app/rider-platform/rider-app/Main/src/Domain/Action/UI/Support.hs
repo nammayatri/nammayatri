@@ -48,7 +48,7 @@ import SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.CallbackRequest as QCallback
-import qualified Storage.Queries.Issues as Queries
+import qualified Storage.Queries.Issue as Queries
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -94,7 +94,7 @@ sendIssue :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => (Id Person.Person, I
 sendIssue (personId, merchantId) request = do
   runRequestValidation validateSendIssueReq request
   newIssue <- buildDBIssue personId request
-  Queries.insertIssue newIssue
+  Queries.create newIssue
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber

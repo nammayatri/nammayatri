@@ -1,1 +1,0 @@
-ALTER TABLE atlas_app.issue ADD COLUMN night_safety BOOLEAN NOT NULL DEFAULT false;

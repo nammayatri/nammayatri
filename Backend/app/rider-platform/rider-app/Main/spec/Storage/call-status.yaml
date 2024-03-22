@@ -1,0 +1,51 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Ride: Domain.Types.Ride
+  CallService: Kernel.External.Call.Types
+
+
+CallStatus:
+  tableName: call_status
+
+  fields:
+    id : Id CallStatus
+    callId : Text
+    rideId : Maybe (Id Ride)
+    dtmfNumberUsed : Maybe Text
+    status : Kernel.External.Call.Interface.Types.CallStatus
+    recordingUrl : Maybe Text
+    conversationDuration : Int
+    merchantId : Maybe Text
+    callService : Maybe CallService
+    callError : Maybe Text
+    createdAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+    callId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    updateCallStatus:
+      kvFunction: updateWithKV
+      params: [conversationDuration, recordingUrl, status]
+      where: id
+
+    updateCallStatusInformation:
+      kvFunction: updateWithKV
+      params: [merchantId, rideId, callService, dtmfNumberUsed]
+      where: id
+
+    updateCallError:
+      kvFunction: updateWithKV
+      params: [callError, callService, merchantId]
+      where: id
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

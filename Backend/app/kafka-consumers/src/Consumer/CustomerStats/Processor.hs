@@ -28,7 +28,7 @@ import "sessionizer-metrics" Lib.SessionizerMetrics.Types.Event as E
 import "rider-app" SharedLogic.Person as SP
 import "rider-app" Storage.CachedQueries.Merchant.RiderConfig as QRC
 import "rider-app" Storage.Queries.BookingCancellationReason as QBCR
-import "rider-app" Storage.Queries.Person.PersonStats as QP
+import "rider-app" Storage.Queries.PersonStats as QP
 import "rider-app" Tools.Error
 import "dynamic-offer-driver-app" Tools.Event as TE
 

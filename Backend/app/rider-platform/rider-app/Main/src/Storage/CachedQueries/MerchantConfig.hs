@@ -30,7 +30,7 @@ findAllByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) 
 findAllByMerchantOperatingCityId id =
   Hedis.safeGet (makeMerchantOperatingCityIdKey id) >>= \case
     Just a -> return a
-    Nothing -> cacheMerchantOperatingCity id /=<< Queries.findAllByMerchantOperatingCityId id
+    Nothing -> cacheMerchantOperatingCity id /=<< Queries.findAllByMerchantOperatingCityId id True
 
 cacheMerchantOperatingCity :: (CacheFlow m r) => Id MerchantOperatingCity -> [MerchantConfig] -> m ()
 cacheMerchantOperatingCity merchantOperatingCityId merchantConfig = do

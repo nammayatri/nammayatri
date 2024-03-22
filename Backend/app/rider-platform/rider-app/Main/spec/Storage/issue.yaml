@@ -1,0 +1,39 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Quote: Domain.Types.Quote
+  IssueStatus: IssueManagement.Common
+Issue:
+  tableName: issue
+
+  fields:
+    id : Id Issue
+    customerId : Id Person
+    bookingId : Maybe (Id Quote)
+    contactEmail : Maybe Text
+    reason : Text
+    description : Text
+    ticketId : Maybe Text
+    status : IssueStatus
+    nightSafety : Bool
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  queries:
+    kvFunction: insertIssue
+
+
+  constraints:
+    id: PrimaryKey
+    ticketId: SecondaryKey
+    bookingId: SecondaryKey
+
+  default:
+    status: "'OPEN'"
+    nightSafety: "false"
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

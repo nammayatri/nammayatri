@@ -300,7 +300,7 @@ instance FromTType' BeamB.Booking Booking where
               DRB.InterCityDetails <$> buildInterCityDetails toLocationId
           return (pickupLoc, bookingDetails)
         else do
-          fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
+          fromLocationMapping <- QLM.getLatestStartByEntityId id 0 QLM.latestTag >>= fromMaybeM (FromLocationMappingNotFound id)
           fl <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
 
           mbToLocationMapping <- QLM.getLatestEndByEntityId id

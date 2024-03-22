@@ -110,22 +110,6 @@ ALTER TABLE atlas_app.location_backup OWNER TO atlas_app_user;
 
 
 
-CREATE TABLE atlas_app.on_search_event (
-id character(36) NOT NULL,
-bpp_id character varying(255) NOT NULL,
-transaction_id character varying(255) NOT NULL,
-error_code character varying(255),
-error_type character varying(255),
-error_message text,
-created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-,CONSTRAINT  on_search_event_pkey PRIMARY KEY (id)
-);
-ALTER TABLE atlas_app.on_search_event OWNER TO atlas_app_user;
-
-
-
-
-
 
 
 CREATE TABLE atlas_app.organization (
@@ -258,33 +242,6 @@ provider_url character varying(255) NOT NULL
 );
 ALTER TABLE atlas_app.quote OWNER TO atlas_app_user;
 CREATE INDEX idx_16394_case_id ON atlas_app.quote USING btree (request_id);
-
-
-
-
-
-
-
-CREATE TABLE atlas_app.registration_token (
-id character(36) NOT NULL,
-auth_medium character varying(255) NOT NULL,
-auth_type character varying(255) NOT NULL,
-auth_value_hash character varying(1024) NOT NULL,
-token character varying(1024) NOT NULL,
-verified boolean NOT NULL,
-auth_expiry bigint NOT NULL,
-token_expiry bigint NOT NULL,
-attempts bigint NOT NULL,
-entity_id character(36) NOT NULL,
-entity_type character(36) NOT NULL,
-info text,
-created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-,CONSTRAINT  idx_16467_primary PRIMARY KEY (id)
-);
-ALTER TABLE atlas_app.registration_token OWNER TO atlas_app_user;
-CREATE INDEX idx_16467_entity_id ON atlas_app.registration_token USING btree (entity_id);
-CREATE INDEX idx_16467_entity_type ON atlas_app.registration_token USING btree (entity_type);
 
 
 

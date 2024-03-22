@@ -1,2 +1,0 @@
-ALTER TABLE atlas_app.merchant_config ADD COLUMN fraud_ride_count_threshold int default 0 NOT NULL;
-ALTER TABLE atlas_app.merchant_config ADD COLUMN fraud_ride_count_window json default '{"period":24, "periodType":"Hours"}' NOT NULL;
