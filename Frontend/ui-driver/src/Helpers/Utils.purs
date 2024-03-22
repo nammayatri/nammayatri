@@ -124,6 +124,7 @@ foreign import setEnabled :: String -> Boolean -> Unit
 foreign import decodeErrorCode :: String -> String
 foreign import decodeErrorMessage :: String -> String
 foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import storeCallBackForAddRideStop :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import secondsLeft :: String -> Int
 foreign import objectToAllocationType :: String -> AllocationData
 foreign import getcurrentdate :: String -> String
@@ -665,6 +666,13 @@ formatSecIntoMinSecs seconds =
     secs = seconds `mod` 60
   in 
     show mins <> ":" <> (if secs < 10 then "0" else "") <> show secs
+
+formatSecIntoHourMins :: Int -> String
+formatSecIntoHourMins seconds =
+  let 
+    hours = seconds `div` 3600
+    mins = (seconds `mod` 3600) `div` 60
+  in (if hours > 0 then show hours <> " hr " else "") <> show mins <> " min"
 
 splitBasedOnLanguage :: String -> String
 splitBasedOnLanguage str = 

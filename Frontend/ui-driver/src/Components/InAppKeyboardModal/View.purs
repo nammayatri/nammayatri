@@ -16,20 +16,21 @@
 module Components.InAppKeyboardModal.View where
 
 import Common.Types.App
-import Components.InAppKeyboardModal.Controller (Action(..), InAppKeyboardModalState)
+import Components.InAppKeyboardModal.Controller (Action(..), InAppKeyboardModalState, SingleElementTextBoxConfig, InputFieldConfig)
 import Animation (translateYAnim)
 import Animation.Config (translateYAnimConfig)
-import Data.Array (mapWithIndex)
+import Data.Array (mapWithIndex, insertAt)
+import Data.Maybe (fromMaybe)
 import Data.String (take, drop, length)
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, unit, void, ($), (/), (<>), (==), (||), (>=), (&&), (<), not, pure)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), InputType(..), LetterSpacing(..), imageUrl, imageView, linearLayout, onBackPressed, onClick, textView, alpha, editText, afterRender, onChange, inputType, relativeLayout, letterSpacing)
+import Prelude (Unit, const, map, unit, void, show, ($), (/), (<>), (==), (||), (>=), (&&), (<), (>), not, pure, (<$>), (/=))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), InputType(..), LetterSpacing(..), LetterSpacing(..), imageUrl, imageView, linearLayout, onBackPressed, onClick, textView, alpha, editText, afterRender, onChange, inputType, relativeLayout, letterSpacing, onFocus)
 import PrestoDOM.Animation as PrestoAnim
-import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility,imageWithFallback, lineHeight, id, pattern)
+import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility, letterSpacing, imageWithFallback, lineHeight, id, pattern, textFromHtml, placeHolder)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
 import Screens.Types(KeyboardModalType(..)) as KeyboardModalType
@@ -39,7 +40,7 @@ import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Debug (spy)
 import Data.Array as DA
-import JBridge (showKeyboard)
+import JBridge (showKeyboard, requestKeyboardShow)
 
 view :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -71,13 +72,14 @@ view push state =
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , orientation HORIZONTAL
-                , margin (Margin 20 20 20 20 )
+                , margin $ if state.isDismissable then (MarginVertical 20 20 ) else  (Margin 20 20 20 20 )
                 , gravity CENTER_VERTICAL
                 ][  imageView
                     [ width (V 35)
                     , height (V 35)
                     , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
                     , onClick push (const BackPressed)
+                    , visibility if state.isDismissable then VISIBLE else GONE
                     , padding (Padding 5 5 5 5)
                     ]
                   , textView $ 
@@ -136,15 +138,15 @@ textBoxes push state =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
-  , visibility if state.modalType == KeyboardModalType.OTP && not state.otpAttemptsExceeded && not state.enableDeviceKeyboard then VISIBLE else GONE
+  , visibility if (state.modalType == KeyboardModalType.OTP || state.modalType == KeyboardModalType.ODOMETER ) && not state.otpAttemptsExceeded && not state.enableDeviceKeyboard then VISIBLE else GONE
   , margin (Margin 0 20 0 20)
   , clickable false
   ](mapWithIndex (\index item ->
       textView $
       [ width state.textBoxConfig.width
       , height state.textBoxConfig.height
-      , color Color.greyTextColor
-      , text ( take 1 (drop index state.inputTextConfig.text) )
+      , color $  if ( take 1 (drop index state.inputTextConfig.text) == "•" ) then Color.black600 else Color.greyTextColor
+      , text $ if ( take 1 (drop index state.inputTextConfig.text) ) == "-" then "" else ( take 1 (drop index state.inputTextConfig.text) )
       , gravity CENTER
       , cornerRadius 4.0
       , stroke ("1," <> if (state.otpIncorrect || state.otpAttemptsExceeded ) then Color.textDanger else if state.inputTextConfig.focusIndex == index then Color.highlightBorderColor else Color.borderColorLight )
@@ -190,49 +192,57 @@ otpView :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> Pres
 otpView push state =
    linearLayout
       [ width MATCH_PARENT
-           , height WRAP_CONTENT
-           , margin (Margin 20 0 20 0)
-           , orientation VERTICAL
-           , gravity if(state.modalType == KeyboardModalType.OTP) then CENTER else LEFT
+        , height WRAP_CONTENT
+        , margin (Margin 20 0 20 0)
+        , orientation VERTICAL
+        , gravity if(state.modalType == KeyboardModalType.OTP || state.modalType == KeyboardModalType.ODOMETER) then CENTER else LEFT
        ]
-             ([] <> [if state.enableDeviceKeyboard then editTextSingleBox push state else textBoxes push state] <> [singleTextBox push state] <>
-                    [textView $
-                    [ width state.subHeadingConfig.width
-                    , height state.subHeadingConfig.height
-                    , color state.subHeadingConfig.color
-                    , text state.subHeadingConfig.text
-                    , visibility state.subHeadingConfig.visibility
-                    , gravity state.subHeadingConfig.gravity
-                    , cornerRadius state.subHeadingConfig.cornerRadius
-                    , padding state.subHeadingConfig.padding
-                    , margin state.subHeadingConfig.margin
-                    , weight state.subHeadingConfig.weight
-                    ] <> (FontStyle.getFontStyle state.subHeadingConfig.textStyle LanguageStyle)
-                    ] <>
-                    [textView $
-                    [ width state.errorConfig.width
-                    , height state.errorConfig.width
-                    , visibility state.errorConfig.visibility
-                    , margin state.errorConfig.margin
-                    , text state.errorConfig.text
-                    , color state.errorConfig.color
-                    , gravity state.errorConfig.gravity
-                    , cornerRadius state.errorConfig.cornerRadius
-                    , padding state.errorConfig.padding
-                    , weight state.errorConfig.weight
-                    ] <> (FontStyle.getFontStyle state.errorConfig.textStyle LanguageStyle)
-                  ] <>
-                    [textView(
-                      [
-                        width WRAP_CONTENT
-                      , height WRAP_CONTENT
-                      , text (getString RESEND_OTP)
-                      , color Color.blue900
-                      , margin (Margin 0 0 0 0)
-                      , onClick push (const (OnClickResendOtp))
-                      , visibility if (state.modalType == KeyboardModalType.OTP && state.showResendOtpButton && (not state.otpAttemptsExceeded)) then VISIBLE else GONE
-                      ] <> FontStyle.tags TypoGraphy
-                    )])                 
+        (
+          [
+            case state.modalType of
+              KeyboardModalType.OTP -> if state.enableDeviceKeyboard then editTextSingleBox push state else textBoxes push state
+              KeyboardModalType.ODOMETER -> appKeyboardOdometerInput push state
+              _ -> textView[]
+          ] <> 
+          [singleTextBox push state] <>
+          [textView $
+          [ width state.subHeadingConfig.width
+          , height state.subHeadingConfig.height
+          , color state.subHeadingConfig.color
+          , text state.subHeadingConfig.text
+          , visibility state.subHeadingConfig.visibility
+          , gravity state.subHeadingConfig.gravity
+          , cornerRadius state.subHeadingConfig.cornerRadius
+          , padding state.subHeadingConfig.padding
+          , margin state.subHeadingConfig.margin
+          , weight state.subHeadingConfig.weight
+          ] <> (FontStyle.getFontStyle state.subHeadingConfig.textStyle LanguageStyle)
+          ] <>
+          [textView $
+          [ width state.errorConfig.width
+          , height state.errorConfig.width
+          , visibility state.errorConfig.visibility
+          , margin state.errorConfig.margin
+          , text state.errorConfig.text
+          , color state.errorConfig.color
+          , gravity state.errorConfig.gravity
+          , cornerRadius state.errorConfig.cornerRadius
+          , padding state.errorConfig.padding
+          , weight state.errorConfig.weight
+          ] <> (FontStyle.getFontStyle state.errorConfig.textStyle LanguageStyle)
+        ] <>
+          [textView(
+            [
+              width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , text (getString RESEND_OTP)
+            , color Color.blue900
+            , margin (Margin 0 0 0 0)
+            , onClick push (const (OnClickResendOtp))
+            , visibility if (state.modalType == KeyboardModalType.OTP && state.showResendOtpButton && (not state.otpAttemptsExceeded)) then VISIBLE else GONE
+            ] <> FontStyle.tags TypoGraphy
+          )]
+        )                 
 
 keyboard :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 keyboard push state =
@@ -269,8 +279,7 @@ keyboard push state =
            , cornerRadius 4.0
            , cornerRadii $ if key == "back" then Corners 30.0 false false false true else Corners 30.0 false false true false
            , onClick push if key == "back" then (const (OnClickBack state.inputTextConfig.text)) else (const (OnClickDone state.inputTextConfig.text))
-           , clickable if key == "back" then true 
-                      else ((length state.inputTextConfig.text == (DA.length state.textBoxConfig.textBoxesArray) && state.modalType == KeyboardModalType.OTP && not state.otpIncorrect ) || (length state.inputTextConfig.text == 10  && state.modalType == KeyboardModalType.MOBILE__NUMBER && state.isValidAlternateNumber))
+           , clickable if key == "back" then true else isClickable state
            ][ 
                 if key == "back" then 
                 imageView
@@ -307,3 +316,86 @@ keyboard push state =
        ]
        ) item.keys )
     ) state.keyList )
+  where
+    isClickable state = case state.modalType of
+        KeyboardModalType.OTP -> length state.inputTextConfig.text == (DA.length state.textBoxConfig.textBoxesArray) && not state.otpIncorrect
+        KeyboardModalType.ODOMETER -> length state.inputTextConfig.text > 3
+        KeyboardModalType.MOBILE__NUMBER -> length state.inputTextConfig.text == 10 && state.isValidAlternateNumber
+        _ -> false
+
+appKeyboardOdometerInput :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
+appKeyboardOdometerInput push state = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , gravity CENTER
+  , margin $ MarginHorizontal 16 16
+  , width MATCH_PARENT
+  ][  
+    linearLayout
+  [ height $ V 60
+  , cornerRadius 8.0 
+  , stroke $ "1,"<> Color.borderColorLight 
+  , padding $ Padding 16 16 16 16
+  , gravity CENTER
+  , weight 1.0][  
+      textView $
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , text state.inputTextConfig.text
+      , letterSpacing $ PX 6.0
+      , height MATCH_PARENT
+      , color Color.black900
+      ] <> FontStyle.h2 TypoGraphy
+    , textView $
+      [ height MATCH_PARENT
+      , width WRAP_CONTENT
+      , text "Km"
+      , margin $ MarginLeft 12
+      , color Color.black600
+      ] <> FontStyle.h2 TypoGraphy
+  ]
+  ]
+
+systemKeyboardOodometerInput :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w -- Currently not in use but can be used in future
+systemKeyboardOodometerInput push state =
+  linearLayout
+  [
+    width MATCH_PARENT,
+    height WRAP_CONTENT,
+    orientation HORIZONTAL,
+    gravity CENTER,
+    margin (Margin 0 20 0 20),
+    visibility if state.modalType == KeyboardModalType.ODOMETER then VISIBLE else GONE
+  ](
+    fromMaybe [] $
+    insertAt 4 
+      (textView $ 
+        [ text "•",
+          width state.textBoxConfig.width,
+          height state.textBoxConfig.height,
+          stroke $ "1," <> Color.black600,
+           gravity CENTER,
+          cornerRadius 4.0,
+          margin state.textBoxConfig.margin
+        ]<>(FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle))
+      (mapWithIndex (\index item ->
+        editText $
+        [
+          width state.textBoxConfig.width,
+          height state.textBoxConfig.height, 
+          margin state.textBoxConfig.margin,
+          stroke $ "1," <> if state.inputTextConfig.focusIndex == index then Color.highlightBorderColor else Color.borderColorLight,
+          color Color.greyTextColor,
+          cornerRadius 4.0,
+          gravity CENTER,
+          id $ getNewIDWithTag $ "OdometerKeyboard" <> show index,
+          onFocus push (const (OnclickTextBox index)),
+          onChange (\action -> do case action of
+                                      OnClickDone text -> 
+                                        void $ push (OnSelection text index)
+                                      _ -> pure unit
+                      ) OnClickDone,
+          pattern "[0-9]*,1",
+          inputType Numeric
+      ] <> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle)) state.textBoxConfig.textBoxesArray)
+  )

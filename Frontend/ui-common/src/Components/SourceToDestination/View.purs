@@ -15,7 +15,7 @@
 
 module Components.SourceToDestination.View where
 
-import Prelude (Unit, ($), (<>), (/), (<), (>), (==))
+import Prelude (Unit, ($), (<>), (/), (<), (>), (==),(/=))
 import Effect (Effect)
 import Components.SourceToDestination.Controller (Action,Config)
 import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Margin(..), Padding(..), Accessiblity(..), Visibility(..), background, color, ellipsize, fontStyle, relativeLayout, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, text, textSize, textView, visibility, width, cornerRadius, stroke, margin, imageWithFallback, id, accessibilityHint, accessibility)
@@ -42,15 +42,19 @@ view push config =
       , width MATCH_PARENT
       ] <> case config.id of
         Just layoutId -> [id $ getNewIDWithTag $ "src_dest_layout_" <> layoutId]
-        Nothing -> [])[ linearLayout
+        Nothing -> [])((if config.destinationTextConfig.text /= "" then [ 
+        linearLayout
         [ height WRAP_CONTENT
         , orientation VERTICAL
         , width MATCH_PARENT
         , margin $ MarginTop config.separatorMargin
         ][SeparatorView.view $ separatorConfig config
       , destinationLayout config]
-      , sourceLayout config
       ]
+       else []) <>
+      [
+      sourceLayout config
+      ])
     , distanceLayout config
     ]
 

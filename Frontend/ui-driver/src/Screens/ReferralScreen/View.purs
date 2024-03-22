@@ -30,7 +30,7 @@ import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, getNewI
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge (openUrlInApp, toast)
-import Language.Strings (getString)
+import Language.Strings 
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, discard, show, (>), void, (/=), (/), (*), (+), not, (||), negate, (<=), (&&), (-), (<))
 import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, alpha, relativeLayout, scrollView, alignParentRight, alignParentBottom, imageWithFallback, frameLayout, horizontalScrollView, scrollBarX, scrollBarY, id, gradient, rotation, rotationY, shimmerFrameLayout, onRefresh,  swipeRefreshLayout, layoutGravity, textFromHtml)
@@ -243,8 +243,8 @@ leaderBoard push state =
       , background Color.grey800
       , cornerRadius 30.0
       , gravity CENTER
-      ][ leaderBoardTab (getString DAILY) ST.Daily push state
-       , leaderBoardTab (getString WEEKLY) ST.Weekly push state
+      ][ leaderBoardTab (getStringEnToHi DAILY) ST.Daily push state
+       , leaderBoardTab (getStringEnToHi WEEKLY) ST.Weekly push state
        ]
     , dateAndTime push state
     , relativeLayout
@@ -285,7 +285,7 @@ noDataView state =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , margin (Margin 24 0 24 4)
-            , text (getString GETTING_THE_LEADERBOARD_READY)
+            , text (getStringEnToHi GETTING_THE_LEADERBOARD_READY)
             , color Color.black800
             , fontStyle $ FontStyle.bold LanguageStyle
             , textSize FontSize.a_18
@@ -295,7 +295,7 @@ noDataView state =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , margin (Margin 24 0 24 30)
-            , text (getString PLEASE_WAIT_WHILE_WE_UPDATE_THE_DETAILS)
+            , text (getStringEnToHi PLEASE_WAIT_WHILE_WE_UPDATE_THE_DETAILS)
             , color Color.black700
             , textSize FontSize.a_14
             , gravity CENTER_HORIZONTAL
@@ -355,7 +355,7 @@ dateAndTime push state =
       , textView
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text $ (getString LAST_UPDATED) <> state.props.lastUpdatedAt
+        , text $ (getStringEnToHi LAST_UPDATED) <> state.props.lastUpdatedAt
         , textSize FontSize.a_12
         , color Color.black700
         , gravity RIGHT
@@ -417,9 +417,9 @@ congratsBar state =
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text  if rank == 1 then
-                        (getString CONGRATULATIONS_YOU_ARE_RANK) <> (show rank) <> " 🏆"
+                        (getStringEnToHi CONGRATULATIONS_YOU_ARE_RANK) <> (show rank) <> " 🏆"
                       else
-                        (getString CONGRATULATIONS_YOU_ARE_RANK) <> (show rank) <> " 🎉"
+                        (getStringEnToHi CONGRATULATIONS_YOU_ARE_RANK) <> (show rank) <> " 🎉"
               , color Color.white900
               , textSize FontSize.a_18
               ]
@@ -535,7 +535,7 @@ rankCard item aboveThreshold state =
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity CENTER_VERTICAL
-          , text $ if checkDriverWithZeroRides item aboveThreshold state then  getString ACCEPT_RIDES_TO_ENTER_RANKINGS else (show item.rides) <> " " <> (getString RIDES)
+          , text $ if checkDriverWithZeroRides item aboveThreshold state then  getStringEnToHi ACCEPT_RIDES_TO_ENTER_RANKINGS else (show item.rides) <> " " <> (getStringEnToHi RIDES)
           , textSize FontSize.a_16
           , fontStyle  $ FontStyle.semiBold LanguageStyle
           , color if aboveThreshold || (item == currentDriverData && currentDriverData.rank > 0) then Color.white900 else Color.black800
@@ -646,7 +646,7 @@ rankers size rank themeColor showCrown fontSize detail imageUrl =
         ][ textView
            [ width MATCH_PARENT
            , height MATCH_PARENT
-           , text $ (show detail.rides) <> " " <> (getString RIDES)
+           , text $ (show detail.rides) <> " " <> (getStringEnToHi RIDES)
            , gravity CENTER
            , textSize FontSize.a_18
            , fontStyle  $ FontStyle.bold LanguageStyle

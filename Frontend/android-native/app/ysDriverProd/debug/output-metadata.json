@@ -1,0 +1,20 @@
+{
+  "version": 3,
+  "artifactType": {
+    "type": "APK",
+    "kind": "Directory"
+  },
+  "applicationId": "in.juspay.jatrisaathidriver.debug",
+  "variantName": "ysDriverProdDebug",
+  "elements": [
+    {
+      "type": "SINGLE",
+      "filters": [],
+      "attributes": [],
+      "versionCode": 107,
+      "versionName": "1.4.12",
+      "outputFile": "app-ysDriver-prod-debug.apk"
+    }
+  ],
+  "elementType": "File"
+}
