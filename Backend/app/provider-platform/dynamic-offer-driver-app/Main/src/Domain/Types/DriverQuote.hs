@@ -15,6 +15,7 @@
 
 module Domain.Types.DriverQuote where
 
+import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.Estimate
@@ -41,6 +42,7 @@ data DriverQuote = DriverQuote
   { id :: Id DriverQuote,
     requestId :: Id SearchRequest,
     searchTryId :: Id SearchTry,
+    clientId :: Maybe (Id DC.Client),
     searchRequestForDriverId :: Maybe (Id SearchRequestForDriver),
     tripCategory :: DTC.TripCategory,
     estimateId :: Id Estimate,

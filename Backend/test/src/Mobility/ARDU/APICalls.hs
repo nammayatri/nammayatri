@@ -20,6 +20,7 @@ import qualified "dynamic-offer-driver-app" API.UI.Ride as RideAPI
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Dashboard
 import qualified Domain.Action.UI.Ride.CancelRide as DCR
 import qualified Domain.Action.UI.Ride.EndRide as DER
+import qualified "dynamic-offer-driver-app" Domain.Types.Client as DC
 import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as TDI
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as TDM
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide
@@ -47,8 +48,8 @@ data RideAPIs = RideAPIs
 data DriverAPIs = DriverAPIs
   { getDriverInfo :: Text -> Maybe Int -> ClientM DriverAPI.DriverInformationRes,
     getNearbySearchRequests :: RegToken -> ClientM DriverAPI.GetNearbySearchRequestsRes,
-    offerQuote :: RegToken -> DriverAPI.DriverOfferReq -> ClientM APISuccess,
-    respondQuote :: RegToken -> DriverAPI.DriverRespondReq -> ClientM APISuccess,
+    offerQuote :: RegToken -> Maybe (Id DC.Client) -> DriverAPI.DriverOfferReq -> ClientM APISuccess,
+    respondQuote :: RegToken -> Maybe (Id DC.Client) -> DriverAPI.DriverRespondReq -> ClientM APISuccess,
     setDriverOnline :: Text -> Bool -> Maybe TDI.DriverMode -> ClientM APISuccess,
     updateMetaData :: RegToken -> DriverAPI.MetaDataReq -> ClientM APISuccess,
     validate :: Text -> DriverAPI.DriverAlternateNumberReq -> ClientM DriverAPI.DriverAlternateNumberRes,

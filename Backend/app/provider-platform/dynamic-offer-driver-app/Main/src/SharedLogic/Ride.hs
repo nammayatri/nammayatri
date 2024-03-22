@@ -17,6 +17,7 @@ module SharedLogic.Ride where
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DGetHomeRequest
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DTMM
@@ -60,8 +61,9 @@ initializeRide ::
   DBooking.Booking ->
   Maybe Text ->
   Maybe Bool ->
+  Maybe (Id DC.Client) ->
   Flow (DRide.Ride, SRD.RideDetails, DVeh.Vehicle)
-initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates = do
+initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates mbClientId = do
   otpCode <-
     case mbOtpCode of
       Just otp -> pure otp
@@ -76,7 +78,7 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
           Just otp -> pure otp
   ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
 
-  ride <- buildRide driver.id booking ghrId otpCode enableFrequentLocationUpdates
+  ride <- buildRide driver.id booking ghrId otpCode enableFrequentLocationUpdates mbClientId
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   rideDetails <- buildRideDetails ride driver vehicle
 
@@ -127,8 +129,8 @@ buildRideDetails ride driver vehicle = do
         fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId)
       }
 
-buildRide :: Id Person -> DBooking.Booking -> Maybe (Id DGetHomeRequest.DriverGoHomeRequest) -> Text -> Maybe Bool -> Flow DRide.Ride
-buildRide driverId booking ghrId otp enableFrequentLocationUpdates = do
+buildRide :: Id Person -> DBooking.Booking -> Maybe (Id DGetHomeRequest.DriverGoHomeRequest) -> Text -> Maybe Bool -> Maybe (Id DC.Client) -> Flow DRide.Ride
+buildRide driverId booking ghrId otp enableFrequentLocationUpdates clientId = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   now <- getCurrentTime
@@ -139,6 +141,7 @@ buildRide driverId booking ghrId otp enableFrequentLocationUpdates = do
       { id = guid,
         pickupDropOutsideOfThreshold = Nothing,
         bookingId = booking.id,
+        clientId = clientId,
         shortId = shortId,
         merchantId = Just booking.providerId,
         merchantOperatingCityId = booking.merchantOperatingCityId,

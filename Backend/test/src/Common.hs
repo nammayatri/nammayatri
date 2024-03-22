@@ -22,6 +22,7 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.UTF8 as B
 import Data.Maybe (fromJust)
 import Data.Time.Clock.POSIX
+import qualified "rider-app" Domain.Types.Client as DC
 import qualified "rider-app" Domain.Types.SearchRequest as BSearchRequest
 import EulerHS.Prelude
 import Kernel.Types.Base64
@@ -53,6 +54,7 @@ searchServices ::
   AppBESearch.SearchReq ->
   Maybe Version ->
   Maybe Version ->
+  Maybe (Id DC.Client) ->
   Maybe Text ->
   ClientM AppBESearch.SearchResp
 searchServices = client (Proxy :: Proxy AppBESearch.API)

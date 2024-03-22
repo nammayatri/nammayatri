@@ -74,6 +74,7 @@ data TransporterConfigD u = TransporterConfig
     checkImageExtractionForDashboard :: Bool,
     searchRepeatLimit :: Int,
     actualRideDistanceDiffThreshold :: HighPrecMeters,
+    actualRideDistanceDiffThresholdIfWithinPickupDrop :: HighPrecMeters,
     recomputeIfPickupDropNotOutsideOfThreshold :: Bool,
     upwardsRecomputeBuffer :: HighPrecMeters,
     approxRideDistanceDiffThreshold :: HighPrecMeters,

@@ -284,6 +284,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       endOtp = Nothing
       startOdometerReading = Nothing
       endOdometerReading = Nothing
+      clientId = booking.clientId
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::

@@ -102,7 +102,7 @@ handler merchant req validatedQuote = do
     handleDynamicOfferFlow isNewRider driver driverQuote booking riderDetails = do
       updateBookingDetails isNewRider booking riderDetails
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-      (ride, _, vehicle) <- initializeRide merchant.id driver uBooking Nothing $ Just req.enableFrequentLocationUpdates
+      (ride, _, vehicle) <- initializeRide merchant.id driver uBooking Nothing (Just req.enableFrequentLocationUpdates) driverQuote.clientId
       void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId driverQuote.estimatedFare
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       return $ mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails

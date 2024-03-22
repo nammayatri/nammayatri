@@ -28,6 +28,7 @@ data RideT f = RideT
     bppRideId :: B.C f Text,
     bookingId :: B.C f Text,
     shortId :: B.C f Text,
+    clientId :: B.C f (Maybe Text),
     merchantId :: B.C f (Maybe Text),
     merchantOperatingCityId :: B.C f (Maybe Text),
     status :: B.C f Domain.RideStatus,

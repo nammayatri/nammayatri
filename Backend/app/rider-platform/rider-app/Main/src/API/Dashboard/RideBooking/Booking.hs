@@ -70,4 +70,4 @@ callBookingStatus merchantId bookingId personId = do
 callBookingList :: ShortId DM.Merchant -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> FlowHandler DBooking.BookingListRes
 callBookingList merchantId personId mbLimit mbOffset mbOnlyActive bkngStatus = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  UB.bookingList (personId, m.id) mbLimit mbOffset mbOnlyActive bkngStatus
+  UB.bookingList (personId, m.id) mbLimit mbOffset mbOnlyActive bkngStatus Nothing

@@ -16,6 +16,7 @@
 module Domain.Types.Booking.Type where
 
 import Data.Aeson
+import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -59,6 +60,7 @@ data Booking = Booking
   { id :: Id Booking,
     transactionId :: Text,
     fulfillmentId :: Maybe Text,
+    clientId :: Maybe (Id DC.Client),
     bppBookingId :: Maybe (Id BPPBooking),
     quoteId :: Maybe (Id DQuote.Quote),
     paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
