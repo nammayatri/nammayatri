@@ -1488,7 +1488,8 @@ type OnBoardingSubscriptionScreenData = {
   plansList :: Array PlanCardConfig,
   selectedPlanItem :: Maybe PlanCardConfig,
   subscriptionConfig :: SubscriptionConfig,
-  reelsData :: Array RC.ReelItem
+  reelsData :: Array RC.ReelItem,
+  freeTrialDuration :: Maybe Int
 }
 
 type OnBoardingSubscriptionScreenProps = {

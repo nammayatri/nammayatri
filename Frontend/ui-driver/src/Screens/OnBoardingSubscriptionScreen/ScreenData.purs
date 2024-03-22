@@ -15,7 +15,8 @@ initData = {
         plansList : [dummyPlanConfig],
         selectedPlanItem : Nothing,
         subscriptionConfig : (getAppConfig appConfig).subscriptionConfig,
-        reelsData : RC.defaultReelsData
+        reelsData : RC.defaultReelsData,
+        freeTrialDuration : Nothing
     },
     props:{
         isSelectedLangTamil : false,

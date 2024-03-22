@@ -212,6 +212,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , operatingCity         : Nothing
     , isVehicleSupported    : Nothing
     , canSwitchToRental      : false
+    , freeTrialDuration     : Nothing
 }
 
 organizationInfo :: OrganizationInfo

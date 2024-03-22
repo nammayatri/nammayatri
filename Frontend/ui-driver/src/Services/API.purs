@@ -475,6 +475,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , operatingCity         :: Maybe String
     , isVehicleSupported    :: Maybe Boolean
     , canSwitchToRental     :: Boolean
+    , freeTrialDuration     :: Maybe Int
     }
 
 

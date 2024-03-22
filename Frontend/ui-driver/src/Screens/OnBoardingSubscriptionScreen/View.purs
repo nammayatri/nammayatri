@@ -257,6 +257,10 @@ headerLayout push state =
 
 infoView :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
 infoView push state =
+  let freeTrialDuration = fromMaybe 7 state.data.freeTrialDuration
+      title = getString $ SEVEN_DAY_FREE_TRIAL_ACTIVATED $ show freeTrialDuration
+      desc = getString $ TAKE_UNLIMITED_RIDES_FOR_THE_NEXT_SEVEN_DAYS $ show freeTrialDuration
+  in
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -266,8 +270,8 @@ infoView push state =
   , cornerRadii $ Corners 24.0 false false true true
   , gravity CENTER
   ][
-    commonTV push (getString SEVEN_DAY_FREE_TRIAL_ACTIVATED) Color.black900 FontStyle.h2 CENTER 0 NoAction false
-  , commonTV push (getString TAKE_UNLIMITED_RIDES_FOR_THE_NEXT_SEVEN_DAYS) Color.black700 FontStyle.subHeading2 CENTER 1 NoAction false
+    commonTV push title Color.black900 FontStyle.h2 CENTER 0 NoAction false
+  , commonTV push desc Color.black700 FontStyle.subHeading2 CENTER 1 NoAction false
   , case (state.data.reelsData DA.!! 0)  of 
     Just reelData -> youtubeView push state reelData
     Nothing -> linearLayout [][]
@@ -318,6 +322,10 @@ infoView push state =
 
 workFlowView :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
 workFlowView push state = 
+  let freeTrialDuration = fromMaybe 7 state.data.freeTrialDuration
+      planStarts = getString $ PLAN_STARTS $ show freeTrialDuration
+      freeTrialReminder = getString $ FREE_TRIAL_REMINDER $ show (freeTrialDuration - 2)
+  in
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -349,9 +357,9 @@ workFlowView push state =
       ][
         commonTV push (getString TODAY) Color.black800 FontStyle.body1 LEFT 0 NoAction false
       , commonTV push (getString SIGN_UP_FOR_AUTOPAY_BY_PAYING_JUST) Color.black700 font2 LEFT 0 NoAction false
-      , commonTV push (getString FREE_TRIAL_REMINDER) Color.black800 FontStyle.body1 LEFT 25 NoAction false
+      , commonTV push freeTrialReminder Color.black800 FontStyle.body1 LEFT 25 NoAction false
       , commonTV push (getString GET_REMINDED_ABOUT_YOUR_PLAN_SETUP) Color.black700 font2 LEFT 0 NoAction false
-      , commonTV push (getString PLAN_STARTS) Color.black800 FontStyle.body1 LEFT 25 NoAction false
+      , commonTV push planStarts Color.black800 FontStyle.body1 LEFT 25 NoAction false
       , commonTV push (getString EASY_AUTOMATIC_PAYMENTS_START) Color.black700 font2 LEFT 0 NoAction false
       ]
     ]
