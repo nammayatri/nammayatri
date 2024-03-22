@@ -1183,6 +1183,7 @@ homeScreenFlow = do
           sourceLong = if sourceServiceabilityResp.serviceable then long else updatedState.props.sourceLong
           cityName = if sourceServiceabilityResp.serviceable then getCityNameFromCode sourceServiceabilityResp.city else updatedState.props.city
           srcServiceability = isWhitelisted || sourceServiceabilityResp.serviceable
+      sourcePlaceName <- getPlaceName sourceLat sourceLong HomeScreenData.dummyLocation false
       setValueToLocalStore CUSTOMER_LOCATION (show cityName)
       void $ pure $ firebaseLogEvent $ "ny_loc_unserviceable_" <> show (not sourceServiceabilityResp.serviceable)
       modifyScreenState $ HomeScreenStateType 
@@ -1192,7 +1193,9 @@ homeScreenFlow = do
             { locateOnMapLocation
               { sourceLat = sourceLat
               , sourceLng = sourceLong
-              , source = if os == "IOS" then (getString STR.CURRENT_LOCATION) else homeScreen.props.locateOnMapLocation.source
+              , source = case sourcePlaceName of
+                            Just (PlaceName placeDetails) -> placeDetails.formattedAddress
+                            Nothing -> getString STR.CURRENT_LOCATION 
               }
             , sourceLat = sourceLat
             , sourceLong = sourceLong
