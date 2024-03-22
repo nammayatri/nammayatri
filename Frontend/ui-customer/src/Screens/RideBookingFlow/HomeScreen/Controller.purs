@@ -2939,6 +2939,7 @@ recenterCurrentLocation state = continueWithCmd state [ do
       _ <- pure $ currentPosition ""
       _ <- addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 (0.5) (0.9)
       pure unit
+    -- let newState = state{data{source = state.props.currentLocation.place}}
     pure NoAction
   ]
 
