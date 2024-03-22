@@ -84,7 +84,7 @@ assignCreateAndStartOtpRide _ _ Common.AssignCreateAndStartOtpRideAPIReq {..} = 
   requestor <- findPerson (cast driverId)
   booking <- runInReplica $ QBooking.findById (cast bookingId) >>= fromMaybeM (BookingNotFound bookingId.getId)
   rideOtp <- booking.specialZoneOtpCode & fromMaybeM (InternalError "otpCode not found for special zone booking")
-  ride <- DRide.otpRideCreate requestor rideOtp booking
+  ride <- DRide.otpRideCreate requestor rideOtp booking Nothing
   let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor, odometer = Nothing}
   fork "sending dashboard sms - start ride" $ do
     mride <- runInReplica $ QRide.findById ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)

@@ -18,6 +18,7 @@ module Domain.Types.Ride where
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Client as DC
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequest)
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.Location as DL
@@ -55,6 +56,7 @@ data Ride = Ride
     bookingId :: Id DRB.Booking,
     shortId :: ShortId Ride,
     merchantId :: Maybe (Id DM.Merchant),
+    clientId :: Maybe (Id DC.Client),
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     status :: RideStatus,
     driverId :: Id DPers.Person,

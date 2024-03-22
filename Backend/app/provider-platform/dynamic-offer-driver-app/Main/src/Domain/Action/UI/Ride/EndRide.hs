@@ -458,7 +458,7 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
   let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals
   if not pickupDropOutsideOfThreshold
     then
-      if distanceDiff > thresholdConfig.actualRideDistanceDiffThreshold && thresholdConfig.recomputeIfPickupDropNotOutsideOfThreshold
+      if distanceDiff > thresholdConfig.actualRideDistanceDiffThresholdIfWithinPickupDrop && thresholdConfig.recomputeIfPickupDropNotOutsideOfThreshold
         then recalculateFareForDistance handle booking ride (roundToIntegral $ min ride.traveledDistance maxDistance) thresholdConfig
         else recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig
     else

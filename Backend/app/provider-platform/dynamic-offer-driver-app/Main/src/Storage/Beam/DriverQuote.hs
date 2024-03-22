@@ -30,6 +30,7 @@ data DriverQuoteT f = DriverQuoteT
     requestId :: B.C f Text,
     searchTryId :: B.C f Text,
     searchRequestForDriverId :: B.C f (Maybe Text),
+    clientId :: B.C f (Maybe Text),
     estimateId :: B.C f Text,
     tripCategory :: B.C f (Maybe DTC.TripCategory),
     driverId :: B.C f Text,

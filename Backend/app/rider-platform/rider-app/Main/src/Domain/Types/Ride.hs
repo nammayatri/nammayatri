@@ -18,6 +18,7 @@ module Domain.Types.Ride where
 import Control.Applicative
 import Data.Aeson
 import qualified Domain.Types.Booking.Type as DRB
+import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -48,6 +49,7 @@ data Ride = Ride
     bookingId :: Id DRB.Booking,
     shortId :: ShortId Ride,
     merchantId :: Maybe (Id DM.Merchant),
+    clientId :: Maybe (Id DC.Client),
     fromLocation :: DL.Location,
     toLocation :: Maybe DL.Location,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),

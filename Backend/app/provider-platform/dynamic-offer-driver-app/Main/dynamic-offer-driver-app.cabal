@@ -596,6 +596,7 @@ library
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
       Domain.Types.CancellationReason
+      Domain.Types.Client
       Domain.Types.DailyStats
       Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPoolConfig
@@ -623,6 +624,7 @@ library
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
       Storage.Beam.CancellationReason
+      Storage.Beam.Client
       Storage.Beam.DailyStats
       Storage.Beam.DriverModuleCompletion
       Storage.Beam.DriverPoolConfig
@@ -650,6 +652,7 @@ library
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
       Storage.Queries.CancellationReason
+      Storage.Queries.Client
       Storage.Queries.DailyStats
       Storage.Queries.DriverModuleCompletion
       Storage.Queries.DriverPoolConfig

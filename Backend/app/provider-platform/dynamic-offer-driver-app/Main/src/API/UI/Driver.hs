@@ -36,6 +36,7 @@ where
 
 import Data.Time (Day)
 import qualified Domain.Action.UI.Driver as DDriver
+import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import Domain.Types.DriverFee (DriverFeeStatus)
 import Domain.Types.DriverInformation as DI
@@ -92,12 +93,14 @@ type API =
                 )
            :<|> "searchRequest"
              :> TokenAuth
+             :> Header "client-id" (Id DC.Client)
              :> "quote"
              :> "offer"
              :> ReqBody '[JSON] DDriver.DriverOfferReq
              :> Post '[JSON] APISuccess
            :<|> "searchRequest"
              :> TokenAuth
+             :> Header "client-id" (Id DC.Client)
              :> "quote"
              :> "respond"
              :> ReqBody '[JSON] DDriver.DriverRespondReq
@@ -252,15 +255,17 @@ getNearbySearchRequests = withFlowHandlerAPI . DDriver.getNearbySearchRequests
 
 offerQuote ::
   (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe (Id DC.Client) ->
   DDriver.DriverOfferReq ->
   FlowHandler APISuccess
-offerQuote (personId, driverId, merchantOpCityId) = withFlowHandlerAPI . DDriver.offerQuote (personId, driverId, merchantOpCityId)
+offerQuote (personId, driverId, merchantOpCityId) clientId = withFlowHandlerAPI . DDriver.offerQuote (personId, driverId, merchantOpCityId) clientId
 
 respondQuote ::
   (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe (Id DC.Client) ->
   DDriver.DriverRespondReq ->
   FlowHandler APISuccess
-respondQuote (personId, driverId, merchantOpCityId) = withFlowHandlerAPI . DDriver.respondQuote (personId, driverId, merchantOpCityId)
+respondQuote (personId, driverId, merchantOpCityId) clientId = withFlowHandlerAPI . DDriver.respondQuote (personId, driverId, merchantOpCityId) clientId
 
 getStats :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> FlowHandler DDriver.DriverStatsRes
 getStats day = withFlowHandlerAPI . DDriver.getStats day

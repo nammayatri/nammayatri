@@ -23,6 +23,7 @@ import Domain.Action.UI.HotSpot
 import Domain.Action.UI.Maps (makeAutoCompleteKey)
 import qualified Domain.Action.UI.Maps as DMaps
 import qualified Domain.Action.UI.Serviceability as Serviceability
+import qualified Domain.Types.Client as DC
 import Domain.Types.HotSpot hiding (address, updatedAt)
 import Domain.Types.HotSpotConfig
 import qualified Domain.Types.Location as Location
@@ -210,9 +211,10 @@ search ::
   SearchReq ->
   Maybe Version ->
   Maybe Version ->
+  Maybe (Id DC.Client) ->
   Maybe Text ->
   m SearchRes
-search personId req bundleVersion clientVersion device = do
+search personId req bundleVersion clientVersion clientId device = do
   now <- getCurrentTime
   let (riderPreferredOption, origin, stops, isSourceManuallyMoved, isSpecialLocation, startTime, isReallocationEnabled) =
         case req of
@@ -326,6 +328,7 @@ search personId req bundleVersion clientVersion device = do
   searchRequest <-
     buildSearchRequest
       searchRequestId
+      clientId
       person
       fromLocation
       merchantOperatingCity
@@ -412,6 +415,7 @@ buildSearchRequest ::
     MonadFlow m
   ) =>
   Id SearchRequest.SearchRequest ->
+  Maybe (Id DC.Client) ->
   DPerson.Person ->
   Location.Location ->
   DMOC.MerchantOperatingCity ->
@@ -426,7 +430,7 @@ buildSearchRequest ::
   Maybe Seconds ->
   SearchRequest.RiderPerferredOption ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime bundleVersion clientVersion device disabilityTag duration riderPreferredOption = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime bundleVersion clientVersion device disabilityTag duration riderPreferredOption = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   return
@@ -441,6 +445,7 @@ buildSearchRequest searchRequestId person pickup merchantOperatingCity mbDrop mb
         maxDistance = mbMaxDistance,
         merchantId = person.merchantId,
         merchantOperatingCityId = merchantOperatingCity.id,
+        clientId = mbClientId,
         createdAt = now,
         estimatedRideDuration = duration,
         device = device,

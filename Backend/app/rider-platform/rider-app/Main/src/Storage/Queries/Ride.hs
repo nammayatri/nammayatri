@@ -23,6 +23,7 @@ import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
 import Domain.Types.Booking.Type as Booking
 import qualified Domain.Types.Booking.Type as DRB
+import qualified Domain.Types.Client as DC
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
@@ -294,8 +295,8 @@ findRiderIdByRideId rideId = do
   booking <- maybe (pure Nothing) (\ride' -> findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId (Ride.bookingId ride')]) ride
   pure $ Booking.riderId <$> booking
 
-findAllByRiderIdAndRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
-findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
+findAllByRiderIdAndRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> m [Booking]
+findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId = do
   let isOnlyActive = Just True == mbOnlyActive
   let limit' = maybe 10 fromIntegral mbLimit
   let offset' = maybe 0 fromIntegral mbOffset
@@ -305,6 +306,7 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
           ( [Se.Is BeamB.riderId $ Se.Eq personId]
               <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED, DRB.REALLOCATED] | isOnlyActive])
               <> ([Se.Is BeamB.status $ Se.Eq (fromJust mbBookingStatus) | isJust mbBookingStatus])
+              <> ([Se.Is BeamB.clientId $ Se.Eq (getId <$> mbClientId) | isJust mbClientId])
           )
       ]
       (Se.Desc BeamB.createdAt)
@@ -398,6 +400,7 @@ instance FromTType' BeamR.Ride Ride where
             bookingId = Id bookingId,
             shortId = ShortId shortId,
             merchantId = Id <$> merchantId,
+            clientId = Id <$> clientId,
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
             trackingUrl = tUrl,
             fare = roundToIntegral <$> fare,
@@ -413,6 +416,7 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.bookingId = getId bookingId,
         BeamR.shortId = getShortId shortId,
         BeamR.merchantId = getId <$> merchantId,
+        BeamR.clientId = getId <$> clientId,
         BeamR.merchantOperatingCityId = getId <$> merchantOperatingCityId,
         BeamR.status = status,
         BeamR.driverName = driverName,

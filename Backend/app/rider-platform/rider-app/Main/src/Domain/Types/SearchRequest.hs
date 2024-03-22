@@ -15,6 +15,7 @@
 
 module Domain.Types.SearchRequest where
 
+import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -40,6 +41,7 @@ data SearchRequest = SearchRequest
     startTime :: UTCTime,
     validTill :: UTCTime,
     riderId :: Id DP.Person,
+    clientId :: Maybe (Id DC.Client),
     fromLocation :: DLoc.Location,
     toLocation :: Maybe DLoc.Location,
     distance :: Maybe HighPrecMeters,

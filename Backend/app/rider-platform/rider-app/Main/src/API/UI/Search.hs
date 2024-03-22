@@ -29,6 +29,7 @@ import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search as DSearch
+import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment
@@ -58,17 +59,18 @@ type API =
     :> ReqBody '[JSON] DSearch.SearchReq
     :> Servant.Header "x-bundle-version" Version
     :> Servant.Header "x-client-version" Version
+    :> Header "client-id" (Id DC.Client)
     :> Header "x-device" Text
     :> Post '[JSON] DSearch.SearchResp
 
 handler :: FlowServer API
 handler = search
 
-search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler DSearch.SearchResp
-search (personId, _) req mbBundleVersion mbClientVersion mbDevice = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe (Id DC.Client) -> Maybe Text -> FlowHandler DSearch.SearchResp
+search (personId, _) req mbBundleVersion mbClientVersion mbClientId mbDevice = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
   updateVersions personId mbBundleVersion mbClientVersion
-  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbDevice
+  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientId mbDevice
   fork "search cabs" . withShortRetry $ do
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2

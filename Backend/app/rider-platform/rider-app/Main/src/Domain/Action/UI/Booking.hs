@@ -18,6 +18,7 @@ import qualified Beckn.ACL.Update as ACL
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import Data.OpenApi (ToSchema (..))
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.Client as DC
 import Domain.Types.Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.LocationMapping as DLM
@@ -59,9 +60,9 @@ bookingStatus bookingId _ = do
   logInfo $ "booking: test " <> show booking
   SRB.buildBookingAPIEntity booking booking.riderId
 
-bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
-bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
-  rbList <- runInReplica $ QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
+bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> m BookingListRes
+bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId = do
+  rbList <- runInReplica $ QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId
   logInfo $ "rbList: test " <> show rbList
   BookingListRes <$> traverse (`SRB.buildBookingAPIEntity` personId) rbList
 

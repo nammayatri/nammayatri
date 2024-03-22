@@ -35,6 +35,7 @@ import Data.Time (Day)
 import Domain.Action.Dashboard.Ride
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
@@ -316,8 +317,8 @@ arrivedAtPickup rideId req = do
   where
     isValidRideStatus status = status == DRide.NEW
 
-otpRideCreate :: DP.Person -> Text -> DRB.Booking -> Flow DriverRideRes
-otpRideCreate driver otpCode booking = do
+otpRideCreate :: DP.Person -> Text -> DRB.Booking -> Maybe (Id DC.Client) -> Flow DriverRideRes
+otpRideCreate driver otpCode booking clientId = do
   transporter <-
     QM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -329,7 +330,7 @@ otpRideCreate driver otpCode booking = do
   unless (driverInfo.enabled) $ throwError DriverAccountDisabled
   when driverInfo.onRide $ throwError DriverOnRide
 
-  (ride, rideDetails, _) <- initializeRide transporter.id driver booking (Just otpCode) Nothing
+  (ride, rideDetails, _) <- initializeRide transporter.id driver booking (Just otpCode) Nothing clientId
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle
 

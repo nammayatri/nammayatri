@@ -86,6 +86,7 @@ import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummy
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
 import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
@@ -801,13 +802,13 @@ offerQuoteLockKey :: Id Person -> Text
 offerQuoteLockKey driverId = "Driver:OfferQuote:DriverId-" <> driverId.getId
 
 -- DEPRECATED
-offerQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DriverOfferReq -> Flow APISuccess
-offerQuote (driverId, merchantId, merchantOpCityId) DriverOfferReq {..} = do
+offerQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> DriverOfferReq -> Flow APISuccess
+offerQuote (driverId, merchantId, merchantOpCityId) clientId DriverOfferReq {..} = do
   let response = Accept
-  respondQuote (driverId, merchantId, merchantOpCityId) DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, ..}
+  respondQuote (driverId, merchantId, merchantOpCityId) clientId DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, ..}
 
-respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DriverRespondReq -> Flow APISuccess
-respondQuote (driverId, merchantId, merchantOpCityId) req = do
+respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> DriverRespondReq -> Flow APISuccess
+respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
   Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
     searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
     searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
@@ -866,6 +867,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) req = do
             requestId = searchReq.id,
             searchTryId = sd.searchTryId,
             searchRequestForDriverId = Just sd.id,
+            clientId = clientId,
             driverId,
             driverName = driver.firstName,
             driverRating = SP.roundToOneDecimal <$> driver.rating,
@@ -953,7 +955,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) req = do
       CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
       unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
       QST.updateStatus searchTry.id DST.COMPLETED
-      (ride, _, vehicle) <- initializeRide merchantId driver booking Nothing Nothing
+      (ride, _, vehicle) <- initializeRide merchantId driver booking Nothing Nothing clientId
       driverFCMPulledList <- deactivateExistingQuotes merchantOpCityId merchantId driver.id searchTry.id quote.estimatedFare
       void $ sendRideAssignedUpdateToBAP booking ride driver vehicle
       CS.markBookingAssignmentCompleted booking.id
