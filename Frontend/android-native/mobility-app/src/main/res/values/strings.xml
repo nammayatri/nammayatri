@@ -65,4 +65,12 @@
     <string name="zone_pickup_extra">Zone pickup extra</string>
     <string name="you_are_near_a_special_pickup_zone">You are near a special \npickup zone</string>
     <string name="zone_pickup">Zone Pickup</string>
+    <string name="customer_edited">Customer edited a stop!</string>
+    <string name="customer_added">Customer added a stop!</string>
+    <string name="navigate_to_location">Navigate to location</string>
+    <string name="close">Close</string>
+    <string name="today">Today</string>
+    <string name="now"> Now</string>
+    <string name="rental"> Rental</string>
+    <string name="intercity"> Intercity</string>
 </resources>

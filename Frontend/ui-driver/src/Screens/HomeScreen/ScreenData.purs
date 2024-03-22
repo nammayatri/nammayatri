@@ -22,8 +22,8 @@ import Data.Maybe
 import Foreign.Object (empty)
 import Domain.Payments as PP
 import ConfigProvider
-import RemoteConfig as RC
-
+import Screens.Types as ST
+import RemoteConfig.Utils as RU
 initData :: HomeScreenState
 initData = {
     data: {
@@ -34,17 +34,18 @@ initData = {
         profileImg : Nothing,
         driverAlternateMobile : Nothing,
         gender : "UNKNOWN",
-        subsRemoteConfig : RC.subscriptionConfig "subscription_configs",
+        subsRemoteConfig : RU.subscriptionConfig "subscription_configs",
         driverStats: false,
         activeRide : {
           id : "",
           source : "",
-          destination : "",
+          destination : Nothing,
           src_lat : 0.0,
           src_lon : 0.0,
           dest_lat : 0.0,
           dest_lon : 0.0,
           actualRideDistance : 0.0,
+          tripActualDistance : Nothing,
           status : NOTHING,
           distance : 0.0,
           duration : 0,
@@ -56,10 +57,24 @@ initData = {
           specialLocationTag : Nothing,
           waitTimeSeconds : -1,
           waitTimeInfo : false,
+          tripDuration : Nothing,
           rideCreatedAt : "",
           requestedVehicleVariant : Nothing,
           disabilityTag : Nothing,
-          enableFrequentLocationUpdates : false
+          enableFrequentLocationUpdates : false,
+          tripScheduledAt : Nothing,
+          tripType : ST.OneWay,
+          tripStartTime: Nothing,
+          tripEndTime: Nothing,
+          nextStopAddress : Nothing,
+          lastStopAddress : Nothing,
+          nextStopLat : Nothing,
+          nextStopLon : Nothing,
+          lastStopLat : Nothing,
+          lastStopLon : Nothing,
+          actualRideDuration : Nothing,
+          startOdometerReading : Nothing,
+          endOdometerReading : Nothing
         },
         cancelRideModal : {
           selectionOptions : [],
@@ -120,6 +135,8 @@ initData = {
         triggerPatchCounter : 0,
         peekHeight : 0,
         endRideData : {
+          actualRideDuration : Nothing,
+          actualRideDistance : Nothing,
           rideId : "",
           zeroCommision : 0,
           tip : Nothing,
@@ -154,13 +171,15 @@ initData = {
         , currentBanner : 0
         , bannerScrollState: "0"
         , currentPage : 0
-      },
+        },
+        odometerReading : odometerDigits,
       prevLatLon : Nothing,
       noOfLocations : 0,
       isVehicleSupported : true
     },
     props: {
         isFreeRide : false,
+        arrivedAtStop : false,
         statusOnline : true,
         driverStatusSet : Online,
         goOfflineModal : false,
@@ -168,8 +187,16 @@ initData = {
         rideActionModal : false,
         updatedArrivalInChat : false,
         enterOtpModal : false,
+        endRideOtpModal : false,
+        odometerValue : "",
+        startRideOdometerImage : Nothing,
+        endRideOdometerImage : Nothing,
+        enterOdometerReadingModal : false,
+        endRideOdometerReadingModal : false,
+        isInvalidOdometer : false,
         rideOtp : "",
         enterOtpFocusIndex : 0,
+        enterOdometerFocusIndex : 0,
         time : 0,
         otpIncorrect : false,
         wrongVehicleVariant : false,
@@ -214,7 +241,11 @@ initData = {
         safetyAudioAutoPlay : false,
         vehicleNSPopup : false,
         bgLocationPopup : false,
-        specialZoneProps : { specialZonePopup : false, nearBySpecialZone : false, currentGeoHash : "" }
+        specialZoneProps : { specialZonePopup : false, nearBySpecialZone : false, currentGeoHash : "" },
+        rideStartTimer : 0,
+        odometerFileId : Nothing,
+        odometerUploadAttempts : 0,
+        odometerImageUploading : false
     }
 }
 
@@ -226,3 +257,14 @@ dummyDriverRideStats = DriverProfileStatsResp
     , bonusEarning : 0
     , coinBalance : 0
     }
+
+
+odometerDigits :: ST.OdometerReading
+odometerDigits = 
+  {
+    digit0 : "",
+    digit1 : "",
+    digit2 : "",
+    digit3 : "",
+    digit4 : ""
+  }

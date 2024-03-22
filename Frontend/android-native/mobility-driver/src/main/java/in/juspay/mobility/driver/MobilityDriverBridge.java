@@ -119,6 +119,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     // CallBacks
     private static String storeUpdateTimeCallBack = null;
+    private String storeAddRideStopCallBack = null;
     private LocationUpdateService.UpdateTimeCallback locationCallback;
     private PreviewView previewView;
     private ImageCapture imageCapture;
@@ -131,6 +132,20 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         registerCallBacks();
         translator = new TranslatorMLKit(bridgeComponents.getContext());
         app = AppType.PROVIDER;
+    }
+ 
+    @JavascriptInterface
+    public void storeCallBackForAddRideStop(String callback) {
+        storeAddRideStopCallBack = callback;
+    }
+
+    public void callDriverAddRideStopCallBack(String newStopLocation) {
+       
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                    storeAddRideStopCallBack, newStopLocation);
+            Log.d(CALLBACK, javascript);
+            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+        
     }
 
     @JavascriptInterface
@@ -202,6 +217,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         videoDuration = 0;
 
         // CallBacks
+        storeAddRideStopCallBack = null;
         storeUpdateTimeCallBack = null;
     }
     //endregion

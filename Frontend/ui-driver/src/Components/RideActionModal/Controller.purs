@@ -14,11 +14,13 @@
 -}
 
 module Components.RideActionModal.Controller where
+
+import ConfigProvider
+
 import Data.Maybe as Mb
 import MerchantConfig.Types (AppConfig)
-import ConfigProvider
+import Prelude (negate)
 import Screens.Types as ST
-import Prelude(negate)
 
 data Action = StartRide 
             | EndRide 
@@ -33,13 +35,18 @@ data Action = StartRide
             | SecondaryTextClick
             | VisuallyImpairedCustomer
             | NoAction
+            | ArrivedAtStop
+            | RideStartTimer Int String String 
 
 type Config = { 
   startRideActive :: Boolean,
+  arrivedStopActive :: Boolean,
   totalDistance :: String,
   customerName :: String,
   sourceAddress :: AddressConfig,
-  destinationAddress :: AddressConfig,
+  destinationAddress :: Mb.Maybe AddressConfig,
+  stopAddress :: Mb.Maybe AddressConfig,
+  lastStopAddress :: Mb.Maybe AddressConfig,
   estimatedRideFare :: Int,
   notifiedCustomer :: Boolean,
   id :: String,
@@ -53,7 +60,14 @@ type Config = {
   gotoTag :: Boolean,
   waitTimeStatus :: ST.TimerStatus,
   waitTimeSeconds :: Int,
-  thresholdTime :: Int
+  thresholdTime :: Int,
+  rideType :: ST.TripType,
+  rideScheduledTime :: Mb.Maybe String,
+  rideStartTime :: Mb.Maybe String,
+  startODOReading :: String,
+  tripDuration :: Mb.Maybe String,
+  durationTravelled :: String,
+  rideStartTimer :: Int
   }
 
 type AddressConfig = {
@@ -64,16 +78,19 @@ type AddressConfig = {
 config :: Config
 config = {
   startRideActive : false,
+  arrivedStopActive : false,
   totalDistance : "",
   customerName : "",
   sourceAddress : {
     titleText : "",
     detailText : ""
     },
-  destinationAddress : {
+  destinationAddress : Mb.Just ({
   titleText : "",
   detailText : ""
-  },
+  }),
+  stopAddress : Mb.Nothing,
+  lastStopAddress : Mb.Nothing,
   estimatedRideFare : 0,
   notifiedCustomer : true,
   buttonTimeOut : 10,
@@ -87,5 +104,12 @@ config = {
   gotoTag : false,
   waitTimeStatus : ST.NoStatus,
   waitTimeSeconds : -1,
-  thresholdTime : 0
+  thresholdTime : 0,
+  rideType: ST.OneWay,
+  rideScheduledTime : Mb.Nothing,
+  startODOReading : "0",
+  tripDuration : Mb.Nothing,
+  durationTravelled : "0",
+  rideStartTimer : 0,
+  rideStartTime : Mb.Nothing
 }

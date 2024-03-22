@@ -28,8 +28,9 @@ data Action = BackPressed
             | ChooseVehicleAC ChooseVehicle.Action
             | PrimaryButtonAC PrimaryButton.Action
             | DowngradeVehicle
+            | ToggleRental
 
-data ScreenOutput = GoBack | SelectCab BookingOptionsScreenState Boolean
+data ScreenOutput = GoBack | SelectCab BookingOptionsScreenState Boolean | EnableRental BookingOptionsScreenState Boolean
 
 eval :: Action -> BookingOptionsScreenState -> Eval Action ScreenOutput BookingOptionsScreenState
 eval BackPressed state = exit GoBack
@@ -44,8 +45,11 @@ eval DowngradeVehicle state = do
       updatedDowngradeOptions = map (\item -> item{isSelected = downgraded}) state.data.downgradeOptions
   exit $ SelectCab state{ data{ downgradeOptions = updatedDowngradeOptions } } true
 
-eval _ state = continue state
+eval ToggleRental state = do
+   let isEnabled = not state.props.canSwitchToRental
+   exit $ EnableRental state{ props { canSwitchToRental = isEnabled } } isEnabled
 
+eval _ state = continue state
 
 downgradeOptionsConfig :: Array VehicleP -> String -> ChooseVehicle.Config
 downgradeOptionsConfig vehicles vehicleType =
