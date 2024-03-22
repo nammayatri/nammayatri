@@ -33,6 +33,7 @@ import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
+import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -59,6 +60,7 @@ type API =
   "driver"
     :> "otpRide"
     :> TokenAuth
+    :> Header "client-id" (Id DC.Client)
     :> "start"
     :> ReqBody '[JSON] DRide.OTPRideReq
     :> Post '[JSON] DRide.DriverRideRes
@@ -148,8 +150,8 @@ startRide (requestorId, merchantId, merchantOpCityId) rideId StartRideReq {..} =
   shandle <- withTimeAPI "startRide" "buildStartRideHandle" $ RideStart.buildStartRideHandle merchantId merchantOpCityId
   withTimeAPI "startRide" "driverStartRide" $ RideStart.driverStartRide shandle rideId driverReq
 
-otpRideCreateAndStart :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DRide.OTPRideReq -> FlowHandler DRide.DriverRideRes
-otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) DRide.OTPRideReq {..} = withFlowHandlerAPI $ do
+otpRideCreateAndStart :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> DRide.OTPRideReq -> FlowHandler DRide.DriverRideRes
+otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide.OTPRideReq {..} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
   now <- getCurrentTime
   driverInfo <- QDI.findById (cast requestor.id) >>= fromMaybeM (PersonNotFound requestor.id.getId)
@@ -157,7 +159,7 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) DRide.OTPRideR
   let rideOtp = specialZoneOtpCode
   transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId (Just driverInfo.driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now transporterConfig.specialZoneBookingOtpExpiry >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
-  ride <- DRide.otpRideCreate requestor rideOtp booking
+  ride <- DRide.otpRideCreate requestor rideOtp booking clientId
   let driverReq = RideStart.DriverStartRideReq {rideOtp, requestor, ..}
   shandle <- RideStart.buildStartRideHandle merchantId merchantOpCityId
   void $ RideStart.driverStartRide shandle ride.id driverReq

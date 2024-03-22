@@ -107,6 +107,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
         SearchRequest
           { id = Id id,
             riderId = Id riderId,
+            clientId = Id <$> clientId,
             distance = HighPrecMeters <$> distance,
             maxDistance = HighPrecMeters <$> maxDistance,
             merchantId = Id merchantId,
@@ -130,6 +131,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.startTime = startTime,
         BeamSR.validTill = validTill,
         BeamSR.riderId = getId riderId,
+        BeamSR.clientId = getId <$> clientId,
         BeamSR.fromLocationId = Just $ getId fromLocation.id,
         BeamSR.toLocationId = getId <$> (toLocation <&> (.id)),
         BeamSR.distance = getHighPrecMeters <$> distance,

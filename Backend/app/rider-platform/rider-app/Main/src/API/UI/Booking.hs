@@ -24,6 +24,7 @@ where
 import qualified Domain.Action.UI.Booking as DBooking
 import Domain.Types.Booking (BookingAPIEntity)
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment
@@ -46,6 +47,7 @@ type API =
              :> QueryParam "offset" Integer
              :> QueryParam "onlyActive" Bool
              :> QueryParam "status" SRB.BookingStatus
+             :> QueryParam "clientId" (Id DC.Client)
              :> Get '[JSON] DBooking.BookingListRes
            :<|> Capture "rideBookingId" (Id SRB.Booking)
              :> TokenAuth
@@ -75,5 +77,5 @@ addStop bookingId (personId, merchantId) addStopReq = withFlowHandlerAPI . withP
 editStop :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> DBooking.StopReq -> FlowHandler APISuccess
 editStop bookingId (personId, merchantId) editStopReq = withFlowHandlerAPI . withPersonIdLogTag personId $ DBooking.editStop (personId, merchantId) bookingId editStopReq
 
-bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> FlowHandler DBooking.BookingListRes
-bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI . DBooking.bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive
+bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> FlowHandler DBooking.BookingListRes
+bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId = withFlowHandlerAPI . DBooking.bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId

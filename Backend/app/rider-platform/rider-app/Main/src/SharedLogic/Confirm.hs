@@ -207,6 +207,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
   return $
     DRB.Booking
       { id = Id id,
+        clientId = searchRequest.clientId,
         transactionId = searchRequest.id.getId,
         bppBookingId = Nothing,
         fulfillmentId = mbFulfillmentId,

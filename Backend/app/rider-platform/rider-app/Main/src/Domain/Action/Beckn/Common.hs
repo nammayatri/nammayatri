@@ -226,6 +226,7 @@ rideAssignedReqHandler ValidatedRideAssignedReq {..} = do
             bookingId = booking.id,
             merchantId = Just booking.merchantId,
             merchantOperatingCityId = Just booking.merchantOperatingCityId,
+            clientId = booking.clientId,
             status = DRide.NEW,
             trackingUrl = Nothing,
             fare = Nothing,

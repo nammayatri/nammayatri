@@ -28,6 +28,7 @@ data BookingT f = BookingT
   { id :: B.C f Text,
     transactionId :: B.C f Text,
     fulfillmentId :: B.C f (Maybe Text),
+    clientId :: B.C f (Maybe Text),
     itemId :: B.C f Text,
     fareProductType :: B.C f DQuote.FareProductType,
     bppBookingId :: B.C f (Maybe Text),

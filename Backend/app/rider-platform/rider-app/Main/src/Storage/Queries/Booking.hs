@@ -332,6 +332,7 @@ instance FromTType' BeamB.Booking Booking where
         Booking
           { id = Id id,
             transactionId = transactionId,
+            clientId = Id <$> clientId,
             bppBookingId = Id <$> bppBookingId,
             quoteId = Id <$> quoteId,
             paymentMethodId = Id <$> paymentMethodId,
@@ -412,6 +413,7 @@ instance ToTType' BeamB.Booking Booking where
           DRB.InterCityDetails details -> (DQuote.INTER_CITY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
      in BeamB.BookingT
           { BeamB.id = getId id,
+            BeamB.clientId = getId <$> clientId,
             BeamB.transactionId = transactionId,
             BeamB.fareProductType = fareProductType,
             BeamB.bppBookingId = getId <$> bppBookingId,

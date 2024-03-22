@@ -437,6 +437,7 @@ library
       Domain.Types.BecknConfig
       Domain.Types.BppDetails
       Domain.Types.BusinessHour
+      Domain.Types.Client
       Domain.Types.FRFSQuote
       Domain.Types.FRFSRecon
       Domain.Types.FRFSSearch
@@ -464,6 +465,7 @@ library
       Storage.Beam.BecknConfig
       Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
+      Storage.Beam.Client
       Storage.Beam.FRFSQuote
       Storage.Beam.FRFSRecon
       Storage.Beam.FRFSSearch
@@ -491,6 +493,7 @@ library
       Storage.Queries.BecknConfig
       Storage.Queries.BppDetails
       Storage.Queries.BusinessHour
+      Storage.Queries.Client
       Storage.Queries.FRFSQuote
       Storage.Queries.FRFSRecon
       Storage.Queries.FRFSSearch
