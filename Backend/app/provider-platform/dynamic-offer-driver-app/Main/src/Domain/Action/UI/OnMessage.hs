@@ -18,6 +18,7 @@ module Domain.Action.UI.OnMessage
   )
 where
 
+import Data.HashMap.Strict as HMS
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -27,6 +28,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -41,7 +43,7 @@ data FCMReq = FCMReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-sendMessageFCM :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FCMReq -> m APISuccess.APISuccess
+sendMessageFCM :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]) => (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FCMReq -> m APISuccess.APISuccess
 sendMessageFCM (_personId, _, _) FCMReq {..} = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)

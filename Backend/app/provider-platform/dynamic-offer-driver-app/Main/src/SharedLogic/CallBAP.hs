@@ -23,7 +23,6 @@ module SharedLogic.CallBAP
     sendEstimateRepetitionUpdateToBAP,
     sendNewMessageToBAP,
     sendDriverOffer,
-    callOnConfirm,
     callOnConfirmV2,
     callOnStatusV2,
     buildBppUrl,
@@ -43,7 +42,6 @@ import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
-import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
@@ -65,6 +63,7 @@ import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as SRide
@@ -73,18 +72,20 @@ import qualified Domain.Types.SearchRequestForDriver as DSRFD
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
-import qualified EulerHS.Types as ET
+import qualified EulerHS.Types as Euler
 import Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
+import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FarePolicy as SFP
@@ -100,6 +101,8 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 callOnSelectV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -108,7 +111,9 @@ callOnSelectV2 ::
     CacheFlow m r,
     EsqDBFlow m r,
     HasHttpClientOptions r c,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DM.Merchant ->
   DSR.SearchRequest ->
@@ -119,8 +124,7 @@ callOnSelectV2 ::
 callOnSelectV2 transporter searchRequest srfd searchTry content = do
   let bapId = searchRequest.bapId
       bapUri = searchRequest.bapUri
-  let bppSubscriberId = getShortId $ transporter.subscriberId
-      authKey = getHttpManagerKey bppSubscriberId
+      bppSubscriberId = getShortId $ transporter.subscriberId
   bppUri <- buildBppUrl (transporter.id)
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
 
@@ -130,7 +134,7 @@ callOnSelectV2 transporter searchRequest srfd searchTry content = do
   ttl <- bppConfig.onSelectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttl)
   logDebug $ "on_selectV2 request bpp: " <> show content
-  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (Spec.OnSelectReq context Nothing (Just content))
+  void $ withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (Spec.OnSelectReq context Nothing (Just content))
   where
     getMsgIdByTxnId :: CacheFlow m r => Text -> m Text
     getMsgIdByTxnId txnId = do
@@ -145,95 +149,83 @@ callOnUpdateV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     MonadFlow m,
     CoreMetrics m,
-    HasHttpClientOptions r c
+    HasHttpClientOptions r c,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]
   ) =>
   Spec.OnUpdateReq ->
   RetryCfg ->
+  Id Merchant.Merchant ->
   m ()
-callOnUpdateV2 req retryConfig = do
+callOnUpdateV2 req retryConfig merchantId = do
   bapUri' <- req.onUpdateReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Ride Assigned request context.")
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onUpdateReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
-  let authKey = getHttpManagerKey bppSubscriberId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap req
+  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap req
 
 callOnStatusV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     MonadFlow m,
     CoreMetrics m,
-    HasHttpClientOptions r c
+    HasHttpClientOptions r c,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]
   ) =>
   Spec.OnStatusReq ->
   RetryCfg ->
+  Id Merchant.Merchant ->
   m ()
-callOnStatusV2 req retryConfig = do
+callOnStatusV2 req retryConfig merchantId = do
   bapUri' <- req.onStatusReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Ride Assigned request context.")
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onStatusReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
-  let authKey = getHttpManagerKey bppSubscriberId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
+  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
 
 callOnCancelV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     MonadFlow m,
     CoreMetrics m,
-    HasHttpClientOptions r c
+    HasHttpClientOptions r c,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]
   ) =>
   Spec.OnCancelReq ->
   RetryCfg ->
+  Id Merchant.Merchant ->
   m ()
-callOnCancelV2 req retryConfig = do
+callOnCancelV2 req retryConfig merchantId = do
   bapUri' <- req.onCancelReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Ride Assigned request context.")
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onCancelReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
-  let authKey = getHttpManagerKey bppSubscriberId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
-
-callOnConfirm ::
-  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
-    HasHttpClientOptions r c,
-    HasShortDurationRetryCfg r c,
-    CoreMetrics m
-  ) =>
-  DM.Merchant ->
-  Context.Context ->
-  OnConfirm.OnConfirmMessage ->
-  m ()
-callOnConfirm transporter contextFromConfirm content = do
-  let bapUri = contextFromConfirm.bap_uri
-      bapId = contextFromConfirm.bap_id
-      msgId = contextFromConfirm.message_id
-      city = contextFromConfirm.city
-      country = contextFromConfirm.country
-      bppSubscriberId = getShortId $ transporter.subscriberId
-      authKey = getHttpManagerKey bppSubscriberId
-  bppUri <- buildBppUrl transporter.id
-  internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  context_ <- buildTaxiContext Context.ON_CONFIRM msgId contextFromConfirm.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False
-  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPIV1 bapUri internalEndPointHashMap (BecknCallbackReq context_ $ Right content)
+  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
 
 callOnConfirmV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DM.Merchant ->
   Spec.Context ->
-  -- OnConfirm.OnConfirmMessageV2 ->
   Spec.ConfirmReqMessage ->
   DBC.BecknConfig ->
   m ()
 callOnConfirmV2 transporter context content bppConfig = do
   let bppSubscriberId = getShortId $ transporter.subscriberId
-      authKey = getHttpManagerKey bppSubscriberId
   bapUri <- Utils.getContextBapUri context
   bapId <- Utils.getContextBapId context
   msgId <- Utils.getMessageId context
@@ -244,7 +236,7 @@ callOnConfirmV2 transporter context content bppConfig = do
   txnId <- Utils.getTransactionId context
   ttl <- bppConfig.onConfirmTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context_ <- ContextV2.buildContextV2 Context.ON_CONFIRM Context.MOBILITY msgId (Just txnId) bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
-  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap (Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content})
+  void $ withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap (Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content})
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]
@@ -266,7 +258,9 @@ sendRideAssignedUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -308,7 +302,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
   rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking rideAssignedBuildReq
   let generatedMsg = A.encode rideAssignedMsgV2
   logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
-  void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig
+  void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig merchant.id
   where
     refillKey = "REFILLED_" <> ride.driverId.getId
     updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
@@ -360,7 +354,9 @@ sendRideStartedUpdateToBAP ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -383,7 +379,7 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
       rideStartedBuildReq = ACL.RideStartedReq ACL.DRideStartedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
   rideStartedMsgV2 <- ACL.buildOnStatusReqV2 merchant booking rideStartedBuildReq Nothing
-  void $ callOnStatusV2 rideStartedMsgV2 retryConfig
+  void $ callOnStatusV2 rideStartedMsgV2 retryConfig merchant.id
 
 sendRideCompletedUpdateToBAP ::
   ( CacheFlow m r,
@@ -392,7 +388,9 @@ sendRideCompletedUpdateToBAP ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -413,18 +411,20 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
       rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
   rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking rideCompletedBuildReq
-  void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig
+  void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id
 
 sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     CacheFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     CoreMetrics m,
-    CacheFlow m r
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   DM.Merchant ->
@@ -434,7 +434,7 @@ sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
   let bookingCancelledBuildReqV2 = ACL.BookingCancelledBuildReqV2 ACL.DBookingCancelledReqV2 {..}
   retryConfig <- asks (.longDurationRetryCfg)
   bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry (show Enums.CANCELLED) bookingCancelledBuildReqV2 Nothing
-  void $ callOnCancelV2 bookingCancelledMsgV2 retryConfig
+  void $ callOnCancelV2 bookingCancelledMsgV2 retryConfig transporter.id
 
 sendDriverOffer ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -444,7 +444,9 @@ sendDriverOffer ::
     CacheFlow m r,
     EsqDBFlow m r,
     CoreMetrics m,
-    HasPrettyLogger m r
+    HasPrettyLogger m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DM.Merchant ->
   DSR.SearchRequest ->
@@ -496,7 +498,9 @@ sendDriverArrivalUpdateToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -519,7 +523,7 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
       driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
   driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking driverArrivedBuildReq
-  void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig
+  void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
 
 sendStopArrivalUpdateToBAP ::
   ( CacheFlow m r,
@@ -528,7 +532,9 @@ sendStopArrivalUpdateToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -549,7 +555,7 @@ sendStopArrivalUpdateToBAP booking ride driver vehicle = do
         stopArrivedBuildReq = ACL.StopArrivedBuildReq ACL.DStopArrivedBuildReq {..}
     stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking stopArrivedBuildReq
     retryConfig <- asks (.shortDurationRetryCfg)
-    void $ callOnUpdateV2 stopArrivedMsgV2 retryConfig
+    void $ callOnUpdateV2 stopArrivedMsgV2 retryConfig merchant.id
 
 sendNewMessageToBAP ::
   ( CacheFlow m r,
@@ -558,7 +564,9 @@ sendNewMessageToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -582,7 +590,7 @@ sendNewMessageToBAP booking ride message = do
         newMessageBuildReq = ACL.NewMessageBuildReq ACL.DNewMessageReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     newMessageMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking newMessageBuildReq
-    void $ callOnUpdateV2 newMessageMsgV2 retryConfig
+    void $ callOnUpdateV2 newMessageMsgV2 retryConfig merchant.id
 
 sendSafetyAlertToBAP ::
   ( CacheFlow m r,
@@ -591,7 +599,9 @@ sendSafetyAlertToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -616,7 +626,7 @@ sendSafetyAlertToBAP booking ride reason driver vehicle = do
 
     retryConfig <- asks (.shortDurationRetryCfg)
     safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking safetyAlertBuildReq
-    void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig
+    void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig merchant.id
 
 sendEstimateRepetitionUpdateToBAP ::
   ( CacheFlow m r,
@@ -625,7 +635,9 @@ sendEstimateRepetitionUpdateToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -649,6 +661,31 @@ sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource dri
     let bookingDetails = ACL.BookingDetails {..}
         estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq ACL.DEstimateRepetitionReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
-
     estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking estimateRepetitionBuildReq
-    void $ callOnUpdateV2 estimateRepMsgV2 retryConfig
+    void $ callOnUpdateV2 estimateRepMsgV2 retryConfig merchant.id
+
+callBecknAPIWithSignature' ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    IsBecknAPI api req res,
+    SanitizedUrl api,
+    ToJSON req,
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    EsqDBFlow m r
+  ) =>
+  Id Merchant.Merchant ->
+  Text ->
+  Text ->
+  Proxy api ->
+  BaseUrl ->
+  HMS.HashMap BaseUrl BaseUrl ->
+  req ->
+  m res
+callBecknAPIWithSignature' merchantId a b c d e req' = do
+  fork ("sending " <> show b <> ", pushing ondc logs") do
+    ondcTokenHashMap <- asks (.ondcTokenHashMap)
+    let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup merchantId.getId ondcTokenHashMap
+    void $ pushLogs b (toJSON req') tokenConfig
+  Beckn.callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'

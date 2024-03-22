@@ -21,6 +21,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified Beckn.Types.Core.Taxi.API.Status as Status
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified Data.HashMap.Strict as HMS
 import qualified Domain.Action.Beckn.Status as DStatus
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -32,6 +33,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -54,11 +57,15 @@ status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
     let context = reqV2.statusReqContext
     callbackUrl <- Utils.getContextBapUri context
     dStatusRes <- DStatus.handler transporterId dStatusReq
+    fork "status received pushing ondc logs" do
+      ondcTokenHashMap <- asks (.ondcTokenHashMap)
+      let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup dStatusRes.booking.providerId.getId ondcTokenHashMap
+      void $ pushLogs "status" (toJSON reqV2) tokenConfig
     internalEndPointHashMap <- asks (.internalEndPointHashMap)
     msgId <- Utils.getMessageId context
-    onStautusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info (Just msgId)
-    Callback.withCallback dStatusRes.transporter "STATUS" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStautusReq.onStatusReqContext) $
-      pure onStautusReq
+    onStatusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info (Just msgId)
+    Callback.withCallback dStatusRes.transporter "on_status" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStatusReq.onStatusReqContext) $
+      pure onStatusReq
 
 errHandler :: Spec.Context -> BecknAPIError -> Spec.OnStatusReq
 errHandler context (BecknAPIError err) =

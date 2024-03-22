@@ -52,8 +52,10 @@ import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Streaming.Kafka.Topic.PublicTransportQuoteList
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (objectWithSingleFieldParsing)
@@ -70,7 +72,6 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
-import Tools.Error
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
 
@@ -178,7 +179,7 @@ instance ToSchema OfferRes where
 estimateBuildLockKey :: Text -> Text
 estimateBuildLockKey searchReqid = "Customer:Estimate:Build:" <> searchReqid
 
-getQuotes :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
+getQuotes :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)]) => Id SSR.SearchRequest -> m GetQuotesRes
 getQuotes searchRequestId = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   activeBooking <- runInReplica $ QBooking.findLatestByRiderId searchRequest.riderId
@@ -198,7 +199,7 @@ getQuotes searchRequestId = do
           paymentMethods
         }
 
-processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => Booking -> CancellationStage -> m ()
+processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)]) => Booking -> CancellationStage -> m ()
 processActiveBooking booking cancellationStage = do
   mbRide <- QRide.findActiveByRBId booking.id
   case mbRide of
@@ -215,7 +216,7 @@ processActiveBooking booking cancellationStage = do
                   }
           fork "active booking processing" $ do
             dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-            void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+            void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
         else throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
 
 isRentalOrInterCity :: DBooking.BookingDetails -> Bool

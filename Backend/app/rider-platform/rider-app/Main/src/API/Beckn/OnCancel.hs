@@ -19,6 +19,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnCancel as OnCancel
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnCancel as DOnCancel
 import Environment
@@ -28,6 +29,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import Tools.Error
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 type API = OnCancel.OnCancelAPIV2
 
@@ -58,8 +61,12 @@ onCancel _ req = withFlowHandlerBecknAPI do
             fork "on cancel processing" $ do
               Redis.whenWithLockRedis (onCancelProcessingLockKey messageId) 60 $ do
                 DOnCancel.onCancel validatedOnCancelReq
-        pure Ack
+                fork "on cancel received pushing ondc logs" do
+                  ondcTokenHashMap <- asks (.ondcTokenHashMap)
+                  let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HM.lookup validatedOnCancelReq.booking.merchantId.getId ondcTokenHashMap
+                  void $ pushLogs "on_cancel" (toJSON req) tokenConfig
       _ -> throwError . InvalidBecknSchema $ "on_cancel order.status expected:-CANCELLED, received:-" <> cancelStatus'
+  pure Ack
 
 onCancelLockKey :: Text -> Text
 onCancelLockKey id = "Customer:OnCancel:MessageId-" <> id

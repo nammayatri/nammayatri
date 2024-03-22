@@ -15,27 +15,34 @@
 
 module Beckn.OnDemand.Utils.Callback where
 
+import Data.HashMap.Strict as HMS
 import Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding ((.~))
 import qualified EulerHS.Types as ET
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.SignatureAuth
 import Servant.Client
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 withCallback ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions],
     HasShortDurationRetryCfg r c,
     CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]
   ) =>
   DM.Merchant ->
   WithBecknCallback api callback_success m
 withCallback = withCallback' withShortRetry
 
 withCallback' ::
+  (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]) =>
   (m () -> m ()) ->
   (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, CacheFlow m r) =>
   DM.Merchant ->
@@ -43,6 +50,11 @@ withCallback' ::
 withCallback' doWithCallback transporter action api cbUrl internalEndPointHashMap fromError f = do
   let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
+  fork ("sending " <> show action <> ", pushing ondc logs") do
+    ondcTokenHashMap <- asks (.ondcTokenHashMap)
+    let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup transporter.id.getId ondcTokenHashMap
+    req <- f
+    void $ pushLogs action (toJSON req) tokenConfig
   withBecknCallback doWithCallback (Just $ ET.ManagerSelector authKey) action api cbUrl internalEndPointHashMap fromError f
 
 type Action = Text
@@ -53,7 +65,8 @@ type WithBecknCallback api callback_result m =
     CoreMetrics m,
     HasClient ET.EulerClient api,
     Client ET.EulerClient api
-      ~ (callback_result -> ET.EulerClient AckResponse)
+      ~ (callback_result -> ET.EulerClient AckResponse),
+    ToJSON callback_result
   ) =>
   Action ->
   Proxy api ->

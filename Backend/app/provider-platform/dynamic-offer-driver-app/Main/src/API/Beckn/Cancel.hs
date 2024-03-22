@@ -25,6 +25,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Aeson as A
+import qualified Data.HashMap.Strict as HMS
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Cancel as DCancel
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -46,6 +47,8 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.Queries.Booking as QRB
 import Tools.Error
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 type API =
   Capture "merchantId" (Id Merchant)
@@ -81,6 +84,10 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
       internalEndPointHashMap <- asks (.internalEndPointHashMap)
       merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
       booking <- QRB.findById cancelReq.bookingId >>= fromMaybeM (BookingDoesNotExist cancelReq.bookingId.getId)
+      fork "cancel received pushing ondc logs" do
+        ondcTokenHashMap <- asks (.ondcTokenHashMap)
+        let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup merchant.id.getId ondcTokenHashMap
+        void $ pushLogs "cancel" (toJSON reqV2) tokenConfig
       let onCancelBuildReq =
             OC.DBookingCancelledReqV2
               { booking = booking,
@@ -99,12 +106,12 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
               DCancel.cancel cancelReq merchant booking
               buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
               void $
-                Callback.withCallback merchant "CANCEL" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
+                Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
                   pure buildOnCancelMessageV2
         Just Enums.SOFT_CANCEL -> do
           buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
           void $
-            Callback.withCallback merchant "CANCEL" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
+            Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
               pure buildOnCancelMessageV2
         _ -> throwError $ InvalidRequest "Invalid cancel status"
     Right cancelSearchReq -> do

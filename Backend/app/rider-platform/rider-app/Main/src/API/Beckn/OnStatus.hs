@@ -18,14 +18,19 @@ import qualified Beckn.ACL.OnStatus as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
+import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.Booking as QRB
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 type API = OnStatus.OnStatusAPIV2
 
@@ -48,7 +53,12 @@ onStatus _ reqV2 = withFlowHandlerBecknAPI do
         fork "on status processing" $ do
           Redis.whenWithLockRedis (onStatusProcessngLockKey messageId) 60 $
             DOnStatus.onStatus validatedOnStatusReq
-    pure Ack
+          fork "on status received pushing ondc logs" do
+            booking <- QRB.findByBPPBookingId onStatusReq.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> onStatusReq.bppBookingId.getId)
+            ondcTokenHashMap <- asks (.ondcTokenHashMap)
+            let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HM.lookup booking.merchantId.getId ondcTokenHashMap
+            void $ pushLogs "on_status" (toJSON reqV2) tokenConfig
+  pure Ack
 
 onStatusLockKey :: Text -> Text
 onStatusLockKey id = "Customer:OnStatus:MessageId-" <> id

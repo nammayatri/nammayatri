@@ -1,6 +1,7 @@
 module SharedLogic.Booking where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashMap.Strict as HMS
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
@@ -9,6 +10,7 @@ import qualified Domain.Types.Ride as SRide
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -32,7 +34,9 @@ cancelBooking ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     LT.HasLocationService m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   Maybe DPerson.Person ->

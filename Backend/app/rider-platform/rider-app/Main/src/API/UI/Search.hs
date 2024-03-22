@@ -70,7 +70,7 @@ handler :: FlowServer API
 handler = search
 
 search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe (Id DC.Client) -> Maybe Text -> FlowHandler DSearch.SearchResp
-search (personId, _) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
   updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice
   dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice
@@ -78,7 +78,7 @@ search (personId, _) req mbBundleVersion mbClientVersion mbClientConfigVersion m
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
-    void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2
+    void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
   -- fork "search metro" . withShortRetry $ do
   --   becknMetroReq <- MetroACL.buildSearchReq dSearchRes
   --   CallBPP.searchMetro dSearchRes.gatewayUrl becknMetroReq

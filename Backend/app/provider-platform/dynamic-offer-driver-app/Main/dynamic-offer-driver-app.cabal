@@ -799,6 +799,7 @@ library
     , esqueleto
     , euler-hs
     , exceptions
+    , external
     , extra
     , generic-lens
     , geohash ==1.0.1

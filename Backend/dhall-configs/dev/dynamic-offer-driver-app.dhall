@@ -343,4 +343,5 @@ in  { esqDBCfg
     , superPositionConfig
     , maxStraightLineRectificationThreshold = +800
     , singleBatchProcessingTempDelay = +2
+    , ondcTokenMap = sec.ondcTokenMap
     }
