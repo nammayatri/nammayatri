@@ -19,6 +19,7 @@ import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import BecknV2.Utils
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -39,6 +40,9 @@ import qualified SharedLogic.FarePolicy as SFP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Tools.TransactionLogs
+import TransactionLogs.Interface
+import TransactionLogs.Interface.Types
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -98,6 +102,11 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
       let vehicleCategory = Utils.mapVariantToVehicle dConfirmRes.vehicleVariant
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+      fork "confirm received pushing ondc logs" do
+        let kafkaLog = TransactionLog "confirm" $ Req reqV2.confirmReqContext (toJSON reqV2.confirmReqMessage)
+        pushBecknLogToKafka kafkaLog
+        let transactionLog = TransactionLogReq "confirm" $ ReqLog (toJSON reqV2.confirmReqContext) (maskSensitiveData $ toJSON reqV2.confirmReqMessage)
+        void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dConfirmRes.booking.quoteId
       let pricing = Utils.convertBookingToPricing dConfirmRes.booking
           onConfirmMessage = ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig mbFarePolicy

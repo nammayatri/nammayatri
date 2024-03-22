@@ -41,6 +41,9 @@ import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.FarePolicy as SFP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import Tools.TransactionLogs
+import TransactionLogs.Interface
+import TransactionLogs.Interface.Types
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -84,6 +87,11 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
           internalEndPointHashMap <- asks (.internalEndPointHashMap)
           let vehicleCategory = Utils.mapVariantToVehicle dInitRes.booking.vehicleVariant
           bppConfig <- QBC.findByMerchantIdDomainAndVehicle dInitRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+          fork "init received pushing ondc logs" do
+            let kafkaLog = TransactionLog "init" $ Req reqV2.initReqContext (toJSON reqV2.initReqMessage)
+            pushBecknLogToKafka kafkaLog
+            let transactionLog = TransactionLogReq "init" $ ReqLog (toJSON reqV2.initReqContext) (maskSensitiveData $ toJSON reqV2.initReqMessage)
+            void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
           ttlInInt <- bppConfig.onInitTTLSec & fromMaybeM (InternalError "Invalid ttl")
           let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
               ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
@@ -92,6 +100,11 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
             Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
               mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dInitRes.booking.quoteId
               let onInitMessage = ACL.mkOnInitMessageV2 dInitRes bppConfig mbFarePolicy
+              fork "sending on init, pushing ondc logs" do
+                let kafkaLog = TransactionLog "on_init" $ Req reqV2.initReqContext (toJSON reqV2.initReqMessage)
+                pushBecknLogToKafka kafkaLog
+                let transactionLog = TransactionLogReq "on_init" $ ReqLog (toJSON context) (maskSensitiveData $ toJSON (Just onInitMessage))
+                void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
               pure $
                 Spec.OnInitReq
                   { onInitReqContext = context,

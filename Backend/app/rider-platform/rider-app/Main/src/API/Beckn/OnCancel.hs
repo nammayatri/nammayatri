@@ -19,6 +19,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnCancel as OnCancel
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import BecknV2.Utils
 import qualified Domain.Action.Beckn.OnCancel as DOnCancel
 import Environment
 import Kernel.Prelude
@@ -26,7 +27,11 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import Tools.Error
+import Tools.TransactionLogs
+import TransactionLogs.Interface
+import TransactionLogs.Interface.Types
 
 type API = OnCancel.OnCancelAPIV2
 
@@ -55,6 +60,12 @@ onCancel _ req = withFlowHandlerBecknAPI do
         fork "on cancel processing" $ do
           Redis.whenWithLockRedis (onCancelProcessingLockKey messageId) 60 $
             DOnCancel.onCancel validatedOnCancelReq
+        fork "on cancel received pushing ondc logs" do
+          let kafkaLog = TransactionLog "on_cancel" $ Req req.onCancelReqContext (toJSON req.onCancelReqMessage)
+          pushBecknLogToKafka kafkaLog
+          let transactionLog = TransactionLogReq "on_cancel" $ ReqLog (toJSON req.onCancelReqContext) (maskSensitiveData $ toJSON req.onCancelReqMessage)
+          becknConfig <- QBC.findByMerchantIdDomainAndVehicle validatedOnCancelReq.booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle validatedOnCancelReq.booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+          void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
   pure Ack
 
 onCancelLockKey :: Text -> Text

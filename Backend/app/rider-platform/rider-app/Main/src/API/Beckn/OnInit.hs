@@ -17,9 +17,11 @@ module API.Beckn.OnInit (API, handler) where
 import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnInit as TaxiACL
+import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified BecknV2.OnDemand.Utils.Common as Common
+import BecknV2.Utils
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.UI.Cancel as DCancel
 import Domain.Types.CancellationReason
@@ -32,6 +34,10 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import Tools.TransactionLogs
+import TransactionLogs.Interface
+import TransactionLogs.Interface.Types
 
 type API = OnInit.OnInitAPIV2
 
@@ -50,8 +56,20 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
       Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $
         fork "oninit request processing" $ do
           (onInitRes, booking) <- DOnInit.onInit onInitReq
-          handle (errHandler booking) . void . withShortRetry $
-            CallBPP.confirmV2 onInitRes.bppUrl =<< ACL.buildConfirmReqV2 onInitRes
+          becknConfig <- QBC.findByMerchantIdDomainAndVehicle onInitRes.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle onInitRes.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+          fork "on init received pushing ondc logs" do
+            let kafkaLog = TransactionLog "on_init" $ Req reqV2.onInitReqContext (toJSON reqV2.onInitReqMessage)
+            pushBecknLogToKafka kafkaLog
+            let transactionLog = TransactionLogReq "on_init" $ ReqLog (toJSON reqV2.onInitReqContext) (maskSensitiveData $ toJSON reqV2.onInitReqMessage)
+            void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
+          handle (errHandler booking) . void . withShortRetry $ do
+            confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
+            fork "sending confirm, pushing ondc logs" do
+              let kafkaLog = TransactionLog "confirm" $ Req confirmBecknReq.confirmReqContext (toJSON confirmBecknReq.confirmReqMessage)
+              pushBecknLogToKafka kafkaLog
+              let transactionLog = TransactionLogReq "confirm" $ ReqLog (toJSON confirmBecknReq.confirmReqContext) (maskSensitiveData $ toJSON confirmBecknReq.confirmReqMessage)
+              void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
+            CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq
     pure Ack
   where
     errHandler booking exc

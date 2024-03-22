@@ -19,6 +19,8 @@ module Domain.Action.Dashboard.Booking
 where
 
 import Beckn.ACL.Status
+import qualified Beckn.OnDemand.Utils.Common as Utils
+import BecknV2.Utils
 import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import Data.Coerce (coerce)
 import qualified Domain.Types.Booking as DBooking
@@ -36,12 +38,16 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import Tools.TransactionLogs
+import TransactionLogs.Interface
+import TransactionLogs.Interface.Types
 
 ---------------------------------------------------------------------
 
@@ -136,7 +142,7 @@ bookingSync merchant merchantOpCityId reqBookingId = do
   let merchantOperatingCityId = booking.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= ((.city) <$>) . fromMaybeM (MerchantOperatingCityDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   mbRide <- B.runInReplica $ QRide.findActiveByRBId bookingId
-  case mbRide of
+  updBooking <- case mbRide of
     Just ride -> do
       let bookingNewStatus = case ride.status of
             DRide.NEW -> DBooking.TRIP_ASSIGNED
@@ -147,21 +153,18 @@ bookingSync merchant merchantOpCityId reqBookingId = do
         let cancellationReason = mkBookingCancellationReason merchant.id Common.syncBookingCode (Just ride.id) bookingId
         QBooking.updateStatus bookingId bookingNewStatus
         when (bookingNewStatus == DBooking.CANCELLED) $ QBCR.upsert cancellationReason
-      let updBooking = booking{status = bookingNewStatus}
-      let dStatusReq = DStatusReq {booking = updBooking, merchant, city}
-      isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-      if isBecknSpecVersion2
-        then do
-          becknStatusReq <- buildStatusReqV2 dStatusReq
-          void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq
-        else do
-          becknStatusReq <- buildStatusReq dStatusReq
-          void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
+      return booking{status = bookingNewStatus}
     Nothing -> do
       let cancellationReason = mkBookingCancellationReason merchant.id Common.syncBookingCodeWithNoRide Nothing bookingId
       QBooking.updateStatus bookingId DBooking.CANCELLED
       QBCR.upsert cancellationReason
-      let updBooking = booking{status = DBooking.CANCELLED}
-      let dStatusReq = DStatusReq {booking = updBooking, merchant, city}
-      becknStatusReq <- buildStatusReq dStatusReq
-      void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
+      return booking{status = DBooking.CANCELLED}
+  let dStatusReq = DStatusReq {booking = updBooking, merchant, city}
+  becknStatusReq <- buildStatusReqV2 dStatusReq
+  fork "sending status, pushing ondc logs" do
+    let kafkaLog = TransactionLog "status" $ Req becknStatusReq.statusReqContext (toJSON becknStatusReq.statusReqMessage)
+    pushBecknLogToKafka kafkaLog
+    let transactionLog = TransactionLogReq "status" $ ReqLog (toJSON becknStatusReq.statusReqContext) (maskSensitiveData $ toJSON becknStatusReq.statusReqMessage)
+    becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+    void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
+  void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq

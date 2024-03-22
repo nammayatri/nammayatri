@@ -57,6 +57,8 @@ updateByPrimaryKey (Domain.Types.BecknConfig.BecknConfig {..}) = do
       Se.Set Beam.domain domain,
       Se.Set Beam.gatewayUrl (Kernel.Prelude.showBaseUrl gatewayUrl),
       Se.Set Beam.initTTLSec initTTLSec,
+      Se.Set Beam.logsToken logsToken,
+      Se.Set Beam.logsUrl $ Kernel.Prelude.showBaseUrl logsUrl,
       Se.Set Beam.paymentParamsJson paymentParamsJson,
       Se.Set Beam.registryUrl (Kernel.Prelude.showBaseUrl registryUrl),
       Se.Set Beam.searchTTLSec searchTTLSec,
@@ -78,6 +80,7 @@ updateByPrimaryKey (Domain.Types.BecknConfig.BecknConfig {..}) = do
 instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   fromTType' (Beam.BecknConfigT {..}) = do
     gatewayUrl' <- Kernel.Prelude.parseBaseUrl gatewayUrl
+    logsUrl' <- Kernel.Prelude.parseBaseUrl logsUrl
     registryUrl' <- Kernel.Prelude.parseBaseUrl registryUrl
     staticTermsUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) staticTermsUrl
     subscriberUrl' <- Kernel.Prelude.parseBaseUrl subscriberUrl
@@ -93,6 +96,8 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
             gatewayUrl = gatewayUrl',
             id = Kernel.Types.Id.Id id,
             initTTLSec = initTTLSec,
+            logsToken = logsToken,
+            logsUrl = logsUrl',
             paymentParamsJson = paymentParamsJson,
             registryUrl = registryUrl',
             searchTTLSec = searchTTLSec,
@@ -122,6 +127,8 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
         Beam.gatewayUrl = Kernel.Prelude.showBaseUrl gatewayUrl,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.initTTLSec = initTTLSec,
+        Beam.logsToken = logsToken,
+        Beam.logsUrl = Kernel.Prelude.showBaseUrl logsUrl,
         Beam.paymentParamsJson = paymentParamsJson,
         Beam.registryUrl = Kernel.Prelude.showBaseUrl registryUrl,
         Beam.searchTTLSec = searchTTLSec,

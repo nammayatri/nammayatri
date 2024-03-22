@@ -27,6 +27,7 @@ module Domain.Action.Beckn.OnUpdate
     NewMessageReq (..),
     SafetyAlertReq (..),
     StopArrivedReq (..),
+    ValidatedOnUpdateReq (..),
   )
 where
 

@@ -18,46 +18,51 @@ import qualified Beckn.ACL.OnStatus as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified BecknV2.OnDemand.Utils.Common as Utils
-import qualified Data.Aeson as A
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
+import BecknV2.Utils
 import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import Environment
-import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
+import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
-import Tools.Error
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.Queries.Booking as QRB
+import Tools.TransactionLogs
+import TransactionLogs.Interface
+import TransactionLogs.Interface.Types
 
-type API = OnStatus.OnStatusAPI
+type API = OnStatus.OnStatusAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onStatus
 
 onStatus ::
   SignatureAuthResult ->
-  -- OnStatus.OnStatusReq ->
-  ByteString ->
+  OnStatus.OnStatusReqV2 ->
   FlowHandler AckResponse
-onStatus _ reqBS = withFlowHandlerBecknAPI do
-  req <- decodeReq reqBS
-  (mbDOnStatusReq, messageId) <- case req of
-    Right reqV2 -> do
-      transactionId <- Utils.getTransactionId reqV2.onStatusReqContext
-      messageId <- Utils.getMessageIdText reqV2.onStatusReqContext
-      onStatusReq <- Utils.withTransactionIdLogTag transactionId $ ACL.buildOnStatusReqV2 reqV2
-      return (onStatusReq, messageId)
-    Left reqV1 ->
-      throwError $ InvalidRequest $ "On Status v1 req shouldn't come" <> show reqV1
-  whenJust mbDOnStatusReq $ \onStatusReq ->
-    Redis.whenWithLockRedis (onStatusLockKey messageId) 60 $ do
-      validatedOnStatusReq <- DOnStatus.validateRequest onStatusReq
-      fork "on update processing" $ do
-        Redis.whenWithLockRedis (onStatusProcessngLockKey messageId) 60 $
-          DOnStatus.onStatus validatedOnStatusReq
+onStatus _ reqV2 = withFlowHandlerBecknAPI do
+  transactionId <- Utils.getTransactionId reqV2.onStatusReqContext
+  Utils.withTransactionIdLogTag transactionId $ do
+    messageId <- Utils.getMessageIdText reqV2.onStatusReqContext
+    mbDOnStatusReq <- ACL.buildOnStatusReqV2 reqV2
+    whenJust mbDOnStatusReq $ \onStatusReq ->
+      Redis.whenWithLockRedis (onStatusLockKey messageId) 60 $ do
+        validatedOnStatusReq <- DOnStatus.validateRequest onStatusReq
+        fork "on update processing" $ do
+          Redis.whenWithLockRedis (onStatusProcessngLockKey messageId) 60 $
+            DOnStatus.onStatus validatedOnStatusReq
+        fork "on status received pushing ondc logs" do
+          let kafkaLog = TransactionLog "on_status" $ Req reqV2.onStatusReqContext (toJSON reqV2.onStatusReqMessage)
+          pushBecknLogToKafka kafkaLog
+          (variant, merchantId) <- do
+            booking <- QRB.findByBPPBookingId onStatusReq.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> onStatusReq.bppBookingId.getId)
+            return (booking.vehicleVariant, booking.merchantId)
+          let transactionLog = TransactionLogReq "on_status" $ ReqLog (toJSON reqV2.onStatusReqContext) (maskSensitiveData $ toJSON reqV2.onStatusReqMessage)
+          becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchantId "MOBILITY" (Utils.mapVariantToVehicle variant) >>= fromMaybeM (InternalError "Beckn Config not found")
+          void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
   pure Ack
 
 onStatusLockKey :: Text -> Text
@@ -65,12 +70,3 @@ onStatusLockKey id = "Customer:OnStatus:MessageId-" <> id
 
 onStatusProcessngLockKey :: Text -> Text
 onStatusProcessngLockKey id = "Customer:OnStatus:Processing:MessageId-" <> id
-
-decodeReq :: MonadFlow m => ByteString -> m (Either OnStatus.OnStatusReq OnStatus.OnStatusReqV2)
-decodeReq reqBS =
-  case A.eitherDecodeStrict reqBS of
-    Right reqV1 -> pure $ Left reqV1
-    Left _ ->
-      case A.eitherDecodeStrict reqBS of
-        Right reqV2 -> pure $ Right reqV2
-        Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS

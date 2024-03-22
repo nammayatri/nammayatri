@@ -295,6 +295,7 @@ library
     , record-dot-preprocessor
     , record-hasfield
     , regex-applicative
+    , regex-posix
     , relude
     , resource-pool
     , resourcet

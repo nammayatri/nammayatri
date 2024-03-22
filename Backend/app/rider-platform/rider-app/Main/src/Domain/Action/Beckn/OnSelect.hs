@@ -18,6 +18,8 @@ module Domain.Action.Beckn.OnSelect
 where
 
 import qualified Beckn.ACL.Init as ACL
+import qualified Beckn.OnDemand.Utils.Common as UCommon
+import BecknV2.Utils
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
@@ -38,6 +40,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Confirm as SConfirm
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Estimate as QEstimate
@@ -47,6 +50,9 @@ import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
+import Tools.TransactionLogs
+import TransactionLogs.Interface
+import TransactionLogs.Interface.Types
 
 data DOnSelectReq = DOnSelectReq
   { bppEstimateId :: Id DEstimate.BPPEstimate,
@@ -113,7 +119,13 @@ onSelect OnSelectValidatedReq {..} = do
           let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quoteId = autoAssignQuote.id, paymentMethodId = searchRequest.selectedPaymentMethodId}
           dConfirmRes <- SConfirm.confirm dConfirmReq
           becknInitReq <- ACL.buildInitReqV2 dConfirmRes
-          handle (errHandler dConfirmRes.booking) $
+          handle (errHandler dConfirmRes.booking) $ do
+            fork "sending init, pushing ondc logs" do
+              let kafkaLog = TransactionLog "init" $ Req becknInitReq.initReqContext (toJSON becknInitReq.initReqMessage)
+              pushBecknLogToKafka kafkaLog
+              let transactionLog = TransactionLogReq "init" $ ReqLog (toJSON becknInitReq.initReqContext) (maskSensitiveData $ toJSON becknInitReq.initReqMessage)
+              becknConfig <- QBC.findByMerchantIdDomainAndVehicle searchRequest.merchantId "MOBILITY" (UCommon.mapVariantToVehicle autoAssignQuote.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+              void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
             void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq
         Nothing -> do
           bppDetails <- forM ((.providerId) <$> quotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))

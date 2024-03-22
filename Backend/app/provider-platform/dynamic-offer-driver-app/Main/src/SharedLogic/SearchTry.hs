@@ -29,6 +29,7 @@ import qualified Domain.Types.Vehicle as DVeh
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -92,7 +93,8 @@ initiateDriverSearchBatch ::
     HasField "isBecknSpecVersion2" r Bool,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   (DriverPoolConfig -> DSR.SearchRequest -> DST.SearchTry -> DM.Merchant -> Maybe DFP.DriverExtraFeeBounds -> Maybe Money -> GoHomeConfig -> m (ExecutionResult, PoolType, Maybe Seconds)) ->
   DM.Merchant ->

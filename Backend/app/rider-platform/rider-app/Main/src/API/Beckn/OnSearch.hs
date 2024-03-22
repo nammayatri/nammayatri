@@ -18,14 +18,21 @@ import qualified Beckn.ACL.OnSearch as TaxiACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import BecknV2.Utils
 import Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
+import Domain.Types.BecknConfig
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import Tools.TransactionLogs
+import TransactionLogs.Interface
+import TransactionLogs.Interface.Types
 
 type API = OnSearch.OnSearchAPIV2
 
@@ -46,6 +53,12 @@ onSearch _ reqV2 = withFlowHandlerBecknAPI do
     whenJust mbDOnSearchReq $ \request -> do
       Redis.whenWithLockRedis (onSearchLockKey messageId) 60 $ do
         validatedRequest <- DOnSearch.validateRequest request
+        fork "on search received pushing ondc logs" do
+          let kafkaLog = TransactionLog "on_search" $ Req reqV2.onSearchReqContext (toJSON reqV2.onSearchReqMessage)
+          pushBecknLogToKafka kafkaLog
+          let transactionLog = TransactionLogReq "on_search" $ ReqLog (toJSON reqV2.onSearchReqContext) (maskSensitiveData $ toJSON reqV2.onSearchReqMessage)
+          becknConfig <- QBC.findByMerchantIdDomainAndVehicle validatedRequest.merchant.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError "Beckn Config not found")
+          void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
         fork "on search processing" $ do
           Redis.whenWithLockRedis (onSearchProcessingLockKey messageId) 60 $
             DOnSearch.onSearch messageId validatedRequest
