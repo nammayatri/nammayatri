@@ -43,7 +43,8 @@ getFollowRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Log m)
 getFollowRide (mbPersonId, _) = do
   id <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   emContacts <- PDEN.findAllByContactPersonId id
-  let follwingEmContacts = filter (\contact -> contact.enableForFollowing || contact.enableForShareRide) emContacts
+  followList <- CQFollowRide.getFollowRideCounter id
+  let followingEmContacts = filter (\contact -> contact.personId.getId `elem` followList) emContacts
   foldlM
     ( \acc contact -> do
         mbPerson <- QPerson.findById contact.personId
@@ -59,7 +60,7 @@ getFollowRide (mbPersonId, _) = do
                 pure $ acc <> [follower]
     )
     []
-    follwingEmContacts
+    followingEmContacts
 
 buildFollower :: Maybe Text -> Maybe Text -> Id Booking -> Int -> Followers
 buildFollower phoneNo name bookingId priority =
@@ -75,7 +76,6 @@ postShareRide (mbPersonId, merchantId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   emergencyContacts <- DAP.getDefaultEmergencyNumbers (personId, merchantId)
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound person.merchantOperatingCityId.getId)
   mapM_
     ( \emergencyContact ->
         when (emergencyContact.mobileNumber `elem` req.emergencyContactNumbers) $ do
@@ -83,7 +83,7 @@ postShareRide (mbPersonId, merchantId) req = do
             Nothing -> pure ()
             Just id -> do
               emergencyContactEntity <- QPerson.findById id >>= fromMaybeM (PersonDoesNotExist id.getId)
-              updateFollowDetails emergencyContactEntity emergencyContact riderConfig
+              updateFollowDetails emergencyContactEntity emergencyContact
               dbHash <- getDbHash emergencyContact.mobileNumber
               PDEN.updateShareRide dbHash personId $ Just True
               SLPEN.sendNotificationToEmergencyContact emergencyContactEntity (body person) title Notification.SHARE_RIDE
@@ -94,14 +94,7 @@ postShareRide (mbPersonId, merchantId) req = do
     title = "Ride Share"
     body person = SLP.getName person <> " has invited you to follow their ride!\nFollow along to ensure their safety."
 
-updateFollowDetails :: Person.Person -> PDEN.PersonDefaultEmergencyNumberAPIEntity -> DRC.RiderConfig -> Flow ()
-updateFollowDetails contactPersonEntity PDEN.PersonDefaultEmergencyNumberAPIEntity {..} config = do
-  now <- getLocalCurrentTime config.timeDiffFromUtc
-  let isFollowingEnabled = checkTimeConstraintForFollowRide config now
-  let shouldUpdate =
-        if isFollowingEnabled
-          then enableForFollowing
-          else enableForShareRide
-  unless shouldUpdate $ do
-    void $ CQFollowRide.incrementFollowRideCount contactPersonEntity.id
-    QPerson.updateFollowsRide contactPersonEntity.id True
+updateFollowDetails :: Person.Person -> PDEN.PersonDefaultEmergencyNumberAPIEntity -> Flow ()
+updateFollowDetails contactPersonEntity PDEN.PersonDefaultEmergencyNumberAPIEntity {..} = do
+  void $ CQFollowRide.updateFollowRideList contactPersonEntity.id personId True
+  QPerson.updateFollowsRide contactPersonEntity.id True

@@ -139,7 +139,7 @@ getPersonDetails (personId, _) = do
     Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
     _ -> return Nothing
   decPerson <- decrypt person
-  isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled decPerson
+  isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled person
   return $ Person.makePersonAPIEntity decPerson tag isSafetyCenterDisabled
 
 updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess

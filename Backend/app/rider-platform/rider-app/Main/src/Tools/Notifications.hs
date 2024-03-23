@@ -15,6 +15,7 @@
 module Tools.Notifications where
 
 import Data.Aeson (object)
+import qualified Data.List as L
 import qualified Data.Text as T
 import Data.Time hiding (secondsToNominalDiffTime)
 import qualified Domain.Types.Booking as SRB
@@ -283,8 +284,9 @@ disableFollowRide personId = do
     followingContacts
   where
     updateFollowRideCount emPersonId = do
-      count <- CQFollowRide.decrementFollowRideCount emPersonId
-      when (count <= 0) $ do
+      CQFollowRide.updateFollowRideList emPersonId personId False
+      list <- CQFollowRide.getFollowRideCounter emPersonId
+      when (L.null list) $ do
         CQFollowRide.clearFollowsRideCounter emPersonId
         Person.updateFollowsRide emPersonId False
 
@@ -737,7 +739,7 @@ notifyRideStartToEmergencyContacts booking ride = do
     else logInfo "Follow ride is not enabled"
   where
     updateFollowsRideCount emPersonId = do
-      _ <- CQFollowRide.incrementFollowRideCount emPersonId
+      void $ CQFollowRide.updateFollowRideList emPersonId booking.riderId True
       Person.updateFollowsRide emPersonId True
 
     sendFCM personId name notificationSound = do
