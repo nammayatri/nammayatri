@@ -126,7 +126,7 @@ postSosCreate (mbPersonId, merchantId) req = do
     emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
     when (shouldSendSms person) $ do
       void $ QPDEN.updateShareRideForAll personId (Just True)
-      enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers riderConfig
+      enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
       SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just message) True emergencyContacts.defaultEmergencyNumbers
   return $
     SosRes
@@ -137,15 +137,15 @@ postSosCreate (mbPersonId, merchantId) req = do
     notificationBody person_ = SLP.getName person_ <> " has initiated an SOS. Tap to follow and respond to the emergency situation"
     notificationTitle = "SOS Alert"
 
-enableFollowRideInSos :: [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> DRC.RiderConfig -> Flow ()
-enableFollowRideInSos emergencyContacts config = do
+enableFollowRideInSos :: [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Flow ()
+enableFollowRideInSos emergencyContacts = do
   mapM_
     ( \contact -> do
         case contact.contactPersonId of
           Nothing -> pure ()
           Just id -> do
             contactPersonEntity <- QP.findById id >>= fromMaybeM (PersonDoesNotExist id.getId)
-            DFR.updateFollowDetails contactPersonEntity contact config
+            DFR.updateFollowDetails contactPersonEntity contact
     )
     emergencyContacts
 
@@ -224,9 +224,8 @@ postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
     Just True -> do
       SPDEN.notifyEmergencyContacts person (notificationBody person True) notificationTitle Notification.SOS_MOCK_DRILL_NOTIFY Nothing False emergencyContacts.defaultEmergencyNumbers
       when (fromMaybe False onRide) $ do
-        riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
         void $ QPDEN.updateShareRideForAll personId (Just True)
-        enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers riderConfig
+        enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
     _ -> do
       when (not $ fromMaybe False person.hasCompletedMockSafetyDrill) $ QP.updateSafetyDrillStatus personId $ Just True
       when (fromMaybe False onRide) $ do

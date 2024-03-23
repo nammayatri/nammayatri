@@ -41,27 +41,21 @@ clearFollowsRide :: Hedis.HedisFlow m r => Id Booking -> Id Person -> m ()
 clearFollowsRide bookingId personId = do
   Hedis.del (makeFollowsRideKey bookingId personId)
 
-decrementFollowRideCount :: CacheFlow m r => Id Person -> m Integer
-decrementFollowRideCount personId = do
-  let key = makeFollowsRideCounterKey personId
-  Hedis.incr key
-
-incrementFollowRideCount :: CacheFlow m r => Id Person -> m Integer
-incrementFollowRideCount personId = do
-  let key = makeFollowsRideCounterKey personId
+updateFollowRideList :: CacheFlow m r => Id Person -> Id Person -> Bool -> m ()
+updateFollowRideList followerId userId shouldAdd = do
+  let key = makeFollowsRideListKey followerId
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  count <- Hedis.incr key
-  when (count == 1) $ Hedis.expire key expTime
-  return count
+  if shouldAdd
+    then Hedis.rPushExp key [userId.getId] expTime
+    else void $ Hedis.lrem key 0 userId.getId
 
-getFollowRideCounter :: (CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Integer)
+getFollowRideCounter :: CacheFlow m r => Id Person -> m [Text]
 getFollowRideCounter person = do
-  let key = makeFollowsRideCounterKey person
-  Hedis.safeGet key
+  Hedis.getList $ makeFollowsRideListKey person
 
-makeFollowsRideCounterKey :: Id Person -> Text
-makeFollowsRideCounterKey personId = "CachedQueries:FollowRide:Counter:PersonId:" <> personId.getId
+makeFollowsRideListKey :: Id Person -> Text
+makeFollowsRideListKey personId = "CachedQueries:FollowRide:List:PersonId:" <> personId.getId
 
 clearFollowsRideCounter :: Hedis.HedisFlow m r => Id Person -> m ()
 clearFollowsRideCounter personId = do
-  Hedis.del (makeFollowsRideCounterKey personId)
+  Hedis.del (makeFollowsRideListKey personId)
