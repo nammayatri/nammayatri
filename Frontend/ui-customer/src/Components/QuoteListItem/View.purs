@@ -31,7 +31,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, parseFloat)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, pure, show, unit, ($), (/=), (<>), (==))
@@ -127,18 +127,11 @@ driverImageView state =
         [ height $ V state.appConfig.quoteListItemConfig.vehicleHeight
         , width $ V state.appConfig.quoteListItemConfig.vehicleWidth
         , cornerRadius 20.0
-        , imageWithFallback $ fetchImage FF_ASSET $ getAutoImage state.city
+        , imageWithFallback $ fetchImage FF_ASSET $ getVehicleVariantImage $ getValueToLocalStore SELECTED_VARIANT
         , weight 1.0
         ]
       ]
   ]
-  where 
-    getAutoImage :: City -> String
-    getAutoImage city = case city of
-      Hyderabad -> "ny_ic_black_yellow_auto_quote_list"
-      Chennai -> "ny_ic_black_yellow_auto_quote_list"
-      Kochi -> "ny_ic_black_auto_quote_list"
-      _ -> "ny_ic_auto_quote_list"
 
 
 driverRatingView :: forall w . QuoteListItemState -> PrestoDOM (Effect Unit) w
