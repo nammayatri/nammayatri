@@ -143,7 +143,9 @@ config =
               registration : registrationConfig,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : true,
-                variantList : ["AutoCategory"]
+                variantList : ["AutoCategory"],
+                enableCabsSubscriptionView : false,
+                staticViewPlans : getStaticViewPlans
               },
               showEarningSection : true,
               referral : {
@@ -169,7 +171,9 @@ config =
               registration : registrationConfig,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
-                variantList : []
+                variantList : [],
+                enableCabsSubscriptionView : false,
+                staticViewPlans : getStaticViewPlans
               },
               showEarningSection : true,
               referral : {
@@ -195,7 +199,9 @@ config =
               registration : registrationConfig,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
-                variantList : []
+                variantList : [],
+                enableCabsSubscriptionView : false,
+                staticViewPlans : getStaticViewPlans
               },
               showEarningSection : true,
               referral : {
@@ -221,7 +227,9 @@ config =
               registration : registrationConfig,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
-                variantList : []
+                variantList : [],
+                enableCabsSubscriptionView : false,
+                staticViewPlans : getStaticViewPlans
               },
               showEarningSection : true,
               referral : {
@@ -246,8 +254,10 @@ config =
               vehicleNSImg : "ny_ic_auto_image_old",
               registration : registrationConfig,
               variantSubscriptionConfig : {
-                enableVariantBasedSubscription : false,
-                variantList : []
+                enableVariantBasedSubscription : true,
+                variantList : [],
+                enableCabsSubscriptionView : false,
+                staticViewPlans : getStaticViewPlans
               },
               showEarningSection : false,
               referral : {
@@ -273,7 +283,9 @@ config =
               registration : registrationConfig,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
-                variantList : []
+                variantList : [],
+                enableCabsSubscriptionView : false,
+                staticViewPlans : getStaticViewPlans
               },
               showEarningSection : true,
               referral : {
@@ -299,7 +311,9 @@ config =
               registration : registrationConfig,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
-                variantList : []
+                variantList : [],
+                enableCabsSubscriptionView : false,
+                staticViewPlans : getStaticViewPlans
               },
               showEarningSection : false,
               referral : {
@@ -325,7 +339,9 @@ config =
               registration : registrationConfig,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
-                variantList : []
+                variantList : [],
+                enableCabsSubscriptionView : false,
+                staticViewPlans : getStaticViewPlans
               },
               showEarningSection : true,
               referral : {
@@ -351,7 +367,9 @@ config =
               registration : registrationConfig,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
-                variantList : []
+                variantList : [],
+                enableCabsSubscriptionView : false,
+                staticViewPlans : getStaticViewPlans
               },
               showEarningSection : true,
               referral : {
@@ -377,7 +395,9 @@ config =
               registration : registrationConfig,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
-                variantList : []
+                variantList : [],
+                enableCabsSubscriptionView : false,
+                staticViewPlans : getStaticViewPlans
               },
               showEarningSection : false,
               referral : {
@@ -407,7 +427,9 @@ config =
               },
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
-                variantList : []
+                variantList : [],
+                enableCabsSubscriptionView : false,
+                staticViewPlans : getStaticViewPlans
               },
               showEarningSection : true,
               referral : {
@@ -528,3 +550,10 @@ registrationConfig = {
   callSupport : true,
   whatsappSupport : false
 }
+
+getStaticViewPlans :: Array CTC.StaticViewPlans
+getStaticViewPlans = [
+  {price : 45.0, frequency : "PER_DAY", variantCategory : "CarCategory", name : "DAILY_UNLIMITED", introductoryOffer : "FREE_RIDE_OFFER", showSelected : false, planDesc : "CAB_DAILY_UNLIMITED_OFFER"},
+  {price : 9.0, frequency : "PER_RIDE", variantCategory : "CarCategory", name : "DAILY_PER_RIDE", introductoryOffer : "", showSelected : false, planDesc : "CAB_DAILY_PER_RIDE_OFFER"},
+  {price : 25.0, frequency : "PER_DAY", variantCategory : "AutoCategory", name : "DAILY_UNLIMITED", introductoryOffer : "NO_CHARGES_TILL", showSelected : true, planDesc : ""}
+]

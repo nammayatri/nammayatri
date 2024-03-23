@@ -727,7 +727,7 @@ getKN stringKey =
         DAILY_UNLIMITED ->  "ದೈನಂದಿನ ಅನಿಯಮಿತ"
         DAILY_PER_RIDE ->  "ಪ್ರತಿದಿನ ಪ್ರತಿ ಸವಾರಿಗೆ"
         DAILY_UNLIMITED_PLAN_DESC ->  "ಪ್ರತಿದಿನ ಅನ್ಲಿಮಿಟೆಡ್ ರೈಡ್‌ಗಳನ್ನು ಆನಂದಿಸಿ"
-        DAILY_PER_RIDE_PLAN_DESC ->  "ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹35"
+        DAILY_PER_RIDE_PLAN_DESC price ->  "ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹"<> price 
         AUTOPAY_CANCELLED ->  "ಸ್ವಯಂ ಪಾವತಿ ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ"
         NO ->  "ಇಲ್ಲ"
         YES_CANCEL ->  "ಹೌದು, ರದ್ದುಮಾಡಿ"

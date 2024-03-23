@@ -805,7 +805,7 @@ data STR = LETS_GET_STARTED
         | DAILY_UNLIMITED
         | DAILY_PER_RIDE
         | DAILY_UNLIMITED_PLAN_DESC
-        | DAILY_PER_RIDE_PLAN_DESC
+        | DAILY_PER_RIDE_PLAN_DESC String
         | AUTOPAY_CANCELLED
         | NO
         | YES_CANCEL

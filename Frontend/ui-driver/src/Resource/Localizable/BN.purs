@@ -738,7 +738,7 @@ getBN stringKey =
         DAILY_UNLIMITED ->  "দৈনিক সীমাহীন"
         DAILY_PER_RIDE ->  "প্রতি যাত্রায় প্রতিদিন"
         DAILY_UNLIMITED_PLAN_DESC ->  "প্রতিদিন সীমাহীন রাইড উপভোগ করুন"
-        DAILY_PER_RIDE_PLAN_DESC ->  "প্রতিদিন সর্বোচ্চ ₹35 পর্যন্ত"
+        DAILY_PER_RIDE_PLAN_DESC price ->  "প্রতিদিন সর্বোচ্চ ₹"<> price <>" পর্যন্ত"
         PAY_TO_JOIN_THIS_PLAN ->  "প্ল্যানে যোগ দিতে ₹1 পে করুন"
         OFFERS_NOT_APPLICABLE ->  "সম্পূর্ণ না হলে অফার প্রযোজ্য নয়"
         PAUSED_STR ->  "বিরতি দেওয়া হয়েছে"

@@ -702,7 +702,7 @@ getML stringKey =
         DAILY_UNLIMITED ->  "ദിവസേന അൺലിമിറ്റഡ്"
         DAILY_PER_RIDE ->  "ദിവസേന ഓരോ റൈഡിനും"
         DAILY_UNLIMITED_PLAN_DESC ->  "എല്ലാ ദിവസവും പരിധിയില്ലാത്ത റൈഡുകൾ ആസ്വദിക്കൂ"
-        DAILY_PER_RIDE_PLAN_DESC ->  "പ്രതിദിനം പരമാവധി ₹35 വരെ"
+        DAILY_PER_RIDE_PLAN_DESC price ->  "പ്രതിദിനം പരമാവധി ₹"<> price <>" വരെ"
         PAY_TO_JOIN_THIS_PLAN ->  "പ്ലാനിൽ ചേരാൻ ₹1 അടയ്ക്കുക"
         OFFERS_NOT_APPLICABLE ->  "പൂർത്തിയാക്കിയില്ലെങ്കിൽ ഓഫറുകൾ ബാധകമല്ല"
         PAUSED_STR ->  "താൽക്കാലികമായി നിർത്തി"

@@ -17,7 +17,7 @@ import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAut
 import Screens.Types (OnBoardingSubscriptionScreenState)
 import Screens.Types (PlanCardConfig)
 import Services.API (ReelsResp(..), UiPlansResp(..))
-import Storage (KeyStore(..), setValueToLocalStore)
+import Storage (KeyStore(..), setValueToLocalStore, getValueToLocalStore)
 import Components.PopUpModal as PopUpModal
 import PrestoDOM.Core (getPushFn)
 import Effect.Uncurried (runEffectFn5, runEffectFn1)
@@ -29,6 +29,9 @@ import Foreign.Generic (encodeJSON)
 import Presto.Core.Types.Language.Flow (delay)
 import Data.Time.Duration (Milliseconds(..))
 import Control.Monad.Trans.Class(lift)
+import ConfigProvider (getAppConfig)
+import Helpers.Utils (getCityConfig)
+import Constants as Const
 
 instance showAction :: Show Action where
     show _ = ""
@@ -70,8 +73,10 @@ eval GoToRegisteration state = exit $ GoToRegisterationScreen state
 eval (LoadPlans plans) state = do
     let (UiPlansResp planResp) = plans
         config = state.data.subscriptionConfig
+        appConfig = getAppConfig Const.appConfig
+        cityConfig = getCityConfig appConfig.cityConfig $ getValueToLocalStore DRIVER_LOCATION
     _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "false"
-    let planList = planListTransformer plans false config 
+    let planList = planListTransformer plans false config cityConfig
     continue state { data{ plansList = planList , selectedPlanItem = (planList !! 0)}}
 eval (SelectPlan config ) state = continue state {data { selectedPlanItem = Just config }}
 eval (JoinPlanAC PrimaryButton.OnClick) state = updateAndExit state $ StartFreeTrialExit state

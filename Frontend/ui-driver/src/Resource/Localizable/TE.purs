@@ -762,7 +762,7 @@ getTE stringKey =
         DAILY_UNLIMITED -> "డైలీ అన్లిమిటెడ్"
         DAILY_PER_RIDE -> "డైలీ పర్ రైడ్"
         DAILY_UNLIMITED_PLAN_DESC -> "ప్రతిరోజూ అపరిమిత రైడ్‌లను ఆస్వాదించండి"
-        DAILY_PER_RIDE_PLAN_DESC -> "రోజుకు గరిష్టంగా ₹35 వరకు"
+        DAILY_PER_RIDE_PLAN_DESC price -> "రోజుకు గరిష్టంగా ₹"<> price <>" వరకు"
         AUTOPAY_CANCELLED -> "ఆటోపే రద్దు చేయబడింది"
         NO -> "లేదు"
         YES_CANCEL -> "అవును, రద్దు చేయి"

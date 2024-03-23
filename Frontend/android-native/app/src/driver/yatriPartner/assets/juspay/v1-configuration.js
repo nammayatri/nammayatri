@@ -159,7 +159,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
-          "variantList" : ["AutoCategory"]
+          "variantList" : ["AutoCategory"],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : []
         },
         "showEarningSection" : true,
         "referral" : {
@@ -189,7 +191,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : []
         },
         "showEarningSection" : true,
         "referral" : {
@@ -219,7 +223,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : []
         },
         "showEarningSection" : true,
         "referral" : {
@@ -249,7 +255,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : []
         },
         "showEarningSection" : true,
         "referral" : {
@@ -279,7 +287,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : []
         },
         "showEarningSection" : false,
         "referral" : {
@@ -309,7 +319,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : []
         },
         "showEarningSection" : true,
         "referral" : {
@@ -339,7 +351,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : []
         },
         "showEarningSection" : false,
         "referral" : {
@@ -368,7 +382,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : []
         },
         "showEarningSection" : true,
         "referral" : {
@@ -398,7 +414,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : []
         },
         "showEarningSection" : true,
         "referral" : {
@@ -427,7 +445,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : []
         },
         "showEarningSection" : true,
         "referral" : {
@@ -457,7 +477,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : []
         },
         "showEarningSection" : false,
         "referral" : {

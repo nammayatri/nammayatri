@@ -295,7 +295,9 @@ window.getMerchantConfig = function () {
       },
       "variantSubscriptionConfig" : {
         "enableVariantBasedSubscription" : false,
-        "variantList" : []
+        "variantList" : [],
+        "enableCabsSubscriptionView" : false,
+        "staticViewPlans" : []
       },
       "referral" : {
           "domain" : "https://www.yatrisathi.in"
