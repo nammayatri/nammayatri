@@ -521,7 +521,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
   when (subscriptionConfigs.allowDriverFeeCalcSchedule && scheduleDriverFeeCalc) $ do
     let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay endTime) (secondsToDiffTime 0))
         startTime' = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
-        endTime' = addUTCTime transporterConfig.driverPaymentCycleDuration startTime
+        endTime' = addUTCTime transporterConfig.driverPaymentCycleDuration startTime'
     case transporterConfig.driverFeeCalculationTime of
       Nothing -> pure ()
       Just dfCalcTime -> do
