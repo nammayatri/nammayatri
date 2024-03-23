@@ -757,7 +757,7 @@ getHI stringKey =
         DAILY_UNLIMITED ->  "डेली अनलिमिटेड"
         DAILY_PER_RIDE ->  "दैनिक प्रति सवारी"
         DAILY_UNLIMITED_PLAN_DESC ->  "हर दिन असीमित सवारी का आनंद लें"
-        DAILY_PER_RIDE_PLAN_DESC ->  "प्रति दिन अधिकतम ₹35 तक"
+        DAILY_PER_RIDE_PLAN_DESC price ->  "प्रति दिन अधिकतम ₹"<> price <>" तक"
         AUTOPAY_CANCELLED ->  "ऑटोपे भुगतान रद्द"
         NO ->  "नहीं"
         YES_CANCEL ->  "हां, रद्द करें"

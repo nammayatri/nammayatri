@@ -130,7 +130,19 @@ type BannerCarousalConfig = {
 
 type VariantSubscriptionConfig = {
   enableVariantBasedSubscription :: Boolean,
-  variantList :: Array String
+  variantList :: Array String,
+  enableCabsSubscriptionView :: Boolean,
+  staticViewPlans :: Array StaticViewPlans
+}
+
+type StaticViewPlans = {
+  price :: Number,
+  frequency :: String,
+  variantCategory :: String,
+  name :: String,
+  introductoryOffer :: String,
+  showSelected :: Boolean,
+  planDesc :: String
 }
 
 type GeoJson = {

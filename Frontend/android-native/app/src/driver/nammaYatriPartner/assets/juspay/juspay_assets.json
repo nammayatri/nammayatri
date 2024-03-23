@@ -461,6 +461,8 @@
       "ny_ic_no_rides_history" : true,
       "ny_ic_noida_map" : true,
       "ny_ic_ny_driver" : true,
+      "ny_ic_ny_driver_auto" : true,
+      "ny_ic_ny_driver_cab" : true,
       "ny_ic_offer_ends_tonight" : true,
       "ny_ic_offline" : true,
       "ny_ic_offline_status" : true,

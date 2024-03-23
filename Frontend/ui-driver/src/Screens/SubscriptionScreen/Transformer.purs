@@ -29,12 +29,12 @@ import Data.Int (floor, fromNumber, toNumber)
 import Data.List.Lazy (Pattern)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number.Format (fixed, toStringWith)
-import Data.String (Pattern(..), split, toLower)
+import Data.String (Pattern(..), split, toLower, null)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getFixedTwoDecimals, splitBasedOnLanguage)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import MerchantConfig.Types (SubscriptionConfig, GradientConfig)
+import MerchantConfig.Types (SubscriptionConfig, GradientConfig, AppConfig)
 import Screens.Types (KeyValType, PlanCardConfig, PromoConfig, SubscriptionScreenState, DueItem)
 import Services.API (ReelVideoThresholdConfig, ReelsResp, DriverDuesEntity(..), FeeType(..), GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Storage (getValueToLocalStore, KeyStore(..))
@@ -43,7 +43,7 @@ import RemoteConfig as RC
 import Services.API as API
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Foldable (foldl)
-
+import Common.Types.Config (CityConfig, StaticViewPlans)
 
 type PlanData = {
     title :: String,
@@ -57,7 +57,7 @@ getMultiLanguagePlanData isLocalized planData = do
     else do
         if planData.title ==  dailyUnlimited 
             then {title : getString DAILY_UNLIMITED, description : getString DAILY_UNLIMITED_PLAN_DESC}
-            else {title : getString DAILY_PER_RIDE, description : getString DAILY_PER_RIDE_PLAN_DESC} 
+            else {title : getString DAILY_PER_RIDE, description : getString $ DAILY_PER_RIDE_PLAN_DESC "35"} 
 
 getPromoConfig :: Array OfferEntity -> Array GradientConfig -> Array PromoConfig
 getPromoConfig offerEntityArr gradientConfig =
@@ -80,15 +80,15 @@ myPlanListTransformer planEntity isLocalized' subsConfig = do
     let isLocalized = fromMaybe false isLocalized'
     getPlanCardConfig planEntity isLocalized false subsConfig
 
-planListTransformer :: UiPlansResp -> Boolean -> SubscriptionConfig -> Array PlanCardConfig
-planListTransformer (UiPlansResp planResp) isIntroductory config =
+planListTransformer :: UiPlansResp -> Boolean -> SubscriptionConfig -> CityConfig -> Array PlanCardConfig
+planListTransformer (UiPlansResp planResp) isIntroductory config cityConfig =
     let planEntityArray = planResp.list
         plansplit = DA.partition (\(PlanEntity item) -> item.name == getString DAILY_UNLIMITED) planEntityArray
         sortedPlanEntityList = (plansplit.yes) <> (plansplit.no)
         isLocalized = fromMaybe false planResp.isLocalized 
     in 
     if isIntroductory 
-        then [introductoryPlanConfig config]
+        then fetchIntroductoryPlans config cityConfig
     else map (\ planEntity -> getPlanCardConfig planEntity isLocalized isIntroductory config) sortedPlanEntityList 
 
 decodeOfferDescription :: String -> String
@@ -123,10 +123,15 @@ freeRideOfferConfig lazy =
     isPaidByYatriCoins : false
     }
 
-introductoryOfferConfig :: SubscriptionConfig -> PromoConfig
-introductoryOfferConfig config = 
+introductoryOfferConfig :: SubscriptionConfig -> String -> PromoConfig
+introductoryOfferConfig config offerName = 
+    let offer = case offerName of 
+                    "FREE_RIDE_OFFER" -> getString FIRST_FREE_RIDE
+                    "NO_CHARGES_TILL" -> getVarString NO_CHARGES_TILL [splitBasedOnLanguage config.noChargesTillDate]
+                    _ -> splitBasedOnLanguage offerName 
+    in
     {  
-    title : Just $ getVarString NO_CHARGES_TILL [splitBasedOnLanguage config.noChargesTillDate],
+    title : Just offer,
     isGradient : true,
     gradient : [Color.blue600, Color.blue600],
     hasImage : true,
@@ -210,7 +215,7 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory  config =
             isSelected : false ,
             offers : (if planEntity.freeRideCount > 0 
                         then [freeRideOfferConfig Language] 
-                        else if isIntroductory then [introductoryOfferConfig config] else []) <> getPromoConfig planEntity.offers config.gradientConfig,
+                        else if isIntroductory then [introductoryOfferConfig config ""] else []) <> getPromoConfig planEntity.offers config.gradientConfig,
             priceBreakup : planEntity.planFareBreakup,
             frequency : planEntity.frequency,
             freeRideCount : planEntity.freeRideCount,
@@ -260,17 +265,19 @@ getPlanAmountConfig plan = case plan of
                             "DAILY PER RIDE" -> {value : 35.0, isFixed : false, perRide : 3.5}
                             _ ->  {value : 25.0, isFixed : true, perRide : 0.0}
 
-introductoryPlanConfig :: SubscriptionConfig -> PlanCardConfig
-introductoryPlanConfig config =  {
+introductoryPlanConfig :: SubscriptionConfig -> StaticViewPlans ->  PlanCardConfig
+introductoryPlanConfig config planConfig =  {
     id : "dummy",
-    title : getString DAILY_UNLIMITED,
-    description : "",
-    isSelected : true,
-    frequency : "PER_DAY",
+    title : getTranslatedString planConfig.name,
+    description : getTranslatedString planConfig.planDesc,
+    isSelected : false,
+    frequency : planConfig.frequency,
     freeRideCount : 0,
-    offers : [introductoryOfferConfig config],
-    priceBreakup : [PaymentBreakUp{amount: 25.0, component: "FINAL_FEE"}],
-    showOffer : true
+    offers : if null planConfig.introductoryOffer
+                then []
+                else [introductoryOfferConfig config planConfig.introductoryOffer],
+    priceBreakup : [PaymentBreakUp{amount: planConfig.price, component: "FINAL_FEE"}],
+    showOffer : not $ null planConfig.introductoryOffer
 } 
 
 transformReelsPurescriptDataToNativeData :: Array RC.ReelItem -> ReelModal
@@ -312,3 +319,23 @@ transformReelsPurescriptDataToNativeData reelsData = do
       seekEnabled : Just true
     }
   }
+
+fetchIntroductoryPlans :: SubscriptionConfig -> CityConfig -> Array PlanCardConfig
+fetchIntroductoryPlans subsConfig cityConfig = do
+    let vehicleCategory = getValueToLocalStore VEHICLE_CATEGORY
+        finalVehicleCategory = if not cityConfig.variantSubscriptionConfig.enableCabsSubscriptionView 
+                                then "AutoCategory"
+                                else
+                                    case vehicleCategory of
+                                        _ | vehicleCategory == "CarCategory" || vehicleCategory == "AutoCategory" -> vehicleCategory
+                                        _ -> "AutoCategory"
+        plans = cityConfig.variantSubscriptionConfig.staticViewPlans
+    map (\planConfig -> introductoryPlanConfig subsConfig planConfig) $ DA.filter (\planConfig -> planConfig.variantCategory == finalVehicleCategory) plans
+
+getTranslatedString :: String -> String
+getTranslatedString str = case str of
+                    "DAILY_UNLIMITED" -> getString DAILY_UNLIMITED
+                    "DAILY_PER_RIDE" -> getString DAILY_PER_RIDE
+                    "CAB_DAILY_UNLIMITED_OFFER" -> getString DAILY_UNLIMITED_PLAN_DESC
+                    "CAB_DAILY_PER_RIDE_OFFER" -> getString $ DAILY_PER_RIDE_PLAN_DESC "90"
+                    _ -> splitBasedOnLanguage str

@@ -77,6 +77,7 @@ import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
 import Locale.Utils
 import RemoteConfig (ReelItem(..))
+import Mobility.Prelude as MP
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
 screen initialState globalState =
@@ -258,13 +259,18 @@ joinPlanView push state visibility' =
           [ width $ V 116
           , height $ V 368
           , margin $ MarginTop 20
-          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_ny_driver"
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImageType
           ]
         , enjoyBenefitsView push state
         , plansBottomView push state
       ]
     ]
   ]
+  where 
+    driverImageType = 
+      if getValueToLocalStore VEHICLE_CATEGORY == "CarCategory" then "ny_ic_ny_driver_cab"
+      else if getValueToLocalStore VEHICLE_CATEGORY == "AutoCategory" then "ny_ic_ny_driver_auto"
+      else "ny_ic_ny_driver"
 
 enjoyBenefitsView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
 enjoyBenefitsView push state = 
@@ -279,7 +285,7 @@ enjoyBenefitsView push state =
         , height WRAP_CONTENT
         , orientation VERTICAL
         ][  commonTV push (getString $ GET_READY_FOR_YS_SUBSCRIPTION "GET_READY_FOR_YS_SUBSCRIPTION") Color.black800 (FontStyle.h1 TypoGraphy) 0 LEFT state.props.joinPlanProps.isIntroductory
-          , commonTV push (getString ENJOY_THESE_BENEFITS) Color.black800 (FontStyle.body4 TypoGraphy) 0 LEFT true
+          , commonTV push (getString WE_GUARANTEE_YOU) Color.black800 (FontStyle.body4 TypoGraphy) 0 LEFT true
           , linearLayout
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -390,7 +396,7 @@ plansBottomView push state =
   , alignParentBottom "true,-1"
   , cornerRadii $ Corners 20.0 true true false false
   , background Color.white900
-  , padding $ Padding 20 20 20 if length state.data.joinPlanData.allPlans == 1 then 16 else 0
+  , padding $ Padding 20 20 20 16
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -1174,7 +1180,7 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
         , cornerRadius 8.0
         ][
         linearLayout
-        [ height WRAP_CONTENT
+        ([ height WRAP_CONTENT
         , width MATCH_PARENT
         , background if isSelected && not isMyPlan && not isIntroductory then Color.blue600 else Color.white900
         , stroke $ "1," <> (if isIntroductory then Color.grey900
@@ -1184,8 +1190,10 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
         , padding $ Padding 16 12 16 (if isMyPlan then 16 else 12)
         , cornerRadius 8.0
         , orientation VERTICAL
-        , onClick push $ const $ action state
-        ][ linearLayout
+        ] <> if isIntroductory 
+               then []
+               else [onClick push $ const $ action state])
+        [ linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , gravity CENTER_VERTICAL
@@ -1193,7 +1201,7 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
           ][ textView $
               [ text state.title
               , weight 1.0
-              , color if isSelected && not isMyPlan || isIntroductory then Color.blue900 else Color.black700
+              , color if isSelected && not isMyPlan then Color.blue900 else Color.black700
               ] <> if isSelectedLangTamil then FontStyle.body17 TypoGraphy else FontStyle.body22 TypoGraphy
             , planPriceView state.priceBreakup state.frequency isSelectedLangTamil isIntroductory
             ]
@@ -1205,7 +1213,7 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
               [ text state.description
               , color Color.black600
               , weight 1.0
-              , visibility if isIntroductory then GONE else VISIBLE
+              , visibility $ MP.boolToVisibility $ not DS.null state.description
               ] <> if isSelectedLangTamil then FontStyle.body16 TypoGraphy else FontStyle.tags TypoGraphy
             , if state.showOffer && DA.length state.offers > 1 then offerCountView (DA.length state.offers) isSelected else linearLayout[visibility GONE][]
             ]
@@ -1263,7 +1271,6 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
   ]
   where cardMargin = case isMyPlan, isIntroductory of
                       true, _ -> Margin 16 13 16 0 
-                      false, true -> MarginVertical 13 16
                       _, _ -> MarginVertical 6 6
   
   

@@ -106,7 +106,9 @@ dummyCityConfig = {
                     },
                     variantSubscriptionConfig : {
                       enableVariantBasedSubscription : true,
-                      variantList : ["AutoCategory"]
+                      variantList : ["AutoCategory"],
+                      enableCabsSubscriptionView : false,
+                      staticViewPlans : []
                     },
                     showEarningSection: true,
                     referral : {

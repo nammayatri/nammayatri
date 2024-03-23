@@ -193,7 +193,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
-          "variantList" : ["AutoCategory"]
+          "variantList" : ["AutoCategory"],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -223,7 +225,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -253,7 +257,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -283,7 +289,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -312,8 +320,10 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "enableVariantBasedSubscription" : true,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : false,
         "referral" : {
@@ -343,7 +353,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -373,7 +385,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : false,
         "referral" : {
@@ -402,7 +416,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -432,7 +448,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -461,7 +479,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -491,7 +511,9 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : []
+          "variantList" : [],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : false,
         "referral" : {
@@ -522,3 +544,9 @@ window.getMerchantConfig = function () {
     }
   })
 }
+
+let staticSubscriptionConfig = [
+  {"price" : 45.0, "frequency" : "PER_DAY", "variantCategory" : "CarCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" :  "FREE_RIDE_OFFER", "showSelected" : false, "planDesc" : "CAB_DAILY_UNLIMITED_OFFER"},
+  {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "CAB_DAILY_PER_RIDE_OFFER"},
+  {"price" : 25.0, "frequency" : "PER_DAY", "variantCategory" : "AutoCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" : "NO_CHARGES_TILL", "showSelected" : true, "planDesc" : ""}
+]

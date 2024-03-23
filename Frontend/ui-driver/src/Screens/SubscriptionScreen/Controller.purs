@@ -25,7 +25,7 @@ import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC, liftFlow, ge
 import Engineering.Helpers.Utils (saveObject)
 import Foreign (unsafeToForeign)
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getDistanceBwCordinates, getFixedTwoDecimals)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getDistanceBwCordinates, getFixedTwoDecimals, getCityConfig)
 import JBridge (openUrlInApp, shareTextMessage, addReels, cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport, metaLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -37,7 +37,7 @@ import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants as Const
 import Screens (getScreen, ScreenName(..))
-import Screens.SubscriptionScreen.Transformer (transformReelsPurescriptDataToNativeData, alternatePlansTransformer, constructDues, getAutoPayDetailsList, getSelectedId, getSelectedPlan, introductoryPlanConfig, myPlanListTransformer, planListTransformer)
+import Screens.SubscriptionScreen.Transformer (transformReelsPurescriptDataToNativeData, alternatePlansTransformer, constructDues, getAutoPayDetailsList, getSelectedId, getSelectedPlan, introductoryPlanConfig, myPlanListTransformer, planListTransformer, fetchIntroductoryPlans)
 import Screens.Types (AutoPayStatus(..), KioskLocation(..), OptionsMenuState(..), PlanCardConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (ReelsResp, BankError(..), FeeType, GetCurrentPlanResp(..), KioskLocationRes(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..), LastPaymentType(..))
 import Services.Backend (getCorrespondingErrorMessage)
@@ -275,9 +275,10 @@ eval RefreshPage state = exit $ Refresh
 
 eval (LoadPlans plans) state = do
   let (UiPlansResp planResp) = plans
+      cityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
   _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "false"
   continue state {
-      data{ joinPlanData {allPlans = planListTransformer plans state.data.config.subscriptionConfig.enableIntroductoryView state.data.config.subscriptionConfig,
+      data{ joinPlanData {allPlans = planListTransformer plans state.data.config.subscriptionConfig.enableIntroductoryView state.data.config.subscriptionConfig cityConfig,
                             subscriptionStartDate = (convertUTCtoISC planResp.subscriptionStartTime "Do MMM")}},
       props{showShimmer = false, subView = JoinPlan,  
             joinPlanProps { selectedPlanItem = if (Mb.isNothing state.props.joinPlanProps.selectedPlanItem) then getSelectedPlan plans state.data.config.subscriptionConfig else state.props.joinPlanProps.selectedPlanItem}} }
@@ -393,7 +394,9 @@ eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state =
 
 -- eval (TogglePlanDescription _) state = continue state{data{myPlanData{planEntity{isSelected = not state.data.myPlanData.planEntity.isSelected}}}} --Always expended
 
-eval EnableIntroductoryView state = continue state{props{subView = JoinPlan, showShimmer = false, joinPlanProps{isIntroductory = true}}, data{joinPlanData {allPlans = [introductoryPlanConfig state.data.config.subscriptionConfig]}}}
+eval EnableIntroductoryView state = do
+  let cityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
+  continue state{props{subView = JoinPlan, showShimmer = false, joinPlanProps{isIntroductory = true}}, data{joinPlanData {allPlans = fetchIntroductoryPlans state.data.config.subscriptionConfig cityConfig}}}
 
 eval (OpenReelsView index) state = do
   void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "true"
