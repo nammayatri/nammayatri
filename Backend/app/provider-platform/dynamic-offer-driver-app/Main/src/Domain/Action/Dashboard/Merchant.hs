@@ -910,6 +910,7 @@ createMerchantOperatingCity merchantShortId city req = do
             location = Maps.LatLong req.lat req.long,
             city = req.city,
             state = req.state,
+            country = req.country,
             supportNumber = req.supportNumber <|> baseCity.supportNumber,
             language = fromMaybe baseCity.language req.primaryLanguage
           }

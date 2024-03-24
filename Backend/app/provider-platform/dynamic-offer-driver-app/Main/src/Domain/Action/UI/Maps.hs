@@ -37,6 +37,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
 import qualified Tools.Maps as Maps
 
 data AutoCompleteReq = AutoCompleteReq
@@ -122,16 +123,17 @@ convertResultsRespToPlaceNameCache resultsResp latitude longitude geoHashPrecisi
 
 autoComplete :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> AutoCompleteReq -> m Maps.AutoCompleteResp
 autoComplete merchantId merchantOpCityId AutoCompleteReq {..} = do
-  merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  merchantCity <- QMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   Maps.autoComplete
     merchantId
     merchantOpCityId
     Maps.AutoCompleteReq
-      { country = toInterfaceCountry merchant.country,
+      { country = toInterfaceCountry merchantCity.country,
         ..
       }
   where
     toInterfaceCountry = \case
       Context.India -> Maps.India
       Context.France -> Maps.France
+      Context.USA -> Maps.USA
       Context.AnyCountry -> Maps.India

@@ -44,6 +44,7 @@ import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.Person as CQP
 import Tools.Error
@@ -69,8 +70,8 @@ makeAutoCompleteKey token typeOfSearch = "Analytics-RiderApp-AutoComplete-Data" 
 
 autoComplete :: (ServiceFlow m r, EventStreamFlow m r) => (Id DP.Person, Id DMerchant.Merchant) -> AutoCompleteReq -> m Maps.AutoCompleteResp
 autoComplete (personId, merchantId) AutoCompleteReq {..} = do
-  merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
+  merchantOperatingCity <- QMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   fork "Inserting/Updating autocomplete data" $ do
     riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId
     whenJust riderConfig $ \config -> do
@@ -99,13 +100,14 @@ autoComplete (personId, merchantId) AutoCompleteReq {..} = do
     merchantId
     merchantOperatingCityId
     Maps.AutoCompleteReq
-      { country = toInterfaceCountry merchant.country,
+      { country = toInterfaceCountry merchantOperatingCity.country,
         ..
       }
   where
     toInterfaceCountry = \case
       Context.India -> Maps.India
       Context.France -> Maps.France
+      Context.USA -> Maps.USA
       Context.AnyCountry -> Maps.India
 
 getPlaceDetails :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp

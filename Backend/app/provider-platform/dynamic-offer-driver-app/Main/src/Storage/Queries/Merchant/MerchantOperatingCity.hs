@@ -65,6 +65,7 @@ instance ToTType' BeamMOC.MerchantOperatingCity MerchantOperatingCity where
         BeamMOC.merchantShortId = getShortId merchantShortId,
         BeamMOC.city = city,
         BeamMOC.state = state,
+        BeamMOC.country = country,
         BeamMOC.lat = location.lat,
         BeamMOC.lon = location.lon,
         BeamMOC.supportNumber = supportNumber,

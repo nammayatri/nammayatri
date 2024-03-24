@@ -1,6 +1,7 @@
 imports:
   City: Kernel.Types.Beckn.Context
   IndianState: Kernel.Types.Beckn.Context
+  Country: Kernel.Types.Beckn.Context
   Merchant: Domain.Types.Merchant
   ShortId: Kernel.Types.Id
 
@@ -12,6 +13,7 @@ MerchantOperatingCity:
     merchantId: Id Merchant
     merchantShortId: ShortId Merchant
     state: IndianState
+    country: Country
     city: City
     lat: Double
     long: Double
@@ -22,6 +24,7 @@ MerchantOperatingCity:
     lat: '0.0'
     long: '0.0'
     state: "'Karnataka'"
+    country: "'India'"
 
   queries:
     findById:

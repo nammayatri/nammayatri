@@ -20,11 +20,8 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.ValueAddNP.ValueAddNP] -> m ()
 createMany = traverse_ create
 
-findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Bool -> m ([Domain.Types.ValueAddNP.ValueAddNP])
-findAll enabled = do
-  findAllWithKV
-    [ Se.Is Beam.enabled $ Se.Eq enabled
-    ]
+findAll :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> m ([Domain.Types.ValueAddNP.ValueAddNP]))
+findAll enabled = do findAllWithKV [Se.Is Beam.enabled $ Se.Eq enabled]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> m (Maybe (Domain.Types.ValueAddNP.ValueAddNP))
 findByPrimaryKey subscriberId = do
