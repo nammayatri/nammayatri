@@ -306,6 +306,7 @@ createMerchantOperatingCity merchantShortId city req = do
             long = req.long,
             city = req.city,
             state = req.state,
+            country = req.country,
             createdAt = now,
             updatedAt = now
           }

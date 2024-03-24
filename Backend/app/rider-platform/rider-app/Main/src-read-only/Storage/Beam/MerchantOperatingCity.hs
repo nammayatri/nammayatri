@@ -13,15 +13,16 @@ import qualified Kernel.Types.Beckn.Context
 import Tools.Beam.UtilsTH
 
 data MerchantOperatingCityT f = MerchantOperatingCityT
-  { city :: B.C f Kernel.Types.Beckn.Context.City,
-    id :: B.C f Kernel.Prelude.Text,
-    lat :: B.C f Kernel.Prelude.Double,
-    long :: B.C f Kernel.Prelude.Double,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantShortId :: B.C f Kernel.Prelude.Text,
-    state :: B.C f Kernel.Types.Beckn.Context.IndianState,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { city :: (B.C f Kernel.Types.Beckn.Context.City),
+    country :: (B.C f Kernel.Types.Beckn.Context.Country),
+    id :: (B.C f Kernel.Prelude.Text),
+    lat :: (B.C f Kernel.Prelude.Double),
+    long :: (B.C f Kernel.Prelude.Double),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantShortId :: (B.C f Kernel.Prelude.Text),
+    state :: (B.C f Kernel.Types.Beckn.Context.IndianState),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +32,6 @@ instance B.Table MerchantOperatingCityT where
 
 type MerchantOperatingCity = MerchantOperatingCityT Identity
 
-$(enableKVPG ''MerchantOperatingCityT ['id] [])
+$(enableKVPG (''MerchantOperatingCityT) [('id)] [])
 
-$(mkTableInstances ''MerchantOperatingCityT "merchant_operating_city")
+$(mkTableInstances (''MerchantOperatingCityT) "merchant_operating_city")

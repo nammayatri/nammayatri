@@ -12,6 +12,7 @@ import qualified Tools.Beam.UtilsTH
 
 data MerchantOperatingCity = MerchantOperatingCity
   { city :: Kernel.Types.Beckn.Context.City,
+    country :: Kernel.Types.Beckn.Context.Country,
     id :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     lat :: Kernel.Prelude.Double,
     long :: Kernel.Prelude.Double,

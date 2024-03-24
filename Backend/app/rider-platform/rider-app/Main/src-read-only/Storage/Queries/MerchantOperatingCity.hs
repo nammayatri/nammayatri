@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByMerchantIdAndState ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m [Domain.Types.MerchantOperatingCity.MerchantOperatingCity])
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m ([Domain.Types.MerchantOperatingCity.MerchantOperatingCity]))
 findAllByMerchantIdAndState (Kernel.Types.Id.Id merchantId) state = do findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq merchantId, Se.Is Beam.state $ Se.Eq state]]
 
 findById ::
@@ -52,6 +52,7 @@ updateByPrimaryKey (Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.city city,
+      Se.Set Beam.country country,
       Se.Set Beam.lat lat,
       Se.Set Beam.long long,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -68,6 +69,7 @@ instance FromTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCit
       Just
         Domain.Types.MerchantOperatingCity.MerchantOperatingCity
           { city = city,
+            country = country,
             id = Kernel.Types.Id.Id id,
             lat = lat,
             long = long,
@@ -82,6 +84,7 @@ instance ToTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.
   toTType' (Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..}) = do
     Beam.MerchantOperatingCityT
       { Beam.city = city,
+        Beam.country = country,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.lat = lat,
         Beam.long = long,

@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN country text NOT NULL default 'India';

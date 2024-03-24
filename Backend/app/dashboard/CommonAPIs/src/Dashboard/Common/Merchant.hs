@@ -637,6 +637,7 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     reqContentType :: Text,
     city :: Context.City,
     state :: Context.IndianState,
+    country :: Context.Country,
     lat :: Double,
     long :: Double,
     primaryLanguage :: Maybe Language,
@@ -655,6 +656,7 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> fmap fdFileCType (lookupFile "file" form)
       <*> parseInput "city" form
       <*> parseInput "state" form
+      <*> parseInput "country" form
       <*> parseInput "lat" form
       <*> parseInput "long" form
       <*> parseMaybeInput "primaryLanguage" form
@@ -690,6 +692,7 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
   { geom :: Text,
     city :: Context.City,
     state :: Context.IndianState,
+    country :: Context.Country,
     lat :: Double,
     long :: Double,
     primaryLanguage :: Maybe Language,

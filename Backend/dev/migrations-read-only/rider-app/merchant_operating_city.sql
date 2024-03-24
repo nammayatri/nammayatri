@@ -18,3 +18,8 @@ ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN state text NOT NULL def
 
 ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN long double precision NOT NULL default 0.0;
 ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN lat double precision NOT NULL default 0.0;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN country text NOT NULL default 'India';
