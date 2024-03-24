@@ -25,6 +25,7 @@ data CityRes = CityRes
     location :: LatLong,
     supportNumber :: Maybe Text,
     language :: Language,
+    rcNumberPrefixList :: [Text],
     subscription :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
