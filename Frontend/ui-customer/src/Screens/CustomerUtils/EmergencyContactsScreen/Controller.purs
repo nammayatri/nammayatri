@@ -238,7 +238,7 @@ startsWith :: String -> String -> Boolean
 startsWith prefix str = DS.take (DS.length prefix) (DS.toLower str) == (DS.toLower prefix)
 
 findContactsWithPrefix :: String -> Array NewContacts -> Array NewContacts
-findContactsWithPrefix prefix arr = filter (\contact -> startsWith prefix contact.name) arr
+findContactsWithPrefix prefix arr = filter (\contact -> DS.contains (DS.Pattern prefix) contact.name) arr
 
 
 uniqueContacts :: Array NewContacts -> Array NewContacts -> Array NewContacts
