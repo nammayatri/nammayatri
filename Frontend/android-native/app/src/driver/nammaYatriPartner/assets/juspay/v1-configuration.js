@@ -521,6 +521,37 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       }
+      },
+      {
+        "cityName" : "Minneapolis",
+        "mapImage" : "ny_ic_minneapolis_map",
+        "cityCode" : "std:01189",
+        "showSubscriptions" : false,
+        "cityLat" : 44.977753,
+        "cityLong" : -93.2650108,
+        "supportNumber" : "+918069724848",
+        "languageKey" : "EN_US",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "registration" : {
+          "supportWAN" : "919625724848",
+          "callSupport" : true,
+          "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : false,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
       }
   ]
   , "dashboard" : {
