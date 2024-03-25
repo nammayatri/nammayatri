@@ -1,6 +1,7 @@
 module MerchantConfig.Types where
 
 import Common.Types.Config
+import Common.Types.App
 
 type AppConfig = AppConfigCustomer CommonAppConfig
 
@@ -70,6 +71,7 @@ type AppConfigCustomer a =
   , cityConfig :: Array CityConfig
   , enableSingleEstimate :: Boolean
   , driverLocationPolling :: DriverLocationPollingConfig
+  , countryCodeConfig ::  Array CountryCodeObj
   | a
   }
 

@@ -214,6 +214,7 @@ window.getMerchantConfig = function () {
     }
     , "SUPPORT_EMAIL" : "support@nammayatri.in"
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+    , "internationalNumberEnabled" : true
     , "callOptions" : ["ANONYMOUS", "DIRECT"]
     , "termsVersion" : 2.0
     , "showDisabilityBanner" : false

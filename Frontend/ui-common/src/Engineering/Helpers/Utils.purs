@@ -127,6 +127,7 @@ mobileNumberValidator _ countryShortCode mobileNumber =
           else
             Invalid
         Nothing -> ValidPrefix
+      "US" -> if len == maxLen then Valid else ValidPrefix
       _ -> Invalid
     else
       MaxLengthExceeded
@@ -136,6 +137,7 @@ mobileNumberMaxLength countryShortCode = case countryShortCode of
   "IN" -> 10
   "FR" -> 9
   "BD" -> 10
+  "US" -> 10
   _ -> 0
 
 -- Local Storage Utils
