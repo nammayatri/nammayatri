@@ -132,6 +132,8 @@ countryCodeCaptureView push config  =
     
 countryCodeOptionView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 countryCodeOptionView push config =
+  let uiConfig = getAppConfig appConfig
+  in
   PrestoAnim.animationSet
    (if EHC.os == "IOS" then
         [ Anim.fadeIn config.countryCodeField.countryCodeOptionExpanded
@@ -178,10 +180,10 @@ countryCodeOptionView push config =
             , width MATCH_PARENT
             , background config.countryCodeOptionElementConfig.lineColor
             , margin config.countryCodeOptionElementConfig.lineMargin
-            , visibility if ((length getCountryCodesObj)-1) == index  && config.countryCodeOptionElementConfig.lineVisibility then GONE else VISIBLE 
+            , visibility if ((length uiConfig.countryCodeConfig)-1) == index  && config.countryCodeOptionElementConfig.lineVisibility then GONE else VISIBLE 
             ][]
           ]
-        ) getCountryCodesObj
+        ) uiConfig.countryCodeConfig
       )
 
 
