@@ -177,7 +177,7 @@ let kvConfigUpdateFrequency = +10
 
 let appBackendBapInternal =
       { name = "APP_BACKEND"
-      , url = "https://f57b-13-232-74-226.ngrok-free.app/"
+      , url = "https://0fc0-65-1-52-128.ngrok-free.app/"
       , apiKey = sec.appBackendApikey
       , internalKey = sec.internalKey
       }
@@ -269,8 +269,10 @@ in  { esqDBCfg
     , port = +8016
     , metricsPort = +9997
     , hostName = "localhost"
-    , nwAddress = "http://localhost:8016/beckn"
-    , selfUIUrl = "http://localhost:8016/ui/"
+    , nwAddress =
+        "https://d56d-2402-3a80-8c6-80b7-3409-4ac5-5220-4449.ngrok-free.app/beckn"
+    , selfUIUrl =
+        "https://d56d-2402-3a80-8c6-80b7-3409-4ac5-5220-4449.ngrok-free.app/ui/"
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config

@@ -1,6 +1,6 @@
 -- NOTE : THIS QUERY IS ONLY FOR LOCAL DO NOT RUN IN MASTER
 UPDATE atlas_driver_offer_bpp.merchant_overlay
-SET merchant_id = 'favorit0-0000-0000-0000-00000favorit'
+SET merchant_id = '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f'
 WHERE merchant_id = '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f';
 
 -- ADDING TABLES FOR MERCHANT OPERATING CITY

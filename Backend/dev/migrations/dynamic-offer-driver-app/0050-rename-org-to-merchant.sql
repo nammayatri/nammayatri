@@ -32,7 +32,7 @@ ALTER TABLE atlas_driver_offer_bpp.merchant
 -- testing data for dev env
 UPDATE atlas_driver_offer_bpp.merchant SET
   short_id = 'NAMMA_YATRI_PARTNER'
-  WHERE subscriber_id = 'NAMMA_YATRI';
+  WHERE subscriber_id = 'api.sandbox.moving.tech/dev/dobpp/beckn/7f7896dd-787e-4a0b-8675-e9e6fe93bb8f';
 
 UPDATE atlas_driver_offer_bpp.merchant SET
   short_id = 'OTHER_MERCHANT_2'

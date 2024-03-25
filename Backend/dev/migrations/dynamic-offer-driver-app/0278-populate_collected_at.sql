@@ -1,1 +1,1 @@
-UPDATE atlas_driver_offer_bpp.driver_fee SET collected_at = updated_at WHERE status in ('CLEARED','COLLECTED_CASH','EXEMPTED') and collected_at is null and merchant_id = 'favorit0-0000-0000-0000-00000favorit'; -- YS
+UPDATE atlas_driver_offer_bpp.driver_fee SET collected_at = updated_at WHERE status in ('CLEARED','COLLECTED_CASH','EXEMPTED') and collected_at is null and merchant_id = '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f'; -- YS

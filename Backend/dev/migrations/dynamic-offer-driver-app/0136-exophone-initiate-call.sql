@@ -7,7 +7,7 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ALTER COLUMN in
 WITH MerchantCallServiceConfigs AS (
   SELECT T1.id, 'Call_Exotel', CAST ('{
    "exotelUrl":"https://api.exotel.com/",
-   "callbackUrl":"http://localhost:8016/ui/driver/ride/call/statusCallback",
+   "callbackUrl":"https://d56d-2402-3a80-8c6-80b7-3409-4ac5-5220-4449.ngrok-free.app/ui/driver/ride/call/statusCallback",
    "apiKey":"xxxxxxx",
    "apiToken":"xxxxxxx",
    "accountSID":"xxxxxxx",

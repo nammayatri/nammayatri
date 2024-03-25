@@ -4,4 +4,4 @@ UPDATE atlas_driver_offer_bpp.merchant SET exo_phones = '{"8069457995","80352729
 ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN exo_phones SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN exo_phone_country_code SET NOT NULL;
 
-ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN merchant_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.merchant (id) default 'favorit0-0000-0000-0000-00000favorit';
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN merchant_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.merchant (id) default '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f';

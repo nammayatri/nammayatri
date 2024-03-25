@@ -29,4 +29,4 @@ set plan_type = 'DEFAULT'
 where id = '25ade579-fd9c-4288-a015-337af085e66c' and plan_type = 'MANUAL';
 
 INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequency, plan_base_amount, name, description, max_amount, registration_amount, is_offer_applicable, max_credit_limit, free_ride_count, plan_type, cgst_percentage , sgst_percentage, max_mandate_amount) VALUES
-   ('25ade579-fd9c-4288-a015-337af085e66c', 'favorit0-0000-0000-0000-00000favorit', 'MANUAL', 'DAILY', 'PERRIDE_10', 'DAILY PER RIDE' , 'Up to a maximum of ₹100 per day', 100, 1, true, 350, 0, 'DEFAULT', 0.09 , 0.09, 150.0);
+   ('25ade579-fd9c-4288-a015-337af085e66c', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'MANUAL', 'DAILY', 'PERRIDE_10', 'DAILY PER RIDE' , 'Up to a maximum of ₹100 per day', 100, 1, true, 350, 0, 'DEFAULT', 0.09 , 0.09, 150.0);

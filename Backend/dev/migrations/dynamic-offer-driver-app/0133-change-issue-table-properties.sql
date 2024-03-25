@@ -36,7 +36,7 @@ UPDATE atlas_driver_offer_bpp.issue_category SET logo_url = 'https://assets.jusp
 UPDATE atlas_driver_offer_bpp.issue_category SET logo_url = 'https://assets.juspay.in/hyper/nammayatri/images/common/ic_app_related.png' WHERE id = '3c2970e3-f01a-4dc3-8a21-3b77f01497ea';
 
 -- add media file configs in transporter config table
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN media_file_url_pattern text DEFAULT 'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>' NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN media_file_url_pattern text DEFAULT 'https://d56d-2402-3a80-8c6-80b7-3409-4ac5-5220-4449.ngrok-free.app/ui/<DOMAIN>/media?filePath=<FILE_PATH>' NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN media_file_size_upper_limit int DEFAULT 10000000 NOT NULL; -- 10MB Size Limit
 
 -- make primary key size as 36 character

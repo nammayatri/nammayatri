@@ -40,13 +40,13 @@ let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let appBackend =
       { name = common.ServerName.APP_BACKEND
-      , url = "https://f57b-13-232-74-226.ngrok-free.app/"
+      , url = "https://0fc0-65-1-52-128.ngrok-free.app/"
       , token = sec.appBackendToken
       }
 
 let appBackendManagement =
       { name = common.ServerName.APP_BACKEND_MANAGEMENT
-      , url = "https://f57b-13-232-74-226.ngrok-free.app/"
+      , url = "https://0fc0-65-1-52-128.ngrok-free.app/"
       , token = sec.appBackendToken
       }
 

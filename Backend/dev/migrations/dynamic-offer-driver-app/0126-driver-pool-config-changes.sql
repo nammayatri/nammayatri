@@ -32,4 +32,4 @@ ALTER TABLE atlas_driver_offer_bpp.driver_intelligent_pool_config OWNER TO atlas
 
 INSERT INTO atlas_driver_offer_bpp.driver_intelligent_pool_config(
 	merchant_id, availability_time_weightage, acceptance_ratio_weightage, cancellation_ratio_weightage, availability_time_window_option, acceptance_ratio_window_option, cancellation_ratio_window_option, min_quotes_to_qualify_for_intelligent_pool, min_quotes_to_qualify_for_intelligent_pool_window_option, intelligent_pool_percentage, created_at, updated_at)
-	VALUES ('favorit0-0000-0000-0000-00000favorit', 70, 40, -40, '{"period":7, "periodType":"Days"}', '{"period":7, "periodType":"Days"}', '{"period":7, "periodType":"Days"}', 5, '{"period":24, "periodType":"Hours"}', 50, now(), now());
+	VALUES ('7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 70, 40, -40, '{"period":7, "periodType":"Days"}', '{"period":7, "periodType":"Days"}', '{"period":7, "periodType":"Days"}', 5, '{"period":24, "periodType":"Hours"}', 50, now(), now());

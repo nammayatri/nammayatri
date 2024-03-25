@@ -45,25 +45,27 @@ let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let driverOfferBpp =
       { name = common.ServerName.DRIVER_OFFER_BPP
-      , url = "http://localhost:8016/"
+      , url =
+          "https://d56d-2402-3a80-8c6-80b7-3409-4ac5-5220-4449.ngrok-free.app/"
       , token = sec.driverOfferBppToken
       }
 
 let driverOfferBppManagement =
       { name = common.ServerName.DRIVER_OFFER_BPP_MANAGEMENT
-      , url = "http://localhost:8016/"
+      , url =
+          "https://d56d-2402-3a80-8c6-80b7-3409-4ac5-5220-4449.ngrok-free.app/"
       , token = sec.driverOfferBppToken
       }
 
 let appBackend =
       { name = common.ServerName.APP_BACKEND
-      , url = "https://f57b-13-232-74-226.ngrok-free.app/"
+      , url = "https://0fc0-65-1-52-128.ngrok-free.app/"
       , token = sec.appBackendToken
       }
 
 let appBackendManagement =
       { name = common.ServerName.APP_BACKEND_MANAGEMENT
-      , url = "https://f57b-13-232-74-226.ngrok-free.app/"
+      , url = "https://0fc0-65-1-52-128.ngrok-free.app/"
       , token = sec.appBackendToken
       }
 
