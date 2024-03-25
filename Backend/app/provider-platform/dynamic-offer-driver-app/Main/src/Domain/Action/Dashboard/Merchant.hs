@@ -342,6 +342,12 @@ castPoolSortingType = \case
 castBatchSplitByPickupDistance :: Common.BatchSplitByPickupDistance -> DriverPool.BatchSplitByPickupDistance
 castBatchSplitByPickupDistance Common.BatchSplitByPickupDistance {..} = DriverPool.BatchSplitByPickupDistance {..}
 
+castOnRideSplitByPickupDistance :: Common.BatchSplitByPickupDistanceOnRide -> DriverPool.BatchSplitByPickupDistanceOnRide
+castOnRideSplitByPickupDistance Common.BatchSplitByPickupDistanceOnRide {..} = DriverPool.BatchSplitByPickupDistanceOnRide {..}
+
+castOnRideRadiusConfig :: Common.OnRideRadiusConfig -> DriverPool.OnRideRadiusConfig
+castOnRideRadiusConfig Common.OnRideRadiusConfig {..} = DriverPool.OnRideRadiusConfig {..}
+
 ---------------------------------------------------------------------
 driverPoolConfigCreate ::
   ShortId DM.Merchant ->
@@ -388,6 +394,9 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance vehicleVariant tr
         updatedAt = now,
         createdAt = now,
         thresholdToIgnoreActualDistanceThreshold = Nothing,
+        onRideBatchSplitConfig = map castOnRideSplitByPickupDistance onRideBatchSplitConfig,
+        onRideRadiusConfig = map castOnRideRadiusConfig onRideRadiusConfig,
+        totalBatchSize = totalBatchSize,
         ..
       }
 

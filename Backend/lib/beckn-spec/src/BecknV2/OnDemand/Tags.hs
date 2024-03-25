@@ -43,6 +43,7 @@ data TagGroup
   | RIDE_ODOMETER_DETAILS
   | DRIVER_NEW_MESSAGE
   | PREVIOUS_CANCELLATION_REASONS
+  | FORWARD_BATCHING_REQUEST_INFO
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data Tag
@@ -150,4 +151,6 @@ data Tag
     MESSAGE
   | -- Previous cancellation reasons tags
     CANCELLATION_REASON
+  | -- Forward batching request info tags
+    CURRENT_RIDE_DROP_LOCATION
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

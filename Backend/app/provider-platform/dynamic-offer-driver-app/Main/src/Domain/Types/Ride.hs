@@ -68,6 +68,7 @@ data Ride = Ride
     tripEndTime :: Maybe UTCTime,
     tripStartPos :: Maybe LatLong,
     tripEndPos :: Maybe LatLong,
+    previousActiveRideEndPos :: Maybe LatLong,
     fromLocation :: DL.Location,
     toLocation :: Maybe DL.Location,
     fareParametersId :: Maybe (Id DFare.FareParameters),

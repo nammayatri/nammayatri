@@ -42,6 +42,8 @@ data RideT f = RideT
     tripStartLon :: B.C f (Maybe Double),
     tripEndLat :: B.C f (Maybe Double),
     tripEndLon :: B.C f (Maybe Double),
+    previousActivetripEndLat :: B.C f (Maybe Double),
+    previousActivetripEndLon :: B.C f (Maybe Double),
     startOdometerReadingValue :: B.C f (Maybe Centesimal),
     endOdometerReadingValue :: B.C f (Maybe Centesimal),
     startOdometerReadingFileId :: B.C f (Maybe Text),

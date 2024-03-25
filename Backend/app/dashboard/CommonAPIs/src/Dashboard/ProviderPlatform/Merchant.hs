@@ -328,12 +328,29 @@ data BatchSplitByPickupDistance = BatchSplitByPickupDistance
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data BatchSplitByPickupDistanceOnRide = BatchSplitByPickupDistanceOnRide
+  { batchSplitSize :: Int,
+    batchSplitDelay :: Seconds
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OnRideRadiusConfig = OnRideRadiusConfig
+  { onRideRadius :: Meters,
+    batchNumber :: Int
+  }
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
   { minRadiusOfSearch :: Meters,
     maxRadiusOfSearch :: Meters,
     radiusStepSize :: Meters,
     driverPositionInfoExpiry :: Maybe Seconds,
     actualDistanceThreshold :: Maybe Meters,
+    onRideBatchSplitConfig :: [BatchSplitByPickupDistanceOnRide],
+    onRideRadiusConfig :: [OnRideRadiusConfig],
+    totalBatchSize :: Int,
     maxDriverQuotesRequired :: Int,
     driverQuoteLimit :: Int,
     driverRequestCountLimit :: Int,

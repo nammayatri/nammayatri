@@ -41,6 +41,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
@@ -131,6 +132,10 @@ handler merchantId req validatedReq = do
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
       exophone <- findRandomExophone searchRequest.merchantOperatingCityId
+      currentInProgressRide <- QRide.getInProgressByDriverId =<< driverQuote.driverId
+      inProgressRideToLocation <- case currentInProgressRide of
+        Just ride -> pure $ ride.toLocation
+        Nothing -> pure Nothing
       pure
         DRB.Booking
           { transactionId = searchRequest.transactionId,
@@ -159,6 +164,7 @@ handler merchantId req validatedReq = do
             isScheduled = searchRequest.isScheduled,
             paymentMethodId = mbPaymentMethodId,
             distanceToPickup = distanceToPickup,
+            currentActiveBookingDropLocationId = inProgressRideToLocation,
             stopLocationId = (.id) <$> toLocation,
             startTime = searchRequest.startTime,
             ..

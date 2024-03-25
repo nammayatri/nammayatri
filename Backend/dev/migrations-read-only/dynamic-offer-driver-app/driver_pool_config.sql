@@ -28,3 +28,122 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN trip_distance i
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN vehicle_variant text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD PRIMARY KEY ( id);
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN total_batch_size integer NOT NULL default 20;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_radius_config text NOT NULL default Array [];
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_batch_split_config text NOT NULL default Array [];
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN total_batch_size;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_radius_config;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_batch_split_config;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN total_batch_size integer NOT NULL default 20;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_radius_config text NOT NULL default Array [];
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_batch_split_config text NOT NULL default Array [];
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN total_batch_size;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_radius_config;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_batch_split_config;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN total_batch_size integer NOT NULL default 20;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_radius_config text NOT NULL default Array [];
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_batch_split_config text NOT NULL default Array [];
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN total_batch_size;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_radius_config;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_batch_split_config;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN total_batch_size integer NOT NULL default 20;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_radius_config text NOT NULL default Array [];
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_batch_split_config text NOT NULL default Array [];
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN total_batch_size;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_radius_config;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_batch_split_config;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN total_batch_size integer NOT NULL default 20;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_radius_config text NOT NULL default Array [];
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_batch_split_config text NOT NULL default Array [];
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN total_batch_size;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_radius_config;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_batch_split_config;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN total_batch_size integer NOT NULL default 20;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_radius_config text NOT NULL default Array [];
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_batch_split_config text NOT NULL default Array [];
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN total_batch_size;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_radius_config;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_batch_split_config;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN total_batch_size integer NOT NULL default 20;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_radius_config text NOT NULL default Array [];
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_batch_split_config text NOT NULL default Array [];
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN total_batch_size;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_radius_config;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_batch_split_config;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN total_batch_size integer NOT NULL default 20;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_radius_config text NOT NULL default Array [];
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_batch_split_config text NOT NULL default Array [];
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN total_batch_size;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_radius_config;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN on_ride_batch_split_config;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN total_batch_size integer NOT NULL default 20;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_radius_config text NOT NULL default Array [];
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_batch_split_config text NOT NULL default Array [];

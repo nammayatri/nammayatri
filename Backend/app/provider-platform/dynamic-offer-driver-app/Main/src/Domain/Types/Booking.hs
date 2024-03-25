@@ -66,6 +66,7 @@ data Booking = Booking
     riderId :: Maybe (Id DRD.RiderDetails),
     fromLocation :: DLoc.Location,
     toLocation :: Maybe DLoc.Location,
+    currentActiveBookingDropLocation :: Maybe (DLoc.Location),
     vehicleVariant :: DVeh.Variant,
     estimatedDistance :: Maybe Meters,
     maxEstimatedDistance :: Maybe HighPrecMeters,

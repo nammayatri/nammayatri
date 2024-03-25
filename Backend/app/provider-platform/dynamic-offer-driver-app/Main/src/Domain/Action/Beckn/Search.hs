@@ -295,7 +295,7 @@ selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLoc
     if null driverPoolNotOnRide
       then do
         if transporterConfig.includeDriverCurrentlyOnRide
-          then calculateDriverPoolCurrentlyOnRide Estimate driverPoolCfg Nothing fromLocation merchantId Nothing False
+          then calculateDriverPoolCurrentlyOnRide Estimate driverPoolCfg Nothing fromLocation merchantId Nothing False Nothing
           else pure []
       else pure []
   let driverPool =

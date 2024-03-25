@@ -47,6 +47,7 @@ data BookingT f = BookingT
     riderId :: B.C f (Maybe Text),
     fromLocationId :: B.C f (Maybe Text),
     toLocationId :: B.C f (Maybe Text),
+    currentActiveBookingDropLocationId :: B.C f (Maybe Text),
     vehicleVariant :: B.C f Veh.Variant,
     estimatedDistance :: B.C f (Maybe Meters),
     maxEstimatedDistance :: B.C f (Maybe HighPrecMeters),

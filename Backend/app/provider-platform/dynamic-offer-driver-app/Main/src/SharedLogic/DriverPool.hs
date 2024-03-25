@@ -50,7 +50,7 @@ where
 
 import Control.Monad.Extra (mapMaybeM)
 import Data.Fixed
-import Data.List (partition)
+import Data.List (find, partition)
 import Data.List.Extra (notNull)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.List.NonEmpty.Extra as NE
@@ -68,7 +68,7 @@ import Domain.Types.RiderDetails (RiderDetails)
 import Domain.Types.SearchRequest
 import Domain.Types.SearchTry
 import Domain.Types.Vehicle.Variant (Variant)
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (find, id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude (NominalDiffTime, head)
 import qualified Kernel.Randomizer as Rnd
@@ -763,9 +763,10 @@ calculateDriverPoolCurrentlyOnRide ::
   Id DM.Merchant ->
   Maybe PoolRadiusStep ->
   Bool ->
+  Maybe Integer ->
   m [DriverPoolResultCurrentlyOnRide]
-calculateDriverPoolCurrentlyOnRide poolStage driverPoolCfg mbVariant pickup merchantId mRadiusStep isRental = do
-  let radius = getRadius mRadiusStep
+calculateDriverPoolCurrentlyOnRide poolStage driverPoolCfg mbVariant pickup merchantId mRadiusStep isRental mbBatchNum = do
+  let radius = getRadius' mRadiusStep
   let coord = getCoordinates pickup
   now <- getCurrentTime
   approxDriverPool <-
@@ -785,6 +786,16 @@ calculateDriverPoolCurrentlyOnRide poolStage driverPoolCfg mbVariant pickup merc
   pure $ makeDriverPoolResult <$> driversWithLessThanNParallelRequests
   where
     getParallelSearchRequestCount now dObj = getValidSearchRequestCount merchantId (cast dObj.driverId) now
+    getRadius' mRadiusStep_ = do
+      let radiusParams = driverPoolCfg.onRideRadiusConfig
+      let maxRadiusThreshold = getRadius mRadiusStep_
+      case (radiusParams, mbBatchNum) of
+        ([], _) -> maxRadiusThreshold
+        (_ : _, Nothing) -> maxRadiusThreshold
+        (_ : _, Just batchNum) -> getMaxRadiusWithThreshold radiusParams maxRadiusThreshold batchNum
+    getMaxRadiusWithThreshold radiusList threshold batchNum = do
+      let mbRadius = find (\r -> r.batchNumber == fromIntegral batchNum) radiusList
+      maybe threshold (\r -> max threshold r.onRideRadius) mbRadius
     getRadius mRadiusStep_ = do
       let maxRadius = driverPoolCfg.maxRadiusOfSearch
       case mRadiusStep_ of
@@ -818,9 +829,10 @@ calculateDriverCurrentlyOnRideWithActualDist ::
   Id DMOC.MerchantOperatingCity ->
   Maybe PoolRadiusStep ->
   Bool ->
+  Integer ->
   m [DriverPoolWithActualDistResult]
-calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage poolType driverPoolCfg mbVariant pickup merchantId merchantOpCityId mRadiusStep isRental = do
-  driverPool <- calculateDriverPoolCurrentlyOnRide poolCalculationStage driverPoolCfg mbVariant pickup merchantId mRadiusStep isRental
+calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage poolType driverPoolCfg mbVariant pickup merchantId merchantOpCityId mRadiusStep isRental batchNum = do
+  driverPool <- calculateDriverPoolCurrentlyOnRide poolCalculationStage driverPoolCfg mbVariant pickup merchantId mRadiusStep isRental (Just batchNum)
   case driverPool of
     [] -> return []
     (a : pprox) -> do

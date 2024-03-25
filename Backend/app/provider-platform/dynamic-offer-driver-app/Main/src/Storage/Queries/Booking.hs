@@ -215,6 +215,7 @@ instance FromTType' BeamB.Booking Booking where
           return (fl, tl)
 
     fp <- QueriesFP.findById (Id fareParametersId)
+    cabdl <- QL.findById =<< currentActiveBookingDropLocationId
     pUrl <- parseBaseUrl bapUri
     merchant <- CQM.findById (Id providerId) >>= fromMaybeM (MerchantNotFound providerId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant bapCity
@@ -248,6 +249,7 @@ instance FromTType' BeamB.Booking Booking where
                 maxEstimatedDistance = maxEstimatedDistance,
                 estimatedFare = roundToIntegral estimatedFare,
                 estimatedDuration = estimatedDuration,
+                currentActiveBookingDropLocation = cabdl,
                 fareParams = fromJust fp, -- This fromJust is safe because of the check above.
                 paymentMethodId = Id <$> paymentMethodId,
                 riderName = riderName,
@@ -291,6 +293,7 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.bapCountry = bapCountry,
         BeamB.fromLocationId = Just $ getId fromLocation.id,
         BeamB.toLocationId = (getId . (.id)) <$> toLocation,
+        BeamB.currentActiveBookingDropLocationId = currentActiveBookingDropLocation <&> (getId . (.id)),
         BeamB.vehicleVariant = vehicleVariant,
         BeamB.estimatedDistance = estimatedDistance,
         BeamB.maxEstimatedDistance = maxEstimatedDistance,

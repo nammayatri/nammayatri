@@ -1010,3 +1010,32 @@ tfProvider becknConfig =
         providerLocations = Nothing,
         providerPayments = Nothing
       }
+
+mkArrivalTimeTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
+mkArrivalTimeTagGroupV2 currentRideDropLocation' =
+  currentRideDropLocation' <&> \currentRideDropLocation ->
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.FORWARD_BATCHING_REQUEST_INFO,
+                  descriptorName = Just "Forward Batching Request Info",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.CURRENT_RIDE_DROP_LOCATION,
+                            descriptorName = Just "Current Ride Drop Location",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ show currentRideDropLocation
+                  }
+              ]
+        }
+    ]

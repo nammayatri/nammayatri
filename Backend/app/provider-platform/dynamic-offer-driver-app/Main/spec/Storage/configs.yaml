@@ -2,6 +2,8 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
   BatchSplitByPickupDistance: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
+  BatchSplitByPickupDistanceOnRide: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
+  OnRideRadiusConfig: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   PoolSortingType: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   Seconds: Kernel.Types.Common
   IndianState: Kernel.Types.Beckn.Context
@@ -33,6 +35,9 @@ DriverPoolConfig:
     driverToDestinationDistanceThreshold: Meters
     driverToDestinationDuration: Seconds
     scheduleTryTimes: "[Int]"
+    totalBatchSize: Int
+    onRideRadiusConfig: "[OnRideRadiusConfig]"
+    onRideBatchSplitConfig: "[BatchSplitByPickupDistanceOnRide]"
     createdAt: UTCTime
     updatedAt: UTCTime
     vehicleVariant: Maybe Variant
@@ -50,6 +55,9 @@ DriverPoolConfig:
     tripCategory: "'All'"
     distanceBasedBatchSplit: "Array ['BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 4 }']"
     scheduleTryTimes: "'{1800, 900, 300}'"
+    totalBatchSize: "20"
+    onRideRadiusConfig: "Array []"
+    onRideBatchSplitConfig: "Array []"
 
   queries:
     findAllByMerchantOpCityId:

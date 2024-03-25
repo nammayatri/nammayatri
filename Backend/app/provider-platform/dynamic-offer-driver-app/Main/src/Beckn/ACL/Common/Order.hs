@@ -233,6 +233,7 @@ tfAssignedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideAssignedReq ->
 tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig = do
   let Common.BookingDetails {..} = bookingDetails
       arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
+      currentRideDropLocation = if isValueAddNP then Utils.mkLocationTagGroupV2 ride.dropLocation else Nothing
       quote = Utils.tfQuotation booking
       farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
       items = Utils.tfItems booking merchant.shortId.getShortId Nothing farePolicy
