@@ -61,7 +61,7 @@ tfQuotesInfo provider fulfillments validTill item = do
   specialLocationTag_ <- Beckn.OnDemand.Utils.OnSearch.buildSpecialLocationTag item
   vehicleVariant_ <- Beckn.OnDemand.Utils.OnSearch.getVehicleVariant provider item
   quoteOrEstId_ <- Beckn.OnDemand.Utils.OnSearch.getQuoteFulfillmentId item
-  fulfillment <- filter (\f -> f.fulfillmentId == Just quoteOrEstId_) fulfillments & Data.Maybe.listToMaybe & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing fulfillment for item")
+  fulfillment <- find (\f -> f.fulfillmentId == Just quoteOrEstId_) fulfillments & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing fulfillment for item")
   fulfillmentType <- fulfillment.fulfillmentType & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing fulfillment type")
   case fulfillmentType of
     "RENTAL" -> do

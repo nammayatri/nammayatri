@@ -219,6 +219,15 @@ updatePaymentUrl bookingId paymentUrl = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
+updatePaymentStatus :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> PaymentStatus -> m ()
+updatePaymentStatus rbId paymentStatus = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.paymentStatus (Just paymentStatus),
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId rbId)]
+
 -- THIS IS TEMPORARY UNTIL WE HAVE PROPER ADD STOP FEATURE
 updateStop :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> Maybe DL.Location -> m ()
 updateStop booking mbStopLoc = do
@@ -364,7 +373,8 @@ instance FromTType' BeamB.Booking Booking where
             estimatedDuration = estimatedDuration,
             updatedAt = updatedAt,
             initialPickupLocation = initialPickupLocation,
-            serviceTierName = serviceTierName
+            serviceTierName = serviceTierName,
+            paymentStatus = paymentStatus
           }
     where
       buildOneWayDetails mbToLocid = do
@@ -449,7 +459,8 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.estimatedDuration = estimatedDuration,
             BeamB.createdAt = createdAt,
             BeamB.updatedAt = updatedAt,
-            BeamB.serviceTierName = serviceTierName
+            BeamB.serviceTierName = serviceTierName,
+            BeamB.paymentStatus = paymentStatus
           }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME

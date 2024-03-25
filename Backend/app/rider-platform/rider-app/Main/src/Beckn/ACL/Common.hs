@@ -234,6 +234,7 @@ parseRideCompletedEvent order msgId txnId = do
   let personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
       tripEndLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
       rideEndTime = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) >>= Utils.getDropLocation >>= (.stopTime) >>= (.timeTimestamp)
+      paymentStatus = order.orderPayments >>= listToMaybe >>= (.paymentStatus) >>= readMaybe . T.unpack
   pure $
     Common.RideCompletedReq
       { bookingDetails,

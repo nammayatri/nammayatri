@@ -71,6 +71,12 @@ data PaymentStatus
   | NOT_PAID
   deriving (Eq, Generic)
 
+instance Read PaymentStatus where
+  readsPrec _ = \case
+    "PAID" -> [(PAID, "")]
+    "NOT-PAID" -> [(NOT_PAID, "")]
+    _ -> []
+
 instance Show PaymentStatus where
   show PAID = "PAID"
   show NOT_PAID = "NOT-PAID"

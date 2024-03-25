@@ -112,7 +112,30 @@ data RideCompletedReq = RideCompletedReq
     paymentUrl :: Maybe Text,
     tripEndLocation :: Maybe LatLong,
     endOdometerReading :: Maybe Centesimal,
-    rideEndTime :: Maybe UTCTime
+    rideEndTime :: Maybe UTCTime,
+    paymentStatus :: Maybe DRB.PaymentStatus
+  }
+
+data ValidatedRideCompletedReq = ValidatedRideCompletedReq
+  { bookingDetails :: BookingDetails,
+    fare :: Money,
+    totalFare :: Money,
+    fareBreakups :: [DFareBreakup],
+    chargeableDistance :: Maybe HighPrecMeters,
+    traveledDistance :: Maybe HighPrecMeters,
+    paymentUrl :: Maybe Text,
+    tripEndLocation :: Maybe LatLong,
+    endOdometerReading :: Maybe Centesimal,
+    rideEndTime :: Maybe UTCTime,
+    booking :: DRB.Booking,
+    ride :: DRide.Ride,
+    person :: DPerson.Person,
+    paymentStatus :: Maybe DRB.PaymentStatus
+  }
+
+data ValidatedFarePaidReq = ValidatedFarePaidReq
+  { booking :: DRB.Booking,
+    paymentStatus :: DRB.PaymentStatus
   }
 
 data ValidatedRideCompletedReq = ValidatedRideCompletedReq
@@ -319,11 +342,11 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
   let updRide =
         ride{status = DRide.COMPLETED,
-             fare = Just fare,
-             totalFare = Just totalFare,
-             chargeableDistance,
-             rideEndTime,
-             endOdometerReading
+              fare = Just fare,
+              totalFare = Just totalFare,
+              chargeableDistance,
+              rideEndTime,
+              endOdometerReading
             }
   breakups <- traverse (buildFareBreakup booking.id) fareBreakups
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
@@ -335,6 +358,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
   unless (booking.status == DRB.COMPLETED) $ void $ QRB.updateStatus booking.id DRB.COMPLETED
+  -- JAYPAL: should we combine above booking update with this one ?
+  when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   _ <- QRide.updateMultiple updRide.id updRide
   _ <- QFareBreakup.createMany breakups
@@ -369,6 +394,9 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           { id = guid,
             ..
           }
+
+farePaidReqHandler :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => ValidatedFarePaidReq -> m ()
+farePaidReqHandler req = void $ QRB.updatePaymentStatus req.booking.id req.paymentStatus
 
 driverArrivedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
@@ -518,7 +546,7 @@ validateRideCompletedReq ::
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
   ) =>
   RideCompletedReq ->
-  m ValidatedRideCompletedReq
+  m (Either ValidatedRideCompletedReq ValidatedFarePaidReq)
 validateRideCompletedReq RideCompletedReq {..} = do
   let BookingDetails {..} = bookingDetails
   booking <- QRB.findByBPPBookingId bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bookingDetails.bppBookingId.getId)
@@ -527,12 +555,23 @@ validateRideCompletedReq RideCompletedReq {..} = do
       rideCanBeCompleted = ride.status == DRide.INPROGRESS
       bookingAlreadyCompleted = booking.status == DRB.COMPLETED
       rideAlreadyCompleted = ride.status == DRide.COMPLETED
-  unless (bookingCanBeCompleted || (bookingAlreadyCompleted && rideCanBeCompleted)) $
-    throwError (BookingInvalidStatus $ show booking.status)
-  unless (rideCanBeCompleted || (rideAlreadyCompleted && bookingCanBeCompleted)) $
-    throwError (RideInvalidStatus $ show ride.status)
-  person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  return $ ValidatedRideCompletedReq {..}
+  if bookingAlreadyCompleted && rideAlreadyCompleted
+    then validateFarePaidReq
+    else do
+      unless (bookingCanBeCompleted || (bookingAlreadyCompleted && rideCanBeCompleted)) $
+        throwError (BookingInvalidStatus $ show booking.status)
+      unless (rideCanBeCompleted || (rideAlreadyCompleted && bookingCanBeCompleted)) $
+        throwError (RideInvalidStatus $ show ride.status)
+      person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+      return . Left $ ValidatedRideCompletedReq {..}
+  where
+    validateFarePaidReq = do
+      when (booking.paymentStatus == Just DRB.PAID) $ do
+        throwError . InvalidRequest $ "payment_status is already PAID for bookingId:-" <> show booking.id.getId
+      when (paymentStatus /= Just DRB.PAID) $ do
+        throwError . InvalidRequest $ "Invalid payment status change:-" <> show paymentStatus <> " for bookingId:-" <> show booking.id.getId <> ", which is already completed."
+      return . Right $ ValidatedFarePaidReq {booking, paymentStatus = fromJust paymentStatus} -- fromJust is safe here because of above check.
+      
 
 validateBookingCancelledReq ::
   ( CacheFlow m r,

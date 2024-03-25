@@ -37,12 +37,12 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
-import Storage.CachedQueries.ValueAddNP as VNP
+import qualified Storage.CachedQueries.ValueAddNP as VNP
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
     :> SignatureAuth 'Domain.MOBILITY "Authorization"
-    :> SignatureAuth 'Domain.MOBILITY "X-Gateway-Authorization"
+    -- :> SignatureAuth 'Domain.MOBILITY "X-Gateway-Authorization"
     :> Search.SearchAPI
 
 handler :: FlowServer API
@@ -51,13 +51,13 @@ handler = search
 search ::
   Id DM.Merchant ->
   SignatureAuthResult ->
-  SignatureAuthResult ->
+  -- SignatureAuthResult ->
   Search.SearchReqV2 ->
   FlowHandler AckResponse
-search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandlerBecknAPI $ do
+search transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI $ do
   transactionId <- Utils.getTransactionId reqV2.searchReqContext
   Utils.withTransactionIdLogTag transactionId $ do
-    logTagInfo "SearchV2 API Flow" "Reached"
+    logTagInfo "SearchV2 API Flow" $ "Reached:-" <> TL.toStrict (A.encodeToLazyText reqV2)
     dSearchReq <- ACL.buildSearchReqV2 subscriber reqV2
     let context = reqV2.searchReqContext
     let txnId = Just transactionId
@@ -76,17 +76,16 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
           dSearchRes <- DSearch.handler validatedSReq dSearchReq
           internalEndPointHashMap <- asks (.internalEndPointHashMap)
 
-          isValueAddNP_ <- VNP.isValueAddNP dSearchReq.bapId
-          if (notNull dSearchRes.quotes && isValueAddNP_) || (null dSearchRes.quotes)
-            then do
-              onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri (Just bppId) (Just bppUri) city country
-              let context' = onSearchReq.onSearchReqContext
-              logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
-              void $
-                Callback.withCallback dSearchRes.provider "SEARCH" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
-                  pure onSearchReq
-            else pure ()
-  pure Ack
+          isValueAddNP <- VNP.isValueAddNP dSearchReq.bapId
+          -- JAYPAL: isn't this condition wrong, if there are quotes and its not value add NP, we are not sending on_search itself ?
+          when ((notNull dSearchRes.quotes && isValueAddNP) || null dSearchRes.quotes) $ do
+            onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri (Just bppId) (Just bppUri) city country
+            let context' = onSearchReq.onSearchReqContext
+            logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
+            void $
+              Callback.withCallback dSearchRes.provider "SEARCH" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
+                pure onSearchReq
+    pure Ack
 
 searchLockKey :: Text -> Text -> Text
 searchLockKey id mId = "Driver:Search:MessageId-" <> id <> ":" <> mId

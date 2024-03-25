@@ -136,6 +136,7 @@ mkPaymentParams :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC
 mkPaymentParams _paymentMethodInfo _paymentUrl merchant bppConfig booking = do
   let amount = Just $ show booking.estimatedFare
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
+  -- JAYPAL: should the below payment status be `PAID` for OFFUS and `NOT_PAID` in ONUS and update it during driver rating customer?
   mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 mkDistanceTagGroup :: MonadFlow m => DRide.Ride -> m (Maybe [Spec.TagGroup])

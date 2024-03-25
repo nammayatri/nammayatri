@@ -59,7 +59,8 @@ data BookingT f = BookingT
     isScheduled :: B.C f (Maybe Bool),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    serviceTierName :: B.C f (Maybe Text)
+    serviceTierName :: B.C f (Maybe Text),
+    paymentStatus :: B.C f (Maybe Domain.PaymentStatus)
   }
   deriving (Generic, B.Beamable)
 
