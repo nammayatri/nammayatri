@@ -138,22 +138,6 @@ data ValidatedFarePaidReq = ValidatedFarePaidReq
     paymentStatus :: DRB.PaymentStatus
   }
 
-data ValidatedRideCompletedReq = ValidatedRideCompletedReq
-  { bookingDetails :: BookingDetails,
-    fare :: Money,
-    totalFare :: Money,
-    fareBreakups :: [DFareBreakup],
-    chargeableDistance :: Maybe HighPrecMeters,
-    traveledDistance :: Maybe HighPrecMeters,
-    paymentUrl :: Maybe Text,
-    tripEndLocation :: Maybe LatLong,
-    endOdometerReading :: Maybe Centesimal,
-    rideEndTime :: Maybe UTCTime,
-    booking :: DRB.Booking,
-    ride :: DRide.Ride,
-    person :: DPerson.Person
-  }
-
 data BookingCancelledReq = BookingCancelledReq
   { bookingDetails :: Maybe BookingDetails,
     bppBookingId :: Id DRB.BPPBooking,
@@ -216,7 +200,7 @@ rideAssignedReqHandler req = do
   void $ QRB.updateBPPBookingId req.booking.id bppBookingId -- JAYPAL : Should we only update it here in offus case?
   let booking = req.booking {DRB.bppBookingId = Just bppBookingId}
   mbMerchant <- CQM.findById booking.merchantId
-  ride <- buildRide mbMerchant bookingDetails
+  ride <- buildRide mbMerchant booking req.bookingDetails
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
   let category = case booking.specialLocationTag of
         Just _ -> "specialLocation"
@@ -233,8 +217,8 @@ rideAssignedReqHandler req = do
       Notify.notifyDriverBirthDay booking.riderId driverName
   withLongRetry $ CallBPP.callTrack booking ride
   where
-    buildRide :: MonadFlow m => Maybe DMerchant.Merchant -> BookingDetails -> m DRide.Ride
-    buildRide mbMerchant BookingDetails {..} = do
+    buildRide :: MonadFlow m => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> m DRide.Ride
+    buildRide mbMerchant booking BookingDetails {..} = do
       guid <- generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
@@ -342,11 +326,11 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
   let updRide =
         ride{status = DRide.COMPLETED,
-              fare = Just fare,
-              totalFare = Just totalFare,
-              chargeableDistance,
-              rideEndTime,
-              endOdometerReading
+             fare = Just fare,
+             totalFare = Just totalFare,
+             chargeableDistance,
+             rideEndTime,
+             endOdometerReading
             }
   breakups <- traverse (buildFareBreakup booking.id) fareBreakups
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
@@ -493,7 +477,6 @@ validateRideAssignedReq ::
   RideAssignedReq ->
   m ValidatedRideAssignedReq
 validateRideAssignedReq RideAssignedReq {..} = do
-  let BookingDetails {..} = bookingDetails
   booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId) -- JAYPAL:: we haven't stored bppBookingId in OFFus during on_init, should we rely on transactionId?
   unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)
   return $ ValidatedRideAssignedReq {..}
@@ -556,7 +539,7 @@ validateRideCompletedReq RideCompletedReq {..} = do
       bookingAlreadyCompleted = booking.status == DRB.COMPLETED
       rideAlreadyCompleted = ride.status == DRide.COMPLETED
   if bookingAlreadyCompleted && rideAlreadyCompleted
-    then validateFarePaidReq
+    then validateFarePaidReq booking
     else do
       unless (bookingCanBeCompleted || (bookingAlreadyCompleted && rideCanBeCompleted)) $
         throwError (BookingInvalidStatus $ show booking.status)
@@ -565,13 +548,12 @@ validateRideCompletedReq RideCompletedReq {..} = do
       person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
       return . Left $ ValidatedRideCompletedReq {..}
   where
-    validateFarePaidReq = do
+    validateFarePaidReq booking = do
       when (booking.paymentStatus == Just DRB.PAID) $ do
         throwError . InvalidRequest $ "payment_status is already PAID for bookingId:-" <> show booking.id.getId
       when (paymentStatus /= Just DRB.PAID) $ do
         throwError . InvalidRequest $ "Invalid payment status change:-" <> show paymentStatus <> " for bookingId:-" <> show booking.id.getId <> ", which is already completed."
       return . Right $ ValidatedFarePaidReq {booking, paymentStatus = fromJust paymentStatus} -- fromJust is safe here because of above check.
-      
 
 validateBookingCancelledReq ::
   ( CacheFlow m r,

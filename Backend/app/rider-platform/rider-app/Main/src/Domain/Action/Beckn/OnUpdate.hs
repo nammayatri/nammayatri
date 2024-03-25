@@ -269,8 +269,8 @@ validateRequest = \case
   OURideCompletedReq req -> do
     vRequest <- Common.validateRideCompletedReq req
     case vRequest of
-      Left validateRequest -> return $ OUValidatedRideCompletedReq validateRequest
-      Right validateRequest -> return $ OUValidatedFarePaidReq validateRequest
+      Left validatedRequest -> return $ OUValidatedRideCompletedReq validatedRequest
+      Right validatedRequest -> return $ OUValidatedFarePaidReq validatedRequest
   OUBookingCancelledReq req -> do
     validatedRequest <- Common.validateBookingCancelledReq req
     return $ OUValidatedBookingCancelledReq validatedRequest

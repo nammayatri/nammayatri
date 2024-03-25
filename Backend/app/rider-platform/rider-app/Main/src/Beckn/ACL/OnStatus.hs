@@ -54,7 +54,7 @@ buildOnStatusReqV2 req txnId = do
       -- TODO::Beckn, need to refactor this codes, according to spec.
       case orderStatus of
         "NEW_BOOKING" -> pure DOnStatus.NewBookingDetails
-        "RIDE_BOOKING_REALLOCATION" -> parseRideBookingReallocationOrder order messageId txnId
+        "RIDE_BOOKING_REALLOCATION" -> parseRideBookingReallocationOrder order messageId
         "ACTIVE" -> do
           case eventType of
             "RIDE_ASSIGNED" -> do
@@ -62,22 +62,22 @@ buildOnStatusReqV2 req txnId = do
               return $ DOnStatus.RideAssignedDetails assignedReq
             "RIDE_ENROUTE_PICKUP" -> pure DOnStatus.RideEnroutePickupDetails
             "RIDE_ARRIVED_PICKUP" -> do
-              arrivedReq <- Common.parseDriverArrivedEvent order messageId txnId
+              arrivedReq <- Common.parseDriverArrivedEvent order messageId
               return $ DOnStatus.DriverArrivedDetails arrivedReq
             "RIDE_STARTED" -> do
-              startedReq <- Common.parseRideStartedEvent order messageId txnId
+              startedReq <- Common.parseRideStartedEvent order messageId
               return $ DOnStatus.RideStartedDetails startedReq
             _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
         "COMPLETE" -> do
           case eventType of
             "RIDE_ENDED" -> do
-              completedReq <- Common.parseRideCompletedEvent order messageId txnId
+              completedReq <- Common.parseRideCompletedEvent order messageId
               return $ DOnStatus.RideCompletedDetails completedReq
             _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
         "CANCELLED" -> do
           case eventType of
             "RIDE_CANCELLED" -> do
-              cancelledReq <- Common.parseBookingCancelledEvent order messageId txnId
+              cancelledReq <- Common.parseBookingCancelledEvent order messageId
               return $ DOnStatus.BookingCancelledDetails cancelledReq
             _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
         _ -> throwError . InvalidRequest $ "Invalid order.status: " <> show orderStatus
@@ -87,9 +87,9 @@ buildOnStatusReqV2 req txnId = do
           rideDetails
         }
 
-parseRideBookingReallocationOrder :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> Text -> m DOnStatus.RideDetails
-parseRideBookingReallocationOrder order messageId txnId = do
-  bookingDetails <- Common.parseBookingDetails order messageId txnId
+parseRideBookingReallocationOrder :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m DOnStatus.RideDetails
+parseRideBookingReallocationOrder order messageId = do
+  bookingDetails <- Common.parseBookingDetails order messageId
   reallocationSourceText <- order.orderCancellation >>= (.cancellationCancelledBy) & fromMaybeM (InvalidRequest "order.cancellation.,cancelled_by is not present in on_status BookingReallocationEvent request.")
   let reallocationSource = Utils.castCancellationSourceV2 reallocationSourceText
   pure $ DOnStatus.BookingReallocationDetails DOnStatus.BookingReallocationReq {..}

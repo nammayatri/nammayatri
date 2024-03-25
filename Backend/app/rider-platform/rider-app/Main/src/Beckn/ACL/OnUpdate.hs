@@ -75,16 +75,16 @@ parseEventV2 transactionId messageId order = do
       assignedReq <- Common.parseRideAssignedEvent order messageId transactionId
       return $ DOnUpdate.OURideAssignedReq assignedReq
     "RIDE_ARRIVED_PICKUP" -> do
-      arrivedReq <- Common.parseDriverArrivedEvent order messageId transactionId
+      arrivedReq <- Common.parseDriverArrivedEvent order messageId
       return $ DOnUpdate.OUDriverArrivedReq arrivedReq
     "RIDE_STARTED" -> do
-      startedReq <- Common.parseRideStartedEvent order messageId transactionId
+      startedReq <- Common.parseRideStartedEvent order messageId
       return $ DOnUpdate.OURideStartedReq startedReq
     "RIDE_ENDED" -> do
-      completedReq <- Common.parseRideCompletedEvent order messageId transactionId
+      completedReq <- Common.parseRideCompletedEvent order messageId
       return $ DOnUpdate.OURideCompletedReq completedReq
     "RIDE_CANCELLED" -> do
-      cancelledReq <- Common.parseBookingCancelledEvent order messageId transactionId
+      cancelledReq <- Common.parseBookingCancelledEvent order messageId
       return $ DOnUpdate.OUBookingCancelledReq cancelledReq
     "ESTIMATE_REPETITION" -> parseEstimateRepetitionEvent transactionId order
     "NEW_MESSAGE" -> parseNewMessageEvent order
