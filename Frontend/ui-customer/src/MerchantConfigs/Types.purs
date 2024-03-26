@@ -1,6 +1,7 @@
 module MerchantConfig.Types where
 
 import Common.Types.Config
+import Common.Types.App
 
 type AppConfig = AppConfigCustomer CommonAppConfig
 

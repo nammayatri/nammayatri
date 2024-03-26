@@ -14,6 +14,7 @@
 -}
 module Common.Types.Config where
 
+import Common.Types.App
 type CommonAppConfig = (
     colors :: Colors
   , primaryButtonConfig :: PrimaryButtonConfig
@@ -32,6 +33,7 @@ type CommonAppConfig = (
   , dashboard :: DashboardConfig
   , logFunctionCalls :: Boolean
   , bannerCarousel :: BannerCarousalConfig 
+  , countryCodeConfig ::  Array CountryCodeObj
   , defaultLanguage :: String)
   
 type Colors = {

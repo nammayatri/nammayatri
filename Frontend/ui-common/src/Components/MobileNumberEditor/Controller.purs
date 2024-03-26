@@ -216,7 +216,7 @@ config = {
     , background : Color.white900
     , stroke : "1,"<>Color.grey900
     , cornerRadius : 8.0 
-    , margin : MarginTop 0
+    , margin : MarginTop 10
   }
   , countryCodeOptionElementConfig :{ 
     height : WRAP_CONTENT
