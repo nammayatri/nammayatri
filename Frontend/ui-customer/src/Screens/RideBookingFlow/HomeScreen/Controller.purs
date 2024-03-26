@@ -1418,18 +1418,18 @@ eval BackPressed state = do
             HomeScreenData.initData
               { data
                 { disability = state.data.disability
+                , bannerData = state.data.bannerData
                 , settingSideBar
                   { gender = state.data.settingSideBar.gender
                   , email = state.data.settingSideBar.email
                   , hasCompletedSafetySetup = state.data.settingSideBar.hasCompletedSafetySetup
                   }
-                  , destinationSuggestions = state.data.destinationSuggestions
-                  , tripSuggestions = state.data.tripSuggestions
                   , followers = state.data.followers
                 }
               , props { 
                   isBanner = state.props.isBanner
                 , sourceLat = state.props.sourceLat
+                , showShimmer = true
                 , sourceLong = state.props.sourceLong
                 , currentLocation = state.props.currentLocation
                 , sosBannerType = state.props.sosBannerType 
@@ -1533,7 +1533,7 @@ eval (UpdateSource lat lng name) state = do
   _ <- pure $ printLog "Name::" name
   exit $ UpdatedState state { data { source = name, sourceAddress = encodeAddress name [] state.props.sourcePlaceId lat lng}, props { sourceLat = lat, sourceLong = lng, searchLocationModelProps{crossBtnSrcVisibility = (STR.length name) > 2}} } true
 
-eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard =false}}
+eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard =false, showShimmer = false}}
 
 eval LiveDashboardAction state = do
   _ <- pure $ firebaseLogEvent "ny_user_on_ride_live_stats"
