@@ -16,7 +16,6 @@ import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_OK;
 import static android.content.Context.MODE_PRIVATE;
-import static in.juspay.hyper.core.JuspayCoreLib.getApplicationContext;
 import static in.juspay.mobility.common.Utils.captureImage;
 import static in.juspay.mobility.common.Utils.drawableToBitmap;
 import static in.juspay.mobility.common.Utils.encodeImageToBase64;
@@ -129,6 +128,8 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.Circle;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.Dash;
 import com.google.android.gms.maps.model.Dot;
 import com.google.android.gms.maps.model.Gap;
@@ -144,6 +145,8 @@ import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.gms.tasks.Task;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.data.Feature;
 import com.google.maps.android.data.Layer;
@@ -188,9 +191,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
 import java.util.Objects;
-import java.util.TimeZone;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.constants.LogCategory;
@@ -200,6 +200,7 @@ import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.common.dataModel.CircleConfig;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 
 public class MobilityCommonBridge extends HyperBridge {
@@ -1716,6 +1717,41 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
+    private final Map<String, Circle> circleMap = new HashMap<>();
+
+    @JavascriptInterface
+    public void drawOrUpdateCircle(String circleConfigStr) {
+        Gson gson = new GsonBuilder().create();
+        CircleConfig circleConfig = gson.fromJson(circleConfigStr, CircleConfig.class);
+        Circle circle = circleMap.get(circleConfig.getId());
+        if (circle == null && circleConfig != null) {
+            CircleOptions circleOptions = new CircleOptions()
+                    .center(new LatLng(circleConfig.getCenterLat(),circleConfig.getCenterLon()))
+                    .radius(circleConfig.getRadius()) // In meters
+                    .strokeWidth(circleConfig.getStrokeWidth())
+                    .strokeColor(Color.parseColor(circleConfig.getStroke()))
+                    .fillColor(Color.parseColor(circleConfig.getFillColor()));
+            if (googleMap!=null){
+                circle = googleMap.addCircle(circleOptions);
+                circleMap.put(circleConfig.getId(), circle);
+            }
+        } else {
+            circle.setCenter(new LatLng(circleConfig.getCenterLat(),circleConfig.getCenterLon()));
+            circle.setRadius(circleConfig.getRadius());
+            circle.setStrokeWidth(circleConfig.getStrokeWidth());
+            circle.setStrokeColor(Color.parseColor(circleConfig.getStroke()));
+            circle.setFillColor(Color.parseColor(circleConfig.getFillColor()));
+        }
+    }
+
+    @JavascriptInterface
+    public void removeCircle(String circleId) {
+        Circle circle = circleMap.get(circleId);
+        if (circle != null) {
+            circle.remove();
+            circleMap.remove(circleId);
+        }
+    }
 
     @SuppressLint({"MissingPermission", "PotentialBehaviorOverride"})
     private void getMapAsync(SupportMapFragment mapFragment, boolean isEnableCurrentLocation, final String mapType, final String callback, final String pureScriptId, final float zoom) {
