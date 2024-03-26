@@ -584,16 +584,16 @@ public class NotificationUtils {
                         channel.setName("SOS Resolved");
                         channel.setDescription("Used to alert when SOS is resolved by emergency contact");
                         break;
-                    case DRIVER_QUOTE_INCOMING:
-                        soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                        channel.setName("Driver Quote Incoming");
-                        channel.setDescription("Driver quote related Notifications");
-                        break;
-                    case DRIVER_ASSIGNMENT:
-                        soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                        channel.setName("Driver Assignment");
-                        channel.setDescription("Driver Assignment related Notifications");
-                        break;
+//                    case DRIVER_QUOTE_INCOMING:
+//                        soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+//                        channel.setName("Driver Quote Incoming");
+//                        channel.setDescription("Driver quote related Notifications");
+//                        break;
+//                    case DRIVER_ASSIGNMENT:
+//                        soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+//                        channel.setName("Driver Assignment");
+//                        channel.setDescription("Driver Assignment related Notifications");
+//                        break;
                     case REALLOCATE_PRODUCT:
                         soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                         channel.setName("Ride Reallocation");
