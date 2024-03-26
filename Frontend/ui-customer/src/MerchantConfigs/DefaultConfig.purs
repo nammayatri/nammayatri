@@ -266,6 +266,8 @@ config =
       }
   , metroTicketingConfig : {
     metroStationTtl : 10080 -- in Minutes
+  , bookingStartTime : "04:30:00"
+  , bookingEndTime : "22:30:00"
   }
   , purpleRideConfig : {
       genericVideoUrl : "" ,

@@ -275,6 +275,8 @@ type MapConfig = {
 
 type MetroConfig = {
   metroStationTtl :: Int
+, bookingStartTime :: String
+, bookingEndTime :: String
 }
 
 type LocateOnMapConfigs = {

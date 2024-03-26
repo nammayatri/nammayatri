@@ -20,7 +20,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import PrestoDOM
 import Styles.Colors as Color
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (convertTo12HourFormat , fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
 import Common.Types.App(LazyCheck(..))
 import Engineering.Helpers.Commons (getNewIDWithTag)
@@ -79,17 +79,19 @@ updateButtonConfig state = let
 
 metroTimeErrorPopupConfig :: ST.MetroTicketBookingScreenState -> InfoCard.Config
 metroTimeErrorPopupConfig state = let
+  startTime = fromMaybe "4:30 AM" $ convertTo12HourFormat state.config.metroTicketingConfig.bookingStartTime
+  endTime = fromMaybe "11:30 PM" $ convertTo12HourFormat state.config.metroTicketingConfig.bookingEndTime
   requestInfoCardConfig' =  InfoCard.config{
     title {
-      text = getString METRO_BOOKING_TIMINGS,
+      text = getString METRO_BOOKING_TIMINGS, 
       accessibilityHint = "Metro Booking Timings"
     }
   , primaryText {
-      text = getString CHENNAI_METRO_TIME ,
+      text = (getString $ CHENNAI_METRO_TIME startTime endTime) ,
       padding = Padding 16 16 0 0,
       textStyle = FontStyle.ParagraphText,
       color = Color.black700,
-      accessibilityHint = "Chennai Metro allows QR ticket purchase from 4:30am to 22:30 PM on all days."
+      accessibilityHint = "Chennai Metro allows QR ticket purchase from "<> startTime <>" to "<> endTime <>" on all days."
     }
   , secondaryText {
       text = getString PLEASE_COME_BACK_LATER_METRO,

@@ -1002,7 +1002,7 @@ getFR stringKey =
         BUY_METRO_TICKETS -> "Acheter des billets de métro"
         GET_FARE -> "Obtenir le tarif"
         METRO_BOOKING_TIMINGS -> "Horaires de réservation du métro"
-        CHENNAI_METRO_TIME -> "Le métro de Chennai permet l'achat de billets QR de 4h30 à 22h30 tous les jours."
+        CHENNAI_METRO_TIME startTime endTime -> "Le métro de Chennai permet l'achat de billets QR de 4h30 à 22h30 tous les jours."
         PLEASE_COME_BACK_LATER_METRO -> "Veuillez revenir plus tard pendant la période éligible pour acheter des billets."
         NO_QOUTES_AVAILABLE -> "Aucune citation disponible"
         I_AGREE_TO_THE -> "J'accepte"
