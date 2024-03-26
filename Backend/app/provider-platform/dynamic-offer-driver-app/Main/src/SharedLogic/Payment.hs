@@ -107,7 +107,8 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
             mandateEndDate = mbMandateOrder <&> (.mandateEndDate),
             mandateStartDate = mbMandateOrder <&> (.mandateStartDate),
             optionsGetUpiDeepLinks = mbDeepLinkData >>= (.sendDeepLink),
-            metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes)
+            metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
+            metadataGatewayReferenceId = Nothing --- assigned in shared kernel
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id

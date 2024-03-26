@@ -136,13 +136,16 @@ mapsServiceConfigUpdate ::
   Context.City ->
   Common.MapsServiceConfigUpdateReq ->
   Flow APISuccess
-mapsServiceConfigUpdate merchantShortId _ req = do
+mapsServiceConfigUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   let serviceName = DMSC.MapsService $ Common.getMapsServiceFromReq req
   serviceConfig <- DMSC.MapsServiceConfig <$> Common.buildMapsServiceConfig req
-  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound ("merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city))
+  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id merchantOperatingCity.id serviceConfig
   _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig
-  CQMSC.clearCache merchant.id serviceName
+  CQMSC.clearCache merchant.id merchantOperatingCity.id serviceName
   logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchant.id)
   pure Success
 
@@ -152,13 +155,16 @@ smsServiceConfigUpdate ::
   Context.City ->
   Common.SmsServiceConfigUpdateReq ->
   Flow APISuccess
-smsServiceConfigUpdate merchantShortId _ req = do
+smsServiceConfigUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound ("merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city))
   let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
   serviceConfig <- DMSC.SmsServiceConfig <$> Common.buildSmsServiceConfig req
-  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
+  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id merchantOperatingCity.id serviceConfig
   _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig
-  CQMSC.clearCache merchant.id serviceName
+  CQMSC.clearCache merchant.id merchantOperatingCity.id serviceName
   logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
   pure Success
 
@@ -173,14 +179,13 @@ mapsServiceUsageConfigUpdate merchantShortId city req = do
   whenJust req.getEstimatedPickupDistances $ \_ ->
     throwError (InvalidRequest "getEstimatedPickupDistances is not allowed for bap")
   merchant <- findMerchantByShortId merchantShortId
-
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound ("merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city))
   forM_ Maps.availableMapsServices $ \service -> do
     when (Common.mapsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByMerchantIdAndService merchant.id (DMSC.MapsService service)
+        CQMSC.findByMerchantOpCityIdAndService merchant.id merchantOperatingCity.id (DMSC.MapsService service)
           >>= fromMaybeM (InvalidRequest $ "Merchant config for maps service " <> show service <> " is not provided")
 
-  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound ("merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city))
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantOperatingCityId merchantOperatingCity.id
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
@@ -206,14 +211,13 @@ smsServiceUsageConfigUpdate ::
 smsServiceUsageConfigUpdate merchantShortId city req = do
   runRequestValidation Common.validateSmsServiceUsageConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
-
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound ("merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city))
   forM_ SMS.availableSmsServices $ \service -> do
     when (Common.smsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByMerchantIdAndService merchant.id (DMSC.SmsService service)
+        CQMSC.findByMerchantOpCityIdAndService merchant.id merchantOperatingCity.id (DMSC.SmsService service)
           >>= fromMaybeM (InvalidRequest $ "Merchant config for sms service " <> show service <> " is not provided")
 
-  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound ("merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city))
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantOperatingCityId merchantOperatingCity.id
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)

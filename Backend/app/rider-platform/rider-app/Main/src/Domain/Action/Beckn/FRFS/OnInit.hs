@@ -106,12 +106,13 @@ onInit onInitReq merchant booking_ = do
             mandateEndDate = Nothing,
             mandateStartDate = Nothing,
             optionsGetUpiDeepLinks = Nothing,
-            metadataExpiryInMins = Nothing
+            metadataExpiryInMins = Nothing,
+            metadataGatewayReferenceId = Nothing --- assigned in shared kernel
           }
-
+  mocId <- booking.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in booking")
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchant.id
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
-      createOrderCall = Payment.createOrder merchant.id Nothing Payment.FRFSBooking
+      createOrderCall = Payment.createOrder merchant.id mocId Nothing Payment.FRFSBooking
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
     Just _ -> do

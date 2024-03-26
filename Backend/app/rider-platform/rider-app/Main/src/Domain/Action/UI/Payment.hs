@@ -93,12 +93,13 @@ createOrder (personId, merchantId) rideId = do
             mandateStartDate = Nothing,
             mandateEndDate = Nothing,
             optionsGetUpiDeepLinks = Nothing,
-            metadataExpiryInMins = Nothing
+            metadataExpiryInMins = Nothing,
+            metadataGatewayReferenceId = Nothing --- assigned in shared kernel
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person personId
-      createOrderCall = Payment.createOrder merchantId Nothing Payment.Normal -- api call
+      createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing Payment.Normal -- api call
   DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall >>= fromMaybeM (InternalError "Order expired please try again")
 
 -- order status -----------------------------------------------------
@@ -116,8 +117,9 @@ getStatus ::
   m DPayment.PaymentStatusResp
 getStatus (personId, merchantId) orderId = do
   ticketBooking <- QTB.findById (cast orderId)
+  mocId <- ticketBooking <&> (.merchantOperatingCityId) & fromMaybeM (InternalError "MerchantOperatingCityId not found in booking") ----- fix the api and pass mocId in params
   let commonPersonId = cast @DP.Person @DPayment.Person personId
-      orderStatusCall = Payment.orderStatus merchantId (ticketBooking <&> (.ticketPlaceId)) Payment.Normal -- api call
+      orderStatusCall = Payment.orderStatus merchantId mocId (ticketBooking <&> (.ticketPlaceId)) Payment.Normal -- api call
   DPayment.orderStatusService commonPersonId orderId orderStatusCall
 
 getOrder ::
@@ -154,14 +156,14 @@ juspayWebhookHandler ::
 juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData value = do
   merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   let city = fromMaybe merchant.defaultCity mbCity
-  _ <- CQMOC.findByMerchantShortIdAndCity merchantShortId city
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
   let merchantId = merchant.id
   placeBasedConfig <- case mbPlaceId of
     Just id -> CQPBSC.findByPlaceIdAndServiceName (Id id) (DMSC.PaymentService Payment.Juspay)
     Nothing -> return Nothing
   merchantServiceConfig' <- do
-    CQMSC.findByMerchantIdAndService merchantId (getPaymentServiceByType mbServiceType)
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
+    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCity.id (getPaymentServiceByType mbServiceType)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCity.id.getId "Payment" (show Payment.Juspay))
   paymentServiceConfig <- do
     case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig'.serviceConfig of
       Just (DMSC.PaymentServiceConfig vsc) -> pure vsc
