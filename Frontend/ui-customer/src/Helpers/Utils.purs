@@ -256,6 +256,20 @@ convertUTCToISTAnd12HourFormat inputTime = do
       pure adjustedTime
     _ -> Nothing
 
+convertTo12HourFormat :: String -> Maybe String
+convertTo12HourFormat time = do
+  -- Convert the input time to a 24-hour format if it's in 12-hour format (AM/PM)
+  let adjustedInputTime = replace (Pattern "PM") (Replacement "") $ replace (Pattern "AM") (Replacement "") time
+
+  case split (Pattern ":") adjustedInputTime of
+    [h, m, _] -> do
+      hours <- fromString h
+      minutes <- fromString m
+      let {adjustedHours, period} = if hours < 12 then {adjustedHours: hours, period: "AM"} else {adjustedHours: hours - 12, period: "PM"}
+      let adjustedTime = show hours <> ":" <> show minutes <> " " <> period
+      pure adjustedTime
+    _ -> Nothing
+
 getMinutesBetweenTwoUTChhmmss :: String -> String -> Maybe Int
 getMinutesBetweenTwoUTChhmmss time1 time2 = do
   if DS.null time1 || DS.null time2 then Nothing

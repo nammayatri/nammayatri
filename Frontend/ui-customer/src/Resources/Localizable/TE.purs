@@ -1013,7 +1013,7 @@ getTE stringKey =
     BUY_METRO_TICKETS -> "మెట్రో టికెట్లను కొనుగోలు చేయండి"
     GET_FARE -> "ఫేర్ పొందండి"
     METRO_BOOKING_TIMINGS -> "మెట్రో బుకింగ్ టైమింగ్స్"
-    CHENNAI_METRO_TIME -> "చెన్నై మెట్రో అనుమతించిన క్యూఆర్ టికెట్ కొనుగోలు 4:30 AM నుండి 10:30 PM వరకు అన్ని రోజులు."
+    CHENNAI_METRO_TIME startTime endTime -> "చెన్నై మెట్రో అనుమతించిన క్యూఆర్ టికెట్ కొనుగోలు "<>startTime<>" నుండి "<> endTime <>" వరకు అన్ని రోజులు."
     PLEASE_COME_BACK_LATER_METRO -> "దయచేసి ప్రారంభ సమయంలో టికెట్లు కొనుగోలు చేయడానికి తరువాత తిరిగి రాయండి."
     NO_QOUTES_AVAILABLE -> "ములాకాతులు లేవు"
     I_AGREE_TO_THE -> "నేను సమ్మతిస్తాను"
