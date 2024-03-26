@@ -127,7 +127,8 @@ mobileNumberValidator _ countryShortCode mobileNumber =
           else
             Invalid
         Nothing -> ValidPrefix
-      _ -> Invalid
+      "US" -> if len == maxLen then Valid else ValidPrefix
+      _ -> if len == maxLen then Valid else ValidPrefix
     else
       MaxLengthExceeded
 
@@ -136,7 +137,8 @@ mobileNumberMaxLength countryShortCode = case countryShortCode of
   "IN" -> 10
   "FR" -> 9
   "BD" -> 10
-  _ -> 0
+  "US" -> 10
+  _ -> 10
 
 -- Local Storage Utils
 foreign import saveToLocalStoreImpl :: String -> String -> EffectFnAff Unit

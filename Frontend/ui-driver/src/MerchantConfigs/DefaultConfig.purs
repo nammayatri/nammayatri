@@ -478,6 +478,7 @@ config =
   , genericHeaderConfig : defaultGenericHeader
   , currency: "₹"
   , internationalNumberEnabled : false
+  , countryCodeConfig : []
   , feature : {
     enableBonus : false
   , enableImageUpload : true
