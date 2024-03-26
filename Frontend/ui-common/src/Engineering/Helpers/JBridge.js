@@ -1634,20 +1634,39 @@ export const storeOnResumeCallback = function (cb, action) {
     console.log("Error occurred in storeOnResumeCallback ------", error);
   }
 }
+export const storeCallBackInternetAction = (cb, action, screenName) => {
+  try {
+    const callback = callbackMapper.map(isNetworkOn => {
+      Object.values(window.internetListeners).forEach(listener => listener(isNetworkOn));
+    });
 
-export const storeCallBackInternetAction = function (cb) {
-  return function (action) {
-    return function () {
-      try {
-        const callback = callbackMapper.map(function (isNetworkOn) {
-          cb(action(isNetworkOn))();
-        });
-        console.log("In storeCallBackInternetAction ---------- + " + action);
-        window.JBridge.storeCallBackInternetAction(callback);
-      } catch (error) {
-        console.log("Error occurred in storeCallBackInternetAction ------", error);
-      }
+    console.log(`In storeCallBackInternetAction ---------- + ${action}`);
+
+    window.internetListeners[screenName] = inNetworkOn => {
+      cb(action(inNetworkOn))();
+    };
+
+    window.JBridge.storeCallBackInternetAction(callback);
+  } catch (error) {
+    console.error("Error occurred in storeCallBackInternetAction", error);
+  }
+}
+
+export const storeNoInternetAction = function (cb, action) {
+  try {
+    window.noInternetAction = function(){
+      cb(action)();
     }
+  } catch (error) {
+    console.log("Error occurred in storeNoInternetAction ------", error);
+  }
+}
+
+export const clearNoInternetAction = function () {
+  try {
+    window.noInternetAction = undefined;
+  } catch (error) {
+    console.log("Error occurred in clearNoInternetAction ------", error);
   }
 }
 

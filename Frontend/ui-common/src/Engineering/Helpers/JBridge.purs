@@ -202,8 +202,9 @@ foreign import storeCallBackOverlayPermission :: forall action. (action -> Effec
 foreign import storeCallBackBatteryUsagePermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import storeCallBackNotificationPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import isInternetAvailable :: Unit -> Effect Boolean
-foreign import storeCallBackInternetAction :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
-
+foreign import storeCallBackInternetAction :: forall action. EffectFn3 (action -> Effect Unit) (String -> action) String Unit
+foreign import storeNoInternetAction :: forall action. EffectFn2 (action -> Effect Unit) action Unit
+foreign import clearNoInternetAction :: Unit -> Effect Unit
 foreign import openWhatsAppSupport :: String -> Effect Unit
 foreign import generateSessionToken :: String -> String
 foreign import addMediaFile :: EffectFn7 String String String String String String Boolean Unit

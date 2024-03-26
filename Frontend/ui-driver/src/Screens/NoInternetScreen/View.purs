@@ -32,6 +32,7 @@ import Common.Types.App
 import Screens.NoInternetScreen.ComponentConfig
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
+import Effect.Uncurried(runEffectFn3)
 
 screen :: ST.NoInternetScreenState -> String -> Screen Action ST.NoInternetScreenState ScreenOutput
 screen initialState triggertype = 
@@ -40,7 +41,7 @@ screen initialState triggertype =
   , name : "NoInternetScreen"
   , globalEvents : [(\ push -> do
     _ <- JB.storeCallBackDriverLocationPermission push LocationPermissionCallBack
-    _ <- JB.storeCallBackInternetAction push InternetActionCallBack
+    _ <- runEffectFn3 JB.storeCallBackInternetAction push InternetActionCallBack "NoInternetScreen"
     pure $ pure unit)]
   , eval
   }

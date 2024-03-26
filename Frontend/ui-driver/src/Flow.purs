@@ -2168,8 +2168,11 @@ homeScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
   Events.measureDurationFlowBT "Flow.homeScreenFlow" $ do    
     void $ pure $ cleverTapSetLocation unit
-    if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && (not $ any (\item -> isLocalStageOn item) [RideAccepted, RideStarted, ChatWithCustomer]) then currentRideFlow Nothing Nothing
-      else pure unit
+    if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && (not $ any (\item -> isLocalStageOn item) [RideAccepted, RideStarted, ChatWithCustomer])
+      then do  
+        currentRideFlow Nothing Nothing
+      else do 
+        pure unit
     (GlobalState globalState) <- getState
     getDriverInfoResp <- getDriverInfoDataFromCache (GlobalState globalState) false
     when globalState.homeScreen.data.config.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp

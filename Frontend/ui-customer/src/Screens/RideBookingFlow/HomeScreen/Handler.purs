@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.HomeScreen.Handler where
 
 import Control.Monad.Except.Trans (lift)
@@ -27,24 +26,24 @@ import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
 import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..))
 import Screens.Types (BottomNavBarIcon(..))
-import Screens.HomeScreen.Transformer(getTripDetailsState)
+import Screens.HomeScreen.Transformer (getTripDetailsState)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Debug
 
-homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
+homeScreen :: FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
   liftFlowBT $ markPerformance "HOME_SCREEN_RUN"
   (GlobalState state) <- getState
   act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
   void $ lift $ lift $ toggleLoader false
   case act of
-    UpdateLocationName updatedState lat lng-> do
+    UpdateLocationName updatedState lat lng -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> pure (UPDATE_LOCATION_NAME updatedState lat lng)
     UpdatePickupName updatedState lat lng -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> pure (UPDATE_PICKUP_NAME updatedState lat lng)
-    PastRides updatedState fromBanner-> do
+    PastRides updatedState fromBanner -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_RIDES fromBanner)
     GoToHelp updatedState -> do
@@ -64,26 +63,26 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_PROFILE updateProfile)
     GoToFavourites updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure GO_TO_FAVOURITES_ )
+      App.BackT $ App.BackPoint <$> (pure GO_TO_FAVOURITES_)
     LocationSelected selectedItem addToRecents updatedState -> do
-          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-          App.BackT $ App.BackPoint <$> (pure $ LOCATION_SELECTED selectedItem addToRecents)
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ LOCATION_SELECTED selectedItem addToRecents)
     SearchPlace input updatedState -> do
-          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-          App.BackT $ App.NoBack <$> (pure $ SEARCH_LOCATION input updatedState)
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ SEARCH_LOCATION input updatedState)
     GetQuotes updatedState -> do
-          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-          App.BackT $ App.NoBack <$> (pure $ GET_QUOTES updatedState)
-    GoToTicketBookingFlow updatedState -> do 
-          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState{props{focussedBottomIcon = MOBILITY}})
-          App.BackT $ App.BackPoint <$> (pure $ EXIT_TO_TICKETING updatedState)
-    GoToMetroTicketBookingFlow updatedState -> do 
-          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-          App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_BOOKING updatedState)
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GET_QUOTES updatedState)
+    GoToTicketBookingFlow updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState { props { focussedBottomIcon = MOBILITY } })
+      App.BackT $ App.BackPoint <$> (pure $ EXIT_TO_TICKETING updatedState)
+    GoToMetroTicketBookingFlow updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_BOOKING updatedState)
     LogoutUser -> App.BackT $ App.NoBack <$> (pure $ LOGOUT)
     SelectEstimate updatedState -> do
-          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-          App.BackT $ App.NoBack <$> (pure $ SELECT_ESTIMATE updatedState)
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ SELECT_ESTIMATE updatedState)
     GetSelectList updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ GET_SELECT_LIST updatedState)
@@ -93,21 +92,21 @@ homeScreen = do
     RideConfirmed updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ ONGOING_RIDE updatedState)
-    CancelRide updatedState cancelSearchType-> do
+    CancelRide updatedState cancelSearchType -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CANCEL_RIDE_REQUEST updatedState cancelSearchType)
     UpdatedState screenState saveToCurrLocs -> do
-       modifyScreenState $ HomeScreenStateType (\homeScreenState → screenState)
-       App.BackT $ App.BackPoint <$> (pure $ RELOAD saveToCurrLocs)
-    NotificationHandler notification updatedState ->  do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → screenState)
+      App.BackT $ App.BackPoint <$> (pure $ RELOAD saveToCurrLocs)
+    NotificationHandler notification updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ FCM_NOTIFICATION notification updatedState)
     RefreshHomeScreen updatedState -> do
-        modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-        App.BackT $ App.NoBack <$> (pure $ REFRESH_HOME_SCREEN)
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ REFRESH_HOME_SCREEN)
     Retry updatedState -> do
-        modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-        App.BackT $ App.NoBack <$> (pure $ RETRY)
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ RETRY)
     GoToHome state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
       App.BackT $ App.NoBack <$> (pure $ HOME_SCREEN)
@@ -124,8 +123,8 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ GO_TO_FIND_ESTIMATES updatedState)
     UpdateSavedLocation screenState -> do
-       modifyScreenState $ HomeScreenStateType (\homeScreenState → screenState)
-       App.BackT $ App.BackPoint <$> (pure $ UPDATE_SAVED_LOCATION )
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → screenState)
+      App.BackT $ App.BackPoint <$> (pure $ UPDATE_SAVED_LOCATION)
     CheckLocServiceability updatedState lat long -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.NoBack <$> (pure $ CHECK_SERVICEABILITY updatedState lat long)
@@ -170,11 +169,11 @@ homeScreen = do
     ReportIssue updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REPORT_ISSUE updatedState)
-    RideDetailsScreen updatedState -> do 
+    RideDetailsScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       modifyScreenState $ TripDetailsScreenStateType (\_ -> getTripDetailsState updatedState.data.ratingViewState.rideBookingRes state.tripDetailsScreen)
       App.BackT $ App.BackPoint <$> (pure $ RIDE_DETAILS_SCREEN updatedState)
-    RepeatTrip state trip-> do
+    RepeatTrip state trip -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
       App.BackT $ App.BackPoint <$> (pure $ REPEAT_RIDE_FLOW_HOME trip)
     ExitToTicketing updatedState -> do
@@ -186,11 +185,11 @@ homeScreen = do
     ReAllocateRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ REALLOCATE_RIDE updatedState)
-    GoToRentalsFlow updatedState -> do 
+    GoToRentalsFlow updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RENTALS_FLOW updatedState)
     GoToScheduledRides -> App.BackT $ App.NoBack <$> (pure $ GO_TO_SCHEDULED_RIDES)
-    Add_Stop updatedState -> do 
+    Add_Stop updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ ADD_STOP updatedState)
     GoToNammaSafety updatedState triggerSos showTestDrill -> do
@@ -234,14 +233,16 @@ homeScreen = do
     GoToRideRelatedIssues updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_RELATED_ISSUES updatedState)
-    Go_To_Search_Location_Flow updatedState isSource-> do 
+    Go_To_Search_Location_Flow updatedState isSource -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ GO_TO_SEARCH_LOCATION_SCREEN updatedState isSource)
-    RideSearchSO -> 
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDE_SEARCH_FLOW)
+    RideSearchSO -> App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDE_SEARCH_FLOW)
     ConfirmRentalRideSO state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
       App.BackT $ App.NoBack <$> (pure $ CONFIRM_RENTAL_RIDE)
     StayInHomeScreenSO state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
       App.BackT $ App.NoBack <$> (pure $ STAY_IN_HOME_SCREEN)
+    ReloadFlowStatus updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ RELOAD_FLOW_STATUS)

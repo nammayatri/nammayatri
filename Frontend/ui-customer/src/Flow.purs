@@ -329,8 +329,9 @@ currentFlowStatus = do
   goToConfirmingQuotesStage currentStatus = do
     let
       currentTimeToValid = EHC.getUTCAfterNSeconds (getCurrentUTC "") 1800
+
       diffFromValidToCurrent = EHC.compareUTCDate currentStatus.validTill (getCurrentUTC "")
-    when (diffFromValidToCurrent < 3600 && diffFromValidToCurrent > 0 ) do --change depending on time
+    when (diffFromValidToCurrent < 3600 && diffFromValidToCurrent > 0) do --change depending on time
       setValueToLocalStore CONFIRM_QUOTES_POLLING "false"
       updateLocalStage ConfirmingQuotes
       hideLoaderFlow
@@ -518,7 +519,9 @@ currentFlowStatus = do
   goToConfirmRide currentStatus =
     let
       bookingId = currentStatus.bookingId
+
       _ = spy "inside gotoconfirmride" currentStatus
+
       fareProductType = currentStatus.fareProductType
     in
       if any (_ == fareProductType) [ Just "ONE_WAY_SPECIAL_ZONE", Nothing ] then
@@ -546,44 +549,50 @@ enterMobileNumberScreenFlow = do
   flow <- UI.enterMobileNumberScreen
   case flow of
     GoToAccountSetUp state -> do
-            void $ lift $ lift $ loaderText (getString STR.VERIFYING_OTP) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
-            void $ lift $ lift $ toggleLoader true
-            let generatedID = "generated_" <> (generateSessionId unit)
-            (resp) <- lift $ lift $  Remote.verifyToken (Remote.makeVerifyOTPReq state.data.otp generatedID) state.data.tokenId
-            case resp of
-              Right resp -> do
-                    void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_verify_otp"
-                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {props {enterOTP = false}})
-                    let (VerifyTokenResp response) = resp
-                        customerId = ((response.person)^. _id)
-                    if (customerId == "__failed") then do
-                      void $ lift $ lift $ setLogField "customer_id" $ encode ("null")
-                      pure unit
-                      else do
-                        void $ lift $ lift $ setLogField "customer_id" $ encode (customerId)
-                        pure unit
-                    setValueToLocalStore CUSTOMER_ID customerId
-                    void $ liftFlowBT $ setCleverTapUserData "Identity" customerId
-                    setValueToLocalStore REGISTERATION_TOKEN response.token
-                    setValueToLocalStore USER_NAME $ (fromMaybe "" $ response.person ^. _firstName) <> " " <> (fromMaybe "" $ response.person ^. _middleName) <> " " <> (fromMaybe "" $ response.person ^. _lastName)
-                    if isNothing (response.person ^. _firstName) then currentFlowStatus else handleDeepLinks Nothing false
-              Left err -> do
-                pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
-                let errResp = err.response
-                    codeMessage = decodeError errResp.errorMessage "errorCode"
-                if ( err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
-                    void $ pure $ toast (getString STR.OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN)
-                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{data{otp=""}, props{enterOTP = false, wrongOTP = false}})
-                else if ( err.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
-                    let attemptsLeft = decodeError errResp.errorMessage "errorPayload"
-                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true, btnActiveOTP = false, attemptLeft = attemptsLeft}, data{otp=""}})
-                else if ( err.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
-                    pure $ toast (getString STR.TOO_MANY_LOGIN_ATTEMPTS_PLEASE_TRY_AGAIN_LATER)
-                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {props {enterOTP = false, wrongOTP = false}, data{otp=""}})
-                else do
-                    pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
-                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {props {enterOTP = false,wrongOTP = false}, data{otp=""}})
-                enterMobileNumberScreenFlow
+      void $ lift $ lift $ loaderText (getString STR.VERIFYING_OTP) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handlde Loader in IOS Side
+      void $ lift $ lift $ toggleLoader true
+      let
+        generatedID = "generated_" <> (generateSessionId unit)
+      (resp) <- lift $ lift $ Remote.verifyToken (Remote.makeVerifyOTPReq state.data.otp generatedID) state.data.tokenId
+      case resp of
+        Right resp -> do
+          void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_verify_otp"
+          modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { props { enterOTP = false } })
+          let
+            (VerifyTokenResp response) = resp
+
+            customerId = ((response.person) ^. _id)
+          if (customerId == "__failed") then do
+            void $ lift $ lift $ setLogField "customer_id" $ encode ("null")
+            pure unit
+          else do
+            void $ lift $ lift $ setLogField "customer_id" $ encode (customerId)
+            pure unit
+          setValueToLocalStore CUSTOMER_ID customerId
+          void $ liftFlowBT $ setCleverTapUserData "Identity" customerId
+          setValueToLocalStore REGISTERATION_TOKEN response.token
+          setValueToLocalStore USER_NAME $ (fromMaybe "" $ response.person ^. _firstName) <> " " <> (fromMaybe "" $ response.person ^. _middleName) <> " " <> (fromMaybe "" $ response.person ^. _lastName)
+          if isNothing (response.person ^. _firstName) then currentFlowStatus else handleDeepLinks Nothing false
+        Left err -> do
+          pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
+          let
+            errResp = err.response
+
+            codeMessage = decodeError errResp.errorMessage "errorCode"
+          if (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
+            void $ pure $ toast (getString STR.OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN)
+            modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber { data { otp = "" }, props { enterOTP = false, wrongOTP = false } })
+          else if (err.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
+            let
+              attemptsLeft = decodeError errResp.errorMessage "errorPayload"
+            modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber { props { wrongOTP = true, btnActiveOTP = false, attemptLeft = attemptsLeft }, data { otp = "" } })
+          else if (err.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
+            pure $ toast (getString STR.TOO_MANY_LOGIN_ATTEMPTS_PLEASE_TRY_AGAIN_LATER)
+            modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { props { enterOTP = false, wrongOTP = false }, data { otp = "" } })
+          else do
+            pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+            modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { props { enterOTP = false, wrongOTP = false }, data { otp = "" } })
+          enterMobileNumberScreenFlow
     GoToOTP state -> do
       when ((getValueToLocalStore MOBILE_NUMBER) /= state.data.mobileNumber)
         $ do
@@ -974,7 +983,7 @@ homeScreenFlow = do
         Nothing -> do
           logInfo "auto_complete_search_predictions" input
           (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input state.props.sourceLat state.props.sourceLong (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "" cityConfig.geoCodeConfig state.props.rideSearchProps.autoCompleteType state.props.rideSearchProps.sessionId)
-          let 
+          let
             sortedByDistanceList = sortPredictionByDistance searchLocationResp.predictions
 
             predictionList = getLocationList sortedByDistanceList
@@ -1617,6 +1626,7 @@ homeScreenFlow = do
     GO_TO_FAVOURITES_ -> do
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_addresses"
       savedLocationFlow
+    RELOAD_FLOW_STATUS -> currentFlowStatus
     OPEN_GOOGLE_MAPS state -> do
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_ride_track_gmaps"
       (GetDriverLocationResp resp) <- Remote.getDriverLocationBT (state.data.driverInfoCardState.rideId)
@@ -2467,38 +2477,57 @@ tripDetailsScreenFlow = do
       void $ lift $ lift $ toggleLoader false
       config <- getAppConfigFlowBT appConfig
       pure $ toast (getString STR.REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON)
-      void $ Remote.sendIssueBT (Remote.makeSendIssueReq  (Just config.appData.supportMail) (Just updatedState.data.selectedItem.rideId) "LOSTANDFOUND" "LOST AND FOUND" $ Just false)
-      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{fromMyRides = updatedState.props.fromMyRides}})
-      tripDetailsScreenFlow 
-    GET_CATEGORIES_LIST updatedState -> do 
-      let language = fetchLanguage $ getLanguageLocale languageKey
-          categoryOrder = ["LOST_AND_FOUND", "DRIVER_RELATED", "RIDE_RELATED", "APP_RELATED"]
-          compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
+      void $ Remote.sendIssueBT (Remote.makeSendIssueReq (Just config.appData.supportMail) (Just updatedState.data.selectedItem.rideId) "LOSTANDFOUND" "LOST AND FOUND" $ Just false)
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { props { fromMyRides = updatedState.props.fromMyRides } })
+      tripDetailsScreenFlow
+    GET_CATEGORIES_LIST updatedState -> do
+      let
+        language = fetchLanguage $ getLanguageLocale languageKey
+
+        categoryOrder = [ "LOST_AND_FOUND", "DRIVER_RELATED", "RIDE_RELATED", "APP_RELATED" ]
+
+        compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
-      let unsortedCatagory = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : catObj.label, categoryImageUrl : catObj.logoUrl}) response.categories
-          categories' = sortBy compareByOrder unsortedCatagory
-      modifyScreenState $ TripDetailsScreenStateType (\helpAndSupportScreen -> updatedState { data {categories = categories' }, props { fromMyRides = updatedState.props.fromMyRides} } )
-      tripDetailsScreenFlow 
+      let
+        unsortedCatagory = map (\(Category catObj) -> { categoryName: if (language == "en") then capitalize catObj.category else catObj.category, categoryId: catObj.issueCategoryId, categoryAction: catObj.label, categoryImageUrl: catObj.logoUrl }) response.categories
+
+        categories' = sortBy compareByOrder unsortedCatagory
+      modifyScreenState $ TripDetailsScreenStateType (\helpAndSupportScreen -> updatedState { data { categories = categories' }, props { fromMyRides = updatedState.props.fromMyRides } })
+      tripDetailsScreenFlow
     GO_TO_ISSUE_CHAT_SCREEN updatedState selectedCategory -> do
-      let language = fetchLanguage $ getLanguageLocale languageKey
-      currentIssueList <- if selectedCategory.categoryAction == "RIDE_RELATED" 
-                              then do
-                                (FetchIssueListResp issueListResponse) <- Remote.fetchIssueListBT language
-                                let issues = getApiIssueList issueListResponse.issues
-                                pure $ getUpdatedIssueList ["OPEN", "PENDING", "RESOLVED", "REOPENED"] issues 
-                              else pure []
+      let
+        language = fetchLanguage $ getLanguageLocale languageKey
+      currentIssueList <-
+        if selectedCategory.categoryAction == "RIDE_RELATED" then do
+          (FetchIssueListResp issueListResponse) <- Remote.fetchIssueListBT language
+          let
+            issues = getApiIssueList issueListResponse.issues
+          pure $ getUpdatedIssueList [ "OPEN", "PENDING", "RESOLVED", "REOPENED" ] issues
+        else
+          pure []
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" ""
-      let filteredOptions = UI.transformIssueOptions getOptionsRes.options (Just updatedState.data.selectedItem) currentIssueList updatedState.data.config.cityConfig
-          options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) filteredOptions
-          messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))getOptionsRes.messages
-          chats' = map (\(Message currMessage) -> Chat {
-                      chatId : currMessage.id,
-                      chatType : "IssueMessage",
-                      timestamp : getCurrentUTC ""
-                    }) getOptionsRes.messages
-          categoryName = getTitle selectedCategory.categoryAction
-          merchantExoPhone' = if updatedState.data.selectedItem.merchantExoPhone == "" then Nothing else Just updatedState.data.selectedItem.merchantExoPhone
-      modifyScreenState $ ReportIssueChatScreenStateType (\ reportIssueChatState -> reportIssueChatState { data { merchantExoPhone = merchantExoPhone',  selectedRide = Just updatedState.data.selectedItem, entryPoint = ReportIssueChatScreenData.TripDetailsScreenEntry, chats = chats', categoryName = categoryName, categoryId = selectedCategory.categoryId, options = options', chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'}, tripId = Just updatedState.data.selectedItem.rideId }})
+      let
+        filteredOptions = UI.transformIssueOptions getOptionsRes.options (Just updatedState.data.selectedItem) currentIssueList updatedState.data.config.cityConfig
+
+        options' = mapWithIndex (\index (Option optionObj) -> optionObj { option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option) }) filteredOptions
+
+        messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))) getOptionsRes.messages
+
+        chats' =
+          map
+            ( \(Message currMessage) ->
+                Chat
+                  { chatId: currMessage.id
+                  , chatType: "IssueMessage"
+                  , timestamp: getCurrentUTC ""
+                  }
+            )
+            getOptionsRes.messages
+
+        categoryName = getTitle selectedCategory.categoryAction
+
+        merchantExoPhone' = if updatedState.data.selectedItem.merchantExoPhone == "" then Nothing else Just updatedState.data.selectedItem.merchantExoPhone
+      modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueChatState -> reportIssueChatState { data { merchantExoPhone = merchantExoPhone', selectedRide = Just updatedState.data.selectedItem, entryPoint = ReportIssueChatScreenData.TripDetailsScreenEntry, chats = chats', categoryName = categoryName, categoryId = selectedCategory.categoryId, options = options', chatConfig = ReportIssueChatScreenData.initData.data.chatConfig { messages = messages' }, tripId = Just updatedState.data.selectedItem.rideId } })
       flowRouter IssueReportChatScreenFlow
 
 invoiceScreenFlow :: FlowBT String Unit
@@ -4114,8 +4143,7 @@ rideScheduledFlow = do
     RideScheduledScreenOutput.GoToMyRidesScreen state -> do
       modifyScreenState $ RideScheduledScreenStateType (\_ -> RideScheduledScreenData.initData)
       myRidesScreenFlow
-    
-    RideScheduledScreenOutput.NotificationListenerSO notificationType -> do 
+    RideScheduledScreenOutput.NotificationListenerSO notificationType -> do
       (GlobalState globalState) <- getState
       fcmHandler notificationType globalState.homeScreen
       homeScreenFlow
@@ -5352,7 +5380,8 @@ rentalScreenFlow = do
             -- setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ Arr.sortWith (_.rideStartTime) $ (decodeBookingTimeList FunctionCall) <> [ { bookingId: resp.bookingId, rideStartTime: updatedState.data.startTimeUTC, estimatedDuration: (updatedState.data.rentalBookingData.baseDuration * 60) } ]
             rideScheduledFlow
         Left err -> do
-          let _ = spy "inside (decodeError err.response.errorMessage errorCode)" (decodeError err.response.errorMessage "errorCode")
+          let
+            _ = spy "inside (decodeError err.response.errorMessage errorCode)" (decodeError err.response.errorMessage "errorCode")
           if ((decodeError err.response.errorMessage "errorCode") == "INVALID_REQUEST" && DS.contains (Pattern "Quote expired") (decodeError err.response.errorMessage "errorMessage")) then do
             void $ pure $ toast "Quote Expired, Please schedule a ride again"
             modifyScreenState $ RentalScreenStateType (\_ -> updatedState { data { currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = [] } })

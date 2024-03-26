@@ -21,6 +21,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PopUpModal as PopUpModal
 import DecodeUtil as DU
 import Data.Function.Uncurried (runFn3)
+import Effect.Uncurried (runEffectFn3)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
@@ -49,7 +50,7 @@ screen initialState  =
       pure $ pure unit
     else do 
       _ <- JB.storeCallBackDriverLocationPermission push LocationPermissionCallBackCustomer
-      _ <- JB.storeCallBackInternetAction push InternetCallBackCustomer
+      _ <- runEffectFn3 JB.storeCallBackInternetAction push InternetCallBackCustomer "PermissionScreen"
       pure $ pure unit
   )]
   , eval
