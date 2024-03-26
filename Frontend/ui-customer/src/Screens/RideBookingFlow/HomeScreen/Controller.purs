@@ -775,6 +775,7 @@ data ScreenOutput = LogoutUser
                   | GoToMyMetroTickets HomeScreenState
                   | GoToMetroTicketBookingFlow HomeScreenState
                   | GoToSafetyEducation HomeScreenState
+                  | ReloadFlowStatus HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -944,6 +945,8 @@ data Action = NoAction
             | AllChatsLoaded
             | GoToSafetyEducationScreen
             | SpecialZoneInfoTag 
+            | UpdateNoInternet 
+            | InternetCallBackCustomer String
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -959,6 +962,14 @@ eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) s
         }
       }
     }
+
+eval (InternetCallBackCustomer internetAvailable) state =
+  if( internetAvailable == "true") then do
+    updateAndExit state{props{isOffline = false}} $ ReloadFlowStatus state{props{isOffline = false}}
+  else continue state
+  
+
+eval UpdateNoInternet state = continue state{props{isOffline = true}}
 
 eval ShowMoreSuggestions state = do
   void $ pure $ map (\item -> startLottieProcess lottieAnimationConfig{ rawJson =  (getAssetsBaseUrl FunctionCall) <> "lottie/right_arrow.json" , speed = 1.0,lottieId = (getNewIDWithTag $ "movingArrowView" <> show item), minProgress = 0.0 }) [0,1]
@@ -1784,7 +1795,11 @@ eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButt
 eval OpenSettings state = do
   _ <- pure $ hideKeyboardOnNavigation true
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_burger_menu"
-  continue state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+  if state.props.isOffline then do 
+    void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+    continue state 
+  else
+    continue state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
 eval (SearchExpireCountDown seconds status timerID) state = do
   if status == "EXPIRED" then do
@@ -1878,15 +1893,23 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)
 
 eval OpenEmergencyHelp state = do
   _ <- pure $ performHapticFeedback unit
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_ic_safety_center_clicked"
-  exit $ GoToNammaSafety state true false
+  if state.props.isOffline then do 
+    void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+    continue state 
+  else do
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_ic_safety_center_clicked"
+    exit $ GoToNammaSafety state true false
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{currentSheetState = if state.props.currentSheetState == EXPANDED then COLLAPSED else EXPANDED}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = 
-  if state.data.config.feature.shareWithEmergencyContacts 
-    then exit $ GoToShareRide state
-    else continueWithCmd state [pure ShareRide]
+  if state.props.isOffline then do 
+    void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+    continue state 
+  else do
+    if state.data.config.feature.shareWithEmergencyContacts 
+      then exit $ GoToShareRide state
+      else continueWithCmd state [pure ShareRide]
 
 eval ShareRide state = do
   continueWithCmd state
@@ -1947,11 +1970,40 @@ eval (CancelRidePopUpAction (CancelRidePopUp.ClearOptions)) state = do
 
 eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnClick)) state = do
     _ <- pure $ performHapticFeedback unit
-    let newState = state{props{autoScroll = false, isCancelRide = false,currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = NoView }}
-    case state.props.cancelRideActiveIndex of
-      Just index -> if ( (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "OTHER" || (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "TECHNICAL_GLITCH" ) then exit $ CancelRide newState{props{cancelDescription = if (newState.props.cancelDescription == "") then (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description else newState.props.cancelDescription }}
-                      else exit $ CancelRide newState{props{cancelDescription = (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description , cancelReasonCode = (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode }}
-      Nothing    -> continue state
+    if state.props.isOffline then do
+      void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+      continue state 
+    else do
+      let newState = 
+            state
+              { props
+                  { autoScroll = false
+                  , isCancelRide = false
+                  , currentStage = HomeScreen
+                  , rideRequestFlow = false
+                  , isSearchLocation = NoView 
+                  }
+              }
+      case state.props.cancelRideActiveIndex of
+        Just index -> 
+          if (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "OTHER" 
+             || (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "TECHNICAL_GLITCH" 
+          then 
+            exit $ CancelRide newState
+              { props
+                  { cancelDescription = if STR.null newState.props.cancelDescription 
+                                        then (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).description 
+                                        else newState.props.cancelDescription 
+                  }
+              }
+          else 
+            exit $ CancelRide newState
+              { props
+                  { cancelDescription = (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).description
+                  , cancelReasonCode = (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode 
+                  }
+              }
+        Nothing -> continue state
 
 eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.Button1 PrimaryButtonController.OnClick))) state = continue state { data { ratingViewState { openReportIssue = false } } }
 
@@ -2494,7 +2546,12 @@ eval (DisabilityPopUpAC PopUpModal.OnButton1Click) state = do
   _ <- pure $ pauseYoutubeVideo unit
   continue state{props{showDisabilityPopUp = false}}
 
-eval (SafetyBannerAction Banner.OnClick) state = exit $ GoToNammaSafety state false $ state.props.sosBannerType == Just MOCK_DRILL_BANNER
+eval (SafetyBannerAction Banner.OnClick) state =
+  if state.props.isOffline then do
+      void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+      continue state 
+  else do
+    exit $ GoToNammaSafety state false $ state.props.sosBannerType == Just MOCK_DRILL_BANNER
 
 eval ShowRateCard state = do
   continue state { props { showRateCard = true } }

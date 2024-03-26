@@ -992,6 +992,7 @@ homeScreenFlow = do
                                       setValueToLocalStore IS_SOS_ACTIVE "false"
                                       deleteValueFromLocalStore SELECTED_VARIANT
                                       removeChatService ""
+                                      liftFlowBT $ JB.clearNoInternetAction unit
                                       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{data{sosId = ""}})
                                       if (state.props.bookingId /= "") then do
                                         (RideBookingRes resp) <- Remote.rideBookingBT (state.props.bookingId)
@@ -1337,6 +1338,7 @@ homeScreenFlow = do
     GO_TO_FAVOURITES_  -> do
         void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_addresses"
         savedLocationFlow
+    RELOAD_FLOW_STATUS -> currentFlowStatus
     OPEN_GOOGLE_MAPS state -> do
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_ride_track_gmaps"
       (GetDriverLocationResp resp) <- Remote.getDriverLocationBT (state.data.driverInfoCardState.rideId)
