@@ -77,7 +77,7 @@ import Screens as ScreenNames
 import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight, getBannerConfigs)
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..),TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..))
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), GetDriverInfoReq(..))
+import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), GetDriverInfoReq(..), DriverProfileStatsResp(..))
 import Services.Backend as Remote
 import Engineering.Helpers.Events as Events
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
@@ -113,12 +113,13 @@ screen initialState (GlobalState globalState) =
                            void $ pure $ JB.setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
           if getValueToLocalNativeStore IS_DRIVER_STATS_CALLED == "false"
             then do
-              void $ pure $ setValueToLocalStore IS_DRIVER_STATS_CALLED "true"
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ do                
                 driverStatsResp <- Remote.getDriverProfileStats (DriverProfileStatsReq (HU.getcurrentdate ""))
                 case driverStatsResp of
-                  Right driverStats -> liftFlow $ push $ DriverStats driverStats
-                  Left _ -> void $ pure $ setValueToLocalStore IS_DRIVER_STATS_CALLED "false"
+                  Right (DriverProfileStatsResp driverStats) -> liftFlow $ push $ DriverStats (DriverProfileStatsResp driverStats)
+                  Left _ -> do
+                    void $ pure $ JB.firebaseLogEvent "error_stats_api"
+                    void $ pure $ setValueToLocalStore IS_DRIVER_STATS_CALLED "false"
             else pure unit
           let localStage = getValueToLocalNativeStore LOCAL_STAGE
           if (localStage /= "RideAccepted" && localStage /= "ChatWithCustomer" && initialState.data.activeRide.waitTimerId /= "") then do
@@ -358,7 +359,7 @@ driverMapsHeaderView push state =
                     , relativeLayout 
                       [ width MATCH_PARENT
                       , height WRAP_CONTENT
-                      , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
+                      , visibility $ boolToVisibility $ not $ (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) || statesNotInitalized
                       ][ statsModel push state
                        , expandedStatsModel push state
                       ]
@@ -381,6 +382,7 @@ driverMapsHeaderView push state =
   ]
   where
     getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || visible then [] else [bannersCarousal item bottomMargin state push]) state.data.bannerData.bannerItem
+    statesNotInitalized = DA.any (_ == -1) [state.data.totalEarningsOfDay, state.data.totalRidesOfDay, state.data.bonusEarned, state.data.coinBalance]
 
 specialPickupZone :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 specialPickupZone push state = 

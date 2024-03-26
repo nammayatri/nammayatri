@@ -2373,6 +2373,8 @@ homeScreenFlow = do
     GOT_DRIVER_STATS driverStats -> do      
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { driverRideStats = Just $ driverStats }      
       updateDriverDataToStates
+      void $ liftFlowBT $ HU.setStatsToLocal driverStats
+      setValueToLocalStore IS_DRIVER_STATS_CALLED "true"
       modifyScreenState $ HomeScreenStateType $ \currentState -> currentState { data { driverStats = true } }
       homeScreenFlow
     UPDATE_SPECIAL_LOCATION_LIST -> do
@@ -3117,6 +3119,21 @@ updateBannerAndPopupFlags = do
         && toBool (getValueToLocalNativeStore IS_RIDE_ACTIVE)  == false 
         && (fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) /= 7)
         && isCoinPopupNotShownToday
+    
+  case (HU.getStatsFromLocal FunctionCall) of
+    Just (DriverProfileStatsResp driverStats) ->
+      modifyScreenState $ HomeScreenStateType 
+        (\homeScreen -> 
+          homeScreen 
+            { data 
+                { totalRidesOfDay = driverStats.totalRidesOfDay
+                , totalEarningsOfDay = driverStats.totalEarningsOfDay
+                , coinBalance = driverStats.coinBalance
+                , bonusEarned = driverStats.bonusEarning 
+                }
+            }
+        )
+    Nothing -> pure unit
 
   when moveDriverToOffline $ do
       setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE (getCurrentUTC "")

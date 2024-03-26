@@ -1161,8 +1161,7 @@ eval (GoToEarningsScreen showCoinsView) state = do
   let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_driver_coins_click_on_homescreen" $ [{key : "CoinBalance", value : unsafeToForeign state.data.coinBalance}]
   exit $ EarningsScreen state showCoinsView
 
-eval (DriverStats driverStats) state = do
-  exit $ DriverStatsUpdate driverStats state
+eval (DriverStats driverStats) state = exit $ DriverStatsUpdate driverStats state
 
 eval _ state = continue state
 
