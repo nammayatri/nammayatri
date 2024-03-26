@@ -34,6 +34,7 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -85,6 +86,12 @@ data ConfirmQuoteDetails
   | ConfirmAutoDetails Text
   | ConfirmOneWaySpecialZoneDetails Text
   deriving (Show, Generic)
+
+tryInitTriggerLock :: (Redis.HedisFlow m r) => Id DP.Person -> m Bool
+tryInitTriggerLock personId = do
+  let initTriggerLockKey = "Customer:Init:Trigger:PersonId:-" <> personId.getId
+      lockExpiryTime = 10 -- Note: this value should be decided based on the delay between consecutive quotes in on_select api & also considering reallocation.
+  Redis.tryLockRedis initTriggerLockKey lockExpiryTime
 
 confirm ::
   ( EsqDBFlow m r,

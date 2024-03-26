@@ -110,11 +110,13 @@ onSelect OnSelectValidatedReq {..} = do
       let lowestFareQuote = selectLowestFareQuote quotes
       case lowestFareQuote of
         Just autoAssignQuote -> do
-          let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quoteId = autoAssignQuote.id, paymentMethodId = searchRequest.selectedPaymentMethodId}
-          dConfirmRes <- SConfirm.confirm dConfirmReq
-          becknInitReq <- ACL.buildInitReqV2 dConfirmRes
-          handle (errHandler dConfirmRes.booking) $
-            void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq
+          isLockAcquired <- SConfirm.tryInitTriggerLock person.id
+          when isLockAcquired $ do
+            let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quoteId = autoAssignQuote.id, paymentMethodId = searchRequest.selectedPaymentMethodId}
+            dConfirmRes <- SConfirm.confirm dConfirmReq
+            becknInitReq <- ACL.buildInitReqV2 dConfirmRes
+            handle (errHandler dConfirmRes.booking) $
+              void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq
         Nothing -> do
           bppDetails <- forM ((.providerId) <$> quotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
           Notify.notifyOnDriverOfferIncoming estimate.id quotes person bppDetails
