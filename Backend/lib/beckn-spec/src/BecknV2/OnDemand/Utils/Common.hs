@@ -15,6 +15,7 @@ module BecknV2.OnDemand.Utils.Common where
 
 import BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.Utils as Utils
 import qualified Data.Aeson as A
 import Data.Data (Data, gmapQ)
 import Data.Generics.Aliases (ext1Q)
@@ -24,6 +25,7 @@ import qualified Data.UUID as UUID
 import EulerHS.Prelude
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Error
+import Kernel.Types.TimeRFC339 (convertRFC3339ToUTC)
 import Kernel.Utils.Common
 import Text.Printf (printf)
 
@@ -53,3 +55,9 @@ decodeReq reqBS =
 
 gpsToText :: Gps.Gps -> Maybe Text
 gpsToText Gps.Gps {..} = Just $ T.pack (printf "%.6f" lat) <> ", " <> T.pack (printf "%.6f" lon)
+
+getTimestampAndValidTill :: (MonadFlow m, Log m) => Spec.Context -> m (UTCTime, UTCTime)
+getTimestampAndValidTill context = do
+  ttl <- context.contextTtl >>= Utils.parseISO8601Duration & fromMaybeM (InvalidRequest "Missing ttl")
+  timestamp <- context.contextTimestamp >>= Just . convertRFC3339ToUTC & fromMaybeM (InvalidRequest "Missing timestamp")
+  return $ (timestamp, addUTCTime ttl timestamp)
