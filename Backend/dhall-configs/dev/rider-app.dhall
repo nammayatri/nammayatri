@@ -61,7 +61,7 @@ let InfoBIPConfig =
       , password = common.InfoBIPConfig.password
       , token = common.InfoBIPConfig.token
       , url = "https://gye1yw.api.infobip.com"
-      , webhookurl = "https://0fc0-65-1-52-128.ngrok-free.app/v2/update/status"
+      , webhookurl = "https://dd17-106-51-81-97.ngrok-free.app/v2/update/status"
       , sender = "JUSPAY"
       }
 
@@ -231,8 +231,8 @@ in  { esqDBCfg
     , port = +8013
     , metricsPort = +9999
     , hostName = "localhost"
-    , nwAddress = "https://0fc0-65-1-52-128.ngrok-free.app/beckn/cab/v1"
-    , selfUIUrl = "https://0fc0-65-1-52-128.ngrok-free.app/v2/"
+    , nwAddress = "https://dd17-106-51-81-97.ngrok-free.app/beckn/cab/v1"
+    , selfUIUrl = "https://dd17-106-51-81-97.ngrok-free.app/v2/"
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config

@@ -59,13 +59,13 @@ let driverOfferBppManagement =
 
 let appBackend =
       { name = common.ServerName.APP_BACKEND
-      , url = "https://0fc0-65-1-52-128.ngrok-free.app/"
+      , url = "https://dd17-106-51-81-97.ngrok-free.app/"
       , token = sec.appBackendToken
       }
 
 let appBackendManagement =
       { name = common.ServerName.APP_BACKEND_MANAGEMENT
-      , url = "https://0fc0-65-1-52-128.ngrok-free.app/"
+      , url = "https://dd17-106-51-81-97.ngrok-free.app/"
       , token = sec.appBackendToken
       }
 

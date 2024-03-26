@@ -177,7 +177,7 @@ let kvConfigUpdateFrequency = +10
 
 let appBackendBapInternal =
       { name = "APP_BACKEND"
-      , url = "https://0fc0-65-1-52-128.ngrok-free.app/"
+      , url = "https://dd17-106-51-81-97.ngrok-free.app/"
       , apiKey = sec.appBackendApikey
       , internalKey = sec.internalKey
       }

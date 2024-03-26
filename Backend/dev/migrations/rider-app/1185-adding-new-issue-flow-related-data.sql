@@ -75,7 +75,7 @@ CREATE TABLE atlas_app.issue_config (
 );
 
 --MEDIAFILE CONFIGS TO MERCHANT TABLE
-ALTER TABLE atlas_app.merchant ADD COLUMN media_file_url_pattern text DEFAULT 'https://0fc0-65-1-52-128.ngrok-free.app/v2/<DOMAIN>/media?filePath=<FILE_PATH>' NOT NULL;
+ALTER TABLE atlas_app.merchant ADD COLUMN media_file_url_pattern text DEFAULT 'https://dd17-106-51-81-97.ngrok-free.app/v2/<DOMAIN>/media?filePath=<FILE_PATH>' NOT NULL;
 ALTER TABLE atlas_app.merchant ADD COLUMN media_file_size_upper_limit int DEFAULT 10000000 NOT NULL;
 
 --ISSUE CONFIGS

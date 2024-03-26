@@ -53,7 +53,7 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , googleTranslateUrl = "https://www.googleapis.com/"
     , googleTranslateKey = sec.googleTranslateKey
     , registryUrl = mockRegistryUrl
-    , authServiceUrl = "https://0fc0-65-1-52-128.ngrok-free.app/"
+    , authServiceUrl = "https://dd17-106-51-81-97.ngrok-free.app/"
     , consumerType = globalCommon.consumerType
     , schedulerType = SchedulerType
     , internalEndPointMap
