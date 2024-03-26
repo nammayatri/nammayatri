@@ -190,6 +190,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
     @JavascriptInterface
     public void updateRoute(String _payload) {
+
         ExecutorManager.runOnMainThread(() -> {
             if (googleMap != null) {
                 try {
@@ -276,8 +277,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         if (marker != null) {
 
             LatLng startPosition = marker.getPosition();
-
-
             ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1);
             valueAnimator.setDuration(2000); // TODO :: get this value from Loacl Storage to maintain sync with PS
             valueAnimator.setInterpolator(new LinearInterpolator());

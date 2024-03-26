@@ -200,7 +200,9 @@ import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.common.map.RouteHandler;
 import in.juspay.mobility.common.services.MobilityCallAPI;
+import in.juspay.mobility.common.utills.SharedPref;
 
 public class MobilityCommonBridge extends HyperBridge {
 
@@ -280,6 +282,8 @@ public class MobilityCommonBridge extends HyperBridge {
     private MapRemoteConfig mapRemoteConfig;
     protected LocateOnMapManager locateOnMapManager = null;
     private Timer polylineAnimationTimer = null;
+
+    private RouteHandler routeHandler = null;
 
     protected enum AppType {
         CONSUMER, PROVIDER
@@ -375,6 +379,8 @@ public class MobilityCommonBridge extends HyperBridge {
         callBack = this::callImageUploadCallBack;
         Utils.registerCallback(callBack);
         fetchAndUpdateLastKnownLocation();
+
+        sharedPref = new SharedPref(bridgeComponents);
     }
 
     public MapRemoteConfig getMapRemoteConfig() {
@@ -1460,6 +1466,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
+    @Deprecated
     @JavascriptInterface
     public void animateCamera(final double lat, final double lng, final float zoom, final String zoomType) {
         ExecutorManager.runOnMainThread(() -> {
@@ -2212,6 +2219,13 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
+    public void drawRouteV2(final String routeId, final String config) {
+        onMapUpdate(null,null);
+        routeHandler.drawRoute(routeId, config);
+    }
+
+
+
     @JavascriptInterface
     public void updateMarker(final String markerConfigString) {
         ExecutorManager.runOnMainThread(() -> {
@@ -2589,6 +2603,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
     // endregion
 
+    @Deprecated
     @JavascriptInterface
     public void showMap(final String pureScriptId, boolean isEnableCurrentLocation, final String mapType, final float zoom, final String callback, final String mapConfig) {
         try {
@@ -2618,30 +2633,35 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
+
+
     // region Shared Preference Utils
     @JavascriptInterface
     public void setKeysInSharedPrefs(String key, String value) {
-        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
-        sharedPref.edit().putString(key, value).apply();
-        if (key.equals(bridgeComponents.getContext().getString(R.string.LANGUAGE_KEY))) {
-            Utils.updateLocaleResource(value, bridgeComponents.getContext());
-        }
+//        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
+//        sharedPref.edit().putString(key, value).apply();
+//        if (key.equals(bridgeComponents.getContext().getString(R.string.LANGUAGE_KEY))) {
+//            Utils.updateLocaleResource(value, bridgeComponents.getContext());
+//        }
+        sharedPref.setKeysInSharedPrefs(key, value);
     }
 
     @JavascriptInterface
     public String getKeysInSharedPref(String key) {
-        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
-        return sharedPref.getString(key, "__failed");
+//        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
+//        return sharedPref.getString(key, "__failed");
+        return sharedPref.getKeysInSharedPref(key);
     }
 
     @JavascriptInterface
     public String getKeyInNativeSharedPrefKeys(String key) {
-        return getKeysInSharedPref(key);
+        return sharedPref.getKeyInNativeSharedPrefKeys(key);
     }
 
     @JavascriptInterface
     public void setEnvInNativeSharedPrefKeys(String key, String value) {
-        setKeysInSharedPrefs(key, value);
+//        setKeysInSharedPrefs(key, value);
+        sharedPref.setEnvInNativeSharedPrefKeys(key, value);
     }
 
     //endregion
