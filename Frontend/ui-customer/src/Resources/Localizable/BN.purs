@@ -998,7 +998,7 @@ getBN stringKey =
         BUY_METRO_TICKETS -> "মেট্রো টিকেট কিনুন"
         GET_FARE -> "ভাড়া প্রাপ্ত করুন"
         METRO_BOOKING_TIMINGS -> "মেট্রো বুকিং সময়"
-        CHENNAI_METRO_TIME -> "চেন্নাই মেট্রো 4:30 টা থেকে 10:30 টা পর্যন্ত কিউআর টিকেট ক্রয় করার অনুমতি দেয়।"
+        CHENNAI_METRO_TIME startTime endTime  -> "চেন্নাই মেট্রো 4:30 টা থেকে 10:30 টা পর্যন্ত কিউআর টিকেট ক্রয় করার অনুমতি দেয়।"
         PLEASE_COME_BACK_LATER_METRO -> "দয়া করে এলাক্টেবল সময়ে টিকেট ক্রয় করতে প্রস্তুত হন।"
         NO_QOUTES_AVAILABLE -> "কোন উদ্ধৃতি উপলব্ধ নেই"
         I_AGREE_TO_THE -> "আমি সম্মত"

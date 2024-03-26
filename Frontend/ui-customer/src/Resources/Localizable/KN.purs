@@ -998,7 +998,7 @@ getKN stringKey =
         BUY_METRO_TICKETS -> "ಮೆಟ್ರೊ ಟಿಕೆಟ್ಗಳನ್ನು ಖರೀದಿಸಿ"
         GET_FARE -> "ಶುಲ್ಕ ಪಡೆಯಿರಿ"
         METRO_BOOKING_TIMINGS -> "ಮೆಟ್ರೊ ಬುಕಿಂಗ್ ಸಮಯ"
-        CHENNAI_METRO_TIME -> "ಚೆನ್ನೈ ಮೆಟ್ರೊ 4:30 ಗೆ ಬೆಳಗ್ಗೆ 10:30 ಗೆ ರಾತ್ರಿ ಕ್ಯೂಆರ್ ಟಿಕೆಟ್ ಖರೀದಿಸಲು ಅನುಮತಿಸಿದೆ."
+        CHENNAI_METRO_TIME startTime endTime -> "ಚೆನ್ನೈ ಮೆಟ್ರೊ "<> startTime <> " ಇಂದ "<> endTime <> " ಗೆರವರೆಗೆ ಕ್ಯೂಆರ್ ಟಿಕೆಟ್ ಖರೀದಿಸಲು ಅನುಮತಿಸಿದೆ."
         PLEASE_COME_BACK_LATER_METRO -> "ದಯವಿಟ್ಟು ಟಿಕೆಟ್ ಖರೀದಿಸಲು ಅರ್ಹ ಸಮಯದಲ್ಲಿ ಮರಳಿ ಬನ್ನಿ."
         NO_QOUTES_AVAILABLE -> "ಯಾವುದೇ ಉದಾಹರಣೆಗಳು ಲಭ್ಯವಿಲ್ಲ"
         I_AGREE_TO_THE -> "ನಾನು ಒಪ್ಪಿದ್ದೇನೆ"

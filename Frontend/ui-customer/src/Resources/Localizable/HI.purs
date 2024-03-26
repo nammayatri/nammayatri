@@ -998,7 +998,7 @@ getHI stringKey =
         BUY_METRO_TICKETS -> "मेट्रो टिकट खरीदें"
         GET_FARE -> "किराया प्राप्त करें"
         METRO_BOOKING_TIMINGS -> "मेट्रो बुकिंग समय"
-        CHENNAI_METRO_TIME -> "चेन्नई मेट्रो 4:30 बजे से 10:30 बजे तक क्यूआर टिकट खरीद करने की अनुमति देता है।"
+        CHENNAI_METRO_TIME startTime endTime -> "चेन्नई मेट्रो "<> startTime<>" से "<> endTime <> " तक क्यूआर टिकट खरीद करने की अनुमति देता है।"
         PLEASE_COME_BACK_LATER_METRO -> "कृपया समय पर वापस आएं टिकट खरीदने के लिए।"
         NO_QOUTES_AVAILABLE -> "कोट्स उपलब्ध नहीं हैं"
         I_AGREE_TO_THE -> "मैं सहमत हूँ"

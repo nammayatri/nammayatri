@@ -16,6 +16,7 @@ module Screens.TicketBookingFlow.MetroTicketBooking.ScreenData where
 
 import Prelude
 import Screens.Types as ST
+import ConfigProvider
 
 initData :: ST.MetroTicketBookingScreenState
 initData = {
@@ -38,5 +39,6 @@ initData = {
     , currentStage : ST.MetroTicketSelection
     , isButtonActive : false
     , showMetroBookingTimeError : false
-  }
+  },
+  config :  getAppConfig appConfig
 }

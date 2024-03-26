@@ -1014,7 +1014,7 @@ getTA stringKey =
     BUY_METRO_TICKETS -> "மெட்ரோ டிக்கெட்"
     GET_FARE -> "கட்டணத்தைப் பெறு"
     METRO_BOOKING_TIMINGS -> "மெட்ரோ முன்பதிவு நேரம்"
-    CHENNAI_METRO_TIME -> "சென்னை மெட்ரோ அனைத்து நாட்களிலும் 4:30 AM முதல் 10:30 PM வரை QR டிக்கெட் வாங்க அனுமதிக்கிறது."
+    CHENNAI_METRO_TIME startTime endTime -> "சென்னை மெட்ரோ அனைத்து நாட்களிலும் "<>startTime<>" முதல் "<>endTime<>" வரை QR டிக்கெட் வாங்க அனுமதிக்கிறது."
     PLEASE_COME_BACK_LATER_METRO -> "டிக்கெட்டுகளை வாங்க தகுதியான நேரத்தில் பின்னர் வரவும்."
     NO_QOUTES_AVAILABLE -> "விலைக்குறி இல்லை"
     I_AGREE_TO_THE -> "நான் ஒப்புக்கொள்கிறேன்"

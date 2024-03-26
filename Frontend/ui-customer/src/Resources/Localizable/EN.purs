@@ -996,7 +996,7 @@ getEN stringKey =
         BUY_METRO_TICKETS -> "Buy Metro Tickets"
         GET_FARE -> "Get Fare"
         METRO_BOOKING_TIMINGS -> "Metro Booking Timings"
-        CHENNAI_METRO_TIME -> "Chennai Metro allows QR ticket purchase from 4:30 AM to 10:30 PM on all days. "
+        CHENNAI_METRO_TIME startTime endTime -> "Chennai Metro allows QR ticket purchase from "<> startTime <>" to "<> endTime <> " on all days. "
         PLEASE_COME_BACK_LATER_METRO -> "Please come back later during the eligible time to purchase tickets."
         NO_QOUTES_AVAILABLE -> "No quotes available"
         I_AGREE_TO_THE -> "I agree to the"
