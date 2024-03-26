@@ -2107,7 +2107,8 @@ type MetroStationsList = {
 
 type MetroTicketBookingScreenState = {
   data :: MetroTicketBookingScreenData,
-  props :: MetroTicketBookingScreenProps
+  props :: MetroTicketBookingScreenProps, 
+  config :: AppConfig
 }
 
 type MetroTicketBookingScreenData = {
