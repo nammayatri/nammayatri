@@ -46,7 +46,8 @@ window.getMerchantConfig = function () {
       "SAFETY_TEAM_WILL_BE_ALERTED",
       "SHARE_RIDE_DESCRIPTION",
       "PLEASE_STAY_CALM_TEAM_ALERTED",
-      "INDICATION_TO_EMERGENCY_CONTACTS"
+      "INDICATION_TO_EMERGENCY_CONTACTS",
+      "EMERGENCY_CONTACTS_CAN_TAKE_ACTION"
     ],
     "isReferralEnabled": "true",
     "showBookingPreference": "false",
@@ -160,7 +161,8 @@ window.getMerchantConfig = function () {
       "SAFETY_TEAM_WILL_BE_ALERTED" : "Upon SOS  Yatri Sathi safety team will be notified",
       "SHARE_RIDE_DESCRIPTION" : "On choosing this, Yatri Sathi will send app push notification to the emergency contacts",
       "PLEASE_STAY_CALM_TEAM_ALERTED" : "Please stay calm, Yatri Sathi safety team is alerted!",
-      "INDICATION_TO_EMERGENCY_CONTACTS" : "Yatri Sathi will indicate to your emergency contacts that this is a test drill, ensuring a stress-free experience."
+      "INDICATION_TO_EMERGENCY_CONTACTS" : "Yatri Sathi will indicate to your emergency contacts that this is a test drill, ensuring a stress-free experience.",
+      "EMERGENCY_CONTACTS_CAN_TAKE_ACTION" : "Emergency Contacts can follow/ take emergency response actions on Yatri Sathi App"
     },
     "hindiStrings": {
       "MOST_LOVED_APP" : "मेरा शहर, मेरी यात्रा",
@@ -196,7 +198,8 @@ window.getMerchantConfig = function () {
       "SAFETY_TEAM_WILL_BE_ALERTED": "SOS के अनुसार यात्री साथी सुरक्षा टीम को सूचित किया जाएगा",
       "SHARE_RIDE_DESCRIPTION": "इसे चुनने पर, यात्री साथी अप्लिकेशन पुश सूचना आपात संपर्कों को भेजेगा",
       "PLEASE_STAY_CALM_TEAM_ALERTED": "कृपया शांत रहें, यात्री साथी सुरक्षा टीम को चेतावनी दी गई है!",
-      "INDICATION_TO_EMERGENCY_CONTACTS": "यात्री साथी आपके आपात संपर्कों को सूचित करेगा कि यह एक टेस्ट ड्रिल है, जो एक तनावमुक्त अनुभव सुनिश्चित करेगा"
+      "INDICATION_TO_EMERGENCY_CONTACTS": "यात्री साथी आपके आपात संपर्कों को सूचित करेगा कि यह एक टेस्ट ड्रिल है, जो एक तनावमुक्त अनुभव सुनिश्चित करेगा",
+      "EMERGENCY_CONTACTS_CAN_TAKE_ACTION": "आपात संपर्क व्यक्तियां यात्री साथी ऐप पर अनुकरण कर सकती हैं और आपात प्रतिक्रिया कार्रवाई ले सकती हैं।"
     },
     "bengaliStrings": {
       "MOST_LOVED_APP" : "আমার শহর, আমার সফর",
@@ -232,7 +235,8 @@ window.getMerchantConfig = function () {
       "SAFETY_TEAM_WILL_BE_ALERTED": "SOS অনুসারে যাত্রী সাথী সুরক্ষা দলে জানানো হবে",
       "SHARE_RIDE_DESCRIPTION": "এইটা চয়ন করার সময়, যাত্রী সাথী অ্যাপ পুশ বিজ্ঞপ্তি পাঠাবে অতি জরুরি যোগাযোগের সাথে",
       "PLEASE_STAY_CALM_TEAM_ALERTED": "অনুগ্রহ করে শান্ত থাকুন, যাত্রী সাথী সুরক্ষা দলটি সতর্ক করা হয়েছে!",
-      "INDICATION_TO_EMERGENCY_CONTACTS": "যাত্রী সাথী আপনার জরুরি যোগাযোগের সংকেত দেবে যে এটি একটি টেস্ট ড্রিল, যাত্রা অভিজ্ঞতার মন্তব্যে নিরাপদ অনুভূতি নিশ্চিত করা হয়"
+      "INDICATION_TO_EMERGENCY_CONTACTS": "যাত্রী সাথী আপনার জরুরি যোগাযোগের সংকেত দেবে যে এটি একটি টেস্ট ড্রিল, যাত্রা অভিজ্ঞতার মন্তব্যে নিরাপদ অনুভূতি নিশ্চিত করা হয়",
+      "EMERGENCY_CONTACTS_CAN_TAKE_ACTION": "জরুরি যোগাযোগ ব্যক্তিগণ যাত্রী সাথী অ্যাপ উপর অনুসরণ করতে পারে এবং জরুরি প্রতিক্রিয়া নিতে পারে"
     },
     "languageList": [{
       "name": "English",

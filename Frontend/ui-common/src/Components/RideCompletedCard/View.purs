@@ -87,11 +87,37 @@ topPillAndSupportView config push =
             width MATCH_PARENT
           , height WRAP_CONTENT
           , gravity RIGHT
-          , visibility if config.enableContactSupport then VISIBLE else GONE
-          ][imageView
+          ][    linearLayout
+                  [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , gravity CENTER
+                  , cornerRadius 18.0
+                  , background Color.black150
+                  , padding $ Padding 12 8 12 8
+                  , visibility $ boolToVisibility $ (not config.topCard.topPill.visible) && config.showSafetyCenter
+                  , onClick push $ const GoToSOS
+                  ]
+                  [ imageView
+                      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos_white_bg"
+                      , height $ V 24
+                      , width $ V 24
+                      , margin $ MarginRight 8
+                      , accessibilityHint $ "S O S Button, Select to view S O S options"
+                      , accessibility ENABLE
+                      ]
+                  , textView
+                      $ [ text config.safetyTitle
+                        , color Color.white900
+                        , margin $ MarginBottom 1
+                        ]
+                      <> FontStyle.body6 TypoGraphy
+                  ]
+          , imageView
               [ height $ V 40
               , width $ V 40
+              , margin $ MarginLeft 10
               , accessibility config.accessibility
+              , visibility $ boolToVisibility config.enableContactSupport
               , accessibilityHint "Contact Support : Button"
               , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if config.theme == LIGHT then "ny_ic_black_headphone" else "ny_ic_headphone"
               , onClick push $ const Support

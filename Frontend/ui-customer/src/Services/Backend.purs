@@ -906,10 +906,11 @@ callbackRequestBT lazyCheck = do
       errorHandler errorPayload = do
             BackT $ pure GoBack
 
-makeUserSosReq :: UserSosFlow -> String -> UserSosReq
-makeUserSosReq flow rideId = UserSosReq {
+makeUserSosReq :: UserSosFlow -> String -> Boolean -> UserSosReq
+makeUserSosReq flow rideId isRideEnded = UserSosReq {
      "flow" : flow,
-     "rideId" : rideId
+     "rideId" : rideId,
+     "isRideEnded" : isRideEnded
 }
 
 createUserSosFlow :: String -> String -> UserSosFlow
@@ -1113,13 +1114,10 @@ updateIssue language issueId req = do
 
 ------------------------------------------------------------------------ SafetyFlow --------------------------------------------------------------------------------
 
-getEmergencySettingsBT :: String -> FlowBT String GetEmergencySettingsRes
-getEmergencySettingsBT _  = do
-        headers <- getHeaders' "" true
-        withAPIResultBT (EP.getEmergencySettings "") (\x → x) errorHandler (lift $ lift $ callAPI headers (GetEmergencySettingsReq))
-    where
-    errorHandler (errorPayload) =  do
-        BackT $ pure GoBack
+getEmergencySettings :: String -> Flow GlobalState (Either ErrorResponse GetEmergencySettingsRes)
+getEmergencySettings _  = do
+    headers <- getHeaders "" true
+    withAPIResult (EP.getEmergencySettings "") identity $ callAPI headers (GetEmergencySettingsReq)
 
 updateEmergencySettings :: UpdateEmergencySettingsReq -> Flow GlobalState (Either ErrorResponse UpdateEmergencySettingsRes)
 updateEmergencySettings (UpdateEmergencySettingsReq payload) = do
@@ -1128,21 +1126,18 @@ updateEmergencySettings (UpdateEmergencySettingsReq payload) = do
     where
         unwrapResponse (x) = x
 
-markRideAsSafe :: String -> Boolean -> Flow GlobalState (Either ErrorResponse UpdateAsSafeRes)
-markRideAsSafe sosId isMock = do
+markRideAsSafe :: String -> Boolean -> Boolean -> Flow GlobalState (Either ErrorResponse UpdateAsSafeRes)
+markRideAsSafe sosId isMock isRideEnded = do
         headers <- getHeaders "" false
-        let reqBody = UpdateAsSafeReqBody{isMock : isMock}
+        let reqBody = UpdateAsSafeReqBody {isMock : isMock, isRideEnded : isRideEnded}
         withAPIResult (EP.updateSafeRide sosId) unwrapResponse $ callAPI headers (UpdateAsSafeReq sosId reqBody)
     where
         unwrapResponse (x) = x
 
-getSosDetails :: String -> FlowBT String GetSosDetailsRes
+getSosDetails :: String -> Flow GlobalState (Either ErrorResponse GetSosDetailsRes)
 getSosDetails rideId = do
-        headers <- getHeaders' "" true
-        withAPIResultBT (EP.getSosDetails rideId) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetSosDetailsReq rideId))
-    where
-    errorHandler (errorPayload) =  do
-        BackT $ pure GoBack
+        headers <- getHeaders "" true
+        withAPIResult (EP.getSosDetails rideId) identity $ callAPI headers (GetSosDetailsReq rideId)
 
 sendSafetySupport req = do
         headers <- getHeaders "" true

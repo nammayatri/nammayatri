@@ -899,7 +899,7 @@ getFR stringKey =
         START_TEST_DRILL -> "Démarrer l'exercice de sécurité"
         REPORT_SAFETY_ISSUE -> "Signaler un problème de sécurité"
         SAFETY_TEAM_WILL_BE_ALERTED _ -> "En cas d'urgence, l'équipe de sécurité de Namma Yatri sera informée"
-        EMERGENCY_CONTACTS_CAN_TAKE_ACTION -> "En cas d'urgence, les contacts d'urgence peuvent suivre/ prendre des mesures d'intervention d'urgence sur l'application Namma Yatri"
+        EMERGENCY_CONTACTS_CAN_TAKE_ACTION _ -> "En cas d'urgence, les contacts d'urgence peuvent suivre/ prendre des mesures d'intervention d'urgence sur l'application Namma Yatri"
         SHARE_RIDE -> "Partager le trajet"
         SHARE_RIDE_DESCRIPTION _ -> "En choisissant cela, NY enverra une notification push de l'application aux contacts d'urgence"
         SHARE_RIDE_WITH_CONTACT number -> "Partager avec le contact " <> number
@@ -1039,4 +1039,7 @@ getFR stringKey =
         DRIVER_AT_PICKUP_LOCATION -> "Votre chauffeur est au lieu de prise en charge"
         DRIVER_IS_ON_THE_WAY -> "Votre chauffeur est en route"
         DRIVER_IS_WAITING_AT_PICKUP -> "Votre chauffeur attend au moment du ramassage"
-
+        IS_AT_PICKUP_LOCATION -> "est au lieu de ramassage"
+        PREPARE_EMERGENCY_CONTACTS -> "Préparez vos contacts d'urgence"
+        EMERGENCY_CONTACTS_WILL_BE_NOTIFIED -> "Les contacts d'urgence seront informés de votre situation"
+        INFORM_EMERGENCY_CONTACTS_ABOUT_TEST -> "Informez vos contacts d'urgence pour éviter toute panique inutile."

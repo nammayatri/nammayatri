@@ -48,6 +48,7 @@ import Screens.Types as ST
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Data.Either (Either(..))
 
 screen :: ST.NammaSafetyScreenState -> Screen Action ST.NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -56,13 +57,19 @@ screen initialState =
   , name: "SetupSafetySettingsScreen"
   , globalEvents:
       [ ( \push -> do
-            void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+            void $ launchAff $ EHC.flowRunner defaultGlobalState
               $ do
-                  response <- Remote.getEmergencySettingsBT ""
-                  lift $ lift $ doAff do liftEffect $ push $ UpdateEmergencySettings response
-                  lift $ lift $ doAff do liftEffect $ push $ DisableShimmer
-                  lift $ lift $ EHU.toggleLoader false
-                  pure unit
+                  eiResponse <- Remote.getEmergencySettings ""
+                  case eiResponse of
+                    Right response -> do
+                      EHC.liftFlow $ push $ UpdateEmergencySettings response
+                      EHC.liftFlow $ push $ DisableShimmer
+                      EHU.toggleLoader false
+                    Left err -> do
+                      let errMessage = if err.code == 400 
+                                          then err.response.errorMessage 
+                                          else getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+                      void $ pure $ JB.toast errMessage
             pure $ pure unit
         )
       ]

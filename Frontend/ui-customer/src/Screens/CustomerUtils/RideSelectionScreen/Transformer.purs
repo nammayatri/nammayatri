@@ -68,8 +68,8 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
    listRes)
 
 
-myRideListTransformer :: RideSelectionScreenState -> Array RideBookingRes -> Array IndividualRideCardState
-myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETED" || item.status == "CANCELLED")) (map (\(RideBookingRes ride) ->
+myRideListTransformer :: Boolean -> Array RideBookingRes -> Array IndividualRideCardState
+myRideListTransformer isSrcServiceable listRes = filter (\item -> (item.status == "COMPLETED" || item.status == "CANCELLED")) (map (\(RideBookingRes ride) ->
   let
     fares = getFares ride.fareBreakup
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
@@ -123,7 +123,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , isSpecialZone : null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode)
   , zoneType : specialTags.priorityTag
   , optionsVisibility : false
-  , isSrcServiceable: state.data.isSrcServiceable
+  , isSrcServiceable
   , vehicleVariant : fetchVehicleVariant rideDetails.vehicleVariant
   , merchantExoPhone : ride.merchantExoPhone
   }) listRes)

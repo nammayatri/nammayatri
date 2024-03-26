@@ -1891,7 +1891,8 @@ instance encodeCancelEstimateReq  :: Encode CancelEstimateReq where encode = def
 newtype UserSosReq = UserSosReq
   {
      flow :: UserSosFlow,
-     rideId :: String
+     rideId :: String,
+     isRideEnded :: Boolean
   }
 
 newtype UserSosFlow = UserSosFlow
@@ -2917,7 +2918,8 @@ instance encodeSos :: Encode Sos where encode = defaultEncode
 data UpdateAsSafeReq = UpdateAsSafeReq String UpdateAsSafeReqBody
 
 newtype UpdateAsSafeReqBody = UpdateAsSafeReqBody {
-  isMock :: Boolean
+  isMock :: Boolean,
+  isRideEnded :: Boolean
 }
 
 newtype UpdateAsSafeRes = UpdateAsSafeRes {
