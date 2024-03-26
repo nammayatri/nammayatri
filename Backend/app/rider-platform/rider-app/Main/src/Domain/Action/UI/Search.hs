@@ -268,7 +268,7 @@ search personId req bundleVersion clientVersion clientId device = do
         fork "calling mmi directions api" $ do
           let collectMMIData = fromMaybe False riderConfig.collectMMIRouteData
           when collectMMIData $ do
-            mmiConfigs <- QMSC.findByMerchantIdAndService person.merchantId (DMSC.MapsService MapsK.MMI) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "MMI")
+            mmiConfigs <- QMSC.findByMerchantOpCityIdAndService person.merchantId merchantOperatingCity.id (DMSC.MapsService MapsK.MMI) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "MMI")
             case mmiConfigs.serviceConfig of
               DMSC.MapsServiceConfig mapsCfg -> do
                 routeResp <- MapsRoutes.getRoutes True mapsCfg request
@@ -280,7 +280,7 @@ search personId req bundleVersion clientVersion clientId device = do
         fork "calling next billion directions api" $ do
           shouldCollectRouteData <- asks (.collectRouteData)
           when shouldCollectRouteData $ do
-            nextBillionConfigs <- QMSC.findByMerchantIdAndService person.merchantId (DMSC.MapsService MapsK.NextBillion) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "NextBillion")
+            nextBillionConfigs <- QMSC.findByMerchantOpCityIdAndService person.merchantId merchantOperatingCity.id (DMSC.MapsService MapsK.NextBillion) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "NextBillion")
             case nextBillionConfigs.serviceConfig of
               DMSC.MapsServiceConfig mapsCfg -> do
                 case mapsCfg of

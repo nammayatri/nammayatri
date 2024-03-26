@@ -187,11 +187,12 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             mandateEndDate = Nothing,
             mandateStartDate = Nothing,
             optionsGetUpiDeepLinks = Nothing,
-            metadataExpiryInMins = Nothing
+            metadataExpiryInMins = Nothing,
+            metadataGatewayReferenceId = Nothing
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_
-      createOrderCall = Payment.createOrder merchantId (Just placeId) Payment.Normal
+      createOrderCall = Payment.createOrder merchantId merchantOpCity.id (Just placeId) Payment.Normal
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> return createOrderRes
@@ -507,7 +508,7 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   ticketBooking' <- QTB.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (TicketBookingNotFound shortId)
   let commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person personId
-      orderStatusCall = Payment.orderStatus merchantId (Just ticketBooking'.ticketPlaceId) Payment.Normal -- api call
+      orderStatusCall = Payment.orderStatus merchantId ticketBooking'.merchantOperatingCityId (Just ticketBooking'.ticketPlaceId) Payment.Normal -- api call
   order <- QOrder.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (PaymentOrderNotFound shortId)
   ticketBookingServices <- QTBS.findAllByBookingId ticketBooking'.id
   tBookingServiceCats <- mapM (\tBookingS -> QTBSC.findAllByTicketBookingServiceId tBookingS.id) ticketBookingServices

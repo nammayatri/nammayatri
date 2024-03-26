@@ -49,7 +49,7 @@ runWithServiceConfig func merchantId merchantOperatingCityId req = do
     QMSUC.findByMerchantOperatingCityId merchantOperatingCityId
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantIssueTicketServiceConfig <-
-    QMSC.findByMerchantIdAndService merchantId (DMSC.IssueTicketService merchantConfig.issueTicketService)
+    QMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.IssueTicketService merchantConfig.issueTicketService)
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   case merchantIssueTicketServiceConfig.serviceConfig of
     DMSC.IssueTicketServiceConfig msc -> func msc req

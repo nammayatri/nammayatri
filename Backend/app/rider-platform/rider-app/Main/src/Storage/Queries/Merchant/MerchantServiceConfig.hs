@@ -24,6 +24,7 @@ import qualified Data.Aeson as A
 import Domain.Types.Merchant as DOrg
 import Domain.Types.Merchant.MerchantServiceConfig
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Beam.Functions
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
@@ -49,19 +50,35 @@ import Tools.Error
 -- findAllMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [MerchantServiceConfig]
 -- findAllMerchantOpCityId (Id merchantOperatingCityId) = findAllWithKV [Se.Is BeamMSC.merchantOperatingCityId $ Se.Eq $ Just merchantOperatingCityId]
 
-findByMerchantIdAndService :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
-findByMerchantIdAndService (Id merchantId) serviceName = findOneWithKV [Se.And [Se.Is BeamMSC.merchantId $ Se.Eq merchantId, Se.Is BeamMSC.serviceName $ Se.Eq serviceName]]
+findByMerchantOpCityIdAndService ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  ServiceName ->
+  m (Maybe MerchantServiceConfig)
+findByMerchantOpCityIdAndService (Id merchantId) (Id merchantOperatingCity) serviceName = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamMSC.merchantId $ Se.Eq merchantId,
+          Se.Is BeamMSC.merchantOperatingCityId $ Se.Eq merchantOperatingCity,
+          Se.Is BeamMSC.serviceName $ Se.Eq serviceName
+        ]
+    ]
 
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig merchantServiceConfig = do
   now <- getCurrentTime
   let (_serviceName, configJSON) = BeamMSC.getServiceNameConfigJSON merchantServiceConfig.serviceConfig
-  res <- findByMerchantIdAndService merchantServiceConfig.merchantId _serviceName
+  res <- findByMerchantOpCityIdAndService merchantServiceConfig.merchantId merchantServiceConfig.merchantOperatingCityId _serviceName
   if isJust res
     then
       updateWithKV
         [Se.Set BeamMSC.configJSON configJSON, Se.Set BeamMSC.updatedAt now]
-        [Se.Is BeamMSC.merchantId $ Se.Eq $ getId merchantServiceConfig.merchantId]
+        [ Se.And
+            [ Se.Is BeamMSC.merchantId $ Se.Eq $ getId merchantServiceConfig.merchantId,
+              Se.Is BeamMSC.merchantOperatingCityId $ Se.Eq $ getId merchantServiceConfig.merchantOperatingCityId
+            ]
+        ]
     else createWithKV merchantServiceConfig
 
 instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
@@ -71,6 +88,7 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
       Just
         MerchantServiceConfig
           { merchantId = Id merchantId,
+            merchantOperatingCityId = Id merchantOperatingCityId,
             serviceConfig = serviceConfig,
             updatedAt = updatedAt,
             createdAt = createdAt
@@ -106,6 +124,7 @@ instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
   toTType' MerchantServiceConfig {..} =
     BeamMSC.MerchantServiceConfigT
       { BeamMSC.merchantId = getId merchantId,
+        BeamMSC.merchantOperatingCityId = getId merchantOperatingCityId,
         BeamMSC.serviceName = fst $ getServiceNameConfigJson serviceConfig,
         BeamMSC.configJSON = snd $ getServiceNameConfigJson serviceConfig,
         BeamMSC.updatedAt = updatedAt,

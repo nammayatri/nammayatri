@@ -34,6 +34,7 @@ import Tools.Beam.UtilsTH
 
 data MerchantServiceConfigT f = MerchantServiceConfigT
   { merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     serviceName :: B.C f Domain.ServiceName,
     configJSON :: B.C f A.Value,
     updatedAt :: B.C f UTCTime,

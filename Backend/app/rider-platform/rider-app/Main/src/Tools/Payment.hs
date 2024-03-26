@@ -26,6 +26,7 @@ import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.TicketPlace
 import Kernel.External.Payment.Interface as Reexport hiding
   ( createOrder,
@@ -41,26 +42,27 @@ import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 
-createOrder :: ServiceFlow m r => Id DM.Merchant -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
+createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
 createOrder = runWithServiceConfig Payment.createOrder
 
-orderStatus :: ServiceFlow m r => Id DM.Merchant -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
+orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 orderStatus = runWithServiceConfig Payment.orderStatus
 
 runWithServiceConfig ::
   ServiceFlow m r =>
   (Payment.PaymentServiceConfig -> req -> m resp) ->
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Maybe (Id TicketPlace) ->
   PaymentServiceType ->
   req ->
   m resp
-runWithServiceConfig func merchantId mbPlaceId paymentServiceType req = do
+runWithServiceConfig func merchantId merchantOperatingCityId mbPlaceId paymentServiceType req = do
   placeBasedConfig <- case mbPlaceId of
     Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
     Nothing -> return Nothing
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndService merchantId (getPaymentServiceByType paymentServiceType)
+    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType paymentServiceType)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> func vsc req

@@ -256,7 +256,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
     DFRFSTicketBooking.APPROVED -> do
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
       paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
-      paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
+      paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id (orderStatusCall merchantOperatingCity.id)
       let paymentBookingStatus = makeTicketBookingPaymentAPIStatus paymentStatusResp.status
       if (paymentBookingStatus == FRFSTicketService.FAILURE)
         then do
@@ -269,7 +269,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
           let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
           void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING bookingId
           let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.PAYMENT_PENDING Nothing
-          paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId
+          paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId merchantOperatingCity.id
           let paymentObj =
                 Just $
                   FRFSTicketService.FRFSBookingPaymentAPI
@@ -280,7 +280,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
     DFRFSTicketBooking.PAYMENT_PENDING -> do
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
       paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
-      paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
+      paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id (orderStatusCall merchantOperatingCity.id)
       let paymentBookingStatus = makeTicketBookingPaymentAPIStatus paymentStatusResp.status
       if (paymentBookingStatus == FRFSTicketService.FAILURE)
         then do
@@ -307,7 +307,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                 void $ CallBPP.confirm providerUrl bknConfirmReq
               buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
             else do
-              paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId
+              paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId merchantOperatingCity.id
               txn <- QPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
               let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
                   paymentObj =
@@ -332,7 +332,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
             paymentOrder = Nothing
           }
 
-    buildCreateOrderResp paymentOrder person commonPersonId = do
+    buildCreateOrderResp paymentOrder person commonPersonId merchantOperatingCityId = do
       personEmail <- mapM decrypt person.email
       personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
       let createOrderReq =
@@ -351,12 +351,13 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                 mandateEndDate = Nothing,
                 mandateStartDate = Nothing,
                 optionsGetUpiDeepLinks = Nothing,
-                metadataExpiryInMins = Nothing
+                metadataExpiryInMins = Nothing,
+                metadataGatewayReferenceId = Nothing --- assigned in shared kernel
               }
-      DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
+      DPayment.createOrderService commonMerchantId commonPersonId createOrderReq (createOrderCall merchantOperatingCityId)
 
-    createOrderCall = Payment.createOrder merchantId_ Nothing Payment.FRFSBooking
-    orderStatusCall = Payment.orderStatus merchantId_ Nothing Payment.FRFSBooking
+    createOrderCall merchantOperatingCityId = Payment.createOrder merchantId_ merchantOperatingCityId Nothing Payment.FRFSBooking
+    orderStatusCall merchantOperatingCityId = Payment.orderStatus merchantId_ merchantOperatingCityId Nothing Payment.FRFSBooking
     commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId_
 
     makeUpdatedBooking DFRFSTicketBooking.FRFSTicketBooking {..} updatedStatus mTTL =
