@@ -49,14 +49,13 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error
 import Tools.Event
 
 data DConfirmReq = DConfirmReq
   { personId :: Id DP.Person,
-    quoteId :: Id DQuote.Quote,
+    quote :: DQuote.Quote,
     paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod)
   }
 
@@ -87,9 +86,9 @@ data ConfirmQuoteDetails
   | ConfirmOneWaySpecialZoneDetails Text
   deriving (Show, Generic)
 
-tryInitTriggerLock :: (Redis.HedisFlow m r) => Id DP.Person -> m Bool
-tryInitTriggerLock personId = do
-  let initTriggerLockKey = "Customer:Init:Trigger:PersonId:-" <> personId.getId
+tryInitTriggerLock :: (Redis.HedisFlow m r) => Id DSReq.SearchRequest -> m Bool
+tryInitTriggerLock searchRequestId = do
+  let initTriggerLockKey = "Customer:Init:Trigger:SearchRequestId:-" <> searchRequestId.getId
       lockExpiryTime = 10 -- Note: this value should be decided based on the delay between consecutive quotes in on_select api & also considering reallocation.
   Redis.tryLockRedis initTriggerLockKey lockExpiryTime
 
@@ -106,7 +105,6 @@ confirm ::
   DConfirmReq ->
   m DConfirmRes
 confirm DConfirmReq {..} = do
-  quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   now <- getCurrentTime
   fulfillmentId <-
     case quote.quoteDetails of
