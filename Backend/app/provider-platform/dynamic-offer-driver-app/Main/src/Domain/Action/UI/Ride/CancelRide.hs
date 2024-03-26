@@ -168,10 +168,16 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
             return $ listToMaybe driverLocations
           disToPickup <- forM mbLocation $ \location -> do
             pickUpDistance booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation)
+          -- Temporary for debug issue with huge values
+          let disToPickupThreshold = 1000000 --1000km can be max valid distance
+          updatedDisToPickup :: Maybe Meters <- case disToPickup of
+            Just dis -> if abs dis > disToPickupThreshold then (logWarning ("Driver distance to pickup is huge" <> show disToPickup) >> return (Just disToPickupThreshold)) else return (Just dis)
+            Nothing -> return Nothing
+
           let currentDriverLocation = getCoordinates <$> mbLocation
           logDebug "RideCancelled Coin Event by driver"
           fork "DriverRideCancelledCoin Event : " $ DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
-          buildRideCancelationReason currentDriverLocation disToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled)
+          buildRideCancelationReason currentDriverLocation updatedDisToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled)
       return (rideCancellationReason, mbCancellationCnt, isGoToDisabled)
     DashboardRequestorId (reqMerchantId, mocId) -> do
       unless (driver.merchantId == reqMerchantId && mocId == driver.merchantOperatingCityId) $ throwError (RideDoesNotExist rideId.getId)

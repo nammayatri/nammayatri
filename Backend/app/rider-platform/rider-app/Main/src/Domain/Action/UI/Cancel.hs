@@ -142,7 +142,17 @@ cancel bookingId _ req = do
           Right res' -> do
             let merchantOperatingCityId = booking.merchantOperatingCityId
             disToPickup <- driverDistanceToPickup booking.merchantId merchantOperatingCityId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
-            buildBookingCancelationReason (Just res'.currPoint) (Just disToPickup) (Just booking.merchantId)
+            -- Temporary for debug issue with huge values
+            let disToPickupThreshold = 1000000 --1000km can be max valid distance
+            disToPickupUpd :: Meters <-
+              if abs disToPickup > disToPickupThreshold
+                then do
+                  logWarning $ "Invalid disToPickup received: " <> show disToPickup
+                  pure (-1)
+                else do
+                  logInfo $ "Valid disToPickup received: " <> show disToPickup
+                  pure disToPickup
+            buildBookingCancelationReason (Just res'.currPoint) (Just disToPickupUpd) (Just booking.merchantId)
           Left err -> do
             logTagInfo "DriverLocationFetchFailed" $ show err
             buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
