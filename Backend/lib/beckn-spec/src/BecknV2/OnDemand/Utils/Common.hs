@@ -23,6 +23,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.UUID as UUID
 import EulerHS.Prelude
+import Kernel.Prelude (intToNominalDiffTime)
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Error
 import Kernel.Types.TimeRFC339 (convertRFC3339ToUTC)
@@ -60,4 +61,9 @@ getTimestampAndValidTill :: (MonadFlow m, Log m) => Spec.Context -> m (UTCTime, 
 getTimestampAndValidTill context = do
   ttl <- context.contextTtl >>= Utils.parseISO8601Duration & fromMaybeM (InvalidRequest "Missing ttl")
   timestamp <- context.contextTimestamp >>= Just . convertRFC3339ToUTC & fromMaybeM (InvalidRequest "Missing timestamp")
-  return $ (timestamp, addUTCTime ttl timestamp)
+  return (timestamp, addUTCTime ttl timestamp)
+
+computeTtlISO8601 :: Int -> Text
+computeTtlISO8601 ttlInSec =
+  let ttlToNominalDiffTime = intToNominalDiffTime ttlInSec
+   in Utils.formatTimeDifference ttlToNominalDiffTime

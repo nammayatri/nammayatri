@@ -46,8 +46,8 @@ import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import BecknV2.Utils
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
@@ -123,10 +123,8 @@ callOnSelectV2 transporter searchRequest searchTry content = do
   msgId <- getMsgIdByTxnId searchRequest.transactionId
   let vehicleCategory = Utils.mapVariantToVehicle searchTry.vehicleVariant
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
-  ttlInInt <- bppConfig.onSelectTTLSec & fromMaybeM (InternalError "Invalid ttl")
-  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
-      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
-  context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttlToISO8601Duration)
+  ttl <- bppConfig.onSelectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+  context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttl)
   logDebug $ "on_selectV2 request bpp: " <> show content
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (Spec.OnSelectReq context Nothing (Just content))
   where
@@ -240,10 +238,8 @@ callOnConfirmV2 transporter context content bppConfig = do
   bppUri <- buildBppUrl transporter.id
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   txnId <- Utils.getTransactionId context
-  ttlInInt <- bppConfig.onConfirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
-  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
-      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
-  context_ <- ContextV2.buildContextV2 Context.ON_CONFIRM Context.MOBILITY msgId (Just txnId) bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttlToISO8601Duration)
+  ttl <- bppConfig.onConfirmTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+  context_ <- ContextV2.buildContextV2 Context.ON_CONFIRM Context.MOBILITY msgId (Just txnId) bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap (Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content})
 
 buildBppUrl ::

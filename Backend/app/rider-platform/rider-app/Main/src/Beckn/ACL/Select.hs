@@ -20,9 +20,9 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as UCommonV2
+import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import BecknV2.OnDemand.Utils.Payment
-import BecknV2.Utils
 import Control.Lens ((%~))
 import qualified Data.List as L
 import qualified Data.Text as T
@@ -48,10 +48,8 @@ buildSelectReqV2 dSelectRes = do
       messageId = dSelectRes.estimate.bppEstimateId.getId
       transactionId = dSelectRes.searchRequest.id.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack dSelectRes.merchant.id.getId)
-  ttlInInt <- bapConfig.selectTTLSec & fromMaybeM (InternalError "Invalid ttl")
-  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
-      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
-  context <- ContextV2.buildContextV2 Context.SELECT Context.MOBILITY messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.city dSelectRes.merchant.country (Just ttlToISO8601Duration)
+  ttl <- bapConfig.selectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+  context <- ContextV2.buildContextV2 Context.SELECT Context.MOBILITY messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.city dSelectRes.merchant.country (Just ttl)
   pure $ Spec.SelectReq {selectReqContext = context, selectReqMessage = message}
 
 buildSelectReqMessage :: DSelect.DSelectRes -> Location.Location -> Bool -> BecknConfig -> Spec.ConfirmReqMessage

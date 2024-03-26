@@ -68,8 +68,8 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
     country <- Utils.getContextCountry context
     isValueAddNP <- CQVAN.isValueAddNP bapId
     dConfirmReq <- ACL.buildConfirmReqV2 reqV2 isValueAddNP
-    now <- getCurrentTime
     Redis.whenWithLockRedis (confirmLockKey dConfirmReq.bookingId.getId) 60 $ do
+      now <- getCurrentTime
       (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
       fork "confirm" $ do
         Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do

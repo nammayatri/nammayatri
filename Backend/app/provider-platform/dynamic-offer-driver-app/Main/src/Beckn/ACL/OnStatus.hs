@@ -34,8 +34,8 @@ import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder as RideA
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder as RideCompletedOS
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder as RideStartedOS
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as CU
-import BecknV2.Utils
 import Domain.Types.Beckn.Status as DStatus
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
@@ -185,10 +185,8 @@ buildOnStatusReqV2' ::
   DBC.BecknConfig ->
   m Spec.OnStatusReq
 buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country booking req mbFarePolicy bppConfig = do
-  ttlInInt <- bppConfig.onStatusTTLSec & fromMaybeM (InternalError "Invalid ttl")
-  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
-      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
-  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttlToISO8601Duration)
+  ttl <- bppConfig.onStatusTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
   message <- mkOnStatusMessageV2 req mbFarePolicy bppConfig
   pure $
     Spec.OnStatusReq

@@ -21,8 +21,8 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnTrack as OnTrack
 import qualified Beckn.Types.Core.Taxi.API.Track as Track
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import BecknV2.Utils
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -85,10 +85,8 @@ track transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerBe
   booking <- QRB.findById dTrackReq.bookingId >>= fromMaybeM (BookingNotFound dTrackReq.bookingId.getId)
   let vehicleCategory = Utils.mapVariantToVehicle booking.vehicleVariant
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporterId (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
-  ttlInInt <- bppConfig.onTrackTTLSec & fromMaybeM (InternalError "Invalid ttl")
-  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
-      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
-  context <- ContextV2.buildContextV2 Context.ON_TRACK Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttlToISO8601Duration)
+  ttl <- bppConfig.onTrackTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+  context <- ContextV2.buildContextV2 Context.ON_TRACK Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttl)
   Callback.withCallback dTrackRes.transporter "TRACK" OnTrack.onTrackAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $
     -- there should be DOnTrack.onTrack, but it is empty anyway
     pure $
