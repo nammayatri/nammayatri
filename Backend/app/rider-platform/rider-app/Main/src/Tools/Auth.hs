@@ -35,7 +35,6 @@ import qualified Kernel.Utils.Common as Utils
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (Context, throwError)
-import qualified Storage.CachedQueries.Merchant as Merchant
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Tools.Error
 
@@ -69,25 +68,19 @@ verifyPerson token = do
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   result <- Redis.safeGet key
   case result of
-    Just (personId, merchantId) -> do
-      merchantId' <- checkMerchant merchantId
-      return (personId, merchantId')
+    Just (personId, merchantId) -> return (personId, merchantIdFallback merchantId)
     Nothing -> do
       sr <- verifyToken token
       let expiryTime = min sr.tokenExpiry authTokenCacheExpiry
       let personId = Id sr.entityId
-      merchantId <- checkMerchant (Id sr.merchantId)
+      let merchantId = merchantIdFallback (Id sr.merchantId)
       Redis.setExp key (personId, merchantId) expiryTime
       return (personId, merchantId)
 
-checkMerchant :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant.Merchant -> m (Id Merchant.Merchant)
-checkMerchant merchantId = do
-  merchant <- Merchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-  case merchant.shortId.getShortId of
-    "YATRI" -> do
-      nyMerchant <- Merchant.findByShortId "NAMMA_YATRI" >>= fromMaybeM (MerchantDoesNotExist "NAMMA_YATRI")
-      return nyMerchant.id
-    _ -> return merchantId
+merchantIdFallback :: Id Merchant.Merchant -> Id Merchant.Merchant
+merchantIdFallback "da4e23a5-3ce6-4c37-8b9b-41377c3c1a51" = "4b17bd06-ae7e-48e9-85bf-282fb310209c"
+merchantIdFallback "c9811842-d572-11ed-afa1-0242ac120002" = "4b17bd06-ae7e-48e9-85bf-282fb310209c"
+merchantIdFallback v = v
 
 authTokenCacheKey :: RegToken -> Text
 authTokenCacheKey regToken =

@@ -193,7 +193,8 @@ auth ::
   Maybe Version ->
   Maybe Version ->
   m AuthRes
-auth req mbBundleVersion mbClientVersion = do
+auth req' mbBundleVersion mbClientVersion = do
+  let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = (ShortId "NAMMA_YATRI")} else req'
   runRequestValidation validateAuthReq req
   smsCfg <- asks (.smsCfg)
   let countryCode = req.mobileCountryCode
@@ -261,7 +262,8 @@ signatureAuth ::
   Maybe Version ->
   Maybe Version ->
   m AuthRes
-signatureAuth req mbBundleVersion mbClientVersion = do
+signatureAuth req' mbBundleVersion mbClientVersion = do
+  let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = (ShortId "NAMMA_YATRI")} else req'
   runRequestValidation validateSignatureAuthReq req
   smsCfg <- asks (.smsCfg)
   let countryCode = req.mobileCountryCode
