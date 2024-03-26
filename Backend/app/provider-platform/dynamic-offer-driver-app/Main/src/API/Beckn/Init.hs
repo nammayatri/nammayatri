@@ -33,7 +33,6 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Types.TimeRFC339 (convertRFC3339ToUTC)
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
@@ -76,11 +75,6 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
           case dInitReq.fulfillmentId of
             DInit.DriverQuoteId (Id fId) -> fId
             DInit.QuoteId (Id fId) -> fId
-    now <- getCurrentTime
-    initTtl <- reqV2.initReqContext.contextTtl & fromMaybeM (InvalidRequest "Missing ttl")
-    timestamp <- reqV2.initReqContext.contextTimestamp >>= Just . convertRFC3339ToUTC & fromMaybeM (InvalidRequest "Missing timestamp")
-    let validTill = addDurationToUTCTime timestamp (fromJust (parseISO8601Duration initTtl))
-    when (validTill < now) $ throwError $ InvalidRequest "Init request has expired"
     Redis.whenWithLockRedis (initLockKey initFulfillmentId) 60 $ do
       validatedRes <- DInit.validateRequest transporterId dInitReq
       fork "init request processing" $ do

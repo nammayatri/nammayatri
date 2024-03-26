@@ -20,6 +20,7 @@ module BecknV2.OnDemand.Utils.Context
 where
 
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.Utils as Utils
 import qualified Data.Aeson as A
 import qualified Data.UUID as UUID
 import qualified EulerHS.Language as L
@@ -28,7 +29,7 @@ import qualified Kernel.Prelude as KP
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import qualified Kernel.Types.Error as Error
-import Kernel.Types.TimeRFC339 (UTCTimeRFC3339 (..))
+import Kernel.Types.TimeRFC339 (UTCTimeRFC3339 (..), convertRFC3339ToUTC)
 import Kernel.Utils.Common
 
 showContextAction :: Context.Action -> Maybe Text
@@ -93,6 +94,7 @@ validateContext :: (HasFlowEnv m r '["_version" ::: Text]) => Context.Action -> 
 validateContext action context = do
   validateDomain Context.MOBILITY context
   validateContextCommons action context
+  validateTTL context
 
 validateDomain :: (L.MonadFlow m, Log m) => Context.Domain -> Spec.Context -> m ()
 validateDomain expectedDomain context = do
@@ -120,3 +122,11 @@ validateCoreVersion context = do
   version <- context.contextVersion & fromMaybeM (Error.InvalidRequest "Missing contextVersion")
   unless (version == supportedVersion) $
     throwError Error.UnsupportedCoreVer
+
+validateTTL :: (MonadFlow m, Log m) => Spec.Context -> m ()
+validateTTL context = do
+  now <- getCurrentTime
+  ttl <- context.contextTtl >>= Utils.parseISO8601Duration & fromMaybeM (Error.InvalidRequest "Missing ttl")
+  timestamp <- context.contextTimestamp >>= Just . convertRFC3339ToUTC & fromMaybeM (Error.InvalidRequest "Missing timestamp")
+  let validTill = addUTCTime ttl timestamp
+  when (validTill < now) $ throwError $ Error.InvalidRequest "Request has expired"

@@ -17,15 +17,13 @@ module Beckn.ACL.OnSearch where
 import qualified Beckn.OnDemand.Transformer.OnSearch as TOnSearch
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextUtils
-import BecknV2.Utils
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Domain.Types.OnSearchEvent
 import EulerHS.Prelude hiding (find, id, map, readMaybe, state, unpack)
-import Kernel.Prelude (fromJust)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
-import Kernel.Types.TimeRFC339 (convertRFC3339ToUTC)
 import Kernel.Utils.Common
 import qualified Storage.Queries.OnSearchEvent as OnSearchEvent
 import Tools.Error
@@ -39,9 +37,7 @@ buildOnSearchReqV2 ::
 buildOnSearchReqV2 req = do
   ContextUtils.validateContext Context.ON_SEARCH req.onSearchReqContext
   logOnSearchEventV2 req
-  onSearchTtl <- req.onSearchReqContext.contextTtl & fromMaybeM (InvalidRequest "Missing ttl")
-  timestamp <- req.onSearchReqContext.contextTimestamp >>= Just . convertRFC3339ToUTC & fromMaybeM (InvalidRequest "Missing timestamp")
-  let validTill = addDurationToUTCTime timestamp (fromJust (parseISO8601Duration onSearchTtl))
+  (_, validTill) <- Utils.getTimestampAndValidTill req.onSearchReqContext
   case req.onSearchReqError of
     Nothing -> do
       -- generated function

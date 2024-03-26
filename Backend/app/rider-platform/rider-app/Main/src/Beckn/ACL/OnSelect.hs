@@ -19,6 +19,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import BecknV2.Utils
 import qualified BecknV2.Utils as Utils
@@ -29,7 +30,6 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.TimeRFC339 (convertRFC3339ToUTC)
 import Kernel.Utils.Common
 import Tools.Error
 
@@ -40,7 +40,6 @@ buildOnSelectReqV2 ::
 buildOnSelectReqV2 req = do
   logDebug $ "on_select requestV2: " <> show req
   let context = req.onSelectReqContext
-  timestamp <- context.contextTimestamp >>= Just . convertRFC3339ToUTC & fromMaybeM (InvalidRequest "Missing Timestamp")
   ContextV2.validateContext Context.ON_SELECT context
   handleErrorV2 req $ \message -> do
     providerId <- context.contextBppId & fromMaybeM (InvalidRequest "Missing bpp_id")
@@ -51,8 +50,7 @@ buildOnSelectReqV2 req = do
     fulfillments <- order.orderFulfillments & fromMaybeM (InvalidRequest "Missing orderFulfillments")
     fulfillment <- listToMaybe fulfillments & fromMaybeM (InvalidRequest "Missing fulfillment")
     quote <- order.orderQuote & fromMaybeM (InvalidRequest "Missing orderQuote")
-    onSelectTtl <- context.contextTtl & fromMaybeM (InvalidRequest "Missing ttl")
-    let validTill = addDurationToUTCTime timestamp (fromJust (parseISO8601Duration onSelectTtl))
+    (timestamp, validTill) <- Utils.getTimestampAndValidTill context
     quotesInfo <- traverse (buildQuoteInfoV2 fulfillment quote timestamp order validTill) items
     messageUuid <- context.contextMessageId & fromMaybeM (InvalidRequest "Missing message_id")
     let bppEstimateId = Id $ UUID.toText messageUuid
