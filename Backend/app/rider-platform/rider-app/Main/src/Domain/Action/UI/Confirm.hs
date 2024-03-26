@@ -35,6 +35,7 @@ import qualified SharedLogic.Confirm as SConfirm
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.Quote as QQuote
 import qualified Tools.Notifications as Notify
 
 confirm ::
@@ -52,9 +53,10 @@ confirm ::
   Maybe (Id DMPM.MerchantPaymentMethod) ->
   m SConfirm.DConfirmRes
 confirm personId quoteId paymentMethodId = do
-  isLockAcquired <- SConfirm.tryInitTriggerLock personId
+  quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
+  isLockAcquired <- SConfirm.tryInitTriggerLock quote.requestId
   unless isLockAcquired $ do
-    throwError . InvalidRequest $ "Lock on personId:-" <> personId.getId <> " to create booking already acquired, can't create booking for quoteId:-" <> quoteId.getId
+    throwError . InvalidRequest $ "Lock on searchRequestId:-" <> quote.requestId.getId <> " to create booking already acquired, can't create booking for quoteId:-" <> quoteId.getId
   SConfirm.confirm SConfirm.DConfirmReq {..}
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
