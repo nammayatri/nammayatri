@@ -21,8 +21,8 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import BecknV2.Utils
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -83,10 +83,8 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
           internalEndPointHashMap <- asks (.internalEndPointHashMap)
           let vehicleCategory = Utils.mapVariantToVehicle dInitRes.booking.vehicleVariant
           bppConfig <- QBC.findByMerchantIdDomainAndVehicle dInitRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
-          ttlInInt <- bppConfig.onInitTTLSec & fromMaybeM (InternalError "Invalid ttl")
-          let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
-              ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
-          context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country (Just ttlToISO8601Duration)
+          ttl <- bppConfig.onInitTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+          context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country (Just ttl)
           void . handle (errHandler dInitRes.booking dInitRes.transporter) $
             Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
               mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dInitRes.booking.quoteId

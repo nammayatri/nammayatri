@@ -21,11 +21,10 @@ where
 import qualified Beckn.OnDemand.Transformer.Search as Search
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Types as Spec
-import BecknV2.Utils
+import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified Domain.Action.UI.Search as DSearch
 import Domain.Types.BecknConfig
 import EulerHS.Prelude hiding (state, (%~))
-import Kernel.Prelude (intToNominalDiffTime)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -39,9 +38,7 @@ buildSearchReqV2 ::
 buildSearchReqV2 DSearch.SearchRes {..} = do
   bapUri <- Utils.mkBapUri merchant.id
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show merchant.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show AUTO_RICKSHAW) -- get Vehicle Variatnt here
-  ttlInInt <- bapConfig.searchTTLSec & fromMaybeM (InternalError "Invalid ttl")
-  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
-      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
+  ttl <- bapConfig.searchTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   Search.buildBecknSearchReqV2
     Context.SEARCH
     Context.MOBILITY
@@ -61,6 +58,6 @@ buildSearchReqV2 DSearch.SearchRes {..} = do
     startTime
     multipleRoutes
     bapConfig
-    ttlToISO8601Duration
+    ttl
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)

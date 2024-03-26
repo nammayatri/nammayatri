@@ -23,8 +23,8 @@ where
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Track as Track
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import BecknV2.Utils
 import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
@@ -86,10 +86,8 @@ buildTrackReqV2 res = do
   -- TODO :: Add request city, after multiple city support on gateway.
   booking <- QRB.findByBPPBookingId res.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> res.bppBookingId.getId)
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle res.merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
-  ttlInInt <- bapConfig.trackTTLSec & fromMaybeM (InternalError "Invalid ttl")
-  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
-      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
-  context <- ContextV2.buildContextV2 Context.TRACK Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country (Just ttlToISO8601Duration)
+  ttl <- bapConfig.trackTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+  context <- ContextV2.buildContextV2 Context.TRACK Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country (Just ttl)
   pure $ Spec.TrackReq context $ mkTrackMessageV2 res
   where
     key messageId = "Track:bppRideId:" <> messageId

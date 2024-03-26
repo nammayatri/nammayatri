@@ -22,8 +22,8 @@ import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
 import Beckn.Types.Core.Taxi.API.OnCancel as OnCancel
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import BecknV2.Utils
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Cancel as DCancel
@@ -33,7 +33,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OnCancel as OC
 import Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.Prelude (intToNominalDiffTime)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Context as Context
@@ -89,10 +88,8 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
               }
       let vehicleCategory = Utils.mapVariantToVehicle booking.vehicleVariant
       bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
-      ttlInInt <- bppConfig.onCancelTTLSec & fromMaybeM (InternalError "Invalid ttl")
-      let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
-          ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
-      context <- ContextV2.buildContextV2 Context.ON_CANCEL Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttlToISO8601Duration)
+      ttl <- bppConfig.onCancelTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+      context <- ContextV2.buildContextV2 Context.ON_CANCEL Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttl)
       let cancelStatus = A.decode . A.encode =<< cancelReq.cancelStatus
       case cancelStatus of
         Just Enums.CONFIRM_CANCEL -> do
