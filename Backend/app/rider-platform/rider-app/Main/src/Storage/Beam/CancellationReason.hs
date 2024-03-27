@@ -25,6 +25,7 @@ data CancellationReasonT f = CancellationReasonT
     description :: B.C f Text,
     enabled :: B.C f Bool,
     onSearch :: B.C f Bool,
+    onInit :: B.C f Bool,
     onConfirm :: B.C f Bool,
     onAssign :: B.C f Bool,
     priority :: B.C f Int

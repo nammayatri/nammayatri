@@ -136,7 +136,6 @@ cancel bookingId _ req = do
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  when (booking.status == SRB.NEW) $ throwError (BookingInvalidStatus "NEW")
   bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
   mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
   cancellationReason <-
@@ -194,7 +193,7 @@ cancel bookingId _ req = do
 
 isBookingCancellable :: (CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> m Bool
 isBookingCancellable booking
-  | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT] = pure True
+  | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.NEW] = pure True
   | booking.status == SRB.TRIP_ASSIGNED = do
     ride <- QR.findActiveByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "BookingId: " <> booking.id.getId)
     pure (ride.status == Ride.NEW)

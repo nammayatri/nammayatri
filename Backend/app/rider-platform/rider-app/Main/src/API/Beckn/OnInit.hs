@@ -22,7 +22,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified BecknV2.OnDemand.Utils.Common as Common
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.UI.Cancel as DCancel
-import Domain.Types.CancellationReason
+import Domain.Types.CancellationReason (CancellationReasonCode (..), CancellationStage (..))
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -32,6 +32,7 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.Booking as QRB
 
 type API = OnInit.OnInitAPIV2
 
@@ -46,27 +47,40 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
   transactionId <- Common.getTransactionId reqV2.onInitReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     mbDOnInitReq <- TaxiACL.buildOnInitReqV2 reqV2
-    whenJust mbDOnInitReq $ \onInitReq ->
-      Redis.whenWithLockRedis (onInitLockKey onInitReq.bookingId.getId) 60 $
-        fork "oninit request processing" $ do
-          (onInitRes, booking) <- DOnInit.onInit onInitReq
-          handle (errHandler booking) . void . withShortRetry $
-            CallBPP.confirmV2 onInitRes.bppUrl =<< ACL.buildConfirmReqV2 onInitRes
+    if isJust mbDOnInitReq
+      then do
+        let onInitReq = fromJust mbDOnInitReq -- safe to use here, because of above check
+        Redis.whenWithLockRedis (onInitLockKey onInitReq.bookingId.getId) 60 $
+          fork "on_init request processing" $ do
+            (onInitRes, booking) <- DOnInit.onInit onInitReq
+            handle (errHandler booking) . void . withShortRetry $
+              CallBPP.confirmV2 onInitRes.bppUrl =<< ACL.buildConfirmReqV2 onInitRes
+      else do
+        let cancellationReason = "on_init API failure"
+            cancelReq = buildCancelReq cancellationReason OnInit
+        booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingNotFound $ "transactionId:-" <> transactionId)
+        errHandlerAction booking cancelReq
     pure Ack
   where
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = do
-        dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-        void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+        let cancellationReason = "Confirm Beckn API Call failure"
+            cancelReq = buildCancelReq cancellationReason OnConfirm
+        errHandlerAction booking cancelReq
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = do
-        dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-        void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+        let cancellationReason = "External API Call failure, during confirm beckn api"
+            cancelReq = buildCancelReq cancellationReason OnConfirm
+        errHandlerAction booking cancelReq
       | otherwise = throwM exc
 
-    cancelReq =
+    errHandlerAction booking cancelReq = do
+      dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
+      void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+
+    buildCancelReq cancellationReason reasonStage =
       DCancel.CancelReq
-        { reasonCode = CancellationReasonCode "External/Beckn API failure",
-          reasonStage = OnConfirm,
+        { reasonCode = CancellationReasonCode cancellationReason,
+          reasonStage,
           additionalInfo = Nothing
         }
 
