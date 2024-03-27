@@ -72,9 +72,9 @@ initData = {
         currentDriverLat : 0.0,
         currentDriverLon : 0.0,
         locationLastUpdatedTime : "",
-        totalRidesOfDay : 2,
-        totalEarningsOfDay : 2,
-        bonusEarned : 0,
+        totalRidesOfDay : -1,
+        totalEarningsOfDay : -1,
+        bonusEarned : -1,
         route : [],
         cancelRideConfirmationPopUp : {
           delayInSeconds : 5,
@@ -148,7 +148,7 @@ initData = {
           confirmGotoCancel : false,
           savedLocationCount : 0
         },
-        coinBalance : 0
+        coinBalance : -1
       , bannerData : {
           bannerItem : Nothing
         , currentBanner : 0

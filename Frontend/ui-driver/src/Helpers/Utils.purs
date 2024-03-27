@@ -105,6 +105,7 @@ import Data.Argonaut.Decode.Class as AD
 import Data.Argonaut.Encode.Class as AE
 import Data.Argonaut.Core as AC
 import Data.Argonaut.Decode.Parser as ADP
+import Foreign.Generic as FG
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -849,3 +850,13 @@ checkSpecialPickupZone maybeLabel =
                       specialPickupZone = fromMaybe "" (arr DA.!! 3)
                   in specialPickupZone == "PickupZone"
     Nothing    -> false
+
+getStatsFromLocal :: LazyCheck -> Maybe SA.DriverProfileStatsResp
+getStatsFromLocal lazyCheck = do
+  let maybeResp = runExcept (FG.decodeJSON (getValueToLocalStore DRIVER_STATS_DATA) :: _ SA.DriverProfileStatsResp)
+  case maybeResp of
+    Right res -> Just res
+    Left err -> Nothing
+
+setStatsToLocal :: Encode SA.DriverProfileStatsResp => SA.DriverProfileStatsResp -> Effect Unit
+setStatsToLocal object = void $ pure $ runFn2 setValueToLocalStore (show DRIVER_STATS_DATA) (FG.encodeJSON object)
