@@ -39,6 +39,9 @@ DriverPoolConfig:
     tripCategory: Text
     thresholdToIgnoreActualDistanceThreshold: Maybe Meters
 
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
   constraints:
     id: PrimaryKey
 

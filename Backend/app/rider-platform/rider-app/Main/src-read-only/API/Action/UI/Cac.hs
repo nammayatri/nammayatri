@@ -17,11 +17,10 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API =
-  TokenAuth :> "getUiConfigs" :> MandatoryQueryParam "toss" (Kernel.Prelude.Int) :> Get '[JSON] Data.Aeson.Object
+type API = (TokenAuth :> "getUiConfigs" :> MandatoryQueryParam "toss" Kernel.Prelude.Int :> Get '[JSON] Data.Aeson.Object)
 
 handler :: Environment.FlowServer API
 handler = getGetUiConfigs
 
-getGetUiConfigs :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Int -> Environment.FlowHandler Data.Aeson.Object
+getGetUiConfigs :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Int -> Environment.FlowHandler Data.Aeson.Object)
 getGetUiConfigs a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Cac.getGetUiConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

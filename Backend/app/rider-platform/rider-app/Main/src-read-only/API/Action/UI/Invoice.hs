@@ -17,7 +17,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "invoice" :> MandatoryQueryParam "from" Kernel.Prelude.UTCTime :> MandatoryQueryParam "to" Kernel.Prelude.UTCTime :> Get ('[JSON]) [API.Types.UI.Invoice.InvoiceRes])
+type API = (TokenAuth :> "invoice" :> MandatoryQueryParam "from" Kernel.Prelude.UTCTime :> MandatoryQueryParam "to" Kernel.Prelude.UTCTime :> Get '[JSON] [API.Types.UI.Invoice.InvoiceRes])
 
 handler :: Environment.FlowServer API
 handler = getInvoice
