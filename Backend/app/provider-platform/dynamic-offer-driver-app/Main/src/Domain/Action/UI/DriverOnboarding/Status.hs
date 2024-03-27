@@ -27,14 +27,14 @@ where
 
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
-import Domain.Types.DriverOnboarding.AadhaarVerification as AV
-import qualified Domain.Types.DriverOnboarding.DriverLicense as DL
-import qualified Domain.Types.DriverOnboarding.Image as Image
-import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as RC
+import Domain.Types.AadhaarVerification as AV
+import qualified Domain.Types.DriverLicense as DL
 import qualified Domain.Types.IdfyVerification as IV
+import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.VehicleRegistrationCertificate as RC
 import Environment
 import Kernel.External.Encryption
 import Kernel.External.Types
@@ -45,15 +45,15 @@ import Kernel.Utils.Error
 import SharedLogic.DriverOnboarding (enableAndTriggerOnboardingAlertsAndMessages)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import Storage.CachedQueries.Merchant.TransporterConfig
+import qualified Storage.Queries.AadhaarVerification as SAV
 import qualified Storage.Queries.DriverInformation as DIQuery
-import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as SAV
-import qualified Storage.Queries.DriverOnboarding.DriverLicense as DLQuery
-import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DRAQuery
-import qualified Storage.Queries.DriverOnboarding.Image as IQuery
-import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
+import qualified Storage.Queries.DriverLicense as DLQuery
+import qualified Storage.Queries.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
+import qualified Storage.Queries.Image as IQuery
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.Translations as MTQuery
+import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 
 -- PENDING means "pending verification"
 -- FAILED is used when verification is failed

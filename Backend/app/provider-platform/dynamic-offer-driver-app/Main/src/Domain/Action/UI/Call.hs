@@ -33,7 +33,6 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.CallEvent as DCE
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.CallStatus as SCS
-import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
@@ -56,12 +55,12 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
-import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
-import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
+import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import Storage.Queries.Person as PSQuery
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
+import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import Tools.Call
 import Tools.Error
 
@@ -134,7 +133,7 @@ initiateCallToCustomer rideId merchantOpCityId = do
 getDriverMobileNumber :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, HasField "esqDBReplicaEnv" r EsqDBEnv, HasField "loggerEnv" r LoggerEnv) => (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> m CallRes
 getDriverMobileNumber (driverId, merchantId, merchantOpCityId) rcNo = do
   vehicleRC <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
-  rcActiveAssociation <- DAQuery.findActiveAssociationByRC vehicleRC.id >>= fromMaybeM ActiveRCNotFound
+  rcActiveAssociation <- DAQuery.findActiveAssociationByRC vehicleRC.id True >>= fromMaybeM ActiveRCNotFound
   callStatusId <- generateGUID
   linkedDriverNumber <- getDecryptedMobileNumberByDriverId rcActiveAssociation.driverId
   driverRequestedNumber <- getDecryptedMobileNumberByDriverId driverId

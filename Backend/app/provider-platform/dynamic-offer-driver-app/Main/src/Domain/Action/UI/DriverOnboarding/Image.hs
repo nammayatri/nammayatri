@@ -19,8 +19,7 @@ import AWS.S3 as S3
 import qualified Data.ByteString as BS
 import Data.Text as T hiding (length)
 import Data.Time.Format.ISO8601
-import Domain.Types.DriverOnboarding.Error
-import qualified Domain.Types.DriverOnboarding.Image as Domain
+import qualified Domain.Types.Image as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
@@ -37,8 +36,9 @@ import Servant.Multipart
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.TransporterConfig
-import qualified Storage.Queries.DriverOnboarding.Image as Query
+import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.Person as Person
+import Tools.Error
 import qualified Tools.Verification as Verification
 
 data ImageValidateRequest = ImageValidateRequest
@@ -120,7 +120,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
       Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
   when validationOutput.validationAvailable $ do
     checkErrors imageEntity.id imageType validationOutput.detectedImage
-  _ <- Query.updateToValid imageEntity.id
+  _ <- Query.updateToValid True imageEntity.id
 
   return $ ImageValidateResponse {imageId = imageEntity.id}
   where
@@ -167,7 +167,8 @@ mkImage personId_ merchantId s3Path imageType_ isValid = do
         imageType = imageType_,
         isValid,
         failureReason = Nothing,
-        createdAt = now
+        createdAt = now,
+        updatedAt = now
       }
 
 getImage :: Id DM.Merchant -> Id Domain.Image -> Flow Text

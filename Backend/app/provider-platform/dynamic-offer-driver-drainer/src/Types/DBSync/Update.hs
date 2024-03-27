@@ -14,6 +14,9 @@ import qualified IssueManagement.Storage.Beam.MediaFile as MediaFile
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as PaymentOrder
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as PaymentTransaction
 import Sequelize
+import qualified "dynamic-offer-driver-app" Storage.Beam.AadhaarOtpReq as AadhaarOtpReq
+import qualified "dynamic-offer-driver-app" Storage.Beam.AadhaarOtpVerify as AadhaarOtpVerify
+import qualified "dynamic-offer-driver-app" Storage.Beam.AadhaarVerification as AadhaarVerification
 import qualified "dynamic-offer-driver-app" Storage.Beam.BapMetadata as BapMetadata
 import qualified "dynamic-offer-driver-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.Booking as Booking
@@ -26,16 +29,11 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.Dr
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverBlockReason as DriverBlockReason
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverFee as DriverFee
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverInformation as DriverInformation
-import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.AadhaarOtpReq as AadhaarOtpReq
-import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.AadhaarOtpVerify as AadhaarOtpVerify
-import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.AadhaarVerification as AadhaarVerification
-import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.DriverLicense as DriverLicense
-import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.DriverRCAssociation as DriverRCAssociation
-import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Image as Image
-import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as VehicleRegistrationCertificate
+import qualified "dynamic-offer-driver-app" Storage.Beam.DriverLicense as DriverLicense
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverPlan as DriverPlan
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverPoolConfig as DriverPoolConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverQuote as DriverQuote
+import qualified "dynamic-offer-driver-app" Storage.Beam.DriverRCAssociation as DriverRCAssociation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverReferral as DriverReferral
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverStats as DriverStats
 import qualified "dynamic-offer-driver-app" Storage.Beam.Estimate as Estimate
@@ -57,6 +55,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.FleetDriverAssociation 
 import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
 import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.IdfyVerification as IdfyVerification
+import qualified "dynamic-offer-driver-app" Storage.Beam.Image as Image
 import "dynamic-offer-driver-app" Storage.Beam.IssueManagement ()
 import qualified "dynamic-offer-driver-app" Storage.Beam.Location as Location
 import qualified "dynamic-offer-driver-app" Storage.Beam.LocationMapping as LocationMapping
@@ -88,6 +87,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest as Search
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver as SearchRequestForDriver
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
 import qualified "dynamic-offer-driver-app" Storage.Beam.Vehicle as Vehicle
+import qualified "dynamic-offer-driver-app" Storage.Beam.VehicleRegistrationCertificate as VehicleRegistrationCertificate
 import qualified "dynamic-offer-driver-app" Storage.Beam.Volunteer as Volunteer
 import Utils.Parse
 

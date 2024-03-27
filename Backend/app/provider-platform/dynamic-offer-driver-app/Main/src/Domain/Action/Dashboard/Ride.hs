@@ -36,8 +36,6 @@ import Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.Common as DTC
-import Domain.Types.DriverOnboarding.DriverRCAssociation
-import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -54,6 +52,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -62,9 +61,8 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
-import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
-import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.DriverQuote as DQ
+import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
@@ -72,6 +70,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as VQuery
+import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -506,7 +505,7 @@ bookingWithVehicleNumberAndPhone merchant merchantOpCityId req = do
               }
       void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) rcStatusReq
     createRCAssociation driverId rc = do
-      driverRCAssoc <- makeRCAssociation driverId rc.id (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId driverId rc.id (DomainRC.convertTextToUTC (Just "2099-12-12"))
       DAQuery.create driverRCAssoc
 
 endActiveRide :: Id DRide.Ride -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()

@@ -18,12 +18,15 @@ import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.DriverInformation as DI
-import Domain.Types.DriverOnboarding.Error
-import qualified Domain.Types.DriverOnboarding.Image as Domain
+import Domain.Types.DriverRCAssociation
+import Domain.Types.IdfyVerification
+import qualified Domain.Types.Image as Domain
 import qualified Domain.Types.Merchant as DTM
 import qualified Domain.Types.Merchant.MerchantMessage as DMM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person
+import Domain.Types.Vehicle
+import Domain.Types.VehicleRegistrationCertificate
 import Environment
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Ticket.Interface.Types as Ticket
@@ -37,9 +40,10 @@ import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.DriverInformation as DIQuery
-import qualified Storage.Queries.DriverOnboarding.Image as Query
+import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.Message.Message as MessageQuery
 import qualified Storage.Queries.Person as QP
+import Tools.Error
 import qualified Tools.Ticket as TT
 import Tools.Whatsapp as Whatsapp
 
@@ -77,7 +81,7 @@ notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
 
 throwImageError :: Id Domain.Image -> DriverOnboardingError -> Flow b
 throwImageError id_ err = do
-  _ <- Query.addFailureReason id_ err
+  _ <- Query.addFailureReason (Just err) id_
   throwError err
 
 getFreeTrialDaysLeft :: MonadFlow m => Int -> DI.DriverInformation -> m Int
@@ -113,3 +117,74 @@ enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified =
     merchant <- CQM.findById merchantOpCity.merchantId >>= fromMaybeM (MerchantNotFound merchantOpCity.merchantId.getId)
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     triggerOnboardingAlertsAndMessages person merchant merchantOpCity
+
+makeRCAssociation :: (MonadFlow m) => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person -> Id VehicleRegistrationCertificate -> Maybe UTCTime -> m DriverRCAssociation
+makeRCAssociation merchantId merchantOperatingCityId driverId rcId end = do
+  id <- generateGUID
+  now <- getCurrentTime
+  return $
+    DriverRCAssociation
+      { id,
+        driverId,
+        rcId,
+        associatedOn = now,
+        associatedTill = end,
+        consent = True,
+        consentTimestamp = now,
+        isRcActive = False,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOperatingCityId,
+        createdAt = now,
+        updatedAt = now
+      }
+
+data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPIEntity
+  { certificateNumber :: Text,
+    fitnessExpiry :: UTCTime,
+    permitExpiry :: Maybe UTCTime,
+    pucExpiry :: Maybe UTCTime,
+    insuranceValidity :: Maybe UTCTime,
+    vehicleClass :: Maybe Text,
+    vehicleVariant :: Maybe Variant,
+    failedRules :: [Text],
+    vehicleManufacturer :: Maybe Text,
+    vehicleCapacity :: Maybe Int,
+    vehicleModel :: Maybe Text,
+    manufacturerModel :: Maybe Text,
+    reviewRequired :: Maybe Bool,
+    vehicleColor :: Maybe Text,
+    vehicleEnergyType :: Maybe Text,
+    reviewedAt :: Maybe UTCTime,
+    verificationStatus :: VerificationStatus,
+    fleetOwnerId :: Maybe Text,
+    createdAt :: UTCTime
+  }
+  deriving (Generic, ToSchema, ToJSON, FromJSON)
+
+makeRCAPIEntity :: VehicleRegistrationCertificate -> Text -> VehicleRegistrationCertificateAPIEntity
+makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
+  VehicleRegistrationCertificateAPIEntity
+    { certificateNumber = rcDecrypted,
+      ..
+    }
+
+makeVehicleFromRC :: UTCTime -> Id Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Vehicle
+makeVehicleFromRC now driverId merchantId certificateNumber rc =
+  Vehicle
+    { driverId,
+      capacity = rc.vehicleCapacity,
+      category = getCategory <$> rc.vehicleVariant,
+      make = rc.vehicleManufacturer,
+      model = fromMaybe "Unkown" rc.vehicleModel,
+      size = Nothing,
+      merchantId,
+      variant = fromMaybe AUTO_RICKSHAW rc.vehicleVariant, -- Value will be always Just if reaching here
+      color = fromMaybe "Unkown" rc.vehicleColor,
+      energyType = rc.vehicleEnergyType,
+      registrationNo = certificateNumber,
+      registrationCategory = Nothing,
+      vehicleClass = fromMaybe "Unkown" rc.vehicleClass,
+      vehicleName = Nothing,
+      createdAt = now,
+      updatedAt = now
+    }

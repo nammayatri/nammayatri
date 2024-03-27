@@ -156,14 +156,6 @@ data DriverListItem = DriverListItem
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data DocumentInfo a = DocumentInfo
-  { documentNumber :: Text,
-    status :: Text,
-    details :: Maybe a
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data LicDetails = LicDetails
   { licExpiry :: UTCTime,
     vehicleClass :: [Text]
@@ -564,10 +556,6 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
     -- createdAt :: UTCTime, -- do we need it?
     -- updatedAt UTCTime,
   }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data VerificationStatus = PENDING | VALID | INVALID
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

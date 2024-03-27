@@ -4,13 +4,15 @@ imports:
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
   UTCTime: Kernel.Prelude
   EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
   Variant: Domain.Types.Vehicle
-  ImageType: Domain.Types.DriverOnboarding.Image
-  Image: Domain.Types.DriverOnboarding.Image
+  ImageType: Domain.Types.Image
+  Image: Domain.Types.Image
+  DriverOnboardingError: Tools.Error
+  VerificationStatus: Domain.Types.IdfyVerification
 
 IdfyVerification:
   tableName: idfy_verification
-
   fields:
     id: Id IdfyVerification
     documentImageId1: Id Image
@@ -28,58 +30,276 @@ IdfyVerification:
     dashboardPassedVehicleVariant: Maybe Variant
     retryCount: Maybe Int
     nameOnCard: Maybe Text
-
   beamInstance: MakeTableInstancesWithTModifier [("multipleRC", "multiple_r_c")]
-
   types:
     ImageExtractionValidation:
       enum: "Success,Skipped,Failed"
     VerificationStatus:
       enum: "PENDING,VALID,INVALID"
-
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
     requestId: SecondaryKey
-
   queries:
     findById:
       kvFunction: findOneWithKV
       where: id
-
     findAllByDriverId:
       kvFunction: findAllWithKV
       where: driverId
-
     findAllByDriverIdAndDocType:
       kvFunction: findAllWithKV
       where:
         and: [driverId, docType]
-
     findLatestByDriverIdAndDocType:
       kvFunction: findAllWithOptionsKV
       where:
         and: [driverId, docType]
-
     findByRequestId:
       kvFunction: findOneWithKV
       where: requestId
-
     updateResponse:
       kvFunction: updateWithKV
       params: [status, idfyResponse]
       where: requestId
-
     updateStatus:
       kvFunction: updateWithKV
       params: [status]
       where: requestId
-
     updateExtractValidationStatus:
       kvFunction: updateWithKV
       params: [imageExtractionValidation]
       where: requestId
-
     deleteByPersonId:
       kvFunction: deleteWithKV
       where: driverId
+
+AadhaarOtpVerify:
+  tableName: aadhaar_otp_verify
+  fields:
+    id: Id AadhaarOtpVerify
+    driverId: Id Person
+    requestId: Text
+    statusCode: Text
+    transactionId: Text
+    requestMessage: Text
+  excludedFields: [merchantOperatingCityId, merchantId]
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+  queries:
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where: driverId
+
+AadhaarOtpReq:
+  tableName: aadhaar_otp_req
+  fields:
+    id: Id AadhaarOtpReq
+    driverId: Id Person
+    requestId: Text
+    statusCode: Text
+    transactionId: Maybe Text
+    requestMessage: Text
+  excludedFields: [merchantOperatingCityId, merchantId]
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+  queries:
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where: driverId
+
+AadhaarVerification:
+  tableName: aadhaar_verification
+  fields:
+    driverId: Id Person
+    driverName: Text
+    driverGender: Text
+    driverDob: Text
+    driverImage: Maybe Text
+    aadhaarNumberHash: Maybe DbHash
+    isVerified: Bool
+    driverImagePath: Maybe Text
+  excludedFields: [merchantOperatingCityId, merchantId]
+  derives: "Generic,Show,ToJSON,FromJSON"
+  constraints:
+    driverId: PrimaryKey
+    aadhaarNumberHash: SecondaryKey
+  queries:
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
+    findByAadhaarNumberHash:
+      kvFunction: findOneWithKV
+      where: aadhaarNumberHash
+    findByPhoneNumberAndUpdate:
+      kvFunction: updateWithKV
+      params: [driverName, driverGender, driverDob, aadhaarNumberHash, isVerified]
+      where: driverId
+    updateDriverImagePath:
+      kvFunction: updateOneWithKV
+      params: [driverImagePath]
+      where: driverId
+
+DriverLicense:
+  tableName: driver_license
+  fields:
+    id: Id DriverLicense
+    driverId: Id Person
+    documentImageId1: Id Image
+    documentImageId2: Maybe (Id Image)
+    driverDob: Maybe UTCTime
+    driverName: Maybe Text
+    licenseNumber: EncryptedHashedField e Text
+    licenseExpiry: UTCTime
+    classOfVehicles: '[Text]'
+    failedRules: '[Text]'
+    verificationStatus: VerificationStatus
+    consent: Bool
+    consentTimestamp: UTCTime
+  excludedFields: [merchantOperatingCityId]
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    licenseNumberHash: SecondaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+VehicleRegistrationCertificate:
+  tableName: vehicle_registration_certificate
+  fields:
+    id: Id VehicleRegistrationCertificate
+    documentImageId: Id Image
+    certificateNumber: EncryptedHashedField e Text
+    fitnessExpiry: UTCTime
+    permitExpiry: Maybe UTCTime
+    pucExpiry: Maybe UTCTime
+    insuranceValidity: Maybe UTCTime
+    vehicleClass: Maybe Text
+    vehicleVariant: Maybe Variant
+    failedRules: '[Text]'
+    vehicleManufacturer: Maybe Text
+    vehicleCapacity: Maybe Int
+    vehicleModel: Maybe Text
+    manufacturerModel: Maybe Text
+    vehicleColor: Maybe Text
+    vehicleEnergyType: Maybe Text
+    reviewedAt: Maybe UTCTime
+    reviewRequired: Maybe Bool
+    verificationStatus: VerificationStatus
+    fleetOwnerId: Maybe Text
+  constraints:
+    id: PrimaryKey
+    certificateNumberHash: SecondaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    updateFleetOwnerId:
+      kvFunction: updateWithKV
+      params: [fleetOwnerId]
+      where: id
+    findByRCIdAndFleetOwnerId:
+      kvFunction: findOneWithKV
+      where:
+        and: [id, fleetOwnerId]
+    findAllByFleetOwnerId:
+      kvFunction: findAllWithOptionsKV
+      where: fleetOwnerId
+      orderBy: updatedAt
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+DriverRCAssociation:
+  tableName: driver_rc_association
+  fields:
+    id: Id DriverRCAssociation
+    driverId: Id Person
+    rcId: Id VehicleRegistrationCertificate
+    associatedOn: UTCTime
+    associatedTill: Maybe UTCTime
+    consent: Bool
+    consentTimestamp: UTCTime
+    isRcActive: Bool
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    rcId: SecondaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
+    findActiveAssociationByRC:
+      kvFunction: findOneWithKV
+      where:
+        and: [rcId, isRcActive]
+    findActiveAssociationByDriver:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, isRcActive]
+    deactivateRCForDriver:
+      kvFunction: updateWithKV
+      params: [isRcActive]
+      where:
+        and: [driverId, rcId]
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+Image:
+  tableName: image
+  fields:
+    id: Id Image
+    personId: Id Person
+    merchantId: Id Merchant
+    s3Path: Text
+    imageType: ImageType
+    isValid: Bool
+    failureReason: Maybe DriverOnboardingError
+  excludedFields: [merchantOperatingCityId]
+  types:
+    ImageType:
+      enum: "DriverLicense,VehicleRegistrationCertificate"
+  constraints:
+    id: PrimaryKey
+    personId: SecondaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findImagesByPersonAndType:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, personId, imageType]
+    updateToValid:
+      kvFunction: updateWithKV
+      params: [isValid]
+      where: id
+    findByMerchantId:
+      kvFunction: findAllWithKV
+      where: merchantId
+    addFailureReason:
+      kvFunction: updateWithKV
+      params: [failureReason]
+      where: id
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where: personId
+  extraOperations:
+    - EXTRA_QUERY_FILE

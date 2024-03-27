@@ -26,11 +26,11 @@ import Data.Text (pack, unpack)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
+import qualified Domain.Types.AadhaarOtpReq as DAR
+import qualified Domain.Types.AadhaarOtpVerify as DAV
+import Domain.Types.AadhaarVerification
+import qualified Domain.Types.AadhaarVerification as VDomain
 import Domain.Types.DriverInformation (DriverInformation)
-import qualified Domain.Types.DriverOnboarding.AadhaarOtp as Domain
-import Domain.Types.DriverOnboarding.AadhaarVerification
-import qualified Domain.Types.DriverOnboarding.AadhaarVerification as VDomain
-import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
@@ -45,11 +45,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Driver.DriverImage as CQDI
 import Storage.CachedQueries.Merchant.TransporterConfig as CTC
+import qualified Storage.Queries.AadhaarOtpReq as QueryAR
+import qualified Storage.Queries.AadhaarOtpVerify as QueryAV
+import qualified Storage.Queries.AadhaarVerification as Q
+import qualified Storage.Queries.AadhaarVerification as QAV
 import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverOnboarding.AadhaarOtp as Query
-import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as Q
-import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as QAV
 import qualified Storage.Queries.Person as Person
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
@@ -93,7 +94,7 @@ generateAadhaarOtp isDashboard mbMerchant personId merchantOpCityId req = do
   unless (isDashboard || tried < transporterConfig.onboardingTryLimit) $ throwError (GenerateAadhaarOtpExceedLimit personId.getId)
   res <- AadhaarVerification.generateAadhaarOtp person.merchantId merchantOpCityId req
   aadhaarOtpEntity <- mkAadhaarOtp personId res
-  _ <- Query.createForGenerate aadhaarOtpEntity
+  _ <- QueryAR.create aadhaarOtpEntity
   cacheAadhaarVerifyTries personId tried res.transactionId aadhaarHash isDashboard
   pure res
 
@@ -132,7 +133,7 @@ verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
               }
       res <- AadhaarVerification.verifyAadhaarOtp person.merchantId merchantOpCityId aadhaarVerifyReq
       aadhaarVerifyEntity <- mkAadhaarVerify personId tId res
-      Query.createForVerify aadhaarVerifyEntity
+      QueryAV.create aadhaarVerifyEntity
       if res.code == pack "1002"
         then do
           Redis.del key
@@ -178,7 +179,7 @@ backfillAadhaarImage person merchantOpCityId aadhaarVerification =
       case resultOrg of
         Left _ -> return $ Just image
         Right _ -> do
-          QAV.updateDriverImagePath person.id orgImageFilePath
+          QAV.updateDriverImagePath (Just orgImageFilePath) person.id
           (compImage, resultComp) <- uploadCompressedAadhaarImage person merchantOpCityId image imageType
           case resultComp of
             Left _ -> return $ Just image
@@ -258,19 +259,20 @@ mkAadhaarOtp ::
   (MonadGuid m, MonadTime m) =>
   Id Person.Person ->
   AadhaarVerification.AadhaarVerificationResp ->
-  m Domain.AadhaarOtpReq
+  m DAR.AadhaarOtpReq
 mkAadhaarOtp personId res = do
   id <- generateGUID
   now <- getCurrentTime
   return $
-    Domain.AadhaarOtpReq
+    DAR.AadhaarOtpReq
       { id,
         driverId = personId,
         requestId = res.requestId,
         statusCode = res.statusCode,
         transactionId = res.transactionId,
         requestMessage = res.message,
-        createdAt = now
+        createdAt = now,
+        updatedAt = now
       }
 
 mkAadhaarVerify ::
@@ -278,19 +280,20 @@ mkAadhaarVerify ::
   Id Person.Person ->
   Text ->
   AadhaarVerification.AadhaarOtpVerifyRes ->
-  m Domain.AadhaarOtpVerify
+  m DAV.AadhaarOtpVerify
 mkAadhaarVerify personId tId res = do
   id <- generateGUID
   now <- getCurrentTime
   return $
-    Domain.AadhaarOtpVerify
+    DAV.AadhaarOtpVerify
       { id,
         driverId = personId,
         requestId = res.request_id,
         statusCode = res.code,
         transactionId = tId,
         requestMessage = res.message,
-        createdAt = now
+        createdAt = now,
+        updatedAt = now
       }
 
 mkAadhaar ::
@@ -322,5 +325,5 @@ mkAadhaar personId name gender dob aadhaarHash img aadhaarVerified imgPath = do
 
 checkForDuplicacy :: DbHash -> Flow ()
 checkForDuplicacy aadhaarHash = do
-  aadhaarInfo <- Q.findByAadhaarNumberHash aadhaarHash
+  aadhaarInfo <- Q.findByAadhaarNumberHash (Just aadhaarHash)
   when (isJust aadhaarInfo) $ throwError AadhaarAlreadyLinked

@@ -17,8 +17,8 @@ module SharedLogic.Allocator.Jobs.Document.VerificationRetry
   )
 where
 
-import qualified Domain.Types.DriverOnboarding.Image as Image
 import Domain.Types.IdfyVerification
+import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DTO
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)

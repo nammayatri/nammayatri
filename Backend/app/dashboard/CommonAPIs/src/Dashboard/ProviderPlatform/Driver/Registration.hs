@@ -25,7 +25,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
-import Servant
+import Servant hiding (Summary)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data DriverRegistrationEndpoint
@@ -38,6 +38,75 @@ data DriverRegistrationEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "DriverRegistrationEndpoint"
+
+-- Under review drivers list --------------
+type UnderReviewDriversListAPI =
+  "underReviewDrivers"
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> Get '[JSON] UnderReviewDriversListResponse
+
+data UnderReviewDriversListResponse = UnderReviewDriversListResponse
+  { drivers :: [UnderReviewDriver],
+    summary :: Summary
+  }
+
+data UnderReviewDriver = UnderReviewDriver
+  { driverId :: Id Driver,
+    driverName :: Text,
+    driverMobileNumber :: Text,
+    driverMobileCountryCode :: Text,
+    reviewedBy :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+-- Driver documents info --------------
+type DriverDocumentInfoAPI =
+  Capture "driverId" (Id Driver)
+    :> "documents"
+    :> "info"
+    :> Get '[JSON] [DriverDocument]
+
+newtype DocumentInfo = DocumentInfo
+  { documentNumber :: Maybe Text
+  }
+  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data DriverDocument = DriverDocument
+  { documentType :: DocumentType,
+    documentStatus :: VerificationStatus,
+    documentImageId :: Maybe (Id Image),
+    documentId :: Maybe (Id Document),
+    documentInfo :: Maybe DocumentInfo
+  }
+  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- Approve/Reject Document --------------
+type UpdateDocumentAPI =
+  "documents"
+    :> Capture "documentId" (Id Document)
+    :> "update"
+    :> ReqBody '[JSON] UpdateDocumentRequest
+    :> Post '[JSON] APISuccess
+
+data UpdateDocumentRequest = Approve ApproveDetails | Reject RejectDetails
+  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data RejectDetails = RejectDetails
+  { reason :: Text,
+    documentImageId :: Maybe (Id Image)
+  }
+  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data ApproveDetails
+  = RC RCApproveDetails
+  | DL
+  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
+newtype RCApproveDetails = RCApproveDetails
+  { vehicleVariant :: Variant
+  }
+  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- driver documents list API --------------
 -- ----------------------------------------
@@ -80,7 +149,7 @@ type UploadDocumentAPI =
 data DocumentType
   = DriverLicense
   | VehicleRegistrationCertificate
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data UploadDocumentReq = UploadDocumentReq
   { imageBase64 :: Text,

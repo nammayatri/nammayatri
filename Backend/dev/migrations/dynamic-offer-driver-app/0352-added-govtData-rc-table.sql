@@ -20,8 +20,6 @@ CREATE TABLE atlas_driver_offer_bpp.govt_data_r_c  (
     created_at timestamp with time zone NOT NULL DEFAULT now()
 );
 
-Alter table atlas_driver_offer_bpp.vehicle_registration_certificate alter Column vehicle_capacity set data type integer USING vehicle_capacity::integer ; -- No need to run this in master and prod (already there)
-
 UPDATE atlas_driver_offer_bpp.onboarding_document_configs SET rc_number_prefix_list = '{"TS", "KA"}' ; -- need to check and run in master and prod accordingly
 
 UPDATE atlas_driver_offer_bpp.onboarding_document_configs SET supported_vehicle_classes_json =

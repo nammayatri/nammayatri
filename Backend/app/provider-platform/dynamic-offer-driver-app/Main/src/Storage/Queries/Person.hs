@@ -51,19 +51,18 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
-import qualified Storage.Beam.DriverOnboarding.DriverLicense as BeamDL
-import qualified Storage.Beam.DriverOnboarding.DriverRCAssociation as BeamDRCA
-import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
+import qualified Storage.Beam.DriverLicense as BeamDL
 import qualified Storage.Beam.DriverQuote as BeamDQ
+import qualified Storage.Beam.DriverRCAssociation as BeamDRCA
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Ride as BeamR
 import qualified Storage.Beam.Vehicle as BeamV
+import qualified Storage.Beam.VehicleRegistrationCertificate as BeamVRC
 import Storage.Queries.Booking ()
 import qualified Storage.Queries.DriverInformation.Internal as Int
-import qualified Storage.Queries.DriverOnboarding.DriverLicense ()
-import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation ()
-import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate ()
+import qualified Storage.Queries.DriverLicense ()
 import Storage.Queries.DriverQuote ()
+import qualified Storage.Queries.DriverRCAssociation ()
 import Storage.Queries.Instances.DriverInformation ()
 import Storage.Queries.Instances.Person ()
 import Storage.Queries.Person.GetNearestDrivers as Reexport
@@ -73,6 +72,7 @@ import qualified Storage.Queries.Person.Internal as Int
 import Storage.Queries.Ride ()
 import Storage.Queries.Vehicle ()
 import qualified Storage.Queries.Vehicle.Internal as Int
+import qualified Storage.Queries.VehicleRegistrationCertificate ()
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person.Person -> m ()
 create = createWithKV

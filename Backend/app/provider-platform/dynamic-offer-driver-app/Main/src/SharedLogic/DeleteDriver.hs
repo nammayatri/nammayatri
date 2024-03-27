@@ -24,16 +24,17 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
+import qualified Storage.Queries.AadhaarOtpReq as AadhaarReq
+import qualified Storage.Queries.AadhaarOtpVerify as AadhaarOtp
+import qualified Storage.Queries.AadhaarVerification as AV
 import qualified Storage.Queries.DriverInformation as QDriverInfo
-import qualified Storage.Queries.DriverOnboarding.AadhaarOtp as AadhaarOtp
-import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as AV
-import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
-import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
-import qualified Storage.Queries.DriverOnboarding.Image as QImage
+import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverQuote as QDriverQuote
+import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriverAssociation
 import qualified Storage.Queries.IdfyVerification as QIV
+import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Message.MessageReport as QMessage
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
@@ -69,9 +70,9 @@ deleteDriver merchantShortId reqDriverId = do
   QDriverInfo.deleteById (cast reqDriverId)
   QMessage.deleteByPersonId reqDriverId
   QIssueReport.deleteByPersonId (cast reqDriverId)
-  AadhaarOtp.deleteByPersonIdForGenerate reqDriverId
-  AadhaarOtp.deleteByPersonIdForVerify reqDriverId
-  AV.deleteByPersonId reqDriverId
+  AadhaarReq.deleteByPersonId reqDriverId
+  AadhaarOtp.deleteByPersonId reqDriverId
+  AV.deleteByDriverId reqDriverId
   QPerson.deleteById reqDriverId
   logTagInfo "deleteDriver : " (show reqDriverId)
   return Success
