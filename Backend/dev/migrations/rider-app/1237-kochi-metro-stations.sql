@@ -31,6 +31,3 @@ SET merchant_operating_city_id = (
     WHERE merchant_short_id = 'NAMMA_YATRI'
     LIMIT 1
 );
-
-ALTER TABLE atlas_app.station
-ALTER COLUMN merchant_operating_city_id SET NOT NULL;

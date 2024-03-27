@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByMerchantIdAndState ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m ([Domain.Types.MerchantOperatingCity.MerchantOperatingCity]))
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m [Domain.Types.MerchantOperatingCity.MerchantOperatingCity])
 findAllByMerchantIdAndState (Kernel.Types.Id.Id merchantId) state = do findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq merchantId, Se.Is Beam.state $ Se.Eq state]]
 
 findById ::

@@ -12,11 +12,11 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data ClientT f = ClientT
-  { id :: (B.C f Kernel.Prelude.Text),
-    shortId :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { id :: B.C f Kernel.Prelude.Text,
+    shortId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -26,6 +26,6 @@ instance B.Table ClientT where
 
 type Client = ClientT Identity
 
-$(enableKVPG (''ClientT) [('id)] [])
+$(enableKVPG ''ClientT ['id] [])
 
-$(mkTableInstances (''ClientT) "client")
+$(mkTableInstances ''ClientT "client")

@@ -53,25 +53,13 @@ updateBppBankDetailsById bppBankAccountNumber bppBankCode (Kernel.Types.Id.Id id
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.bppBankAccountNumber bppBankAccountNumber, Se.Set Beam.bppBankCode bppBankCode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-updateFinalPriceById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
-updateFinalPriceById finalPrice (Kernel.Types.Id.Id id) = do
-  now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.finalPrice finalPrice,
-      Se.Set Beam.updatedAt now
-    ]
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+updateFinalPriceById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateFinalPriceById finalPrice (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.finalPrice finalPrice, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-updatePriceById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
-updatePriceById price (Kernel.Types.Id.Id id) = do
-  _now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.price price,
-      Se.Set Beam.updatedAt _now
-    ]
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+updatePriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updatePriceById price (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.price price, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
 updateStatusById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
