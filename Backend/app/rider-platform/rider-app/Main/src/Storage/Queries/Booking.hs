@@ -132,7 +132,12 @@ findByBPPBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BPPBooki
 findByBPPBookingId (Id bppRbId) = findOneWithKV [Se.Is BeamB.bppBookingId $ Se.Eq $ Just bppRbId]
 
 findByTransactionId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Booking)
-findByTransactionId transactionId = findOneWithKV [Se.Is BeamB.transactionId $ Se.Eq transactionId]
+findByTransactionId transactionId =
+  findAllWithKVAndConditionalDB
+    [ Se.Is BeamB.transactionId $ Se.Eq transactionId
+    ]
+    (Just (Se.Desc BeamB.createdAt))
+    <&> listToMaybe
 
 findByIdAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> Id Merchant -> m (Maybe Booking)
 findByIdAndMerchantId (Id bookingId) (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.merchantId $ Se.Eq merchantId]]
