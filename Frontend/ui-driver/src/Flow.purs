@@ -2372,8 +2372,7 @@ homeScreenFlow = do
       homeScreenFlow
     GOT_DRIVER_STATS driverStats -> do      
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { driverRideStats = Just $ driverStats }      
-      updateDriverDataToStates
-      modifyScreenState $ HomeScreenStateType $ \currentState -> currentState { data { driverStats = true } }
+      updateDriverDataToStates      
       homeScreenFlow
     UPDATE_SPECIAL_LOCATION_LIST -> do
       resp <- HelpersAPI.callApiBT $ API.SpecialLocationFullReq
@@ -2921,7 +2920,7 @@ updateDriverDataToStates = do
   (GlobalState globalstate) <- getState  
   case globalstate.globalProps.driverRideStats of
     Just (DriverProfileStatsResp driverStats) -> do
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { totalRidesOfDay = driverStats.totalRidesOfDay, totalEarningsOfDay = driverStats.totalEarningsOfDay, coinBalance = driverStats.coinBalance, bonusEarned = driverStats.bonusEarning }})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { totalRidesOfDay = driverStats.totalRidesOfDay, totalEarningsOfDay = driverStats.totalEarningsOfDay, coinBalance = driverStats.coinBalance, bonusEarned = driverStats.bonusEarning, driverStats = true }})
       void $ pure $ setCleverTapUserProp [{key : "Driver Coin Balance", value : unsafeToForeign driverStats.coinBalance }]
     Nothing -> pure unit
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate) false
