@@ -23,9 +23,16 @@ data RentalDetailsT f = RentalDetailsT
     perHourCharge :: B.C f Money,
     perExtraMinRate :: B.C f Money,
     perExtraKmRate :: B.C f Money,
+    baseFareAmount :: B.C f (Maybe HighPrecMoney),
+    perHourChargeAmount :: B.C f (Maybe HighPrecMoney),
+    perExtraMinRateAmount :: B.C f (Maybe HighPrecMoney),
+    perExtraKmRateAmount :: B.C f (Maybe HighPrecMoney),
     includedKmPerHr :: B.C f Kilometers,
     plannedPerKmRate :: B.C f Money,
     nightShiftCharge :: B.C f (Maybe Money),
+    plannedPerKmRateAmount :: B.C f (Maybe HighPrecMoney),
+    nightShiftChargeAmount :: B.C f (Maybe HighPrecMoney),
+    currency :: B.C f (Maybe Currency),
     nightShiftStart :: B.C f (Maybe TimeOfDay),
     nightShiftEnd :: B.C f (Maybe TimeOfDay)
   }

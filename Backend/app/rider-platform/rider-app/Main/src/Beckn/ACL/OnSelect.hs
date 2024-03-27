@@ -27,6 +27,7 @@ import qualified Data.UUID as UUID
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -99,30 +100,37 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
     Left err -> do
       logTagError "on_select req" $ "on_select error: " <> show err
       throwError $ InvalidRequest "Invalid or missing price data"
-    Right estimatedFare -> do
+    Right (estimatedFare, currency) -> do
       return $
         DOnSelect.QuoteInfo
           { vehicleVariant = vehicleVariant,
-            estimatedFare = Money estimatedFare,
+            estimatedFare = Utils.decimalValueToPrice currency estimatedFare,
             discount = Nothing,
             serviceTierName = serviceTierName,
             quoteValidTill = validTill,
             ..
           }
   where
-    parsedData :: Spec.Order -> Either Text Int
+    parsedData :: Spec.Order -> Either Text (DecimalValue.DecimalValue, Currency)
     parsedData orderV2 = do
       estimatedFare <-
         orderV2.orderQuote
           >>= (.quotationPrice)
           >>= (.priceValue)
-          >>= parseInt
+          >>= parseDecimalValue
           & maybe (Left "Invalid Price") Right
 
-      Right estimatedFare
+      currency <-
+        orderV2.orderQuote
+          >>= (.quotationPrice)
+          >>= (.priceCurrency)
+          >>= (readMaybe . T.unpack)
+          & maybe (Left "Invalid Currency") Right
 
-    parseInt :: Text -> Maybe Int
-    parseInt = readMaybe . T.unpack
+      Right (estimatedFare, currency)
+
+    parseDecimalValue :: Text -> Maybe DecimalValue.DecimalValue
+    parseDecimalValue = DecimalValue.valueFromString
 
 buildDriverOfferQuoteDetailsV2 ::
   (MonadFlow m, MonadThrow m, Log m, MonadTime m) =>

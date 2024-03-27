@@ -43,9 +43,9 @@ data Estimate = Estimate
     merchantId :: Maybe (Id DM.Merchant),
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     bppEstimateId :: Id BPPEstimate,
-    estimatedFare :: Money,
-    discount :: Maybe Money,
-    estimatedTotalFare :: Money,
+    estimatedFare :: Price,
+    discount :: Maybe Price,
+    estimatedTotalFare :: Price,
     totalFareRange :: FareRange,
     estimatedDuration :: Maybe Seconds,
     estimatedDistance :: Maybe HighPrecMeters,
@@ -74,7 +74,16 @@ data Estimate = Estimate
 data BPPEstimate
 
 data NightShiftInfo = NightShiftInfo
+  { nightShiftCharge :: Price,
+    oldNightShiftCharge :: Maybe Centesimal, -- TODO: this field works wrong, value in it not always make sense, it have to be removed later
+    nightShiftStart :: TimeOfDay,
+    nightShiftEnd :: TimeOfDay
+  }
+  deriving (Generic, Show)
+
+data NightShiftInfoAPIEntity = NightShiftInfoAPIEntity
   { nightShiftCharge :: Money,
+    nightShiftChargeWithCurrency :: PriceAPIEntity,
     oldNightShiftCharge :: Maybe Centesimal, -- TODO: this field works wrong, value in it not always make sense, it have to be removed later
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
@@ -87,24 +96,59 @@ data EstimateBreakup = EstimateBreakup
     title :: Text,
     price :: EstimateBreakupPrice
   }
-  deriving (Generic, FromJSON, ToJSON, Show, PrettyShow, ToSchema)
+  deriving (Generic, Show, PrettyShow)
 
-data EstimateBreakupPrice = EstimateBreakupPrice
-  { currency :: Text,
+newtype EstimateBreakupPrice = EstimateBreakupPrice
+  { value :: Price
+  }
+  deriving (Generic, Show, PrettyShow)
+
+data EstimateBreakupPriceAPIEntity = EstimateBreakupPriceAPIEntity
+  { currency :: Currency,
     value :: Money
   }
   deriving (Generic, FromJSON, ToJSON, Show, PrettyShow, ToSchema)
 
 data FareRange = FareRange
-  { minFare :: Money,
-    maxFare :: Money
+  { minFare :: Price,
+    maxFare :: Price
   }
-  deriving (Generic, Show, PrettyShow, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, PrettyShow)
 
-newtype WaitingCharges = WaitingCharges
-  { waitingChargePerMin :: Maybe Money
+data FareRangeAPIEntity = FareRangeAPIEntity
+  { minFare :: Money,
+    maxFare :: Money,
+    minFareWithCurrency :: PriceAPIEntity,
+    maxFareWithCurrency :: PriceAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+mkFareRangeAPIEntity :: FareRange -> FareRangeAPIEntity
+mkFareRangeAPIEntity FareRange {..} =
+  FareRangeAPIEntity
+    { minFare = minFare.amountInt,
+      maxFare = maxFare.amountInt,
+      minFareWithCurrency = mkPriceAPIEntity minFare,
+      maxFareWithCurrency = mkPriceAPIEntity maxFare
+    }
+
+newtype WaitingCharges = WaitingCharges
+  { waitingChargePerMin :: Maybe Price
+  }
+  deriving (Generic, Show)
+
+data WaitingChargesAPIEntity = WaitingChargesAPIEntity
+  { waitingChargePerMin :: Maybe Money,
+    waitingChargePerMinWithCurrency :: Maybe PriceAPIEntity
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+mkWaitingChargesAPIEntity :: WaitingCharges -> WaitingChargesAPIEntity
+mkWaitingChargesAPIEntity WaitingCharges {waitingChargePerMin} =
+  WaitingChargesAPIEntity
+    { waitingChargePerMin = waitingChargePerMin <&> (.amountInt),
+      waitingChargePerMinWithCurrency = mkPriceAPIEntity <$> waitingChargePerMin
+    }
 
 data EstimateAPIEntity = EstimateAPIEntity
   { id :: Id Estimate,
@@ -112,15 +156,18 @@ data EstimateAPIEntity = EstimateAPIEntity
     estimatedFare :: Money,
     estimatedTotalFare :: Money,
     discount :: Maybe Money,
-    totalFareRange :: FareRange,
+    estimatedFareWithCurrency :: PriceAPIEntity,
+    estimatedTotalFareWithCurrency :: PriceAPIEntity,
+    discountWithCurrency :: Maybe PriceAPIEntity,
+    totalFareRange :: FareRangeAPIEntity,
     agencyName :: Text,
     agencyNumber :: Text,
     agencyCompletedRidesCount :: Int,
     tripTerms :: [Text],
     estimateFareBreakup :: [EstimateBreakupAPIEntity],
     nightShiftRate :: Maybe NightShiftRateAPIEntity, -- TODO: doesn't make sense, to be removed
-    nightShiftInfo :: Maybe NightShiftInfo,
-    waitingCharges :: WaitingCharges,
+    nightShiftInfo :: Maybe NightShiftInfoAPIEntity,
+    waitingCharges :: WaitingChargesAPIEntity,
     driversLatLong :: [LatLong],
     specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
@@ -147,6 +194,11 @@ data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+mkNightShiftInfoAPIEntity :: NightShiftInfo -> NightShiftInfoAPIEntity
+mkNightShiftInfoAPIEntity NightShiftInfo {..} = do
+  let nightShiftChargeWithCurrency = mkPriceAPIEntity nightShiftCharge
+  NightShiftInfoAPIEntity {nightShiftCharge = nightShiftCharge.amountInt, ..}
+
 mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Estimate -> m EstimateAPIEntity
 mkEstimateAPIEntity Estimate {..} = do
   valueAddNPRes <- QNP.isValueAddNP providerId
@@ -167,6 +219,15 @@ mkEstimateAPIEntity Estimate {..} = do
         providerLogoUrl = bppDetails.logoUrl,
         providerDescription = bppDetails.description,
         isValueAddNP = valueAddNPRes,
+        estimatedFare = estimatedFare.amountInt,
+        estimatedTotalFare = estimatedTotalFare.amountInt,
+        discount = discount <&> (.amountInt),
+        estimatedFareWithCurrency = mkPriceAPIEntity estimatedFare,
+        estimatedTotalFareWithCurrency = mkPriceAPIEntity estimatedTotalFare,
+        discountWithCurrency = mkPriceAPIEntity <$> discount,
+        nightShiftInfo = mkNightShiftInfoAPIEntity <$> nightShiftInfo,
+        waitingCharges = mkWaitingChargesAPIEntity waitingCharges,
+        totalFareRange = mkFareRangeAPIEntity totalFareRange,
         ..
       }
   where
@@ -184,7 +245,7 @@ mkEstimateBreakupAPIEntity :: EstimateBreakup -> EstimateBreakupAPIEntity
 mkEstimateBreakupAPIEntity EstimateBreakup {..} = do
   EstimateBreakupAPIEntity
     { title = title,
-      price = price.value
+      price = price.value.amountInt
     }
 
 data EstimateStatus = NEW | DRIVER_QUOTE_REQUESTED | CANCELLED | GOT_DRIVER_QUOTE | DRIVER_QUOTE_CANCELLED | COMPLETED

@@ -38,13 +38,13 @@ import Tools.Notifications
 data OnInitReq = OnInitReq
   { bookingId :: Id Booking,
     bppBookingId :: Maybe (Id BPPBooking),
-    estimatedFare :: Money,
-    discount :: Maybe Money,
-    -- estimatedTotalFare :: Money,
+    estimatedFare :: Price,
+    discount :: Maybe Price,
+    -- estimatedTotalFare :: Price,
     paymentUrl :: Maybe Text,
     paymentId :: Maybe Text
   }
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Show, Generic) --, FromJSON, ToJSON, ToSchema)
 
 data OnInitRes = OnInitRes
   { bookingId :: Id DRB.Booking,
@@ -58,8 +58,8 @@ data OnInitRes = OnInitRes
     bppUrl :: BaseUrl,
     fromLocation :: DL.Location,
     mbToLocation :: Maybe DL.Location,
-    estimatedTotalFare :: Money,
-    estimatedFare :: Money,
+    estimatedTotalFare :: Price,
+    estimatedFare :: Price,
     riderPhoneCountryCode :: Text,
     riderPhoneNumber :: Text,
     mbRiderName :: Maybe Text,

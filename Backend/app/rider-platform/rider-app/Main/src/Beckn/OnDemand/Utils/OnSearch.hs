@@ -70,19 +70,19 @@ getVehicleVariant provider item = do
     (Just "CAB", Just "TAXI_PLUS") -> return VehicleVariant.TAXI_PLUS
     _ -> throwError (InvalidRequest $ "Unable to parse vehicle category:-" <> show category <> ",vehicle variant:-" <> show variant)
 
-getEstimatedFare :: MonadFlow m => Spec.Item -> m Money
-getEstimatedFare item = do
+getEstimatedFare :: MonadFlow m => Spec.Item -> Currency -> m Price
+getEstimatedFare item currency = do
   price <- item.itemPrice & fromMaybeM (InvalidRequest "Missing Price")
   let value = price.priceValue
   tagValue <- (DecimalValue.valueFromString =<< value) & fromMaybeM (InvalidRequest "Missing fare breakup item: tagValue")
-  return $ Money $ roundToIntegral tagValue
+  return $ decimalValueToPrice currency tagValue
 
 getItemId :: MonadFlow m => Spec.Item -> m Text
 getItemId item = do
   item.itemId & fromMaybeM (InvalidRequest "Missing Item Id")
 
-getTotalFareRange :: MonadFlow m => Spec.Item -> m Estimate.FareRange
-getTotalFareRange item = do
+getTotalFareRange :: MonadFlow m => Spec.Item -> Currency -> m Estimate.FareRange
+getTotalFareRange item currency = do
   minValue <-
     item.itemPrice
       >>= getPriceField (.priceMinimumValue) (.priceValue)
@@ -95,19 +95,15 @@ getTotalFareRange item = do
       & fromMaybeM (InvalidBecknSchema $ "Missing Price Value:-" <> show item.itemPrice)
   return $
     Estimate.FareRange
-      { Estimate.minFare = Money $ roundToIntegral minValue,
-        Estimate.maxFare = Money $ roundToIntegral maxValue
+      { Estimate.minFare = decimalValueToPrice currency minValue,
+        Estimate.maxFare = decimalValueToPrice currency maxValue
       }
   where
     getPriceField :: (Spec.Price -> Maybe Text) -> (Spec.Price -> Maybe Text) -> Spec.Price -> Maybe Text
     getPriceField f1 f2 price = f1 price <|> f2 price
 
-buildEstimateBreakupList :: MonadFlow m => Spec.Item -> m [OnSearch.EstimateBreakupInfo]
-buildEstimateBreakupList item = do
-  currency <-
-    item.itemPrice
-      >>= (.priceCurrency)
-      & fromMaybeM (InvalidRequest "Missing Currency")
+buildEstimateBreakupList :: MonadFlow m => Spec.Item -> Currency -> m [OnSearch.EstimateBreakupInfo]
+buildEstimateBreakupList item currency = do
   let tagGroups = item.itemTags
       tagGroupRateCard = find (\tagGroup_ -> descriptorCode tagGroup_.tagGroupDescriptor == Just (show Tag.FARE_POLICY)) =<< tagGroups -- consume this from now on
       tagListRateCard = (.tagGroupList) =<< tagGroupRateCard
@@ -119,7 +115,7 @@ buildEstimateBreakupList item = do
     descriptorCode Nothing = Nothing
 
 buildEstimateBreakUpItem ::
-  Text ->
+  Currency ->
   Spec.Tag ->
   Maybe OnSearch.EstimateBreakupInfo
 buildEstimateBreakUpItem currency tag = do
@@ -132,15 +128,14 @@ buildEstimateBreakUpItem currency tag = do
       { title = title,
         price =
           OnSearch.BreakupPriceInfo
-            { currency = currency,
-              value = Money $ roundToIntegral tagValue
+            { value = decimalValueToPrice currency tagValue
             }
       }
 
-buildNightShiftInfo :: Spec.Item -> Maybe OnSearch.NightShiftInfo
-buildNightShiftInfo item = do
+buildNightShiftInfo :: Spec.Item -> Currency -> Maybe OnSearch.NightShiftInfo
+buildNightShiftInfo item currency = do
   let itemTags = item.itemTags
-  nightShiftCharge <- getNightShiftCharge itemTags
+  nightShiftCharge <- getNightShiftCharge itemTags currency
   let oldNightShiftCharge = getOldNightShiftCharge itemTags
   nightShiftStart <- getNightShiftStart itemTags
   nightShiftEnd <- getNightShiftEnd itemTags
@@ -150,11 +145,11 @@ buildNightShiftInfo item = do
         ..
       }
 
-getNightShiftCharge :: Maybe [Spec.TagGroup] -> Maybe Money
-getNightShiftCharge tagGroup = do
+getNightShiftCharge :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getNightShiftCharge tagGroup currency = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.NIGHT_CHARGE_MULTIPLIER tagGroup
   nightShiftCharge <- DecimalValue.valueFromString tagValue
-  Just . Money $ roundToIntegral nightShiftCharge
+  Just $ decimalValueToPrice currency nightShiftCharge
 
 getOldNightShiftCharge :: Maybe [Spec.TagGroup] -> Maybe DecimalValue
 getOldNightShiftCharge tagGroups = do
@@ -171,29 +166,29 @@ getNightShiftEnd tagGroups = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.NIGHT_SHIFT_END_TIME tagGroups
   readMaybe $ T.unpack tagValue
 
-getRentalBaseFare :: Maybe [Spec.TagGroup] -> Maybe Money
-getRentalBaseFare tagGroups = do
+getRentalBaseFare :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getRentalBaseFare tagGroups currency = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.MIN_FARE tagGroups
   baseFare <- DecimalValue.valueFromString tagValue
-  Just . Money $ roundToIntegral baseFare
+  Just $ decimalValueToPrice currency baseFare
 
-getRentalPerHourCharge :: Maybe [Spec.TagGroup] -> Maybe Money
-getRentalPerHourCharge tagGroups = do
+getRentalPerHourCharge :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getRentalPerHourCharge tagGroups currency = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_HOUR_CHARGE tagGroups
   perHourCharge <- DecimalValue.valueFromString tagValue
-  Just . Money $ roundToIntegral perHourCharge
+  Just $ decimalValueToPrice currency perHourCharge
 
-getRentalPerExtraMinRate :: Maybe [Spec.TagGroup] -> Maybe Money
-getRentalPerExtraMinRate tagGroups = do
+getRentalPerExtraMinRate :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getRentalPerExtraMinRate tagGroups currency = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_MINUTE_CHARGE tagGroups
   perExtraMinRate <- DecimalValue.valueFromString tagValue
-  Just . Money $ roundToIntegral perExtraMinRate
+  Just $ decimalValueToPrice currency perExtraMinRate
 
-getRentalPerExtraKmRate :: Maybe [Spec.TagGroup] -> Maybe Money
-getRentalPerExtraKmRate tagGroups = do
+getRentalPerExtraKmRate :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getRentalPerExtraKmRate tagGroups currency = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.UNPLANNED_PER_KM_CHARGE tagGroups
   perExtraKmRate <- DecimalValue.valueFromString tagValue
-  Just . Money $ roundToIntegral perExtraKmRate
+  Just $ decimalValueToPrice currency perExtraKmRate
 
 getRentalIncludedKmPerHr :: Maybe [Spec.TagGroup] -> Maybe Kilometers
 getRentalIncludedKmPerHr tagGroups = do
@@ -201,21 +196,21 @@ getRentalIncludedKmPerHr tagGroups = do
   includedKmPerHr <- DecimalValue.valueFromString tagValue
   Just . Kilometers $ roundToIntegral includedKmPerHr
 
-getRentalPlannedPerKmRate :: Maybe [Spec.TagGroup] -> Maybe Money
-getRentalPlannedPerKmRate tagGroups = do
+getRentalPlannedPerKmRate :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getRentalPlannedPerKmRate tagGroups currency = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PLANNED_PER_KM_CHARGE tagGroups
   plannedPerKmRate <- DecimalValue.valueFromString tagValue
-  Just . Money $ roundToIntegral plannedPerKmRate
+  Just $ decimalValueToPrice currency plannedPerKmRate
 
-buildWaitingChargeInfo' :: Maybe [Spec.TagGroup] -> Maybe Money
-buildWaitingChargeInfo' tagGroups = do
+buildWaitingChargeInfo' :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+buildWaitingChargeInfo' tagGroups currency = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.WAITING_CHARGE_PER_MIN tagGroups
   waitingChargeValue <- DecimalValue.valueFromString tagValue
-  Just . Money $ roundToIntegral waitingChargeValue
+  Just $ decimalValueToPrice currency waitingChargeValue
 
-buildWaitingChargeInfo :: MonadFlow m => Spec.Item -> m (Maybe OnSearch.WaitingChargesInfo)
-buildWaitingChargeInfo item = do
-  let waitingChargePerMin' = buildWaitingChargeInfo' item.itemTags
+buildWaitingChargeInfo :: MonadFlow m => Spec.Item -> Currency -> m (Maybe OnSearch.WaitingChargesInfo)
+buildWaitingChargeInfo item currency = do
+  let waitingChargePerMin' = buildWaitingChargeInfo' item.itemTags currency
   return $ ---------- FIX TODO_______SOUMYAJIT
     Just
       OnSearch.WaitingChargesInfo

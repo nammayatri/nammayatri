@@ -81,7 +81,7 @@ createOrder (personId, merchantId) rideId = do
         Payment.CreateOrderReq
           { orderId = rideId.getId,
             orderShortId = ride.shortId.getShortId, -- should be Alphanumeric with character length less than 18.
-            amount = fromIntegral totalFare,
+            amount = totalFare.amount,
             customerId = person.id.getId,
             customerEmail,
             customerPhone,

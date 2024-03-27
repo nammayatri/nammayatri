@@ -194,20 +194,21 @@ mkArrivalTimeTagGroup arrivalTime =
       }
   ]
 
-currency :: Text
-currency = "INR"
+-- FIXME
+defaultCurrency :: Text
+defaultCurrency = "INR"
 
 buildRideCompletedQuote :: MonadFlow m => DRide.Ride -> DFParams.FareParameters -> m Quote.RideCompletedQuote
 buildRideCompletedQuote ride fareParams = do
   fare <- realToFrac <$> ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
   let price =
         Quote.QuotePrice
-          { currency,
+          { currency = defaultCurrency,
             value = fare,
             computed_value = fare
           }
       breakup =
-        Fare.mkFareParamsBreakups (Breakup.BreakupItemPrice currency . fromIntegral) Breakup.BreakupItem fareParams
+        Fare.mkFareParamsBreakups (Breakup.BreakupItemPrice defaultCurrency . fromIntegral) Breakup.BreakupItem fareParams
           & filter (Common.filterRequiredBreakups $ DFParams.getFareParametersType fareParams) -- TODO: Remove after roll out
   pure
     Quote.RideCompletedQuote
@@ -223,7 +224,7 @@ mkRideCompletedPayment paymentMethodInfo paymentUrl = do
         Payment.PaymentParams
           { collected_by = maybe Payment.BPP (Common.castDPaymentCollector . (.collectedBy)) paymentMethodInfo,
             instrument = Nothing,
-            currency,
+            currency = defaultCurrency,
             amount = Nothing
           },
       uri = paymentUrl

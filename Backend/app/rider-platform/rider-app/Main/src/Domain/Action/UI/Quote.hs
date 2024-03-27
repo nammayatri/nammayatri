@@ -179,9 +179,9 @@ getEstimates searchRequestId = do
   estimates <- mapM DEstimate.mkEstimateAPIEntity (sortByEstimatedFare estimateList)
   return . sortBy (compare `on` (.createdAt)) $ estimates
 
-sortByEstimatedFare :: (HasField "estimatedFare" r Money) => [r] -> [r]
+sortByEstimatedFare :: (HasField "estimatedFare" r Price) => [r] -> [r]
 sortByEstimatedFare resultList = do
-  let sortFunc = compare `on` (.estimatedFare)
+  let sortFunc = compare `on` (.estimatedFare.amount)
   sortBy sortFunc resultList
 
 getPaymentMethods :: (CacheFlow m r, EsqDBFlow m r) => SSR.SearchRequest -> m [DMPM.PaymentMethodAPIEntity]

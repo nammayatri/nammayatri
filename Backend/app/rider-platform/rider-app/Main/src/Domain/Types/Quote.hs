@@ -36,9 +36,9 @@ import qualified Tools.Schema as S
 data Quote = Quote
   { id :: Id Quote,
     requestId :: Id DSearchRequest.SearchRequest,
-    estimatedFare :: Money,
-    discount :: Maybe Money,
-    estimatedTotalFare :: Money,
+    estimatedFare :: Price,
+    discount :: Maybe Price,
+    estimatedTotalFare :: Price,
     providerId :: Text,
     providerUrl :: BaseUrl,
     itemId :: Text,
@@ -74,6 +74,9 @@ data QuoteAPIEntity = QuoteAPIEntity
     estimatedFare :: Money,
     estimatedTotalFare :: Money,
     discount :: Maybe Money,
+    estimatedFareWithCurrency :: PriceAPIEntity,
+    estimatedTotalFareWithCurrency :: PriceAPIEntity,
+    discountWithCurrency :: Maybe PriceAPIEntity,
     agencyName :: Text,
     agencyNumber :: Maybe Text,
     tripTerms :: [Text],
@@ -117,7 +120,7 @@ newtype OneWaySpecialZoneQuoteAPIDetails = OneWaySpecialZoneQuoteAPIDetails
 
 mkQuoteAPIDetails :: QuoteDetails -> QuoteAPIDetails
 mkQuoteAPIDetails = \case
-  RentalDetails DRentalDetails.RentalDetails {..} -> RentalAPIDetails DRentalDetails.RentalDetailsAPIEntity {..}
+  RentalDetails details -> RentalAPIDetails $ DRentalDetails.mkRentalDetailsAPIEntity details
   OneWayDetails OneWayQuoteDetails {..} -> OneWayAPIDetails OneWayQuoteAPIDetails {..}
   DriverOfferDetails DDriverOffer.DriverOffer {..} ->
     let distanceToPickup' = distanceToPickup <|> (Just . HighPrecMeters $ toCentesimal 0) -- TODO::remove this default value
@@ -142,5 +145,11 @@ makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
           agencyNumber = Just providerNum,
           tripTerms = maybe [] (.descriptions) tripTerms,
           quoteDetails = mkQuoteAPIDetails quoteDetails,
+          estimatedFare = estimatedFare.amountInt,
+          estimatedTotalFare = estimatedTotalFare.amountInt,
+          discount = discount <&> (.amountInt),
+          estimatedFareWithCurrency = mkPriceAPIEntity estimatedFare,
+          estimatedTotalFareWithCurrency = mkPriceAPIEntity estimatedTotalFare,
+          discountWithCurrency = mkPriceAPIEntity <$> discount,
           ..
         }

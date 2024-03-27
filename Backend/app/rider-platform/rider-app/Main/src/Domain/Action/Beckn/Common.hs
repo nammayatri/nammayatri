@@ -104,8 +104,8 @@ data ValidatedRideStartedReq = ValidatedRideStartedReq
 
 data RideCompletedReq = RideCompletedReq
   { bookingDetails :: BookingDetails,
-    fare :: Money,
-    totalFare :: Money,
+    fare :: Price,
+    totalFare :: Price,
     fareBreakups :: [DFareBreakup],
     chargeableDistance :: Maybe HighPrecMeters,
     traveledDistance :: Maybe HighPrecMeters,
@@ -118,8 +118,8 @@ data RideCompletedReq = RideCompletedReq
 
 data ValidatedRideCompletedReq = ValidatedRideCompletedReq
   { bookingDetails :: BookingDetails,
-    fare :: Money,
-    totalFare :: Money,
+    fare :: Price,
+    totalFare :: Price,
     fareBreakups :: [DFareBreakup],
     chargeableDistance :: Maybe HighPrecMeters,
     traveledDistance :: Maybe HighPrecMeters,
@@ -177,7 +177,7 @@ data ValidatedDriverArrivedReq = ValidatedDriverArrivedReq
   }
 
 data DFareBreakup = DFareBreakup
-  { amount :: HighPrecMoney,
+  { amount :: Price,
     description :: Text
   }
 

@@ -67,10 +67,12 @@ findAllByPerson (Id personId) = findAllWithKV [Se.Is BeamSR.riderId $ Se.Eq pers
 findLatestSearchRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe SearchRequest)
 findLatestSearchRequest (Id riderId) = findAllWithOptionsKV [Se.Is BeamSR.riderId $ Se.Eq riderId] (Se.Desc BeamSR.createdAt) (Just 1) Nothing <&> listToMaybe
 
-updateCustomerExtraFeeAndPaymentMethod :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> m ()
+updateCustomerExtraFeeAndPaymentMethod :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Price -> Maybe (Id DMPM.MerchantPaymentMethod) -> m ()
 updateCustomerExtraFeeAndPaymentMethod (Id searchReqId) customerExtraFee paymentMethodId =
   updateOneWithKV
-    [ Se.Set BeamSR.customerExtraFee customerExtraFee,
+    [ Se.Set BeamSR.customerExtraFee $ customerExtraFee <&> (.amountInt),
+      Se.Set BeamSR.customerExtraFeeAmount $ customerExtraFee <&> (.amount),
+      Se.Set BeamSR.currency $ customerExtraFee <&> (.currency),
       Se.Set BeamSR.selectedPaymentMethodId (getId <$> paymentMethodId)
     ]
     [Se.Is BeamSR.id (Se.Eq searchReqId)]
@@ -117,6 +119,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
             availablePaymentMethods = Id <$> availablePaymentMethods,
             selectedPaymentMethodId = Id <$> selectedPaymentMethodId,
             riderPreferredOption = fromMaybe OneWay riderPreferredOption,
+            customerExtraFee = mkPriceWithDefault customerExtraFeeAmount currency <$> customerExtraFee,
             ..
           }
     where
@@ -144,7 +147,9 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.clientVersion = versionToText <$> clientVersion,
         BeamSR.language = language,
         BeamSR.disabilityTag = disabilityTag,
-        BeamSR.customerExtraFee = customerExtraFee,
+        BeamSR.customerExtraFee = customerExtraFee <&> (.amountInt),
+        BeamSR.customerExtraFeeAmount = customerExtraFee <&> (.amount),
+        BeamSR.currency = customerExtraFee <&> (.currency),
         BeamSR.autoAssignEnabled = autoAssignEnabled,
         BeamSR.autoAssignEnabledV2 = autoAssignEnabledV2,
         BeamSR.availablePaymentMethods = getId <$> availablePaymentMethods,
