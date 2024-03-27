@@ -431,6 +431,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , maskedDeviceToken     :: Maybe String
     , operatingCity         :: Maybe String
     , isVehicleSupported    :: Maybe Boolean
+    , freeTrialDuration     :: Maybe Int
     }
 
 

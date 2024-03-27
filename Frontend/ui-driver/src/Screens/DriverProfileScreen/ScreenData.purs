@@ -207,6 +207,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , maskedDeviceToken     : Nothing
     , operatingCity         : Nothing
     , isVehicleSupported    : Nothing
+    , freeTrialDuration     : Nothing
 }
 
 organizationInfo :: OrganizationInfo
