@@ -18,7 +18,6 @@ module Storage.CachedQueries.ValueAddNP
   )
 where
 
-import Domain.Types.ValueAddNP
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
@@ -27,20 +26,19 @@ import qualified Storage.Queries.ValueAddNP as Queries
 isValueAddNP :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m Bool
 isValueAddNP subscriberId =
   Hedis.safeGet lookupKey >>= \case
-    Just npList -> return $ checkIfValueAddNP subscriberId npList
+    Just subscriberIds -> return $ checkIfValueAddNP subscriberId subscriberIds
     Nothing -> do
-      npList <- Queries.findAll True
-      cacheValueAddNPList npList
-      return $ checkIfValueAddNP subscriberId npList
+      subscriberIds <- Queries.findAll True <&> map (.subscriberId)
+      cacheValueAddNPList subscriberIds
+      return $ checkIfValueAddNP subscriberId subscriberIds
 
-checkIfValueAddNP :: Text -> [ValueAddNP] -> Bool
-checkIfValueAddNP subscriberId npList = subscriberId `elem` (map (.subscriberId) npList)
+checkIfValueAddNP :: Text -> [Text] -> Bool
+checkIfValueAddNP subscriberId subscriberIds = subscriberId `elem` subscriberIds
 
 lookupKey :: Text
 lookupKey = "CachedQueries:ValueAddNP"
 
-cacheValueAddNPList :: (CacheFlow m r) => [ValueAddNP] -> m ()
-cacheValueAddNPList npList = do
+cacheValueAddNPList :: (CacheFlow m r) => [Text] -> m ()
+cacheValueAddNPList subscriberIds = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let ids = map (.subscriberId) npList
-  Hedis.setExp lookupKey ids expTime
+  Hedis.setExp lookupKey subscriberIds expTime
