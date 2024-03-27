@@ -1,3 +1,6 @@
+--------- fixed the migration for local not required to run in master ---------------
+ALTER TABLE atlas_app.station
+ALTER COLUMN merchant_operating_city_id SET DEFAULT 'default_city';
 insert into atlas_app.station (id, code, name, lat, lon, vehicle_type, merchant_id) values
 ('719fca8c-dab8-4a2c-91ed-9cb034a2e2ab', 'SGM|0115', 'AG-DMS', 13.044682, 80.248052, 'METRO', '4b17bd06-ae7e-48e9-85bf-282fb310209c'),
 ('f723fd25-aeed-4bc8-af80-69ef9c39871e', 'SAP|0133', 'Chennai International Airport', 12.980826, 80.164200, 'METRO', '4b17bd06-ae7e-48e9-85bf-282fb310209c'),
