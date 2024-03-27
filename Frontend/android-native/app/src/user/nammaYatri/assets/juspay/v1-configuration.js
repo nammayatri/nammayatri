@@ -236,7 +236,7 @@ window.getMerchantConfig = function () {
     , "metroTicketingConfig" : {
       "metroStationTtl" : 10080
       , "bookingStartTime" : "04:30:00"
-      , "bookingEndTime" : "01:00:00"
+      , "bookingEndTime" : "22:30:00"
     }
     , "estimateAndQuoteConfig" : 
       { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
