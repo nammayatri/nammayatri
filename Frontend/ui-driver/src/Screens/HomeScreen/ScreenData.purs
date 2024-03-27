@@ -72,8 +72,8 @@ initData = {
         currentDriverLat : 0.0,
         currentDriverLon : 0.0,
         locationLastUpdatedTime : "",
-        totalRidesOfDay : 2,
-        totalEarningsOfDay : 2,
+        totalRidesOfDay : 0,
+        totalEarningsOfDay : 0,
         bonusEarned : 0,
         route : [],
         cancelRideConfirmationPopUp : {
