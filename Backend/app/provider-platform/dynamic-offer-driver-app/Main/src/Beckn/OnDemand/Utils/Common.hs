@@ -55,8 +55,8 @@ import GHC.Float (double2Int)
 import Kernel.External.Maps as Maps
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
-import Kernel.Types.Common
-import Kernel.Utils.Common
+import Kernel.Types.Common hiding (mkPrice)
+import Kernel.Utils.Common hiding (mkPrice)
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import Tools.Error
@@ -1000,9 +1000,9 @@ tfCancellationTerms becknConfig =
 
 tfPayments :: DBooking.Booking -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments booking transporter bppConfig = do
-  let amount = Just $ show booking.estimatedFare.getMoney
+  let mPrice = Just $ mkPriceFromMoney booking.estimatedFare -- FIXME
   let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
-  Just . List.singleton $ mkPayment (show transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  Just . List.singleton $ mkPayment (show transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfProvider :: DBC.BecknConfig -> Maybe Spec.Provider
 tfProvider becknConfig =

@@ -238,7 +238,8 @@ notifyOnRideCompleted booking ride = do
   let personId = booking.riderId
       rideId = ride.id
       driverName = ride.driverName
-      totalFare = ride.totalFare
+      mbTotalFare = ride.totalFare
+      totalFare = fromMaybe booking.estimatedFare mbTotalFare
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.TRIP_FINISHED merchantOperatingCityId
@@ -253,7 +254,7 @@ notifyOnRideCompleted booking ride = do
             entity = Notification.Entity Notification.Product rideId.getId (),
             body = body,
             title = title,
-            dynamicParams = RideCompleteParam driverName $ show (fromMaybe booking.estimatedFare totalFare),
+            dynamicParams = RideCompleteParam driverName $ show totalFare.amountInt,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
             ttl = Nothing,
             sound = notificationSound
@@ -263,7 +264,7 @@ notifyOnRideCompleted booking ride = do
         unwords
           [ "Hope you enjoyed your trip with",
             driverName,
-            "Total Fare " <> show (fromMaybe booking.estimatedFare totalFare)
+            "Total Fare " <> show totalFare.amount <> " " <> show totalFare.currency -- TODO Check number of digits
           ]
   disableFollowRide personId
   Redis.del $ CQSos.mockSosKey personId

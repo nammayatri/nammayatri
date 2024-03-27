@@ -76,8 +76,8 @@ instance FromTType' BeamE.Estimate Estimate where
     pUrl <- parseBaseUrl providerUrl
     let totalFareRange =
           DE.FareRange
-            { minFare = roundToIntegral minTotalFare,
-              maxFare = roundToIntegral maxTotalFare
+            { minFare = mkPrice currency minTotalFare,
+              maxFare = mkPrice currency maxTotalFare
             }
     pure $
       Just $
@@ -88,9 +88,9 @@ instance FromTType' BeamE.Estimate Estimate where
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
             bppEstimateId = Id bppEstimateId,
             itemId = itemId,
-            discount = roundToIntegral <$> discount,
-            estimatedFare = roundToIntegral estimatedFare,
-            estimatedTotalFare = roundToIntegral estimatedTotalFare,
+            discount = mkPrice currency <$> discount,
+            estimatedFare = mkPrice currency estimatedFare,
+            estimatedTotalFare = mkPrice currency estimatedTotalFare,
             totalFareRange = totalFareRange,
             estimatedDuration = estimatedDuration,
             estimatedDistance = estimatedDistance,
@@ -107,13 +107,13 @@ instance FromTType' BeamE.Estimate Estimate where
               ((,,) <$> nightShiftCharge <*> nightShiftStart <*> nightShiftEnd)
                 <&> \(nightShiftCharge', nightShiftStart', nightShiftEnd') ->
                   DE.NightShiftInfo
-                    { nightShiftCharge = nightShiftCharge',
+                    { nightShiftCharge = mkPriceWithDefault nightShiftChargeAmount currency nightShiftCharge',
                       oldNightShiftCharge = oldNightShiftCharge,
                       nightShiftStart = nightShiftStart',
                       nightShiftEnd = nightShiftEnd'
                     },
             status = status,
-            waitingCharges = DE.WaitingCharges waitingChargePerMin,
+            waitingCharges = DE.WaitingCharges $ mkPriceWithDefault waitingChargePerMinAmount currency <$> waitingChargePerMin,
             driversLocation = driversLocation,
             specialLocationTag = specialLocationTag,
             updatedAt = updatedAt,
@@ -131,11 +131,12 @@ instance ToTType' BeamE.Estimate Estimate where
         BeamE.merchantOperatingCityId = getId <$> merchantOperatingCityId,
         BeamE.bppEstimateId = getId bppEstimateId,
         BeamE.itemId = itemId,
-        BeamE.estimatedFare = realToFrac estimatedFare,
-        BeamE.discount = realToFrac <$> discount,
-        BeamE.estimatedTotalFare = realToFrac estimatedTotalFare,
-        BeamE.minTotalFare = realToFrac totalFareRange.minFare,
-        BeamE.maxTotalFare = realToFrac totalFareRange.maxFare,
+        BeamE.estimatedFare = estimatedFare.amount,
+        BeamE.discount = discount <&> (.amount),
+        BeamE.estimatedTotalFare = estimatedTotalFare.amount,
+        BeamE.currency = Just estimatedFare.currency,
+        BeamE.minTotalFare = totalFareRange.minFare.amount,
+        BeamE.maxTotalFare = totalFareRange.maxFare.amount,
         BeamE.estimatedDuration = estimatedDuration,
         BeamE.estimatedDistance = estimatedDistance,
         BeamE.device = device,
@@ -147,12 +148,14 @@ instance ToTType' BeamE.Estimate Estimate where
         BeamE.vehicleVariant = vehicleVariant,
         BeamE.driversLocation = driversLocation,
         BeamE.tripTermsId = getId <$> (tripTerms <&> (.id)),
-        BeamE.nightShiftCharge = nightShiftInfo <&> (.nightShiftCharge),
+        BeamE.nightShiftCharge = nightShiftInfo <&> (.nightShiftCharge.amountInt),
+        BeamE.nightShiftChargeAmount = nightShiftInfo <&> (.nightShiftCharge.amount),
         BeamE.oldNightShiftCharge = (.oldNightShiftCharge) =<< nightShiftInfo,
         BeamE.nightShiftStart = nightShiftInfo <&> (.nightShiftStart),
         BeamE.nightShiftEnd = nightShiftInfo <&> (.nightShiftEnd),
         BeamE.status = status,
-        BeamE.waitingChargePerMin = waitingCharges.waitingChargePerMin,
+        BeamE.waitingChargePerMin = waitingCharges.waitingChargePerMin <&> (.amountInt),
+        BeamE.waitingChargePerMinAmount = waitingCharges.waitingChargePerMin <&> (.amount),
         BeamE.specialLocationTag = specialLocationTag,
         BeamE.updatedAt = updatedAt,
         BeamE.createdAt = createdAt,

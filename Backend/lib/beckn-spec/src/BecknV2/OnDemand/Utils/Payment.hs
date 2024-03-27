@@ -23,6 +23,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import Data.Aeson as A
 import Domain.Types
 import Kernel.Prelude
+import Kernel.Types.Common (Price)
 
 type TxnId = Text
 
@@ -40,7 +41,7 @@ mkPayment ::
   City ->
   CollectedBy ->
   Spec.PaymentStatus ->
-  Maybe Text ->
+  Maybe Price ->
   Maybe TxnId ->
   Maybe BknPaymentParams ->
   Maybe SettlementType ->
@@ -48,13 +49,15 @@ mkPayment ::
   Maybe BaseUrl ->
   Maybe BuyerFinderFee ->
   Spec.Payment
-mkPayment txnCity collectedBy paymentStatus mAmount mTxnId mPaymentParams mSettlementType mSettlementWindow mSettlementTermsUrl mbff =
+mkPayment txnCity collectedBy paymentStatus mPrice mTxnId mPaymentParams mSettlementType mSettlementWindow mSettlementTermsUrl mbff = do
+  let mAmount = show . (.amount) <$> mPrice -- TODO check number of digits
+  let mCurrency = show . (.currency) <$> mPrice
   Spec.Payment
     { paymentCollectedBy = Just collectedBy,
       paymentId = mTxnId,
       paymentParams =
         if anyTrue [isJust mTxnId, isJust mAmount, isJust mPaymentParams]
-          then Just $ mkPaymentParams mPaymentParams mTxnId mAmount
+          then Just $ mkPaymentParams mPaymentParams mTxnId mAmount mCurrency
           else Nothing,
       paymentStatus = encodeToText' paymentStatus,
       paymentTags = Just $ mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff,
@@ -63,13 +66,13 @@ mkPayment txnCity collectedBy paymentStatus mAmount mTxnId mPaymentParams mSettl
   where
     anyTrue = or
 
-mkPaymentParams :: Maybe BknPaymentParams -> Maybe TxnId -> Maybe Text -> Spec.PaymentParams
-mkPaymentParams mPaymentParams _mTxnId mAmount =
+mkPaymentParams :: Maybe BknPaymentParams -> Maybe TxnId -> Maybe Text -> Maybe Text -> Spec.PaymentParams
+mkPaymentParams mPaymentParams _mTxnId mAmount mCurrency = do
   Spec.PaymentParams
     { paymentParamsAmount = mAmount,
       paymentParamsBankAccountNumber = mPaymentParams >>= (.bankAccNumber),
       paymentParamsBankCode = mPaymentParams >>= (.bankCode),
-      paymentParamsCurrency = Just "INR",
+      paymentParamsCurrency = mCurrency,
       -- paymentParamsTransactionId = mTxnId,
       paymentParamsVirtualPaymentAddress = mPaymentParams >>= (.vpa)
     }

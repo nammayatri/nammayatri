@@ -42,7 +42,7 @@ import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Common (Money)
+import Kernel.Types.Common (Currency (INR), Money, PriceAPIEntity (..))
 import Kernel.Types.Id
 import qualified Mobility.ARDU.APICalls as API
 import Mobility.ARDU.Fixtures as Fixtures
@@ -153,6 +153,7 @@ select bapToken quoteId =
   void . callBAP . selectQuote2 bapToken quoteId $
     AppSelect.DSelectReq
       { customerExtraFee = Just 10,
+        customerExtraFeeWithCurrency = Just $ PriceAPIEntity 10.0 INR,
         autoAssignEnabled = False,
         autoAssignEnabledV2 = Nothing,
         paymentMethodId = Nothing

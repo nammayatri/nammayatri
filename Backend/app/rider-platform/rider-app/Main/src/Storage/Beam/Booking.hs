@@ -46,6 +46,7 @@ data BookingT f = BookingT
     estimatedFare :: B.C f HighPrecMoney,
     discount :: B.C f (Maybe HighPrecMoney),
     estimatedTotalFare :: B.C f HighPrecMoney,
+    currency :: B.C f (Maybe Currency),
     estimatedDistance :: B.C f (Maybe HighPrecMeters),
     estimatedDuration :: B.C f (Maybe Seconds),
     distance :: B.C f (Maybe HighPrecMeters),

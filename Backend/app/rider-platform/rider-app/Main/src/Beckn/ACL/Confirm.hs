@@ -111,9 +111,13 @@ tfItems res =
 -- TODO: Discuss payment info transmission with ONDC
 tfPayments :: DOnInit.OnInitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bapConfig = do
-  let amount = Just $ show res.estimatedTotalFare.getMoney
+  let mPrice = Just res.estimatedTotalFare
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
+<<<<<<< HEAD
   Just $ DL.singleton $ OUP.mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID amount res.paymentId mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
+=======
+  Just $ DL.singleton $ OUP.mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
+>>>>>>> backend/feat: introduce currency for rider-app
 
 tfQuotation :: DOnInit.OnInitRes -> Maybe Spec.Quotation
 tfQuotation res =
@@ -129,11 +133,11 @@ tfQuotationPrice res =
   Just $
     Spec.Price
       { priceComputedValue = Nothing,
-        priceCurrency = Just "INR",
+        priceCurrency = Just $ show res.estimatedTotalFare.currency,
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
-        priceOfferedValue = Just $ encodeToText res.estimatedTotalFare,
-        priceValue = Just $ encodeToText res.estimatedFare
+        priceOfferedValue = Just $ encodeToText res.estimatedTotalFare.amount, -- TODO check number of digits
+        priceValue = Just $ encodeToText res.estimatedFare.amount -- TODO check number of digits
       }
 
 tfCustomer :: DOnInit.OnInitRes -> Maybe Spec.Customer

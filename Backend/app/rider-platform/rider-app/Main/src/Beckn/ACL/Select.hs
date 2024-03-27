@@ -195,8 +195,8 @@ mkAutoAssignEnabledTagGroup res =
 
 tfPrice :: DSelect.DSelectRes -> Spec.Price
 tfPrice res =
-  let priceCurrency = Just "INR"
-      priceValue = Just $ show res.estimate.estimatedFare.getMoney
+  let priceCurrency = Just $ show res.estimate.estimatedFare.currency
+      priceValue = Just $ show res.estimate.estimatedFare.amount -- TODO check number of digits
       priceComputedValue = Nothing
       priceMaximumValue = Nothing
       priceMinimumValue = Nothing
@@ -205,9 +205,9 @@ tfPrice res =
 
 tfPayments :: DSelect.DSelectRes -> BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bapConfig = do
-  let amount = Just $ show res.estimate.estimatedFare.getMoney
+  let mPrice = Just res.estimate.estimatedFare
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
-  Just $ L.singleton $ mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
+  Just $ L.singleton $ mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
 
 tfProvider :: DSelect.DSelectRes -> Spec.Provider
 tfProvider res =

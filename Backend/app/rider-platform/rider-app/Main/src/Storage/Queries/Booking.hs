@@ -198,13 +198,14 @@ findBookingIdAssignedByEstimateId (Id estimateId) statusList = do
   booking <- findAllWithKV [Se.Is BeamB.quoteId $ Se.In $ map (\x -> Just (getId x.id)) quote, Se.Is BeamB.status $ Se.In statusList]
   return $ listToMaybe $ Domain.id <$> booking
 
-updatePaymentInfo :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> m ()
+updatePaymentInfo :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Price -> Maybe Price -> Price -> Maybe Text -> m ()
 updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamB.estimatedFare (realToFrac estimatedFare),
-      Se.Set BeamB.discount (realToFrac <$> discount),
-      Se.Set BeamB.estimatedTotalFare (realToFrac estimatedTotalFare),
+    [ Se.Set BeamB.estimatedFare estimatedFare.amount,
+      Se.Set BeamB.discount (discount <&> (.amount)),
+      Se.Set BeamB.estimatedTotalFare estimatedTotalFare.amount,
+      Se.Set BeamB.currency (Just estimatedFare.currency),
       Se.Set BeamB.paymentUrl mbPaymentUrl,
       Se.Set BeamB.updatedAt now
     ]
@@ -358,9 +359,9 @@ instance FromTType' BeamB.Booking Booking where
             startTime = startTime,
             riderId = Id riderId,
             fromLocation = fl,
-            estimatedFare = roundToIntegral estimatedFare,
-            discount = roundToIntegral <$> discount,
-            estimatedTotalFare = roundToIntegral estimatedTotalFare,
+            estimatedFare = mkPrice currency estimatedFare,
+            discount = mkPrice currency <$> discount,
+            estimatedTotalFare = mkPrice currency estimatedTotalFare,
             vehicleVariant = vehicleVariant,
             isScheduled = fromMaybe False isScheduled,
             bookingDetails = bookingDetails,
@@ -443,9 +444,10 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.itemId = itemId,
             BeamB.fromLocationId = Just $ getId fromLocation.id,
             BeamB.toLocationId = toLocationId,
-            BeamB.estimatedFare = realToFrac estimatedFare,
-            BeamB.discount = realToFrac <$> discount,
-            BeamB.estimatedTotalFare = realToFrac estimatedTotalFare,
+            BeamB.estimatedFare = estimatedFare.amount,
+            BeamB.discount = discount <&> (.amount),
+            BeamB.estimatedTotalFare = estimatedTotalFare.amount,
+            BeamB.currency = Just estimatedFare.currency,
             BeamB.otpCode = otpCode,
             BeamB.vehicleVariant = vehicleVariant,
             BeamB.distance = distance,

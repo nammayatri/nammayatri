@@ -23,15 +23,21 @@ data FareBreakup = FareBreakup
   { id :: Id FareBreakup,
     bookingId :: Id Booking,
     description :: Text,
-    amount :: HighPrecMoney
+    amount :: Price
   }
   deriving (Show)
 
 data FareBreakupAPIEntity = FareBreakupAPIEntity
   { description :: Text,
-    amount :: HighPrecMoney
+    amount :: HighPrecMoney,
+    amountWithCurrency :: PriceAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 mkFareBreakupAPIEntity :: FareBreakup -> FareBreakupAPIEntity
-mkFareBreakupAPIEntity FareBreakup {..} = FareBreakupAPIEntity {..}
+mkFareBreakupAPIEntity FareBreakup {..} =
+  FareBreakupAPIEntity
+    { amount = amount.amount,
+      amountWithCurrency = mkPriceAPIEntity amount,
+      ..
+    }

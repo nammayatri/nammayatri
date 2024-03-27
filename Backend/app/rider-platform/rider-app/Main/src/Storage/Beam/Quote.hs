@@ -30,6 +30,7 @@ data QuoteT f = QuoteT
     estimatedFare :: B.C f HighPrecMoney,
     discount :: B.C f (Maybe HighPrecMoney),
     estimatedTotalFare :: B.C f HighPrecMoney,
+    currency :: B.C f (Maybe Currency),
     providerId :: B.C f Text,
     providerUrl :: B.C f Text,
     itemId :: B.C f Text,

@@ -25,7 +25,8 @@ data FareBreakupT f = FareBreakupT
   { id :: B.C f Text,
     bookingId :: B.C f Text,
     description :: B.C f Text,
-    amount :: B.C f HighPrecMoney
+    amount :: B.C f HighPrecMoney,
+    currency :: B.C f (Maybe Currency)
   }
   deriving (Generic, B.Beamable)
 

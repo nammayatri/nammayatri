@@ -428,7 +428,7 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Text ->
   Maybe Seconds ->
-  SearchRequest.RiderPerferredOption ->
+  SearchRequest.RiderPreferredOption ->
   m SearchRequest.SearchRequest
 buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime bundleVersion clientVersion device disabilityTag duration riderPreferredOption = do
   now <- getCurrentTime

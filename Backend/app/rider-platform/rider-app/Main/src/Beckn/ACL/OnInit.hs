@@ -14,6 +14,7 @@
 
 module Beckn.ACL.OnInit (buildOnInitReqV2) where
 
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Text as T
@@ -22,6 +23,7 @@ import qualified Domain.Action.Beckn.OnInit as DOnInit
 import Domain.Types.Booking (BPPBooking, Booking)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Tools.Error
@@ -36,17 +38,17 @@ buildOnInitReqV2 req = do
   handleErrorV2 req $ \_message ->
     case parsedData of
       Left err -> throwError . InvalidBecknSchema $ "on_init req," <> "on_init error: " <> show err
-      Right (bookingId, bppBookingId, estimatedFare, paymentId) -> do
+      Right (bookingId, bppBookingId, estimatedFare, paymentId, currency) -> do
         return $
           Just $
             DOnInit.OnInitReq
-              { estimatedFare = Money estimatedFare,
+              { estimatedFare = Utils.decimalValueToPrice currency estimatedFare,
                 discount = Nothing, -- TODO : replace when actual discount logic is implemented
                 paymentUrl = Nothing, -- TODO check with ONDC
                 ..
               }
   where
-    parsedData :: Either Text (Id Booking, Maybe (Id BPPBooking), Int, Maybe Text)
+    parsedData :: Either Text (Id Booking, Maybe (Id BPPBooking), DecimalValue.DecimalValue, Maybe Text, Currency)
     parsedData = do
       order <- maybe (Left "Invalid Order") (Right . (.confirmReqMessageOrder)) req.onInitReqMessage
 
@@ -62,7 +64,7 @@ buildOnInitReqV2 req = do
         order.orderQuote
           >>= (.quotationPrice)
           >>= (.priceValue)
-          >>= parseInt
+          >>= parseDecimalValue
           & maybe (Left "Invalid Price") Right
 
       paymentId <-
@@ -71,10 +73,17 @@ buildOnInitReqV2 req = do
           >>= (.paymentId)
           & Right
 
-      Right (bookingId, bppBookingId, estimatedFare, paymentId)
+      currency <-
+        order.orderQuote
+          >>= (.quotationPrice)
+          >>= (.priceCurrency)
+          >>= (readMaybe . T.unpack)
+          & maybe (Left "Invalid Currency") Right
 
-    parseInt :: Text -> Maybe Int
-    parseInt = readMaybe . T.unpack
+      Right (bookingId, bppBookingId, estimatedFare, paymentId, currency)
+
+    parseDecimalValue :: Text -> Maybe DecimalValue.DecimalValue
+    parseDecimalValue = DecimalValue.valueFromString
 
 handleErrorV2 ::
   (MonadFlow m) =>

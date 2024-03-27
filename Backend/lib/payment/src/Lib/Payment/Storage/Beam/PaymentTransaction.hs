@@ -20,7 +20,7 @@ import qualified Database.Beam as B
 import Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
-import Kernel.Types.Common hiding (id)
+import Kernel.Types.Common hiding (Price (..), PriceAPIEntity (..), id)
 
 data PaymentTransactionT f = PaymentTransactionT
   { id :: B.C f Text,
@@ -33,8 +33,8 @@ data PaymentTransactionT f = PaymentTransactionT
     gatewayReferenceId :: B.C f (Maybe Text),
     orderId :: B.C f Text,
     merchantId :: B.C f Text,
-    amount :: B.C f HighPrecMoney,
-    currency :: B.C f Payment.Currency,
+    amount :: B.C f HighPrecMoney, -- FIXME Kernel.Types.Common.Price
+    currency :: B.C f Payment.Currency, -- FIXME Kernel.Types.Common.Price
     dateCreated :: B.C f (Maybe UTCTime),
     statusId :: B.C f Int,
     status :: B.C f Payment.TransactionStatus,
@@ -44,7 +44,7 @@ data PaymentTransactionT f = PaymentTransactionT
     mandateEndDate :: B.C f (Maybe UTCTime),
     mandateId :: B.C f (Maybe Text),
     mandateFrequency :: B.C f (Maybe Payment.MandateFrequency),
-    mandateMaxAmount :: B.C f (Maybe HighPrecMoney),
+    mandateMaxAmount :: B.C f (Maybe HighPrecMoney), -- FIXME Kernel.Types.Common.Price
     bankErrorCode :: B.C f (Maybe Text),
     bankErrorMessage :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
