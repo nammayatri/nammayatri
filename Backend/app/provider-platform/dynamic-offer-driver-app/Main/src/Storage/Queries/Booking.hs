@@ -75,7 +75,12 @@ findByQuoteId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe
 findByQuoteId quoteId = findOneWithKV [Se.Is BeamB.quoteId $ Se.Eq quoteId]
 
 findByTransactionId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe Booking)
-findByTransactionId txnId = findOneWithKV [Se.Is BeamB.transactionId $ Se.Eq txnId]
+findByTransactionId txnId =
+  findAllWithKVAndConditionalDB
+    [ Se.Is BeamB.transactionId $ Se.Eq txnId
+    ]
+    (Just (Se.Desc BeamB.createdAt))
+    <&> listToMaybe
 
 updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
