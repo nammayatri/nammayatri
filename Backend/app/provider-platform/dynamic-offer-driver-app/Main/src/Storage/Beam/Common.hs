@@ -22,15 +22,14 @@ import Storage.Beam.CallStatus
 import Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
 import Storage.Beam.DriverFee
 import Storage.Beam.DriverInformation
-import Storage.Beam.DriverOnboarding.DriverLicense
-import Storage.Beam.DriverOnboarding.DriverRCAssociation
-import Storage.Beam.DriverOnboarding.Image
-import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
+import Storage.Beam.DriverLicense
+import Storage.Beam.DriverRCAssociation
 import Storage.Beam.DriverReferral
 import Storage.Beam.Exophone
 import Storage.Beam.FleetDriverAssociation
 import Storage.Beam.Geometry
 import Storage.Beam.IdfyVerification
+import Storage.Beam.Image
 import Storage.Beam.Invoice
 import Storage.Beam.Message.Message
 import Storage.Beam.Message.MessageReport
@@ -43,6 +42,7 @@ import Storage.Beam.Ride
 import Storage.Beam.RideDetails
 import Storage.Beam.RiderDetails
 import Storage.Beam.Vehicle
+import Storage.Beam.VehicleRegistrationCertificate
 
 atlasDB :: B.DatabaseSettings be AtlasDB
 atlasDB =

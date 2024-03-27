@@ -18,13 +18,13 @@ import qualified Storage.Beam.Person as BeamP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.Queries.Booking ()
-import qualified Storage.Queries.DriverOnboarding.DriverLicense ()
-import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation ()
-import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate ()
+import qualified Storage.Queries.DriverLicense ()
 import Storage.Queries.DriverQuote ()
+import qualified Storage.Queries.DriverRCAssociation ()
 import Storage.Queries.Instances.DriverInformation ()
 import Storage.Queries.Ride ()
 import Storage.Queries.Vehicle ()
+import qualified Storage.Queries.VehicleRegistrationCertificate ()
 import Tools.Error
 
 instance FromTType' BeamP.Person Person where

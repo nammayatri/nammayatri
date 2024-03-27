@@ -4,7 +4,7 @@
 
 module Domain.Types.IdfyVerification where
 
-import qualified Domain.Types.DriverOnboarding.Image
+import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -16,9 +16,9 @@ import qualified Tools.Beam.UtilsTH
 
 data IdfyVerificationE e = IdfyVerification
   { dashboardPassedVehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant,
-    docType :: Domain.Types.DriverOnboarding.Image.ImageType,
-    documentImageId1 :: Kernel.Types.Id.Id Domain.Types.DriverOnboarding.Image.Image,
-    documentImageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverOnboarding.Image.Image),
+    docType :: Domain.Types.Image.ImageType,
+    documentImageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
+    documentImageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     documentNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     driverDateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -38,9 +38,9 @@ data IdfyVerificationE e = IdfyVerification
   }
   deriving (Generic)
 
-type IdfyVerification = IdfyVerificationE 'AsEncrypted
+type IdfyVerification = IdfyVerificationE ('AsEncrypted)
 
-type DecryptedIdfyVerification = IdfyVerificationE 'AsUnencrypted
+type DecryptedIdfyVerification = IdfyVerificationE ('AsUnencrypted)
 
 instance EncryptedItem IdfyVerification where
   type Unencrypted IdfyVerification = (DecryptedIdfyVerification, HashSalt)
@@ -106,6 +106,6 @@ data ImageExtractionValidation = Success | Skipped | Failed deriving (Eq, Ord, S
 
 data VerificationStatus = PENDING | VALID | INVALID deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ImageExtractionValidation)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ImageExtractionValidation))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VerificationStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VerificationStatus))

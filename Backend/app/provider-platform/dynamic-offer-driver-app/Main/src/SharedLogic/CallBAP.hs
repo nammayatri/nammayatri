@@ -60,10 +60,10 @@ import Domain.Action.UI.DriverOnboarding.AadhaarVerification
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
-import qualified Domain.Types.DriverOnboarding.Image as DIT
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
+import qualified Domain.Types.Image as DIT
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP

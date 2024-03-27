@@ -59,7 +59,7 @@ import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.DriverInformation as QD
-import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDL
+import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR

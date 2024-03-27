@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.fleet_driver_association(
 );
 
 
-ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN fleet_owner_id character (36);
 ALTER TABLE atlas_driver_offer_bpp.ride_details ADD COLUMN fleet_owner_id CHARACTER VARYING(36);
 CREATE INDEX idx_vehicle_registration_certificate_fleet_owner_id ON atlas_driver_offer_bpp.vehicle_registration_certificate USING btree (fleet_owner_id);
 CREATE INDEX idx_ride_detail_fleet_owner_id ON atlas_driver_offer_bpp.ride_details USING btree (fleet_owner_id);

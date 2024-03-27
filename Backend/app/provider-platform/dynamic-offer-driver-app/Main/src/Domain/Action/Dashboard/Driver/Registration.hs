@@ -31,9 +31,9 @@ import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.Registration as DReg
-import Domain.Types.DriverOnboarding.Image
-import qualified Domain.Types.DriverOnboarding.Image as Domain
 import qualified Domain.Types.FleetDriverAssociation as FDV
+import Domain.Types.Image
+import qualified Domain.Types.Image as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RegistrationToken as SR
 import Environment
@@ -45,8 +45,8 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.Queries.DriverOnboarding.Image as QImage
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
+import Storage.Queries.Image as QImage
 import qualified Tools.AadhaarVerification as AadhaarVerification
 
 documentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DocumentsListResponse

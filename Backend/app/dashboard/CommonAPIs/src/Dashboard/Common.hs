@@ -54,11 +54,17 @@ data DriverHomeLocation
 
 data DriverGoHomeRequest
 
+data Document
+
 data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
-  deriving stock (Show, Generic)
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''Variant)
+
+data VerificationStatus = PENDING | VALID | INVALID
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data Summary = Summary
   { totalCount :: Int, --TODO add db indexes

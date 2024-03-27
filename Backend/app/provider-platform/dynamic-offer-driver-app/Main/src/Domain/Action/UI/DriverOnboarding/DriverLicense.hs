@@ -27,10 +27,9 @@ import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import Data.Time (nominalDay)
 import qualified Data.Time as DT
-import qualified Domain.Types.DriverOnboarding.DriverLicense as Domain
-import Domain.Types.DriverOnboarding.Error
-import qualified Domain.Types.DriverOnboarding.Image as Image
+import qualified Domain.Types.DriverLicense as Domain
 import qualified Domain.Types.IdfyVerification as Domain
+import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Merchant.OnboardingDocumentConfig (OnboardingDocumentConfig)
@@ -52,9 +51,9 @@ import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as QODC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.DriverInformation as DriverInfo
-import qualified Storage.Queries.DriverOnboarding.DriverLicense as Query
-import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
+import qualified Storage.Queries.DriverLicense as Query
 import qualified Storage.Queries.IdfyVerification as IVQuery
+import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
 import Tools.Error
 import qualified Tools.Verification as Verification
@@ -209,7 +208,7 @@ onVerifyDL verificationReq output = do
           onboardingDocumentConfig <- QODC.findByMerchantOpCityIdAndDocumentType person.merchantOperatingCityId DTO.DL >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantOperatingCityId.getId (show DTO.DL))
           mEncryptedDL <- encrypt `mapM` output.id_number
           let mLicenseExpiry = convertTextToUTC (output.t_validity_to <|> output.nt_validity_to)
-          let mDriverLicense = createDL onboardingDocumentConfig person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 verificationReq.nameOnCard now <$> mEncryptedDL <*> mLicenseExpiry
+          let mDriverLicense = createDL person.merchantId onboardingDocumentConfig person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 verificationReq.nameOnCard now <$> mEncryptedDL <*> mLicenseExpiry
 
           case mDriverLicense of
             Just driverLicense -> do
@@ -225,6 +224,7 @@ dlCacheKey personId =
   "providerPlatform:dlCacheKey:" <> personId.getId
 
 createDL ::
+  Id DM.Merchant ->
   DTO.OnboardingDocumentConfig ->
   Id Person.Person ->
   Idfy.DLVerificationOutput ->
@@ -236,7 +236,7 @@ createDL ::
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   Domain.DriverLicense
-createDL configs driverId output id imageId1 imageId2 nameOnCard now edl expiry = do
+createDL merchantId configs driverId output id imageId1 imageId2 nameOnCard now edl expiry = do
   let classOfVehicles = maybe [] (map (.cov)) output.cov_details
   let verificationStatus = validateDLStatus configs expiry classOfVehicles now
   let verifiedName = (\n -> if '*' `T.elem` n then Nothing else Just n) =<< output.name
@@ -246,6 +246,7 @@ createDL configs driverId output id imageId1 imageId2 nameOnCard now edl expiry 
       driverId,
       documentImageId1 = imageId1,
       documentImageId2 = imageId2,
+      merchantId = Just merchantId,
       driverDob = convertTextToUTC output.dob,
       driverName,
       licenseNumber = edl,

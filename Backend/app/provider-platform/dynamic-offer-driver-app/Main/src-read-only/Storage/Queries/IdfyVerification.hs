@@ -4,8 +4,8 @@
 
 module Storage.Queries.IdfyVerification where
 
-import qualified Domain.Types.DriverOnboarding.Image
 import qualified Domain.Types.IdfyVerification
+import qualified Domain.Types.Image
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -26,12 +26,12 @@ createMany = traverse_ create
 deleteByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByPersonId (Kernel.Types.Id.Id driverId) = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq driverId]
 
-findAllByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.IdfyVerification.IdfyVerification])
+findAllByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.IdfyVerification.IdfyVerification]))
 findAllByDriverId (Kernel.Types.Id.Id driverId) = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq driverId]
 
 findAllByDriverIdAndDocType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DriverOnboarding.Image.ImageType -> m [Domain.Types.IdfyVerification.IdfyVerification])
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Image.ImageType -> m ([Domain.Types.IdfyVerification.IdfyVerification]))
 findAllByDriverIdAndDocType (Kernel.Types.Id.Id driverId) docType = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.docType $ Se.Eq docType]]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IdfyVerification.IdfyVerification -> m (Maybe Domain.Types.IdfyVerification.IdfyVerification))
@@ -42,7 +42,7 @@ findByRequestId requestId = do findOneWithKV [Se.Is Beam.requestId $ Se.Eq reque
 
 findLatestByDriverIdAndDocType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DriverOnboarding.Image.ImageType -> m [Domain.Types.IdfyVerification.IdfyVerification])
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Image.ImageType -> m ([Domain.Types.IdfyVerification.IdfyVerification]))
 findLatestByDriverIdAndDocType limit offset (Kernel.Types.Id.Id driverId) docType = do
   findAllWithOptionsKV
     [ Se.And
