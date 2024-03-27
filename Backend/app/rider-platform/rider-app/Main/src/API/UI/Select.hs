@@ -136,10 +136,9 @@ cancelSearch (personId, _) estimateId = withFlowHandlerAPI . withPersonIdLogTag 
       pure DSelect.BookingAlreadyCreated
     else do
       dCancelSearch <- DCancel.mkDomainCancelSearch personId estimateId
-      let sendToBpp = dCancelSearch.estimateStatus /= DEstimate.NEW
       result <-
         try @_ @SomeException $
-          when sendToBpp . void . withShortRetry $ do
+          when dCancelSearch.sendToBpp . void . withShortRetry $ do
             CallBPP.cancelV2 dCancelSearch.providerUrl =<< CACL.buildCancelSearchReqV2 dCancelSearch
       case result of
         Left err -> do
