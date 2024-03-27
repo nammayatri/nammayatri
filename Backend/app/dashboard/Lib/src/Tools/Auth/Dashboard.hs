@@ -114,5 +114,15 @@ verifyDashboardAccess requiredAccessType personId = do
       if role.dashboardAccessType == DRole.MERCHANT_ADMIN
         then pure person.id
         else throwError AccessDenied
+    DRole.MERCHANT_MAKER -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.MERCHANT_MAKER || role.dashboardAccessType == DRole.MERCHANT_ADMIN
+        then pure person.id
+        else throwError AccessDenied
+    DRole.MERCHANT_SERVER -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.MERCHANT_SERVER
+        then pure person.id
+        else throwError AccessDenied
     DRole.DASHBOARD_USER ->
       pure person.id

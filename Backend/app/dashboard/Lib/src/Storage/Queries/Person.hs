@@ -55,6 +55,18 @@ findByEmail email = do
   emailDbHash <- getDbHash (T.toLower email)
   findOneWithKV [Se.Is BeamP.emailHash $ Se.Eq $ Just emailDbHash]
 
+findAllByIds ::
+  BeamFlow m r =>
+  [Id Person] ->
+  m [Person]
+findAllByIds personIds = findAllWithKV [Se.Is BeamP.id $ Se.In $ getId <$> personIds]
+
+findAllByRole ::
+  BeamFlow m r =>
+  Id Role ->
+  m [Person]
+findAllByRole roleId = findAllWithKV [Se.Is BeamP.roleId $ Se.Eq $ getId roleId]
+
 findByEmailAndPassword ::
   (BeamFlow m r, EncFlow m r) =>
   Text ->
@@ -179,6 +191,9 @@ updatePersonMobile personId encMobileNumber = do
     ]
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
+
+findAllByIdAndRoleId :: BeamFlow m r => [Id Person] -> Id Role -> m [Person]
+findAllByIdAndRoleId personIds roleId = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In $ getId <$> personIds, Se.Is BeamP.roleId $ Se.Eq $ getId roleId]]
 
 instance FromTType' BeamP.Person Person.Person where
   fromTType' BeamP.PersonT {..} = do

@@ -1,0 +1,72 @@
+imports:
+  Text: Data.Text
+  Merchant: Domain.Types.Merchant
+  APISuccess: Kernel.Types.APISuccess
+  HashMap: Data.HashMap.Strict
+  WebHookHeaders: Domain.Types.MerchantConfigs
+  Person: Domain.Types.Person
+  MerchantConfigs: Domain.Types.MerchantConfigs
+
+
+importPackageOverrides:
+    Domain.Types.Merchant: lib-dashboard
+    Tools.Auth: lib-dashboard
+    Environment: lib-dashboard
+    Domain.Types.Person : lib-dashboard
+
+
+module : Merchant
+types:
+  SetMerchantConfigReq:
+    merchantShortId : Text
+    webhookUrl : Text
+    webHookHeaders : [WebHookHeaders]
+
+  MerchantUserList:
+    merchantUserList : [Domain.Types.Person.PersonAPIEntity]
+
+  ResetPasswordReq:
+    email : Text
+    newPassword : Text
+
+  WebHookConfigPreferenceReq:
+    preference : Bool
+
+
+
+
+apis:
+    - POST:
+        endpoint: /set/merchantConfig
+        auth: DashboardAuth MERCHANT_ADMIN
+        request:
+          type: API.Types.UI.Merchant.SetMerchantConfigReq
+        response:
+          type: APISuccess
+    - GET:
+        endpoint: /merchant/user/list
+        auth: DashboardAuth MERCHANT_ADMIN
+        response:
+          type: API.Types.UI.Merchant.MerchantUserList
+
+    - POST:
+        endpoint: /merchant/user/resetPassword
+        auth: DashboardAuth MERCHANT_ADMIN
+        request:
+          type: API.Types.UI.Merchant.ResetPasswordReq
+        response:
+          type: APISuccess
+
+    - GET:
+        endpoint: /merchant/get/webhookConfig
+        auth: DashboardAuth MERCHANT_ADMIN
+        response:
+          type: MerchantConfigs
+
+    - POST:
+        endpoint: /merchant/webhookConfig/preference
+        auth: DashboardAuth MERCHANT_ADMIN
+        request:
+          type: API.Types.UI.Merchant.WebHookConfigPreferenceReq
+        response:
+          type: APISuccess

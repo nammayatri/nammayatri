@@ -23,7 +23,7 @@ import Kernel.External.Maps.Types (MapsService)
 import Kernel.External.Notification.Types (NotificationService)
 import Kernel.External.SMS.Types
 import Kernel.External.Ticket.Types (IssueTicketService)
-import Kernel.External.Verification.Types (VerificationService)
+import Kernel.External.Verification.Types (DriverBackgroundVerificationService, VerificationService)
 import Kernel.External.Whatsapp.Types
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -46,6 +46,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     snapToRoadProvidersList :: [MapsService],
     whatsappProvidersPriorityList :: [WhatsappService],
     verificationService :: VerificationService,
+    driverBackgroundVerificationService :: DriverBackgroundVerificationService,
     aadhaarVerificationService :: AadhaarVerificationService,
     faceVerificationService :: VerificationService,
     issueTicketService :: IssueTicketService,
@@ -55,7 +56,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     createdAt :: UTCTime,
     verificationProvidersPriorityList :: [VerificationService]
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 type MerchantServiceUsageConfig = MerchantServiceUsageConfigD 'Safe
 

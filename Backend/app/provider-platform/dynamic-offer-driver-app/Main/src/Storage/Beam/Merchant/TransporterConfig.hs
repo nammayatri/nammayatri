@@ -145,7 +145,8 @@ data TransporterConfigT f = TransporterConfigT
     dummyToLocation :: B.C f (Maybe A.Value),
     scheduleRideBufferTime :: B.C f Seconds,
     fakeOtpMobileNumbers :: B.C f [Text],
-    considerDriversForSearch :: B.C f Bool
+    considerDriversForSearch :: B.C f Bool,
+    safetyWebhookAuthToken :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

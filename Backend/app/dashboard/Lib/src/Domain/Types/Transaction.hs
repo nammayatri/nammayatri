@@ -39,6 +39,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.DriverReferra
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
+import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ServerName as DSN
@@ -88,6 +89,7 @@ data Endpoint
   | OverlayAPI BPP.OverlayEndpoint
   | TicketsAPI ADT.TicketBookingEndpoint
   | MapAPI BPP.MapEndPoint
+  | SafetyAPI Safety.SafetyEndpoint
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON)
 
 $(mkBeamInstancesForEnum ''Endpoint)

@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMerchantId, cleanCachedTokensByMerchantIdAndCity, AuthFlow) where
+module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMerchantId, cleanCachedTokensByMerchantIdAndCity, cleanCachedTokensOfMerchantAndCity, AuthFlow, authTokenCacheKey) where
 
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
@@ -136,6 +136,20 @@ cleanCachedTokensByMerchantId ::
   m ()
 cleanCachedTokensByMerchantId personId merchantId = do
   regTokens <- QR.findAllByPersonIdAndMerchantId personId merchantId
+  for_ regTokens $ \regToken -> do
+    key <- authTokenCacheKey regToken.token
+    void $ Redis.del key
+
+cleanCachedTokensOfMerchantAndCity ::
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  Id DMerchant.Merchant ->
+  City.City ->
+  m ()
+cleanCachedTokensOfMerchantAndCity merchantId city = do
+  regTokens <- QR.findAllByMerchantIdAndCity merchantId city
   for_ regTokens $ \regToken -> do
     key <- authTokenCacheKey regToken.token
     void $ Redis.del key

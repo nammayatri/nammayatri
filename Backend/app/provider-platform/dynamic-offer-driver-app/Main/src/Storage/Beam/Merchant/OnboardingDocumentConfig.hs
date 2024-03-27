@@ -31,6 +31,7 @@ data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
     rcNumberPrefix :: B.C f Text,
     rcNumberPrefixList :: B.C f [Text],
     maxRetryCount :: B.C f Int,
+    dlNumberVerification :: B.C f (Maybe Bool),
     vehicleClassCheckType :: B.C f Domain.VehicleClassCheckType,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
