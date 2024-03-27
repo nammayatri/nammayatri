@@ -212,3 +212,6 @@ homeScreen = do
     GoToSafetyEducation updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_SAFETY_EDUCATION)
+    ReloadFlowStatus updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ RELOAD_FLOW_STATUS)
