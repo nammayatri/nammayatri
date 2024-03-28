@@ -45,7 +45,7 @@ instance FromTType' BeamFB.FareBreakup FareBreakup where
           { id = Id id,
             bookingId = Id bookingId,
             description = description,
-            amount = amount
+            amount = mkPrice currency amount
           }
 
 instance ToTType' BeamFB.FareBreakup FareBreakup where
@@ -54,5 +54,6 @@ instance ToTType' BeamFB.FareBreakup FareBreakup where
       { BeamFB.id = getId id,
         BeamFB.bookingId = getId bookingId,
         BeamFB.description = description,
-        BeamFB.amount = amount
+        BeamFB.amount = amount.amount,
+        BeamFB.currency = Just amount.currency
       }

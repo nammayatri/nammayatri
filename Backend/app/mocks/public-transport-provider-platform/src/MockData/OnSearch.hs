@@ -18,7 +18,7 @@ import "public-transport-rider-platform" Beckn.Spec.Common.Price
 import "public-transport-rider-platform" Beckn.Spec.OnSearch
 import Data.Time.Clock
 import Kernel.Types.Beckn.Gps
-import Kernel.Types.Common
+import Kernel.Types.Common hiding (Price)
 import Relude hiding (id, state)
 
 mockBppDescriptor :: Descriptor

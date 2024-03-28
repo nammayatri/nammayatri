@@ -150,14 +150,14 @@ type TxnId = Text
 
 type Amount = Text
 
-mkPayment :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Maybe BknPaymentParams -> Maybe Text -> Spec.Payment
-mkPayment paymentStatus mAmount mTxnId mPaymentParams mSettlementType =
+mkPayment :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Maybe BknPaymentParams -> Maybe Text -> Maybe Currency -> Spec.Payment
+mkPayment paymentStatus mAmount mTxnId mPaymentParams mSettlementType mCurrency =
   Spec.Payment
     { paymentCollectedBy = Just $ show Enums.BAP,
       paymentId = mTxnId,
       paymentParams =
         if anyTrue [isJust mTxnId, isJust mAmount, isJust mPaymentParams]
-          then Just $ mkPaymentParams mPaymentParams mTxnId mAmount
+          then Just $ mkPaymentParams mPaymentParams mTxnId mAmount mCurrency
           else Nothing,
       paymentStatus = encodeToText' paymentStatus,
       paymentTags = Just $ mkPaymentTags mSettlementType mAmount,
@@ -166,13 +166,13 @@ mkPayment paymentStatus mAmount mTxnId mPaymentParams mSettlementType =
   where
     anyTrue = or
 
-mkPaymentParams :: Maybe BknPaymentParams -> Maybe TxnId -> Maybe Amount -> Spec.PaymentParams
-mkPaymentParams mPaymentParams mTxnId mAmount =
+mkPaymentParams :: Maybe BknPaymentParams -> Maybe TxnId -> Maybe Amount -> Maybe Currency -> Spec.PaymentParams
+mkPaymentParams mPaymentParams mTxnId mAmount mCurrency =
   Spec.PaymentParams
     { paymentParamsAmount = mAmount,
       paymentParamsBankAccountNumber = mPaymentParams >>= (.bankAccNumber),
       paymentParamsBankCode = mPaymentParams >>= (.bankCode),
-      paymentParamsCurrency = Just "INR",
+      paymentParamsCurrency = show <$> mCurrency,
       paymentParamsTransactionId = mTxnId,
       paymentParamsVirtualPaymentAddress = mPaymentParams >>= (.vpa)
     }

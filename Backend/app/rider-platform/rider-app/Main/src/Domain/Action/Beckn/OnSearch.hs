@@ -95,9 +95,9 @@ data ProviderInfo = ProviderInfo
 data EstimateInfo = EstimateInfo
   { bppEstimateId :: Id DEstimate.BPPEstimate,
     vehicleVariant :: VehicleVariant,
-    estimatedFare :: Money,
-    discount :: Maybe Money,
-    estimatedTotalFare :: Money,
+    estimatedFare :: Price,
+    discount :: Maybe Price,
+    estimatedTotalFare :: Price,
     itemId :: Text,
     totalFareRange :: DEstimate.FareRange,
     descriptions :: [Text],
@@ -111,14 +111,14 @@ data EstimateInfo = EstimateInfo
   }
 
 data NightShiftInfo = NightShiftInfo
-  { nightShiftCharge :: Money,
+  { nightShiftCharge :: Price,
     oldNightShiftCharge :: Maybe Centesimal,
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
   }
 
 newtype WaitingChargesInfo = WaitingChargesInfo
-  { waitingChargePerMin :: Maybe Money
+  { waitingChargePerMin :: Maybe Price
   }
 
 data EstimateBreakupInfo = EstimateBreakupInfo
@@ -126,16 +126,15 @@ data EstimateBreakupInfo = EstimateBreakupInfo
     price :: BreakupPriceInfo
   }
 
-data BreakupPriceInfo = BreakupPriceInfo
-  { currency :: Text,
-    value :: Money
+newtype BreakupPriceInfo = BreakupPriceInfo
+  { value :: Price
   }
 
 data QuoteInfo = QuoteInfo
   { vehicleVariant :: VehicleVariant,
-    estimatedFare :: Money,
-    discount :: Maybe Money,
-    estimatedTotalFare :: Money,
+    estimatedFare :: Price,
+    discount :: Maybe Price,
+    estimatedTotalFare :: Price,
     quoteDetails :: QuoteDetails,
     itemId :: Text,
     descriptions :: [Text],
@@ -164,12 +163,12 @@ newtype InterCityQuoteDetails = InterCityQuoteDetails
 
 data RentalQuoteDetails = RentalQuoteDetails
   { id :: Text,
-    baseFare :: Money,
-    perHourCharge :: Money,
-    perExtraMinRate :: Money,
+    baseFare :: Price,
+    perHourCharge :: Price,
+    perExtraMinRate :: Price,
     includedKmPerHr :: Kilometers,
-    plannedPerKmRate :: Money,
-    perExtraKmRate :: Money,
+    plannedPerKmRate :: Price,
+    perExtraKmRate :: Price,
     nightShiftInfo :: Maybe NightShiftInfo
   }
 
@@ -384,7 +383,7 @@ mkEstimatePrice ::
   MonadFlow m =>
   BreakupPriceInfo ->
   m DEstimate.EstimateBreakupPrice
-mkEstimatePrice BreakupPriceInfo {..} = pure DEstimate.EstimateBreakupPrice {..}
+mkEstimatePrice BreakupPriceInfo {value} = pure DEstimate.EstimateBreakupPrice {value}
 
 intersectPaymentMethods :: [DMPM.PaymentMethodInfo] -> [DMPM.MerchantPaymentMethod] -> [DMPM.MerchantPaymentMethod]
 intersectPaymentMethods providerPaymentMethods = filter (\mpm -> any (compareMerchantPaymentMethod mpm) providerPaymentMethods)

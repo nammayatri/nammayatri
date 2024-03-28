@@ -27,11 +27,19 @@ findById rentalDetailsId = findOneWithKV [Se.Is BeamRS.id $ Se.Eq (getId rentalD
 
 instance FromTType' BeamRS.RentalDetails RentalDetails where
   fromTType' BeamRS.RentalDetailsT {..} = do
-    let nightShiftInfo = ((,,) <$> nightShiftCharge <*> nightShiftStart <*> nightShiftEnd) <&> \(nightShiftCharge', nightShiftStart', nightShiftEnd') -> NightShiftInfo nightShiftCharge' Nothing nightShiftStart' nightShiftEnd'
+    let nightShiftInfo =
+          ((,,) <$> nightShiftCharge <*> nightShiftStart <*> nightShiftEnd) <&> \(nightShiftCharge', nightShiftStart', nightShiftEnd') -> do
+            let nightShiftCharge_ = mkPriceWithDefault nightShiftChargeAmount currency nightShiftCharge'
+            NightShiftInfo nightShiftCharge_ Nothing nightShiftStart' nightShiftEnd'
     pure $
       Just
         RentalDetails
           { id = Id id,
+            baseFare = mkPriceWithDefault baseFareAmount currency baseFare,
+            perHourCharge = mkPriceWithDefault perHourChargeAmount currency perHourCharge,
+            perExtraMinRate = mkPriceWithDefault perExtraMinRateAmount currency perExtraMinRate,
+            perExtraKmRate = mkPriceWithDefault perExtraKmRateAmount currency perExtraKmRate,
+            plannedPerKmRate = mkPriceWithDefault plannedPerKmRateAmount currency plannedPerKmRate,
             ..
           }
 
@@ -39,13 +47,20 @@ instance ToTType' BeamRS.RentalDetails RentalDetails where
   toTType' RentalDetails {..} = do
     BeamRS.RentalDetailsT
       { BeamRS.id = getId id,
-        BeamRS.baseFare = baseFare,
-        BeamRS.perHourCharge = perHourCharge,
-        BeamRS.perExtraMinRate = perExtraMinRate,
-        BeamRS.perExtraKmRate = perExtraKmRate,
+        BeamRS.baseFare = baseFare.amountInt,
+        BeamRS.perHourCharge = perHourCharge.amountInt,
+        BeamRS.perExtraMinRate = perExtraMinRate.amountInt,
+        BeamRS.perExtraKmRate = perExtraKmRate.amountInt,
+        BeamRS.baseFareAmount = Just baseFare.amount,
+        BeamRS.perHourChargeAmount = Just perHourCharge.amount,
+        BeamRS.perExtraMinRateAmount = Just perExtraMinRate.amount,
+        BeamRS.perExtraKmRateAmount = Just perExtraKmRate.amount,
         BeamRS.includedKmPerHr = includedKmPerHr,
-        BeamRS.plannedPerKmRate = plannedPerKmRate,
-        BeamRS.nightShiftCharge = (.nightShiftCharge) <$> nightShiftInfo,
+        BeamRS.plannedPerKmRate = plannedPerKmRate.amountInt,
+        BeamRS.nightShiftCharge = (.nightShiftCharge.amountInt) <$> nightShiftInfo,
+        BeamRS.plannedPerKmRateAmount = Just plannedPerKmRate.amount,
+        BeamRS.nightShiftChargeAmount = (.nightShiftCharge.amount) <$> nightShiftInfo,
+        BeamRS.currency = Just baseFare.currency,
         BeamRS.nightShiftStart = (.nightShiftStart) <$> nightShiftInfo,
         BeamRS.nightShiftEnd = (.nightShiftEnd) <$> nightShiftInfo
       }

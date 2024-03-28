@@ -27,6 +27,7 @@ module Domain.Action.UI.Select
   )
 where
 
+import Control.Applicative ((<|>))
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
@@ -68,6 +69,7 @@ import Tools.Error
 
 data DSelectReq = DSelectReq
   { customerExtraFee :: Maybe Money,
+    customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     autoAssignEnabled :: Bool,
     autoAssignEnabledV2 :: Maybe Bool,
     paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod)
@@ -78,7 +80,10 @@ data DSelectReq = DSelectReq
 validateDSelectReq :: Validate DSelectReq
 validateDSelectReq DSelectReq {..} =
   sequenceA_
-    [ validateField "customerExtraFee" customerExtraFee $ InMaybe $ InRange @Money 1 100
+    [ validateField "customerExtraFee" customerExtraFee $ InMaybe $ InRange @Money 1 100,
+      whenJust customerExtraFeeWithCurrency $ \obj ->
+        validateObject "customerExtraFeeWithCurrency" obj $ \obj' ->
+          validateField "amount" obj'.amount $ InRange @HighPrecMoney 1.0 100.0
     ]
 
 data DSelectRes = DSelectRes
@@ -88,6 +93,7 @@ data DSelectRes = DSelectRes
     providerUrl :: BaseUrl,
     variant :: VehicleVariant,
     customerExtraFee :: Maybe Money,
+    customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     merchant :: DM.Merchant,
     city :: Context.City,
     autoAssignEnabled :: Bool,
@@ -156,8 +162,9 @@ select2 personId estimateId req@DSelectReq {..} = do
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
   _ <- QEstimate.updateStatus estimateId DEstimate.DRIVER_QUOTE_REQUESTED
   _ <- QDOffer.updateStatus estimateId DDO.INACTIVE
-  when (isJust req.customerExtraFee || isJust req.paymentMethodId) $ do
-    void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id req.customerExtraFee req.paymentMethodId
+  let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney <$> req.customerExtraFee) -- TODO check for correct currency
+  when (isJust mbCustomerExtraFee || isJust req.paymentMethodId) $ do
+    void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee req.paymentMethodId
   QPFS.clearCache searchRequest.riderId
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)

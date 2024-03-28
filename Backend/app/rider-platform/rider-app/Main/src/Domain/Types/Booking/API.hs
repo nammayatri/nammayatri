@@ -55,6 +55,9 @@ data BookingAPIEntity = BookingAPIEntity
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
+    estimatedFareWithCurrency :: PriceAPIEntity,
+    discountWithCurrency :: Maybe PriceAPIEntity,
+    estimatedTotalFareWithCurrency :: PriceAPIEntity,
     fromLocation :: LocationAPIEntity,
     initialPickupLocation :: LocationAPIEntity,
     rideList :: [RideAPIEntity],
@@ -145,9 +148,12 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
       status = booking.status,
       agencyName = bppDetails.name,
       agencyNumber = Just providerNum,
-      estimatedFare = booking.estimatedFare,
-      discount = booking.discount,
-      estimatedTotalFare = booking.estimatedTotalFare,
+      estimatedFare = booking.estimatedFare.amountInt,
+      discount = booking.discount <&> (.amountInt),
+      estimatedTotalFare = booking.estimatedTotalFare.amountInt,
+      estimatedFareWithCurrency = mkPriceAPIEntity booking.estimatedFare,
+      discountWithCurrency = mkPriceAPIEntity <$> booking.discount,
+      estimatedTotalFareWithCurrency = mkPriceAPIEntity booking.estimatedTotalFare,
       fromLocation = SLoc.makeLocationAPIEntity booking.fromLocation,
       initialPickupLocation = SLoc.makeLocationAPIEntity booking.initialPickupLocation,
       rideList = allRides <&> makeRideAPIEntity,
@@ -239,6 +245,7 @@ buildBookingAPIEntity booking personId = do
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) fareBreakups mbExoPhone mbPaymentMethod person.hasDisability False mbSosStatus bppDetails isValueAddNP
 
+-- TODO move to Domain.Types.Ride.Extra
 makeRideAPIEntity :: Ride -> RideAPIEntity
 makeRideAPIEntity Ride {..} =
   let driverMobileNumber' = if status == DRide.NEW then Just driverMobileNumber else Just "xxxx"
@@ -252,7 +259,8 @@ makeRideAPIEntity Ride {..} =
           driverRatings = driverRating',
           driverRegisteredAt = Just driverRegisteredAt',
           rideOtp = otp,
-          computedPrice = totalFare,
+          computedPrice = totalFare <&> (.amountInt),
+          computedPriceWithCurrency = mkPriceAPIEntity <$> totalFare,
           chargeableRideDistance = chargeableDistance,
           vehicleColor = vehicleColor',
           ..

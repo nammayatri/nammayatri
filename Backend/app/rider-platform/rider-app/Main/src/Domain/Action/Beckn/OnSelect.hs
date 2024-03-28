@@ -63,9 +63,9 @@ data ProviderInfo = ProviderInfo
 
 data QuoteInfo = QuoteInfo
   { vehicleVariant :: VehicleVariant,
-    estimatedFare :: Money,
-    discount :: Maybe Money,
-    -- estimatedTotalFare :: Money,
+    estimatedFare :: Price,
+    discount :: Maybe Price,
+    -- estimatedTotalFare :: Price,
     quoteDetails :: DriverOfferQuoteDetails,
     specialLocationTag :: Maybe Text,
     serviceTierName :: Maybe Text,
@@ -140,7 +140,7 @@ selectLowestFareQuote [] = Nothing
 
 comparator :: DQuote.Quote -> DQuote.Quote -> DQuote.Quote
 comparator quote1 quote2 =
-  if quote1.estimatedFare < quote2.estimatedFare
+  if quote1.estimatedFare.amount < quote2.estimatedFare.amount
     then quote1
     else quote2
 

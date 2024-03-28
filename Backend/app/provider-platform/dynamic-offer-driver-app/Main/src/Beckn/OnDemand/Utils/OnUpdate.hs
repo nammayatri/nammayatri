@@ -32,8 +32,8 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id, (%~))
-import Kernel.Types.Common
-import Kernel.Utils.Common
+import Kernel.Types.Common hiding (mkPrice)
+import Kernel.Utils.Common hiding (mkPrice)
 import SharedLogic.FareCalculator as Fare
 import Tools.Error
 
@@ -134,9 +134,9 @@ mkRideCompletedQuote ride fareParams = do
 
 mkPaymentParams :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> DRB.Booking -> Spec.Payment
 mkPaymentParams _paymentMethodInfo _paymentUrl merchant bppConfig booking = do
-  let amount = Just $ show booking.estimatedFare
+  let mPrice = Just $ mkPriceFromMoney booking.estimatedFare -- FIXME
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
-  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 mkDistanceTagGroup :: MonadFlow m => DRide.Ride -> m (Maybe [Spec.TagGroup])
 mkDistanceTagGroup ride = do

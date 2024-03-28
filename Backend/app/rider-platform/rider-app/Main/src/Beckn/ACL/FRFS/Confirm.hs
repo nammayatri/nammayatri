@@ -118,10 +118,11 @@ tfQuantity booking =
       }
 
 tfPayments :: DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> Maybe [Spec.Payment]
-tfPayments booking txnId mPaymentParams mSettlementType =
+tfPayments booking txnId mPaymentParams mSettlementType = do
+  let mCurrency = Just INR -- FIXME
   Just $
     singleton $
-      Utils.mkPayment Spec.PAID (Just $ encodeToText booking.price) (Just txnId) mPaymentParams mSettlementType
+      Utils.mkPayment Spec.PAID (Just $ encodeToText booking.price) (Just txnId) mPaymentParams mSettlementType mCurrency
 
 tfProvider :: DBooking.FRFSTicketBooking -> Maybe Spec.Provider
 tfProvider booking =

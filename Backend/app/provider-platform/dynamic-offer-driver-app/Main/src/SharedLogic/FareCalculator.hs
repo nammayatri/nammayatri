@@ -36,7 +36,7 @@ import Domain.Types.Merchant.TransporterConfig (AvgSpeedOfVechilePerKm)
 import Domain.Types.Vehicle.Variant
 import EulerHS.Prelude hiding (id, map)
 import Kernel.Prelude
-import Kernel.Utils.Common hiding (isTimeWithinBounds)
+import Kernel.Utils.Common hiding (isTimeWithinBounds, mkPrice)
 
 mkFareParamsBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do

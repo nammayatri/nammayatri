@@ -35,8 +35,7 @@ instance FromTType' BeamEB.EstimateBreakup EstimateBreakup where
   fromTType' BeamEB.EstimateBreakupT {..} = do
     let price =
           DEB.EstimateBreakupPrice
-            { currency = priceCurrency,
-              value = roundToIntegral priceValue
+            { value = mkPrice (Just priceCurrency) priceValue
             }
     pure $
       Just
@@ -53,6 +52,6 @@ instance ToTType' BeamEB.EstimateBreakup EstimateBreakup where
       { BeamEB.id = getId id,
         BeamEB.estimateId = getId estimateId,
         BeamEB.title = title,
-        BeamEB.priceCurrency = price.currency,
-        BeamEB.priceValue = realToFrac price.value
+        BeamEB.priceCurrency = price.value.currency,
+        BeamEB.priceValue = price.value.amount
       }

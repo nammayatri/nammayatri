@@ -87,9 +87,9 @@ tfFulfillments res =
 -- TODO: Discuss payment info transmission with ONDC
 tfPayments :: DConfirm.DConfirmResp -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bppConfig = do
-  let amount = Just $ show res.booking.estimatedFare.getMoney
+  let mPrice = Just $ mkPriceFromMoney res.booking.estimatedFare -- FIXME
   let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
-  Just . L.singleton $ mkPayment (show res.booking.bapCity) (show bppConfig.collectedBy) NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  Just . L.singleton $ mkPayment (show res.booking.bapCity) (show bppConfig.collectedBy) NOT_PAID mPrice Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfVehicle :: DConfirm.DConfirmResp -> Maybe Spec.Vehicle
 tfVehicle res = do

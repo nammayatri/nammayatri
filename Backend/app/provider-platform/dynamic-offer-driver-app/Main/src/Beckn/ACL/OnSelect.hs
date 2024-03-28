@@ -96,9 +96,9 @@ mkFulfillmentV2 dReq quote isValueAddNP = do
 
 mkPaymentV2 :: DBC.BecknConfig -> DM.Merchant -> DQuote.DriverQuote -> Spec.Payment
 mkPaymentV2 bppConfig merchant driverQuote = do
-  let amount = Just $ show driverQuote.estimatedFare.getMoney
+  let mPrice = Just $ mkPriceFromMoney driverQuote.estimatedFare -- FIXME
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
-  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 mkVehicleV2 :: DQuote.DriverQuote -> Spec.Vehicle
 mkVehicleV2 quote =

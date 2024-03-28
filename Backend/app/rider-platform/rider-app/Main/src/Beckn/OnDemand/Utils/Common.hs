@@ -34,6 +34,7 @@ import EulerHS.Prelude hiding (id, state, (%~))
 import Kernel.External.Maps as Maps
 import qualified Kernel.Prelude as KP
 import Kernel.Types.App
+import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -318,3 +319,11 @@ getServiceTierName item = item.itemDescriptor >>= (.descriptorName)
 
 mkRideTrackingRedisKey :: Text -> Text
 mkRideTrackingRedisKey rideId = "RideTracking:" <> rideId
+
+decimalValueToPrice :: Currency -> DecimalValue.DecimalValue -> Price
+decimalValueToPrice currency (DecimalValue.DecimalValue v) = do
+  Price
+    { amountInt = Money $ KP.roundToIntegral v,
+      amount = HighPrecMoney v,
+      currency
+    }

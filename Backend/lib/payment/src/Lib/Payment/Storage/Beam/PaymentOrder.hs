@@ -21,7 +21,7 @@ import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption (DbHash)
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
-import Kernel.Types.Common hiding (id)
+import Kernel.Types.Common hiding (Price (..), PriceAPIEntity (..), id)
 import qualified Lib.Payment.Domain.Types.PaymentOrder ()
 
 data PaymentOrderT f = PaymentOrderT
@@ -37,8 +37,8 @@ data PaymentOrderT f = PaymentOrderT
     description :: B.C f (Maybe Text),
     returnUrl :: B.C f (Maybe Text),
     action :: B.C f (Maybe Text),
-    amount :: B.C f HighPrecMoney,
-    currency :: B.C f Payment.Currency,
+    amount :: B.C f HighPrecMoney, -- FIXME Kernel.Types.Common.Price
+    currency :: B.C f Payment.Currency, -- FIXME Kernel.Types.Common.Price
     status :: B.C f Payment.TransactionStatus,
     webPaymentLink :: B.C f (Maybe Text),
     iframePaymentLink :: B.C f (Maybe Text),
@@ -50,7 +50,7 @@ data PaymentOrderT f = PaymentOrderT
     getUpiDeepLinksOption :: B.C f (Maybe Bool),
     environment :: B.C f (Maybe Text),
     createMandate :: B.C f (Maybe Payment.MandateType),
-    mandateMaxAmount :: B.C f (Maybe HighPrecMoney),
+    mandateMaxAmount :: B.C f (Maybe HighPrecMoney), -- FIXME Kernel.Types.Common.Price
     isRetried :: B.C f Bool,
     isRetargeted :: B.C f Bool,
     retargetLink :: B.C f (Maybe Text),

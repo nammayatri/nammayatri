@@ -92,8 +92,9 @@ updateMultiple rideId ride = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamR.status ride.status,
-      Se.Set BeamR.fare (realToFrac <$> ride.fare),
-      Se.Set BeamR.totalFare (realToFrac <$> ride.totalFare),
+      Se.Set BeamR.fare (ride.fare <&> (.amount)),
+      Se.Set BeamR.totalFare (ride.totalFare <&> (.amount)),
+      Se.Set BeamR.currency (ride.fare <&> (.currency)),
       Se.Set BeamR.chargeableDistance ride.chargeableDistance,
       Se.Set BeamR.rideStartTime ride.rideStartTime,
       Se.Set BeamR.rideEndTime ride.rideEndTime,
