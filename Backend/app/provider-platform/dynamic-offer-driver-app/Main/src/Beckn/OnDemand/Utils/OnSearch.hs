@@ -31,7 +31,8 @@ import Kernel.Types.Common
 
 mkProviderLocations :: [Maybe NearestDriverInfo] -> [Spec.Location]
 mkProviderLocations driverLocationsInfo =
-  foldl (<>) [] $ map mkProviderLocation (catMaybes driverLocationsInfo)
+  let duplicatesRemoved = List.nubBy ((==) `on` locationId) (catMaybes driverLocationsInfo)
+   in foldl (<>) [] $ map mkProviderLocation duplicatesRemoved
 
 mkProviderLocation :: NearestDriverInfo -> [Spec.Location]
 mkProviderLocation NearestDriverInfo {..} = do
@@ -49,6 +50,13 @@ mkProviderLocation NearestDriverInfo {..} = do
           locationUpdatedAt = Nothing,
           locationState = Nothing
         }
+
+mkItemLocationIds :: [Maybe NearestDriverInfo] -> Maybe [Text]
+mkItemLocationIds driverLocationsInfo = do
+  let dLocInfo' = List.nubBy ((==) `on` locationId) (catMaybes driverLocationsInfo)
+  case dLocInfo' of
+    [] -> Nothing
+    dLocInfo -> Just $ map (.locationId) dLocInfo
 
 buildFareParamsBreakupsTags :: FareParamsBreakupItem -> Spec.Tag
 buildFareParamsBreakupsTags FareParamsBreakupItem {..} = do
