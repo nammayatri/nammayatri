@@ -28,9 +28,6 @@ UPDATE atlas_app.booking
 
 ALTER TABLE atlas_app.booking ALTER COLUMN provider_exo_phone SET NOT NULL;
 
-ALTER TABLE atlas_app.call_status
-    RENAME COLUMN exotel_call_sid TO call_id;
-
 ALTER TABLE atlas_app.merchant_service_usage_config
     ADD COLUMN initiate_call character varying(30);
 UPDATE atlas_app.merchant_service_usage_config

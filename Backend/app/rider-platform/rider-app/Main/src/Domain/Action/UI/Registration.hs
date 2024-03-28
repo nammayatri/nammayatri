@@ -38,7 +38,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (PersonAPIEntity, PersonE (updatedAt))
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
-import qualified Domain.Types.Person.PersonStats as DPS
+import qualified Domain.Types.PersonStats as DPS
 import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
@@ -75,7 +75,7 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.Person.PersonDisability as PDisability
-import qualified Storage.Queries.Person.PersonStats as QPS
+import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
@@ -444,7 +444,7 @@ verify tokenId req = do
   when isBlockedBySameDeviceToken $ do
     merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
     when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken)
-  void $ RegistrationToken.setVerified tokenId
+  void $ RegistrationToken.setVerified True tokenId
   void $ Person.updateDeviceToken person.id deviceToken
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
   return $ AuthVerifyRes token personAPIEntity
@@ -513,6 +513,7 @@ createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion 
             eveningPeakRides = 0,
             morningPeakRides = 0,
             weekendPeakRides = 0,
+            createdAt = now,
             updatedAt = now
           }
 
