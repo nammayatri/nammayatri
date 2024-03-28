@@ -40,12 +40,16 @@ MerchantConfig:
     fraudSearchCountWindow: json
 
   default:
-    fraudBookingCancellationCountWindow: "'{period:24, periodType:Hours}'"
-    fraudRideCountWindow: "'{period:24, periodType:Hours}'"
+    fraudBookingCancellationCountWindow: |-
+      '{"period":24, "periodType":"Hours"}'
+    fraudRideCountWindow: |-
+      '{"period":24, "periodType":"Hours"}'
     fraudBookingCancelledByDriverCountThreshold: "5"
-    fraudBookingCancelledByDriverCountWindow: "'{period:24, periodType:Hours}'"
+    fraudBookingCancelledByDriverCountWindow: |-
+      '{"period":24, "periodType":"Hours"}'
     fraudSearchCountThreshold: "5"
-    fraudSearchCountWindow: "'{period:24, periodType:Hours}'"
+    fraudSearchCountWindow: |-
+      '{"period":24, "periodType":"Hours"}'
     fraudRideCountThreshold: "0"
     enabled: "True"
 
