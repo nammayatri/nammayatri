@@ -157,9 +157,6 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
-let rideConfig =
-      { driverReachedDistance = +100, driverOnTheWayNotifyExpiry = +3600 }
-
 let cacheConfig = { configsExpTime = +86400 }
 
 let cacheTranslationConfig = { expTranslationTime = +3600 }
@@ -264,7 +261,6 @@ in  { esqDBCfg
     , disableSignatureAuth = False
     , encTools
     , kafkaProducerCfg
-    , rideCfg = rideConfig
     , dashboardToken = sec.dashboardToken
     , cacheConfig
     , cacheTranslationConfig
