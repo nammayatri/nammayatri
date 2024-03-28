@@ -12,6 +12,7 @@ public class CircleRippleEffectOptions implements Cloneable {
     private int mFactor = 0;
     private float mStrokeWidth = 5.0f, mMaxStrokeWidth = 8.0f;
     private String mFromStrokeColor = "#000000", mToStrokeColor = "#000000";
+    private int fillColor = 0;
 
     public float getStrokeWidth() {
         return mStrokeWidth;
@@ -19,6 +20,13 @@ public class CircleRippleEffectOptions implements Cloneable {
 
     public CircleRippleEffectOptions strokeWidth(float strokeWidth) {
         this.mStrokeWidth = strokeWidth;
+        return this;
+    }
+
+    public Integer getFillColor () { return fillColor; }
+
+    public CircleRippleEffectOptions fillColor(int color) {
+        this.fillColor = color;
         return this;
     }
 

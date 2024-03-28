@@ -287,7 +287,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     float v = animation.getAnimatedFraction();
                     LatLng newPosition = SphericalUtil.interpolate(startPosition, destination, v);
                     float rotation = bearingBetweenLocations(startPosition, destination);
-                    System.out.println("Printing startPosition -- " + startPosition + "and destination" + destination);
                     if (rotation > 1.0){
                         MarkerConfig markerConfig = new MarkerConfig();
                         markerConfig.locationName(infoLabelText);

@@ -245,7 +245,6 @@ public class MobilityCommonBridge extends HyperBridge {
     private final UICallBacks callBack;
     private final FusedLocationProviderClient client;
     protected Polyline polyline = null;
-    protected Circle circle = null;
     protected HashMap<String, JSONObject> markersElement = new HashMap<>();
     //Location
     protected double lastLatitudeValue;
@@ -703,16 +702,9 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    public void createCircle(LatLng source, float radius) {
-        if(circle != null)
-            circle.remove();
-        circle = googleMap.addCircle(new CircleOptions()
-                .center(source)
-                .radius(radius)
-                .strokeColor(Color.rgb(252, 195, 44))
-                .fillColor(0x22FCC32C)
-                .strokeWidth(4)
-        );
+    protected void updateRippleCircleWithId(String id, CircleRippleEffectOptions config){
+        CircleRippleEffect circle = circleRipples.get(id);
+         circle.updateCircle(config);
     }
 
     @JavascriptInterface
@@ -735,6 +727,16 @@ public class MobilityCommonBridge extends HyperBridge {
                     googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, zoomLevel));
                     googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
                 }
+                if (EDIT_LOCATION && googleMap != null) {
+                    CircleRippleEffectOptions options = new CircleRippleEffectOptions();
+                    options.radius(editPickupThreshold);
+                    options.strokeWidth(4);
+                    options.fromStrokeColor("#fcc32c");
+                    options.fillColor(0x22fcc32c);
+                    CircleRippleEffect circleRippleEffect = new CircleRippleEffect(1, options);
+                    circleRippleEffect.draw(googleMap, position);
+                    circleRipples.put("edit_location_circle", circleRippleEffect);
+                }
                 googleMap.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
                     @Override
                     public void onCameraMoveStarted(int i) {
@@ -751,10 +753,11 @@ public class MobilityCommonBridge extends HyperBridge {
                     double distance = SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, source);
                     String key = "LatLon";
                     if (EDIT_LOCATION){
-                        if (googleMap != null)
-                            createCircle(source, editPickupThreshold);
                         if(distance >= editPickupThreshold) {
-                            updateCircleStroke(Color.rgb(229, 84, 84));
+                            CircleRippleEffectOptions config = new CircleRippleEffectOptions();
+                            config.fromStrokeColor("#e55454");
+                            config.radius(editPickupThreshold);
+                            updateRippleCircleWithId("edit_location_circle", config);
                             final ImageView labelView = labelId.equals("") ? null : Objects.requireNonNull(bridgeComponents.getActivity()).findViewById(Integer.parseInt(labelId));
                             if (labelView != null) {
                                 key += LOCATION_IS_FAR;
@@ -765,7 +768,12 @@ public class MobilityCommonBridge extends HyperBridge {
                                 labelView.setVisibility(View.VISIBLE);
                             }
                         }
-                        else updateCircleStroke(Color.rgb(252, 195, 44));
+                        else {
+                            CircleRippleEffectOptions config = new CircleRippleEffectOptions();
+                            config.radius(editPickupThreshold);
+                            config.fromStrokeColor("#fcc52c");
+                            updateRippleCircleWithId("edit_location_circle", config);
+                        }
                     }
                     if (storeLocateOnMapCallBack != null) {
                         String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeLocateOnMapCallBack, key , latitude, longitude);
@@ -838,8 +846,17 @@ public class MobilityCommonBridge extends HyperBridge {
                             locateOnMapManager.setEnableMapClickListener(payload.optBoolean("enableMapClickListener", false));
 
                             if (googleMap != null && EDIT_LOCATION) {
-                                    LatLng source = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
-                                    createCircle(source, editPickupThreshold);
+                                LatLng source = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+                                if (googleMap != null) {
+                                    CircleRippleEffectOptions options = new CircleRippleEffectOptions();
+                                    options.radius(editPickupThreshold);
+                                    options.strokeWidth(4);
+                                    options.fromStrokeColor("#fcc32c");
+                                    options.fillColor(0x22fcc32c);
+                                    CircleRippleEffect circleRippleEffect = new CircleRippleEffect(1, options);
+                                    circleRippleEffect.draw(googleMap, source);
+                                    circleRipples.put("edit_location_circle", circleRippleEffect);
+                                }
                             }
                             if (zoneMarkers != null) {
                                 for (Map.Entry<String, Marker> marker : zoneMarkers.entrySet()) {
@@ -965,7 +982,10 @@ public class MobilityCommonBridge extends HyperBridge {
                                     if (EDIT_LOCATION){
                                         double distFromSource = SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target,  new LatLng(Double.parseDouble(lat), Double.parseDouble(lon)));
                                         if(distFromSource >= editPickupThreshold) {
-                                            updateCircleStroke(Color.rgb(229, 84, 84));
+                                            CircleRippleEffectOptions config = new CircleRippleEffectOptions();
+                                            config.fromStrokeColor("#e55454");
+                                            config.radius(editPickupThreshold);
+                                            updateRippleCircleWithId("edit_location_circle", config);
                                             if ( !isPointInsidePolygon && labelView != null) {
                                                 zoneName += LOCATION_IS_FAR;
                                                 MarkerConfig markerConfig = new MarkerConfig();
@@ -975,7 +995,12 @@ public class MobilityCommonBridge extends HyperBridge {
                                                 labelView.setVisibility(View.VISIBLE);
                                             }
                                         }
-                                        else updateCircleStroke(Color.rgb(252, 195, 44));
+                                        else {
+                                            CircleRippleEffectOptions config = new CircleRippleEffectOptions();
+                                            config.fromStrokeColor("#fcc32c");
+                                            config.radius(editPickupThreshold);
+                                            updateRippleCircleWithId("edit_location_circle", config);
+                                        }
                                     }
                                     String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeLocateOnMapCallBack, zoneName, lat1, lng);
                                     Log.e(CALLBACK, javascript);
@@ -1366,15 +1391,20 @@ public class MobilityCommonBridge extends HyperBridge {
                 }
                 if (layer != null)
                     layer.removeLayerFromMap();
-                if (circle != null) {
-                    circle.remove();
-                }
+                clearEditPickupCircle();
             });
         } catch (Exception e) {
             Log.i(MAPS, "LocateOnMap Exit Error for ", e);
         }
     }
 
+    protected void clearEditPickupCircle() {
+        CircleRippleEffect circle = circleRipples.get("edit_location_circle");
+        if (circle != null) {
+            circle.remove();
+        }
+        circleRipples.remove("edit_location_circle");
+        }
     protected void dottedLineFromCurrentPosition(Double lat,Double lon,Boolean dottedLineVisible,Double dottedLineRange,String dottedLineColor) {
         if (googleMap != null && dottedLineVisible) {
             if (polyline != null) {
@@ -2491,7 +2521,6 @@ public class MobilityCommonBridge extends HyperBridge {
         ImageView pointer = customMarkerView.findViewById(R.id.pointer_img);
         if(markerRotation > 1.0) {
             pointer.setRotation(markerRotation);
-            System.out.println("printing rotation angle " + markerRotation);
         }
         if (pointerImage != null)
             pointer.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(pointerImage, "drawable", context.getPackageName())));
@@ -2610,9 +2639,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 polylineAnimationTimer.cancel();
                 polylineAnimationTimer = null;
             }
-            if (circle != null) {
-                circle.remove();
-            }
+            clearEditPickupCircle();
         });
     }
 
@@ -3365,11 +3392,6 @@ public class MobilityCommonBridge extends HyperBridge {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    protected void updateCircleStroke(int color){
-      if(circle != null)
-        circle.setStrokeColor(color);
     }
 
     @JavascriptInterface

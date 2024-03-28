@@ -607,8 +607,8 @@ updateRouteConfig = {
         fade: 0, 
         delay: 0
       } ,
-      pickUpLocationEditable : true,
-      dropLocationEditable : true
+      pickUpLocationEditable : false,
+      dropLocationEditable : false
   }
   , locationName : ""
   , zoomLevel : if (os == "IOS") then 19.0 else 17.0
