@@ -291,6 +291,7 @@ dependencies {
     implementation 'com.google.mlkit:translate:17.0.2'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
+    implementation 'co.hyperverge:hyperkyc:0.13.0'
 }
 
 def tmpSource = "/tmp/juspay"

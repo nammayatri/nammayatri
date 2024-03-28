@@ -41,6 +41,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.WebView;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -94,6 +95,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import co.hyperverge.hyperkyc.HyperKyc;
+import co.hyperverge.hyperkyc.data.models.HyperKycConfig;
 import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
 import in.juspay.hypersdk.data.KeyValueStore;
@@ -370,6 +373,8 @@ public class MainActivity extends AppCompatActivity {
         preInitFutureTask = Executors.newSingleThreadExecutor().submit(this::preInitFlow);
         driverInfoFutureTask = Executors.newSingleThreadExecutor().submit(this::getDriverInfoFlow);
 
+
+        initHVSdk();
         initApp();
 
         handleSplashScreen();
@@ -413,6 +418,31 @@ public class MainActivity extends AppCompatActivity {
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
         window.setStatusBarColor(this.getResources().getColor(R.color.colorPrimaryDark, getTheme()));
         countAppUsageDays();
+    }
+
+    private void initHVSdk() {
+        HyperKycConfig config = new HyperKycConfig("appId", "appKey", "aadhaar_flow", "transactionId");
+//        config.setInputs();
+        config.setUseLocation(false);
+
+        ActivityResultLauncher<HyperKycConfig> hyperKycLauncher =
+                registerForActivityResult(new HyperKyc.Contract(), result -> {
+                    // handle result post workflow finish/exit
+//                    switch (result.getStatus()) {
+//                        case HyperKycResult.Status.USER_CANCELLED:
+//                            // user cancelled
+//                            break;
+//                        case HyperKycResult.Status.ERROR:
+//                            // failure
+//                            break;
+//                        case HyperKycResult.Status.AUTO_APPROVED:
+//                        case HyperKycResult.Status.AUTO_DECLINED:
+//                        case HyperKycResult.Status.NEEDS_REVIEW:
+//                            // workflow success
+//                            break;
+//                    }
+                });
+        hyperKycLauncher.launch(config);
     }
 
     private void handleSplashScreen() {
