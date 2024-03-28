@@ -264,7 +264,7 @@ notifyOnRideCompleted booking ride = do
         unwords
           [ "Hope you enjoyed your trip with",
             driverName,
-            "Total Fare " <> show totalFare.amount <> " " <> show totalFare.currency -- TODO Check number of digits
+            "Total Fare " <> show totalFare.amount <> " " <> show totalFare.currency
           ]
   disableFollowRide personId
   Redis.del $ CQSos.mockSosKey personId

@@ -196,7 +196,7 @@ mkAutoAssignEnabledTagGroup res =
 tfPrice :: DSelect.DSelectRes -> Spec.Price
 tfPrice res =
   let priceCurrency = Just $ show res.estimate.estimatedFare.currency
-      priceValue = Just $ show res.estimate.estimatedFare.amount -- TODO check number of digits
+      priceValue = Just $ show res.estimate.estimatedFare.amount
       priceComputedValue = Nothing
       priceMaximumValue = Nothing
       priceMinimumValue = Nothing

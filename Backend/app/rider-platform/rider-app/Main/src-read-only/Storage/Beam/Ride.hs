@@ -30,6 +30,7 @@ data RideT f = RideT
     driverRegisteredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     endOdometerReading :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     endOtp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     fare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     id :: B.C f Kernel.Prelude.Text,
     isFreeRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

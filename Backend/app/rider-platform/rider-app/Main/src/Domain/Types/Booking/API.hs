@@ -245,6 +245,7 @@ buildBookingAPIEntity booking personId = do
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) fareBreakups mbExoPhone mbPaymentMethod person.hasDisability False mbSosStatus bppDetails isValueAddNP
 
+-- TODO move to Domain.Types.Ride.Extra
 makeRideAPIEntity :: Ride -> RideAPIEntity
 makeRideAPIEntity Ride {..} =
   let driverMobileNumber' = if status == DRide.NEW then Just driverMobileNumber else Just "xxxx"
@@ -258,7 +259,8 @@ makeRideAPIEntity Ride {..} =
           driverRatings = driverRating',
           driverRegisteredAt = Just driverRegisteredAt',
           rideOtp = otp,
-          computedPrice = totalFare,
+          computedPrice = totalFare <&> (.amountInt),
+          computedPriceWithCurrency = mkPriceAPIEntity <$> totalFare,
           chargeableRideDistance = chargeableDistance,
           vehicleColor = vehicleColor',
           ..

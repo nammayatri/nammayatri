@@ -264,7 +264,6 @@ in  { esqDBCfg
     , disableSignatureAuth = False
     , encTools
     , kafkaProducerCfg
-    , rideCfg = rideConfig
     , dashboardToken = sec.dashboardToken
     , cacheConfig
     , cacheTranslationConfig
