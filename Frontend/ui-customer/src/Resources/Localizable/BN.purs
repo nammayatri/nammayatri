@@ -1026,6 +1026,10 @@ getBN stringKey =
         MESSAGE_FROM name -> name <> " থেকে বার্তা"
         RIDE_CANCELLED -> "রাইড বাতিল করা হয়েছে"
         TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 হ্যালো,\n\nআমি " <> appName <> " ড্রাইভার " <> driverName <> " সাথে রাইড করছি! এই রাইডটি ট্র্যাক করতে: " <> trackLink <> "\n\nগাড়ীর নম্বর: " <> vehicleNumber        
+        DRIVER_ALMOST_AT_PICKUP -> "ড্রাইভার প্রায় পিকআপে আছে, পিকআপ পরিবর্তন করতে তাদের সাথে যোগাযোগ করুন"
+        MAXIMUM_EDIT_PICKUP_ATTEMPTS_REACHED -> "আপনি পিকআপ অবস্থান পরিবর্তন করার সর্বোচ্চ সংখ্যক প্রচেষ্টায় পৌঁছেছেন"
+        MOVE_PIN_TO_THE_DESIRED_PICKUP_POINT -> "পিনটিকে পছন্দসই পিকআপ পয়েন্টে নিয়ে যান (নির্দেশিত এলাকার মধ্যে)"
+        CHANGE_PICKUP_LOCATION -> "পিকআপ লোকেশন পরিবর্তন করুন"
         SAFETY_CENTER_IS_DISABLED -> "SOS বৈশিষ্ট্যটি তিনবার দুর্নীতিমূলকভাবে ব্যবহৃত হয়েছে, তাই এটি অক্ষম করা হয়েছে"
         TRACK_ON_GOOGLE_MAP -> "গুগল ম্যাপে ট্র্যাক করুন >"
         SHOW_WALKING_DIRECTION -> "হেঁটে যাওয়ার দিকনির্দেশন দেখান >"
@@ -1041,3 +1045,4 @@ getBN stringKey =
         CONTINUE_SEARCH_WITH_NO_TIP -> "কোন টিপ ছাড়া অনুসন্ধান চালিয়ে যান"
         SEARCHING_WITH_NO_TIP -> "কোন টিপ ছাড়াই অনুসন্ধান করা হচ্ছে"
         SEARCH_AGAIN -> "আবার খুঁজুন"
+        LOCATION_IS_TOO_FAR -> "অবস্থান অনেক দূরে!"

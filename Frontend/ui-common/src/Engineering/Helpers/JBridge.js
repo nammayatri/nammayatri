@@ -1838,6 +1838,18 @@ export const locateOnMap = (configObj) => {
   }
 };
 
+export const storeCallBackEditLocation = function (cb, action ) {
+  try {
+    if(JBridge.storeCallBackEditLocation){
+      const callback = callbackMapper.map(function (editLocation) {
+        cb(action(editLocation))();
+      });
+      window.JBridge.storeCallBackEditLocation(callback);}
+  } catch (error) {
+    console.log("Error occurred in storeCallBackEditLocation ------", error);
+  }
+}
+
 export const exitLocateOnMap = function (str) {
   JBridge.exitLocateOnMap(str);
 }

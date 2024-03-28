@@ -521,6 +521,7 @@ data Stage = HomeScreen
            | RetryFindingQuote
            | PickUpFarFromCurrentLocation
            | LoadMap
+           | EditPickUpLocation
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -714,6 +715,7 @@ type HomeScreenStateProps =
   , isEstimateChanged :: Boolean
   , showRateCard :: Boolean
   , showRateCardIcon :: Boolean
+  , markerLabel :: String
   , emergencyHelpModal :: Boolean
   , sendMessageActive :: Boolean
   , chatcallbackInitiated :: Boolean
@@ -792,7 +794,13 @@ type HomeScreenStateProps =
   , locateOnMapProps :: LocateOnMapProps
   , showSpecialZoneInfoPopup :: Boolean
   , hotSpot :: HotSpotProps
+  , editedPickUpLocation :: EditedLocation
   }
+
+type EditedLocation = {
+  gps :: LatLong ,
+  address :: Address
+}
 
 data BottomNavBarIcon = TICKETING | MOBILITY
 
@@ -1125,6 +1133,8 @@ type DriverInfoCard =
   , price :: Int
   , sourceLat :: Number
   , sourceLng :: Number
+  , initialPickupLat :: Number
+  , initialPickupLon :: Number
   , destinationLat :: Number
   , destinationLng :: Number
   , driverLat :: Number
@@ -1143,7 +1153,9 @@ type DriverInfoCard =
   , vehicleVariant :: String
   , sourceAddress :: Address
   , destinationAddress :: Address
+  , editPickupAttemptsLeft :: Int
   , status :: String
+  , fareProductType :: String
   }
 
 type RatingCard =

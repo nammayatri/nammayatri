@@ -207,7 +207,31 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 }
                             }
                             break;
+                        case NotificationTypes.EDIT_LOCATION :
+                            try {
+                                String jsonData = remoteMessage.getData().get("entity_data");
+                                JSONObject dataModel = new JSONObject(jsonData);
+                                JSONObject originData = dataModel.getJSONObject("origin");
+                                String gpsValue = originData.getString("gps");
 
+                                JSONObject locationChanged = new JSONObject();
+                                locationChanged.put("okButtonText", getString(R.string.update_navigation));
+                                locationChanged.put("buttonOkVisibility",true);
+                                locationChanged.put("imageVisibility",true);
+                                locationChanged.put("imageUrl","https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_pickup_location_updated.png");
+                                locationChanged.put("buttonLayoutVisibility",true);
+                                locationChanged.put("titleVisibility",true);
+                                JSONArray arr = new JSONArray();
+                                arr.put("EDIT_LOCATION");
+                                locationChanged.put("actions",arr);
+                                locationChanged.put("title",getString(R.string.updated_pickup_location));
+                                locationChanged.put("gps", gpsValue);
+                                showOverlayMessage(locationChanged);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                Log.e("MyFirebaseMessagingService", "Error in EDIT_LOCATION " + e);
+                            }
+                            break;
                         case NotificationTypes.TRIGGER_SERVICE:
                             if (merchantType.equals("DRIVER")) {
                                 FirebaseAnalytics.getInstance(this).logEvent("notification_trigger_service", new Bundle());
@@ -600,6 +624,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         public static final String UPDATE_STORAGE = "UPDATE_STORAGE";
         public static final String CALL_API = "CALL_API";
         public static final String CHAT_MESSAGE = "CHAT_MESSAGE";
+        private static final String EDIT_LOCATION = "EDIT_LOCATION";
         public static final String DRIVER_NOTIFY = "DRIVER_NOTIFY";
         public static final String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
         public static final String PAYMENT_OVERDUE = "PAYMENT_OVERDUE";

@@ -815,7 +815,7 @@ driverLocationTracking push action duration id routeState = do
         markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING
         sourceSpecialTagIcon = zoneLabelIcon state.data.zoneType.sourceTag
         destSpecialTagIcon = zoneLabelIcon state.data.zoneType.destinationTag
-        specialLocationTag = HSConfig.specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
+        specialLocationTag = HSConfig.specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig false false
     routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
     case routeResponse of
       Right (GetRouteResp routeResp) -> do
@@ -877,7 +877,7 @@ driverLocationTracking push action duration id routeState = do
 
       destSpecialTagIcon = zoneLabelIcon state.data.zoneType.destinationTag
 
-      specialLocationTag = HSConfig.specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
+      specialLocationTag = HSConfig.specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig false false
     locationResp <- liftFlow $ isCoordOnPath (walkCoordinates route.points) (resp ^. _lat) (resp ^. _lon) (state.data.speed)
     if locationResp.isInPath then do
       let
@@ -978,7 +978,7 @@ updateMockData push state id = defaultMockInviteFlow id state
     let markers = normalRoute ""
         srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = getString SOS_LOCATION }
         destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = getString DROP }
-    void $ runExceptT $ runBackT $ drawMapRoute srcPoint.lat srcPoint.lng ride.destinationLat ride.destinationLng srcMarkerConfig destMarkerConfig "NORMAL" route "trip" $ (HSConfig.specialLocationConfig "" "" false getPolylineAnimationConfig) { autoZoom = false }
+    void $ runExceptT $ runBackT $ drawMapRoute srcPoint.lat srcPoint.lng ride.destinationLat ride.destinationLng srcMarkerConfig destMarkerConfig "NORMAL" route "trip" $ (HSConfig.specialLocationConfig "" "" false getPolylineAnimationConfig false false) { autoZoom = false }
     when showRipples $ do
       liftFlow $ addAndUpdateSOSRipples srcPoint
     liftFlow $ animateCamera srcPoint.lat srcPoint.lng 16.0 "ZOOM"

@@ -118,6 +118,9 @@ getTripDetails state color =
     , onAnimationEnd: NoAction
     , backgroundColor: color
     , enablePaddingBottom : false
+    , rideAccepted : false
+    , editingPickupLocation : NoAction
+    , isEditPickupEnabled : false
     }
 
 getCurrentFollower :: Maybe Followers -> Followers
