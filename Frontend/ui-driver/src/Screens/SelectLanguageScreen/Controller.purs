@@ -45,7 +45,7 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen SELECT_LANGUAGE_SCREEN)
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen SELECT_LANGUAGE_SCREEN) "primary_button" "no_action"
       
-data ScreenOutput = GoBack | LanguageConfirmed SelectLanguageScreenState | GoToPreviousScreen
+data ScreenOutput = GoBack SelectLanguageScreenState | LanguageConfirmed SelectLanguageScreenState | GoToPreviousScreen
 data Action = BackPressed | MenuButtonAction MenuButton.Action | PrimaryButtonActionController PrimaryButtonController.Action | AfterRender   
 eval :: Action -> SelectLanguageScreenState -> Eval Action ScreenOutput SelectLanguageScreenState
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = 
@@ -54,8 +54,8 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state =
         let _ = unsafePerformEffect $ logEventWithParams state.data.logField "ny_driver_language_selection" "Language" state.props.selectedLanguage
             _ = setLanguageLocale state.props.selectedLanguage
         _ <- pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign state.props.selectedLanguage}]
-        exit GoBack
-eval BackPressed state = exit $ if state.props.onlyGetTheSelectedLanguage then GoToPreviousScreen else GoBack
+        exit $ GoBack state
+eval BackPressed state = exit $ if state.props.onlyGetTheSelectedLanguage then GoToPreviousScreen else GoBack state
 eval AfterRender state = continue state {props {selectedLanguage = if state.props.onlyGetTheSelectedLanguage then state.props.selectedLanguage else  if getLanguageLocale languageKey == "__failed" then "EN_US" else getLanguageLocale languageKey}}
 eval (MenuButtonAction (MenuButton.OnSelection btnState)) state = continue state { props { selectedLanguage = btnState.text.value }}
 eval (PrimaryButtonActionController (PrimaryButtonController.NoAction)) state = continue state

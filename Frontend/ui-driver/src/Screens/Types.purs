@@ -52,10 +52,11 @@ import Components.ChatView.Controller as ChatView
 import Foreign.Object (Object)
 import Foreign (Foreign)
 import Screens (ScreenName)
-import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..))
+import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..))
 import Styles.Types (FontSize)
 import Common.Types.Config
 import RemoteConfig as RC
+import Services.API as API
 
 type EditTextInLabelState =
  {
@@ -158,6 +159,7 @@ type AddVehicleDetailsScreenData =  {
   logField :: Object Foreign,
   driverMobileNumber :: String,
   cityConfig :: CityConfig,
+  vehicleCategory :: Maybe VehicleCategory,
   config :: AppConfig
  }
 
@@ -226,6 +228,7 @@ type UploadDrivingLicenseStateData = {
   , imageFrontUrl :: String
   , logField :: Object Foreign
   , mobileNumber :: String
+  , vehicleCategory :: Maybe VehicleCategory
   , cityConfig :: CityConfig
   , config :: AppConfig
 }
@@ -257,11 +260,15 @@ type RegistrationScreenState = {
 type RegistrationScreenData = {
   activeIndex :: Int,
   registerationSteps :: Array StepProgress,
+  registerationStepsAuto :: Array StepProgress,
+  registerationStepsCabs :: Array StepProgress,
   phoneNumber :: String,
   drivingLicenseStatus :: StageStatus,
   vehicleDetailsStatus :: StageStatus,
   permissionsStatus :: StageStatus,
   subscriptionStatus :: StageStatus,
+  documentStatusList :: Array DocumentStatus,
+  variantList :: Array VehicleCategory,
   lastUpdateTime :: String,
   cityConfig :: CityConfig,
   config :: AppConfig,
@@ -272,12 +279,31 @@ type RegistrationScreenData = {
   enteredRC :: String,
   dlVerficationMessage :: String,
   rcVerficationMessage :: String,
-  vehicleCategory :: Maybe VehicleCategory
+  vehicleCategory :: Maybe VehicleCategory,
+  linkedRcs :: Array String
+}
+
+type DocumentStatus = {
+  vehicleType :: Maybe VehicleCategory,
+  status :: StageStatus,
+  docType :: RegisterationStep
+}
+
+type VehicleInfo = {
+  vehicleType :: VehicleCategory,
+  vehicleImage :: String,
+  vehicleName :: String
 }
 
 type StepProgress = {
   stageName :: String,
-  stage :: RegisterationStep
+  stage :: RegisterationStep,
+  subtext :: String,
+  isMandatory :: Boolean,
+  isDisabled :: Boolean,
+  disableWarning :: String,
+  isHidden :: Boolean,
+  dependencyDocumentType :: Array RegisterationStep
 }
 
 type RegistrationScreenProps = {
@@ -289,14 +315,32 @@ type RegistrationScreenProps = {
   referralCodeSubmitted :: Boolean,
   contactSupportView :: Boolean,
   contactSupportModal :: AnimType,
-  selectedVehicleIndex :: Maybe Int
+  selectedVehicleIndex :: Maybe Int,
+  optionalDocsExpanded :: Boolean,
+  confirmChangeVehicle :: Boolean,
+  refreshAnimation :: Boolean,
+  driverEnabled :: Boolean,
+  menuOptions :: Boolean
 }
 
 data AnimType = HIDE | SHOW | ANIMATING
 derive instance genericAnimType :: Generic AnimType _
 instance eqAnimType :: Eq AnimType where eq = genericEq
 
-data RegisterationStep = DRIVING_LICENSE_OPTION | VEHICLE_DETAILS_OPTION | GRANT_PERMISSION | SUBSCRIPTION_PLAN
+data RegisterationStep = 
+    DRIVING_LICENSE_OPTION 
+  | VEHICLE_DETAILS_OPTION 
+  | GRANT_PERMISSION 
+  | SUBSCRIPTION_PLAN
+  | PROFILE_PHOTO
+  | AADHAAR_CARD
+  | PAN_CARD 
+  | VEHICLE_PERMIT 
+  | FITNESS_CERTIFICATE 
+  | VEHICLE_INSURANCE
+  | VEHICLE_PUC
+  | NO_OPTION
+
 derive instance genericRegisterationStep :: Generic RegisterationStep _
 instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
 
@@ -865,7 +909,8 @@ type SelectLanguageScreenProps = {
   selectedLanguage :: String,
   btnActive :: Boolean,
   onlyGetTheSelectedLanguage :: Boolean,
-  selectLanguageForScreen :: String
+  selectLanguageForScreen :: String,
+  fromOnboarding :: Boolean
 }
 
 ----------------------------------------------- HomeScreenState ---------------------------------------------
@@ -1804,7 +1849,9 @@ type GlobalProps = {
   callScreen :: ScreenName,
   gotoPopupType :: GoToPopUpType,
   addTimestamp :: Boolean,
-  bgLocPopupShown :: Boolean
+  bgLocPopupShown :: Boolean,
+  rcInfo :: Maybe GetAllRcDataResp,
+  onBoardingDocs :: Maybe API.OnboardingDocsRes
 }
 
 --------------------------------------------------------------- SubscriptionScreenState ---------------------------------------------------
@@ -2501,3 +2548,23 @@ type SpecialZoneProps = {
   , nearBySpecialZone :: Boolean
   , currentGeoHash :: String
 }
+
+type DocumentCaptureScreenState = {
+  data :: DocumentCaptureScreenData ,
+  props :: DocumentCaptureScreenProps
+}
+
+type DocumentCaptureScreenData = {
+  imageBase64 :: String,
+  docType :: RegisterationStep,
+  errorMessage :: Maybe String,
+  vehicleCategory :: Maybe VehicleCategory,
+  docId :: String,
+  linkedRcs :: Array String
+} 
+
+type DocumentCaptureScreenProps = {
+  validateDocModal :: Boolean,
+  logoutModalView :: Boolean,
+  validating :: Boolean
+} 

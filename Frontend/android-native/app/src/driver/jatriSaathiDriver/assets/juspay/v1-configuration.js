@@ -288,6 +288,7 @@ window.getMerchantConfig = function () {
       "uploadRCandDL" : true, 
       "enableYatriCoins" : false,
       "vehicleNSImg" : "",
+      "onBoardingDocs" : defOnboardingDocs,
       "registration" : {
           "supportWAN" : "",
           "callSupport" : false,
@@ -308,3 +309,42 @@ window.getMerchantConfig = function () {
   ]
   })
 }
+
+let defOnboardingDocs = [
+  { "documentType" : "DRIVING_LICENSE_OPTION",
+    "text" : "",
+    "subtext" : "",
+    "isMandatory" : true,
+    "isDisabled" : false,
+    "disableWarning" : "",
+    "isHidden" : false,
+    "dependencyDocumentType" : []
+  },
+  { "documentType" : "VEHICLE_DETAILS_OPTION",
+    "text" : "",
+    "subtext" : "",
+    "isMandatory" : true,
+    "isDisabled" : false,
+    "disableWarning" : "",
+    "isHidden" : false,
+    "dependencyDocumentType" : []
+  },
+  { "documentType" : "GRANT_PERMISSION",
+    "text" : "",
+    "subtext" : "",
+    "isMandatory" : true,
+    "isDisabled" : false,
+    "disableWarning" : "",
+    "isHidden" : false,
+    "dependencyDocumentType" : []
+  },
+  { "documentType" : "SUBSCRIPTION_PLAN",
+    "text" : "",
+    "subtext" : "",
+    "isMandatory" : true,
+    "isDisabled" : false,
+    "disableWarning" : "",
+    "isHidden" : false,
+    "dependencyDocumentType" : []
+  }
+]

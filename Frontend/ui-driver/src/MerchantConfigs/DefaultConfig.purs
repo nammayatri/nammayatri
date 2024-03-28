@@ -141,6 +141,7 @@ config =
               enableYatriCoins : true,
               vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig,
+              onBoardingDocs : defOnboardingDocs,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : true,
                 variantList : ["AutoCategory"],
@@ -169,6 +170,7 @@ config =
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image_old",
               registration : registrationConfig,
+              onBoardingDocs : defOnboardingDocs,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : [],
@@ -197,6 +199,7 @@ config =
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig,
+              onBoardingDocs : defOnboardingDocs,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : [],
@@ -225,6 +228,7 @@ config =
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig,
+              onBoardingDocs : defOnboardingDocs,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : [],
@@ -253,6 +257,7 @@ config =
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image_old",
               registration : registrationConfig,
+              onBoardingDocs : defOnboardingDocs,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : true,
                 variantList : [],
@@ -281,6 +286,7 @@ config =
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig,
+              onBoardingDocs : defOnboardingDocs,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : [],
@@ -309,6 +315,7 @@ config =
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig,
+              onBoardingDocs : defOnboardingDocs,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : [],
@@ -337,6 +344,7 @@ config =
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig,
+              onBoardingDocs : defOnboardingDocs,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : [],
@@ -365,6 +373,7 @@ config =
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig,
+              onBoardingDocs : defOnboardingDocs,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : [],
@@ -393,6 +402,7 @@ config =
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image_old",
               registration : registrationConfig,
+              onBoardingDocs : defOnboardingDocs,
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : [],
@@ -420,6 +430,7 @@ config =
               uploadRCandDL : true, 
               enableYatriCoins : false,
               vehicleNSImg : "",
+              onBoardingDocs : defOnboardingDocs,
               registration : {
                   supportWAN : "",
                   callSupport : false,
@@ -551,6 +562,19 @@ registrationConfig = {
   callSupport : true,
   whatsappSupport : false
 }
+
+defOnboardingDocs :: Array CTC.OnBoardingDocConfig
+defOnboardingDocs = [
+  {  documentType : "DRIVING_LICENSE_OPTION"
+  , text : "Driving License"
+  , subtext : "String"
+  , isMandatory : true
+  , isDisabled : false
+  , disableWarning : "String"
+  , isHidden : false
+  , dependencyDocumentType : []
+  }
+]
 
 getStaticViewPlans :: Array CTC.StaticViewPlans
 getStaticViewPlans = [

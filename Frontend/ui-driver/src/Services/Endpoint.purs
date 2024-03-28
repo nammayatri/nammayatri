@@ -315,3 +315,6 @@ dummyRideRequest _ =  (getBaseUrl "") <> "/driver/getDummyRideRequest"
 
 specialLocationList :: String -> String
 specialLocationList _ = (getBaseUrl "") <> "/specialLocation/list"
+
+onBoardingConfigs :: String -> String
+onBoardingConfigs _ = (getBaseUrl "") <> "/onboarding/configs"

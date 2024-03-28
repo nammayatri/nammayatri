@@ -102,6 +102,7 @@ type CityConfig = {
   uploadRCandDL :: Boolean,
   enableYatriCoins :: Boolean,
   registration :: RegistrationConfig,
+  onBoardingDocs :: Array OnBoardingDocConfig,
   vehicleNSImg :: String,
   variantSubscriptionConfig :: VariantSubscriptionConfig,
   showEarningSection :: Boolean,
@@ -123,6 +124,17 @@ type RegistrationConfig = {
   supportWAN :: String,
   callSupport :: Boolean,
   whatsappSupport :: Boolean
+}
+
+type OnBoardingDocConfig = { 
+    documentType :: String--DocumentType
+  , text :: String
+  , subtext :: String
+  , isMandatory :: Boolean
+  , isDisabled :: Boolean
+  , disableWarning :: String
+  , isHidden :: Boolean
+  , dependencyDocumentType :: Array String
 }
 
 type BannerCarousalConfig = {

@@ -79,7 +79,7 @@ screen initialState =
               if initialState.props.validateProfilePicturePopUp  then  lift $ lift $ doAff do liftEffect $ push $ AfterRender  else pure unit 
     pure $ pure unit)]
   , eval : \action state -> do
-      let _ = printLog  "UploadDrivingLicenseScreen state -----" state
+      let _ = spy  "UploadDrivingLicenseScreen state -----" state
           _ = spy "UploadDrivingLicenseScreen action -----" action
       eval action state
   }

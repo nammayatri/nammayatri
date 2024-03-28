@@ -40,6 +40,7 @@ initData = {
       logField : empty,
       driverMobileNumber : "",
       cityConfig : dummyCityConfig,
+      vehicleCategory : Nothing,
       config : getAppConfig appConfig
     },
     props: {

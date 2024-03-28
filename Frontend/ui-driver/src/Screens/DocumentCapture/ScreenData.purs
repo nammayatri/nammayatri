@@ -12,26 +12,24 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+module Screens.DocumentCaptureScreen.ScreenData where
 
-module Screens.SelectLanguageScreen.ScreenData where
+import Screens.Types as ST
+import Data.Maybe(Maybe(..))
 
-import ConfigProvider
-import Screens.Types (SelectLanguageScreenState)
-import Foreign.Object (empty)
-
-initData :: SelectLanguageScreenState
-initData = {
-    data: {
-    isSelected : true
-  , config : getAppConfig appConfig
-  , logField : empty
-  , languageList: []
-    },
-    props: {
-      btnActive :false,
-      selectedLanguage: "",
-      onlyGetTheSelectedLanguage : false,
-      selectLanguageForScreen : "",
-      fromOnboarding : false
-    }
-}
+initData :: ST.DocumentCaptureScreenState
+initData =
+  { data:
+      { imageBase64: ""
+      , docType: ST.NO_OPTION
+      , errorMessage : Nothing
+      , vehicleCategory : Nothing
+      , docId : ""
+      , linkedRcs : []
+      }
+  , props:
+      { validateDocModal : false,
+        logoutModalView : false,
+        validating : false
+      }
+  }

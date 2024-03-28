@@ -58,6 +58,7 @@ import Types.ModifyScreenState (modifyScreenState)
 import Foreign.Object (empty)
 import Locale.Utils
 import Data.Boolean (otherwise)
+import Screens.Types as ST
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -643,15 +644,23 @@ callDriverToDriverBT rcNo = do
   where
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
 
-makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> DriverRCReq
-makeDriverRCReq regNo imageId dateOfRegistration multipleRc= DriverRCReq
+makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> Maybe ST.VehicleCategory -> DriverRCReq
+makeDriverRCReq regNo imageId dateOfRegistration multipleRc category = DriverRCReq
     {
       "vehicleRegistrationCertNumber" : regNo,
       "operatingCity" : "BANGALORE",
       "imageId" : imageId,
       "dateOfRegistration" : dateOfRegistration,
-      "multipleRC" : multipleRc
+      "multipleRC" : multipleRc,
+      "category" : mkCategory category
     }
+
+mkCategory :: Maybe ST.VehicleCategory -> Maybe String
+mkCategory category =
+    case category of 
+        Just ST.AutoCategory -> Just "AUTO_CATEGORY"
+        Just ST.CarCategory -> Just "CAR"
+        _ -> Nothing
 
 registerDriverDLBT :: DriverDLReq -> FlowBT String  DriverDLResp
 registerDriverDLBT payload = do
@@ -667,15 +676,16 @@ registerDriverDL payload = do
     where
         unwrapResponse (x) = x
 
-makeDriverDLReq :: String -> String -> Maybe String -> String -> String -> DriverDLReq
-makeDriverDLReq dlNumber dob dateOfIssue imageIdFront imageIdBack = DriverDLReq
+makeDriverDLReq :: String -> String -> Maybe String -> String -> String -> Maybe ST.VehicleCategory -> DriverDLReq
+makeDriverDLReq dlNumber dob dateOfIssue imageIdFront imageIdBack category = DriverDLReq
     {
         "driverLicenseNumber": dlNumber,
         "driverDateOfBirth": dob,
         "operatingCity": "BANGALORE",
         "imageId1": imageIdFront,
         "imageId2" : Nothing,
-        "dateOfIssue" : dateOfIssue
+        "dateOfIssue" : dateOfIssue,
+        "category" : mkCategory category
     }
 
 validateImageBT :: ValidateImageReq -> FlowBT String ValidateImageRes
@@ -692,11 +702,13 @@ validateImage payload = do
     where
         unwrapResponse (x) = x
 
-makeValidateImageReq :: String -> String -> ValidateImageReq
-makeValidateImageReq image imageType= ValidateImageReq
+makeValidateImageReq :: String -> String -> Maybe String -> Maybe ST.VehicleCategory ->ValidateImageReq
+makeValidateImageReq image imageType rcNumber category = ValidateImageReq
     {
       "image" : image,
-      "imageType" : imageType
+      "imageType" : imageType,
+      "rcNumber" : rcNumber,
+      "category" : mkCategory category
     }
 
 driverRegistrationStatusBT :: DriverRegistrationStatusReq -> FlowBT String DriverRegistrationStatusResp

@@ -71,11 +71,13 @@ import Screens.Benefits.LmsVideoScreen.ScreenData as LmsVideoScreenData
 import Screens.Benefits.LmsQuizScreen.ScreenData as LmsQuizScreenData
 import Common.Types.App (CategoryListType)
 import Services.API
+import Screens.DocumentCaptureScreen.ScreenData as DocumentCaptureScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
 newtype GlobalState = GlobalState {
     splashScreen :: SplashScreenState
+  , documentCaptureScreen :: DocumentCaptureScreenState
   , chooseLanguageScreen :: ChooseLanguageScreenState
   , driverProfileScreen :: DriverProfileScreenState
   , applicationStatusScreen :: ApplicationStatusScreenState
@@ -125,7 +127,8 @@ newtype GlobalState = GlobalState {
 
 defaultGlobalState :: GlobalState
 defaultGlobalState = GlobalState {
-  splashScreen : {data : { message : "WeDontTalkAnymore"}}
+  documentCaptureScreen : DocumentCaptureScreenData.initData
+, splashScreen : {data : { message : "WeDontTalkAnymore"}}
 , chooseLanguageScreen : ChooseLanguageScreenData.initData
 , driverProfileScreen : DriverProfileScreenData.initData
 , applicationStatusScreen : ApplicationStatusScreenData.initData
@@ -181,7 +184,9 @@ defaultGlobalProps = {
   callScreen : ScreenNames.HOME_SCREEN,
   gotoPopupType : NO_POPUP_VIEW,
   addTimestamp : true,
-  bgLocPopupShown : false
+  bgLocPopupShown : false,
+  rcInfo : Nothing,
+  onBoardingDocs : Nothing
 }
 
 data ScreenType =
@@ -230,6 +235,7 @@ data ScreenType =
   | RegistrationScreenStateType (RegistrationScreenState -> RegistrationScreenState)
   | LmsVideoScreenStateType (LmsVideoScreenState -> LmsVideoScreenState)
   | LmsQuizScreenStateType (LmsQuizScreenState -> LmsQuizScreenState)
+  | DocumentCaptureScreenStateType (DocumentCaptureScreenState -> DocumentCaptureScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -305,7 +311,7 @@ data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
 
 data VEHICLE_DETAILS_SCREEN_OUTPUT = UPDATE_VEHICLE_INFO VehicleDetailsScreenState
 data ABOUT_US_SCREEN_OUTPUT = GO_TO_DRIVER_HOME_SCREEN
-data SELECT_LANGUAGE_SCREEN_OUTPUT = CHANGE_LANGUAGE | LANGUAGE_CONFIRMED SelectLanguageScreenState
+data SELECT_LANGUAGE_SCREEN_OUTPUT = CHANGE_LANGUAGE SelectLanguageScreenState | LANGUAGE_CONFIRMED SelectLanguageScreenState
 data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN
                                     | REPORT_ISSUE_CHAT_SCREEN CategoryListType
                                     | RIDE_SELECTION_SCREEN CategoryListType
@@ -329,6 +335,8 @@ data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
                                 | GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN
                                 | REFRESH_REGISTERATION_SCREEN
                                 | REFERRAL_CODE_SUBMIT RegistrationScreenState
+                                | DOCUMENT_CAPTURE_FLOW RegistrationScreenState RegisterationStep
+                                | SELECT_LANG_FROM_REGISTRATION
 
 data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = VALIDATE_DL_DETAILS UploadDrivingLicenseState | VALIDATE_DATA_API UploadDrivingLicenseState | GOTO_VEHICLE_DETAILS_SCREEN | LOGOUT_ACCOUNT | GOTO_ONBOARDING_FLOW
 
@@ -479,3 +487,5 @@ data LMS_QUIZ_SCREEN_OUTPUT = GO_TO_NEXT_QUESTION LmsQuizScreenState
                             | SELECT_LANGUAGE_FOR_QUESTION LmsQuizScreenState
                             | GO_TO_LMS_VIDEOS_SCREEN_FROM_QUIZ LmsQuizScreenState
                             | GO_TO_BENEFITS_SCREEN_FROM_QUIZ LmsQuizScreenState
+
+data DOCUMENT_CAPTURE_SCREEN_OUTPUT = UPLOAD_DOC_API DocumentCaptureScreenState String | LOGOUT_FROM_DOC_CAPTURE

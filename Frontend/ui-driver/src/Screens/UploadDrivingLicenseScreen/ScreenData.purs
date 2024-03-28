@@ -43,6 +43,7 @@ initData = {
       , imageFrontUrl : ""
       , logField : empty
       , mobileNumber : ""
+      , vehicleCategory : Nothing
       , cityConfig : dummyCityConfig
       , config : getAppConfig appConfig
       },
