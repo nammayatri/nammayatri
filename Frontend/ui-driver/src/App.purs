@@ -71,11 +71,13 @@ import Screens.Benefits.LmsVideoScreen.ScreenData as LmsVideoScreenData
 import Screens.Benefits.LmsQuizScreen.ScreenData as LmsQuizScreenData
 import Common.Types.App (CategoryListType)
 import Services.API
+import Screens.DocumentCaptureScreen.ScreenData as DocumentCaptureScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
 newtype GlobalState = GlobalState {
     splashScreen :: SplashScreenState
+  , documentCaptureScreen :: DocumentCaptureScreenState
   , chooseLanguageScreen :: ChooseLanguageScreenState
   , driverProfileScreen :: DriverProfileScreenState
   , applicationStatusScreen :: ApplicationStatusScreenState
@@ -125,7 +127,8 @@ newtype GlobalState = GlobalState {
 
 defaultGlobalState :: GlobalState
 defaultGlobalState = GlobalState {
-  splashScreen : {data : { message : "WeDontTalkAnymore"}}
+  documentCaptureScreen : DocumentCaptureScreenData.initData
+, splashScreen : {data : { message : "WeDontTalkAnymore"}}
 , chooseLanguageScreen : ChooseLanguageScreenData.initData
 , driverProfileScreen : DriverProfileScreenData.initData
 , applicationStatusScreen : ApplicationStatusScreenData.initData
@@ -230,6 +233,7 @@ data ScreenType =
   | RegistrationScreenStateType (RegistrationScreenState -> RegistrationScreenState)
   | LmsVideoScreenStateType (LmsVideoScreenState -> LmsVideoScreenState)
   | LmsQuizScreenStateType (LmsQuizScreenState -> LmsQuizScreenState)
+  | DocumentCaptureScreenStateType (DocumentCaptureScreenState -> DocumentCaptureScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -329,6 +333,7 @@ data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
                                 | GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN
                                 | REFRESH_REGISTERATION_SCREEN
                                 | REFERRAL_CODE_SUBMIT RegistrationScreenState
+                                | DOCUMENT_CAPTURE_FLOW RegistrationScreenState RegisterationStep
 
 data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = VALIDATE_DL_DETAILS UploadDrivingLicenseState | VALIDATE_DATA_API UploadDrivingLicenseState | GOTO_VEHICLE_DETAILS_SCREEN | LOGOUT_ACCOUNT | GOTO_ONBOARDING_FLOW
 
@@ -479,3 +484,5 @@ data LMS_QUIZ_SCREEN_OUTPUT = GO_TO_NEXT_QUESTION LmsQuizScreenState
                             | SELECT_LANGUAGE_FOR_QUESTION LmsQuizScreenState
                             | GO_TO_LMS_VIDEOS_SCREEN_FROM_QUIZ LmsQuizScreenState
                             | GO_TO_BENEFITS_SCREEN_FROM_QUIZ LmsQuizScreenState
+
+data DOCUMENT_CAPTURE_SCREEN_OUTPUT = UPLOAD_DOC_API DocumentCaptureScreenState String | LOGOUT_FROM_DOC_CAPTURE

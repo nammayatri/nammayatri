@@ -22,7 +22,7 @@ import Data.String (Pattern(..), split, toLower)
 import Data.String (trim)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((==), (&&), (<>))
+import Prelude ((==), (&&), (<>), ($))
 import Screens.Types as ST
 import Services.API (LocationInfo(..))
 
@@ -96,3 +96,19 @@ waitTimeConstructor key = case key of
   "Triggered" -> ST.Triggered
   "PostTriggered" -> ST.PostTriggered
   _ -> ST.NoStatus
+
+transformDocText :: ST.RegisterationStep -> String
+transformDocText stage = 
+  case stage of
+    ST.DRIVING_LICENSE_OPTION -> (getString DRIVING_LICENSE)
+    ST.VEHICLE_DETAILS_OPTION -> getString VEHICLE_REGISTERATON_CERTIFICATE
+    ST.GRANT_PERMISSION -> getString GRANT_PERMISSIONS
+    ST.SUBSCRIPTION_PLAN -> getString $ SUBSCRIPTION_PLAN_STR "SUBSCRIPTION_PLAN_STR"
+    ST.PROFILE_PHOTO -> "Profile Photo"
+    ST.AADHAAR_CARD -> "Aadhaar Card"
+    ST.PAN_CARD -> "Pan Card"
+    ST.VEHICLE_PERMIT -> "Vehicle Permit"
+    ST.FITNESS_CERTIFICATE -> "Fitness Certificate"
+    ST.VEHICLE_INSURANCE -> "Vehicle Insurance"
+    ST.VEHICLE_PUC -> "Vehicle PUC"
+    _ -> ""

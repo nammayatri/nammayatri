@@ -640,6 +640,7 @@ getCityConfig cityConfig cityName = do
                           showCustomerReferral : false,
                           uploadRCandDL : true,
                           vehicleNSImg : "",
+                          onBoardingDocs : [],
                           registration : { 
                             callSupport : false,
                             supportWAN : "", 
