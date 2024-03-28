@@ -105,15 +105,16 @@ view push state =
                       <>  "  -  "
                       <>  reason
                       <>  " \n"
-                      <>  (getString if state.verificationType == "DL" then RETAKE_DL else RETAKE_RC)
+                      <>  (if state.verificationType == "DL" then getString RETAKE_DL else if state.verificationType == "RC" then getString RETAKE_RC else "")
     
     inProgressText :: String -> String 
     inProgressText verificationType = getString if verificationType == "DL" 
-                                        then DL_UPLOADING else RC_UPLOADING
+                                        then DL_UPLOADING else if verificationType == "RC" then RC_UPLOADING else PLEASE_WAIT_WHILE_IN_PROGRESS
                           
     successText :: String -> String
     successText verificationType = (getString if verificationType == "DL" 
-                                        then DL_UPLOADED else RC_UPLOADED) <> "✅"
+                                        then DL_UPLOADED else if verificationType == "RC" then RC_UPLOADED else PLEASE_WAIT_WHILE_IN_PROGRESS
+                                    ) <> "✅"
 
 
 

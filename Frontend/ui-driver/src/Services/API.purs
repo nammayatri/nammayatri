@@ -922,7 +922,8 @@ instance encodeDriverDLResp  :: Encode DriverDLResp where encode = defaultEncode
 -- validateImage API request, response types
 newtype ValidateImageReq = ValidateImageReq {
   image :: String,
-  imageType :: String
+  imageType :: String, -- DriverLicense | VehicleRegistrationCertificate | RCPUC | RCInsurance | RCPermit | RCFitnessCertficate
+  rcNumber :: Maybe String -- pass RC number in case of [RCPUC | RCInsurance | RCPermit | RCFitnessCertficate]
 }
 
 newtype ValidateImageRes = ValidateImageRes {

@@ -94,6 +94,7 @@ data ScreenOutput = GoBack
                   | GoToHomeScreen
                   | RefreshPage
                   | ReferralCode RegistrationScreenState
+                  | DocCapture RegistrationScreenState RegisterationStep
 
 data Action = BackPressed 
             | NoAction
@@ -113,6 +114,7 @@ data Action = BackPressed
             | CallButtonClick
             | ChooseVehicleCategory Int
             | ContinueButtonAction PrimaryButtonController.Action
+            | ExpandOptionalDocs
             
 derive instance genericAction :: Generic Action _
 instance eqAction :: Eq Action where
@@ -123,6 +125,7 @@ eval AfterRender state = continue state
 
 eval BackPressed state = do
   if state.props.enterReferralCodeModal then continue state { props = state.props {enterOtpFocusIndex = 0, enterReferralCodeModal = false}, data {referralCode = ""} }
+  else if state.props.logoutModalView then continue state { props { logoutModalView = false}}
   else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
   else if DA.notElem state.data.vehicleDetailsStatus [COMPLETED, IN_PROGRESS] && Mb.isJust state.data.vehicleCategory then continue state { data {vehicleCategory = Mb.Nothing}}
   else do
@@ -135,6 +138,14 @@ eval (RegistrationAction item ) state =
           VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
           SUBSCRIPTION_PLAN -> exit GoToOnboardSubscription
+          PROFILE_PHOTO -> continue state -- Launch hyperverge
+          AADHAAR_CARD -> continue state -- Launch hyperverge
+          PAN_CARD  -> continue state -- need to ask
+          VEHICLE_PERMIT  -> exit $ DocCapture state item
+          FITNESS_CERTIFICATE  -> exit $ DocCapture state item
+          VEHICLE_INSURANCE -> exit $ DocCapture state item
+          VEHICLE_PUC -> exit $ DocCapture state item
+          _ -> continue state
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
 
@@ -222,6 +233,7 @@ eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
           continue state { data { vehicleCategory = Mb.Just variantData.vehicleType } }
         Mb.Nothing -> continue state
 
+eval ExpandOptionalDocs state = continue state { props { optionalDocsExpanded = not state.props.optionalDocsExpanded}}
 
 eval _ state = continue state
 

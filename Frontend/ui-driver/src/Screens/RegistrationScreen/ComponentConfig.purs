@@ -35,6 +35,7 @@ import Components.InAppKeyboardModal as InAppKeyboardModal
 import Prelude ((<), not, ($))
 import Data.String as DS
 import Mobility.Prelude
+import Prelude ((==))
 
 primaryButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -56,7 +57,10 @@ appOnboardingNavBarConfig state =
   { prefixImageConfig = AppOnboardingNavBar.config.prefixImageConfig{visibility = GONE},
     genericHeaderConfig = genericHeaderConfig state,
     appConfig = state.data.config,
-    headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{text = (getString REGISTRATION)}
+    headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{
+      text = if state.data.vehicleCategory == Just ST.CarCategory then "Register your Car"
+              else "Register your Auto"
+      }
   }
 
 logoutPopUp :: Common.LazyCheck -> PopUpModal.Config

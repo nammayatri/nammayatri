@@ -692,11 +692,12 @@ validateImage payload = do
     where
         unwrapResponse (x) = x
 
-makeValidateImageReq :: String -> String -> ValidateImageReq
-makeValidateImageReq image imageType= ValidateImageReq
+makeValidateImageReq :: String -> String -> Maybe String -> ValidateImageReq
+makeValidateImageReq image imageType rcNumber = ValidateImageReq
     {
       "image" : image,
-      "imageType" : imageType
+      "imageType" : imageType,
+      "rcNumber" : rcNumber
     }
 
 driverRegistrationStatusBT :: DriverRegistrationStatusReq -> FlowBT String DriverRegistrationStatusResp

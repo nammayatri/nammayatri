@@ -31,33 +31,24 @@ import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Data.Array as DA
 
 initData :: RegistrationScreenState
 initData = {
       data: {
         activeIndex : 1,
-        registerationSteps : [
-          {
-            stageName : "Driving License",
-            stage : DRIVING_LICENSE_OPTION
-          },
-          {
-            stageName : "Vehicle Registration",
-            stage : VEHICLE_DETAILS_OPTION
-          },
-          {
-            stageName : "Grant Permission",
-            stage : GRANT_PERMISSION
-          },
-          {
-            stageName : "Namma Yatri Plan",
-            stage : SUBSCRIPTION_PLAN
-          }
-        ],
+        registerationSteps : [],
         drivingLicenseStatus : NOT_STARTED,
         vehicleDetailsStatus : NOT_STARTED,
         permissionsStatus : NOT_STARTED,
         subscriptionStatus : NOT_STARTED,
+        aadhaarStatus : NOT_STARTED,
+        permitStatus : NOT_STARTED,
+        panStatus : NOT_STARTED,
+        fitnessStatus : NOT_STARTED,
+        insuranceStatus : NOT_STARTED,
+        pucStatus : NOT_STARTED,
+        profilePicStatus : NOT_STARTED,
         phoneNumber : "",
         lastUpdateTime : "",
         cityConfig : dummyCityConfig,
@@ -80,7 +71,8 @@ initData = {
         referralCodeSubmitted : false,
         contactSupportView : true,
         contactSupportModal : ST.HIDE,
-        selectedVehicleIndex : Nothing
+        selectedVehicleIndex : Nothing,
+        optionalDocsExpanded : true
       }
   }
 
@@ -99,6 +91,7 @@ dummyCityConfig = {
                     uploadRCandDL : true,
                     enableYatriCoins : false,
                     vehicleNSImg : "",
+                    onBoardingDocs : [],
                     registration : { 
                       callSupport : false,
                       supportWAN : "", 
@@ -129,3 +122,8 @@ variantsData = [
   { vehicleType : ST.AutoCategory, vehicleImage : "ny_ic_auto_side", vehicleName : getString AUTO_RICKSHAW },
   { vehicleType : ST.CarCategory, vehicleImage : "ny_ic_sedan_side", vehicleName : getString CAR }
 ]
+
+requiredDocsForAuto :: Array ST.StepProgress -> Array ST.StepProgress
+requiredDocsForAuto registerationSteps =
+  let mandatoryAutoDocs = [ ST.DRIVING_LICENSE_OPTION, ST.VEHICLE_DETAILS_OPTION, ST.GRANT_PERMISSION, ST.SUBSCRIPTION_PLAN]
+  in DA.filter (\doc -> DA.elem doc.stage mandatoryAutoDocs) registerationSteps

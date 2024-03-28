@@ -59,3 +59,4 @@ import Screens.DriverEarningsScreen.Handler (driverEarningsScreen) as UI
 import Screens.Benefits.BenefitsScreen.Handler (benefitsScreen) as UI
 import Screens.Benefits.LmsVideoScreen.Handler (lmsVideoScreen) as UI
 import Screens.Benefits.LmsQuizScreen.Handler (lmsQuizScreen) as UI
+import Screens.DocumentCaptureScreen.Handler (documentCaptureScreen) as UI

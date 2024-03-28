@@ -262,6 +262,13 @@ type RegistrationScreenData = {
   vehicleDetailsStatus :: StageStatus,
   permissionsStatus :: StageStatus,
   subscriptionStatus :: StageStatus,
+  aadhaarStatus :: StageStatus,
+  permitStatus :: StageStatus,
+  panStatus :: StageStatus,
+  fitnessStatus :: StageStatus,
+  insuranceStatus :: StageStatus,
+  pucStatus :: StageStatus,
+  profilePicStatus :: StageStatus,
   lastUpdateTime :: String,
   cityConfig :: CityConfig,
   config :: AppConfig,
@@ -277,7 +284,13 @@ type RegistrationScreenData = {
 
 type StepProgress = {
   stageName :: String,
-  stage :: RegisterationStep
+  stage :: RegisterationStep,
+  subtext :: String,
+  isMandatory :: Boolean,
+  isDisabled :: Boolean,
+  disableWarning :: String,
+  isHidden :: Boolean,
+  dependencyDocumentType :: Array RegisterationStep
 }
 
 type RegistrationScreenProps = {
@@ -289,14 +302,28 @@ type RegistrationScreenProps = {
   referralCodeSubmitted :: Boolean,
   contactSupportView :: Boolean,
   contactSupportModal :: AnimType,
-  selectedVehicleIndex :: Maybe Int
+  selectedVehicleIndex :: Maybe Int,
+  optionalDocsExpanded :: Boolean
 }
 
 data AnimType = HIDE | SHOW | ANIMATING
 derive instance genericAnimType :: Generic AnimType _
 instance eqAnimType :: Eq AnimType where eq = genericEq
 
-data RegisterationStep = DRIVING_LICENSE_OPTION | VEHICLE_DETAILS_OPTION | GRANT_PERMISSION | SUBSCRIPTION_PLAN
+data RegisterationStep = 
+    DRIVING_LICENSE_OPTION 
+  | VEHICLE_DETAILS_OPTION 
+  | GRANT_PERMISSION 
+  | SUBSCRIPTION_PLAN
+  | PROFILE_PHOTO
+  | AADHAAR_CARD
+  | PAN_CARD 
+  | VEHICLE_PERMIT 
+  | FITNESS_CERTIFICATE 
+  | VEHICLE_INSURANCE
+  | VEHICLE_PUC
+  | NO_OPTION
+
 derive instance genericRegisterationStep :: Generic RegisterationStep _
 instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
 
@@ -2501,3 +2528,21 @@ type SpecialZoneProps = {
   , nearBySpecialZone :: Boolean
   , currentGeoHash :: String
 }
+
+type DocumentCaptureScreenState = {
+  data :: DocumentCaptureScreenData ,
+  props :: DocumentCaptureScreenProps
+}
+
+type DocumentCaptureScreenData = {
+  imageBase64 :: String,
+  docType :: RegisterationStep,
+  errorMessage :: Maybe String,
+  docId :: String
+} 
+
+type DocumentCaptureScreenProps = {
+  validateDocModal :: Boolean,
+  logoutModalView :: Boolean,
+  validating :: Boolean
+} 

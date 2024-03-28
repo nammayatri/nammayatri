@@ -48,3 +48,6 @@ registration = do
     ReferralCode updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REFERRAL_CODE_SUBMIT updatedState)
+    DocCapture updatedState doctype -> do
+      modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ DOCUMENT_CAPTURE_FLOW updatedState doctype)

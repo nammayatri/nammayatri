@@ -97,6 +97,7 @@ import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
 import Screens.HomeScreen.Controller (activeRideDetail, getPreviousVersion)
 import Screens.HomeScreen.ScreenData (dummyDriverRideStats)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
+import Screens.DocumentCaptureScreen.ScreenData (initData) as DocumentCaptureData
 import Screens.HomeScreen.Transformer (getDisabledLocById)
 import Screens.HomeScreen.View (rideRequestPollingData)
 import Screens.PaymentHistoryScreen.Controller (ScreenOutput(..))
@@ -150,6 +151,8 @@ baseAppFlow baseFlow event driverInfoResponse = do
     void $ liftFlowBT initiateLocationServiceClient
     updateOperatingCity
     when baseFlow $ lift $ lift $ initUI
+    -- liftFlowBT hideSplash
+    -- documentcaptureScreenFlow
     void $ pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     void $ pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getCurrency Constants.appConfig)
@@ -619,11 +622,13 @@ onBoardingFlow = do
                   registerationScreen { data { 
                       vehicleDetailsStatus = getStatusValue resp.rcVerificationStatus,
                       drivingLicenseStatus = getStatusValue resp.dlVerificationStatus, 
+                      -- updated other status also here
                       lastUpdateTime = convertUTCtoISC (getCurrentUTC "") "hh:mm A",
                       enteredDL = getValueToLocalStore ENTERED_DL,
                       enteredRC = getValueToLocalStore ENTERED_RC,
                       dlVerficationMessage = resp.dlVerficationMessage,
                       rcVerficationMessage = resp.rcVerficationMessage,
+                      registerationSteps = mkSteps cityConfig.onBoardingDocs,
                       permissionsStatus = case permissions of
                         true -> ST.COMPLETED
                         false -> ST.NOT_STARTED,
@@ -657,6 +662,39 @@ onBoardingFlow = do
     REFERRAL_CODE_SUBMIT state -> do
       activateReferralCode state state.data.referralCode
       onBoardingFlow
+    DOCUMENT_CAPTURE_FLOW state doctype -> do
+      let defState = DocumentCaptureData.initData
+      modifyScreenState $ DocumentCaptureScreenStateType (\_ -> defState { data { docType = doctype}})
+      documentcaptureScreenFlow
+  where 
+    mkSteps :: Array OnBoardingDocConfig -> Array ST.StepProgress
+    mkSteps onBoardingDocsArr = 
+      map (\step ->
+        { 
+          stageName : step.text,
+          stage : transformToData step.documentType,
+          subtext : step.subtext,
+          isMandatory : step.isMandatory,
+          isDisabled : step.isDisabled,
+          disableWarning : step.disableWarning,
+          isHidden : step.isHidden,
+          dependencyDocumentType : map (\item -> transformToData item) step.dependencyDocumentType
+        }) onBoardingDocsArr
+    transformToData str = 
+      case str of
+        "DRIVING_LICENSE_OPTION" -> ST.DRIVING_LICENSE_OPTION
+        "VEHICLE_DETAILS_OPTION" -> ST.VEHICLE_DETAILS_OPTION
+        "GRANT_PERMISSION" -> ST.GRANT_PERMISSION
+        "SUBSCRIPTION_PLAN" -> ST.SUBSCRIPTION_PLAN
+        "PROFILE_PHOTO" -> ST.PROFILE_PHOTO
+        "AADHAAR_CARD" -> ST.AADHAAR_CARD
+        "PAN_CARD" -> ST.PAN_CARD
+        "VEHICLE_PERMIT" -> ST.VEHICLE_PERMIT
+        "FITNESS_CERTIFICATE" -> ST.FITNESS_CERTIFICATE
+        "VEHICLE_INSURANCE" -> ST.VEHICLE_INSURANCE
+        "VEHICLE_PUC" -> ST.VEHICLE_PUC
+        _ -> ST.NO_OPTION
+
 
 updateDriverVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
 updateDriverVersion dbClientVersion dbBundleVersion = do
@@ -769,7 +807,7 @@ uploadDrivingLicenseFlow = do
   flow <- UI.uploadDrivingLicense
   case flow of
     VALIDATE_DL_DETAILS state -> do
-      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.imageFront "DriverLicense")
+      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.imageFront "DriverLicense" Nothing)
       case validateImageResp of
        Right (ValidateImageRes resp) -> do
         liftFlowBT $ logEvent logField_ "ny_driver_dl_photo_confirmed"
@@ -847,7 +885,7 @@ addVehicleDetailsflow addRcFromProf = do
   flow <- UI.addVehicleDetails
   case flow of
     VALIDATE_DETAILS state -> do
-      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.rc_base64 "VehicleRegistrationCertificate")
+      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.rc_base64 "VehicleRegistrationCertificate" Nothing)
       case validateImageResp of
        Right (ValidateImageRes resp) -> do
         liftFlowBT $ logEvent logField_ "ny_driver_rc_photo_confirmed"
@@ -3527,3 +3565,18 @@ activateReferralCode state code = do
       modifyScreenState $ RegistrationScreenStateType (\driverReferralScreen -> state{ props{isValidReferralCode = true, referralCodeSubmitted = true, enterReferralCodeModal = false}})
       setValueToLocalStore REFERRER_URL ""
       setValueToLocalStore REFERRAL_CODE_ADDED "true"
+
+documentcaptureScreenFlow :: FlowBT String Unit 
+documentcaptureScreenFlow = do 
+  screenOutput <- UI.documentCaptureScreen
+  case screenOutput of
+    TA.LOGOUT_FROM_DOC_CAPTURE -> logoutFlow
+    TA.UPLOAD_DOC_API state imageType -> do
+      validateImageResp <- lift $ lift $ Remote.validateImage $ makeValidateImageReq state.data.imageBase64 imageType Nothing -- pass rcNumber in case of [RCPUC | RCInsurance | RCPermit | RCFitnessCertficate]
+      case validateImageResp of
+        Right (ValidateImageRes resp) -> do
+          void $ pure $ toast $ "Document added successfully"
+          onBoardingFlow
+        Left error -> do
+          modifyScreenState $ DocumentCaptureScreenStateType $ \docCapScreenState -> docCapScreenState { props {validating = false}, data {errorMessage = Just $ Remote.getCorrespondingErrorMessage error}}
+          documentcaptureScreenFlow

@@ -1305,3 +1305,7 @@ getEN stringKey =
         ENABLE_LOC_PERMISSION_TO_GET_RIDES -> "Enable Location Permission to Get Rides"
         ENABLE_LOC_PER_FROM_SETTINGS -> "Please enable location permissions from  settings to get non-stop rides"
         ENABLE_PERMISSION_STR -> "Enable Permission"
+        CAPTURE_DOC_DESC_1 -> "Take a clear picture of your {} on a flat surface."
+        CAPTURE_DOC_DESC_2 -> "Ensure that the lighting is adequate and all the details are clearly visible"
+        CAPTURE_DOC_DESC_3 -> "Fit the {} in the marked area correctly as shown below"
+        UPLOAD_DOC -> "Upload {}"

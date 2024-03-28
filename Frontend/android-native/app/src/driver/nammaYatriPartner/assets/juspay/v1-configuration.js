@@ -186,6 +186,7 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : true,
         "enableYatriCoins" : true,
         "vehicleNSImg" : "ny_ic_auto_image",
+        "onBoardingDocs" : defOnboardingDocs,
         "registration" : {
             "supportWAN" : "918618963188",
             "callSupport" : true,
@@ -218,6 +219,7 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
         "vehicleNSImg" : "ny_ic_auto_image_old",
+        "onBoardingDocs" : defOnboardingDocs,
         "registration" : {
             "supportWAN" : "919392636637",
             "callSupport" : true,
@@ -250,6 +252,7 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : true,
         "enableYatriCoins" : true,
         "vehicleNSImg" : "ny_ic_auto_image",
+        "onBoardingDocs" : defOnboardingDocs,
         "registration" : {
             "supportWAN" : "918618963188",
             "callSupport" : true,
@@ -282,6 +285,7 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
         "vehicleNSImg" : "ny_ic_auto_image",
+        "onBoardingDocs" : defOnboardingDocs,
         "registration" : {
             "supportWAN" : "919625724848",
             "callSupport" : true,
@@ -314,6 +318,7 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : false,
         "enableYatriCoins" : false,
         "vehicleNSImg" : "ny_ic_auto_image_old",
+        "onBoardingDocs" : defOnboardingDocs,
         "registration" : {
             "supportWAN" : "917483117936",
             "callSupport" : true,
@@ -346,6 +351,7 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
         "vehicleNSImg" : "ny_ic_auto_image",
+        "onBoardingDocs" : defOnboardingDocs,
         "registration" : {
             "supportWAN" : "",
             "callSupport" : true,
@@ -378,6 +384,7 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
         "vehicleNSImg" : "ny_ic_auto_image",
+        "onBoardingDocs" : defOnboardingDocs,
         "registration" : {
           "supportWAN" : "917483117936",
           "callSupport" : true,
@@ -409,6 +416,7 @@ window.getMerchantConfig = function () {
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : true,
+        "onBoardingDocs" : defOnboardingDocs,
         "registration" : {
           "supportWAN" : "918618963188",
           "callSupport" : true,
@@ -441,6 +449,7 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
         "vehicleNSImg" : "ny_ic_auto_image",
+        "onBoardingDocs" : defOnboardingDocs,
         "registration" : {
           "supportWAN" : "919625724848",
           "callSupport" : true,
@@ -472,6 +481,7 @@ window.getMerchantConfig = function () {
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
+        "onBoardingDocs" : defOnboardingDocs,
         "registration" : {
           "supportWAN" : "919625724848",
           "callSupport" : true,
@@ -504,6 +514,7 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : false,
         "enableYatriCoins" : false,
         "vehicleNSImg" : "ny_ic_auto_image_old",
+        "onBoardingDocs" : defOnboardingDocs,
         "registration" : {
           "supportWAN" : "917483117936",
           "callSupport" : true,
@@ -535,6 +546,7 @@ window.getMerchantConfig = function () {
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
+        "onBoardingDocs" : defOnboardingDocs,
         "registration" : {
           "supportWAN" : "919625724848",
           "callSupport" : true,
@@ -580,4 +592,107 @@ let staticSubscriptionConfig = [
   {"price" : 45.0, "frequency" : "PER_DAY", "variantCategory" : "CarCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" :  "FREE_RIDE_OFFER", "showSelected" : false, "planDesc" : "CAB_DAILY_UNLIMITED_OFFER"},
   {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "CAB_DAILY_PER_RIDE_OFFER"},
   {"price" : 25.0, "frequency" : "PER_DAY", "variantCategory" : "AutoCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" : "NO_CHARGES_TILL", "showSelected" : true, "planDesc" : ""}
+]
+
+
+let defOnboardingDocs = [
+  { "documentType" : "DRIVING_LICENSE_OPTION",
+    "text" : "",
+    "subtext" : "",
+    "isMandatory" : true,
+    "isDisabled" : false,
+    "disableWarning" : "",
+    "isHidden" : false,
+    "dependencyDocumentType" : []
+  },
+  { "documentType" : "VEHICLE_DETAILS_OPTION",
+    "text" : "",
+    "subtext" : "",
+    "isMandatory" : true,
+    "isDisabled" : false,
+    "disableWarning" : "",
+    "isHidden" : false,
+    "dependencyDocumentType" : []
+  },
+  { "documentType" : "GRANT_PERMISSION",
+    "text" : "",
+    "subtext" : "",
+    "isMandatory" : true,
+    "isDisabled" : false,
+    "disableWarning" : "",
+    "isHidden" : false,
+    "dependencyDocumentType" : []
+  },
+  { "documentType" : "SUBSCRIPTION_PLAN",
+    "text" : "",
+    "subtext" : "",
+    "isMandatory" : true,
+    "isDisabled" : false,
+    "disableWarning" : "",
+    "isHidden" : false,
+    "dependencyDocumentType" : []
+  },
+  { "documentType" : "AADHAAR_CARD",
+    "text" : "",
+    "subtext" : "",
+    "isMandatory" : true,
+    "isDisabled" : false,
+    "disableWarning" : "",
+    "isHidden" : false,
+    "dependencyDocumentType" : []
+  },
+  { "documentType" : "PAN_CARD",
+    "text" : "",
+    "subtext" : "",
+    "isMandatory" : false,
+    "isDisabled" : false,
+    "disableWarning" : "",
+    "isHidden" : false,
+    "dependencyDocumentType" : []
+  },
+  { "documentType" : "VEHICLE_PERMIT",
+    "text" : "",
+    "subtext" : "",
+    "isMandatory" : true,
+    "isDisabled" : false,
+    "disableWarning" : "",
+    "isHidden" : false,
+    "dependencyDocumentType" : [] //"VEHICLE_DETAILS_OPTION"
+  },
+  { "documentType" : "FITNESS_CERTIFICATE",
+    "text" : "",
+    "subtext" : "",
+    "isMandatory" : false,
+    "isDisabled" : false,
+    "disableWarning" : "",
+    "isHidden" : false,
+    "dependencyDocumentType" : [] // "VEHICLE_DETAILS_OPTION"
+  },
+  { "documentType" : "VEHICLE_INSURANCE",
+    "text" : "",
+    "subtext" : "",
+    "isMandatory" : false,
+    "isDisabled" : false,
+    "disableWarning" : "",
+    "isHidden" : false,
+    "dependencyDocumentType" : [] // "VEHICLE_DETAILS_OPTION"
+  },  
+  { "documentType" : "VEHICLE_PUC",
+    "text" : "",
+    "subtext" : "",
+    "isMandatory" : false,
+    "isDisabled" : false,
+    "disableWarning" : "",
+    "isHidden" : false,
+    "dependencyDocumentType" : [] //"VEHICLE_DETAILS_OPTION"
+  },
+  { "documentType" : "PROFILE_PHOTO",
+      "text" : "",
+      "subtext" : "",
+      "isMandatory" : true,
+      "isDisabled" : false,
+      "disableWarning" : "",
+      "isHidden" : false,
+      "dependencyDocumentType" : []
+    }
 ]
