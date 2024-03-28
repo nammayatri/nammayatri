@@ -34,12 +34,12 @@ deleteByPersonId (Kernel.Types.Id.Id personId) = do deleteWithKV [Se.Is Beam.per
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.Image.Image))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ([Domain.Types.Image.Image]))
+findByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.Image.Image])
 findByMerchantId (Kernel.Types.Id.Id merchantId) = do findAllWithKV [Se.Is Beam.merchantId $ Se.Eq merchantId]
 
 findImagesByPersonAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Image.ImageType -> m ([Domain.Types.Image.Image]))
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Image.ImageType -> m [Domain.Types.Image.Image])
 findImagesByPersonAndType (Kernel.Types.Id.Id merchantId) (Kernel.Types.Id.Id personId) imageType = do
   findAllWithKV
     [ Se.And

@@ -26,4 +26,4 @@ data Image = Image
 
 data ImageType = DriverLicense | VehicleRegistrationCertificate deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ImageType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ImageType)
