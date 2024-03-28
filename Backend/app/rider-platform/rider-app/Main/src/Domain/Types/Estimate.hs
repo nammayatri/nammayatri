@@ -190,7 +190,8 @@ data NightShiftRateAPIEntity = NightShiftRateAPIEntity
 
 data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
   { title :: Text,
-    price :: Money
+    price :: Money,
+    priceWithCurrency :: PriceAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -245,7 +246,8 @@ mkEstimateBreakupAPIEntity :: EstimateBreakup -> EstimateBreakupAPIEntity
 mkEstimateBreakupAPIEntity EstimateBreakup {..} = do
   EstimateBreakupAPIEntity
     { title = title,
-      price = price.value.amountInt
+      price = price.value.amountInt,
+      priceWithCurrency = mkPriceAPIEntity price.value
     }
 
 data EstimateStatus = NEW | DRIVER_QUOTE_REQUESTED | CANCELLED | GOT_DRIVER_QUOTE | DRIVER_QUOTE_CANCELLED | COMPLETED
