@@ -206,6 +206,7 @@ export const getExpiryTime = function (str1) {
         return 0;
     } catch (err) {
       console.log("error in getExpiryTime " + err);
+      return 0;
     }
   };
 };
