@@ -44,7 +44,7 @@ data OnInitReq = OnInitReq
     paymentUrl :: Maybe Text,
     paymentId :: Maybe Text
   }
-  deriving (Show, Generic) --, FromJSON, ToJSON, ToSchema)
+  deriving (Show, Generic)
 
 data OnInitRes = OnInitRes
   { bookingId :: Id DRB.Booking,

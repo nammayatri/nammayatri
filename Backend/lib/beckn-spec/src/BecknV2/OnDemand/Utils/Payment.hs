@@ -50,7 +50,7 @@ mkPayment ::
   Maybe BuyerFinderFee ->
   Spec.Payment
 mkPayment txnCity collectedBy paymentStatus mPrice mTxnId mPaymentParams mSettlementType mSettlementWindow mSettlementTermsUrl mbff = do
-  let mAmount = show . (.amount) <$> mPrice -- TODO check number of digits
+  let mAmount = show . (.amount) <$> mPrice
   let mCurrency = show . (.currency) <$> mPrice
   Spec.Payment
     { paymentCollectedBy = Just collectedBy,

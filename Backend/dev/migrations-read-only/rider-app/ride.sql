@@ -44,3 +44,4 @@ ALTER TABLE atlas_app.ride ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ALTER COLUMN vehicle_color DROP NOT NULL;
+ALTER TABLE atlas_app.ride ADD COLUMN currency character varying(255) ;

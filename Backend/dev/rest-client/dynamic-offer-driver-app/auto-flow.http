@@ -130,7 +130,10 @@ content-type: application/json
 token: {{app-token}}
 
 {
-  "customerExtraFee" : 10,
+  "customerExtraFeeWithCurrency" : {
+        "amount": 10,
+        "currency" : "INR"
+        },
   "autoAssignEnabled" : false,
   "autoAssignEnabledV2" : false,
   "paymentMethodId" : null

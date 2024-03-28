@@ -8,6 +8,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -37,7 +38,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             driverRegisteredAt = driverRegisteredAt,
             endOdometerReading = endOdometerReading,
             endOtp = endOtp,
-            fare = Kernel.Prelude.fmap Kernel.Prelude.roundToIntegral fare,
+            fare = fmap (Kernel.Types.Common.mkPrice currency) fare,
             fromLocation = fromLocation',
             id = Kernel.Types.Id.Id id,
             isFreeRide = isFreeRide,
@@ -52,7 +53,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             startOdometerReading = startOdometerReading,
             status = status,
             toLocation = toLocation',
-            totalFare = Kernel.Prelude.fmap Kernel.Prelude.roundToIntegral totalFare,
+            totalFare = fmap (Kernel.Types.Common.mkPrice currency) totalFare,
             trackingUrl = trackingUrl',
             traveledDistance = traveledDistance,
             updatedAt = updatedAt,
@@ -80,7 +81,8 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.driverRegisteredAt = driverRegisteredAt,
         Beam.endOdometerReading = endOdometerReading,
         Beam.endOtp = endOtp,
-        Beam.fare = Kernel.Prelude.fmap Kernel.Prelude.realToFrac fare,
+        Beam.currency = Kernel.Prelude.fmap (.currency) fare,
+        Beam.fare = Kernel.Prelude.fmap (.amount) fare,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isFreeRide = isFreeRide,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
@@ -93,7 +95,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.shortId = Kernel.Types.Id.getShortId shortId,
         Beam.startOdometerReading = startOdometerReading,
         Beam.status = status,
-        Beam.totalFare = Kernel.Prelude.fmap Kernel.Prelude.realToFrac totalFare,
+        Beam.totalFare = Kernel.Prelude.fmap (.amount) totalFare,
         Beam.trackingUrl = Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl trackingUrl,
         Beam.traveledDistance = traveledDistance,
         Beam.updatedAt = updatedAt,
