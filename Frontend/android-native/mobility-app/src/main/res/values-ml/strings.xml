@@ -58,5 +58,8 @@
     <string name="zone_pickup_extra">വലയ പിക്കപ്പ് അതിരുകൾ</string>
     <string name="you_are_near_a_special_pickup_zone">നിങ്ങൾ ഒരു പ്രത്യേക \n പിക്കപ്പ് വലയത്തിൽ ഉള്ളുകൾ</string>
     <string name="zone_pickup">പിക്കപ്പ് സോണ്‍</string>
+    <string name="location_is_too_far">ലൊക്കേഷൻ വളരെ അകലെയാണ്!</string>
+    <string name="update_navigation">നാവിഗേഷൻ അപ്ഡേറ്റ് ചെയ്യുക</string>
+    <string name="updated_pickup_location">പിക്കപ്പ് ലൊക്കേഷൻ അപ്ഡേറ്റ് ചെയ്തു!</string>
 
 </resources>

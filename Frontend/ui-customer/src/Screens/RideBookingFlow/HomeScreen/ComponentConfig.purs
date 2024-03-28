@@ -1488,6 +1488,8 @@ specialLocationConfig srcIcon destIcon isAnim animConfig = {
   , isAnimation : isAnim
   , autoZoom : true
   , polylineAnimationConfig : animConfig
+  , pickUpLocationEditable : false
+  , dropLocationEditable : false
 }
 
 setTipViewData :: Encode TipViewData => TipViewData -> Effect Unit

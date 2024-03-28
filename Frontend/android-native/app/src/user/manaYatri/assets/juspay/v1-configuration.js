@@ -258,6 +258,7 @@ window.getMerchantConfig = function () {
     , "feature" : {
         "enableSupport" : false
       , "enableSuggestions" : true
+      , "enableEditPickupLocation" : false
     }
     , "appData" : {
       "link" : getAppLink(window.__OS)

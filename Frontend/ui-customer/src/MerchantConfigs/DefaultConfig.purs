@@ -228,6 +228,7 @@ config =
     enableSafetyFlow : true, 
     shareWithEmergencyContacts: true,
     enableAutoReferral : true,
+    enableEditPickupLocation : false,
     enableCustomerSupportForSafety : false,
     enableSpecialPickup : JB.jBridgeMethodExists "locateOnMapV2"
   }
@@ -258,7 +259,9 @@ config =
               { goToNearestPointWithinRadius : 8.0
               , showHotSpotsWithinRadius : 150.0
               , enableHotSpot : JB.jBridgeMethodExists "locateOnMapV2"
-              }
+              },
+            editPickUpThreshold : 100.0,
+            editPickUpRadius : 100.0 --in meters
           }
       , labelTextSize : 30
       , animationDuration : 500

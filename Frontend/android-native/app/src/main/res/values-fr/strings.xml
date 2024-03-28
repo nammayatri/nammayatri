@@ -48,4 +48,5 @@
     <string name="no_enabled_browser">Aucun navigateur activé trouvé sur votre appareil, veuillez activer ou installer un navigateur </string>
     <string name="go_to">aller à</string>
     <string name="call_support">Appeler le support</string>
+    <string name="location_is_too_far">L\'emplacement est trop loin !</string>
 </resources>

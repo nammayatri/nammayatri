@@ -18,7 +18,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/zone_image_and_text"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:layout_margin="0dp">
             <ImageView
                 android:layout_gravity="center"
                 android:layout_width="28dp"
@@ -73,16 +74,19 @@
     </LinearLayout>
         <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
+            android:id="@+id/marker_action_image_parent"
+            android:visibility="gone"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
-            <ImageView
-                android:layout_width="68dp"
-                android:layout_height="15dp"
-                android:id="@+id/marker_action_image"
-                android:src="@drawable/ny_ic_navigate"
-                android:visibility="gone"/>
+        <ImageView
+            android:layout_width="68dp"
+            android:layout_height="15dp"
+            android:id="@+id/marker_action_image"
+            android:visibility="gone"
+            android:src="@drawable/ny_ic_navigate"/>
         </LinearLayout>
-    </LinearLayout>
+     </LinearLayout>
     <LinearLayout android:id="@+id/ll_marker_right"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -97,6 +101,7 @@
             android:layout_height="40dp"
             android:src="@drawable/ny_ic_dest_marker"
             android:importantForAccessibility="noHideDescendants"
+            android:accessibilityHeading="false"
             android:clickable="false"
             android:id="@+id/pointer_img" />
     </LinearLayout>
