@@ -20,7 +20,7 @@ import Storage.Queries.OrphanInstances.VehicleRegistrationCertificate
 -- Extra code goes here --
 upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => VehicleRegistrationCertificate -> m ()
 upsert a@VehicleRegistrationCertificate {..} = do
-  res <- findOneWithKV [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash)), Se.Is BeamVRC.fitnessExpiry $ Se.Eq a.fitnessExpiry]]
+  res <- findOneWithKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash))]
   if isJust res
     then
       updateOneWithKV
@@ -38,9 +38,10 @@ upsert a@VehicleRegistrationCertificate {..} = do
           Se.Set BeamVRC.reviewedAt reviewedAt,
           Se.Set BeamVRC.failedRules failedRules,
           Se.Set BeamVRC.fleetOwnerId fleetOwnerId,
+          Se.Set BeamVRC.fitnessExpiry fitnessExpiry,
           Se.Set BeamVRC.updatedAt updatedAt
         ]
-        [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash)), Se.Is BeamVRC.fitnessExpiry $ Se.Eq a.fitnessExpiry]]
+        [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash))]
     else createWithKV a
 
 findLastVehicleRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> m (Maybe VehicleRegistrationCertificate)

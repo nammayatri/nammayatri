@@ -224,6 +224,7 @@ data UserActionType
   | UPDATE_RC_INVALID_STATUS
   | BULK_REVIEW_RC_VARIANT
   | UPDATE_SAFETY_CENTER
+  | UPDATE_VEHICLE_VARIANT
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

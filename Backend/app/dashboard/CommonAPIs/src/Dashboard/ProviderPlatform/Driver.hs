@@ -69,6 +69,7 @@ data DriverEndpoint
   | ChangeOperatingCityEndpoint
   | PauseOrResumeServiceChargesEndPoint
   | UpdateRCInvalidStatusEndPoint
+  | UpdateVehicleVariantEndPoint
   | BulkReviewRCVariantEndPoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
@@ -552,7 +553,8 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
     reviewedAt :: Maybe UTCTime,
     manufacturerModel :: Maybe Text,
     verificationStatus :: VerificationStatus,
-    fleetOwnerId :: Maybe Text
+    fleetOwnerId :: Maybe Text,
+    vehicleVariant :: Maybe Variant
     -- createdAt :: UTCTime, -- do we need it?
     -- updatedAt UTCTime,
   }
@@ -1141,6 +1143,24 @@ data UpdateRCInvalidStatusReq = UpdateRCInvalidStatusReq
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance HideSecrets UpdateRCInvalidStatusReq where
+  hideSecrets = identity
+
+-- change RC vehicle varient Api ------------------------
+-------------------------------------------
+
+type UpdateVehicleVariantAPI =
+  "updateVehicleVariant"
+    :> Capture "driverId" (Id Driver)
+    :> ReqBody '[JSON] UpdateVehicleVariantReq
+    :> Post '[JSON] APISuccess
+
+data UpdateVehicleVariantReq = UpdateVehicleVariantReq
+  { rcId :: Text,
+    vehicleVariant :: Variant
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+instance HideSecrets UpdateVehicleVariantReq where
   hideSecrets = identity
 
 type BulkReviewRCVariantAPI =

@@ -70,6 +70,7 @@ module Domain.Action.Dashboard.Driver
     changeOperatingCity,
     getOperatingCity,
     updateRCInvalidStatus,
+    updateVehicleVariant,
     bulkReviewRCVariant,
   )
 where
@@ -730,6 +731,7 @@ buildVehicleRCAPIEntity VehicleRegistrationCertificate {..} = do
         documentImageId = cast @Image @Common.Image documentImageId,
         certificateNumber = certificateNumber',
         verificationStatus = castVerificationStatus verificationStatus,
+        vehicleVariant = castVehicleVariantDashboard vehicleVariant,
         ..
       }
 
@@ -1556,7 +1558,7 @@ fleetRemoveVehicle _merchantShortId opCity fleetOwnerId_ vehicleNo = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   whenJust vehicle $ \veh -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId veh.driverId fleetOwnerId_
-    when (isJust isFleetDriver) $ throwError (InvalidRequest "Vehcile is linked to fleet driver , first unlink then try")
+    when (isJust isFleetDriver) $ throwError (InvalidRequest "Vehicle is linked to fleet driver , first unlink then try")
   vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (VehicleDoesNotExist vehicleNo)
   unless (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId == Just fleetOwnerId_) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId_)
   RCQuery.upsert (updatedVehicleRegistrationCertificate vehicleRC)
@@ -1896,6 +1898,13 @@ updateRCInvalidStatus _ _ req = do
   vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
   let variant = castVehicleVariant req.vehicleVariant
   RCQuery.updateVehicleVariant vehicleRC.id (Just variant) Nothing (Just True)
+  pure Success
+
+updateVehicleVariant :: ShortId DM.Merchant -> Context.City -> Common.UpdateVehicleVariantReq -> Flow APISuccess
+updateVehicleVariant _ _ req = do
+  vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
+  let variant = castVehicleVariant req.vehicleVariant
+  RCQuery.updateVehicleVariant vehicleRC.id (Just variant) Nothing Nothing
   pure Success
 
 bulkReviewRCVariant :: ShortId DM.Merchant -> Context.City -> [Common.ReviewRCVariantReq] -> Flow [Common.ReviewRCVariantRes]

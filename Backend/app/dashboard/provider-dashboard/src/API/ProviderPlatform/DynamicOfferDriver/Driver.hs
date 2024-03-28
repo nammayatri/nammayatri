@@ -110,6 +110,7 @@ type API =
            :<|> GetOperatingCityAPI
            :<|> PauseOrResumeServiceChargesAPI
            :<|> UpdateRCInvalidStatusAPI
+           :<|> UpdateVehicleVariantAPI
            :<|> BulkReviewRCVariantAPI
        )
 
@@ -353,6 +354,10 @@ type UpdateRCInvalidStatusAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UPDATE_RC_INVALID_STATUS
     :> Common.UpdateRCInvalidStatusAPI
 
+type UpdateVehicleVariantAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UPDATE_VEHICLE_VARIANT
+    :> Common.UpdateVehicleVariantAPI
+
 type BulkReviewRCVariantAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'BULK_REVIEW_RC_VARIANT
     :> Common.BulkReviewRCVariantAPI
@@ -419,6 +424,7 @@ handler merchantId city =
     :<|> getOperatingCity merchantId city
     :<|> setServiceChargeEligibleFlagInDriverPlan merchantId city
     :<|> updateRCInvalidStatus merchantId city
+    :<|> updateVehicleVariant merchantId city
     :<|> bulkReviewRCVariant merchantId city
 
 buildTransaction ::
@@ -866,6 +872,14 @@ updateRCInvalidStatus merchantShortId opCity apiTokenInfo driverId req =
     transaction <- buildTransaction Common.UpdateRCInvalidStatusEndPoint apiTokenInfo (Just driverId) (Just req)
     T.withTransactionStoring transaction $
       Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.updateRCInvalidStatus) driverId req
+
+updateVehicleVariant :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateVehicleVariantReq -> FlowHandler APISuccess
+updateVehicleVariant merchantShortId opCity apiTokenInfo driverId req =
+  withFlowHandlerAPI' $ do
+    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+    transaction <- buildTransaction Common.UpdateVehicleVariantEndPoint apiTokenInfo (Just driverId) (Just req)
+    T.withTransactionStoring transaction $
+      Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.updateVehicleVariant) driverId req
 
 bulkReviewRCVariant :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> [Common.ReviewRCVariantReq] -> FlowHandler [Common.ReviewRCVariantRes]
 bulkReviewRCVariant merchantShortId opCity apiTokenInfo req =
