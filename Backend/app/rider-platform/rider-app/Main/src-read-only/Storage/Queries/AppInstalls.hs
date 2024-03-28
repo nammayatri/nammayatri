@@ -18,26 +18,21 @@ import qualified Storage.Beam.AppInstalls as Beam
 import Storage.Queries.AppInstallsExtra as ReExport
 import Storage.Queries.Transformers.AppInstalls
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.AppInstalls.AppInstalls -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.AppInstalls.AppInstalls -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.AppInstalls.AppInstalls] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.AppInstalls.AppInstalls] -> m ())
 createMany = traverse_ create
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.AppInstalls.AppInstalls -> m (Maybe (Domain.Types.AppInstalls.AppInstalls))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.AppInstalls.AppInstalls -> m (Maybe Domain.Types.AppInstalls.AppInstalls))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.AppInstalls.AppInstalls -> m ()
-updateByPrimaryKey Domain.Types.AppInstalls.AppInstalls {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.AppInstalls.AppInstalls -> m ())
+updateByPrimaryKey (Domain.Types.AppInstalls.AppInstalls {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.appVersion $ Kernel.Prelude.fmap Kernel.Utils.Version.versionToText appVersion,
-      Se.Set Beam.bundleVersion $ Kernel.Prelude.fmap Kernel.Utils.Version.versionToText bundleVersion,
+    [ Se.Set Beam.appVersion (Kernel.Prelude.fmap Kernel.Utils.Version.versionToText appVersion),
+      Se.Set Beam.bundleVersion (Kernel.Prelude.fmap Kernel.Utils.Version.versionToText bundleVersion),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.deviceToken deviceToken,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -45,7 +40,4 @@ updateByPrimaryKey Domain.Types.AppInstalls.AppInstalls {..} = do
       Se.Set Beam.source source,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

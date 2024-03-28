@@ -25,8 +25,7 @@ data AppInstallsT f = AppInstallsT
   deriving (Generic, B.Beamable)
 
 instance B.Table AppInstallsT where
-  data PrimaryKey AppInstallsT f = AppInstallsId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey AppInstallsT f = AppInstallsId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = AppInstallsId . id
 
 type AppInstalls = AppInstallsT Identity

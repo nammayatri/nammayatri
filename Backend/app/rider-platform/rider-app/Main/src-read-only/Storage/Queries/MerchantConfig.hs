@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m ([Domain.Types.MerchantConfig.MerchantConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m [Domain.Types.MerchantConfig.MerchantConfig])
 findAllByMerchantOperatingCityId (Kernel.Types.Id.Id merchantOperatingCityId) enabled = do
   findAllWithKV
     [ Se.And

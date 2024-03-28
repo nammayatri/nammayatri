@@ -13,7 +13,7 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data IssueT f = IssueT
-  { bookingId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+  { bookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     contactEmail :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     customerId :: B.C f Kernel.Prelude.Text,
@@ -28,8 +28,7 @@ data IssueT f = IssueT
   deriving (Generic, B.Beamable)
 
 instance B.Table IssueT where
-  data PrimaryKey IssueT f = IssueId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey IssueT f = IssueId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = IssueId . id
 
 type Issue = IssueT Identity

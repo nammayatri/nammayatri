@@ -13,7 +13,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Storage.Beam.Exophone as Beam
 
 instance FromTType' Beam.Exophone Domain.Types.Exophone.Exophone where
-  fromTType' Beam.ExophoneT {..} = do
+  fromTType' (Beam.ExophoneT {..}) = do
     pure $
       Just
         Domain.Types.Exophone.Exophone
@@ -29,7 +29,7 @@ instance FromTType' Beam.Exophone Domain.Types.Exophone.Exophone where
           }
 
 instance ToTType' Beam.Exophone Domain.Types.Exophone.Exophone where
-  toTType' Domain.Types.Exophone.Exophone {..} = do
+  toTType' (Domain.Types.Exophone.Exophone {..}) = do
     Beam.ExophoneT
       { Beam.backupPhone = backupPhone,
         Beam.callService = callService,

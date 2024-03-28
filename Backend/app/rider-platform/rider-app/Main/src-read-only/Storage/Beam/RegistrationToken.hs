@@ -32,8 +32,7 @@ data RegistrationTokenT f = RegistrationTokenT
   deriving (Generic, B.Beamable)
 
 instance B.Table RegistrationTokenT where
-  data PrimaryKey RegistrationTokenT f = RegistrationTokenId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey RegistrationTokenT f = RegistrationTokenId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = RegistrationTokenId . id
 
 type RegistrationToken = RegistrationTokenT Identity

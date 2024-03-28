@@ -13,7 +13,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Storage.Beam.Issue as Beam
 
 instance FromTType' Beam.Issue Domain.Types.Issue.Issue where
-  fromTType' Beam.IssueT {..} = do
+  fromTType' (Beam.IssueT {..}) = do
     pure $
       Just
         Domain.Types.Issue.Issue
@@ -31,7 +31,7 @@ instance FromTType' Beam.Issue Domain.Types.Issue.Issue where
           }
 
 instance ToTType' Beam.Issue Domain.Types.Issue.Issue where
-  toTType' Domain.Types.Issue.Issue {..} = do
+  toTType' (Domain.Types.Issue.Issue {..}) = do
     Beam.IssueT
       { Beam.bookingId = Kernel.Types.Id.getId <$> bookingId,
         Beam.contactEmail = contactEmail,

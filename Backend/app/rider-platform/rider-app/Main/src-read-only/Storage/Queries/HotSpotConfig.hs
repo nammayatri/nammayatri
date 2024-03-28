@@ -14,28 +14,20 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.HotSpotConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.HotSpotConfig.HotSpotConfig -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.HotSpotConfig.HotSpotConfig -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.HotSpotConfig.HotSpotConfig] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.HotSpotConfig.HotSpotConfig] -> m ())
 createMany = traverse_ create
 
-findConfigByMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.HotSpotConfig.HotSpotConfig -> m (Maybe (Domain.Types.HotSpotConfig.HotSpotConfig))
-findConfigByMerchantId (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findConfigByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.HotSpotConfig.HotSpotConfig -> m (Maybe Domain.Types.HotSpotConfig.HotSpotConfig))
+findConfigByMerchantId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.HotSpotConfig.HotSpotConfig -> m (Maybe (Domain.Types.HotSpotConfig.HotSpotConfig))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.HotSpotConfig.HotSpotConfig -> m (Maybe Domain.Types.HotSpotConfig.HotSpotConfig))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.HotSpotConfig.HotSpotConfig -> m ()
-updateByPrimaryKey Domain.Types.HotSpotConfig.HotSpotConfig {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.HotSpotConfig.HotSpotConfig -> m ())
+updateByPrimaryKey (Domain.Types.HotSpotConfig.HotSpotConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.blockRadius blockRadius,
@@ -57,13 +49,10 @@ updateByPrimaryKey Domain.Types.HotSpotConfig.HotSpotConfig {..} = do
       Se.Set Beam.weightOfTripEnd weightOfTripEnd,
       Se.Set Beam.weightOfTripStart weightOfTripStart
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.HotSpotConfig Domain.Types.HotSpotConfig.HotSpotConfig where
-  fromTType' Beam.HotSpotConfigT {..} = do
+  fromTType' (Beam.HotSpotConfigT {..}) = do
     pure $
       Just
         Domain.Types.HotSpotConfig.HotSpotConfig
@@ -89,7 +78,7 @@ instance FromTType' Beam.HotSpotConfig Domain.Types.HotSpotConfig.HotSpotConfig 
           }
 
 instance ToTType' Beam.HotSpotConfig Domain.Types.HotSpotConfig.HotSpotConfig where
-  toTType' Domain.Types.HotSpotConfig.HotSpotConfig {..} = do
+  toTType' (Domain.Types.HotSpotConfig.HotSpotConfig {..}) = do
     Beam.HotSpotConfigT
       { Beam.blockRadius = blockRadius,
         Beam.hotSpotExpiry = hotSpotExpiry,

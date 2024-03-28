@@ -28,20 +28,40 @@ type DecryptedCallbackRequest = CallbackRequestE 'AsUnencrypted
 
 instance EncryptedItem CallbackRequest where
   type Unencrypted CallbackRequest = (DecryptedCallbackRequest, HashSalt)
-  encryptItem (CallbackRequest {..}, salt) = do
-    customerPhone_ <- encryptItem $ (customerPhone, salt)
-    return CallbackRequest {customerPhone = customerPhone_, ..}
-
-  decryptItem CallbackRequest {..} = do
-    customerPhone_ <- fst <$> decryptItem customerPhone
-    return (CallbackRequest {customerPhone = customerPhone_, ..}, "")
+  encryptItem (entity, salt) = do
+    customerPhone_ <- encryptItem (customerPhone entity, salt)
+    pure
+      CallbackRequest
+        { createdAt = createdAt entity,
+          customerMobileCountryCode = customerMobileCountryCode entity,
+          customerName = customerName entity,
+          customerPhone = customerPhone_,
+          id = id entity,
+          merchantId = merchantId entity,
+          status = status entity,
+          updatedAt = updatedAt entity
+        }
+  decryptItem entity = do
+    customerPhone_ <- fst <$> decryptItem (customerPhone entity)
+    pure
+      ( CallbackRequest
+          { createdAt = createdAt entity,
+            customerMobileCountryCode = customerMobileCountryCode entity,
+            customerName = customerName entity,
+            customerPhone = customerPhone_,
+            id = id entity,
+            merchantId = merchantId entity,
+            status = status entity,
+            updatedAt = updatedAt entity
+          },
+        ""
+      )
 
 instance EncryptedItem' CallbackRequest where
   type UnencryptedItem CallbackRequest = DecryptedCallbackRequest
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
-data CallbackRequestStatus = PENDING | RESOLVED | CLOSED
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data CallbackRequestStatus = PENDING | RESOLVED | CLOSED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallbackRequestStatus)

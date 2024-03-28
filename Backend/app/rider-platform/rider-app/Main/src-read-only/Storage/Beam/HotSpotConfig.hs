@@ -35,8 +35,7 @@ data HotSpotConfigT f = HotSpotConfigT
   deriving (Generic, B.Beamable)
 
 instance B.Table HotSpotConfigT where
-  data PrimaryKey HotSpotConfigT f = HotSpotConfigId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey HotSpotConfigT f = HotSpotConfigId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = HotSpotConfigId . id
 
 type HotSpotConfig = HotSpotConfigT Identity

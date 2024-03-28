@@ -12,14 +12,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data OnSearchEventT f = OnSearchEventT
-  { bppId :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    errorCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    errorMessage :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    errorType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    messageId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { bppId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    errorCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    errorMessage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    errorType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    messageId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table OnSearchEventT where
 
 type OnSearchEvent = OnSearchEventT Identity
 
-$(enableKVPG (''OnSearchEventT) [('id)] [])
+$(enableKVPG ''OnSearchEventT ['id] [])
 
-$(mkTableInstances (''OnSearchEventT) "on_search_event")
+$(mkTableInstances ''OnSearchEventT "on_search_event")

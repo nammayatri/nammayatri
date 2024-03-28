@@ -13,7 +13,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Storage.Beam.RegistrationToken as Beam
 
 instance FromTType' Beam.RegistrationToken Domain.Types.RegistrationToken.RegistrationToken where
-  fromTType' Beam.RegistrationTokenT {..} = do
+  fromTType' (Beam.RegistrationTokenT {..}) = do
     pure $
       Just
         Domain.Types.RegistrationToken.RegistrationToken
@@ -35,7 +35,7 @@ instance FromTType' Beam.RegistrationToken Domain.Types.RegistrationToken.Regist
           }
 
 instance ToTType' Beam.RegistrationToken Domain.Types.RegistrationToken.RegistrationToken where
-  toTType' Domain.Types.RegistrationToken.RegistrationToken {..} = do
+  toTType' (Domain.Types.RegistrationToken.RegistrationToken {..}) = do
     Beam.RegistrationTokenT
       { Beam.attempts = attempts,
         Beam.authExpiry = authExpiry,

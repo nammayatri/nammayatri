@@ -16,10 +16,9 @@ import qualified Storage.Beam.AppInstalls as Beam
 import Storage.Queries.Transformers.AppInstalls
 
 instance FromTType' Beam.AppInstalls Domain.Types.AppInstalls.AppInstalls where
-  fromTType' Beam.AppInstallsT {..} = do
+  fromTType' (Beam.AppInstallsT {..}) = do
     appVersion' <- readAppVersion appVersion
     bundleVersion' <- readBundleVersion bundleVersion
-
     pure $
       Just
         Domain.Types.AppInstalls.AppInstalls
@@ -35,7 +34,7 @@ instance FromTType' Beam.AppInstalls Domain.Types.AppInstalls.AppInstalls where
           }
 
 instance ToTType' Beam.AppInstalls Domain.Types.AppInstalls.AppInstalls where
-  toTType' Domain.Types.AppInstalls.AppInstalls {..} = do
+  toTType' (Domain.Types.AppInstalls.AppInstalls {..}) = do
     Beam.AppInstallsT
       { Beam.appVersion = Kernel.Prelude.fmap Kernel.Utils.Version.versionToText appVersion,
         Beam.bundleVersion = Kernel.Prelude.fmap Kernel.Utils.Version.versionToText bundleVersion,

@@ -22,3 +22,9 @@ ALTER TABLE atlas_app.hot_spot_config ADD COLUMN weight_of_special_location inte
 ALTER TABLE atlas_app.hot_spot_config ADD COLUMN weight_of_trip_end integer NOT NULL;
 ALTER TABLE atlas_app.hot_spot_config ADD COLUMN weight_of_trip_start integer NOT NULL;
 ALTER TABLE atlas_app.hot_spot_config ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.hot_spot_config DROP COLUMN updated_at;
+ALTER TABLE atlas_app.hot_spot_config DROP COLUMN created_at;
