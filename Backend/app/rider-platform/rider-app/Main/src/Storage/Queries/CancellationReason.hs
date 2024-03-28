@@ -29,6 +29,7 @@ findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => CancellationStage -> m
 findAll cancStage = do
   seCaseCondition <- case cancStage of
     OnSearch -> pure $ Se.Is BeamCR.onSearch $ Se.Eq True
+    OnInit -> pure $ Se.Is BeamCR.onInit $ Se.Eq True
     OnConfirm -> pure $ Se.Is BeamCR.onConfirm $ Se.Eq True
     OnAssign -> pure $ Se.Is BeamCR.onAssign $ Se.Eq True
   findAllWithOptionsDb [Se.And [Se.Is BeamCR.enabled $ Se.Eq True, seCaseCondition]] (Se.Desc BeamCR.priority) Nothing Nothing
@@ -42,6 +43,7 @@ instance FromTType' BeamCR.CancellationReason CancellationReason where
             description = description,
             enabled = enabled,
             onSearch = onSearch,
+            onInit = onInit,
             onConfirm = onConfirm,
             onAssign = onAssign,
             priority = priority
@@ -54,6 +56,7 @@ instance ToTType' BeamCR.CancellationReason CancellationReason where
         BeamCR.description = description,
         BeamCR.enabled = enabled,
         BeamCR.onSearch = onSearch,
+        BeamCR.onInit = onInit,
         BeamCR.onConfirm = onConfirm,
         BeamCR.onAssign = onAssign,
         BeamCR.priority = priority

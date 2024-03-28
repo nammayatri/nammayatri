@@ -27,7 +27,11 @@ import Kernel.Prelude
 import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
-data CancellationStage = OnSearch | OnConfirm | OnAssign
+data CancellationStage
+  = OnSearch
+  | OnInit
+  | OnConfirm
+  | OnAssign
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Ord)
 
 deriving newtype instance FromField CancellationReasonCode
@@ -47,6 +51,7 @@ data CancellationReason = CancellationReason
     description :: Text,
     enabled :: Bool,
     onSearch :: Bool,
+    onInit :: Bool,
     onConfirm :: Bool,
     onAssign :: Bool,
     priority :: Int

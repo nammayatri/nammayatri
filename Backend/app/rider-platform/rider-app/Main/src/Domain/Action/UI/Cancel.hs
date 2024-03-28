@@ -56,6 +56,7 @@ import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverOffer as QDOffer
@@ -135,7 +136,6 @@ cancel bookingId _ req = do
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  when (booking.status == SRB.NEW) $ throwError (BookingInvalidStatus "NEW")
   bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
   mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
   cancellationReason <-
@@ -193,7 +193,7 @@ cancel bookingId _ req = do
 
 isBookingCancellable :: (CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> m Bool
 isBookingCancellable booking
-  | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT] = pure True
+  | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.NEW] = pure True
   | booking.status == SRB.TRIP_ASSIGNED = do
     ride <- QR.findActiveByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "BookingId: " <> booking.id.getId)
     pure (ride.status == Ride.NEW)
@@ -206,13 +206,14 @@ mkDomainCancelSearch ::
   m CancelSearch
 mkDomainCancelSearch personId estimateId = do
   estStatus <- QEstimate.getStatus estimateId >>= fromMaybeM (EstimateStatusDoesNotExist estimateId.getId)
-  let sendToBpp = estStatus /= DEstimate.NEW
-  buildCancelReq estimateId sendToBpp estStatus
+  let isEstimateNotNew = estStatus /= DEstimate.NEW
+  buildCancelReq estimateId isEstimateNotNew estStatus
   where
-    buildCancelReq estId sendToBpp estStatus = do
+    buildCancelReq estId isEstimateNotNew estStatus = do
       estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
       person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+      isValueAddNP <- CQVAN.isValueAddNP estimate.providerId
       let searchRequestId = estimate.requestId
       city <- case estimate.merchantOperatingCityId of
         Nothing -> pure merchant.defaultCity
@@ -226,7 +227,7 @@ mkDomainCancelSearch personId estimateId = do
             providerId = estimate.providerId,
             searchReqId = searchRequestId,
             estimateStatus = estStatus,
-            sendToBpp,
+            sendToBpp = isEstimateNotNew && isValueAddNP,
             merchant = merchant,
             vehicleVariant = estimate.vehicleVariant,
             ..
