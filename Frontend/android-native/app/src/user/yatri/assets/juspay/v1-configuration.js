@@ -33,7 +33,6 @@ window.getMerchantConfig = function () {
       "ACCESSIBILITY_TEXT",
       "TO_CATER_YOUR_SPECIFIC_NEEDS",
       "PLEASE_ENABLE_LOCATION_PERMISSION",
-      "MOST_LOVED_APP",
       "REPORT_ISSUE_CHAT_PLACEHOLDER",
       "CALL_SUPPORT_DESCRIPTION" ,
       "WE_HOPE_THE_ISSUE_IS_RESOLVED",
@@ -175,6 +174,37 @@ window.getMerchantConfig = function () {
       "PLEASE_STAY_CALM_TEAM_ALERTED": "ദയവായി നിങ്ങൾക്ക് നിരീക്ഷണം നിരസിച്ചിരിക്കാനായി യാത്ര സുരക്ഷാ ടീമിനെ അറിയിക്കുക!",
       "INDICATION_TO_EMERGENCY_CONTACTS": "ഈ ഒരു പരീക്ഷണ പ്രവർത്തനം ആകുന്നത് നിങ്ങളുടെ അത്തം കാൾമുറിക്കുകളെ അറിയിപ്പ് ചെയ്യുന്നതാണെന്ന് യാത്ര പരിചയകൾ തെളിയിക്കും"
     },
+    "hindiStrings" : {
+      "MOST_LOVED_APP" : "",
+      "REQUEST_AUTO_RIDE" : "सवारी का अनुरोध करें",
+      "CURRENTLY_WE_ARE_LIVE_IN_": "वर्तमान में हम कोच्चि में रहते हैं, आप वहां हमारी सेवाओं का आनंद ले सकते हैं",
+      "DRIVER_PICKUP_CHARGES": "सेवा शुल्क",
+      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "आप यात्री सहायता टीम को कॉल करने वाले हैं। क्या आप आगे बढ़ना चाहते हैं?",
+      "SUCCESSFUL_ONBOARD" : "आपने \nयात्री पर सफलतापूर्वक साइन इन कर लिया है",
+      "ABOUT_REFERRAL_PROGRAM_DISCRIPTION": "रेफ़रल कार्यक्रम ड्राइवरों को अधिक सवारी स्वीकार करने, कम रद्द करने और योग्य ड्राइवरों को पहचानने और पुरस्कृत करके आपको बेहतर सेवा देने के लिए प्रोत्साहित करता है। \n\n आप ड्राइवर का रेफरल कोड दर्ज करके मदद कर सकते हैं और सवारी की गुणवत्ता में सुधार कर सकते हैं यात्री समुदाय!",
+      "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "\nआप अपने यात्री ड्राइवर से पूछकर एक रेफरल कोड प्राप्त कर सकते हैं।",
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "आपका स्थान हमारे सिस्टम को आस-पास की सभी टैक्सियों को मैप करने और आपको यथासंभव त्वरित यात्रा दिलाने में मदद करता है।",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "यात्री में आपका स्वागत है \nसवारी की बुकिंग शुरू करने के लिए, कृपया हमें आपको ढूंढने की अनुमति दें!",
+      "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
+      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
+      "CALL_NAMMA_YATRI_SUPPORT" : "यात्री सहायता को कॉल करें",
+      "YOUR_FEEDBACK_HELPS_US" : "आपका फीडबैक हमें यात्रा अनुभव को बेहतर बनाने में मदद करता है",
+      "LEARN_HOW_TEXT" : "जानें कि यात्री आपकी आवश्यकताओं को कैसे पूरा करता है",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ड्राइवर जोड़ने की सीमा ₹10 की वृद्धि में है",
+      "ACCESSIBILITY_TEXT" : "यात्री, अब आपके लिए अनुकूलित!",
+      "TO_CATER_YOUR_SPECIFIC_NEEDS" : "आपकी विशिष्ट आवश्यकताओं को पूरा करने के लिए, हमने यात्री की कुछ विशेषताओं को अनुकूलित किया है।",
+      "PLEASE_ENABLE_LOCATION_PERMISSION" : "सवारी की तलाश शुरू करने के लिए कृपया सेटिंग ऐप से यात्री के लिए स्थान अनुमतियाँ सक्षम करें।",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "अपनी समस्या बताएं। यात्री 24 घंटे के अंदर इसे हल करने का प्रयास करेगा।",
+      "CALL_SUPPORT_DESCRIPTION" : "आप यात्री सहायता को कॉल करने वाले हैं। क्या आप आगे बढ़ना चाहते हैं?",
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "हमें उम्मीद है कि समस्या सुलझ गई है, किसी भी प्रश्न के लिए बेझिझक हमें support@nammayatri.in पर लिखें।",
+      "WHO_CAN_TRACK_YOUR_RIDE": "यात्री ऐप पर आपकी सवारी को कौन ट्रैक कर सकता है",
+      "ALERT_SAFETY_TEAM": "अलर्ट यात्री सुरक्षा टीम",
+      "RECOMMEND_EMERGENCY_CONTACTS_TO_INSTALL": "हम बेहतर ट्रैकिंग अनुभव के लिए आपातकालीन संपर्कों को यात्री इंस्टॉल करने की सलाह देते हैं",
+      "SAFETY_TEAM_WILL_BE_ALERTED": "एसओएस पर यात्री सुरक्षा टीम को सूचित किया जाएगा",
+      "SHARE_RIDE_DESCRIPTION": "इसे चुनने पर, यात्री आपातकालीन संपर्कों को ऐप पुश नोटिफिकेशन भेजेगा",
+      "PLEASE_STAY_CALM_TEAM_ALERTED": "कृपया शांत रहें, यात्री सुरक्षा दल सतर्क है!",
+      "INDICATION_TO_EMERGENCY_CONTACTS": "यात्री आपके आपातकालीन संपर्कों को संकेत देगा कि यह एक परीक्षण ड्रिल है, जो तनाव मुक्त अनुभव सुनिश्चित करेगा।"
+    },
     "languageList": [{
       "name": "English",
       "value": "EN_US",
@@ -183,6 +213,10 @@ window.getMerchantConfig = function () {
       "name": "മലയാളം",
       "value": "ML_IN",
       "subTitle": "Malayalam"
+    },{
+      "name": "हिंदी",
+      "value": "HI_IN",
+      "subTitle": "Hindi"
     }],
     "bannerConfig" : {
       "backgroundColor" : "#F0FAF0"

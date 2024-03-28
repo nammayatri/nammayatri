@@ -595,7 +595,7 @@ public class MainActivity extends AppCompatActivity {
             json.put("requestId", UUID.randomUUID());
             json.put("service", getService());
             json.put("betaAssets", false);
-            payload = getInnerPayload("initiate");
+            payload = getInnerPayload(payload,"initiate");
             payload.put("onCreateTimeStamp", onCreateTimeStamp);
             payload.put("initiateTimeStamp" , initiateTimeStamp);
             json.put(PaymentConstants.PAYLOAD, payload);
@@ -782,7 +782,7 @@ public class MainActivity extends AppCompatActivity {
     private void processDeeplink(String viewParam, String deepLinkJson){
         try {
             JSONObject processPayloadDL = new JSONObject();
-            JSONObject innerPayloadDL = getInnerPayload("process");
+            JSONObject innerPayloadDL = getInnerPayload(new JSONObject(),"process");
             if (viewParam != null && deepLinkJson != null) {
                 innerPayloadDL.put("view_param", viewParam)
                         .put("deepLinkJSON", deepLinkJson)
@@ -857,7 +857,7 @@ public class MainActivity extends AppCompatActivity {
                 innerPayload.put("fullNotificationBody", fullNotification);
             }
             if (jsonData.has("notification_type") && jsonData.getString("notification_type").equals("CHAT_MESSAGE")) {
-                innerPayload = getInnerPayload("OpenChatScreen");
+                getInnerPayload(innerPayload, "OpenChatScreen");
                 NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 notificationManager.cancel(NotificationUtils.chatNotificationId);
                 innerPayload.put("notification_type", "CHAT_MESSAGE");
@@ -867,7 +867,7 @@ public class MainActivity extends AppCompatActivity {
                 String type = jsonData.getString("notification_type");
                 innerPayload.put("notification_type", type);
                 if (type.equals("NEW_MESSAGE")) {
-                    innerPayload = getInnerPayload("callDriverAlert");
+                    getInnerPayload(innerPayload, "callDriverAlert");
                     innerPayload.put("id", id)
                             .put("popType", type);
                 }
@@ -1079,8 +1079,7 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    private JSONObject getInnerPayload(String action) throws JSONException{
-        JSONObject payload = new JSONObject();
+    private JSONObject getInnerPayload(JSONObject payload, String action) throws JSONException{
         String appName = "";
         try{
             appName = context.getApplicationInfo().loadLabel(context.getPackageManager()).toString();

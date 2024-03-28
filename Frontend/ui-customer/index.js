@@ -200,10 +200,10 @@ window.onMerchantEvent = function (_event, globalPayload) {
     console.warn("Process called");
     window.__payload.sdkVersion = "2.0.1"
      try {
-      const parsedPayload = JSON.parse(payload);
+      const parsedPayload = window.__payload;
       if (
         parsedPayload.payload &&
-        parsedPayload.payload.hasOwnProperty("initiateTimeStamp") &&
+        Object.prototype.hasOwnProperty.call(parsedPayload.payload,"initiateTimeStamp") &&
         typeof window.events.initAppToProcessDuration === "undefined" &&
         typeof window.events.onCreateToProcessDuration === "undefined"
       ) {
@@ -212,32 +212,29 @@ window.onMerchantEvent = function (_event, globalPayload) {
         window.events.initAppToProcessDuration =
           new Date().getTime() - parsedPayload.payload.initiateTimeStamp;
       }
-    } catch (err) {}
-    if (clientPaylod.action == "notification") {
-      if (clientPaylod.notification_content && clientPaylod.notification_content.type) {
-        window.callNotificationCallBack(clientPaylod.notification_content.type);
-      }
-    } else if (clientPaylod.action == "OpenChatScreen") { 
-      if (window.openChatScreen) {
-        window.openChatScreen();
-      }
+    } catch (err) {
+      console.error(err)
     }
-    else {
+    if (clientPaylod.action == "notification" && clientPaylod.notification_content && clientPaylod.notification_content.type) {
+      window.callNotificationCallBack(clientPaylod.notification_content.type);
+    } else if ((clientPaylod.action == "OpenChatScreen" || (window.__OS == "IOS" && clientPaylod.notification_type == "CHAT_MESSAGE")) && window.openChatScreen) {
+      window.openChatScreen();
+    } else {
       console.log("client Payload: ", clientPaylod);
       if(clientPaylod.notification_type == "SOS_MOCK_DRILL" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL"){
         purescript.mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL", ""))();
       }else if(clientPaylod.notification_type == "SOS_MOCK_DRILL_NOTIFY" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL_NOTIFY"){
         purescript.mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL_NOTIFY", ""))();
-      }else if(clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE"){
-        purescript.main(makeEvent("CHAT_MESSAGE", ""))(true)();
+      }else if(clientPaylod.notification_type == "CHAT_MESSAGE" || (clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE")){
+        purescript.main(makeEvent("CHAT_MESSAGE", ""))(!clientPaylod.onNewIntent)();
       }else if (clientPaylod.viewParamNewIntent && clientPaylod.viewParamNewIntent.slice(0, 8) == "referrer") {
         purescript.onNewIntent(makeEvent("REFERRAL", clientPaylod.viewParamNewIntent.slice(9)))();
       }else if (clientPaylod.viewParam && clientPaylod.viewParam.slice(0, 8) == "referrer") {
         purescript.onNewIntent(makeEvent("REFERRAL_NEW_INTENT", clientPaylod.viewParam.slice(9)))();
-      }else if(clientPaylod.notification_type == "SAFETY_ALERT_DEVIATION"){
-        purescript.main(makeEvent("SAFETY_ALERT_DEVIATION", ""))(true)();
-      }else {
-        purescript.main(makeEvent("", ""))(true)();
+      }else if(clientPaylod.notification_type == "SAFETY_ALERT_DEVIATION" || (clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SAFETY_ALERT_DEVIATION")){
+        purescript.main(makeEvent("SAFETY_ALERT_DEVIATION", ""))(!clientPaylod.onNewIntent)();
+      }else if (!clientPaylod.notification_type || !clientPaylod.onNewIntent) {
+        purescript.main(makeEvent("", ""))(!clientPaylod.onNewIntent)();
       }
     }
   }
