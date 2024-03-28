@@ -154,6 +154,17 @@ function callInitiateResult () {
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
 }
 
+function shouldRefresh() {
+  const currentDate = new Date();
+  const diff = Math.abs(previousDateObject - currentDate) / 1000;
+  const token = (window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN"));
+  const currentState = (window.JBridge.getKeysInSharedPref("LOCAL_STAGE"));
+  return ((diff > refreshThreshold) && 
+      (token != "__failed") && 
+      (token != "(null)") &&
+      ((currentState == "RideStarted") || currentState == "RideAccepted"))
+}
+
 window.onMerchantEvent = function (_event, globalPayload) {
   console.log(globalPayload);
   window.__payload = JSON.parse(globalPayload);
@@ -217,7 +228,7 @@ window.onMerchantEvent = function (_event, globalPayload) {
     }
     if (clientPaylod.action == "notification" && clientPaylod.notification_content && clientPaylod.notification_content.type) {
       window.callNotificationCallBack(clientPaylod.notification_content.type);
-    } else if ((clientPaylod.action == "OpenChatScreen" || (window.__OS == "IOS" && clientPaylod.notification_type == "CHAT_MESSAGE")) && window.openChatScreen) {
+    } else if ((clientPaylod.action == "OpenChatScreen" || (window.__OS == "IOS" && clientPaylod.notification_type == "CHAT_MESSAGE")) && window.openChatScreen && !shouldRefresh()) {
       window.openChatScreen();
     } else {
       console.log("client Payload: ", clientPaylod);
@@ -295,14 +306,7 @@ window.onActivityResult = function (requestCode, resultCode, bundle) {
 }
 
 function refreshFlow(){
-  const currentDate = new Date();
-  const diff = Math.abs(previousDateObject - currentDate) / 1000;
-  const token = (window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN"));
-  const currentState = (window.JBridge.getKeysInSharedPref("LOCAL_STAGE"));
-  if ((diff > refreshThreshold) && 
-      (token != "__failed") && 
-      (token != "(null)") &&
-      ((currentState == "RideStarted") || currentState == "RideAccepted")){
+  if (shouldRefresh()){
     if(window.storeCallBackMessageUpdated){
       window.__PROXY_FN[window.storeCallBackMessageUpdated] = undefined;
     }
