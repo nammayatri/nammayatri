@@ -15,7 +15,7 @@ let outputPath =
       , _domainHandler = outputPrefix ++ "Domain/Action/UI"
       , _domainType = outputPrefixReadOnly ++ "Domain/Types"
       , _servantApi = outputPrefixReadOnly ++ "API/Action/UI"
-      , _sql = migrationPath
+      , _sql = [ { _1 = migrationPath, _2 = "atlas_app" } ]
       , _purescriptFrontend = ""
       }
 
@@ -152,10 +152,7 @@ let defaultImports =
 
 in  { _output = outputPath
     , _storageConfig =
-      { _dbName = "atlas_app"
-      , _sqlTypeMapper = sqlMapper
-      , _extraDefaultFields = extraDefaultFields
-      }
+      { _sqlTypeMapper = sqlMapper, _extraDefaultFields = extraDefaultFields }
     , _defaultImports = defaultImports
     , _defaultTypeImportMapper = defaultTypeImportMapper
     , _generate =
