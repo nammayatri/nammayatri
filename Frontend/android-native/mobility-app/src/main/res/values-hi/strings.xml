@@ -62,4 +62,7 @@
     <string name="zone_pickup_extra">जोन पिकअप अतिरिक्त</string>
     <string name="you_are_near_a_special_pickup_zone">आप एक विशेष \n पिकअप क्षेत्र के पास हैं</string>
     <string name="zone_pickup">पिकअप जोन</string>
+    <string name="location_is_too_far">स्थान बहुत दूर है!</string>
+    <string name="update_navigation">नेविगेशन अपडेट करें</string>
+    <string name="updated_pickup_location">पिकअप स्थान अपडेट कर दिया गया है!</string>
 </resources>

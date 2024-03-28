@@ -62,4 +62,7 @@
     <string name="zone_pickup_extra">மண்டலம் பிக்கப் எக்ஸ்ட்ரா</string>
     <string name="you_are_near_a_special_pickup_zone">நீங்கள் சிறப்பு மண்டலப் \n பிக்கப் அருகில் உள்ளீர்கள்</string>
     <string name="zone_pickup">ஜோன் பிக்கப்</string>
+    <string name="location_is_too_far">இடம் வெகு தொலைவில் உள்ளது!</string>
+    <string name="update_navigation">வழிசெலுத்தலைப் புதுப்பிக்கவும்</string>
+    <string name="updated_pickup_location">பிக்-அப் இடம் புதுப்பிக்கப்பட்டது!</string>
 </resources>

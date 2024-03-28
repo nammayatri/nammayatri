@@ -65,4 +65,7 @@
     <string name="zone_pickup_extra">Zone pickup extra</string>
     <string name="you_are_near_a_special_pickup_zone">You are near a special \npickup zone</string>
     <string name="zone_pickup">Zone Pickup</string>
+    <string name="location_is_too_far">Location is too far!</string>
+    <string name="update_navigation">Update Navigation</string>
+    <string name="updated_pickup_location">Pickup location has been updated!</string>
 </resources>

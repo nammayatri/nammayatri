@@ -615,6 +615,15 @@ export const parseAddress = function (json) {
   return JSON.parse(json);
 };
 
+export const methodArgumentCount = function (functionName) {
+  try {
+    return window.JBridge.methodArgumentCount(functionName);
+  } catch (error) {
+    console.log("error inside argumentCount : " + error)
+    return 0;
+  }
+}
+
 export const drawRoute = function (data, style, trackColor, isActual, sourceMarkerConfig, destMarkerConfig, polylineWidth, type, mapRouteConfig) {
   console.log("I AM HERE ------------------ IN DRAW ROUTE");
   try {
@@ -635,16 +644,6 @@ export const updateMarker = function (markerConfig) {
     }
   }
 }
-
-export const methodArgumentCount = function (functionName) {
-  try {
-    return window.JBridge.methodArgumentCount(functionName);
-  } catch (error) {
-    console.log("error inside argumentCount : " + error)
-    return 0;
-  }
-}
-
 
 export const updateRoute = (configObj) => {
   if (window.JBridge.updateRoute) {
@@ -1837,6 +1836,18 @@ export const locateOnMap = (configObj) => {
     }
   }
 };
+
+export const storeCallBackEditLocation = function (cb, action ) {
+  try {
+    if(JBridge.storeCallBackEditLocation){
+      const callback = callbackMapper.map(function (editLocation) {
+        cb(action(editLocation))();
+      });
+      window.JBridge.storeCallBackEditLocation(callback);}
+  } catch (error) {
+    console.log("Error occurred in storeCallBackEditLocation ------", error);
+  }
+}
 
 export const exitLocateOnMap = function (str) {
   JBridge.exitLocateOnMap(str);

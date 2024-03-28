@@ -48,5 +48,6 @@
     <string name="message_from_customer">ഉപഭോക്താവിൽ നിന്നുള്ള സന്ദേശം</string>
     <string name="go_to">ഗോ റ്റു</string>
     <string name="call_support">സഹായം അഴകുക</string>
+    <string name="location_is_too_far">ലൊക്കേഷൻ വളരെ അകലെയാണ്!</string>
 
 </resources>
