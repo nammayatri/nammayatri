@@ -612,6 +612,7 @@ public class MainActivity extends AppCompatActivity {
                 mFirebaseAnalytics.logEvent("ny_hyper_" + event,null);
                 switch (event) {
                     case "initiate_result":
+                        Log.i("APP_PERF", "INITIATE_RESULT : " + System.currentTimeMillis());
                         try {
                             JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
 
