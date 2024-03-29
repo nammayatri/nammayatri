@@ -45,7 +45,7 @@ data DOnSearch = DOnSearch
 
 data DQuote = DQuote
   { bppItemId :: Text,
-    price :: HighPrecMoney,
+    price :: Price,
     vehicleType :: DStation.FRFSVehicleType,
     stations :: [DStation],
     _type :: Quote.FRFSQuoteType

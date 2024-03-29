@@ -21,6 +21,7 @@ data FRFSQuoteT f = FRFSQuoteT
     bppSubscriberUrl :: B.C f Kernel.Prelude.Text,
     fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     price :: B.C f Kernel.Types.Common.HighPrecMoney,
     providerDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     providerId :: B.C f Kernel.Prelude.Text,

@@ -89,7 +89,7 @@ parseFulfillments item fulfillments fulfillmentId = do
     if isParentIdAvailable fulfillmentStops
       then fulfillmentStops & sequenceStops & mapWithIndex (\idx stop -> mkDStation stop (Just $ idx + 1))
       else traverse (\s -> mkDStation s Nothing) fulfillmentStops
-  price <- item.itemPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Price not found")
+  price <- item.itemPrice >>= Utils.parsePrice & fromMaybeM (InvalidRequest "Price not found")
   vehicleCategory <- fulfillment.fulfillmentVehicle >>= (.vehicleCategory) & fromMaybeM (InvalidRequest "VehicleType not found")
   vehicleType <- vehicleCategory & castVehicleVariant & fromMaybeM (InvalidRequest "VehicleType not found")
 

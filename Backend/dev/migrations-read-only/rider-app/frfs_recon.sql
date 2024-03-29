@@ -36,3 +36,8 @@ ALTER TABLE atlas_app.frfs_recon ADD COLUMN beneficiary_bank_account text ;
 
 ------- SQL updates -------
 ALTER TABLE atlas_app.frfs_recon ADD COLUMN transaction_uuid text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_recon ADD COLUMN currency text ;
