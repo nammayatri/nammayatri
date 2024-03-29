@@ -95,6 +95,45 @@ findAllDriversEligibleForService serviceName merchantId merchantOperatingCity = 
         ]
     ]
 
+findAllDriversToSendManualPaymentLinkWithLimit ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  DPlan.ServiceNames ->
+  Id Merchant ->
+  Id MOC.MerchantOperatingCity ->
+  UTCTime ->
+  Int ->
+  m [DriverPlan]
+findAllDriversToSendManualPaymentLinkWithLimit serviceName merchantId opCityId endTime limit = do
+  findAllWithOptionsKV'
+    [ Se.And
+        [ Se.Is BeamDF.merchantId $ Se.Eq (Just merchantId.getId),
+          Se.Is BeamDF.merchantOpCityId $ Se.Eq (Just opCityId.getId),
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.enableServiceUsageCharge $ Se.Eq (Just True),
+          Se.Is BeamDF.lastPaymentLinkSentAtIstDate $ Se.Not $ Se.Eq (Just endTime)
+        ]
+    ]
+    (Just limit)
+    Nothing
+
+updateLastPaymentLinkSentAtDateByDriverIdAndServiceName ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person ->
+  DPlan.ServiceNames ->
+  UTCTime ->
+  m ()
+updateLastPaymentLinkSentAtDateByDriverIdAndServiceName (Id driverId) serviceName lastPaymentLinkSentAtIstDate = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDF.lastPaymentLinkSentAtIstDate (Just lastPaymentLinkSentAtIstDate),
+      Se.Set BeamDF.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamDF.driverId (Se.Eq driverId),
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
+        ]
+    ]
+
 updateEnableServiceUsageChargeByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Bool -> DPlan.ServiceNames -> m ()
 updateEnableServiceUsageChargeByDriverIdAndServiceName (Id driverId) value serviceName = do
   now <- getCurrentTime
@@ -290,7 +329,8 @@ instance FromTType' BeamDF.DriverPlan DriverPlan where
             merchantId = merchantId'',
             merchantOpCityId = merchantOpCityId'',
             payerVpa = payerVpa,
-            subscriptionServiceRelatedData = subscriptionServiceRelatedData'
+            subscriptionServiceRelatedData = subscriptionServiceRelatedData',
+            lastPaymentLinkSentAtIstDate = lastPaymentLinkSentAtIstDate
           }
       verifyCommodityData dataPoints = do
         let data' = catMaybes dataPoints
@@ -319,5 +359,6 @@ instance ToTType' BeamDF.DriverPlan DriverPlan where
         BeamDF.merchantId = Just merchantId.getId,
         BeamDF.payerVpa = payerVpa,
         BeamDF.merchantOpCityId = Just merchantOpCityId.getId,
-        BeamDF.rentedVehicleNumber = commodityData >>= (.rentedVehicleNumber)
+        BeamDF.rentedVehicleNumber = commodityData >>= (.rentedVehicleNumber),
+        BeamDF.lastPaymentLinkSentAtIstDate = lastPaymentLinkSentAtIstDate
       }

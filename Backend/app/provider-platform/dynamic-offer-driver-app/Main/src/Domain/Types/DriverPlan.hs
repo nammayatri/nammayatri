@@ -38,12 +38,13 @@ data DriverPlan = DriverPlan
     payerVpa :: Maybe Text,
     autoPayStatus :: Maybe DI.DriverAutoPayStatus,
     serviceName :: DPlan.ServiceNames,
+    lastPaymentLinkSentAtIstDate :: Maybe UTCTime,
     enableServiceUsageCharge :: Bool,
     merchantId :: Id Merchant,
     merchantOpCityId :: Id MerchantOperatingCity,
     subscriptionServiceRelatedData :: SubscriptionServiceRelatedData
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq, Ord)
 
 newtype CommodityData = CommodityData
   { rentedVehicleNumber :: Maybe Text
