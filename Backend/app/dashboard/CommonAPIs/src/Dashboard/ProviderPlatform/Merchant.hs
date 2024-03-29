@@ -542,7 +542,7 @@ data VehicleClassCheckType = Infix | Prefix | Suffix
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data DocumentType = RC | DL | RCInsurance
+data DocumentType = RC | DL
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 

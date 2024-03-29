@@ -68,6 +68,7 @@ retryDocumentVerificationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               Verification.verifyDLAsync person.merchantId person.merchantOperatingCityId $
                 Verification.VerifyDLAsyncReq {dlNumber = documentNumber, dateOfBirth = dob, driverId = person.id.getId}
             mkNewVerificationEntity verificationReq verifyRes.requestId
+        _ -> pure ()
     else do
       IVQuery.updateStatus "source_down_failed" verificationReq.requestId
   return Complete
@@ -77,6 +78,10 @@ retryDocumentVerificationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       case docType of
         Image.VehicleRegistrationCertificate -> DTO.RC
         Image.DriverLicense -> DTO.DL
+        Image.VehiclePermit -> DTO.RC
+        Image.VehiclePUC -> DTO.RC
+        Image.VehicleInsurance -> DTO.RC
+        Image.VehicleFitnessCertificate -> DTO.RC
 
     mkNewVerificationEntity verificationReq requestId = do
       now <- getCurrentTime

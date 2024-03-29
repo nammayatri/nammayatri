@@ -23,6 +23,7 @@ import qualified Domain.Types.Image as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.VehicleRegistrationCertificate as RC
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
@@ -43,13 +44,15 @@ import qualified Tools.Verification as Verification
 
 data ImageValidateRequest = ImageValidateRequest
   { image :: Text,
-    imageType :: Domain.ImageType
+    imageType :: Domain.ImageType,
+    rcId :: Maybe (Id RC.VehicleRegistrationCertificate) -- for PUC, Permit, Insurance and Fitness
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
 data ImageValidateFileRequest = ImageValidateFileRequest
   { image :: FilePath,
-    imageType :: Domain.ImageType
+    imageType :: Domain.ImageType,
+    rcId :: Maybe (Id RC.VehicleRegistrationCertificate) -- for PUC, Permit, Insurance and Fitness
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -58,6 +61,7 @@ instance FromMultipart Tmp ImageValidateFileRequest where
     ImageValidateFileRequest
       <$> fmap fdPayload (lookupFile "image" form)
       <*> fmap (read . T.unpack) (lookupInput "imageType" form)
+      <*> fmap (readMaybe . T.unpack) (lookupInput "rcId" form)
 
 newtype ImageValidateResponse = ImageValidateResponse
   {imageId :: Id Domain.Image}
@@ -110,9 +114,9 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
       throwError (ImageValidationExceedLimit personId.getId)
 
   imagePath <- createPath personId.getId merchantId.getId imageType
-  _ <- fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
-  imageEntity <- mkImage personId merchantId imagePath imageType False
-  _ <- Query.create imageEntity
+  void $ fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
+  imageEntity <- mkImage personId merchantId imagePath imageType False rcId
+  Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
   validationOutput <-
@@ -120,8 +124,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
       Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
   when validationOutput.validationAvailable $ do
     checkErrors imageEntity.id imageType validationOutput.detectedImage
-  _ <- Query.updateToValid True imageEntity.id
-
+  Query.updateToValid True imageEntity.id
   return $ ImageValidateResponse {imageId = imageEntity.id}
   where
     checkErrors id_ _ Nothing = throwImageError id_ ImageValidationFailed
@@ -137,6 +140,10 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
 castImageType :: Domain.ImageType -> Verification.ImageType
 castImageType Domain.DriverLicense = Verification.DriverLicense
 castImageType Domain.VehicleRegistrationCertificate = Verification.VehicleRegistrationCertificate
+castImageType Domain.VehiclePermit = Verification.VehiclePermit
+castImageType Domain.VehiclePUC = Verification.VehiclePUC
+castImageType Domain.VehicleInsurance = Verification.VehicleInsurance
+castImageType Domain.VehicleFitnessCertificate = Verification.VehicleFitnessCertificate
 
 validateImageFile ::
   Bool ->
@@ -145,7 +152,7 @@ validateImageFile ::
   Flow ImageValidateResponse
 validateImageFile isDashboard (personId, merchantId, merchantOpCityId) ImageValidateFileRequest {..} = do
   image' <- L.runIO $ base64Encode <$> BS.readFile image
-  validateImage isDashboard (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType
+  validateImage isDashboard (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcId
 
 mkImage ::
   (MonadGuid m, MonadTime m) =>
@@ -154,8 +161,9 @@ mkImage ::
   Text ->
   Domain.ImageType ->
   Bool ->
+  Maybe (Id RC.VehicleRegistrationCertificate) ->
   m Domain.Image
-mkImage personId_ merchantId s3Path imageType_ isValid = do
+mkImage personId_ merchantId s3Path imageType_ isValid mbRcId = do
   id <- generateGUID
   now <- getCurrentTime
   return $
@@ -167,6 +175,7 @@ mkImage personId_ merchantId s3Path imageType_ isValid = do
         imageType = imageType_,
         isValid,
         failureReason = Nothing,
+        rcId = getId <$> mbRcId,
         createdAt = now,
         updatedAt = now
       }

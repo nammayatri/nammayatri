@@ -153,12 +153,14 @@ data DocumentType
 
 data UploadDocumentReq = UploadDocumentReq
   { imageBase64 :: Text,
-    imageType :: DocumentType
+    imageType :: DocumentType,
+    rcId :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-newtype UploadDocumentTReq = UploadDocumentTReq
-  { imageType :: DocumentType
+data UploadDocumentTReq = UploadDocumentTReq
+  { imageType :: DocumentType,
+    rcId :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON)
 
