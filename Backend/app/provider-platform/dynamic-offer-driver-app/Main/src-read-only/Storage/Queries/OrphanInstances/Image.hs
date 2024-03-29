@@ -23,6 +23,7 @@ instance FromTType' Beam.Image Domain.Types.Image.Image where
             isValid = isValid,
             merchantId = Kernel.Types.Id.Id merchantId,
             personId = Kernel.Types.Id.Id personId,
+            rcId = rcId,
             s3Path = s3Path,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -37,6 +38,7 @@ instance ToTType' Beam.Image Domain.Types.Image.Image where
         Beam.isValid = isValid,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.personId = Kernel.Types.Id.getId personId,
+        Beam.rcId = rcId,
         Beam.s3Path = s3Path,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

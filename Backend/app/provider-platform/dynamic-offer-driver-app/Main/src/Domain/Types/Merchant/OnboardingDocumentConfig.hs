@@ -25,7 +25,7 @@ data VehicleClassCheckType = Infix | Prefix | Suffix deriving (Generic, ToJSON, 
 
 $(mkBeamInstancesForEnum ''VehicleClassCheckType)
 
-data DocumentType = RC | DL | RCInsurance deriving (Generic, ToJSON, FromJSON, Read, Eq, Ord, Show)
+data DocumentType = RC | DL deriving (Generic, ToJSON, FromJSON, Read, Eq, Ord, Show)
 
 $(mkBeamInstancesForEnum ''DocumentType)
 

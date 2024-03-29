@@ -272,10 +272,11 @@ Image:
     imageType: ImageType
     isValid: Bool
     failureReason: Maybe DriverOnboardingError
+    rcId: Maybe Text
   excludedFields: [merchantOperatingCityId]
   types:
     ImageType:
-      enum: "DriverLicense,VehicleRegistrationCertificate"
+      enum: "DriverLicense,VehicleRegistrationCertificate,VehiclePermit,VehicleInsurance,VehiclePUC,VehicleFitnessCertificate"
   constraints:
     id: PrimaryKey
     personId: SecondaryKey

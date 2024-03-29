@@ -485,7 +485,6 @@ castDDocumentType :: DODC.DocumentType -> Common.DocumentType
 castDDocumentType = \case
   DODC.RC -> Common.RC
   DODC.DL -> Common.DL
-  DODC.RCInsurance -> Common.RCInsurance
 
 ---------------------------------------------------------------------
 onboardingDocumentConfigUpdate ::
@@ -545,7 +544,6 @@ castDocumentType :: Common.DocumentType -> DODC.DocumentType
 castDocumentType = \case
   Common.RC -> DODC.RC
   Common.DL -> DODC.DL
-  Common.RCInsurance -> DODC.RCInsurance
 
 ---------------------------------------------------------------------
 onboardingDocumentConfigCreate ::

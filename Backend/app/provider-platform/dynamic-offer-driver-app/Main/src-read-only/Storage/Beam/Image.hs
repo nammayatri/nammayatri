@@ -20,6 +20,7 @@ data ImageT f = ImageT
     isValid :: B.C f Kernel.Prelude.Bool,
     merchantId :: B.C f Kernel.Prelude.Text,
     personId :: B.C f Kernel.Prelude.Text,
+    rcId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     s3Path :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

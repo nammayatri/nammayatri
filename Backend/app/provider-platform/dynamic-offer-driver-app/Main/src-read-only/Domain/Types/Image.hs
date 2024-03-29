@@ -18,12 +18,20 @@ data Image = Image
     isValid :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    rcId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     s3Path :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data ImageType = DriverLicense | VehicleRegistrationCertificate deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ImageType
+  = DriverLicense
+  | VehicleRegistrationCertificate
+  | VehiclePermit
+  | VehicleInsurance
+  | VehiclePUC
+  | VehicleFitnessCertificate
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ImageType)

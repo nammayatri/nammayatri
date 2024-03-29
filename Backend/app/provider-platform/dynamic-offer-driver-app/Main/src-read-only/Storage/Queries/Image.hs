@@ -64,6 +64,7 @@ updateByPrimaryKey (Domain.Types.Image.Image {..}) = do
       Se.Set Beam.isValid isValid,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
+      Se.Set Beam.rcId rcId,
       Se.Set Beam.s3Path s3Path,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now

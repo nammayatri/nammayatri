@@ -70,7 +70,6 @@ instance FromTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig wh
     supportedVehicleClasses' <- case documentType of
       Domain.DL -> Domain.DLValidClasses <$> valueToVehicleClassMap supportedVehicleClassesJSON
       Domain.RC -> Domain.RCValidClasses <$> valueToVehicleClassMap supportedVehicleClassesJSON
-      _ -> return $ Domain.RCValidClasses []
     pure $
       Just
         OnboardingDocumentConfig
