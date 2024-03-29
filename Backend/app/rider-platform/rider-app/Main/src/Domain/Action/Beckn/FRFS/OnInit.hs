@@ -40,7 +40,7 @@ import qualified Tools.Payment as Payment
 
 data DOnInit = DOnInit
   { providerId :: Text,
-    totalPrice :: HighPrecMoney,
+    totalPrice :: Price,
     fareBreakUp :: [DFareBreakUp],
     bppItemId :: Text,
     validTill :: Maybe UTCTime,
@@ -94,7 +94,7 @@ onInit onInitReq merchant booking_ = do
         Payment.CreateOrderReq
           { orderId = orderId.getId,
             orderShortId = orderShortId.getShortId,
-            amount = booking.price,
+            amount = booking.price.amount,
             customerId = person.id.getId,
             customerEmail = fromMaybe "test@gmail.com" personEmail,
             customerPhone = personPhone,

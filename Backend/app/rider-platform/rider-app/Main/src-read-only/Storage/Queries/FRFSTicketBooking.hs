@@ -57,10 +57,10 @@ updateBppBankDetailsById bppBankAccountNumber bppBankCode (Kernel.Types.Id.Id id
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.bppBankAccountNumber bppBankAccountNumber, Se.Set Beam.bppBankCode bppBankCode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-updateFinalPriceById ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
-updateFinalPriceById finalPrice (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.finalPrice finalPrice, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+updateFinalPriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateFinalPriceById finalPrice (Kernel.Types.Id.Id id) = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
 updateIsBookingCancellableByBookingId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -69,8 +69,10 @@ updateIsBookingCancellableByBookingId isBookingCancellable (Kernel.Types.Id.Id i
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isBookingCancellable isBookingCancellable, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-updatePriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
-updatePriceById price (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.price price, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+updatePriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updatePriceById price (Kernel.Types.Id.Id id) = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price), Se.Set Beam.price ((.amount) price), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
 updateRefundCancellationChargesAndIsCancellableByBookingId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -115,12 +117,13 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
       Se.Set Beam.cancellationCharges cancellationCharges,
-      Se.Set Beam.estimatedPrice estimatedPrice,
-      Se.Set Beam.finalPrice finalPrice,
+      Se.Set Beam.estimatedPrice ((.amount) estimatedPrice),
+      Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice),
       Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
       Se.Set Beam.isBookingCancellable isBookingCancellable,
       Se.Set Beam.paymentTxnId paymentTxnId,
-      Se.Set Beam.price price,
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
+      Se.Set Beam.price ((.amount) price),
       Se.Set Beam.providerDescription providerDescription,
       Se.Set Beam.providerId providerId,
       Se.Set Beam.providerName providerName,
@@ -154,13 +157,13 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             bppSubscriberId = bppSubscriberId,
             bppSubscriberUrl = bppSubscriberUrl,
             cancellationCharges = cancellationCharges,
-            estimatedPrice = estimatedPrice,
-            finalPrice = finalPrice,
+            estimatedPrice = Kernel.Types.Common.mkPrice currency estimatedPrice,
+            finalPrice = Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice,
             fromStationId = Kernel.Types.Id.Id fromStationId,
             id = Kernel.Types.Id.Id id,
             isBookingCancellable = isBookingCancellable,
             paymentTxnId = paymentTxnId,
-            price = price,
+            price = Kernel.Types.Common.mkPrice currency price,
             providerDescription = providerDescription,
             providerId = providerId,
             providerName = providerName,
@@ -191,13 +194,14 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.bppSubscriberId = bppSubscriberId,
         Beam.bppSubscriberUrl = bppSubscriberUrl,
         Beam.cancellationCharges = cancellationCharges,
-        Beam.estimatedPrice = estimatedPrice,
-        Beam.finalPrice = finalPrice,
+        Beam.estimatedPrice = (.amount) estimatedPrice,
+        Beam.finalPrice = Kernel.Prelude.fmap (.amount) finalPrice,
         Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isBookingCancellable = isBookingCancellable,
         Beam.paymentTxnId = paymentTxnId,
-        Beam.price = price,
+        Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
+        Beam.price = (.amount) price,
         Beam.providerDescription = providerDescription,
         Beam.providerId = providerId,
         Beam.providerName = providerName,

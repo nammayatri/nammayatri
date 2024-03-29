@@ -30,6 +30,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     id :: B.C f Kernel.Prelude.Text,
     isBookingCancellable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     paymentTxnId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     price :: B.C f Kernel.Types.Common.HighPrecMoney,
     providerDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     providerId :: B.C f Kernel.Prelude.Text,

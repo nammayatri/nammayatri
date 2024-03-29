@@ -10,6 +10,7 @@ imports:
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
   FRFSTicketStatus: Domain.Types.FRFSTicket
   HighPrecMoney: Kernel.Types.Common
+  PriceAPIEntity: Kernel.Types.Common
   UTCTime: Kernel.Prelude
   FRFSTrip: Domain.Types.FRFSTrip
   FRFSSearch: Domain.Types.FRFSSearch
@@ -33,6 +34,7 @@ types:
     vehicleType: FRFSVehicleType
     quantity: Int
     price: HighPrecMoney
+    priceWithCurrency: PriceAPIEntity
     stations: [FRFSStationAPI]
     validTill: UTCTime
 
@@ -45,6 +47,7 @@ types:
     quantity: Int
     vehicleType: FRFSVehicleType
     price: HighPrecMoney
+    priceWithCurrency: PriceAPIEntity
     validTill: UTCTime
     payment: Maybe FRFSBookingPaymentAPI
     tickets: [FRFSTicketAPI]

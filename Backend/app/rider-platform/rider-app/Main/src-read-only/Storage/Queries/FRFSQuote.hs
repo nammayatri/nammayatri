@@ -9,6 +9,8 @@ import qualified Domain.Types.FRFSSearch
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -39,7 +41,8 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
       Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
-      Se.Set Beam.price price,
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
+      Se.Set Beam.price ((.amount) price),
       Se.Set Beam.providerDescription providerDescription,
       Se.Set Beam.providerId providerId,
       Se.Set Beam.providerName providerName,
@@ -68,7 +71,7 @@ instance FromTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
             bppSubscriberUrl = bppSubscriberUrl,
             fromStationId = Kernel.Types.Id.Id fromStationId,
             id = Kernel.Types.Id.Id id,
-            price = price,
+            price = Kernel.Types.Common.mkPrice currency price,
             providerDescription = providerDescription,
             providerId = providerId,
             providerName = providerName,
@@ -94,7 +97,8 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
         Beam.bppSubscriberUrl = bppSubscriberUrl,
         Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.price = price,
+        Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
+        Beam.price = (.amount) price,
         Beam.providerDescription = providerDescription,
         Beam.providerId = providerId,
         Beam.providerName = providerName,

@@ -21,7 +21,7 @@ data FRFSQuote = FRFSQuote
     bppSubscriberUrl :: Kernel.Prelude.Text,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
-    price :: Kernel.Types.Common.HighPrecMoney,
+    price :: Kernel.Types.Common.Price,
     providerDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     providerId :: Kernel.Prelude.Text,
     providerName :: Kernel.Prelude.Text,
@@ -37,7 +37,7 @@ data FRFSQuote = FRFSQuote
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show)
 
 data FRFSQuoteType = SingleJourney | ReturnJourney | Pass | SpecialFareSingleJourney deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

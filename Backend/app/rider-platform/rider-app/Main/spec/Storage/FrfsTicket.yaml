@@ -1,6 +1,8 @@
 imports:
   UTCTime: Kernel.Prelude
   HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  Price: Kernel.Types.Common
   ShortId: Kernel.Types.Id
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
@@ -78,7 +80,7 @@ Station:
 
 FRFSQuote:
   tableName: frfs_quote
-
+  derives: "Generic,Show"
   fields:
     id: Id FRFSQuote
     bppItemId: Text
@@ -94,13 +96,25 @@ FRFSQuote:
     providerId: Text
     providerName: Text
     providerDescription: Maybe Text
-    price: HighPrecMoney
+    price: Price
     validTill: UTCTime
     riderId: Id Person
+
+  beamFields:
+    price:
+      currency: Maybe Currency
+      price: HighPrecMoney
 
   types:
     FRFSQuoteType:
       enum: "SingleJourney, ReturnJourney, Pass, SpecialFareSingleJourney"
+
+  fromTType:
+    price: Kernel.Types.Common.mkPrice currency price|E
+
+  toTType:
+    price: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
 
   queries:
     findById:
@@ -136,7 +150,7 @@ FRFSTrip:
 
 FRFSTicketBooking:
   tableName: frfs_ticket_booking
-
+  derives: "Generic,Show"
   fields:
     id: Id FRFSTicketBooking
     searchId: Id FRFSSearch
@@ -156,9 +170,9 @@ FRFSTicketBooking:
     providerId: Text
     providerName: Text
     providerDescription: Maybe Text
-    price: HighPrecMoney
-    estimatedPrice: HighPrecMoney
-    finalPrice: Maybe HighPrecMoney
+    price: Price
+    estimatedPrice: Price
+    finalPrice: Maybe Price
     validTill: UTCTime
     paymentTxnId : Maybe Text
     bppBankAccountNumber: Maybe Text
@@ -167,9 +181,29 @@ FRFSTicketBooking:
     refundAmount : Maybe HighPrecMoney
     isBookingCancellable : Maybe Bool
 
+  beamFields:
+    price:
+      currency: Maybe Currency
+      price: HighPrecMoney
+    estimatedPrice:
+      estimatedPrice: HighPrecMoney
+    finalPrice:
+      finalPrice: Maybe HighPrecMoney
+
   types:
     FRFSTicketBookingStatus:
       enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED"
+
+  fromTType:
+    price: Kernel.Types.Common.mkPrice currency price|E
+    estimatedPrice: Kernel.Types.Common.mkPrice currency estimatedPrice|E
+    finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
+
+  toTType:
+    price: (.amount)|I
+    estimatedPrice: (.amount)|I
+    finalPrice: Kernel.Prelude.fmap (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
 
   queries:
     findById:
@@ -302,7 +336,7 @@ FRFSTicketBookingPayment:
 
 FRFSRecon:
   tableName: frfs_recon
-
+  derives: "Generic,Show"
   fields:
     id: Id FRFSRecon
     frfsTicketBookingId: Id FRFSTicketBooking
@@ -318,15 +352,42 @@ FRFSRecon:
     ticketNumber: Text
     transactionRefNumber: Text # transactionId
     transactionUUID : Maybe Text # transaction uuid
-    fare: HighPrecMoney # per ticket price
-    buyerFinderFee: HighPrecMoney # populated from bapConfig
-    totalOrderValue: HighPrecMoney # amount paid by customer
-    settlementAmount: HighPrecMoney # settlement amount = totalOrderValue - bff
+    fare: Price # per ticket price
+    buyerFinderFee: Price # populated from bapConfig
+    totalOrderValue: Price # amount paid by customer
+    settlementAmount: Price # settlement amount = totalOrderValue - bff
     beneficiaryIFSC: Maybe Text # beneficiary ifsc code, from on_confirm
     beneficiaryBankAccount: Maybe Text # beneficiary bank account, from on_confirm
     collectorIFSC: Maybe Text # collector ifsc code, from bapConfig
     settlementReferenceNumber: Maybe Text # utr number, to be populated post settlement
     settlementDate: Maybe UTCTime # to be populated post settlement
-    differenceAmount: Maybe HighPrecMoney # Nothing
+    differenceAmount: Maybe Price # Nothing
     message: Maybe Text # Nothing
 
+  beamFields:
+    fare:
+      currency: Maybe Currency
+      fare: HighPrecMoney
+    buyerFinderFee:
+      buyerFinderFee: HighPrecMoney
+    totalOrderValue:
+      totalOrderValue: HighPrecMoney
+    settlementAmount:
+      settlementAmount: HighPrecMoney
+    differenceAmount:
+      differenceAmount: Maybe HighPrecMoney
+
+  fromTType:
+    fare: Kernel.Types.Common.mkPrice currency fare|E
+    buyerFinderFee: Kernel.Types.Common.mkPrice currency buyerFinderFee|E
+    totalOrderValue: Kernel.Types.Common.mkPrice currency totalOrderValue|E
+    settlementAmount: Kernel.Types.Common.mkPrice currency settlementAmount|E
+    differenceAmount: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) differenceAmount|E
+
+  toTType:
+    fare: (.amount)|I
+    buyerFinderFee: (.amount)|I
+    totalOrderValue: (.amount)|I
+    settlementAmount: (.amount)|I
+    differenceAmount: Kernel.Prelude.fmap (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
