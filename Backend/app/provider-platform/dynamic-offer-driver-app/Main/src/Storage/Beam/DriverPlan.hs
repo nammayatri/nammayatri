@@ -38,6 +38,7 @@ data DriverPlanT f = DriverPlanT
     payerVpa :: B.C f (Maybe Text),
     serviceName :: B.C f (Maybe DPlan.ServiceNames),
     enableServiceUsageCharge :: B.C f (Maybe Bool),
+    lastPaymentLinkSentAtIstDate :: B.C f (Maybe UTCTime),
     merchantId :: B.C f (Maybe Text),
     merchantOpCityId :: B.C f (Maybe Text),
     rentedVehicleNumber :: B.C f (Maybe Text)
