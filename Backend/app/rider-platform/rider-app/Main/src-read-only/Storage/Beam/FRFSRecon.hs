@@ -21,6 +21,7 @@ data FRFSReconT f = FRFSReconT
     date :: B.C f Kernel.Prelude.Text,
     destinationStationCode :: B.C f Kernel.Prelude.Text,
     differenceAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     fare :: B.C f Kernel.Types.Common.HighPrecMoney,
     frfsTicketBookingId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,

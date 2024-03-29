@@ -22,9 +22,20 @@ tfDescriptor mCode mName = do
         descriptorName = Just $ name
       }
 
+parsePrice :: Spec.Price -> Maybe Price
+parsePrice specPrice = do
+  currency <- parseCurrency specPrice
+  money <- parseMoney specPrice
+  Just $ mkPrice (Just currency) money
+
 parseMoney :: Spec.Price -> Maybe HighPrecMoney
 parseMoney price =
   price.priceValue >>= (readMaybe . T.unpack)
+
+-- TODO check what we receive from bpp
+parseCurrency :: Spec.Price -> Maybe Currency
+parseCurrency price =
+  price.priceCurrency >>= (readMaybe . T.unpack)
 
 getQuoteValidTill :: UTCTime -> Text -> Maybe UTCTime
 getQuoteValidTill contextTime time = do

@@ -89,7 +89,8 @@ buildReconTable merchant booking _dOrder tickets = do
   now <- getCurrentTime
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "BPP Order Id not found in booking")
   let totalOrderValue = booking.price
-  let finderFee :: HighPrecMoney = fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee
+  let finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee -- FIXME
+  settlementAmount <- totalOrderValue `subtractPrice` finderFee
   let reconEntry =
         Recon.FRFSRecon
           { Recon.id = "",
@@ -107,7 +108,7 @@ buildReconTable merchant booking _dOrder tickets = do
             Recon.mobileNumber = mRiderNumber,
             Recon.networkOrderId = bppOrderId,
             Recon.receiverSubscriberId = booking.bppSubscriberId,
-            Recon.settlementAmount = HighPrecMoney (totalOrderValue.getHighPrecMoney - finderFee.getHighPrecMoney),
+            Recon.settlementAmount,
             Recon.settlementDate = Nothing,
             Recon.settlementReferenceNumber = Nothing,
             Recon.sourceStationCode = fromStation.code,

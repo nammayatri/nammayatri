@@ -24,13 +24,13 @@ data FRFSTicketBooking = FRFSTicketBooking
     bppSubscriberId :: Kernel.Prelude.Text,
     bppSubscriberUrl :: Kernel.Prelude.Text,
     cancellationCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    estimatedPrice :: Kernel.Types.Common.HighPrecMoney,
-    finalPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    estimatedPrice :: Kernel.Types.Common.Price,
+    finalPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     isBookingCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     paymentTxnId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    price :: Kernel.Types.Common.HighPrecMoney,
+    price :: Kernel.Types.Common.Price,
     providerDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     providerId :: Kernel.Prelude.Text,
     providerName :: Kernel.Prelude.Text,
@@ -49,7 +49,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show)
 
 data FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

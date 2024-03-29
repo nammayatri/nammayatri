@@ -52,7 +52,7 @@ buildOnInitReq onInitReq = do
   bankCode <- orderPaymentParams.paymentParamsBankCode & fromMaybeM (InvalidRequest "PaymentParamsBankCode not found")
 
   quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
-  totalPrice <- quotation.quotationPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Invalid quotationPrice")
+  totalPrice <- quotation.quotationPrice >>= Utils.parsePrice & fromMaybeM (InvalidRequest "Invalid quotationPrice")
 
   fareBreakUp <- traverse Utils.mkFareBreakup quoteBreakup
 

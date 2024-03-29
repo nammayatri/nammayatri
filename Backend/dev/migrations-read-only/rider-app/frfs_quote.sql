@@ -22,3 +22,8 @@ ALTER TABLE atlas_app.frfs_quote ADD COLUMN merchant_operating_city_id character
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_quote ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN currency text ;
