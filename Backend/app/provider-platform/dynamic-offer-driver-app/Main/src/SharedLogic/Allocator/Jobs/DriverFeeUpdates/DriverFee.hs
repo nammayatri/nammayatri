@@ -633,21 +633,24 @@ processAndSendManualPaymentLink driverPlansToProccess subscriptionConfigs mercha
     updateStatusByIds PAYMENT_OVERDUE (map (.id) $ filter ((== PAYMENT_PENDING) . (.status)) getPendingAndOverDueDriverFees) now
     let allowDeepLink = subscriptionConfigs.sendDeepLink
     let mbDeepLinkData = if allowDeepLink then Just $ SPayment.DeepLinkData {sendDeepLink = Just True, expiryTimeInMinutes = mbDeepLinkExpiry} else Nothing
-    unless (null getPendingAndOverDueDriverFees) $ do
-      resp' <- try @_ @SomeException $ DDriver.clearDriverDues (driverId, merchantId, opCityId) serviceName mbDeepLinkData
-      errorCatchAndHandle
-        driverId
-        resp'
-        subscriptionConfigs
-        endTime
-        now
-        ( \resp -> do
-            let mbPaymentLink = resp.orderResp.payment_links
-                payload = resp.orderResp.sdk_payload.payload
-                mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney
-            whatsAppResp <- try @_ @SomeException $ SPayment.sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount (Just subscriptionConfigs.paymentLinkChannel) allowDeepLink WHATSAPP_SEND_MANUAL_PAYMENT_LINK
-            errorCatchAndHandle driverId whatsAppResp subscriptionConfigs endTime now (\_ -> QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName driverId serviceName endTime)
-        )
+    if not $ null getPendingAndOverDueDriverFees
+      then do
+        resp' <- try @_ @SomeException $ DDriver.clearDriverDues (driverId, merchantId, opCityId) serviceName mbDeepLinkData
+        errorCatchAndHandle
+          driverId
+          resp'
+          subscriptionConfigs
+          endTime
+          now
+          ( \resp -> do
+              let mbPaymentLink = resp.orderResp.payment_links
+                  payload = resp.orderResp.sdk_payload.payload
+                  mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney
+              whatsAppResp <- try @_ @SomeException $ SPayment.sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount (Just subscriptionConfigs.paymentLinkChannel) allowDeepLink WHATSAPP_SEND_MANUAL_PAYMENT_LINK
+              errorCatchAndHandle driverId whatsAppResp subscriptionConfigs endTime now (\_ -> QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName driverId serviceName endTime)
+          )
+      else do
+        QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName driverId serviceName endTime
 
 errorCatchAndHandle ::
   (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) =>
