@@ -25,6 +25,7 @@ data EstimateBreakupT f = EstimateBreakupT
   { id :: B.C f Text,
     estimateId :: B.C f Text,
     title :: B.C f Text,
+    desc :: B.C f (Maybe Text),
     priceCurrency :: B.C f Currency,
     priceValue :: B.C f HighPrecMoney
   }

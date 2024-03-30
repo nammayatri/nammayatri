@@ -42,6 +42,7 @@ instance FromTType' BeamEB.EstimateBreakup EstimateBreakup where
         EstimateBreakup
           { id = Id id,
             estimateId = Id estimateId,
+            desc = fromMaybe "" desc,
             title = title,
             price = price
           }
@@ -52,6 +53,7 @@ instance ToTType' BeamEB.EstimateBreakup EstimateBreakup where
       { BeamEB.id = getId id,
         BeamEB.estimateId = getId estimateId,
         BeamEB.title = title,
+        BeamEB.desc = Just desc,
         BeamEB.priceCurrency = price.value.currency,
         BeamEB.priceValue = price.value.amount
       }

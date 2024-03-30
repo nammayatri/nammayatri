@@ -94,6 +94,7 @@ data EstimateBreakup = EstimateBreakup
   { id :: Id EstimateBreakup,
     estimateId :: Id Estimate,
     title :: Text,
+    desc :: Text,
     price :: EstimateBreakupPrice
   }
   deriving (Generic, Show, PrettyShow)
@@ -190,6 +191,7 @@ data NightShiftRateAPIEntity = NightShiftRateAPIEntity
 
 data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
   { title :: Text,
+    desc :: Text,
     price :: Money,
     priceWithCurrency :: PriceAPIEntity
   }
@@ -233,7 +235,7 @@ mkEstimateAPIEntity Estimate {..} = do
       }
   where
     addBaseDisatanceFareEB :: Maybe EstimateBreakup -> Maybe EstimateBreakup
-    addBaseDisatanceFareEB = fmap (\baseFareEB -> EstimateBreakup {id = baseFareEB.id, estimateId = baseFareEB.estimateId, title = "BASE_DISTANCE_FARE", price = baseFareEB.price})
+    addBaseDisatanceFareEB = fmap (\baseFareEB -> EstimateBreakup {id = baseFareEB.id, desc = baseFareEB.desc, estimateId = baseFareEB.estimateId, title = "BASE_DISTANCE_FARE", price = baseFareEB.price})
 
 mkNightShiftRateAPIEntity :: NightShiftInfo -> NightShiftRateAPIEntity
 mkNightShiftRateAPIEntity NightShiftInfo {..} = do
@@ -246,6 +248,7 @@ mkEstimateBreakupAPIEntity :: EstimateBreakup -> EstimateBreakupAPIEntity
 mkEstimateBreakupAPIEntity EstimateBreakup {..} = do
   EstimateBreakupAPIEntity
     { title = title,
+      desc = desc,
       price = price.value.amountInt,
       priceWithCurrency = mkPriceAPIEntity price.value
     }

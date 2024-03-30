@@ -123,9 +123,11 @@ buildEstimateBreakUpItem currency tag = do
   value <- tag.tagValue
   tagValue <- DecimalValue.valueFromString value
   title <- descriptor.descriptorCode
+  desc <- descriptor.descriptorShortDesc
   pure
     OnSearch.EstimateBreakupInfo
       { title = title,
+        desc = desc,
         price =
           OnSearch.BreakupPriceInfo
             { value = decimalValueToPrice currency tagValue

@@ -77,6 +77,7 @@ data Pricing = Pricing
 
 data RateCardBreakupItem = RateCardBreakupItem
   { title :: Text,
+    desc :: Text,
     value :: Text
   }
 
@@ -972,7 +973,7 @@ mkRateCardTag estimatedDistance farePolicy = do
         }
     ]
 
-mkRateCardBreakupItem :: Text -> Text -> RateCardBreakupItem
+mkRateCardBreakupItem :: Text -> Text -> Text -> RateCardBreakupItem
 mkRateCardBreakupItem = RateCardBreakupItem
 
 buildRateCardTags :: RateCardBreakupItem -> Spec.Tag
@@ -984,7 +985,7 @@ buildRateCardTags RateCardBreakupItem {..} =
           Spec.Descriptor
             { descriptorCode = Just title,
               descriptorName = Just title,
-              descriptorShortDesc = Nothing
+              descriptorShortDesc = Just desc
             },
       tagValue = Just value
     }

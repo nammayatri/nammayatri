@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.estimate_breakup ADD COLUMN desc text;

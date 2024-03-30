@@ -15,6 +15,7 @@
 module BecknV2.OnDemand.Tags where
 
 import Kernel.Prelude
+import qualified Text.Show
 
 -- ##############################################################
 -- This section contains type aliases for all TagGroups and Tags
@@ -45,6 +46,12 @@ data TagGroup
   | PREVIOUS_CANCELLATION_REASONS
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+newtype EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE Int
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show EXTRA_PER_KM_STEP_FARE where
+  show (EXTRA_PER_KM_STEP_FARE bound) = "EXTRA_PER_KM_STEP_FARE_" <> show bound
+
 data Tag
   = -- ## Item tags ##
     -- FARE_POLICY
@@ -53,6 +60,7 @@ data Tag
   | PER_KM_CHARGE
   | DEAD_KILOMETER_FARE
   | WAITING_CHARGE_PER_MIN
+  | WAITING_CHARGE_RATE_PER_MIN
   | NIGHT_CHARGE_MULTIPLIER
   | NIGHT_SHIFT_START_TIME
   | NIGHT_SHIFT_END_TIME
@@ -61,7 +69,6 @@ data Tag
   | DRIVER_MIN_EXTRA_FEE
   | DRIVER_MAX_EXTRA_FEE
   | EXTRA_PER_KM_FARE
-  | EXTRA_PER_KM_STEP_FARE
   | WAITING_OR_PICKUP_CHARGES
   | CONSTANT_WAITING_CHARGE
   | FREE_WAITING_TIME_IN_MINUTES
@@ -73,6 +80,8 @@ data Tag
   | CONSTANT_PLATFORM_CHARGE
   | PLATFORM_FEE_CGST
   | PLATFORM_FEE_SGST
+  | PROGRESSIVE_NIGHT_SHIFT_CHARGE
+  | CONSTANT_NIGHT_SHIFT_CHARGE
   | -- INFO
     DISTANCE_TO_NEAREST_DRIVER_METER
   | ETA_TO_NEAREST_DRIVER_MIN

@@ -123,6 +123,7 @@ newtype WaitingChargesInfo = WaitingChargesInfo
 
 data EstimateBreakupInfo = EstimateBreakupInfo
   { title :: Text,
+    desc :: Text,
     price :: BreakupPriceInfo
   }
 
@@ -374,6 +375,7 @@ buildEstimateBreakUp estimatesItems estId =
       pure
         DEstimate.EstimateBreakup
           { title = estimateItem.title,
+            desc = estimateItem.desc,
             price = price',
             estimateId = estId,
             ..
