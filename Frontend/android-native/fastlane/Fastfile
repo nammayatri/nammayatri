@@ -16,6 +16,8 @@
 default_platform(:android)
 
 flavors = ["nyUserProd"]
+flavorsMY = ["myUserProd"]
+flavorsY = ["yatriUserProd"]
 
 platform :android do
   desc "Runs all the tests"
@@ -39,7 +41,7 @@ platform :android do
   end
 
   desc "List Apps"
-  lane :list_apps_metadata do
+  lane :release_ny do
     flavors.each { |flavor|
       # gradle(
       #   task: 'clean assemble' + flavor + 'Release',
@@ -76,4 +78,83 @@ platform :android do
     # metadata = lane_context[SharedValues::APP_METADATA]
     # UI.message("App metadata: #{metadata}")
   end
+
+  desc "List Apps1"
+  lane :release_my do
+    flavorsMY.each { |flavor|
+      # gradle(
+      #   task: 'clean assemble' + flavor + 'Release',
+      #   properties: {
+      #     'android.injected.signing.store.file' => 'xxx',
+      #     'android.injected.signing.store.password' => 'xxx',
+      #     'android.injected.signing.key.alias' => 'xxx',
+      #     'android.injected.signing.key.password' => 'xxx'
+      #   }
+      # )
+  
+      # Generate AAB
+      gradle(
+        task: 'bundle' + flavor + 'Release'
+      )
+  
+      # Supply metadata and AAB to Google Play
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'in.mobility.manayatri',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "myUser-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
+    }
+  
+    # Print app metadata
+    # metadata = lane_context[SharedValues::APP_METADATA]
+    # UI.message("App metadata: #{metadata}")
+  end
+
+  desc "List Apps2"
+  lane :release_y do
+    flavorsY.each { |flavor|
+      # gradle(
+      #   task: 'clean assemble' + flavor + 'Release',
+      #   properties: {
+      #     'android.injected.signing.store.file' => 'xxx',
+      #     'android.injected.signing.store.password' => 'xxx',
+      #     'android.injected.signing.key.alias' => 'xxx',
+      #     'android.injected.signing.key.password' => 'xxx'
+      #   }
+      # )
+  
+      # Generate AAB
+      gradle(
+        task: 'bundle' + flavor + 'Release'
+      )
+  
+      # Supply metadata and AAB to Google Play
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'net.openkochi.yatri',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "yatriUser-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
+    }
+  
+    # Print app metadata
+    # metadata = lane_context[SharedValues::APP_METADATA]
+    # UI.message("App metadata: #{metadata}")
+  end
+
 end
