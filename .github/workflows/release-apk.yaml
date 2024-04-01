@@ -1,7 +1,7 @@
 name: Release (Production)
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+
+on:
+  workflow_dispatch:
     inputs:
       versionCode:
         required: true
@@ -9,7 +9,13 @@ jobs:
       versionName:
         required: true
         description: "New version name for the build"
+      ref:
+        description: 'Git reference (branch, tag, or SHA)'
+        required: true
 
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-ruby@v1
