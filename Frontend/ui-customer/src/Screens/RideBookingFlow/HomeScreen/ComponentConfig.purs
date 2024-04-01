@@ -1005,24 +1005,23 @@ chennaiRateCardList :: String -> ST.HomeScreenState -> Array FareList
 chennaiRateCardList vehicleVariant state = do
   let lang = getLanguageLocale languageKey
   case vehicleVariant of
-    "HATCHBACK" -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 4 km" else "4 km " <> (getString MIN_FARE_UPTO) , val : "₹110"}
-                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 4 km" else "4 " <> (getString MORE_THAN), val : "₹24 / km"}
-                   , { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+    "HATCHBACK" -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , val : "₹90"}
+                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN), val : "₹18 / km"}
+                   , { key : (getString PICKUP_CHARGE), val : "₹ 40" }
                    ]
-    "SEDAN"     -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 4 km" else "4 km " <> (getString MIN_FARE_UPTO), val : "₹130"}
-                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 4 km" else "4 " <> (getString MORE_THAN) ,val : "₹27 / km"}
-                   , { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+    "SEDAN"     -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO), val : "₹105"}
+                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) ,val : "₹27 / km"}
+                   , { key : (getString PICKUP_CHARGE), val : "₹ 40" }
                    ]
 
-    "SUV"       -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 4 km" else "4 km " <> (getString MIN_FARE_UPTO) , val : "₹200"}
-                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 4 km" else "4 " <> (getString MORE_THAN) , val :"₹36 / km"}
-                   , { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+    "SUV"       -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , val : "₹140"}
+                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) , val :"₹36 / km"}
+                   , { key : (getString PICKUP_CHARGE), val : "₹ 60" }
                    ]
 
     "AUTO_RICKSHAW"  -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 2.0 km" else "2.0 km " <> (getString MIN_FARE_UPTO) , val : "₹40"}
-                        , { key : "2 km - 13 km" , val : "₹16 / km"}
-                        , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 13 km" else "13 " <> (getString MORE_THAN), val : "₹13 / km"}               
-                        , { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+                        , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 2.0 km" else "2.0 " <> (getString MORE_THAN), val : "₹14 / km"}               
+                        , { key : (getString PICKUP_CHARGE), val : "₹ 20" }
                         ]
     _ -> []
 
