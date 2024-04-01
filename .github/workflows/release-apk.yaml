@@ -9,18 +9,16 @@ on:
       versionName:
         required: true
         description: "New version name for the build"
-      ref:
-        description: 'Git reference (branch, tag, or SHA)'
-        required: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: ruby/setup-ruby
+      - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '2.6'
+          ruby-version: '3.3' # Not needed with a .ruby-version file
+          bundler-cache: true # runs 'bundle install' and caches installed gems automatically
 
       - name: Cache Ruby - Bundler
         uses: actions/cache@v2
