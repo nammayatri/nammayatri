@@ -13,6 +13,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend/android-native
     steps:
       - uses: actions/checkout@v2
       - uses: ruby/setup-ruby@v1
