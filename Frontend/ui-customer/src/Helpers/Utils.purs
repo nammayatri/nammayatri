@@ -35,7 +35,7 @@ import Data.Eq.Generic (genericEq)
 import Data.Foldable (or)
 import Data.Function.Uncurried (Fn2, runFn3, Fn1, Fn3)
 import Data.Generic.Rep (class Generic)
-import Data.Int (round, toNumber, fromString, ceil)
+import Data.Int (round, toNumber, fromString, ceil, floor)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Number (pi, sin, cos, sqrt, asin, abs)
@@ -58,12 +58,12 @@ import Effect.Uncurried (EffectFn1, EffectFn4, EffectFn3, runEffectFn3)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os)
 import Engineering.Helpers.Commons (parseFloat, setText, toStringJSON) as ReExport
-import Engineering.Helpers.Utils (class Serializable, serialize)
+import Engineering.Helpers.Utils (class Serializable, serialize, getValueBtwRange)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Decode, class Encode, encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Foreign.Generic (decode)
-import JBridge (emitJOSEvent, Location)
+import JBridge (emitJOSEvent, Location, getScreenPPI)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
@@ -578,8 +578,11 @@ reverse' = fromCharArray <<< reverse <<< toCharArray
 
 getVehicleSize :: Unit -> Int
 getVehicleSize unit = 
-  let mapConfig = (getAppConfig appConfig).mapConfig
-  in mapConfig.vehicleMarkerSize
+  let 
+    mapConfig = (getAppConfig appConfig).mapConfig
+    screenPPI = getScreenPPI unit
+    size = getValueBtwRange screenPPI 200.0 600.0 120.0 280.0
+  in if os == "IOS" then mapConfig.vehicleMarkerSize else (floor size)
 
 getScreenFromStage :: Stage -> String
 getScreenFromStage stage = case stage of

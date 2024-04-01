@@ -388,3 +388,7 @@ splitIntoEqualParts n arr =
     rest = slice n (DA.length arr) arr
   in 
     cons part (splitIntoEqualParts n rest)
+
+
+getValueBtwRange :: forall a. EuclideanRing a => a -> a -> a -> a -> a -> a
+getValueBtwRange  x  in_min  in_max  out_min  out_max = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min 

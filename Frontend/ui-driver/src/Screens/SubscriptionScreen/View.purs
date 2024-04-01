@@ -52,7 +52,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (convertUTCtoISC, flowRunner, getImageUrl, getNewIDWithTag, liftFlow, screenHeight, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getValueBtwRange, getAssetsBaseUrl)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString, getVarString)
@@ -78,6 +78,7 @@ import Types.App (GlobalState(..), defaultGlobalState)
 import Locale.Utils
 import RemoteConfig (ReelItem(..))
 import Mobility.Prelude as MP
+import Engineering.Helpers.Utils (getValueBtwRange)
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
 screen initialState globalState =
@@ -892,7 +893,7 @@ duesView push state =
               , width MATCH_PARENT
               ][ linearLayout
                   [ height $ V 4
-                  , width $ V $ ceil $ HU.getValueBtwRange state.data.myPlanData.manualDueAmount 0.0 state.data.myPlanData.maxDueAmount 0.0 (toNumber $ (screenWidth unit) - 60)
+                  , width $ V $ ceil $ getValueBtwRange state.data.myPlanData.manualDueAmount 0.0 state.data.myPlanData.maxDueAmount 0.0 (toNumber $ (screenWidth unit) - 60)
                   , background case state.props.myPlanProps.overDue, state.props.myPlanProps.multiTypeDues of
                                 true, _ ->  Color.red 
                                 false, true ->  Color.orange900
@@ -901,7 +902,7 @@ duesView push state =
                   ][]
                   , linearLayout
                     [ height $ V 4
-                    , width $ V $ ceil $ HU.getValueBtwRange state.data.myPlanData.autoPayDueAmount 0.0 state.data.myPlanData.maxDueAmount 0.0 (toNumber $ (screenWidth unit) - 60)
+                    , width $ V $ ceil $ getValueBtwRange state.data.myPlanData.autoPayDueAmount 0.0 state.data.myPlanData.maxDueAmount 0.0 (toNumber $ (screenWidth unit) - 60)
                     , background if state.props.myPlanProps.overDue then Color.red else Color.blue800
                     , cornerRadius 4.0
                     ][]

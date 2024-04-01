@@ -429,6 +429,16 @@ export const getAndroidVersion = function (unit) {
   }
 };
 
+export const getScreenPPI = function (unit) {
+  if(window.__OS == "IOS"){
+    return 1.0;
+  }else{
+    const sessionData = window.JBridge.getSessionInfo();
+    const parsedSessionData = JSON.parse(sessionData);
+    return parsedSessionData["screen_ppi"];
+  }
+}
+
 export const showQrCodeImpl = function (id) {
   return function (str) {
     return function (cb) {
