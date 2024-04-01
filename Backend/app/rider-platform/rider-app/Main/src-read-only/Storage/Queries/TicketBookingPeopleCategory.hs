@@ -9,6 +9,8 @@ import qualified Domain.Types.TicketBookingServiceCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -42,7 +44,8 @@ updateByPrimaryKey (Domain.Types.TicketBookingPeopleCategory.TicketBookingPeople
   updateWithKV
     [ Se.Set Beam.name name,
       Se.Set Beam.numberOfUnits numberOfUnits,
-      Se.Set Beam.pricePerUnit pricePerUnit,
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) pricePerUnit),
+      Se.Set Beam.pricePerUnit ((.amount) pricePerUnit),
       Se.Set Beam.ticketBookingServiceCategoryId (Kernel.Types.Id.getId ticketBookingServiceCategoryId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -59,7 +62,7 @@ instance FromTType' Beam.TicketBookingPeopleCategory Domain.Types.TicketBookingP
           { id = Kernel.Types.Id.Id id,
             name = name,
             numberOfUnits = numberOfUnits,
-            pricePerUnit = pricePerUnit,
+            pricePerUnit = Kernel.Types.Common.mkPrice currency pricePerUnit,
             ticketBookingServiceCategoryId = Kernel.Types.Id.Id ticketBookingServiceCategoryId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
@@ -73,7 +76,8 @@ instance ToTType' Beam.TicketBookingPeopleCategory Domain.Types.TicketBookingPeo
       { Beam.id = Kernel.Types.Id.getId id,
         Beam.name = name,
         Beam.numberOfUnits = numberOfUnits,
-        Beam.pricePerUnit = pricePerUnit,
+        Beam.currency = (Kernel.Prelude.Just . (.currency)) pricePerUnit,
+        Beam.pricePerUnit = (.amount) pricePerUnit,
         Beam.ticketBookingServiceCategoryId = Kernel.Types.Id.getId ticketBookingServiceCategoryId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,

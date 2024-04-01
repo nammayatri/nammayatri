@@ -8,6 +8,8 @@ import qualified Domain.Types.ServicePeopleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -36,7 +38,8 @@ updateByPrimaryKey (Domain.Types.ServicePeopleCategory.ServicePeopleCategory {..
   updateWithKV
     [ Se.Set Beam.description description,
       Se.Set Beam.name name,
-      Se.Set Beam.pricePerUnit pricePerUnit,
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) pricePerUnit),
+      Se.Set Beam.pricePerUnit ((.amount) pricePerUnit),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
@@ -52,7 +55,7 @@ instance FromTType' Beam.ServicePeopleCategory Domain.Types.ServicePeopleCategor
           { description = description,
             id = Kernel.Types.Id.Id id,
             name = name,
-            pricePerUnit = pricePerUnit,
+            pricePerUnit = Kernel.Types.Common.mkPrice currency pricePerUnit,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -65,7 +68,8 @@ instance ToTType' Beam.ServicePeopleCategory Domain.Types.ServicePeopleCategory.
       { Beam.description = description,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.name = name,
-        Beam.pricePerUnit = pricePerUnit,
+        Beam.currency = (Kernel.Prelude.Just . (.currency)) pricePerUnit,
+        Beam.pricePerUnit = (.amount) pricePerUnit,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
