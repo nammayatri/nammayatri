@@ -60,7 +60,7 @@ platform :android do
       # Supply metadata and AAB to Google Play
       # supply(
       #   track: 'internal',
-      #   json_key: 'namma-yatri-217e72f319a6.json',
+      #   json_key: 'play_config.json',
       #   package_name: 'in.juspay.nammayatri',
       #   metadata_path: 'fastlane/metadata/',
       #   aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "nyUser-prod" + "-release.aab",
