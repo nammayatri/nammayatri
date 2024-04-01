@@ -52,7 +52,7 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Types.DomAttributes as PTD
-import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput, validateRegistrationNumber)
+import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
 import Screens.Types (AddVehicleDetailsScreenState, StageStatus(..), ValidationStatus(..))
 import Styles.Colors as Color
@@ -61,6 +61,7 @@ import Data.String.Common as DSC
 import Effect.Uncurried (runEffectFn1)
 import ConfigProvider
 import Mobility.Prelude
+import Data.Array (elem)
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -296,7 +297,7 @@ vehicleRegistrationNumber state push =
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation HORIZONTAL
-          , stroke ("1," <> if ((DS.length state.data.vehicle_registration_number >= 2) && not validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)) then Color.warningRed else Color.borderColorLight) 
+          , stroke ("1," <> if ((DS.length state.data.vehicle_registration_number >= 2) && not isRcPrefixValid) then Color.warningRed else Color.borderColorLight) 
           , cornerRadius 4.0
           ][  textView
               [ width $ V 20
@@ -334,7 +335,7 @@ vehicleRegistrationNumber state push =
             , color Color.warningRed
             , fontStyle $ FontStyle.regular LanguageStyle
             , margin (MarginTop 10)
-            , visibility if ((DS.length state.data.vehicle_registration_number >= 2) && not validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)) then VISIBLE else GONE
+            , visibility if ((DS.length state.data.vehicle_registration_number >= 2) && not isRcPrefixValid) then VISIBLE else GONE
             ] <> FontStyle.paragraphText TypoGraphy
           , linearLayout
           [ width MATCH_PARENT
@@ -401,6 +402,7 @@ vehicleRegistrationNumber state push =
           ]
         ]
       ]
+  where isRcPrefixValid = (DS.take 2 state.data.vehicle_registration_number) `elem` state.data.validationPrefixArray
 
 
 

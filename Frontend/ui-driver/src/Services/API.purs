@@ -3290,7 +3290,9 @@ newtype GetCityRes = GetCityRes (Array CityRes)
 
 newtype CityRes = CityRes {
   name :: String ,
-  code :: String
+  code :: String,
+  rcNumberPrefixList :: Array String,
+  supportNumber :: Maybe String
 }
 
 data GetCityReq = GetCityReq String

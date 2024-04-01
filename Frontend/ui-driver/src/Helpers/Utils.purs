@@ -105,6 +105,7 @@ import Data.Argonaut.Decode.Class as AD
 import Data.Argonaut.Encode.Class as AE
 import Data.Argonaut.Core as AC
 import Data.Argonaut.Decode.Parser as ADP
+import Data.Function (on)
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -849,3 +850,6 @@ checkSpecialPickupZone maybeLabel =
                       specialPickupZone = fromMaybe "" (arr DA.!! 3)
                   in specialPickupZone == "PickupZone"
     Nothing    -> false
+
+compareStrings :: String -> String -> Boolean
+compareStrings = on (==) (DS.toLower <<< DSC.trim)

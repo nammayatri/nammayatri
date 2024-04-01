@@ -159,6 +159,8 @@ baseAppFlow baseFlow event driverInfoResponse = do
     where
     updateOperatingCity :: FlowBT String Unit
     updateOperatingCity = do
+      when (isTokenValid (getValueToLocalStore REGISTERATION_TOKEN)) $
+        void $ lift $ lift $ fork $ fetchCityConfigFromBackend
       let city = getValueToLocalStore DRIVER_LOCATION
       if city /= "__failed" then do
         void $ pure $ setValueToLocalStore DRIVER_LOCATION (capitalize (toLower city))
@@ -235,6 +237,19 @@ baseAppFlow baseFlow event driverInfoResponse = do
         setValueToLocalStore NIGHT_SAFETY_POP_UP "false"
       else 
         pure unit 
+
+    fetchCityConfigFromBackend :: Flow GlobalState Unit
+    fetchCityConfigFromBackend = do
+      config <- getAppConfigFlow appConfig
+      let defRCNumberPrefixList = split (Pattern "|") $ config.vehicle.validationPrefix
+      response <- Remote.getMerchantOperatingCityList ""
+      case response of
+        Left err ->  void $ runExceptT $ runBackT $ modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { validationPrefixList = Just defRCNumberPrefixList }
+        Right (API.GetCityRes getCityRes) -> do
+          let currentCityMb = DA.find (\(API.CityRes item) -> HU.compareStrings item.name (getValueToLocalStore DRIVER_LOCATION)) getCityRes
+          case currentCityMb of
+            Just (API.CityRes currentCity) -> void $ runExceptT $ runBackT $ modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { validationPrefixList = Just currentCity.rcNumberPrefixList }
+            Nothing ->  void $ runExceptT $ runBackT $ modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { validationPrefixList = Just defRCNumberPrefixList }
 
 authenticationFlow :: String -> FlowBT String Unit
 authenticationFlow _ = do
@@ -842,8 +857,8 @@ uploadDrivingLicenseFlow = do
 addVehicleDetailsflow :: Boolean -> FlowBT String Unit
 addVehicleDetailsflow addRcFromProf = do
   logField_ <- lift $ lift $ getLogFields
-  modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen  -> addVehicleDetailsScreen{props{addRcFromProfile = addRcFromProf }})
-  (GlobalState globalState) <- getState
+  prefArr <- fetchPrefArr
+  modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen  -> addVehicleDetailsScreen{props{addRcFromProfile = addRcFromProf }, data { validationPrefixArray = prefArr}})
   flow <- UI.addVehicleDetails
   case flow of
     VALIDATE_DETAILS state -> do
@@ -977,6 +992,27 @@ addVehicleDetailsflow addRcFromProf = do
                 modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just getDriverInfoResp}
                 updateDriverDataToStates
               Left _ -> pure unit
+  where 
+    fetchPrefArr :: FlowBT String (Array String)
+    fetchPrefArr = do
+      GlobalState globalState <- getState
+      case globalState.globalProps.validationPrefixList of
+        Just list -> pure list
+        Nothing -> do
+          config <- getAppConfigFlowBT Constants.appConfig
+          let defRCNumberPrefixList = split (Pattern "|") $ config.vehicle.validationPrefix
+          response <- lift $ lift $ Remote.getMerchantOperatingCityList ""
+          case response of
+            Left err -> pure defRCNumberPrefixList
+            Right (API.GetCityRes getCityRes) -> do
+              let currentCityMb = DA.find (\(API.CityRes item) -> HU.compareStrings item.name (getValueToLocalStore DRIVER_LOCATION)) getCityRes
+              case currentCityMb of
+                Just (API.CityRes currentCity) -> do
+                  modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { validationPrefixList = Just currentCity.rcNumberPrefixList }
+                  pure $ currentCity.rcNumberPrefixList
+                Nothing -> pure defRCNumberPrefixList
+
+
 applicationSubmittedFlow :: String -> FlowBT String Unit
 applicationSubmittedFlow screenType = do
   liftFlowBT hideSplash

@@ -1288,6 +1288,14 @@ rideRoute rideId = do
 
 ------------------------------------------------------------------------- MerchantOperatingCity List -----------------------------------------------------------------------------
 
+getMerchantOperatingCityList :: String -> Flow GlobalState (Either ErrorResponse GetCityRes)
+getMerchantOperatingCityList _ = do
+    let id = if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" )
+    headers <- getHeaders "" false 
+    withAPIResult (EP.getMerchantIdList id) unwrapResponse $ callAPI headers $ GetCityReq id
+    where
+        unwrapResponse x = x  
+
 getMerchantOperatingCityListBT :: String -> FlowBT String GetCityRes
 getMerchantOperatingCityListBT _ = do 
     let id = if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" )

@@ -39,6 +39,7 @@ initData = {
       dateOfRegistrationView : "",
       logField : empty,
       driverMobileNumber : "",
+      validationPrefixArray : [],
       cityConfig : dummyCityConfig,
       config : getAppConfig appConfig
     },

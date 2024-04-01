@@ -157,6 +157,7 @@ type AddVehicleDetailsScreenData =  {
   dateOfRegistrationView :: String,
   logField :: Object Foreign,
   driverMobileNumber :: String,
+  validationPrefixArray :: Array String,
   cityConfig :: CityConfig,
   config :: AppConfig
  }
@@ -1804,7 +1805,8 @@ type GlobalProps = {
   callScreen :: ScreenName,
   gotoPopupType :: GoToPopUpType,
   addTimestamp :: Boolean,
-  bgLocPopupShown :: Boolean
+  bgLocPopupShown :: Boolean,
+  validationPrefixList :: Maybe (Array String)
 }
 
 --------------------------------------------------------------- SubscriptionScreenState ---------------------------------------------------

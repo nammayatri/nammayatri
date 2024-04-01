@@ -181,7 +181,8 @@ defaultGlobalProps = {
   callScreen : ScreenNames.HOME_SCREEN,
   gotoPopupType : NO_POPUP_VIEW,
   addTimestamp : true,
-  bgLocPopupShown : false
+  bgLocPopupShown : false,
+  validationPrefixList : Nothing
 }
 
 data ScreenType =
