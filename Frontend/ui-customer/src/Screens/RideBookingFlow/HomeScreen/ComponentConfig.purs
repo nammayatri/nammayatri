@@ -1010,12 +1010,12 @@ chennaiRateCardList vehicleVariant state = do
                    , { key : (getString PICKUP_CHARGE), val : "₹ 40" }
                    ]
     "SEDAN"     -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO), val : "₹105"}
-                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) ,val : "₹27 / km"}
+                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) ,val : "₹21 / km"}
                    , { key : (getString PICKUP_CHARGE), val : "₹ 40" }
                    ]
 
     "SUV"       -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , val : "₹140"}
-                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) , val :"₹36 / km"}
+                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) , val :"₹28 / km"}
                    , { key : (getString PICKUP_CHARGE), val : "₹ 60" }
                    ]
 
