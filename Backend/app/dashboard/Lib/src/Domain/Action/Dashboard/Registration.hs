@@ -76,7 +76,9 @@ data LoginRes = LoginRes
   { authToken :: Text,
     is2faMandatory :: Bool,
     is2faEnabled :: Bool,
-    message :: Text
+    message :: Text,
+    city :: City.City,
+    merchantId :: ShortId DMerchant.Merchant
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -185,7 +187,7 @@ generateLoginRes person merchant otp city = do
     if isToken
       then generateToken person.id merchant.id city
       else pure ""
-  pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled msg
+  pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled msg city merchant.shortId
 
 check2FA :: (EncFlow m r) => DMerchantAccess.MerchantAccess -> DMerchant.Merchant -> Maybe Text -> m (Bool, Text)
 check2FA merchantAccess merchant otp =
