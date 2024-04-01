@@ -37,7 +37,7 @@ in  { logger_cfg
     , redis_migration_stage = False
     , workers = 1
     , drainer_size = 10
-    , drainer_delay = 20
+    , drainer_delay = 2
     , new_ride_drainer_delay = 2
     , kafka_cfg
     , port = 8081
