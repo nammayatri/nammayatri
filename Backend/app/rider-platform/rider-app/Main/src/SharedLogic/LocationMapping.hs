@@ -22,7 +22,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.LocationMappingExtra as QLM
+import qualified Storage.Queries.LocationMapping as QLM
 
 buildPickUpLocationMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m DLM.LocationMapping
 buildPickUpLocationMapping locationId entityId tag merchantId merchantOperatingCityId = do

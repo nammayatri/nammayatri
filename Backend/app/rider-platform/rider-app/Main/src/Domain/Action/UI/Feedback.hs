@@ -34,7 +34,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.IssueExtra as QIssue
+import qualified Storage.Queries.Issue as QIssue
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
