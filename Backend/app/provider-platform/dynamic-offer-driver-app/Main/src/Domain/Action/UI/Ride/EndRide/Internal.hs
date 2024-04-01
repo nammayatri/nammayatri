@@ -123,7 +123,7 @@ endRideTransaction ::
   TransporterConfig ->
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
-  QDI.updateOnRide (cast ride.driverId) False
+  QDI.updateOnRide False (cast ride.driverId)
   QRide.updateStatus ride.id Ride.COMPLETED
   QRB.updateStatus booking.id SRB.COMPLETED
   whenJust mbFareParams QFare.create

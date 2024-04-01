@@ -18,7 +18,7 @@ module Storage.Beam.SearchRequestForDriver where
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverInformation as D
 import qualified Domain.Types.SearchRequestForDriver as Domain
-import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH

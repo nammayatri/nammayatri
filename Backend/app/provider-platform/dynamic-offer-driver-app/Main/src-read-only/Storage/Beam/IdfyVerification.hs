@@ -6,8 +6,8 @@
 module Storage.Beam.IdfyVerification where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.IdfyVerification
-import qualified Domain.Types.Image
 import qualified Domain.Types.Vehicle
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
@@ -17,7 +17,7 @@ import Tools.Beam.UtilsTH
 
 data IdfyVerificationT f = IdfyVerificationT
   { dashboardPassedVehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant),
-    docType :: B.C f Domain.Types.Image.ImageType,
+    docType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
     documentImageId1 :: B.C f Kernel.Prelude.Text,
     documentImageId2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     documentNumberEncrypted :: B.C f Kernel.Prelude.Text,
@@ -33,6 +33,7 @@ data IdfyVerificationT f = IdfyVerificationT
     requestId :: B.C f Kernel.Prelude.Text,
     retryCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     status :: B.C f Kernel.Prelude.Text,
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Category),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

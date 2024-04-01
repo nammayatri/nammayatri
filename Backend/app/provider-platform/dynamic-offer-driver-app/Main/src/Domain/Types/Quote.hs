@@ -20,7 +20,7 @@ import qualified Domain.Types.FareParameters as Params
 import qualified Domain.Types.FarePolicy as Policy
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.SearchRequest
-import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id

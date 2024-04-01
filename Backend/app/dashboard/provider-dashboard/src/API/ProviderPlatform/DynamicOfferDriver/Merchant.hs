@@ -49,9 +49,9 @@ type API =
            :<|> DriverPoolConfigCreateAPI
            :<|> DriverIntelligentPoolConfigAPI
            :<|> DriverIntelligentPoolConfigUpdateAPI
-           :<|> OnboardingDocumentConfigAPI
-           :<|> OnboardingDocumentConfigUpdateAPI
-           :<|> OnboardingDocumentConfigCreateAPI
+           :<|> DocumentVerificationConfigAPI
+           :<|> DocumentVerificationConfigUpdateAPI
+           :<|> DocumentVerificationConfigCreateAPI
            :<|> ServiceUsageConfigAPI
            :<|> MapsServiceConfigUpdateAPI
            :<|> MapsServiceUsageConfigUpdateAPI
@@ -99,17 +99,17 @@ type DriverIntelligentPoolConfigUpdateAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'DRIVER_INTELLIGENT_POOL_CONFIG_UPDATE
     :> Common.DriverIntelligentPoolConfigUpdateAPI
 
-type OnboardingDocumentConfigAPI =
+type DocumentVerificationConfigAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'ONBOARDING_DOCUMENT_CONFIG
-    :> Common.OnboardingDocumentConfigAPI
+    :> Common.DocumentVerificationConfigAPI
 
-type OnboardingDocumentConfigUpdateAPI =
+type DocumentVerificationConfigUpdateAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'ONBOARDING_DOCUMENT_CONFIG_UPDATE
-    :> Common.OnboardingDocumentConfigUpdateAPI
+    :> Common.DocumentVerificationConfigUpdateAPI
 
-type OnboardingDocumentConfigCreateAPI =
+type DocumentVerificationConfigCreateAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'ONBOARDING_DOCUMENT_CONFIG_CREATE
-    :> Common.OnboardingDocumentConfigCreateAPI
+    :> Common.DocumentVerificationConfigCreateAPI
 
 type ServiceUsageConfigAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'SERVICE_USAGE_CONFIG
@@ -173,9 +173,9 @@ handler merchantId city =
     :<|> driverPoolConfigCreate merchantId city
     :<|> driverIntelligentPoolConfig merchantId city
     :<|> driverIntelligentPoolConfigUpdate merchantId city
-    :<|> onboardingDocumentConfig merchantId city
-    :<|> onboardingDocumentConfigUpdate merchantId city
-    :<|> onboardingDocumentConfigCreate merchantId city
+    :<|> documentVerificationConfig merchantId city
+    :<|> documentVerificationConfigUpdate merchantId city
+    :<|> documentVerificationConfigCreate merchantId city
     :<|> serviceUsageConfig merchantId city
     :<|> mapsServiceConfigUpdate merchantId city
     :<|> mapsServiceUsageConfigUpdate merchantId city
@@ -310,43 +310,46 @@ driverIntelligentPoolConfigUpdate merchantShortId opCity apiTokenInfo req = with
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.driverIntelligentPoolConfigUpdate) req
 
-onboardingDocumentConfig ::
+documentVerificationConfig ::
   ShortId DM.Merchant ->
   City.City ->
   ApiTokenInfo ->
   Maybe Common.DocumentType ->
-  FlowHandler Common.OnboardingDocumentConfigRes
-onboardingDocumentConfig merchantShortId opCity apiTokenInfo documentType = withFlowHandlerAPI' $ do
+  Maybe Common.Category ->
+  FlowHandler Common.DocumentVerificationConfigRes
+documentVerificationConfig merchantShortId opCity apiTokenInfo documentType category = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.onboardingDocumentConfig) documentType
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.documentVerificationConfig) documentType category
 
-onboardingDocumentConfigUpdate ::
+documentVerificationConfigUpdate ::
   ShortId DM.Merchant ->
   City.City ->
   ApiTokenInfo ->
   Common.DocumentType ->
-  Common.OnboardingDocumentConfigUpdateReq ->
+  Common.Category ->
+  Common.DocumentVerificationConfigUpdateReq ->
   FlowHandler APISuccess
-onboardingDocumentConfigUpdate merchantShortId opCity apiTokenInfo documentType req = withFlowHandlerAPI' $ do
-  -- runRequestValidation Common.validateOnboardingDocumentConfigUpdateReq req
+documentVerificationConfigUpdate merchantShortId opCity apiTokenInfo documentType category req = withFlowHandlerAPI' $ do
+  -- runRequestValidation Common.validateDocumentVerificationConfigUpdateReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.OnboardingDocumentConfigUpdateEndpoint apiTokenInfo (Just req)
+  transaction <- buildTransaction Common.DocumentVerificationConfigUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.onboardingDocumentConfigUpdate) documentType req
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.documentVerificationConfigUpdate) documentType category req
 
-onboardingDocumentConfigCreate ::
+documentVerificationConfigCreate ::
   ShortId DM.Merchant ->
   City.City ->
   ApiTokenInfo ->
   Common.DocumentType ->
-  Common.OnboardingDocumentConfigCreateReq ->
+  Common.Category ->
+  Common.DocumentVerificationConfigCreateReq ->
   FlowHandler APISuccess
-onboardingDocumentConfigCreate merchantShortId opCity apiTokenInfo documentType req = withFlowHandlerAPI' $ do
-  -- runRequestValidation Common.validateOnboardingDocumentConfigCreateReq req
+documentVerificationConfigCreate merchantShortId opCity apiTokenInfo documentType category req = withFlowHandlerAPI' $ do
+  -- runRequestValidation Common.validateDocumentVerificationConfigCreateReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.OnboardingDocumentConfigCreateEndpoint apiTokenInfo (Just req)
+  transaction <- buildTransaction Common.DocumentVerificationConfigCreateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.onboardingDocumentConfigCreate) documentType req
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.documentVerificationConfigCreate) documentType category req
 
 serviceUsageConfig ::
   ShortId DM.Merchant ->

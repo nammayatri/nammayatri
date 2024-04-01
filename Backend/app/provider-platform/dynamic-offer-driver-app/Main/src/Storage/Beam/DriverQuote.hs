@@ -18,7 +18,7 @@ module Storage.Beam.DriverQuote where
 import qualified Database.Beam as B
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverQuote as Domain
-import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common

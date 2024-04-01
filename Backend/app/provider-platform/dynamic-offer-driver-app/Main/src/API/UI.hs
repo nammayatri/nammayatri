@@ -19,6 +19,7 @@ module API.UI
 where
 
 import qualified API.Action.UI.Cac as Cac
+import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.LmsModule as LmsModule
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
@@ -62,6 +63,7 @@ type API =
     :> ( HealthCheckAPI
            :<|> Registration.API
            :<|> DriverOnboarding.API
+           :<|> DriverOnboardingV2.API
            :<|> OrgAdmin.API
            :<|> Payment.API
            :<|> Driver.API
@@ -100,6 +102,7 @@ handler =
   pure "App is UP"
     :<|> Registration.handler
     :<|> DriverOnboarding.handler
+    :<|> DriverOnboardingV2.handler
     :<|> OrgAdmin.handler
     :<|> Payment.handler
     :<|> Driver.handler

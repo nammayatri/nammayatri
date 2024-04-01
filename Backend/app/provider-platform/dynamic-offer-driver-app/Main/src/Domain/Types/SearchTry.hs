@@ -20,7 +20,7 @@ import qualified Domain.Types.Common as DTC
 import Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -48,7 +48,7 @@ data SearchTry = SearchTry
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, PrettyShow, Show)
+  deriving (Generic, Show)
 
 data SearchTryStatus = ACTIVE | CANCELLED | COMPLETED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

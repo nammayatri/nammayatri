@@ -16,11 +16,11 @@ module Storage.Queries.Status where
 
 import Data.List (zip7)
 import qualified Database.Beam as B
+import qualified Domain.Types.DocumentVerificationConfig as DVC
 import Domain.Types.DriverInformation
 import Domain.Types.DriverLicense
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.IdfyVerification as IV
-import qualified Domain.Types.Image as Image
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant.MerchantOperatingCity as CQMOC
 import Domain.Types.Person
@@ -57,7 +57,7 @@ data DriverDocsInfo = DriverDocsInfo
     numVehRegImages :: Int
   }
 
-imagesAggTableCTEbyDoctype :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Image.ImageType -> m [(Text, Int)]
+imagesAggTableCTEbyDoctype :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DVC.DocumentType -> m [(Text, Int)]
 imagesAggTableCTEbyDoctype imageType' = do
   dbConf <- getMasterBeamConfig
   resp <-
@@ -81,7 +81,7 @@ fetchDriverDocsInfo merchantId' opCity mbDriverIds = do
           idfy' <- B.leftJoin_' (B.all_ $ BeamCommon.idfyVerification BeamCommon.atlasDB) (\idfy'' -> BeamIV.driverId idfy'' B.==?. BeamP.id person')
           drc' <- B.leftJoin_' (B.all_ $ BeamCommon.driverRCAssociation BeamCommon.atlasDB) (\drc'' -> BeamRC.driverId drc'' B.==?. BeamP.id person')
           vc' <- B.leftJoin_' (B.all_ $ BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB) (\vc'' -> BeamRC.rcId drc' B.==?. B.just_ (BeamVRC.id vc''))
-          idfy'' <- B.leftJoin_' (B.all_ $ BeamCommon.idfyVerification BeamCommon.atlasDB) (\idfy''' -> BeamIV.driverId idfy''' B.==?. BeamP.id person' B.&&?. BeamIV.docType idfy''' B.==?. B.val_ Image.VehicleRegistrationCertificate)
+          idfy'' <- B.leftJoin_' (B.all_ $ BeamCommon.idfyVerification BeamCommon.atlasDB) (\idfy''' -> BeamIV.driverId idfy''' B.==?. BeamP.id person' B.&&?. BeamIV.docType idfy''' B.==?. B.val_ DVC.VehicleRegistrationCertificate)
           di' <- B.join_' (BeamCommon.driverInformation BeamCommon.atlasDB) (\di'' -> BeamDI.driverId di'' B.==?. BeamP.id person')
           pure (person', dl', idfy', drc', vc', idfy'', di')
   resDom <- case res of
@@ -95,8 +95,8 @@ fetchDriverDocsInfo merchantId' opCity mbDriverIds = do
       di <- catMaybes <$> mapM fromTType' (sev' <$> res')
       pure $ zip7 p dl idfy drc vc idfy_ di
     Left _ -> pure []
-  imagesCountLic <- imagesAggTableCTEbyDoctype Image.DriverLicense
-  imagesCountVehReg <- imagesAggTableCTEbyDoctype Image.VehicleRegistrationCertificate
+  imagesCountLic <- imagesAggTableCTEbyDoctype DVC.DriverLicense
+  imagesCountVehReg <- imagesAggTableCTEbyDoctype DVC.VehicleRegistrationCertificate
   let resAndImageCount = foldl' (joinResAndLic imagesCountLic) [] resDom
       resImageAndVehCount = foldl' (joinResAndVeh imagesCountVehReg) [] resAndImageCount
       driverDocs' = filter (\(p, _, _, _, _, _, _, _, _) -> p.merchantId == merchantId'.id && (p.merchantOperatingCityId == opCity.id || opCity.city == merchantId'.city) && maybe True (\dIds -> (getId p.id) `elem` (getId <$> toList dIds)) mbDriverIds) resImageAndVehCount

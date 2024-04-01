@@ -51,6 +51,9 @@ type API =
            :<|> VerifyAadhaarOtpAPI
            :<|> AuthAPI
            :<|> VerifyAPI
+           :<|> UnderReviewDriversListAPI
+           :<|> DriverDocumentInfoAPI
+           :<|> UpdateDocumentAPI
        )
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
@@ -64,6 +67,9 @@ handler merchantId city =
     :<|> verifyAadhaarOtp merchantId city
     :<|> auth merchantId city
     :<|> verify merchantId city
+    :<|> underReviewDriversList merchantId city
+    :<|> driverDocumentInfo merchantId city
+    :<|> updateDocument merchantId city
 
 type DocumentsListAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DOCUMENT_LIST :> Common.DocumentsListAPI
 
@@ -82,6 +88,12 @@ type VerifyAadhaarOtpAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'VERIFY
 type AuthAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'AUTH :> Common.AuthAPI
 
 type VerifyAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'VERIFY :> Common.VerifyAPI
+
+type UnderReviewDriversListAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UNDER_REVIEW_DRIVERS_LIST :> Common.UnderReviewDriversListAPI
+
+type DriverDocumentInfoAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DRIVER_DOCUMENT_INFO :> Common.DriverDocumentInfoAPI
+
+type UpdateDocumentAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UPDATE_DOCUMENT :> Common.UpdateDocumentAPI
 
 buildTransaction ::
   ( MonadFlow m,
@@ -161,3 +173,23 @@ verify merchantShortId opCity apiTokenInfo authId req =
     role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
     let mbFleet = role.dashboardAccessType == DRole.FLEET_OWNER || role.dashboardAccessType == DRole.RENTAL_FLEET_OWNER
     Client.callDriverOfferBPP checkedMerchantId opCity (.driverRegistration.verify) authId mbFleet apiTokenInfo.personId.getId req
+
+underReviewDriversList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> FlowHandler Common.UnderReviewDriversListResponse
+underReviewDriversList merchantShortId opCity apiTokenInfo limit offset =
+  withFlowHandlerAPI' $ do
+    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.underReviewDriversList) limit offset
+
+driverDocumentInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler [Common.DriverDocument]
+driverDocumentInfo merchantShortId opCity apiTokenInfo driverId =
+  withFlowHandlerAPI' $ do
+    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.driverDocumentInfo) driverId
+
+updateDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Image -> Common.UpdateDocumentRequest -> FlowHandler APISuccess
+updateDocument merchantShortId opCity apiTokenInfo imageId req =
+  withFlowHandlerAPI' $ do
+    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+    transaction <- buildTransaction Common.UpdateDocumentEndpoint apiTokenInfo (cast imageId) (Just req) -- TODO: fix this
+    T.withTransactionStoring transaction $
+      Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.updateDocument) imageId req

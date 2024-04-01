@@ -4,8 +4,8 @@
 
 module Storage.Queries.IdfyVerification where
 
+import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.IdfyVerification
-import qualified Domain.Types.Image
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -31,7 +31,7 @@ findAllByDriverId (Kernel.Types.Id.Id driverId) = do findAllWithKV [Se.Is Beam.d
 
 findAllByDriverIdAndDocType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Image.ImageType -> m [Domain.Types.IdfyVerification.IdfyVerification])
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.IdfyVerification.IdfyVerification])
 findAllByDriverIdAndDocType (Kernel.Types.Id.Id driverId) docType = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.docType $ Se.Eq docType]]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IdfyVerification.IdfyVerification -> m (Maybe Domain.Types.IdfyVerification.IdfyVerification))
@@ -42,7 +42,7 @@ findByRequestId requestId = do findOneWithKV [Se.Is Beam.requestId $ Se.Eq reque
 
 findLatestByDriverIdAndDocType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Image.ImageType -> m [Domain.Types.IdfyVerification.IdfyVerification])
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.IdfyVerification.IdfyVerification])
 findLatestByDriverIdAndDocType limit offset (Kernel.Types.Id.Id driverId) docType = do
   findAllWithOptionsKV
     [ Se.And
@@ -90,6 +90,7 @@ updateByPrimaryKey (Domain.Types.IdfyVerification.IdfyVerification {..}) = do
       Se.Set Beam.requestId requestId,
       Se.Set Beam.retryCount retryCount,
       Se.Set Beam.status status,
+      Se.Set Beam.vehicleCategory vehicleCategory,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
@@ -118,6 +119,7 @@ instance FromTType' Beam.IdfyVerification Domain.Types.IdfyVerification.IdfyVeri
             requestId = requestId,
             retryCount = retryCount,
             status = status,
+            vehicleCategory = vehicleCategory,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -144,6 +146,7 @@ instance ToTType' Beam.IdfyVerification Domain.Types.IdfyVerification.IdfyVerifi
         Beam.requestId = requestId,
         Beam.retryCount = retryCount,
         Beam.status = status,
+        Beam.vehicleCategory = vehicleCategory,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

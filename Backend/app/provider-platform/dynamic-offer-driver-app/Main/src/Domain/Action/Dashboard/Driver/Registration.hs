@@ -22,6 +22,9 @@ module Domain.Action.Dashboard.Driver.Registration
     verifyAadhaarOtp,
     auth,
     verify,
+    underReviewDriversList,
+    driverDocumentInfo,
+    updateDocument,
   )
 where
 
@@ -31,9 +34,8 @@ import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.Registration as DReg
+import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.FleetDriverAssociation as FDV
-import Domain.Types.Image
-import qualified Domain.Types.Image as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RegistrationToken as SR
 import Environment
@@ -42,7 +44,9 @@ import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
@@ -52,8 +56,8 @@ import qualified Tools.AadhaarVerification as AadhaarVerification
 documentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DocumentsListResponse
 documentsList merchantShortId _ driverId = do
   merchant <- findMerchantByShortId merchantShortId
-  licImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) DriverLicense)
-  vehRegImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) VehicleRegistrationCertificate)
+  licImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.DriverLicense)
+  vehRegImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleRegistrationCertificate)
   pure
     Common.DocumentsListResponse
       { driverLicense = licImgs,
@@ -66,9 +70,9 @@ getDocument merchantShortId _ imageId = do
   img <- getImage merchant.id (cast imageId)
   pure Common.GetDocumentResponse {imageBase64 = img}
 
-mapImageType :: Common.DocumentType -> Domain.ImageType
-mapImageType Common.DriverLicense = Domain.DriverLicense
-mapImageType Common.VehicleRegistrationCertificate = Domain.VehicleRegistrationCertificate
+mapDocumentType :: Common.DocumentType -> Domain.DocumentType
+mapDocumentType Common.DriverLicense = Domain.DriverLicense
+mapDocumentType Common.VehicleRegistrationCertificate = Domain.VehicleRegistrationCertificate
 
 uploadDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 uploadDocument merchantShortId opCity driverId_ req = do
@@ -80,8 +84,8 @@ uploadDocument merchantShortId opCity driverId_ req = do
       (cast driverId_, cast merchant.id, merchantOpCityId)
       ImageValidateRequest
         { image = req.imageBase64,
-          imageType = mapImageType req.imageType,
-          rcId = Id <$> req.rcId
+          imageType = mapDocumentType req.imageType,
+          rcNumber = req.rcNumber
         }
   pure $ Common.UploadDocumentResp {imageId = cast res.imageId}
 
@@ -96,6 +100,7 @@ registerDL merchantShortId opCity driverId_ Common.RegisterDLReq {..} = do
     DriverDLReq
       { imageId1 = cast imageId1,
         imageId2 = fmap cast imageId2,
+        vehicleCategory = Nothing,
         ..
       }
 
@@ -109,6 +114,7 @@ registerRC merchantShortId opCity driverId_ Common.RegisterRCReq {..} = do
     (cast driverId_, cast merchant.id, merchantOpCityId)
     ( DriverRCReq
         { imageId = cast imageId,
+          vehicleCategory = Nothing,
           ..
         }
     )
@@ -178,6 +184,15 @@ verify authId mbFleet fleetOwnerId req = do
     assoc <- FDV.makeFleetVehicleDriverAssociation res.person.id fleetOwnerId
     QFDV.upsert assoc
   pure Success
+
+underReviewDriversList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.UnderReviewDriversListResponse
+underReviewDriversList _merchantShortId _opCity _limit _offset = throwError (InternalError "Not Implemented")
+
+driverDocumentInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow [Common.DriverDocument]
+driverDocumentInfo _merchantShortId _opCity _driverId = throwError (InternalError "Not Implemented")
+
+updateDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Image -> Common.UpdateDocumentRequest -> Flow APISuccess
+updateDocument _merchantShortId _opCity _imageId _req = throwError (InternalError "Not Implemented")
 
 convertVerifyOtp :: AadhaarVerificationResp -> Common.GenerateAadhaarOtpRes
 convertVerifyOtp AadhaarVerificationResp {..} = Common.GenerateAadhaarOtpRes {..}

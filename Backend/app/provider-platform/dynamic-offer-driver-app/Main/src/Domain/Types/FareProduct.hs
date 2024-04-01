@@ -22,7 +22,7 @@ import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty

@@ -4,6 +4,7 @@
 
 module Storage.Queries.Image (module Storage.Queries.Image, module ReExport) where
 
+import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -39,7 +40,7 @@ findByMerchantId (Kernel.Types.Id.Id merchantId) = do findAllWithKV [Se.Is Beam.
 
 findImagesByPersonAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Image.ImageType -> m [Domain.Types.Image.Image])
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.Image.Image])
 findImagesByPersonAndType (Kernel.Types.Id.Id merchantId) (Kernel.Types.Id.Id personId) imageType = do
   findAllWithKV
     [ Se.And

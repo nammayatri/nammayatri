@@ -129,8 +129,8 @@ resetDriver driver = runARDUFlow "" $ do
     TQRB.updateStatus booking.id TRB.CANCELLED
   forM_ activeQuotes $ \activeQuote ->
     TDQ.setInactiveBySTId activeQuote.searchTryId
-  QTDrInfo.updateActivity (cast driver.driverId) False (Just TDrInfo.OFFLINE)
-  QTDrInfo.updateOnRide (cast driver.driverId) False
+  QTDrInfo.updateActivity False (Just TDrInfo.OFFLINE) (cast driver.driverId)
+  QTDrInfo.updateOnRide False (cast driver.driverId)
 
 -- flow primitives
 search :: Text -> AppSearch.SearchReq -> ClientsM (Id AppSearchReq.SearchRequest)

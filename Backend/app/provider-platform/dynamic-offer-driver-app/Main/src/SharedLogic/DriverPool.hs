@@ -67,7 +67,7 @@ import qualified Domain.Types.Person as DP
 import Domain.Types.RiderDetails (RiderDetails)
 import Domain.Types.SearchRequest
 import Domain.Types.SearchTry
-import Domain.Types.Vehicle.Variant (Variant)
+import Domain.Types.Vehicle (Variant)
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude (NominalDiffTime, head)

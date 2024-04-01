@@ -464,21 +464,21 @@ validateSlidingWindowOptions SWC.SlidingWindowOptions {..} =
 ---------------------------------------------------------
 -- merchant onboarding document config update -----------
 
-type OnboardingDocumentConfigAPI =
+type DocumentVerificationConfigAPI =
   "config"
     :> "onboardingDocument"
     :> QueryParam "documentType" DocumentType
-    :> Get '[JSON] OnboardingDocumentConfigRes
+    :> QueryParam "vehicleCategory" Category
+    :> Get '[JSON] DocumentVerificationConfigRes
 
-type OnboardingDocumentConfigRes = [OnboardingDocumentConfigItem]
+type DocumentVerificationConfigRes = [DocumentVerificationConfigItem]
 
-data OnboardingDocumentConfigItem = OnboardingDocumentConfigItem
+data DocumentVerificationConfigItem = DocumentVerificationConfigItem
   { documentType :: DocumentType,
     checkExtraction :: Bool,
     checkExpiry :: Bool,
     supportedVehicleClasses :: SupportedVehicleClasses,
     vehicleClassCheckType :: VehicleClassCheckType,
-    rcNumberPrefix :: Text,
     rcNumberPrefixList :: Maybe [Text],
     maxRetryCount :: Int,
     createdAt :: UTCTime,
@@ -533,6 +533,7 @@ data VehicleClassVariantMap = VehicleClassVariantMap
     manufacturer :: Maybe Text,
     manufacturerModel :: Maybe Text,
     reviewRequired :: Maybe Bool,
+    vehicleModel :: Text,
     bodyType :: Maybe Text
   }
   deriving stock (Generic, Show)
@@ -551,15 +552,16 @@ $(mkHttpInstancesForEnum ''DocumentType)
 ---------------------------------------------------------
 -- merchant onboarding document config update -----------
 
-type OnboardingDocumentConfigUpdateAPI =
+type DocumentVerificationConfigUpdateAPI =
   "config"
     :> "onboardingDocument"
     :> "update"
     :> MandatoryQueryParam "documentType" DocumentType
-    :> ReqBody '[JSON] OnboardingDocumentConfigUpdateReq
+    :> MandatoryQueryParam "category" Category
+    :> ReqBody '[JSON] DocumentVerificationConfigUpdateReq
     :> Post '[JSON] APISuccess
 
-data OnboardingDocumentConfigUpdateReq = OnboardingDocumentConfigUpdateReq
+data DocumentVerificationConfigUpdateReq = DocumentVerificationConfigUpdateReq
   { checkExtraction :: Maybe (MandatoryValue Bool),
     checkExpiry :: Maybe (MandatoryValue Bool),
     supportedVehicleClasses :: Maybe SupportedVehicleClasses, -- value wrapper make no sense for lists and objects
@@ -571,21 +573,22 @@ data OnboardingDocumentConfigUpdateReq = OnboardingDocumentConfigUpdateReq
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-instance HideSecrets OnboardingDocumentConfigUpdateReq where
+instance HideSecrets DocumentVerificationConfigUpdateReq where
   hideSecrets = identity
 
 ---------------------------------------------------------
 -- merchant onboarding document config create -----------
 
-type OnboardingDocumentConfigCreateAPI =
+type DocumentVerificationConfigCreateAPI =
   "config"
     :> "onboardingDocument"
     :> "create"
     :> MandatoryQueryParam "documentType" DocumentType
-    :> ReqBody '[JSON] OnboardingDocumentConfigCreateReq
+    :> MandatoryQueryParam "category" Category
+    :> ReqBody '[JSON] DocumentVerificationConfigCreateReq
     :> Post '[JSON] APISuccess
 
-data OnboardingDocumentConfigCreateReq = OnboardingDocumentConfigCreateReq
+data DocumentVerificationConfigCreateReq = DocumentVerificationConfigCreateReq
   { checkExtraction :: Bool,
     checkExpiry :: Bool,
     supportedVehicleClasses :: SupportedVehicleClasses,
@@ -597,7 +600,7 @@ data OnboardingDocumentConfigCreateReq = OnboardingDocumentConfigCreateReq
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-instance HideSecrets OnboardingDocumentConfigCreateReq where
+instance HideSecrets DocumentVerificationConfigCreateReq where
   hideSecrets = identity
 
 ---------------------------------------------------------

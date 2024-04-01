@@ -25,7 +25,7 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.Vehicle.Variant as Veh
+import qualified Domain.Types.Vehicle as Veh
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq

@@ -5,7 +5,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.Utils as Utils
 import Data.Text as T
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM (PaymentCollector (..), PaymentInstrument (..), PaymentMethodInfo (..), PaymentType (..))
-import qualified Domain.Types.Vehicle.Variant as VehVar
+import qualified Domain.Types.Vehicle as VehVar
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (..))

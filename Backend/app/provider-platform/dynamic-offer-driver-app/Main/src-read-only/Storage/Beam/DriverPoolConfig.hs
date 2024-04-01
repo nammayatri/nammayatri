@@ -7,7 +7,7 @@ module Storage.Beam.DriverPoolConfig where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.UtilsTH
-import qualified Domain.Types.Vehicle.Variant
+import qualified Domain.Types.Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -42,7 +42,7 @@ data DriverPoolConfigT f = DriverPoolConfigT
     tripCategory :: B.C f Kernel.Prelude.Text,
     tripDistance :: B.C f Kernel.Types.Common.Meters,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant.Variant)
+    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant)
   }
   deriving (Generic, B.Beamable)
 

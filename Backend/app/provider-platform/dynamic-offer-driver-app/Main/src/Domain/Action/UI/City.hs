@@ -17,13 +17,11 @@ module Domain.Action.UI.City where
 import qualified Domain.Types.City as DTC
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity (..))
-import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DTO
 import Environment
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as QODC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQMTC
 import Tools.Error
 
@@ -34,12 +32,10 @@ listCities mId = do
   where
     mkCityRes MerchantOperatingCity {..} = do
       transporterConfig <- CQMTC.findByMerchantOpCityId id Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound id.getId)
-      onboardingDocumentConfig <- QODC.findByMerchantOpCityIdAndDocumentType id DTO.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound id.getId (show DTO.DL))
       return $
         DTC.CityRes
           { code = city,
             name = show city,
             subscription = transporterConfig.subscription,
-            rcNumberPrefixList = onboardingDocumentConfig.rcNumberPrefixList,
             ..
           }

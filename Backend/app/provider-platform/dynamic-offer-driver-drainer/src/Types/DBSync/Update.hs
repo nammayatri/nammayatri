@@ -24,6 +24,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.BookingCancellationReas
 import qualified "dynamic-offer-driver-app" Storage.Beam.BusinessEvent as BusinessEvent
 import qualified "dynamic-offer-driver-app" Storage.Beam.CallStatus as CallStatus
 import qualified "dynamic-offer-driver-app" Storage.Beam.CancellationReason as CancellationReason
+import qualified "dynamic-offer-driver-app" Storage.Beam.DocumentVerificationConfig as MerchantDocumentVerificationConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest as DriverGoHomeRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation as DriverHomeLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverBlockReason as DriverBlockReason
@@ -68,7 +69,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantMessag
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantPaymentMethod as MerchantPaymentMethod
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
-import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.OnboardingDocumentConfig as MerchantOnboardingDocumentConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.TransporterConfig as TransporterConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.Message as Message
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageReport as MessageReport
@@ -145,7 +145,7 @@ data UpdateModel
   | MerchantPaymentMethodUpdate
   | MerchantServiceConfigUpdate
   | MerchantServiceUsageConfigUpdate
-  | MerchantOnboardingDocumentConfigUpdate
+  | MerchantDocumentVerificationConfigUpdate
   | TransporterConfigUpdate
   | MessageUpdate
   | MessageReportUpdate
@@ -229,7 +229,7 @@ getTagUpdate MerchantMessageUpdate = "MerchantMessageOptions"
 getTagUpdate MerchantPaymentMethodUpdate = "MerchantPaymentMethodOptions"
 getTagUpdate MerchantServiceConfigUpdate = "MerchantServiceConfigOptions"
 getTagUpdate MerchantServiceUsageConfigUpdate = "MerchantServiceUsageConfigOptions"
-getTagUpdate MerchantOnboardingDocumentConfigUpdate = "MerchantOnboardingDocumentConfigOptions"
+getTagUpdate MerchantDocumentVerificationConfigUpdate = "MerchantDocumentVerificationConfigOptions"
 getTagUpdate TransporterConfigUpdate = "TransporterConfigOptions"
 getTagUpdate MessageUpdate = "MessageOptions"
 getTagUpdate MessageReportUpdate = "MessageReportOptions"
@@ -312,7 +312,7 @@ parseTagUpdate "MerchantMessageOptions" = return MerchantMessageUpdate
 parseTagUpdate "MerchantPaymentMethodOptions" = return MerchantPaymentMethodUpdate
 parseTagUpdate "MerchantServiceConfigOptions" = return MerchantServiceConfigUpdate
 parseTagUpdate "MerchantServiceUsageConfigOptions" = return MerchantServiceUsageConfigUpdate
-parseTagUpdate "MerchantOnboardingDocumentConfigOptions" = return MerchantOnboardingDocumentConfigUpdate
+parseTagUpdate "MerchantDocumentVerificationConfigOptions" = return MerchantDocumentVerificationConfigUpdate
 parseTagUpdate "TransporterConfigOptions" = return TransporterConfigUpdate
 parseTagUpdate "MessageOptions" = return MessageUpdate
 parseTagUpdate "MessageReportOptions" = return MessageReportUpdate
@@ -396,7 +396,7 @@ data DBUpdateObject
   | MerchantPaymentMethodOptions UpdateModel [Set Postgres MerchantPaymentMethod.MerchantPaymentMethodT] (Where Postgres MerchantPaymentMethod.MerchantPaymentMethodT)
   | MerchantServiceConfigOptions UpdateModel [Set Postgres MerchantServiceConfig.MerchantServiceConfigT] (Where Postgres MerchantServiceConfig.MerchantServiceConfigT)
   | MerchantServiceUsageConfigOptions UpdateModel [Set Postgres MerchantServiceUsageConfig.MerchantServiceUsageConfigT] (Where Postgres MerchantServiceUsageConfig.MerchantServiceUsageConfigT)
-  | MerchantOnboardingDocumentConfigOptions UpdateModel [Set Postgres MerchantOnboardingDocumentConfig.OnboardingDocumentConfigT] (Where Postgres MerchantOnboardingDocumentConfig.OnboardingDocumentConfigT)
+  | MerchantDocumentVerificationConfigOptions UpdateModel [Set Postgres MerchantDocumentVerificationConfig.DocumentVerificationConfigT] (Where Postgres MerchantDocumentVerificationConfig.DocumentVerificationConfigT)
   | TransporterConfigOptions UpdateModel [Set Postgres TransporterConfig.TransporterConfigT] (Where Postgres TransporterConfig.TransporterConfigT)
   | MessageOptions UpdateModel [Set Postgres Message.MessageT] (Where Postgres Message.MessageT)
   | MessageReportOptions UpdateModel [Set Postgres MessageReport.MessageReportT] (Where Postgres MessageReport.MessageReportT)
@@ -590,9 +590,9 @@ instance FromJSON DBUpdateObject where
       MerchantServiceUsageConfigUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ MerchantServiceUsageConfigOptions updateModel updVals whereClause
-      MerchantOnboardingDocumentConfigUpdate -> do
+      MerchantDocumentVerificationConfigUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ MerchantOnboardingDocumentConfigOptions updateModel updVals whereClause
+        return $ MerchantDocumentVerificationConfigOptions updateModel updVals whereClause
       TransporterConfigUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ TransporterConfigOptions updateModel updVals whereClause

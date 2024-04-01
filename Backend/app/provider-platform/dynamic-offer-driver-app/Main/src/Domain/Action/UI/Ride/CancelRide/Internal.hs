@@ -131,7 +131,7 @@ cancelRideTransaction ::
 cancelRideTransaction booking ride bookingCReason merchantId = do
   let driverId = cast ride.driverId
   void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
-  QDI.updateOnRide (cast ride.driverId) False
+  QDI.updateOnRide False (cast ride.driverId)
   void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
   void $ QRide.updateStatus ride.id DRide.CANCELLED
   QBCR.upsert bookingCReason

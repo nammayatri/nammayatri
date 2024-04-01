@@ -144,7 +144,7 @@ verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
             Right _ -> do
               aadhaarEntity <- mkAadhaar personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) Nothing True (Just orgImageFilePath)
               Q.create aadhaarEntity
-              DriverInfo.updateAadhaarVerifiedState (cast personId) True
+              DriverInfo.updateAadhaarVerifiedState True (cast personId)
               Status.statusHandler (person.id, person.merchantId, merchantOpCityId) Nothing
               uploadCompressedAadhaarImage person merchantOpCityId res.image imageType >> pure ()
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
@@ -200,7 +200,7 @@ uploadCompressedAadhaarImage person merchantOpCityId image imageType = do
   resultComp <- try @_ @SomeException $ S3.put (unpack compImageFilePath) compImage
   case resultComp of
     Left err -> logDebug ("Failed to Upload Compressed Aadhaar Image to S3 : " <> show err)
-    Right _ -> QDI.updateCompAadhaarImagePath (cast person.id) compImageFilePath
+    Right _ -> QDI.updateCompAadhaarImagePath (Just compImageFilePath) (cast person.id)
   pure (compImage, resultComp)
 
 resizeImage :: MonadFlow m => Int -> Int -> Text -> ImageType -> m (Maybe Text)

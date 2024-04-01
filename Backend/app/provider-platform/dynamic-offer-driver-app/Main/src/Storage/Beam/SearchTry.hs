@@ -19,7 +19,7 @@ module Storage.Beam.SearchTry where
 import qualified Database.Beam as B
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.SearchTry as Domain
-import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
+import qualified Domain.Types.Vehicle as Variant (Variant)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH

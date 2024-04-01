@@ -6,7 +6,9 @@ imports:
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
   Variant: Domain.Types.Vehicle
-  ImageType: Domain.Types.Image
+  Category: Domain.Types.Vehicle
+  Value: Data.Aeson
+  DocumentType: Domain.Types.DocumentVerificationConfig
   Image: Domain.Types.Image
   DriverOnboardingError: Tools.Error
   VerificationStatus: Domain.Types.IdfyVerification
@@ -19,7 +21,8 @@ IdfyVerification:
     documentImageId2: Maybe (Id Image)
     driverId: Id Person
     requestId: Text
-    docType: ImageType
+    docType: DocumentType
+    vehicleCategory: Maybe Category
     status: Text
     issueDateOnDoc: Maybe UTCTime
     driverDateOfBirth: Maybe UTCTime
@@ -202,6 +205,9 @@ VehicleRegistrationCertificate:
     reviewRequired: Maybe Bool
     verificationStatus: VerificationStatus
     fleetOwnerId: Maybe Text
+    airConditioned: Maybe Bool
+    luggageCapacity: Maybe Int
+    vehicleRating: Maybe Double
   constraints:
     id: PrimaryKey
     certificateNumberHash: SecondaryKey
@@ -269,14 +275,11 @@ Image:
     personId: Id Person
     merchantId: Id Merchant
     s3Path: Text
-    imageType: ImageType
+    imageType: DocumentType
     isValid: Bool
     failureReason: Maybe DriverOnboardingError
     rcId: Maybe Text
   excludedFields: [merchantOperatingCityId]
-  types:
-    ImageType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,VehiclePermit,VehicleInsurance,VehiclePUC,VehicleFitnessCertificate"
   constraints:
     id: PrimaryKey
     personId: SecondaryKey
@@ -304,3 +307,113 @@ Image:
       where: personId
   extraOperations:
     - EXTRA_QUERY_FILE
+
+DocumentVerificationConfig:
+  tableName: document_verification_config
+  types:
+    VehicleClassVariantMap:
+      vehicleClass: Text
+      vehicleCapacity: Maybe Int
+      vehicleVariant: Variant
+      manufacturer: Maybe Text
+      manufacturerModel: Maybe Text
+      vehicleModel: Maybe Text
+      reviewRequired: Maybe Bool
+      bodyType: Maybe Text
+      derive: "Eq, Ord, Read"
+    SupportedVehicleClasses:
+      enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
+    DocumentType:
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC"
+    VehicleClassCheckType:
+      enum: "Infix,Prefix,Suffix"
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    vehicleCategory: Category
+    documentType: DocumentType
+    title: Text
+    description: Maybe Text
+    isMandatory: Bool
+    isDisabled: Bool
+    disableWarning: Maybe Text
+    isHidden: Bool
+    dependencyDocumentType: '[DocumentType]'
+    checkExtraction: Bool
+    checkExpiry: Bool
+    supportedVehicleClasses: SupportedVehicleClasses
+    vehicleClassCheckType: VehicleClassCheckType
+    rcNumberPrefixList: '[Text]'
+    maxRetryCount: Int
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    vehicleCategory: PrimaryKey
+    documentType: PrimaryKey
+  sqlType:
+    dependencyDocumentType: text[]
+    supportedVehicleClassesJSON: json
+  beamFields:
+    supportedVehicleClasses:
+     supportedVehicleClassesJSON: Value
+  toTType:
+    supportedVehicleClassesJSON: getConfigJSON
+  fromTType:
+    supportedVehicleClasses: (getConfigFromJSON documentType)|M
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithOptionsKV
+      where: merchantOperatingCityId
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+VehiclePermit:
+  tableName: vehicle_permit
+  fields:
+    id: Id VehiclePermit
+    rcId: Id VehicleRegistrationCertificate
+    documentImageId: Id Image
+    permitNumber: EncryptedHashedField e Text
+    permitExpiry: UTCTime
+    regionCovered: Text
+    nameOfPermitHolder: Maybe Text
+    issueDate: Maybe UTCTime
+    purposeOfJourney: Maybe Text
+    verificationStatus: VerificationStatus
+
+VehicleInsurance:
+  tableName: vehicle_insurance
+  fields:
+    id: Id VehicleInsurance
+    rcId: Id VehicleRegistrationCertificate
+    documentImageId: Id Image
+    policyNumber: EncryptedHashedField e Text
+    policyExpiry: UTCTime
+    policyProvider: Text
+    insuredName: Maybe Text
+    issueDate: Maybe UTCTime
+    limitsOfLiability: Maybe Text
+    verificationStatus: VerificationStatus
+
+VehicleFitnessCertificate:
+  tableName: vehicle_fitness_certificate
+  fields:
+    id: Id VehicleFitnessCertificate
+    rcId: Id VehicleRegistrationCertificate
+    documentImageId: Id Image
+    applicationNumber: EncryptedHashedField e Text
+    fitnessExpiry: UTCTime
+    inspectingAuthority: Maybe Text
+    receiptDate: Maybe UTCTime
+    inspectingOn: Maybe UTCTime
+    nextInspectionDate: Maybe UTCTime
+    categoryOfVehicle: Maybe Text
+    verificationStatus: VerificationStatus
+
+VehiclePUC:
+  tableName: vehicle_puc
+  fields:
+    id: Id VehiclePUC
+    rcId: Id VehicleRegistrationCertificate
+    documentImageId: Id Image
+    pucExpiry: UTCTime
+    verificationStatus: VerificationStatus

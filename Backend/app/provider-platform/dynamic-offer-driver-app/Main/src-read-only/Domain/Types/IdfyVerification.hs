@@ -4,6 +4,7 @@
 
 module Domain.Types.IdfyVerification where
 
+import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
@@ -16,7 +17,7 @@ import qualified Tools.Beam.UtilsTH
 
 data IdfyVerificationE e = IdfyVerification
   { dashboardPassedVehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant,
-    docType :: Domain.Types.Image.ImageType,
+    docType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     documentImageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     documentImageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     documentNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
@@ -31,6 +32,7 @@ data IdfyVerificationE e = IdfyVerification
     requestId :: Kernel.Prelude.Text,
     retryCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     status :: Kernel.Prelude.Text,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Category,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
@@ -64,6 +66,7 @@ instance EncryptedItem IdfyVerification where
           requestId = requestId entity,
           retryCount = retryCount entity,
           status = status entity,
+          vehicleCategory = vehicleCategory entity,
           merchantId = merchantId entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
           createdAt = createdAt entity,
@@ -89,6 +92,7 @@ instance EncryptedItem IdfyVerification where
             requestId = requestId entity,
             retryCount = retryCount entity,
             status = status entity,
+            vehicleCategory = vehicleCategory entity,
             merchantId = merchantId entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
             createdAt = createdAt entity,

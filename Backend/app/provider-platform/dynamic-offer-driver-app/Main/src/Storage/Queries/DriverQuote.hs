@@ -23,7 +23,7 @@ import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.Vehicle.Variant as VehVar
+import qualified Domain.Types.Vehicle as VehVar
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common

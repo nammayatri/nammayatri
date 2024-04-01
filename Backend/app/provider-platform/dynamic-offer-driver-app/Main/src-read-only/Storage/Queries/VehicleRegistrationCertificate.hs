@@ -51,13 +51,15 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.certificateNumberEncrypted (certificateNumber & unEncrypted . encrypted),
+    [ Se.Set Beam.airConditioned airConditioned,
+      Se.Set Beam.certificateNumberEncrypted (certificateNumber & unEncrypted . encrypted),
       Se.Set Beam.certificateNumberHash (certificateNumber & hash),
       Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
       Se.Set Beam.failedRules failedRules,
       Se.Set Beam.fitnessExpiry fitnessExpiry,
       Se.Set Beam.fleetOwnerId fleetOwnerId,
       Se.Set Beam.insuranceValidity insuranceValidity,
+      Se.Set Beam.luggageCapacity luggageCapacity,
       Se.Set Beam.manufacturerModel manufacturerModel,
       Se.Set Beam.permitExpiry permitExpiry,
       Se.Set Beam.pucExpiry pucExpiry,
@@ -69,6 +71,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.vehicleEnergyType vehicleEnergyType,
       Se.Set Beam.vehicleManufacturer vehicleManufacturer,
       Se.Set Beam.vehicleModel vehicleModel,
+      Se.Set Beam.vehicleRating vehicleRating,
       Se.Set Beam.vehicleVariant vehicleVariant,
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

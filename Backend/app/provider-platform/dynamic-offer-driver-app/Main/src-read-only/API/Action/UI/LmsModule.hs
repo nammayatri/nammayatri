@@ -10,7 +10,7 @@ import qualified Domain.Types.LmsModule
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person
-import qualified Domain.Types.Vehicle.Variant
+import qualified Domain.Types.Vehicle
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Types
@@ -27,7 +27,7 @@ type API =
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
-      :> QueryParam "variant" Domain.Types.Vehicle.Variant.Variant
+      :> QueryParam "variant" Domain.Types.Vehicle.Variant
       :> Get
            '[JSON]
            API.Types.UI.LmsModule.LmsGetModuleRes
@@ -96,7 +96,7 @@ getLmsListAllModules ::
     Kernel.Prelude.Maybe Kernel.External.Types.Language ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant.Variant ->
+    Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant ->
     Environment.FlowHandler API.Types.UI.LmsModule.LmsGetModuleRes
   )
 getLmsListAllModules a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.getLmsListAllModules (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1

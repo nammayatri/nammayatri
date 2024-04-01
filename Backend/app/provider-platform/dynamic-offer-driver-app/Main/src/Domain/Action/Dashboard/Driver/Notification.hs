@@ -27,7 +27,7 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSSL
 import qualified Domain.Types.SearchRequestForDriver as DSearchReq
-import qualified Domain.Types.Vehicle.Variant as DVeh
+import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types

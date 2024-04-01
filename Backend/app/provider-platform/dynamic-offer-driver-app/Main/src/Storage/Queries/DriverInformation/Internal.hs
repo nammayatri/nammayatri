@@ -22,7 +22,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.DriverInformation as BeamDI
-import qualified Storage.Queries.Instances.DriverInformation ()
+import qualified Storage.Queries.OrphanInstances.DriverInformation ()
 
 getDriverInfos ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
