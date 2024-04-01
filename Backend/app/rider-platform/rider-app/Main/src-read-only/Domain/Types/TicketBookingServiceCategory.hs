@@ -13,7 +13,7 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data TicketBookingServiceCategory = TicketBookingServiceCategory
-  { amount :: Kernel.Types.Common.HighPrecMoney,
+  { amount :: Kernel.Types.Common.Price,
     bookedSeats :: Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory,
     name :: Kernel.Prelude.Text,
@@ -24,4 +24,4 @@ data TicketBookingServiceCategory = TicketBookingServiceCategory
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show)

@@ -2,6 +2,8 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Merchant: Domain.Types.Merchant
   HighPrecMoney: Kernel.Types.Common
+  Price: Kernel.Types.Common
+  Currency: Kernel.Types.Common
   UTCTime: Kernel.Prelude
   Person: Domain.Types.Person
   ShortId: Kernel.Types.Id
@@ -153,12 +155,24 @@ ServiceCategory:
 
 ServicePeopleCategory:
   tableName: service_people_category
-
+  derives: "Generic,Show"
   fields:
     id: Id ServicePeopleCategory
     name: Text
     description: Text
-    pricePerUnit: HighPrecMoney
+    pricePerUnit: Price
+
+  beamFields:
+    pricePerUnit:
+      currency: Maybe Currency
+      pricePerUnit: HighPrecMoney
+
+  fromTType:
+    pricePerUnit: Kernel.Types.Common.mkPrice currency pricePerUnit|E
+
+  toTType:
+    pricePerUnit: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
 
   queries:
     findById:
@@ -199,18 +213,30 @@ SeatManagement:
 ### Ticket Booking ###
 TicketBooking:
   tableName: ticket_booking
-
+  derives: "Generic,Show"
   fields:
     id: Id TicketBooking
     shortId: ShortId TicketBooking
     merchantOperatingCityId: Id MerchantOperatingCity
     ticketPlaceId: Id TicketPlace
     personId: Id Person
-    amount: HighPrecMoney
+    amount: Price
     visitDate: Day
     status: BookingStatus
     createdAt: UTCTime
     updatedAt: UTCTime
+
+  beamFields:
+    amount:
+      currency: Maybe Currency
+      amount: HighPrecMoney
+
+  fromTType:
+    amount: Kernel.Types.Common.mkPrice currency amount|E
+
+  toTType:
+    amount: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
 
   constraints:
     id: PrimaryKey
@@ -240,20 +266,32 @@ TicketBooking:
 
 TicketBookingService:
   tableName: ticket_booking_service
-
+  derives: "Generic,Show"
   fields:
     id: Id TicketBookingService
     shortId: ShortId TicketBookingService
     ticketBookingId: Id TicketBooking
     ticketServiceId: Id TicketService
     merchantOperatingCityId: Id MerchantOperatingCity
-    amount: HighPrecMoney
+    amount: Price
     status: ServiceStatus
     verificationCount: Int
     btype: BusinessHourType
     expiryDate: Maybe UTCTime
     createdAt: UTCTime
     updatedAt: UTCTime
+
+  beamFields:
+    amount:
+      currency: Maybe Currency
+      amount: HighPrecMoney
+
+  fromTType:
+    amount: Kernel.Types.Common.mkPrice currency amount|E
+
+  toTType:
+    amount: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
 
   types:
     ServiceStatus:
@@ -283,14 +321,26 @@ TicketBookingService:
 
 TicketBookingServiceCategory:
   tableName: ticket_booking_service_category
-
+  derives: "Generic,Show"
   fields:
     id: Id TicketBookingServiceCategory
     ticketBookingServiceId: Id TicketBookingService
     name: Text
     bookedSeats: Int
-    amount: HighPrecMoney
+    amount: Price
     serviceCategoryId: Maybe Text
+
+  beamFields:
+    amount:
+      currency: Maybe Currency
+      amount: HighPrecMoney
+
+  fromTType:
+    amount: Kernel.Types.Common.mkPrice currency amount|E
+
+  toTType:
+    amount: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
 
   queries:
     findAllByTicketBookingServiceId:
@@ -299,13 +349,25 @@ TicketBookingServiceCategory:
 
 TicketBookingPeopleCategory:
   tableName: ticket_booking_people_category
-
+  derives: "Generic,Show"
   fields:
     id: Id TicketBookingPeopleCategory
     ticketBookingServiceCategoryId: Id TicketBookingServiceCategory
     name: Text
-    pricePerUnit: HighPrecMoney
+    pricePerUnit: Price
     numberOfUnits: Int
+
+  beamFields:
+    pricePerUnit:
+      currency: Maybe Currency
+      pricePerUnit: HighPrecMoney
+
+  fromTType:
+    pricePerUnit: Kernel.Types.Common.mkPrice currency pricePerUnit|E
+
+  toTType:
+    pricePerUnit: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
 
   queries:
     findById:

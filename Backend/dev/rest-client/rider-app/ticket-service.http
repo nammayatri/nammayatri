@@ -1,0 +1,62 @@
+@app-host = http://localhost:8013/v2
+
+###
+
+# @name healthcheck
+
+GET {{app-host}}
+
+###
+
+# @name ticketPlaces
+
+GET {{app-host}}/ticket/places
+token: {{app-token}}
+
+###
+
+# @name ticketPlacesBook
+
+POST {{app-host}}/ticket/places/1ef78db2-90de-4ed7-a38a-fcbb7ce28135/book
+content-type: application/json
+token: {{app-token}}
+
+{ "services" :
+    [
+      {
+        "businessHourId" : "185be4e6-dd20-f0d4-0f34-63b655d84327",
+        "categories" :
+          [
+            { "categoryId" : "7b03af02-bf06-2c52-3aa6-5042f50b9004",
+              "peopleCategories" :
+                [
+                  { "numberOfUnits" : 7,
+                    "peopleCategoryId" : "225378b5-0a86-44ce-afa1-b4d27d712a23"
+                  },
+                  { "numberOfUnits" : 10,
+                    "peopleCategoryId" : "525378b5-0a86-44ce-afa1-b4d27d712a23"
+                  }
+                ]
+            }
+          ],
+        "serviceId" : "a7eba6ed-99f7-442f-a9d8-00c8b380657b"
+      }
+    ],
+  "visitDate" : "2024-04-03"
+}
+
+###
+
+# @name ticketBookingsStatus
+
+@ticketBokingShortId = 3JVtFmZqA2
+
+GET {{app-host}}/ticket/bookings/{{ticketBokingShortId}}/status
+token: {{app-token}}
+
+###
+
+# @name ticketBookingsDetails
+
+GET {{app-host}}/ticket/bookings/{{ticketBokingShortId}}/details
+token: {{app-token}}

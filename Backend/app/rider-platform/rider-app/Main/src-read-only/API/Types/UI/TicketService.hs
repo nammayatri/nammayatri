@@ -47,15 +47,22 @@ data PeopleCategoriesResp = PeopleCategoriesResp
   { description :: Data.Text.Text,
     id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
     name :: Data.Text.Text,
-    pricePerUnit :: Kernel.Types.Common.HighPrecMoney
+    pricePerUnit :: Kernel.Types.Common.HighPrecMoney,
+    pricePerUnitWithCurrency :: Kernel.Types.Common.PriceAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data PeopleCategoriesVerificationRes = PeopleCategoriesVerificationRes {id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory, name :: Data.Text.Text, pricePerUnit :: Kernel.Types.Common.HighPrecMoney}
+data PeopleCategoriesVerificationRes = PeopleCategoriesVerificationRes
+  { id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
+    name :: Data.Text.Text,
+    pricePerUnit :: Kernel.Types.Common.HighPrecMoney,
+    pricePerUnitWithCurrency :: Kernel.Types.Common.PriceAPIEntity
+  }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data TicketBookingAPIEntity = TicketBookingAPIEntity
   { amount :: Kernel.Types.Common.HighPrecMoney,
+    amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     personId :: Data.Text.Text,
     status :: Domain.Types.TicketBooking.BookingStatus,
     ticketPlaceId :: Data.Text.Text,
@@ -67,6 +74,7 @@ data TicketBookingAPIEntity = TicketBookingAPIEntity
 
 data TicketBookingCategoryDetails = TicketBookingCategoryDetails
   { amount :: Kernel.Types.Common.HighPrecMoney,
+    amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     bookedSeats :: Kernel.Prelude.Int,
     name :: Data.Text.Text,
     peopleCategories :: [API.Types.UI.TicketService.TicketBookingPeopleCategoryDetails]
@@ -78,6 +86,7 @@ data TicketBookingCategoryReq = TicketBookingCategoryReq {categoryId :: Kernel.T
 
 data TicketBookingDetails = TicketBookingDetails
   { amount :: Kernel.Types.Common.HighPrecMoney,
+    amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     personId :: Data.Text.Text,
     services :: [API.Types.UI.TicketService.TicketBookingServiceDetails],
     status :: Domain.Types.TicketBooking.BookingStatus,
@@ -88,7 +97,12 @@ data TicketBookingDetails = TicketBookingDetails
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data TicketBookingPeopleCategoryDetails = TicketBookingPeopleCategoryDetails {name :: Data.Text.Text, numberOfUnits :: Kernel.Prelude.Int, pricePerUnit :: Kernel.Types.Common.HighPrecMoney}
+data TicketBookingPeopleCategoryDetails = TicketBookingPeopleCategoryDetails
+  { name :: Data.Text.Text,
+    numberOfUnits :: Kernel.Prelude.Int,
+    pricePerUnit :: Kernel.Types.Common.HighPrecMoney,
+    pricePerUnitWithCurrency :: Kernel.Types.Common.PriceAPIEntity
+  }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data TicketBookingPeopleCategoryReq = TicketBookingPeopleCategoryReq {numberOfUnits :: Kernel.Prelude.Int, peopleCategoryId :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory}
@@ -98,6 +112,7 @@ data TicketBookingReq = TicketBookingReq {services :: [API.Types.UI.TicketServic
 
 data TicketBookingServiceDetails = TicketBookingServiceDetails
   { amount :: Kernel.Types.Common.HighPrecMoney,
+    amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     categories :: [API.Types.UI.TicketService.TicketBookingCategoryDetails],
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     slot :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
@@ -138,6 +153,7 @@ data TicketServiceResp = TicketServiceResp
 
 data TicketServiceVerificationResp = TicketServiceVerificationResp
   { amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    amountWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     categories :: [API.Types.UI.TicketService.TicketBookingCategoryDetails],
     endTime :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     message :: Data.Text.Text,

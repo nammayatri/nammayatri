@@ -4,7 +4,6 @@ imports:
   Ride: Domain.Types.Ride
   UTCTime: Kernel.Prelude
   APISuccess: Kernel.Types.APISuccess
-  HighPrecMoney: Kernel.Types.Common
   HighPrecMeters: Kernel.Types.Common
 
 module: Invoice

@@ -15,7 +15,7 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data TicketBookingService = TicketBookingService
-  { amount :: Kernel.Types.Common.HighPrecMoney,
+  { amount :: Kernel.Types.Common.Price,
     btype :: Domain.Types.BusinessHour.BusinessHourType,
     createdAt :: Kernel.Prelude.UTCTime,
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -29,7 +29,7 @@ data TicketBookingService = TicketBookingService
     verificationCount :: Kernel.Prelude.Int,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show)
 
 data ServiceStatus = Pending | Failed | Confirmed | Verified deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

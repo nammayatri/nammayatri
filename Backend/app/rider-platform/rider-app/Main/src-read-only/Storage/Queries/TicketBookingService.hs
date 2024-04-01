@@ -10,6 +10,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -56,7 +57,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.TicketBookingService.TicketBookingService {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.amount amount,
+    [ Se.Set Beam.amount ((.amount) amount),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
       Se.Set Beam.btype btype,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.expiryDate expiryDate,
@@ -76,7 +78,7 @@ instance FromTType' Beam.TicketBookingService Domain.Types.TicketBookingService.
     pure $
       Just
         Domain.Types.TicketBookingService.TicketBookingService
-          { amount = amount,
+          { amount = Kernel.Types.Common.mkPrice currency amount,
             btype = btype,
             createdAt = createdAt,
             expiryDate = expiryDate,
@@ -94,7 +96,8 @@ instance FromTType' Beam.TicketBookingService Domain.Types.TicketBookingService.
 instance ToTType' Beam.TicketBookingService Domain.Types.TicketBookingService.TicketBookingService where
   toTType' (Domain.Types.TicketBookingService.TicketBookingService {..}) = do
     Beam.TicketBookingServiceT
-      { Beam.amount = amount,
+      { Beam.amount = (.amount) amount,
+        Beam.currency = (Kernel.Prelude.Just . (.currency)) amount,
         Beam.btype = btype,
         Beam.createdAt = createdAt,
         Beam.expiryDate = expiryDate,

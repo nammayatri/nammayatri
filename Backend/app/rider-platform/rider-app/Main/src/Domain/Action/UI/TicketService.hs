@@ -143,7 +143,8 @@ getTicketPlacesServices _ placeId mbDate = do
         PeopleCategoriesResp
           { name = peopleCategory.name,
             id = peopleCategory.id,
-            pricePerUnit = peopleCategory.pricePerUnit,
+            pricePerUnit = peopleCategory.pricePerUnit.amount,
+            pricePerUnitWithCurrency = mkPriceAPIEntity peopleCategory.pricePerUnit,
             description = peopleCategory.description
           }
 
@@ -163,7 +164,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
   ticketBookingId <- generateGUID
   ticketBookingServices <- mapM (createTicketBookingService merchantOpCity.id ticketBookingId) req.services
 
-  let amount = sum (map (.amount) ticketBookingServices)
+  amount <- withCurrencyCheckingList (ticketBookingServices <&> (.amount)) $ \mbCurrency as ->
+    mkPrice mbCurrency $ sum as
   ticketBooking <- createTicketBooking personId_ merchantOpCity.id ticketBookingId amount
 
   QTBS.createMany ticketBookingServices
@@ -175,7 +177,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
         Payment.CreateOrderReq
           { orderId = ticketBooking.id.getId,
             orderShortId = ticketBooking.shortId.getShortId,
-            amount = amount,
+            amount = amount.amount,
             customerId = personId_.getId,
             customerEmail = fromMaybe "test@gmail.com" personEmail,
             customerPhone = personPhone,
@@ -228,7 +230,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
       businessHour <- QBH.findById bHourId >>= fromMaybeM (BusinessHourNotFound bHourId.getId)
       tBookingSCats <- mapM (createTicketBookingServiceCategory merchantOperatingCityId id) categories
       QTBSC.createMany tBookingSCats
-      let amount = sum (map (.amount) tBookingSCats)
+      amount <- withCurrencyCheckingList (tBookingSCats <&> (.amount)) $ \mbCurrency as ->
+        mkPrice mbCurrency $ sum as
       let expiry = calcExpiry ticketService.expiry req.visitDate now
       return $
         DTB.TicketBookingService
@@ -253,7 +256,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
       let serviceCatId = ticketServiceCReq.categoryId
       tBookingSC <- QSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
       tBookingPCats <- mapM (createTicketBookingPeopleCategory now merchantOperatingCityId id) ticketServiceCReq.peopleCategories
-      let (amount, bookedSeats) = calculateAmountAndSeats tBookingPCats
+      (amount, bookedSeats) <- calculateAmountAndSeats tBookingPCats
       QTBPC.createMany tBookingPCats
 
       mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId req.visitDate
@@ -308,15 +311,18 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             updatedAt = now
           }
 
-    calculateAmountAndSeats :: [DTB.TicketBookingPeopleCategory] -> (HighPrecMoney, Int)
-    calculateAmountAndSeats categories =
-      foldl
-        ( \(totalAmount, totalSeats) category ->
-            let categoryAmount = category.pricePerUnit * fromIntegral (category.numberOfUnits)
-             in (totalAmount + categoryAmount, totalSeats + category.numberOfUnits)
-        )
-        (HighPrecMoney 0, 0)
-        categories
+    calculateAmountAndSeats :: (MonadThrow m, Log m) => [DTB.TicketBookingPeopleCategory] -> m (Price, Int)
+    calculateAmountAndSeats categories = do
+      let categoriesNumberOfUnits = categories <&> (.numberOfUnits)
+      withCurrencyCheckingList (categories <&> (.pricePerUnit)) $ \mbCurrency categoriesPricePerUnit -> do
+        first (mkPrice mbCurrency) $
+          foldl
+            ( \(totalAmount, totalSeats) (pricePerUnit, numberOfUnits) -> do
+                let categoryAmount = pricePerUnit * fromIntegral numberOfUnits
+                (totalAmount + categoryAmount, totalSeats + numberOfUnits)
+            )
+            (HighPrecMoney 0, 0)
+            (zip categoriesPricePerUnit categoriesNumberOfUnits)
 
     calcExpiry :: Domain.Types.TicketService.ExpiryType -> Data.Time.Calendar.Day -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime
     calcExpiry expiry visitDate currentTime = case expiry of
@@ -339,6 +345,8 @@ getTicketBookings (mbPersonId, merchantId_) mbLimit mbOffset status_ = do
             ticketPlaceId = Kernel.Types.Id.getId ticketPlaceId,
             personId = personId.getId,
             ticketPlaceName = ticketPlace.name,
+            amount = amount.amount,
+            amountWithCurrency = mkPriceAPIEntity amount,
             ..
           }
 
@@ -357,6 +365,8 @@ getTicketBookingsDetails _ shortId_ = do
             ticketPlaceId = ticketPlaceId.getId,
             personId = personId.getId,
             ticketPlaceName = ticketPlace.name,
+            amount = amount.amount,
+            amountWithCurrency = mkPriceAPIEntity amount,
             ..
           }
 
@@ -371,6 +381,8 @@ getTicketBookingsDetails _ shortId_ = do
             ticketServiceShortId = shortId.getShortId,
             slot = convertedBH.slot,
             ticketServiceName = ticketService.service,
+            amount = amount.amount,
+            amountWithCurrency = mkPriceAPIEntity amount,
             ..
           }
 
@@ -380,13 +392,17 @@ getTicketBookingsDetails _ shortId_ = do
       return $
         TicketBookingCategoryDetails
           { peopleCategories = peopleCategoryDetails,
+            amount = amount.amount,
+            amountWithCurrency = mkPriceAPIEntity amount,
             ..
           }
 
     mkTicketBookingPeopleCategoryDetails DTB.TicketBookingPeopleCategory {..} = do
       return $
         TicketBookingPeopleCategoryDetails
-          { ..
+          { pricePerUnit = pricePerUnit.amount,
+            pricePerUnitWithCurrency = mkPriceAPIEntity pricePerUnit,
+            ..
           }
 
 postTicketBookingsVerify :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Environment.Flow API.Types.UI.TicketService.TicketServiceVerificationResp
@@ -442,7 +458,7 @@ postTicketBookingsVerify _ = processBookingService
       let bType = maybe Nothing (\booking -> Just booking.btype) mbBookingService
           mbConvertedT = convertBusinessHT <$> bType
           mbTicketServiceId = (.id) <$> mbBookingService
-      serviceCategories <- traverse (QTBSC.findAllByTicketBookingServiceId) mbTicketServiceId
+      serviceCategories <- traverse QTBSC.findAllByTicketBookingServiceId mbTicketServiceId
       serviceCatDetails <- mkTicketBookingCategoryDetails serviceCategories
       pure $
         TicketServiceVerificationResp
@@ -452,7 +468,8 @@ postTicketBookingsVerify _ = processBookingService
             ticketServiceShortId = mbBookingService <&> (.shortId) <&> (.getShortId),
             message = verificationMsg status,
             status,
-            amount = mbBookingService <&> (.amount),
+            amount = mbBookingService <&> (.amount.amount),
+            amountWithCurrency = mkPriceAPIEntity . (.amount) <$> mbBookingService,
             verificationCount = mbBookingService <&> (.verificationCount),
             startTime = findStartTime mbConvertedT,
             endTime = (.endTime) =<< mbConvertedT,
@@ -471,7 +488,8 @@ postTicketBookingsVerify _ = processBookingService
                 return
                   TicketBookingCategoryDetails
                     { peopleCategories = peopleCategoryDetails,
-                      amount = category.amount,
+                      amount = category.amount.amount,
+                      amountWithCurrency = mkPriceAPIEntity category.amount,
                       bookedSeats = category.bookedSeats,
                       name = category.name
                     }
@@ -481,7 +499,9 @@ postTicketBookingsVerify _ = processBookingService
     mkTicketBookingPeopleCategoryDetails :: DTB.TicketBookingPeopleCategory -> TicketBookingPeopleCategoryDetails
     mkTicketBookingPeopleCategoryDetails DTB.TicketBookingPeopleCategory {..} =
       TicketBookingPeopleCategoryDetails
-        { ..
+        { pricePerUnit = pricePerUnit.amount,
+          pricePerUnitWithCurrency = mkPriceAPIEntity pricePerUnit,
+          ..
         }
 
     findStartTime :: Kernel.Prelude.Maybe ConvertedTime -> Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay

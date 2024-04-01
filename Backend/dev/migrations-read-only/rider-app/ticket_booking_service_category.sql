@@ -11,3 +11,8 @@ ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN merchant_operat
 ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.ticket_booking_service_category ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN currency text ;
