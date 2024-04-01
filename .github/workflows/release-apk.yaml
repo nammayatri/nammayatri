@@ -13,6 +13,29 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # fastlane_cm:
+        #   - NY
+        #   - MY
+        #   - Y
+        variant:
+          - name: NammaYatri
+            keystore: ANDROID_KEYSTORE_FILE
+            fastlane_cm: NY
+            key_alias: KEYSTORE_KEY_ALIAS
+            local_properties: LOCAL_PROPERTIES 
+          - name: ManaYatri
+            keystore: ANDROID_KEYSTORE_FILE_MY 
+            fastlane_cm: MY
+            key_alias: KEYSTORE_KEY_ALIAS_MY
+            local_properties: LOCAL_PROPERTIES_MY 
+          - name: Yatri
+            keystore: ANDROID_KEYSTORE_FILE_Y 
+            fastlane_cm: Y
+            key_alias: KEYSTORE_KEY_ALIAS_Y
+            local_properties: LOCAL_PROPERTIES_Y 
+          # Add more variants as needed
     defaults:
       run:
         working-directory: Frontend/android-native
@@ -64,8 +87,8 @@ jobs:
           echo "storePassword=$KEYSTORE_STORE_PASSWORD" >> keystore.properties
           echo "keyPassword=$KEYSTORE_KEY_PASSWORD" >> keystore.properties
         env:
-          ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
-          KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
+          ANDROID_KEYSTORE_FILE: ${{ secrets[matrix.variant.keystore] }}
+          KEYSTORE_KEY_ALIAS: ${{ secrets[matrix.variant.key_alias] }}
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
 
@@ -81,7 +104,7 @@ jobs:
           echo "$LOCAL_PROPERTIES" > local.properties.b64
           base64 -d -i local.properties.b64 > local.properties
         env:
-          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+          LOCAL_PROPERTIES: ${{ secrets[matrix.variant.local_properties] }}
 
       - name: Create Google Play Config file
         run : |
@@ -91,4 +114,9 @@ jobs:
           PLAY_CONSOLE_SECRET: ${{ secrets.PLAY_CONSOLE_SECRET }}
 
       - name: Distribute app to Production 🚀
-        run: bundle exec fastlane list_apps_metadata
+        run: |
+          echo "Hello, world! $FASTLANE_CMD"
+          echo "fastlane_cm: ${{ matrix.variant.name }}"
+          bash releaseApp.sh "$FASTLANE_CMD"
+        env: 
+          FASTLANE_CMD: ${{ matrix.variant.fastlane_cm }}
