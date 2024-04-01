@@ -27,6 +27,10 @@ repositories {
     google()
 }
 
+def keystorePropertiesFile = rootProject.file("keystore.properties");
+def keystoreProperties = new Properties()
+keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+
 android {
     compileSdk 34
     namespace "in.juspay.mobility"
@@ -87,6 +91,7 @@ android {
     if (rootProject.file("local.properties").exists()) {
         properties.load(rootProject.file("local.properties").newDataInputStream())
     }
+
     flavorDimensions "app", "mode"
     variantFilter rootProject.ext.becknVariantFilter
     productFlavors {
@@ -219,6 +224,14 @@ android {
         if (names.contains("dev") && build.contains("release")) {
             // Gradle ignores any variants that satisfy the conditions above.
             setIgnore(true)
+        }
+    }
+    signingConfigs {
+        release {
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
         }
     }
 }
