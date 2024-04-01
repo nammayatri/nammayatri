@@ -88,7 +88,7 @@ getSosGetDetails (mbPersonId, _) rideId_ = do
           now <- getCurrentTime
           return SosDetailsRes {sos = Just $ buildMockSos mSos now}
     Just sosDetails -> do
-      unless (personId_ == sosDetails.personId) $ throwError $ InvalidRequest "PersonId not same"
+      unless (personId_ == cast sosDetails.personId) $ throwError $ InvalidRequest "PersonId not same"
       return SosDetailsRes {sos = Just sosDetails}
   where
     buildMockSos :: DSos.SosMockDrill -> UTCTime -> DSos.Sos
@@ -96,8 +96,8 @@ getSosGetDetails (mbPersonId, _) rideId_ = do
       DSos.Sos
         { flow = DSos.SafetyFlow,
           id = "mock-sos",
-          personId = mockSos.personId,
-          rideId = rideId_,
+          personId = cast mockSos.personId,
+          rideId = cast rideId_,
           status = mockSos.status,
           ticketId = Nothing,
           merchantId = Nothing,
@@ -179,7 +179,7 @@ postSosStatus (mbPersonId, _) sosId req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   sosDetails <- runInReplica $ QSos.findById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
-  unless (personId == sosDetails.personId) $ throwError $ InvalidRequest "PersonId not same"
+  unless (personId == cast sosDetails.personId) $ throwError $ InvalidRequest "PersonId not same"
   void $ QSos.updateStatus req.status sosId
   void $ callUpdateTicket person sosDetails req.comment
   pure APISuccess.Success
@@ -195,7 +195,7 @@ postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
       case mockSos of
         Nothing -> pure ()
         Just _ -> do
-          Redis.setExp (CQSos.mockSosKey personId) (DSos.SosMockDrill {personId, status = DSos.MockResolved}) 13400
+          Redis.setExp (CQSos.mockSosKey personId) (DSos.SosMockDrill {personId = cast personId, status = DSos.MockResolved}) 13400
       SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_RESOLVED Nothing False emergencyContacts.defaultEmergencyNumbers
       return APISuccess.Success
     _ -> do
@@ -203,7 +203,7 @@ postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
       when (sosDetails.status == DSos.Resolved) $ throwError $ InvalidRequest "Sos already resolved."
       void $ callUpdateTicket person sosDetails $ Just "Mark Ride as Safe"
       void $ QSos.updateStatus DSos.Resolved sosId
-      CQSos.cacheSosIdByRideId sosDetails.rideId $ sosDetails {DSos.status = DSos.Resolved}
+      CQSos.cacheSosIdByRideId (cast sosDetails.rideId) $ sosDetails {DSos.status = DSos.Resolved}
       when (person.shareEmergencyContacts && isRideEnded /= Just True) $ do
         SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_RESOLVED Nothing False emergencyContacts.defaultEmergencyNumbers
       pure APISuccess.Success
@@ -229,7 +229,7 @@ postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
     _ -> do
       when (not $ fromMaybe False person.hasCompletedMockSafetyDrill) $ QP.updateSafetyDrillStatus (Just True) personId
       when (fromMaybe False onRide) $ do
-        let mockEntity = DSos.SosMockDrill {personId, status = DSos.MockPending}
+        let mockEntity = DSos.SosMockDrill {personId = cast personId, status = DSos.MockPending}
         Redis.setExp (CQSos.mockSosKey personId) mockEntity 13400
       SPDEN.notifyEmergencyContacts person (notificationBody person False) notificationTitle Notification.SOS_MOCK_DRILL Nothing False emergencyContacts.defaultEmergencyNumbers
   pure APISuccess.Success
@@ -261,7 +261,7 @@ addSosVideo sosId personId SOSVideoUploadReq {..} = do
   case result of
     Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
     Right _ -> do
-      ride <- QRide.findById sosDetails.rideId >>= fromMaybeM (RideDoesNotExist sosDetails.rideId.getId)
+      ride <- QRide.findById (cast sosDetails.rideId) >>= fromMaybeM (RideDoesNotExist sosDetails.rideId.getId)
       phoneNumber <- mapM decrypt person.mobileNumber
       let rideInfo = buildRideInfo ride person phoneNumber
           trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
@@ -363,13 +363,13 @@ buildSosDetails person req ticketId = do
   return
     DSos.Sos
       { id = pid,
-        personId = person.id,
+        personId = cast person.id,
         status = DSos.Pending,
         flow = req.flow,
-        rideId = req.rideId,
+        rideId = cast req.rideId,
         ticketId = ticketId,
-        merchantId = Just person.merchantId,
-        merchantOperatingCityId = Just person.merchantOperatingCityId,
+        merchantId = Just $ cast person.merchantId,
+        merchantOperatingCityId = Just $ cast person.merchantOperatingCityId,
         createdAt = now,
         updatedAt = now
       }

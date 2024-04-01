@@ -103,7 +103,8 @@ data PersonE e = Person
     clientConfigVersion :: Maybe Version,
     clientDevice :: Maybe Device,
     backendConfigVersion :: Maybe Version,
-    backendAppVersion :: Maybe Text
+    backendAppVersion :: Maybe Text,
+    hasCompletedSafetySetup :: Maybe Bool
   }
   deriving (Generic)
 

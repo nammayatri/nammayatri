@@ -22,8 +22,10 @@ import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.LmsModule as LmsModule
+import qualified API.Action.UI.PersonDefaultEmergencyNumber as PersonDefaultEmergencyNumber
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.SocialLogin as SocialLogin
+import qualified API.Action.UI.Sos as Sos
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
@@ -97,6 +99,8 @@ type API =
            :<|> Cac.API
            :<|> EditBooking.API
            :<|> SocialLogin.API
+           :<|> PersonDefaultEmergencyNumber.API
+           :<|> Sos.API
        )
 
 handler :: FlowServer API
@@ -137,3 +141,5 @@ handler =
     :<|> Cac.handler
     :<|> EditBooking.handler
     :<|> SocialLogin.handler
+    :<|> PersonDefaultEmergencyNumber.handler
+    :<|> Sos.handler

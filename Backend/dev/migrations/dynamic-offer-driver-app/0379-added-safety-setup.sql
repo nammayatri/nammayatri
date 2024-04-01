@@ -1,0 +1,2 @@
+ALTER TABLE atlas_driver_offer_bpp.person
+ADD COLUMN has_completed_safety_setup boolean;

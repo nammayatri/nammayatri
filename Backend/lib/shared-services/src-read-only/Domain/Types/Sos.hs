@@ -4,24 +4,20 @@
 
 module Domain.Types.Sos where
 
-import Data.Aeson
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Person
-import qualified Domain.Types.Ride
+import qualified IssueManagement.Common
+import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import qualified Tools.Beam.UtilsTH
 
 data Sos = Sos
   { flow :: Domain.Types.Sos.SosType,
     id :: Kernel.Types.Id.Id Domain.Types.Sos.Sos,
-    personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
+    personId :: Kernel.Types.Id.Id IssueManagement.Common.Person,
+    rideId :: Kernel.Types.Id.Id IssueManagement.Common.Ride,
     status :: Domain.Types.Sos.SosStatus,
     ticketId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Common.Merchant),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Common.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -29,14 +25,14 @@ data Sos = Sos
 
 data EmergencyContactId = EmergencyContactId Kernel.Prelude.Text deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SosMockDrill = SosMockDrill {personId :: Kernel.Types.Id.Id Domain.Types.Person.Person, status :: Domain.Types.Sos.SosStatus} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+data SosMockDrill = SosMockDrill {personId :: Kernel.Types.Id.Id IssueManagement.Common.Person, status :: Domain.Types.Sos.SosStatus} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data SosStatus = Resolved | NotResolved | Pending | MockPending | MockResolved deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SosType = Police | CustomerCare | EmergencyContact Domain.Types.Sos.EmergencyContactId | SafetyFlow deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EmergencyContactId)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SosType))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosStatus)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SosStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''EmergencyContactId))

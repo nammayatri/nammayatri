@@ -251,7 +251,8 @@ data DriverInformationRes = DriverInformationRes
     manualDues :: Maybe HighPrecMoney,
     blockStateModifier :: Maybe Text,
     isVehicleSupported :: Bool,
-    frontendConfigHash :: Maybe Text
+    frontendConfigHash :: Maybe Text,
+    hasCompletedSafetySetup :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -290,7 +291,8 @@ data DriverEntityRes = DriverEntityRes
     maskedDeviceToken :: Maybe Text,
     blockStateModifier :: Maybe Text,
     checkIfACWorking :: Bool,
-    isVehicleSupported :: Bool
+    isVehicleSupported :: Bool,
+    hasCompletedSafetySetup :: Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -687,7 +689,7 @@ buildDriverEntityRes (person, driverInfo) = do
         freeTrialDaysLeft = freeTrialDaysLeft,
         maskedDeviceToken = maskedDeviceToken,
         checkIfACWorking,
-        isVehicleSupported = isVehicleSupported
+        hasCompletedSafetySetup = fromMaybe False person.hasCompletedSafetySetup
       }
 
 deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m) => SP.Person -> Id SP.Person -> m APISuccess

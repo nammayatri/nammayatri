@@ -19,6 +19,7 @@ import qualified IssueManagement.Storage.Beam.Issue.IssueOption as BeamIO
 import qualified IssueManagement.Storage.Beam.Issue.IssueReport as BeamIR
 import qualified IssueManagement.Storage.Beam.Issue.IssueTranslation as BeamIT
 import qualified IssueManagement.Storage.Beam.MediaFile as BeamMF
+import qualified Storage.Beam.Sos as BeamSos
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 
 instance HasSchemaName BeamC.CommentT where
@@ -43,4 +44,7 @@ instance HasSchemaName BeamIT.IssueTranslationT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamMF.MediaFileT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamSos.SosT where
   schemaName _ = T.pack currentSchemaName

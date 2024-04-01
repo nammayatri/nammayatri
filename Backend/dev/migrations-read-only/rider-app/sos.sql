@@ -23,3 +23,19 @@ ALTER TABLE atlas_app.sos ADD PRIMARY KEY ( id, ride_id);
 
 ALTER TABLE atlas_app.sos DROP CONSTRAINT sos_pkey;
 ALTER TABLE atlas_app.sos ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.sos ALTER COLUMN ride_id TYPE text;
+ALTER TABLE atlas_app.sos ALTER COLUMN person_id TYPE text;
+ALTER TABLE atlas_app.sos ALTER COLUMN merchant_operating_city_id TYPE text;
+ALTER TABLE atlas_app.sos ALTER COLUMN merchant_id TYPE text;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.sos ALTER COLUMN ride_id TYPE character varying(36);
+ALTER TABLE atlas_app.sos ALTER COLUMN person_id TYPE character varying(36);
+ALTER TABLE atlas_app.sos ALTER COLUMN merchant_operating_city_id TYPE character varying(36);
+ALTER TABLE atlas_app.sos ALTER COLUMN merchant_id TYPE character varying(36);

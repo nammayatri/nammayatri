@@ -4,9 +4,10 @@
 
 module Storage.Queries.Sos where
 
-import qualified Domain.Types.Ride
 import qualified Domain.Types.Sos
+import qualified IssueManagement.Common
 import Kernel.Beam.Functions
+import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -15,25 +16,25 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.Sos as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Sos.Sos -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, HasSchemaName Beam.SosT) => (Domain.Types.Sos.Sos -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Sos.Sos] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, HasSchemaName Beam.SosT) => ([Domain.Types.Sos.Sos] -> m ())
 createMany = traverse_ create
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe Domain.Types.Sos.Sos))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, HasSchemaName Beam.SosT) => (Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe Domain.Types.Sos.Sos))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe Domain.Types.Sos.Sos))
+findByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, HasSchemaName Beam.SosT) => (Kernel.Types.Id.Id IssueManagement.Common.Ride -> m (Maybe Domain.Types.Sos.Sos))
 findByRideId (Kernel.Types.Id.Id rideId) = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq rideId]
 
-updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Sos.SosStatus -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ())
+updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, HasSchemaName Beam.SosT) => (Domain.Types.Sos.SosStatus -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ())
 updateStatus status (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe Domain.Types.Sos.Sos))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, HasSchemaName Beam.SosT) => (Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe Domain.Types.Sos.Sos))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Sos.Sos -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, HasSchemaName Beam.SosT) => (Domain.Types.Sos.Sos -> m ())
 updateByPrimaryKey (Domain.Types.Sos.Sos {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -1,0 +1,31 @@
+imports:
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Merchant: Domain.Types.Merchant
+  Language: Kernel.External.Types
+  Person: Domain.Types.Person
+  EncryptedHashedField: Kernel.External.Encryption
+
+PersonDefaultEmergencyNumber:
+  tableName : person_default_emergency_number
+
+  fields:
+    personId : Id Person
+    name : Text
+    mobileCountryCode : Text
+    mobileNumber : EncryptedHashedField e Text
+    merchantId : Id Merchant
+
+  constraints:
+    personId: PrimaryKey
+    mobileNumberHash: PrimaryKey
+    mobileCountryCode : PrimaryKey
+
+  queries:
+    findAllByPersonId:
+      kvFunction: findAllWithKV
+      where: personId
+
+    deleteAllByPersonId:
+      kvFunction: deleteWithKV
+      where: personId

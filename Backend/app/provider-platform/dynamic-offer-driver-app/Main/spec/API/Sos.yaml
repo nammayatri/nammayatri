@@ -1,0 +1,27 @@
+imports:
+  Text: Data.Text
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  SosType : Domain.Types.Sos
+  SosStatus : Domain.Types.Sos
+  Sos : Domain.Types.Sos
+
+module: Sos
+types:
+  SosRes:
+    sosId: Id Sos
+
+  SosReq:
+    flow: SosType
+    rideId: Id Ride
+    isRideEnded: Maybe Bool
+
+apis:
+  # # POST /sos/create
+  - POST:
+      endpoint: /sos/create
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.Sos.SosReq
+      response:
+        type: API.Types.UI.Sos.SosRes

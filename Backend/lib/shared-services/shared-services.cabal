@@ -65,10 +65,14 @@ library
       IssueManagement.Storage.Queries.MediaFile
       IssueManagement.Tools.Error
       IssueManagement.Tools.UtilsTH
+      Domain.Types.Sos
+      Storage.Beam.Sos
+      Storage.Queries.Sos
   other-modules:
       Paths_shared_services
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds

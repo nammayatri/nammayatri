@@ -191,6 +191,7 @@ library
       Domain.Action.UI.OrgAdmin
       Domain.Action.UI.Payment
       Domain.Action.UI.Performance
+      Domain.Action.UI.PersonDefaultEmergencyNumber
       Domain.Action.UI.Plan
       Domain.Action.UI.Rating
       Domain.Action.UI.Reels
@@ -207,6 +208,7 @@ library
       Domain.Action.UI.Route
       Domain.Action.UI.SafetyWebhook
       Domain.Action.UI.SocialLogin
+      Domain.Action.UI.Sos
       Domain.Action.UI.SpecialLocation
       Domain.Action.UI.Transporter
       Domain.Action.UI.Whatsapp
@@ -568,14 +570,18 @@ library
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.EditBooking
       API.Action.UI.LmsModule
+      API.Action.UI.PersonDefaultEmergencyNumber
       API.Action.UI.Reels
       API.Action.UI.SocialLogin
+      API.Action.UI.Sos
       API.Action.UI.SpecialLocation
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.EditBooking
       API.Types.UI.LmsModule
+      API.Types.UI.PersonDefaultEmergencyNumber
       API.Types.UI.Reels
       API.Types.UI.SocialLogin
+      API.Types.UI.Sos
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
       Domain.Types.AadhaarVerification
@@ -613,6 +619,7 @@ library
       Domain.Types.MerchantState
       Domain.Types.MetaData
       Domain.Types.ModuleCompletionInformation
+      Domain.Types.PersonDefaultEmergencyNumber
       Domain.Types.PlanTranslation
       Domain.Types.PurchaseHistory
       Domain.Types.QuestionInformation
@@ -670,6 +677,7 @@ library
       Storage.Beam.MerchantState
       Storage.Beam.MetaData
       Storage.Beam.ModuleCompletionInformation
+      Storage.Beam.PersonDefaultEmergencyNumber
       Storage.Beam.PlanTranslation
       Storage.Beam.PurchaseHistory
       Storage.Beam.QuestionInformation
@@ -749,6 +757,7 @@ library
       Storage.Queries.OrphanInstances.VehicleRegistrationCertificate
       Storage.Queries.OrphanInstances.Volunteer
       Storage.Queries.OrphanInstances.WhiteListOrg
+      Storage.Queries.PersonDefaultEmergencyNumber
       Storage.Queries.PlanTranslation
       Storage.Queries.PurchaseHistory
       Storage.Queries.QuestionInformation

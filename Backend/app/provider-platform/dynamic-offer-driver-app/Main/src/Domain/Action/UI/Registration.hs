@@ -300,7 +300,8 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         usedCoins = 0,
         registrationLat = req.registrationLat,
         registrationLon = req.registrationLon,
-        useFakeOtp
+        useFakeOtp,
+        hasCompletedSafetySetup = Nothing
       }
 
 makeSession ::

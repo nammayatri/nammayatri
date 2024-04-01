@@ -1,9 +1,6 @@
 imports:
-  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  Merchant: Domain.Types.Merchant
-  Person: Domain.Types.Person
-  Ride: Domain.Types.Ride
-
+  Person: IssueManagement.Common
+  Ride: IssueManagement.Common
 Sos:
   tableName: sos
 
@@ -14,6 +11,15 @@ Sos:
     flow : SosType
     status : SosStatus
     ticketId : Maybe Text
+
+  beamInstance:
+    - MakeTableInstancesGenericSchema
+
+  domainInstance :
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SosType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SosStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <EmergencyContactId>
+
 
   types:
     EmergencyContactId:

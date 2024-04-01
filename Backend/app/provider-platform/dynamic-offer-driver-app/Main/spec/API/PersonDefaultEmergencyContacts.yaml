@@ -1,0 +1,28 @@
+imports:
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+
+module: PersonDefaultEmergencyNumber
+
+types:
+
+  PersonDefaultEmergencyNumber:
+    name: Text
+    mobileCountryCode: Text
+    mobileNumber: Text
+
+  DefaultEmergencyNumbersEntity:
+    defaultEmergencyNumbers: [PersonDefaultEmergencyNumber]
+
+apis:
+  - GET:
+      endpoint: /profile/defaultEmergencyNumbers
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: API.Types.UI.PersonDefaultEmergencyNumber.DefaultEmergencyNumbersEntity
+  - POST:
+      endpoint: /profile/defaultEmergencyNumbers
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.PersonDefaultEmergencyNumber.DefaultEmergencyNumbersEntity
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
