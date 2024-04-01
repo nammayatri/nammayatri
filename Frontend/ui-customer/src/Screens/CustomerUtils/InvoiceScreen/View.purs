@@ -222,7 +222,7 @@ localTextView textValue colorValue =
 
 getFareText :: String -> String -> String
 getFareText fareType baseDistance = case fareType of
-                      "BASE_FARE" -> (getString BASE_FARES) <> if baseDistance == "0 m" then "" else " (" <> baseDistance <> ")"
+                      "BASE_FARE" -> (getString BASE_FARES) -- <> if baseDistance == "0 m" then "" else " (" <> baseDistance <> ")" -- Temporary fix for base distance
                       "EXTRA_DISTANCE_FARE" -> getString NOMINAL_FARE
                       "DRIVER_SELECTED_FARE" -> getString DRIVER_ADDITIONS
                       "TOTAL_FARE" -> getString TOTAL_PAID
