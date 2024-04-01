@@ -10,6 +10,8 @@ import qualified Domain.Types.TicketBooking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -53,7 +55,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.TicketBooking.TicketBooking {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.amount amount,
+    [ Se.Set Beam.amount ((.amount) amount),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
@@ -71,7 +74,7 @@ instance FromTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking 
     pure $
       Just
         Domain.Types.TicketBooking.TicketBooking
-          { amount = amount,
+          { amount = Kernel.Types.Common.mkPrice currency amount,
             createdAt = createdAt,
             id = Kernel.Types.Id.Id id,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -87,7 +90,8 @@ instance FromTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking 
 instance ToTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking where
   toTType' (Domain.Types.TicketBooking.TicketBooking {..}) = do
     Beam.TicketBookingT
-      { Beam.amount = amount,
+      { Beam.amount = (.amount) amount,
+        Beam.currency = (Kernel.Prelude.Just . (.currency)) amount,
         Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,

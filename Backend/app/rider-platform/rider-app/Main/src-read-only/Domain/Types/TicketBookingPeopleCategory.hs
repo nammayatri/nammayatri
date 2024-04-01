@@ -16,11 +16,11 @@ data TicketBookingPeopleCategory = TicketBookingPeopleCategory
   { id :: Kernel.Types.Id.Id Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory,
     name :: Kernel.Prelude.Text,
     numberOfUnits :: Kernel.Prelude.Int,
-    pricePerUnit :: Kernel.Types.Common.HighPrecMoney,
+    pricePerUnit :: Kernel.Types.Common.Price,
     ticketBookingServiceCategoryId :: Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show)

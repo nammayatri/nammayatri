@@ -7,6 +7,7 @@ imports:
   ServiceCategory: Domain.Types.ServiceCategory
   ServicePeopleCategory: Domain.Types.ServicePeopleCategory
   HighPrecMoney: Kernel.Types.Common
+  PriceAPIEntity: Kernel.Types.Common
   ShortId: Kernel.Types.Id
   UTCTime: Kernel.Prelude
   TicketPlace: Domain.Types.TicketPlace
@@ -51,6 +52,7 @@ types:
     id: Id ServicePeopleCategory
     name: Text
     pricePerUnit: HighPrecMoney
+    pricePerUnitWithCurrency: PriceAPIEntity
     description: Text
 
   TicketBookingReq:
@@ -76,6 +78,7 @@ types:
     ticketPlaceName: Text
     personId: Text
     amount: HighPrecMoney
+    amountWithCurrency: PriceAPIEntity
     visitDate: Day
     status: BookingStatus
 
@@ -85,6 +88,7 @@ types:
     ticketPlaceName: Text
     personId: Text
     amount: HighPrecMoney
+    amountWithCurrency: PriceAPIEntity
     visitDate: Day
     status: BookingStatus
     services: [TicketBookingServiceDetails]
@@ -93,6 +97,7 @@ types:
     ticketServiceShortId: Text
     ticketServiceName: Text
     amount : HighPrecMoney
+    amountWithCurrency: PriceAPIEntity
     status : ServiceStatus
     verificationCount : Int
     slot: Maybe TimeOfDay
@@ -103,11 +108,13 @@ types:
     name : Text
     bookedSeats: Int
     amount: HighPrecMoney
+    amountWithCurrency: PriceAPIEntity
     peopleCategories : [TicketBookingPeopleCategoryDetails]
 
   TicketBookingPeopleCategoryDetails:
     name : Text
     pricePerUnit : HighPrecMoney
+    pricePerUnitWithCurrency: PriceAPIEntity
     numberOfUnits : Int
 
   TicketBookingUpdateSeatsReq:
@@ -125,6 +132,7 @@ types:
     message: Text
     status: TicketVerificationStatus
     amount: Maybe HighPrecMoney
+    amountWithCurrency: Maybe PriceAPIEntity
     verificationCount: Maybe Int
     startTime: Maybe TimeOfDay
     endTime: Maybe TimeOfDay
@@ -137,6 +145,7 @@ types:
     id: Id ServicePeopleCategory
     name: Text
     pricePerUnit: HighPrecMoney
+    pricePerUnitWithCurrency: PriceAPIEntity
 
 apis:
   # GET /ticket/places

@@ -42,8 +42,11 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN refund_amount double precis
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN cancellation_charges double precision ;
 
 
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_booking_cancellable boolean ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN currency text ;

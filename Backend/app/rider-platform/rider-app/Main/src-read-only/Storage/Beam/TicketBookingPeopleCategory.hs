@@ -16,6 +16,7 @@ data TicketBookingPeopleCategoryT f = TicketBookingPeopleCategoryT
   { id :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
     numberOfUnits :: B.C f Kernel.Prelude.Int,
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     pricePerUnit :: B.C f Kernel.Types.Common.HighPrecMoney,
     ticketBookingServiceCategoryId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

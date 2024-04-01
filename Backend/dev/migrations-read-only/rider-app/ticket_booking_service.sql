@@ -19,3 +19,8 @@ ALTER TABLE atlas_app.ticket_booking_service ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_booking_service ALTER COLUMN merchant_operating_city_id SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN currency text ;
