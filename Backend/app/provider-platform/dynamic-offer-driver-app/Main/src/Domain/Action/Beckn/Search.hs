@@ -280,9 +280,9 @@ addNearestDriverInfo (Just driverPool) estdOrQuotes = do
       case driverPool' of
         Nothing -> return (input, Nothing)
         Just dp -> do
-          locationId <- generateGUIDText
           let driverLatLongs = fmap (\x -> LatLong x.lat x.lon) dp
               distanceToNearestDriver = NE.head dp & (.distanceToPickup)
+              locationId = NE.head dp & (.driverId) & (.getId)
               nearestDriverInfo = NearestDriverInfo {..}
           return (input, Just nearestDriverInfo)
 

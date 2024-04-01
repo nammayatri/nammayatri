@@ -31,10 +31,10 @@ WITH CTE AS (
         fitness_expiry,
         ROW_NUMBER() OVER (PARTITION BY certificate_number_hash ORDER BY fitness_expiry DESC) AS rn
     FROM
-        vehicle_registration_certificate
+        atlas_driver_offer_bpp.vehicle_registration_certificate
 )
 DELETE FROM
-    vehicle_registration_certificate
+    atlas_driver_offer_bpp.vehicle_registration_certificate
 WHERE
     (certificate_number_hash, fitness_expiry) IN (SELECT certificate_number_hash, fitness_expiry FROM CTE WHERE rn > 1);
 

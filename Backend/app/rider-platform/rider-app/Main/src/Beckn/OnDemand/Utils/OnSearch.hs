@@ -217,15 +217,25 @@ buildWaitingChargeInfo item currency = do
         { waitingChargePerMin = waitingChargePerMin'
         }
 
-getProviderLocation :: MonadFlow m => Spec.Provider -> m [Maps.LatLong]
-getProviderLocation provider = do
+getProviderLocation :: MonadFlow m => Spec.Provider -> VehicleVariant.VehicleVariant -> m [Maps.LatLong]
+getProviderLocation provider vehicleVariant = do
   let locations = provider.providerLocations & fromMaybe []
-  mapM makeLatLong locations
+  latLongs <- mapM (makeLatLong provider vehicleVariant) locations
+  return $ catMaybes latLongs
 
-makeLatLong :: MonadFlow m => Spec.Location -> m Maps.LatLong
-makeLatLong location = do
+makeLatLong :: (MonadFlow m) => Spec.Provider -> VehicleVariant.VehicleVariant -> Spec.Location -> m (Maybe Maps.LatLong)
+makeLatLong provider vehicleVariant location = do
   gps <- location.locationGps & fromMaybeM (InvalidRequest "Missing GPS")
-  Common.parseLatLong gps
+  maybe (return Nothing) (makeLatLongHelper gps) location.locationId
+  where
+    makeLatLongHelper gps locId = maybe (return Nothing) (parseLatLongHelper locId gps) provider.providerItems
+
+    parseLatLongHelper locId gps providerItems = do
+      let providerItem = filter (\item -> maybe False (\locIds -> locId `elem` locIds) item.itemLocationIds) providerItems
+      currVehicleVariant <- maybe (pure Nothing) (fmap Just . getVehicleVariant provider) (listToMaybe providerItem)
+      if currVehicleVariant == Just vehicleVariant
+        then Just <$> Common.parseLatLong gps
+        else return Nothing
 
 buildSpecialLocationTag :: MonadFlow m => Spec.Item -> m (Maybe Text)
 buildSpecialLocationTag item =
