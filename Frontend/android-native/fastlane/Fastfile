@@ -53,24 +53,23 @@ platform :android do
   
       # Generate AAB
       gradle(
-        task: 'bundle' + flavor + 'Release'#,
-
+        task: 'bundle' + flavor + 'Release'
       )
   
       # Supply metadata and AAB to Google Play
-      # supply(
-      #   track: 'internal',
-      #   json_key: 'play_config.json',
-      #   package_name: 'in.juspay.nammayatri',
-      #   metadata_path: 'fastlane/metadata/',
-      #   aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "nyUser-prod" + "-release.aab",
-      #   skip_upload_apk: true,
-      #   skip_upload_metadata: true,
-      #   skip_upload_images: true,
-      #   skip_upload_changelogs: true,
-      #   skip_upload_screenshots: true,
-      #   timeout: 600
-      # )
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'in.juspay.nammayatri',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "nyUser-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
     }
   
     # Print app metadata
