@@ -9,7 +9,7 @@
 package in.juspay.mobility.app;
 
 public class SheetModel {
-    private final String pickUpDistance, distanceToBeCovered, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant;
+    private final String pickUpDistance, distanceToBeCovered, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant,rideProductType, rideDuration, rideDistance, rideStartTime, rideStartDate;
     private String requestId;
     private int startTime, specialZoneExtraTip;
     private double updatedAmount;
@@ -59,7 +59,12 @@ public class SheetModel {
                       double destLng,
                       boolean specialZonePickup,
                       int specialZoneExtraTip,
-                      boolean downgradeEnabled){
+                      boolean downgradeEnabled,
+                      String rideProductType,
+                      String rideDuration,
+                      String rideDistance,
+                      String rideStartTime,
+                      String rideStartDate){
 
         this.srcLat = srcLat;
         this.srcLng = srcLng;
@@ -99,6 +104,31 @@ public class SheetModel {
         this.specialZonePickup = specialZonePickup;
         this.specialZoneExtraTip = specialZoneExtraTip;
         this.downgradeEnabled = downgradeEnabled;
+        this.rideProductType = rideProductType;
+        this.rideDuration = rideDuration;
+        this.rideDistance = rideDistance;
+        this.rideStartTime = rideStartTime;
+        this.rideStartDate = rideStartDate;
+    }
+
+    public String getRideProductType() {
+        return rideProductType;
+    }
+
+    public String getRideDuration() {
+        return rideDuration;
+    }
+
+    public String getRideDistance() {
+        return rideDistance;
+    }
+
+    public String getRideStartDate() {
+        return rideStartDate;
+    }
+
+    public String getRideStartTime() {
+        return rideStartTime;
     }
 
     public boolean getSpecialZonePickup(){

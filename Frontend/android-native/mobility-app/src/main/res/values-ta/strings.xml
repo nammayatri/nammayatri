@@ -62,4 +62,12 @@
     <string name="zone_pickup_extra">மண்டலம் பிக்கப் எக்ஸ்ட்ரா</string>
     <string name="you_are_near_a_special_pickup_zone">நீங்கள் சிறப்பு மண்டலப் \n பிக்கப் அருகில் உள்ளீர்கள்</string>
     <string name="zone_pickup">ஜோன் பிக்கப்</string>
+    <string name="customer_edited">வாடிக்கையாளர் ஒரு நிலையாண்டை சேர்த்தார்!</string>
+    <string name="customer_added">வாடிக்கையாளர் ஒரு நிலையாண்டை சேர்த்தார்!</string>
+    <string name="navigate_to_location"> இருப்பிடத்திற்கு செல்லவும்</string>
+    <string name="close"> மூடு</string>
+    <string name="today"> இன்று</string>
+    <string name="now"> இப்போது</string>
+    <string name="rental"> வாடகை</string>
+    <string name="intercity"> இடர்நகர</string>
 </resources>

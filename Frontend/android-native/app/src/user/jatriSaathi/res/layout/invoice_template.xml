@@ -335,11 +335,13 @@
                         android:layout_width="1px"
                         android:layout_height="80px"
                         android:layout_margin="6px"
+                        android:id="@+id/dashedLine"
                         android:src="@drawable/ic_line" />
 
                     <ImageView
                         android:layout_width="12px"
                         android:layout_height="12px"
+                        android:id="@+id/destRedCircle"
                         android:src="@drawable/ny_ic_red_circle" />
                 </LinearLayout>
 

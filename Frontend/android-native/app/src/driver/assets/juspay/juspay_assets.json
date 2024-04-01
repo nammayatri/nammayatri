@@ -67,6 +67,7 @@
       "ic_lost_found" : true,
       "ic_metro" : true,
       "ic_metro_shape" : true,
+      "ic_intercity_variant_tag": true,
       "ic_mingcute_currency_rupee" : true,
       "ic_nav_unfilled" : true,
       "ic_navigation_blue" : true,
