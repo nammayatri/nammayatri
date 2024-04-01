@@ -119,7 +119,7 @@ getDriverIntelligentPoolConfigFromCAC id srId idName = do
   let res' = contextValue ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverIntelligentPoolConfig:") (itraversed . indices (Text.isPrefixOf "driverIntelligentPoolConfig:" . DAK.toText))
       res = DA.Object (DAKM.fromList res') ^? _JSON :: (Maybe DriverIntelligentPoolConfig)
   maybe
-    (cacFallbackHelper srId idName dipcCond)
+    (logDebug ("DriverIntelligentPoolConfig from CAC Not Parsable: " <> show res' <> " for tenant " <> Text.pack tenant) >> cacFallbackHelper srId idName dipcCond)
     ( \res'' -> do
         when (isJust srId) do
           variantIds <- liftIO $ CM.getVariants tenant dipcCond toss

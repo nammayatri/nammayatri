@@ -472,6 +472,27 @@
     },
     "crane_2": {
       "inputs": {
+        "nixpkgs": [
+          "haskell-cac",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1711681752,
+        "narHash": "sha256-LEg6/dmEFxx6Ygti5DO9MOhGNpyB7zdxdWtzv/FCTXk=",
+        "owner": "ipetkov",
+        "repo": "crane",
+        "rev": "ada0fb4dcce4561acb1eb17c59b7306d9d4a95f3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ipetkov",
+        "repo": "crane",
+        "type": "github"
+      }
+    },
+    "crane_3": {
+      "inputs": {
         "flake-compat": "flake-compat_3",
         "flake-utils": "flake-utils_5",
         "nixpkgs": [
@@ -1614,17 +1635,18 @@
         "common": [
           "common"
         ],
+        "crane": "crane_2",
         "nixpkgs": [
           "common",
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1709132462,
-        "narHash": "sha256-x1MEqWmtqnGpqQ0lmpeRPnMtZngLFj5vwVZadYtHGbk=",
+        "lastModified": 1711965810,
+        "narHash": "sha256-FGPQL7lbYqH/kBrBuqWtuVuVjkuqxuHDPJcEIDZbrno=",
         "owner": "piyushKumar-1",
         "repo": "haskell_cac_client",
-        "rev": "84eace9e6452ff894f8ac7f8723954fa1cde67ed",
+        "rev": "faff5a291abf8fdd489846cf0272a78f5267e40c",
         "type": "github"
       },
       "original": {
@@ -1804,7 +1826,7 @@
     },
     "location-tracking-service": {
       "inputs": {
-        "crane": "crane_2",
+        "crane": "crane_3",
         "flake-parts": "flake-parts_2",
         "nixpkgs": "nixpkgs_8",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix_2",
