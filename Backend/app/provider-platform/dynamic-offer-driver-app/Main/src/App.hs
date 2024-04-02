@@ -18,6 +18,7 @@ import AWS.S3
 import qualified App.Server as App
 import qualified Client.Main as CM
 import qualified Control.Concurrent as CC
+import qualified Data.Bool as B
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
@@ -68,14 +69,14 @@ createCAC appCfg = do
     _ -> do
       -- logError "CAC client failed to start"
       threadDelay 1000000
-      createCAC appCfg
+      B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
   superPositionStatus <- CM.initSuperPositionClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
   case superPositionStatus of
     0 -> CM.runSuperPositionPolling appCfg.cacConfig.tenants
     _ -> do
       -- logError "CAC super position client failed to start"
       threadDelay 1000000
-      createCAC appCfg
+      B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
 
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
 runDynamicOfferDriverApp configModifier = do
