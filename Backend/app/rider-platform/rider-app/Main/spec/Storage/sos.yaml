@@ -3,6 +3,7 @@ imports:
   Merchant: Domain.Types.Merchant
   Person: Domain.Types.Person
   Ride: Domain.Types.Ride
+  MediaFile : IssueManagement.Domain.Types.MediaFile
 
 Sos:
   tableName: sos
@@ -14,13 +15,14 @@ Sos:
     flow : SosType
     status : SosStatus
     ticketId : Maybe Text
+    mediaFiles: "[Id MediaFile]"
 
   types:
     EmergencyContactId:
       enum: "EmergencyContactId Text"
 
     SosType:
-      enum: "Police,CustomerCare,EmergencyContact EmergencyContactId,SafetyFlow"
+      enum: "Police,AudioRecording,CustomerCare,EmergencyContact EmergencyContactId,SafetyFlow"
 
     SosStatus:
       enum: "Resolved,NotResolved,Pending,MockPending,MockResolved"
@@ -30,6 +32,10 @@ Sos:
       status : SosStatus
 
   queries:
+    updateMediaFiles:
+      kvFunction: updateOneWithKV
+      params: [mediaFiles]
+      where: id
     updateStatus:
       kvFunction: updateOneWithKV
       params: [status]

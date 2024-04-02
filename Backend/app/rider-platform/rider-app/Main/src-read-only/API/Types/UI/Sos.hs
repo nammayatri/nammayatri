@@ -8,6 +8,7 @@ import qualified Data.Text
 import qualified Domain.Types.Ride
 import qualified Domain.Types.Sos
 import EulerHS.Prelude hiding (id)
+import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Servant
@@ -19,7 +20,12 @@ data MockSosReq = MockSosReq {onRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
 
 data SosDetailsRes = SosDetailsRes {sos :: Kernel.Prelude.Maybe Domain.Types.Sos.Sos} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data SosReq = SosReq {flow :: Domain.Types.Sos.SosType, isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride}
+data SosReq = SosReq
+  { flow :: Domain.Types.Sos.SosType,
+    isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    mediaFiles :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile],
+    rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride
+  }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data SosRes = SosRes {sosId :: Kernel.Types.Id.Id Domain.Types.Sos.Sos} deriving (Generic, ToJSON, FromJSON, ToSchema)

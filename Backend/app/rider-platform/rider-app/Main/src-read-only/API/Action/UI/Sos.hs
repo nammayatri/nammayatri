@@ -23,14 +23,14 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "sos" :> "getDetails" :> Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.Sos.SosDetailsRes
       :<|> TokenAuth
       :> "sos"
       :> "create"
-      :> ReqBody '[JSON] API.Types.UI.Sos.SosReq
+      :> ReqBody ('[JSON]) API.Types.UI.Sos.SosReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.Sos.SosRes
       :<|> TokenAuth
       :> "sos"
@@ -39,10 +39,10 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Sos.Sos)
       :> "status"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.Sos.SosUpdateReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "sos"
@@ -51,19 +51,19 @@ type API =
            "sosId"
            (Kernel.Types.Id.Id Domain.Types.Sos.Sos)
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.Sos.MarkAsSafeReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "sos"
       :> "createMockSos"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.Sos.MockSosReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 

@@ -7,7 +7,7 @@ import API.Types.UI.Sos
 import AWS.S3 as S3
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.ByteString as BS
-import Data.Text as T
+import qualified Data.Text as T
 import qualified Domain.Action.UI.FollowRide as DFR
 import qualified Domain.Action.UI.Profile as DP
 import qualified Domain.Types.Merchant as Merchant
@@ -22,7 +22,10 @@ import EulerHS.Prelude (withFile)
 import EulerHS.Types (base64Encode)
 import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
+import IssueManagement.Common as IMC
+import IssueManagement.Domain.Types.MediaFile as MediaFile
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import qualified IssueManagement.Storage.CachedQueries.MediaFile as CQMF
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -98,6 +101,7 @@ getSosGetDetails (mbPersonId, _) rideId_ = do
           id = "mock-sos",
           personId = mockSos.personId,
           rideId = rideId_,
+          mediaFiles = [],
           status = mockSos.status,
           ticketId = Nothing,
           merchantId = Nothing,
@@ -114,26 +118,28 @@ postSosCreate (mbPersonId, merchantId) req = do
   ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
   merchantConfig <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-  let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
-  sosId <- createTicketForNewSos person ride riderConfig trackLink req merchantConfig.kaptureDisposition
-  message <-
-    MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
-      MessageBuilder.BuildSOSAlertMessageReq
-        { userName = SLP.getName person,
-          rideLink = trackLink
-        }
-  when (req.isRideEnded /= Just True) $ do
+  let trackLink = "https://" <> riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
+      mediaList = fromMaybe [] req.mediaFiles
+  uploadedMediaFiles <- forM mediaList $ \mediaFile -> CQMF.findById (cast mediaFile) IMC.CUSTOMER >>= fromMaybeM (FileDoNotExist mediaFile.getId)
+  sosId <- createTicketForNewSos person ride riderConfig trackLink uploadedMediaFiles req merchantConfig.kaptureDisposition notAudioRecordingFlow
+  when ((req.isRideEnded /= Just True) && shouldSendSms person) $ do
     emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-    when (shouldSendSms person) $ do
-      void $ QPDEN.updateShareRideForAll personId (Just True)
-      enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
-      SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just message) True emergencyContacts.defaultEmergencyNumbers
+    message <-
+      MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
+        MessageBuilder.BuildSOSAlertMessageReq
+          { userName = SLP.getName person,
+            rideLink = trackLink
+          }
+    void $ QPDEN.updateShareRideForAll personId (Just True)
+    enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
+    SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just message) True emergencyContacts.defaultEmergencyNumbers
   return $
     SosRes
       { sosId = sosId
       }
   where
-    shouldSendSms person_ = person_.shareEmergencyContacts && req.flow /= DSos.Police
+    shouldSendSms person_ = person_.shareEmergencyContacts && (not $ elem req.flow [DSos.Police, DSos.AudioRecording])
+    notAudioRecordingFlow = req.flow /= DSos.AudioRecording
     notificationBody person_ = SLP.getName person_ <> " has initiated an SOS. Tap to follow and respond to the emergency situation"
     notificationTitle = "SOS Alert"
 
@@ -149,30 +155,46 @@ enableFollowRideInSos emergencyContacts = do
     )
     emergencyContacts
 
-createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Text -> SosReq -> Text -> Flow (Id DSos.Sos)
-createTicketForNewSos person ride riderConfig trackLink req kaptureDisposition = do
+createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Text -> [MediaFile] -> SosReq -> Text -> Bool -> Flow (Id DSos.Sos)
+createTicketForNewSos person ride riderConfig trackLink mediaFiles req kaptureDisposition updateStatus = do
   sosRes <- CQSos.findByRideId ride.id
   case sosRes of
     Just sosDetails -> do
-      void $ QSos.updateStatus DSos.Pending sosDetails.id
-      void $ callUpdateTicket person sosDetails $ Just "SOS Re-Activated"
-      CQSos.cacheSosIdByRideId ride.id $ sosDetails {DSos.status = DSos.Pending}
+      when updateStatus $ void $ QSos.updateStatus DSos.Pending sosDetails.id
+      void $ callUpdateTicket person sosDetails $ Just $ issueComment sosDetails
+      when updateStatus $ CQSos.cacheSosIdByRideId ride.id $ sosDetails {DSos.status = DSos.Pending}
+      let medias = getNewMediaFiles sosDetails.mediaFiles
+      void $ QSos.updateMediaFiles (sosDetails.mediaFiles <> (map (.id) medias)) sosDetails.id
       return sosDetails.id
     Nothing -> do
       phoneNumber <- mapM decrypt person.mobileNumber
       let rideInfo = buildRideInfo ride person phoneNumber
+          medias = getNewMediaFiles []
+          mediaFilesUrls = [trackLink] <> (map (.url) medias)
       ticketId <- do
         if riderConfig.enableSupportForSafety
           then do
-            ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink] rideInfo req.flow kaptureDisposition))
+            ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber mediaFilesUrls rideInfo req.flow kaptureDisposition))
             case ticketResponse of
               Right ticketResponse' -> return (Just ticketResponse'.ticketId)
               Left _ -> return Nothing
           else return Nothing
-      sosDetails <- buildSosDetails person req ticketId
+      let status = if updateStatus then DSos.Pending else DSos.NotResolved
+      sosDetails <- buildSosDetails person req ticketId status ((map (.id) medias))
       CQSos.cacheSosIdByRideId ride.id sosDetails
       void $ QSos.create sosDetails
       return sosDetails.id
+  where
+    issueComment :: DSos.Sos -> Text
+    issueComment sos = case updateStatus of
+      True -> if sos.status == DSos.NotResolved then "SOS Activated" else "SOS Re-Activated"
+      False -> do
+        let mediaUrls = map (.url) $ getNewMediaFiles sos.mediaFiles
+        T.unlines $ ["Shared Audio Recording"] <> mediaUrls
+    getNewMediaFiles :: [Id MediaFile] -> [MediaFile]
+    getNewMediaFiles existingMedia =
+      let filterMediaFiles media = not $ media.id `elem` existingMedia
+       in filter filterMediaFiles mediaFiles
 
 postSosStatus :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id DSos.Sos -> SosUpdateReq -> Flow APISuccess.APISuccess
 postSosStatus (mbPersonId, _) sosId req = do
@@ -349,21 +371,23 @@ mkTicket person phoneNumber mediaLinks info flow disposition = do
     }
   where
     issueDescription = case flow of
+      DSos.AudioRecording -> "Shared Audio Recording"
       DSos.Police -> "112 called"
       _ -> "SOS activated"
 
-buildSosDetails :: (EncFlow m r) => Person.Person -> SosReq -> Maybe Text -> m DSos.Sos
-buildSosDetails person req ticketId = do
+buildSosDetails :: (EncFlow m r) => Person.Person -> SosReq -> Maybe Text -> DSos.SosStatus -> [Id MediaFile] -> m DSos.Sos
+buildSosDetails person req ticketId status mediaFiles = do
   pid <- generateGUID
   now <- getCurrentTime
   return
     DSos.Sos
       { id = pid,
         personId = person.id,
-        status = DSos.Pending,
+        status = status,
         flow = req.flow,
         rideId = req.rideId,
         ticketId = ticketId,
+        mediaFiles = mediaFiles,
         merchantId = Just person.merchantId,
         merchantOperatingCityId = Just person.merchantOperatingCityId,
         createdAt = now,
