@@ -4360,8 +4360,10 @@ rentalScreenFlow = do
     RentalScreenController.GoToRideScheduledScreen updatedState -> do
       rideScheduledFlow
     RentalScreenController.OnRentalRideConfirm updatedState -> do
-      let selectedQuote = (fromMaybe { quoteDetails : ChooseVehicle.config
-                                    , index : 0 , activeIndex : 0, fareDetails : {plannedPerKmRate : 0, baseFare : 0,includedKmPerHr : 0, perExtraKmRate : 0, perExtraMinRate : 0, perHourCharge : 0, nightShiftCharge : 0}} $ head (filter (\item -> item.index == item.activeIndex) updatedState.data.rentalsQuoteList)).quoteDetails
+      let quoteConfig = head (filter (\item -> item.index == item.activeIndex) updatedState.data.rentalsQuoteList)
+          selectedQuote = (fromMaybe { quoteDetails : ChooseVehicle.config
+                                    , index : 0 , activeIndex : 0, fareDetails : {plannedPerKmRate : 0, baseFare : 0,includedKmPerHr : 0, perExtraKmRate : 0, perExtraMinRate : 0, perHourCharge : 0, nightShiftCharge : 0}} quoteConfig).quoteDetails
+      setValueToLocalStore SELECTED_VARIANT selectedQuote.vehicleVariant
       response <- lift $ lift $ Remote.rideConfirm (selectedQuote.id)
       case response of 
         Right (ConfirmRes resp) -> do 

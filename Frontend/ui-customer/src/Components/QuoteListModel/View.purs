@@ -238,55 +238,57 @@ quotesView state push =
 
 findingRidesView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 findingRidesView state push =
-  linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , gravity CENTER_HORIZONTAL
-  , visibility if (null state.quoteListModel && isLocalStageOn FindingQuotes) || state.findingRidesAgain || state.isRentalSearch then VISIBLE else GONE
-  , clickable true
-  , accessibility DISABLE
-  , margin $ if state.tipViewProps.onlyPrimaryText then MarginBottom 80 else if state.tipViewProps.isprimaryButtonVisible then MarginBottom 82 else  MarginBottom 85
-  , orientation VERTICAL
-  ][
+  let lottieRawJson = if (state.appConfig.autoVariantEnabled && getValueToLocalStore SELECTED_VARIANT == "AUTO_RICKSHAW") then (getAssetsBaseUrl FunctionCall) <> getAutoLottie state.city else (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_without_text_cab.json"
+  in
     linearLayout
-    [ width MATCH_PARENT
-    , orientation VERTICAL
-    , weight 1.0
-    , gravity CENTER
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity CENTER_HORIZONTAL
+    , visibility if (null state.quoteListModel && isLocalStageOn FindingQuotes) || state.findingRidesAgain || state.isRentalSearch then VISIBLE else GONE
+    , clickable true
     , accessibility DISABLE
+    , margin $ if state.tipViewProps.onlyPrimaryText then MarginBottom 80 else if state.tipViewProps.isprimaryButtonVisible then MarginBottom 82 else  MarginBottom 85
+    , orientation VERTICAL
+    ][
+      linearLayout
+      [ width MATCH_PARENT
+      , orientation VERTICAL
+      , weight 1.0
+      , gravity CENTER
+      , accessibility DISABLE
+      ]
+      [
+        lottieAnimationView
+        [ id (getNewIDWithTag "lottieLoaderAnim")
+        , afterRender (\action-> do
+                      void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = lottieRawJson, lottieId = (getNewIDWithTag "lottieLoaderAnim") }
+                      pure unit)(const NoAction)
+        , height $ V state.appConfig.quoteListModel.lottieHeight
+        , accessibility DISABLE
+        , width $ V state.appConfig.quoteListModel.lottieWidth
+        ]
+      , textView 
+        [ text (getString PLEASE_WAIT)
+        , color "#7C7C7C"
+        , visibility if state.appConfig.showQuoteFindingText then VISIBLE else GONE
+        , textSize FontSize.a_17
+        , margin $ MarginTop if state.appConfig.showQuoteFindingText then 22 else 0
+        , accessibility DISABLE
+        , lineHeight "25"
+        , fontStyle $ FontStyle.regular LanguageStyle
+        ]
+      , textView 
+        [ text $ getString $ if state.isRentalSearch then FINDING_RIDES_NEAR_YOU else FINDING_QUOTES_TEXT
+        , color "#7C7C7C"
+        , visibility if state.appConfig.showQuoteFindingText || state.isRentalSearch then VISIBLE else GONE
+        , textSize FontSize.a_17
+        , accessibility DISABLE
+        , lineHeight "25"
+        , fontStyle $ FontStyle.regular LanguageStyle
+        ]
+      ]
+    , addTipView state push
     ]
-    [
-      lottieAnimationView
-      [ id (getNewIDWithTag "lottieLoaderAnim")
-      , afterRender (\action-> do
-                    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = if (state.appConfig.autoVariantEnabled && getValueToLocalStore SELECTED_VARIANT == "AUTO_RICKSHAW") then (getAssetsBaseUrl FunctionCall) <> getAutoLottie state.city else (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_without_text_cab.json", lottieId = (getNewIDWithTag "lottieLoaderAnim") }
-                    pure unit)(const NoAction)
-      , height $ V state.appConfig.quoteListModel.lottieHeight
-      , accessibility DISABLE
-      , width $ V state.appConfig.quoteListModel.lottieWidth
-      ]
-    , textView 
-      [ text (getString PLEASE_WAIT)
-      , color "#7C7C7C"
-      , visibility if state.appConfig.showQuoteFindingText then VISIBLE else GONE
-      , textSize FontSize.a_17
-      , margin $ MarginTop if state.appConfig.showQuoteFindingText then 22 else 0
-      , accessibility DISABLE
-      , lineHeight "25"
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
-    , textView 
-      [ text (getString FINDING_QUOTES_TEXT)
-      , color "#7C7C7C"
-      , visibility if state.appConfig.showQuoteFindingText || state.isRentalSearch then VISIBLE else GONE
-      , textSize FontSize.a_17
-      , accessibility DISABLE
-      , lineHeight "25"
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
-    ]
-  , addTipView state push
-  ]
 
 addTipView :: forall w. QuoteListModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 addTipView state push =
