@@ -352,7 +352,7 @@ eval (SetLocationOnMap) state = do
         MB.maybe { lat : currentLat, lng : currentLng} (\loc -> mkLatLong currentLat currentLng loc) focussedField
   void $ pure $ hideKeyboardOnNavigation true
   pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-  void $ pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lng, geoJson = "", points = [], zoomLevel = 17.0, labelId = getNewIDWithTag "LocateOnMapSLSPin"}
+  void $ pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lng, geoJson = "", points = [], zoomLevel = 17.0}
   let newState = state{props{searchLocStage = LocateOnMapStage, locUnserviceable = false}, data{latLonOnMap = MB.fromMaybe (MB.fromMaybe dummyLocationInfo state.data.srcLoc) focussedField}}
   updateAndExit newState $ Reload newState
   where 

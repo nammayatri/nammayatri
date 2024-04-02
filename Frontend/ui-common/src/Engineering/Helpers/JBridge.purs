@@ -316,7 +316,7 @@ drawRoute :: Array Locations -> String -> Boolean -> MarkerConfig -> MarkerConfi
 drawRoute locationArr style isActual startMarkerConfig endMarkerConfig routeWidth routeType mapRouteConfig pureScriptID = do
   let normalLocations = maybe ({points : []}) identity (head locationArr)
       rentalLocations = maybe ({points : []}) identity (locationArr !! 1)
-      normalRouteConfig = mkRouteConfig normalLocations startMarkerConfig.labelImage endMarkerConfig.labelImage routeType startMarkerConfig.primaryText endMarkerConfig.primaryText style isActual mapRouteConfig
+      normalRouteConfig = mkRouteConfig normalLocations startMarkerConfig.pointerIcon endMarkerConfig.pointerIcon routeType startMarkerConfig.primaryText endMarkerConfig.primaryText style isActual mapRouteConfig
       rentalRouteConfig = mkRouteConfig rentalLocations "" "ny_ic_blue_marker" routeType "" "" "" true mapRouteConfig
       drawRouteConfig = mkDrawRouteConfig normalRouteConfig rentalRouteConfig pureScriptID
   drawRouteV2 drawRouteConfig
