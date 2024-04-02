@@ -121,6 +121,7 @@ import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
+import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -890,7 +891,7 @@ getFleetDriverVehicleAssociation _merchantShortId _opCity fleetOwnerId mbLimit m
   let filteredItems = filter (.isRcAssociated) listItems
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = filteredItems}
   where
-    createDriverVehicleAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => [FleetDriverAssociation] -> [VehicleRegistrationCertificate] -> m [Common.DriveVehicleAssociationListItem]
+    createDriverVehicleAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [FleetDriverAssociation] -> [VehicleRegistrationCertificate] -> m [Common.DriveVehicleAssociationListItem]
     createDriverVehicleAssociationListItem fdaList vrcaList = do
       now <- getCurrentTime
       fmap concat $
@@ -903,8 +904,8 @@ getFleetDriverVehicleAssociation _merchantShortId _opCity fleetOwnerId mbLimit m
             decryptedVehicleRC <- decrypt vrca.certificateNumber
             rcAssociation <- QRCAssociation.findLinkedByRCIdAndDriverId driverId vrca.id now
             let vehicleType = castVehicleVariantDashboard vrca.vehicleVariant
-            completedRides <- if _merchantShortId.getShortId == "NAMMA_YATRI_PARTNER" then pure 0 else QRD.totalRidesByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) decryptedVehicleRC driverId
-            earning <- if _merchantShortId.getShortId == "NAMMA_YATRI_PARTNER" then pure 0 else QRide.totalEarningsByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) decryptedVehicleRC driverId
+            completedRides <- QRD.totalRidesByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) decryptedVehicleRC driverId
+            earning <- QRide.totalEarningsByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) decryptedVehicleRC driverId
             let isDriverActive = fda.isActive
             let isRcAssociated = isJust rcAssociation
             let driverPhoneNo = driver.unencryptedMobileNumber
@@ -944,7 +945,7 @@ getFleetDriverAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffset
         (Just driverName, Nothing) -> filterOnDriverName driverName list
         (Nothing, Just driverPhNo) -> filterOnDriverPhNo driverPhNo list
         (Nothing, Nothing) -> list
-    createFleetDriverAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => [FleetDriverAssociation] -> m [Common.DriveVehicleAssociationListItem]
+    createFleetDriverAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [FleetDriverAssociation] -> m [Common.DriveVehicleAssociationListItem]
     createFleetDriverAssociationListItem fdaList = do
       forM fdaList $ \fda -> do
         driver <- QPerson.findById fda.driverId >>= fromMaybeM (PersonNotFound fda.driverId.getId)
@@ -962,8 +963,8 @@ getFleetDriverAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffset
         let driverName = Just driver.firstName
         let driverPhoneNo = driver.unencryptedMobileNumber
         driverInfo' <- QDriverInfo.findById fda.driverId >>= fromMaybeM DriverInfoNotFound
-        completedRides <- if _merchantShortId.getShortId == "NAMMA_YATRI_PARTNER" then pure 0 else QRD.totalRidesByFleetOwnerPerDriver (Just fleetOwnerId) driver.id
-        earning <- if _merchantShortId.getShortId == "NAMMA_YATRI_PARTNER" then pure 0 else QRide.totalEarningsByFleetOwnerPerDriver (Just fleetOwnerId) driver.id
+        completedRides <- QRD.totalRidesByFleetOwnerPerDriver (Just fleetOwnerId) driver.id
+        earning <- QRide.totalEarningsByFleetOwnerPerDriver (Just fleetOwnerId) driver.id
         let driverStatus = if isNothing vehicleNo then Nothing else Just $ castDriverStatus driverInfo'.mode
         let isRcAssociated = isJust vehicleNo
         let isDriverActive = fda.isActive
@@ -1003,13 +1004,13 @@ getFleetVehicleAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffse
         (Just vehicleNo, Nothing) -> filterOnVehiclehNo vehicleNo list
         (Nothing, Just driverPhNo) -> filterOnDriverPhNo driverPhNo list
         (Nothing, Nothing) -> list
-    createFleetVehicleAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => [VehicleRegistrationCertificate] -> m [Common.DriveVehicleAssociationListItem]
+    createFleetVehicleAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [VehicleRegistrationCertificate] -> m [Common.DriveVehicleAssociationListItem]
     createFleetVehicleAssociationListItem vrcList = do
       now <- getCurrentTime
       forM vrcList $ \vrc -> do
         decryptedVehicleRC <- decrypt vrc.certificateNumber
-        completedRides <- if _merchantShortId.getShortId == "NAMMA_YATRI_PARTNER" then pure 0 else QRD.totalRidesByFleetOwnerPerVehicle (Just fleetOwnerId) decryptedVehicleRC
-        earning <- if _merchantShortId.getShortId == "NAMMA_YATRI_PARTNER" then pure 0 else QRide.totalEarningsByFleetOwnerPerVehicle (Just fleetOwnerId) decryptedVehicleRC
+        completedRides <- QRD.totalRidesByFleetOwnerPerVehicle (Just fleetOwnerId) decryptedVehicleRC
+        earning <- QRide.totalEarningsByFleetOwnerPerVehicle (Just fleetOwnerId) decryptedVehicleRC
         currentActiveAssociation <- QRCAssociation.findActiveAssociationByRC vrc.id True
         (currentActiveDriver, status) <- case currentActiveAssociation of
           Just activeAssociation -> do

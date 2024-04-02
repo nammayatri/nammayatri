@@ -13,6 +13,8 @@
 
 @clickhouse-driver-offer-bpp = http://localhost:8123
 
+@bpp-dashboard-host = http://localhost:8018
+
 @clickhouse-password = {{empty}}
 
 @merchantId = favorit0-0000-0000-0000-00000favorit
