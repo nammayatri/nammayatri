@@ -92,7 +92,9 @@ android {
             minifyEnabled true
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
             manifestPlaceholders = [
                     appIcon     : "@mipmap/ic_launcher",
                     appIconRound: "@mipmap/ic_launcher_round"
