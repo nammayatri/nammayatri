@@ -1,22 +1,3 @@
-CREATE TABLE atlas_app.location (
-   id CHARACTER(36) PRIMARY KEY NOT NULL,
-   lat DOUBLE PRECISION NOT NULL,
-   lon DOUBLE PRECISION NOT NULL,
-   street TEXT,
-   door TEXT,
-   city TEXT,
-   state TEXT,
-   country TEXT,
-   building TEXT,
-   area_code TEXT,
-   area TEXT,
-   ward TEXT,
-   place_id TEXT,
-   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-
-
 CREATE INDEX ON atlas_app.location_mapping USING btree (entity_id);
 
 -------------------------------------------------------------------------------------------

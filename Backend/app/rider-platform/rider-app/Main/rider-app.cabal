@@ -180,6 +180,7 @@ library
       Domain.Action.UI.Frontend
       Domain.Action.UI.HotSpot
       Domain.Action.UI.Invoice
+      Domain.Action.UI.Location
       Domain.Action.UI.Maps
       Domain.Action.UI.Payment
       Domain.Action.UI.PersonStats
@@ -212,7 +213,6 @@ library
       Domain.Types.FeedbackForm
       Domain.Types.Geometry
       Domain.Types.HotSpot
-      Domain.Types.Location
       Domain.Types.LocationAddress
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
@@ -270,7 +270,6 @@ library
       Storage.Beam.Geometry.Geometry
       Storage.Beam.Geometry.GeometryGeom
       Storage.Beam.IssueManagement
-      Storage.Beam.Location
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
       Storage.Beam.Merchant.MerchantMessage
@@ -338,7 +337,6 @@ library
       Storage.Queries.FRFSTicketBokingPayment
       Storage.Queries.Geometry
       Storage.Queries.IssueExtra
-      Storage.Queries.Location
       Storage.Queries.LocationMappingExtra
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
@@ -415,6 +413,7 @@ library
       Domain.Types.FRFSTrip
       Domain.Types.HotSpotConfig
       Domain.Types.Issue
+      Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.MerchantConfig
       Domain.Types.MerchantOperatingCity
@@ -460,6 +459,7 @@ library
       Storage.Beam.FRFSTrip
       Storage.Beam.HotSpotConfig
       Storage.Beam.Issue
+      Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.MerchantConfig
       Storage.Beam.MerchantOperatingCity
@@ -505,6 +505,7 @@ library
       Storage.Queries.FRFSTrip
       Storage.Queries.HotSpotConfig
       Storage.Queries.Issue
+      Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.MerchantConfig
       Storage.Queries.MerchantOperatingCity

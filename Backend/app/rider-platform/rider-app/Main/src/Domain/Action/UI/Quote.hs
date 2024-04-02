@@ -27,6 +27,7 @@ import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.Cancel as DCancel
+import qualified Domain.Action.UI.Location as DL
 import Domain.Types.Booking
 import Domain.Types.CancellationReason
 import Domain.Types.Estimate (EstimateAPIEntity)
