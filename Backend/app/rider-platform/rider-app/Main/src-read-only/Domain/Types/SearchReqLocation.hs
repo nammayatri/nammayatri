@@ -18,6 +18,6 @@ data SearchReqLocation = SearchReqLocation
     lon :: Kernel.Prelude.Double,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show), (Kernel.External.Maps.HasCoordinates))
+  deriving (Generic, Show, Kernel.External.Maps.HasCoordinates)
 
 data SearchReqLocationAPIEntity = SearchReqLocationAPIEntity {lat :: Kernel.Prelude.Double, lon :: Kernel.Prelude.Double} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
