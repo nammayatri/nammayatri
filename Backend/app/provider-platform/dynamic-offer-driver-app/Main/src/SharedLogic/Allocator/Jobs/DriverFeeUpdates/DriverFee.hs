@@ -392,7 +392,7 @@ getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merch
       let mbStartTime = Just startTime
           mbEndTime = Just endTime
       mbtoCreateDriverFeeForService <- toCreateDriverFeeForService serviceName merchantOperatingCityId
-      if fromMaybe False mbtoCreateDriverFeeForService
+      if fromMaybe True mbtoCreateDriverFeeForService
         then do
           driverEligibleForRentals <- findAllDriversEligibleForService serviceName merchantId merchantOperatingCityId
           driverFees <-
