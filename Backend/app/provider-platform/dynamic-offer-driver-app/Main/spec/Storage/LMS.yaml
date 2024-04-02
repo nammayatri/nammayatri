@@ -283,7 +283,7 @@ ModuleCompletionInformation:
 
 # This table will be used for mapping each module with a set of questions and each question will have reward
 QuestionModuleMapping:
-  tableName : quiz_module_mapping
+  tableName : question_module_mapping
 
   fields:
     moduleId : Id LmsModule
