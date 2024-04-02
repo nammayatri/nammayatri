@@ -62,30 +62,28 @@ getSearchDriverPoolConfig ::
   Maybe Meters ->
   m DriverPoolConfig
 getSearchDriverPoolConfig merchantOpCityId mbDist = do
-  let distance = fromMaybe 0 mbDist
-      vehicle = Nothing
+  let vehicle = Nothing
       tripCategory = "All"
-  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
-  findDriverPoolConfig configs vehicle tripCategory distance
+  getDriverPoolConfigHelper merchantOpCityId vehicle tripCategory mbDist Nothing Nothing
 
 getDriverPoolConfigFromDB ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Id MerchantOperatingCity ->
-  Variant.Variant ->
-  DTC.TripCategory ->
+  Maybe Variant.Variant ->
+  String ->
   Maybe Meters ->
   m DriverPoolConfig
 getDriverPoolConfigFromDB merchantOpCityId vehicle tripCategory mbDist = do
   let distance = fromMaybe 0 mbDist
   configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
-  let mbApplicableConfig = find (filterByDistAndDveh (Just vehicle) (show tripCategory) distance) configs
+  let mbApplicableConfig = find (filterByDistAndDveh vehicle (Text.pack tripCategory) distance) configs
   case configs of
     [] -> throwError $ InvalidRequest $ "DriverPool Configs not found for MerchantOperatingCity: " <> merchantOpCityId.getId
     _ ->
       case mbApplicableConfig of
         Just applicableConfig -> return applicableConfig
         Nothing -> do
-          let alternativeConfigs = find (filterByDistAndDveh (Just vehicle) "All" distance) configs
+          let alternativeConfigs = find (filterByDistAndDveh vehicle "All" distance) configs
           case alternativeConfigs of
             Just cfg -> return cfg
             Nothing -> findDriverPoolConfig configs Nothing "All" distance
@@ -130,9 +128,9 @@ helper srId idName context = do
   _ <- initializeCACThroughConfig CM.createClientFromConfig (fromMaybe (error "Config not found in db for driverPoolConfig") config) tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
   getConfigFromCACStrict srId idName context
 
-getDriverPoolConfigFromCAC :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Variant.Variant -> DTC.TripCategory -> Meters -> Maybe Text -> Maybe Text -> m DriverPoolConfig
+getDriverPoolConfigFromCAC :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> String -> Meters -> Maybe Text -> Maybe Text -> m DriverPoolConfig
 getDriverPoolConfigFromCAC merchantOpCityId mbvt tripCategory dist srId idName = do
-  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "vehicleVariant", DA.String (Text.pack (show mbvt))), (pack "tripCategory", DA.String (Text.pack (show tripCategory))), (pack "tripDistance", DA.String (Text.pack (show dist)))]
+  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "tripCategory", DA.String (Text.pack tripCategory)), (pack "tripDistance", DA.String (Text.pack (show dist)))] <> [("vehicleVariant", DA.String (Text.pack (show (fromJust mbvt)))) | isJust mbvt])
   tenant <- liftIO (SE.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
   gen <- newStdGen
   let (toss', _) = randomR (1, 100) gen :: (Int, StdGen)
@@ -165,17 +163,17 @@ getDriverPoolConfigFromCAC merchantOpCityId mbvt tripCategory dist srId idName =
 doubleToInt :: Double -> Int
 doubleToInt = round
 
-getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Variant.Variant -> DTC.TripCategory -> Meters -> Maybe Text -> Maybe Text -> m DriverPoolConfig
+getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> String -> Meters -> Maybe Text -> Maybe Text -> m DriverPoolConfig
 getConfigFromInMemory id mbvt tripCategory dist srId idName = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
   let roundeDist = doubleToInt (fromIntegral (dist.getMeters + 500) / 1000)
-  dpc <- L.getOption (DTC.DriverPoolConfig id.getId (show mbvt) (show tripCategory) roundeDist)
+  dpc <- L.getOption (DTC.DriverPoolConfig id.getId (show mbvt) tripCategory roundeDist)
   isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
   bool
     ( maybe
         ( getDriverPoolConfigFromCAC id mbvt tripCategory dist Nothing Nothing
             >>= ( \config -> do
-                    L.setOption (DTC.DriverPoolConfig id.getId (show mbvt) (show tripCategory) roundeDist) config
+                    L.setOption (DTC.DriverPoolConfig id.getId (show mbvt) tripCategory roundeDist) config
                     pure config
                 )
         )
@@ -184,7 +182,7 @@ getConfigFromInMemory id mbvt tripCategory dist srId idName = do
             if isUpdateReq
               then do
                 config <- getDriverPoolConfigFromCAC id mbvt tripCategory dist Nothing Nothing
-                L.setOption (DTC.DriverPoolConfig id.getId (show mbvt) (show tripCategory) roundeDist) config
+                L.setOption (DTC.DriverPoolConfig id.getId (show mbvt) tripCategory roundeDist) config
                 pure config
               else pure config'
         )
@@ -192,6 +190,22 @@ getConfigFromInMemory id mbvt tripCategory dist srId idName = do
     )
     (getDriverPoolConfigFromCAC id mbvt tripCategory dist srId idName)
     isExp
+
+getDriverPoolConfigHelper ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id MerchantOperatingCity ->
+  Maybe Variant.Variant ->
+  String ->
+  Maybe Meters ->
+  Maybe Text ->
+  Maybe Text ->
+  m DriverPoolConfig
+getDriverPoolConfigHelper merchantOpCityId vehicle tripCategory mbDist srId idName = do
+  systemConfigs <- L.getOption KBT.Tables
+  let useCACConfig = maybe [] (.useCAC) systemConfigs
+  if "driver_pool_config" `GL.elem` useCACConfig
+    then getConfigFromInMemory merchantOpCityId vehicle tripCategory (fromMaybe 0 mbDist) srId idName
+    else getDriverPoolConfigFromDB merchantOpCityId vehicle tripCategory mbDist
 
 getDriverPoolConfig ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -202,12 +216,7 @@ getDriverPoolConfig ::
   Maybe Text ->
   Maybe Text ->
   m DriverPoolConfig
-getDriverPoolConfig merchantOpCityId vehicle tripCategory mbDist srId idName = do
-  systemConfigs <- L.getOption KBT.Tables
-  let useCACConfig = maybe [] (.useCAC) systemConfigs
-  if "driver_pool_config" `GL.elem` useCACConfig
-    then getConfigFromInMemory merchantOpCityId vehicle tripCategory (fromMaybe 0 mbDist) srId idName
-    else getDriverPoolConfigFromDB merchantOpCityId vehicle tripCategory mbDist
+getDriverPoolConfig merchantOpCityId vehicle tripCategory = getDriverPoolConfigHelper merchantOpCityId (Just vehicle) (show tripCategory)
 
 filterByDistAndDveh :: Maybe Variant.Variant -> Text -> Meters -> DriverPoolConfig -> Bool
 filterByDistAndDveh vehicle tripCategory dist cfg =
