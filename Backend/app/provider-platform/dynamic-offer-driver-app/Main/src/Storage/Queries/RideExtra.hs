@@ -37,6 +37,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
 import Kernel.Prelude hiding (foldl', map)
+import Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -51,6 +52,8 @@ import qualified Storage.Beam.RideDetails as BeamRD
 import qualified Storage.Beam.RiderDetails as BeamRDR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.Clickhouse.Ride (getCompletedRidesByDriver, getEarningsByDriver, getEarningsByIds, getRidesByIdAndStatus)
+import Storage.Clickhouse.RideDetails (findIdsByFleetOwner, findIdsByFleetOwnerAndVehicle)
 import qualified Storage.Queries.Booking as QBooking
 import Storage.Queries.Instances.DriverInformation ()
 import qualified Storage.Queries.Location as QL
@@ -555,174 +558,52 @@ findTotalRidesInDay (Id driverId) time = do
         ]
     ]
 
-totalRidesByFleetOwner :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> m Int
-totalRidesByFleetOwner fleetIdWanted = do
-  res <- findAllWithDb [Se.Is BeamRD.fleetOwnerId $ Se.Eq fleetIdWanted]
-  pure $ length res
+totalRidesByFleetOwner :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> m Int
+totalRidesByFleetOwner fleetOwnerId = do
+  rideIds <- findIdsByFleetOwner fleetOwnerId
+  pure $ length rideIds
 
-totalEarningsByFleetOwner :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> m Int
-totalEarningsByFleetOwner fleetId = do
-  dbConf <- getMasterBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        do
-          rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
-          B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails' B.&&?. BeamR.status ride'' B.==?. B.val_ DDR.COMPLETED)
-  resTable <- case res of
-    Right res' -> mapM fromTType' res'
-    Left _ -> pure []
-  pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
+totalEarningsByFleetOwner :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> m Int
+totalEarningsByFleetOwner fleetOwnerId = do
+  rideIds <- findIdsByFleetOwner fleetOwnerId
+  getEarningsByIds (cast <$> rideIds)
 
-totalEarningsByFleetOwnerPerVehicle :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Text -> m Int
-totalEarningsByFleetOwnerPerVehicle fleetId vehicleNumber = do
-  dbConf <- getMasterBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        do
-          rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumber)) (B.all_ (SBC.rideDetails SBC.atlasDB))
-          B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
-  resTable <- case res of
-    Right res' -> mapM fromTType' res'
-    Left _ -> pure []
-  pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
+totalRidesCompletedInFleet :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> m Int
+totalRidesCompletedInFleet fleetOwnerId = do
+  rideIds <- findIdsByFleetOwner fleetOwnerId
+  getRidesByIdAndStatus (cast <$> rideIds) DRide.COMPLETED
 
-totalEarningsByFleetOwnerPerDriver :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Id Person -> m Int
-totalEarningsByFleetOwnerPerDriver fleetId driverId = do
-  dbConf <- getMasterBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        do
-          rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
-          B.filter_'
-            ( \ride'' -> BeamR.driverId ride'' B.==?. B.val_ driverId.getId
-            )
-            do
-              B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
-  resTable <- case res of
-    Right res' -> mapM fromTType' res'
-    Left _ -> pure []
-  pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
+totalRidesCancelledInFleet :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> m Int
+totalRidesCancelledInFleet fleetOwnerId = do
+  rideIds <- findIdsByFleetOwner fleetOwnerId
+  getRidesByIdAndStatus (cast <$> rideIds) DRide.CANCELLED
 
-totalRidesCompletedInFleet :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> m Int
-totalRidesCompletedInFleet fleetId = do
-  dbConf <- getMasterBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        do
-          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
-            B.filter_'
-              (\ride'' -> ride''.status B.==?. B.val_ DDR.COMPLETED)
-              do
-                rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
-                B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
-  pure $ either (const 0) (\r -> if null r then 0 else head r) res
+totalEarningsByFleetOwnerPerVehicle :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Text -> m Int
+totalEarningsByFleetOwnerPerVehicle fleetOwnerId vehicleNumber = do
+  rideIds <- findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber
+  getEarningsByIds (cast <$> rideIds)
 
-totalRidesCancelledInFleet :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> m Int
-totalRidesCancelledInFleet fleetId = do
-  dbConf <- getMasterBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        do
-          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
-            B.filter_'
-              (\ride'' -> ride''.status B.==?. B.val_ DDR.CANCELLED)
-              do
-                rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
-                B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
-  pure $ either (const 0) (\r -> if null r then 0 else head r) res
+totalEarningsByFleetOwnerPerDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Id Person -> m Int
+totalEarningsByFleetOwnerPerDriver fleetOwnerId driverId = do
+  rideIds <- findIdsByFleetOwner fleetOwnerId
+  getEarningsByDriver (cast <$> rideIds) driverId
 
-totalRidesAssignedInFleet :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> m Int
-totalRidesAssignedInFleet fleetId = do
-  dbConf <- getMasterBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        do
-          rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
-          B.filter_'
-            ( \ride'' -> ride''.status B.==?. B.val_ DDR.COMPLETED
-            )
-            do
-              B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
-  resTable <- case res of
-    Right res' -> mapM fromTType' res'
-    Left _ -> pure []
-  pure $ length resTable
+totalRidesByFleetOwnerPerVehicle :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Text -> m Int
+totalRidesByFleetOwnerPerVehicle fleetOwnerId vehicleNumber = do
+  rideIds <- findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber
+  getRidesByIdAndStatus (cast <$> rideIds) DRide.COMPLETED
 
-totalRidesByFleetOwnerPerVehicle :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Text -> m Int
-totalRidesByFleetOwnerPerVehicle fleetId vehicleNumber = do
-  dbConf <- getMasterBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        do
-          rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumber)) (B.all_ (SBC.rideDetails SBC.atlasDB))
-          B.filter_'
-            ( \ride'' -> ride''.status B.==?. B.val_ DDR.COMPLETED
-            )
-            do
-              B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
-  resTable <- case res of
-    Right res' -> mapM fromTType' res'
-    Left _ -> pure []
-  pure $ length resTable
+totalRidesByFleetOwnerPerDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Id Person -> m Int
+totalRidesByFleetOwnerPerDriver fleetOwnerId driverId = do
+  rideIds <- findIdsByFleetOwner fleetOwnerId
+  getCompletedRidesByDriver (cast <$> rideIds) driverId
 
-totalRidesByFleetOwnerPerDriver :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Id Person -> m Int
-totalRidesByFleetOwnerPerDriver fleetId driverId = do
-  dbConf <- getMasterBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        do
-          rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
-          B.filter_'
-            ( \ride'' -> (ride''.status B.==?. B.val_ DDR.COMPLETED) B.&&?. (BeamR.driverId ride'' B.==?. B.val_ driverId.getId)
-            )
-            do
-              B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
-  resTable <- case res of
-    Right res' -> mapM fromTType' res'
-    Left _ -> pure []
-  pure $ length resTable
+totalRidesByFleetOwnerPerVehicleAndDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Text -> Id Person -> m Int
+totalRidesByFleetOwnerPerVehicleAndDriver fleetOwnerId vehicleNumber driverId = do
+  rideIds <- findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber
+  getCompletedRidesByDriver (cast <$> rideIds) driverId
 
-totalRidesByFleetOwnerPerVehicleAndDriver :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Text -> Id Person -> m Int
-totalRidesByFleetOwnerPerVehicleAndDriver fleetId vehicleNumber driverId = do
-  dbConf <- getMasterBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        do
-          rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumber)) (B.all_ (SBC.rideDetails SBC.atlasDB))
-          B.filter_'
-            ( \ride'' -> (ride''.status B.==?. B.val_ DDR.COMPLETED) B.&&?. (BeamR.driverId ride'' B.==?. B.val_ driverId.getId)
-            )
-            do
-              B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
-  resTable <- case res of
-    Right res' -> mapM fromTType' res'
-    Left _ -> pure []
-  pure $ length resTable
-
-totalEarningsByFleetOwnerPerVehicleAndDriver :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Text -> Id Person -> m Int
-totalEarningsByFleetOwnerPerVehicleAndDriver fleetId vehicleNumber driverId = do
-  dbConf <- getMasterBeamConfig
-  res <-
-    L.runDB dbConf $
-      L.findRows $
-        B.select $
-          do
-            rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId B.&&?. BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumber) (B.all_ (SBC.rideDetails SBC.atlasDB))
-            B.filter_'
-              ( \ride'' -> ride''.status B.==?. B.val_ DDR.COMPLETED B.&&?. BeamR.driverId ride'' B.==?. B.val_ driverId.getId
-              )
-              do
-                B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
-  resTable <- case res of
-    Right res' -> mapM fromTType' res'
-    Left _ -> pure []
-  pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
+totalEarningsByFleetOwnerPerVehicleAndDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Text -> Id Person -> m Int
+totalEarningsByFleetOwnerPerVehicleAndDriver fleetOwnerId vehicleNumber driverId = do
+  rideIds <- findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber
+  getEarningsByDriver (cast <$> rideIds) driverId
