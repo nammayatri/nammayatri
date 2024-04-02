@@ -17,6 +17,3 @@ ALTER TABLE atlas_app.rental_details ADD COLUMN per_extra_min_rate_amount double
 ALTER TABLE atlas_app.rental_details ADD COLUMN per_extra_km_rate_amount double precision;
 ALTER TABLE atlas_app.rental_details ADD COLUMN planned_per_km_rate_amount double precision;
 ALTER TABLE atlas_app.rental_details ADD COLUMN night_shift_charge_amount double precision;
-
-ALTER TABLE atlas_app.search_request ADD COLUMN currency character varying(255);
-ALTER TABLE atlas_app.search_request ADD COLUMN customer_extra_fee_amount double precision;

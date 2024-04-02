@@ -1,19 +1,7 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.SearchRequest where
+module Storage.Queries.SearchRequestExtra where
 
 import Data.Text (strip)
 import qualified Domain.Types.LocationMapping as DLM
@@ -34,6 +22,7 @@ import qualified Storage.Beam.SearchRequest as BeamSR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
+import Storage.Queries.OrphanInstances.SearchRequest
 import Tools.Error
 
 createDSReq' :: (MonadFlow m, EsqDBFlow m r) => SearchRequest -> m ()
@@ -91,69 +80,3 @@ updatePaymentMethods (Id searchReqId) availablePaymentMethods =
     [ Se.Set BeamSR.availablePaymentMethods (getId <$> availablePaymentMethods)
     ]
     [Se.Is BeamSR.id (Se.Eq searchReqId)]
-
-instance FromTType' BeamSR.SearchRequest SearchRequest where
-  fromTType' BeamSR.SearchRequestT {..} = do
-    bundleVersion' <- mapM readVersion (strip <$> bundleVersion)
-    clientVersion' <- mapM readVersion (strip <$> clientVersion)
-
-    fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
-    fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
-
-    mbToLocationMapping <- QLM.getLatestEndByEntityId id
-    toLocation <- maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
-
-    merchantOperatingCityId' <- backfillMOCId merchantOperatingCityId
-    pure $
-      Just
-        SearchRequest
-          { id = Id id,
-            riderId = Id riderId,
-            clientId = Id <$> clientId,
-            distance = HighPrecMeters <$> distance,
-            maxDistance = HighPrecMeters <$> maxDistance,
-            merchantId = Id merchantId,
-            merchantOperatingCityId = merchantOperatingCityId',
-            bundleVersion = bundleVersion',
-            clientVersion = clientVersion',
-            availablePaymentMethods = Id <$> availablePaymentMethods,
-            selectedPaymentMethodId = Id <$> selectedPaymentMethodId,
-            riderPreferredOption = fromMaybe OneWay riderPreferredOption,
-            customerExtraFee = mkPriceWithDefault customerExtraFeeAmount currency <$> customerExtraFee,
-            ..
-          }
-    where
-      backfillMOCId = \case
-        Just mocId -> pure $ Id mocId
-        Nothing -> (.id) <$> CQM.getDefaultMerchantOperatingCity (Id merchantId)
-
-instance ToTType' BeamSR.SearchRequest SearchRequest where
-  toTType' SearchRequest {..} = do
-    BeamSR.SearchRequestT
-      { BeamSR.id = getId id,
-        BeamSR.startTime = startTime,
-        BeamSR.validTill = validTill,
-        BeamSR.riderId = getId riderId,
-        BeamSR.clientId = getId <$> clientId,
-        BeamSR.fromLocationId = Just $ getId fromLocation.id,
-        BeamSR.toLocationId = getId <$> (toLocation <&> (.id)),
-        BeamSR.distance = getHighPrecMeters <$> distance,
-        BeamSR.maxDistance = getHighPrecMeters <$> maxDistance,
-        BeamSR.estimatedRideDuration = estimatedRideDuration,
-        BeamSR.device = device,
-        BeamSR.merchantId = getId merchantId,
-        BeamSR.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
-        BeamSR.bundleVersion = versionToText <$> bundleVersion,
-        BeamSR.clientVersion = versionToText <$> clientVersion,
-        BeamSR.language = language,
-        BeamSR.disabilityTag = disabilityTag,
-        BeamSR.customerExtraFee = customerExtraFee <&> (.amountInt),
-        BeamSR.customerExtraFeeAmount = customerExtraFee <&> (.amount),
-        BeamSR.currency = customerExtraFee <&> (.currency),
-        BeamSR.autoAssignEnabled = autoAssignEnabled,
-        BeamSR.autoAssignEnabledV2 = autoAssignEnabledV2,
-        BeamSR.availablePaymentMethods = getId <$> availablePaymentMethods,
-        BeamSR.selectedPaymentMethodId = getId <$> selectedPaymentMethodId,
-        BeamSR.riderPreferredOption = Just riderPreferredOption,
-        BeamSR.createdAt = createdAt
-      }

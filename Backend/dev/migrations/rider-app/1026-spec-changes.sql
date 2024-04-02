@@ -43,12 +43,6 @@ INSERT INTO
             OR T2.to_location_id = T1.id
          )
    );
-ALTER TABLE
-   atlas_app.search_request
-ADD
-   CONSTRAINT search_request_from_location_id_fkey FOREIGN KEY (from_location_id) REFERENCES atlas_app.search_request_location(id),
-ADD
-   CONSTRAINT search_request_to_location_id_fkey FOREIGN KEY (to_location_id) REFERENCES atlas_app.search_request_location(id);
 
 ALTER TABLE
    atlas_app.ride_booking DROP CONSTRAINT ride_booking_from_location_id_fkey,

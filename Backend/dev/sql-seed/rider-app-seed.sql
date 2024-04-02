@@ -244,22 +244,6 @@ ALTER TABLE atlas_app.quote OWNER TO atlas_app_user;
 CREATE INDEX idx_16394_case_id ON atlas_app.quote USING btree (request_id);
 
 
-
-
-
-
-
-CREATE TABLE atlas_app.search_request (
-id character(36) NOT NULL,
-start_time timestamp with time zone NOT NULL,
-valid_till timestamp with time zone NOT NULL,
-rider_id character varying(255) NOT NULL,
-from_location_id character varying(36),
-to_location_id character varying(36),
-distance double precision NOT NULL,
-created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-,CONSTRAINT  idx_16386_primary PRIMARY KEY (id)
-);
 ALTER TABLE atlas_app.search_request OWNER TO atlas_app_user;
 CREATE INDEX idx_16386_requestor ON atlas_app.search_request USING btree (rider_id);
 

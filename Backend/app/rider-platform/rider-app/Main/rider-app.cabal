@@ -228,7 +228,6 @@ library
       Domain.Types.Quote
       Domain.Types.RentalDetails
       Domain.Types.SavedReqLocation
-      Domain.Types.SearchRequest
       Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
       Domain.Types.UtilsTH
@@ -285,7 +284,6 @@ library
       Storage.Beam.Quote
       Storage.Beam.RentalDetails
       Storage.Beam.SavedReqLocation
-      Storage.Beam.SearchRequest
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.SystemConfigs
       Storage.Beam.TripTerms
@@ -355,11 +353,12 @@ library
       Storage.Queries.RentalDetails
       Storage.Queries.RideExtra
       Storage.Queries.SavedReqLocation
-      Storage.Queries.SearchRequest
+      Storage.Queries.SearchRequestExtra
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.Transformers.AppInstalls
       Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.Transformers.SearchReqLocation
+      Storage.Queries.Transformers.SearchRequest
       Storage.Queries.TripTerms
       Storage.Queries.WhiteListOrg
       Tools.AadhaarVerification
@@ -426,6 +425,7 @@ library
       Domain.Types.Ride
       Domain.Types.RiderConfig
       Domain.Types.SearchReqLocation
+      Domain.Types.SearchRequest
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
@@ -472,6 +472,7 @@ library
       Storage.Beam.Ride
       Storage.Beam.RiderConfig
       Storage.Beam.SearchReqLocation
+      Storage.Beam.SearchRequest
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
@@ -520,12 +521,14 @@ library
       Storage.Queries.OrphanInstances.PersonStats
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.PersonStats
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
       Storage.Queries.Ride
       Storage.Queries.RiderConfig
       Storage.Queries.SearchReqLocation
+      Storage.Queries.SearchRequest
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory

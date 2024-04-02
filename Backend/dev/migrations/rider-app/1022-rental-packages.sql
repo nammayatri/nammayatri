@@ -18,6 +18,3 @@ ALTER TABLE atlas_app.quote ALTER COLUMN distance_to_nearest_driver DROP NOT NUL
 
 ALTER TABLE atlas_app.ride_booking ALTER COLUMN distance DROP NOT NULL;
 ALTER TABLE atlas_app.ride_booking ALTER COLUMN to_location_id DROP NOT NULL;
-
-ALTER TABLE atlas_app.search_request ALTER COLUMN distance DROP NOT NULL;
-ALTER TABLE atlas_app.search_request ALTER COLUMN to_location_id DROP NOT NULL;

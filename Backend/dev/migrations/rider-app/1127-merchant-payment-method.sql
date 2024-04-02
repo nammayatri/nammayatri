@@ -9,9 +9,6 @@ CREATE TABLE atlas_app.merchant_payment_method (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-ALTER TABLE atlas_app.search_request ADD COLUMN available_payment_methods character(36) [] NOT NULL;
-ALTER TABLE atlas_app.search_request ADD COLUMN selected_payment_method_id character(36) REFERENCES atlas_app.merchant_payment_method(id);
-
 ALTER TABLE atlas_app.booking ADD COLUMN payment_method_id character(36) REFERENCES atlas_app.merchant_payment_method(id);
 ALTER TABLE atlas_app.booking ADD COLUMN payment_url text;
 
