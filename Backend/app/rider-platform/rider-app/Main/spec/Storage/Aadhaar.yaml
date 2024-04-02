@@ -5,7 +5,7 @@ imports:
   DbHash: Kernel.External.Encryption
 
 AadhaarOtpReq:
-  tableName: aadhar_otp_request
+  tableName: aadhaar_otp_req
 
   fields:
     id : Id AadhaarOtpReq
@@ -39,7 +39,7 @@ AadhaarOtpReq:
 
 
 AadhaarOtpVerify:
-  tableName: aadhar_otp_verify
+  tableName: aadhaar_otp_verify
 
   fields:
     id : Id AadhaarOtpVerify
