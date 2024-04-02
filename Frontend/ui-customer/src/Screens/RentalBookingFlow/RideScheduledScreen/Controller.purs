@@ -128,8 +128,6 @@ eval (GetBookingList resp) state =
         }
       }
 
-eval CheckFlowStatusAction state = do
-  void $ pure $ toast$ getString STR.NO_RIDES_SCHEDULED_YET
-  continue state
+eval CheckFlowStatusAction state = continue state
 
 eval _ state = continue state

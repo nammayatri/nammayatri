@@ -84,15 +84,15 @@ view push state =
   , orientation VERTICAL
   , id $ getNewIDWithTag "BottomSheetLayout"
   , afterRender push $ const $ NoAction
-  ][  frameLayout
+  ][  linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       ][  linearLayout
-          [ height $ WRAP_CONTENT
-          , width MATCH_PARENT
-          , accessibility DISABLE
-          , clipChildren false
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , accessibility ENABLE
           , id $ getNewIDWithTag "DriverInfoCardActionView"
+          , clickable true
           ][ otpAndWaitView push state 
             , endOTPView push state
             , if state.props.currentStage == RideStarted || state.props.stageBeforeChatScreen == RideStarted then trackRideView push state else dummyView push
@@ -131,6 +131,7 @@ endOTPView push state =
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , background Color.grey700
+    , clickable true
     , onClick push $ const ShowEndOTP
     , visibility $ boolToVisibility $ not state.props.showEndOTP
     , margin $ Margin 4 4 4 4
