@@ -96,6 +96,7 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
       Domain.VerificationService Verification.Idfy -> Domain.VerificationServiceConfig . Verification.IdfyConfig <$> valueToMaybe configJSON
       Domain.VerificationService Verification.InternalScripts -> Domain.VerificationServiceConfig . Verification.FaceVerificationConfig <$> valueToMaybe configJSON
       Domain.VerificationService Verification.GovtData -> Just $ Domain.VerificationServiceConfig Verification.GovtDataConfig
+      Domain.VerificationService Verification.HyperVerge -> Domain.VerificationServiceConfig . Verification.HyperVergeConfig <$> valueToMaybe configJSON
       Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> valueToMaybe configJSON
       Domain.CallService Call.Knowlarity -> Nothing
       Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> valueToMaybe configJSON
@@ -149,6 +150,7 @@ instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
           Verification.IdfyConfig cfg -> (Domain.VerificationService Verification.Idfy, toJSON cfg)
           Verification.FaceVerificationConfig cfg -> (Domain.VerificationService Verification.InternalScripts, toJSON cfg)
           Verification.GovtDataConfig -> (Domain.VerificationService Verification.GovtData, toJSON (A.object []))
+          Verification.HyperVergeConfig cfg -> (Domain.VerificationService Verification.HyperVerge, toJSON cfg)
         Domain.CallServiceConfig callCfg -> case callCfg of
           Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
         Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of

@@ -119,6 +119,8 @@ dependencies:
   - base64-bytestring
   - pureMD5
   - lens-aeson
+  - directory
+  - filepath
 
 ghc-options:
   - -fwrite-ide-info

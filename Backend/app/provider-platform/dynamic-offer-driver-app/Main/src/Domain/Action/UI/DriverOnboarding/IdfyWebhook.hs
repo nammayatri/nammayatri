@@ -65,6 +65,7 @@ oldIdfyWebhookHandler secret val = do
           Idfy.webhookHandler idfyCfg onVerify secret val
         Verification.FaceVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.GovtDataConfig -> throwError $ InternalError "Incorrect service config for Idfy"
+        Verification.HyperVergeConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookHandler ::
@@ -89,6 +90,7 @@ idfyWebhookHandler merchantShortId secret val = do
           Idfy.webhookHandler idfyCfg onVerify secret val
         Verification.FaceVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.GovtDataConfig -> throwError $ InternalError "Incorrect service config for Idfy"
+        Verification.HyperVergeConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookV2Handler ::
@@ -114,6 +116,7 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
           Idfy.webhookHandler idfyCfg onVerify secret val
         Verification.FaceVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.GovtDataConfig -> throwError $ InternalError "Incorrect service config for Idfy"
+        Verification.HyperVergeConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse

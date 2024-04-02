@@ -67,6 +67,7 @@ getServiceNameConfigJSON = \case
     Verification.IdfyConfig cfg -> (Domain.VerificationService Verification.Idfy, toJSON cfg)
     Verification.FaceVerificationConfig cfg -> (Domain.VerificationService Verification.InternalScripts, toJSON cfg)
     Verification.GovtDataConfig -> (Domain.VerificationService Verification.GovtData, toJSON $ A.object [])
+    Verification.HyperVergeConfig cfg -> (Domain.VerificationService Verification.HyperVerge, toJSON cfg)
   Domain.CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
   Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of

@@ -168,6 +168,7 @@ getServiceName osc = case osc.serviceConfig of
     Verification.IdfyConfig _ -> VerificationService Verification.Idfy
     Verification.FaceVerificationConfig _ -> VerificationService Verification.InternalScripts
     Verification.GovtDataConfig -> VerificationService Verification.GovtData
+    Verification.HyperVergeConfig _ -> VerificationService Verification.HyperVerge
   AadhaarVerificationServiceConfig aadhaarVerifictaionCfg -> case aadhaarVerifictaionCfg of
     AadhaarVerification.GridlineConfig _ -> AadhaarVerificationService AadhaarVerification.Gridline
   CallServiceConfig callCfg -> case callCfg of

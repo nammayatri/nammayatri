@@ -37,7 +37,6 @@ import Kernel.External.Verification as Reexport hiding
     verifyRC,
   )
 import qualified Kernel.External.Verification as Verification
-import Kernel.External.Verification.Interface.InternalScripts
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common

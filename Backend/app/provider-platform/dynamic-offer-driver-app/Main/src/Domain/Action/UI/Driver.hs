@@ -76,6 +76,9 @@ import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
+import qualified Data.ByteString.Base64 as B64
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy as LBS
 import Data.Digest.Pure.MD5 as MD5
 import Data.Either.Extra (eitherToMaybe)
 import Data.List (intersect, nub, (\\))
@@ -84,6 +87,7 @@ import qualified Data.Map as M
 import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time (Day, fromGregorian)
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
@@ -130,7 +134,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
-import qualified Kernel.External.Verification.Interface.InternalScripts as IF
+import qualified Kernel.External.Verification.Interface.Types as IF
 import Kernel.Prelude (NominalDiffTime)
 import Kernel.Serviceability (rideServiceable)
 import Kernel.Sms.Config
@@ -199,6 +203,8 @@ import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.Vehicle as QVehicle
+import System.Directory (createDirectoryIfMissing)
+import System.FilePath (takeDirectory)
 import qualified Tools.Auth as Auth
 import Tools.Error
 import Tools.Event
@@ -1012,14 +1018,29 @@ getStats (driverId, _, merchantOpCityId) date = do
 driverPhotoUploadHitsCountKey :: Id SP.Person -> Text
 driverPhotoUploadHitsCountKey driverId = "BPP:ProfilePhoto:verify:" <> getId driverId <> ":hitsCount"
 
+decodeAndWriteToFile :: (MonadIO m, Log m) => BS.ByteString -> FilePath -> m ()
+decodeAndWriteToFile encodedImage filePath = do
+  let decodedImage = B64.decodeLenient encodedImage
+  liftIO $ createDirectoryIfMissing True (takeDirectory filePath)
+  liftIO $ LBS.writeFile filePath (LBS.fromStrict decodedImage)
+  logDebug $ "Image saved to: " <> T.pack filePath
+
+getTmpFilePath :: (MonadIO m, Log m) => BS.ByteString -> Id Person -> m FilePath
+getTmpFilePath image driverId = do
+  let filePath = "/tmp/image_" <> getId driverId <> "." <> "buf"
+  decodeAndWriteToFile image (T.unpack filePath)
+  return $ T.unpack filePath
+
 driverPhotoUpload :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DriverPhotoUploadReq -> Flow APISuccess
 driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq {..} = do
   checkSlidingWindowLimit (driverPhotoUploadHitsCountKey driverId)
   person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound (getId driverId))
   imageExtension <- validateContentType
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  tmpFilePath <- getTmpFilePath (TE.encodeUtf8 image) driverId
+  let transactionId = getId driverId <> "-" <> getId merchantOpCityId -- HVTODO: Ask if this is how to build transaction ID
   when transporterConfig.enableFaceVerification
-    let req = IF.FaceValidationReq {file = image, brisqueFeatures}
+    let req = IF.FaceValidationReq {file = image, brisqueFeatures, transactionId = transactionId, image = tmpFilePath}
      in void $ validateFaceImage merchantId merchantOpCityId req
   filePath <- S3.createFilePath "/driver-profile-picture/" ("driver-" <> getId driverId) fileType imageExtension
   let fileUrl =
