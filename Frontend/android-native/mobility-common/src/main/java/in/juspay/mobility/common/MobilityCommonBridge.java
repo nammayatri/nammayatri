@@ -2191,7 +2191,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
                                 int newColor = Color.HSVToColor(currColor);
                                 if (polyline != null && polyline.getColor() != newColor)
-                                 polyline.setColor(newColor);
+                                    polyline.setColor(newColor);
 
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -2204,7 +2204,6 @@ public class MobilityCommonBridge extends HyperBridge {
             e.printStackTrace();
         }
     }
-
     @JavascriptInterface
     public void drawRouteV2 (final String drawRouteConfig) {
         ExecutorManager.runOnMainThread(() -> {
@@ -2224,13 +2223,11 @@ public class MobilityCommonBridge extends HyperBridge {
                 JSONObject startMarkerConfig = new JSONObject(normalRoute.getString("startMarkerConfig"));
                 JSONObject endMarkerConfig = new JSONObject(normalRoute.getString("endMarkerConfig"));
                 JSONObject stopMarkerConfig = new JSONObject(rentalRoute.getString("endMarkerConfig"));
-                String stopMarker = rentalRoute.optString("endMarker", "");
 
                 String sourceIcon = startMarkerConfig.optString("pointerIcon", "");
                 String destIcon = endMarkerConfig.optString("pointerIcon", "");
-                String stopIcon = rentalRoute.optString("pointerIcon", "");
+                String stopIcon = stopMarkerConfig.optString("pointerIcon", "");
 
-                int normalRouteDistance = normalRoute.optInt("distance", 0);
                 int polylineWidth = normalRoute.optInt("routeWidth", 8);
 
                 String style = normalRoute.optString("style", "LineString");
@@ -2322,7 +2319,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
 // Adding Markers
 // Destination Marker
-                    if (!!destIcon.equals("")) {
+                    if (!destIcon.equals("")) {
                         List<LatLng> points = polylineOptions.getPoints();
                         LatLng dest = points.get(0);
                         markerConfig.locationName(endMarkerConfig.optString("primaryText", ""), endMarkerConfig.optString("secondaryText", ""));
@@ -2362,12 +2359,12 @@ public class MobilityCommonBridge extends HyperBridge {
                         }
                     }
 // Rental Marker
-                    if (rentalPolylineOption.getPoints().size() > 1 && !stopMarker.isEmpty()) {
+                    if (rentalPolylineOption.getPoints().size() > 1 && !stopIcon.equals("")) {
                         List<LatLng> points = rentalPolylineOption.getPoints();
                         LatLng source = points.get(0);
-                        upsertMarkerV2(stopMarker,String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 1.0f,purescriptId);
-                        Marker currMarker = (Marker) markers.get(stopMarker);
-                        markers.put(stopMarker, currMarker);
+                        upsertMarkerV2(stopIcon,String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 1.0f,purescriptId);
+                        Marker currMarker = (Marker) markers.get(stopIcon);
+                        markers.put(stopIcon, currMarker);
                     }
 
                 } catch (JSONException e) {
