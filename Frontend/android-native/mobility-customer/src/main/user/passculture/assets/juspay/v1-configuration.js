@@ -123,6 +123,7 @@ window.getMerchantConfig = function () {
     "profileEditGravity" : "center",
     "nyBrandingVisibility": false,
     "fontType": "Assets",
+    "tipEnabledCities" : ["Bangalore", "Hyderabad"],
     "black900": "#2C2F3A",
     "black800": "#454545",
     "showHamMenu" : true,

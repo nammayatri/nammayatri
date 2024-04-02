@@ -21,7 +21,7 @@ import Prelude (class Eq, Unit, show, bind, const, map, pure, unit, not, void, (
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth)
 import Data.Array (filter, head, null, (!!), mapWithIndex, slice, length, cons, findIndex)
-import Engineering.Helpers.Utils(splitIntoEqualParts)
+import Engineering.Helpers.Utils(splitIntoEqualParts, getFlexBoxCompatibleVersion)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Styles.Colors as Color
 import Mobility.Prelude
@@ -30,16 +30,19 @@ import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App
 import Data.String (replaceAll, Pattern(..), Replacement(..))
+import Storage (getValueToLocalStore, KeyStore(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
+  let enableFlexBox = not $ (os == "IOS" || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (getFlexBoxCompatibleVersion "")))
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin state.tipLayoutMargin
     ]
-    [ if os == "IOS" then iOSTipsView push state else androidTipsView push state
+    [ if enableFlexBox then androidTipsView push state else iOSTipsView push state
     , tipInfoView push state
     ]
 

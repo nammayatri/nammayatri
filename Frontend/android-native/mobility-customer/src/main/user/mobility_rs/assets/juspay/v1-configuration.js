@@ -213,6 +213,7 @@ window.getMerchantConfig = function () {
 			"autoSelectBackground": "#53BB6F",
 			"OTP_MESSAGE_REGEX": "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+",
 			"SUPPORT_EMAIL": "support@nammayatri.in",
+      "tipEnabledCities" : ["Bangalore", "Hyderabad"],
 			"specialLocationView": false,
 			"rideCompletedGradient": "#F2A2A2",
 			"navigationAppConfig": {

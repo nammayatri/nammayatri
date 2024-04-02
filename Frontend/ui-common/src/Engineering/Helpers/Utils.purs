@@ -15,7 +15,7 @@
 module Engineering.Helpers.Utils where
 
 import Prelude
-import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..), LazyCheck)
+import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..), LazyCheck(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..), hush)
@@ -34,7 +34,7 @@ import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (EffectFn1, mkEffectFn1, runEffectFn1)
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.Commons (flowRunner, liftFlow)
+import Engineering.Helpers.Commons (flowRunner, liftFlow, os)
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (Foreign, decode, decodeJSON, encodeJSON)
@@ -56,6 +56,7 @@ import Data.Number (fromString)
 import JBridge (toast, setKeyInSharedPref)
 import Language.Strings (getString)
 import Language.Types
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 
 -- Common Utils
 foreign import reboot :: Effect Unit
@@ -388,3 +389,18 @@ splitIntoEqualParts n arr =
     rest = slice n (DA.length arr) arr
   in 
     cons part (splitIntoEqualParts n rest)
+
+getFlexBoxCompatibleVersion :: String -> String  
+getFlexBoxCompatibleVersion _ = 
+  if os == "IOS" then 
+    case getMerchant FunctionCall of 
+      NAMMAYATRI -> "1.3.6"
+      YATRISATHI -> "1.0.5"
+      YATRI -> "2.1.0"
+      _ -> "0.0.0"
+    else do 
+      case getMerchant FunctionCall of 
+        NAMMAYATRI -> "1.3.10"
+        YATRISATHI -> "0.1.7"
+        YATRI -> "2.2.2"
+        _ -> "0.0.0"
