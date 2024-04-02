@@ -37,6 +37,7 @@ import Kernel.Prelude as KP
 import Kernel.Types.Cac
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
+import Kernel.Utils.Logging
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
@@ -93,7 +94,7 @@ farePolicyMiddleWare configMap config key' = do
         _ -> toJSON (Nothing :: Maybe FarePolicyDetails)
   KP.foldr (\(k, v) acc -> DAKM.insert k v acc) configMap' [("nightShiftBounds", DA.toJSON nightShiftBounds), ("allowedTripDistanceBounds", DA.toJSON allowedTripDistanceBounds), ("driverExtraFeeBounds", DA.toJSON dEFB), ("farePolicyDetails", configMap'')]
 
-jsonToFarePolicy :: String -> String -> Maybe FarePolicy
+jsonToFarePolicy :: MonadFlow m => String -> String -> m (Maybe FarePolicy)
 jsonToFarePolicy config key' = do
   let res' =
         config
@@ -110,7 +111,9 @@ jsonToFarePolicy config key' = do
               )
       res'' = farePolicyMiddleWare (DAKM.fromList res') config key'
       res = Object res'' ^? _JSON :: (Maybe FarePolicy)
-  res
+  when (isNothing res) do
+    logDebug $ "FarePolicy from CAC Not Parsable: " <> show res' <> " after middle parsing" <> show res'' <> " for key: " <> Text.pack key'
+  pure res
 
 type FarePolicy = FarePolicyD 'DTC.Safe
 
