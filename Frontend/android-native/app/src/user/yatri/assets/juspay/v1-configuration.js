@@ -98,6 +98,7 @@ window.getMerchantConfig = function () {
     "profileEditGravity" : "center",
     "profileName": "#FFFFFF",
     "profileImage": "#012A72",
+    "tipEnabledCities" : ["Bangalore", "Hyderabad"],
     "profileCompletion" : "#FCC32C",
     "feedbackBackground": "#2C2F3A",
     "confirmPickUpLocationBorder": "#E5E7EB",

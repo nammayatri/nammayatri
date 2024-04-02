@@ -47,6 +47,7 @@ import Mobility.Prelude (boolToVisibility)
 import Locale.Utils
 import Storage (KeyStore(..))
 import LocalStorage.Cache (getValueFromCache)
+import Engineering.Helpers.Utils(getFlexBoxCompatibleVersion)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -424,7 +425,7 @@ chatComponent :: forall w. Config -> (Action -> Effect Unit) -> ChatComponent ->
 chatComponent state push config isLastItem receiver index =
   let message = getMessageFromKey state.suggestionKey config.message state.languageKey
       chatConfig = getChatConfig state config.sentBy isLastItem index
-      enableFlexBox = not $ (os == "IOS" || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "")))
+      enableFlexBox = not $ (os == "IOS" || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (getFlexBoxCompatibleVersion "")))
   in
   PrestoAnim.animationSet
     [ if config.sentBy == (getCurrentUser (state.userConfig.receiver /= "Driver")) then
@@ -492,21 +493,6 @@ getChatConfig state sentBy isLastItem index =
       textColor :   Color.black800,
       timeStampColor : Color.black800
     }
-
-getPreviousVersion :: String -> String 
-getPreviousVersion _ = 
-  if os == "IOS" then 
-    case getMerchant FunctionCall of 
-      NAMMAYATRI -> "1.3.6"
-      YATRISATHI -> "1.0.5"
-      YATRI -> "2.1.0"
-      _ -> "0.0.0"
-    else do 
-      case getMerchant FunctionCall of 
-        NAMMAYATRI -> "1.3.10"
-        YATRISATHI -> "0.1.7"
-        YATRI -> "2.2.2"
-        _ -> "0.0.0"
 
 getChatFooterHeight :: Config -> Int
 getChatFooterHeight config = 

@@ -51,6 +51,7 @@ window.getMerchantConfig = function () {
     "loaderColor": "#D63941",
     "isGradient": "false",
     "gradient": [],
+    "tipEnabledCities" : ["Bangalore", "Hyderabad"],
     "primaryTextColor": "#FFFFFF",
     "primaryBackground": "#D63941",
     "estimateConfirmText": "",

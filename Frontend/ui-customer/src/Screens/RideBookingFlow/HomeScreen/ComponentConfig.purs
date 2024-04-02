@@ -43,7 +43,7 @@ import Components.LocationTagBarV2 as LocationTagBar
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except (runExcept)
-import Data.Array ((!!), sortBy, mapWithIndex)
+import Data.Array ((!!), sortBy, mapWithIndex, elem)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3)
@@ -597,7 +597,7 @@ logOutPopUpModelConfig state =
           , dismissPopup = true
           , customerTipArray = customerTipArray
           , customerTipArrayWithValues = customerTipArrayWithValues
-          , isTipEnabled = state.data.config.enableTips
+          , isTipEnabled = state.data.config.tipsEnabled
           , primaryText {
               text = if isLocalStageOn ST.QuoteList then (getString TRY_AGAIN <> "?") else getString SEARCH_AGAIN_WITH_A_TIP
             , textStyle = FontStyle.Heading1
@@ -605,7 +605,7 @@ logOutPopUpModelConfig state =
           secondaryText {
               text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS)
             , color = Color.black650
-            , visibility = boolToVisibility state.data.config.enableTips
+            , visibility = boolToVisibility $ state.data.config.tipsEnabled
             }
           , tipLayoutMargin = (Margin 22 2 22 22)
           , buttonLayoutMargin = (MarginHorizontal 16 16)
@@ -619,7 +619,7 @@ logOutPopUpModelConfig state =
               , padding = (Padding 16 12 16 12)
             },
           option1 {
-            text = if not state.data.config.enableTips then getString SEARCH_AGAIN else if state.props.customerTip.tipActiveIndex == 0 then getString SEARCH_AGAIN_WITHOUT_A_TIP else getTipString state customerTipArrayWithValues
+            text = if (not state.data.config.tipsEnabled) then getString SEARCH_AGAIN else if state.props.customerTip.tipActiveIndex == 0 then getString SEARCH_AGAIN_WITHOUT_A_TIP else getTipString state customerTipArrayWithValues
           , width = MATCH_PARENT
           , color = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
@@ -1458,6 +1458,7 @@ menuButtonConfig state item = let
 chooseYourRideConfig :: ST.HomeScreenState -> ChooseYourRide.Config
 chooseYourRideConfig state = 
   let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+      city = getValueToLocalStore CUSTOMER_LOCATION
   in
   ChooseYourRide.config
   {
@@ -1476,7 +1477,7 @@ chooseYourRideConfig state =
     tipForDriver = state.props.customerTip.tipForDriver,
     customerTipArray = tipConfig.customerTipArray,
     customerTipArrayWithValues = tipConfig.customerTipArrayWithValues,
-    enableTips = state.data.config.enableTips
+    enableTips = state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities)
   }
 
 specialLocationConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
@@ -2057,6 +2058,7 @@ getTipConfig variant = do
   let city = HU.getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   case city of 
     Bangalore -> bangaloreConfig variant
+    Hyderabad -> hyderabadConfig variant
     _ -> defaultTipConfig variant
 
 mkTipConfig :: Array Int -> TipConfig
@@ -2081,6 +2083,17 @@ bangaloreConfig variant =
     "TAXI" -> mkTipConfig [0, 10, 20, 30, 40, 50]
     "TAXI_PLUS" -> mkTipConfig [0, 10, 20, 30, 40, 50]
     _ -> mkTipConfig [0, 10, 20, 30, 40, 50]
+
+hyderabadConfig :: String -> TipConfig
+hyderabadConfig variant = 
+  case variant of
+    "SEDAN" -> mkTipConfig [0, 20, 30, 40, 50, 60]
+    "SUV" -> mkTipConfig [0, 20, 30, 40, 50, 60]
+    "HATCHBACK" -> mkTipConfig [0, 20, 30, 40, 50, 60]
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 20, 30, 40, 50, 60]
+    "TAXI" -> mkTipConfig [0, 20, 30, 40, 50, 60]
+    "TAXI_PLUS" -> mkTipConfig [0, 20, 30, 40, 50, 60]
+    _ -> mkTipConfig [0, 20, 30, 40, 50, 60]
 
 defaultTipConfig :: String -> TipConfig
 defaultTipConfig variant = 
