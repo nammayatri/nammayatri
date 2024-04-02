@@ -130,7 +130,7 @@ getConfig id toss stickId idName = do
       res'' = parsingMiddleware $ DAKM.fromList res'
       res = DA.Object res'' ^? _JSON :: Maybe TransporterConfig
   maybe
-    (createThroughConfigHelper id toss)
+    (logDebug ("TransporterConfig from CAC Not Parsable: " <> show res' <> "for tenant" <> Text.pack (fromMaybe "driver_offer_bpp_v2" tenant)) >> createThroughConfigHelper id toss)
     ( \res''' -> do
         when (isJust stickId) do
           variantIds <- liftIO $ CM.getVariants (fromMaybe "driver_offer_bpp_v2" tenant) confCond toss

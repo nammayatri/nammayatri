@@ -42,6 +42,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Error
+import Kernel.Utils.Logging
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 import qualified System.Environment as SE
@@ -131,7 +132,7 @@ helper srId idName context = do
 
 getDriverPoolConfigFromCAC :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Variant.Variant -> DTC.TripCategory -> Meters -> Maybe Text -> Maybe Text -> m DriverPoolConfig
 getDriverPoolConfigFromCAC merchantOpCityId mbvt tripCategory dist srId idName = do
-  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "variant", DA.String (Text.pack (show mbvt))), (pack "tripCategory", DA.String (Text.pack (show tripCategory))), (pack "tripDistance", DA.String (Text.pack (show dist)))]
+  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "vehicleVariant", DA.String (Text.pack (show mbvt))), (pack "tripCategory", DA.String (Text.pack (show tripCategory))), (pack "tripDistance", DA.String (Text.pack (show dist)))]
   tenant <- liftIO (SE.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
   gen <- newStdGen
   let (toss', _) = randomR (1, 100) gen :: (Int, StdGen)
@@ -150,7 +151,7 @@ getDriverPoolConfigFromCAC merchantOpCityId mbvt tripCategory dist srId idName =
   let res' = contextValue ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverPoolConfig:") (itraversed . indices (Text.isPrefixOf "driverPoolConfig:" . DAK.toText))
       res = DA.Object (DAKM.fromList res') ^? _JSON :: (Maybe DriverPoolConfig)
   maybe
-    (helper srId idName dpcCond)
+    (logDebug ("DriverPoolConfig from CAC: " <> show res' <> " for tenant " <> Text.pack tenant) >> helper srId idName dpcCond)
     ( \res'' -> do
         when (isJust srId) do
           variantIds <- liftIO $ CM.getVariants tenant dpcCond toss

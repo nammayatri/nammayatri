@@ -86,7 +86,7 @@ getGoHomeConfigFromCAC id' toss stickyId idName = do
   let res8 = config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "goHomeConfig:") (itraversed . indices (Text.isPrefixOf "goHomeConfig:" . DAK.toText))
       res9 = DA.Object (DAKM.fromList res8) ^? _JSON :: Maybe GoHomeConfig
   maybe
-    (createThroughConfigHelper toss stickyId idName context)
+    (logDebug ("GoHomeConfig from CAC Not Parsable: " <> show res8 <> " for tenant: " <> Text.pack (fromMaybe "driver_offer_bpp_v2" tenant)) >> createThroughConfigHelper toss stickyId idName context)
     ( \res'' -> do
         when (isJust stickyId) do
           variantIds <- liftIO $ CM.getVariants (fromMaybe "driver_offer_bpp_v2" tenant) context toss
