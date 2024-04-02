@@ -51,7 +51,7 @@ findFarePolicyFromCAC id toss txnId idName = do
   fp <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "farePolicyId", DA.String (getId id))]
   tenant <- liftIO $ SE.lookupEnv "TENANT"
   contextValue <- liftIO $ CM.evalExperimentAsString (fromMaybe "atlas_driver_offer_bpp_v2" tenant) fp toss
-  let config = jsonToFarePolicy contextValue $ Text.unpack $ getId id
+  config <- jsonToFarePolicy contextValue $ Text.unpack $ getId id
   when (isJust txnId) do
     variantIds <- liftIO $ CM.getVariants (fromMaybe "atlas_driver_offer_bpp_v2" tenant) fp toss
     let idName' = fromMaybe (error "idName not found") idName
