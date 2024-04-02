@@ -461,6 +461,8 @@ library
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.DriverEdaKafka
       Storage.Clickhouse.DriverFee
+      Storage.Clickhouse.Ride
+      Storage.Clickhouse.RideDetails
       Storage.Queries.BlackListOrg
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
