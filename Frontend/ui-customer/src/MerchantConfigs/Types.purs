@@ -73,7 +73,8 @@ type AppConfigCustomer a =
   , driverLocationPolling :: DriverLocationPollingConfig
   , banners :: Banners
   , tipDisplayDuration :: Int
-  , enableTips :: Boolean
+  , tipsEnabled :: Boolean
+  , tipEnabledCities :: Array String
   | a
   }
 

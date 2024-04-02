@@ -180,6 +180,7 @@ window.getMerchantConfig = function () {
     "enableMockLocation": false,
     "defaultLanguage": "EN_US",
     "fontKannada": "Roboto",
+    "tipEnabledCities" : ["Bangalore", "Hyderabad"],
     "fontName": "Roboto"
     , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"

@@ -358,8 +358,9 @@ config =
   banners : {
     homeScreenSafety : false
   }
-  , tipDisplayDuration : 30
-  , enableTips : true
+  , tipDisplayDuration : 10
+  , tipsEnabled : true
+  , tipEnabledCities : []
 }
 
 defaultCityConfig :: CityConfig

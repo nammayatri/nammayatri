@@ -23,7 +23,7 @@ import Components.QuoteListItem as QuoteListItem
 import Components.QuoteListModel.Controller (Action(..), QuoteListModelState)
 import Components.SeparatorView.View as SeparatorView
 import Components.TipsView as TipsView
-import Data.Array (filter, head, null, (!!), mapWithIndex, slice, length, cons, findIndex)
+import Data.Array (filter, head, null, (!!), mapWithIndex, slice, length, cons, findIndex, elem)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth)
@@ -290,73 +290,73 @@ findingRidesView state push =
 
 addTipView :: forall w. QuoteListModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 addTipView state push =
-      linearLayout
-      [ width MATCH_PARENT
+  linearLayout
+  [ width MATCH_PARENT
+  , orientation VERTICAL
+  , height WRAP_CONTENT
+  , accessibility DISABLE
+  , visibility $ boolToVisibility $ state.appConfig.tipsEnabled && state.tipViewProps.isVisible
+  ]
+  [ linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
       , orientation VERTICAL
-      , height WRAP_CONTENT
+      , alignParentBottom "true,-1"
+      , background Color.ivory
+      , margin $ MarginHorizontal 16 16
+      , cornerRadius 12.0
+      , padding $ Padding 20 16 20 16
       , accessibility DISABLE
-      , visibility $ boolToVisibility $ state.appConfig.enableTips && state.tipViewProps.isVisible
       ]
-      [ linearLayout
+      [ textView
           [ height WRAP_CONTENT
           , width MATCH_PARENT
-          , orientation VERTICAL
-          , alignParentBottom "true,-1"
-          , background Color.ivory
-          , margin $ MarginHorizontal 16 16
-          , cornerRadius 12.0
-          , padding $ Padding 20 16 20 16
-          , accessibility DISABLE
+          , text state.tipViewProps.secondaryText
+          , color Color.black800
+          , gravity CENTER
+          , textSize $ FontSize.a_12
+          , accessibility ENABLE
+          , accessibilityHint state.tipViewProps.secondaryText
+          , fontStyle $ FontStyle.regular LanguageStyle
+          , visibility if state.tipViewProps.onlyPrimaryText then GONE else VISIBLE
           ]
+      , linearLayout
+          ( [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , gravity CENTER
+            ]
+              <> if state.tipViewProps.onlyPrimaryText then [ clickable true, onClick push $ const $ ChangeTip ] else []
+          ) $ 
           [ textView
-              [ height WRAP_CONTENT
-              , width MATCH_PARENT
-              , text state.tipViewProps.secondaryText
-              , color Color.black800
-              , gravity CENTER
-              , textSize $ FontSize.a_12
-              , accessibility ENABLE
-              , accessibilityHint state.tipViewProps.secondaryText
-              , fontStyle $ FontStyle.regular LanguageStyle
-              , visibility if state.tipViewProps.onlyPrimaryText then GONE else VISIBLE
-              ]
-          , linearLayout
-              ( [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , gravity CENTER
-                ]
-                  <> if state.tipViewProps.onlyPrimaryText then [ clickable true, onClick push $ const $ ChangeTip ] else []
-              ) $ 
-              [ textView
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , text state.tipViewProps.primaryText
-                , color Color.black800
-                , gravity CENTER
-                , accessibility ENABLE
-                , accessibilityHint state.tipViewProps.primaryText
-                , textSize $ FontSize.a_14
-                , fontStyle $ FontStyle.bold LanguageStyle
-                ]
-              ] <> (if state.tipViewProps.onlyPrimaryText then [textView $ 
-                      [ text $ getString CHANGE
-                      , margin $ MarginLeft 4
-                      , height $ WRAP_CONTENT
-                      , width $ WRAP_CONTENT
-                      , color Color.blue900
-                      , visibility $ boolToVisibility state.tipViewProps.onlyPrimaryText
-                      ] <> FontStyle.body20 LanguageStyle
-                     ] else [])
-          , tipsView state push
-          , linearLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , visibility if state.tipViewProps.isprimaryButtonVisible && not state.tipViewProps.onlyPrimaryText then VISIBLE else GONE
-              ]
-              [ PrimaryButton.view (push <<< TipViewPrimaryButtonClick) (continueWithTipButtonConfig state)
-              ]
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text state.tipViewProps.primaryText
+            , color Color.black800
+            , gravity CENTER
+            , accessibility ENABLE
+            , accessibilityHint state.tipViewProps.primaryText
+            , textSize $ FontSize.a_14
+            , fontStyle $ FontStyle.bold LanguageStyle
+            ]
+          ] <> (if state.tipViewProps.onlyPrimaryText then [textView $ 
+                  [ text $ getString CHANGE
+                  , margin $ MarginLeft 4
+                  , height $ WRAP_CONTENT
+                  , width $ WRAP_CONTENT
+                  , color Color.blue900
+                  , visibility $ boolToVisibility state.tipViewProps.onlyPrimaryText
+                  ] <> FontStyle.body20 LanguageStyle
+                  ] else [])
+      , tipsView state push
+      , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , visibility if state.tipViewProps.isprimaryButtonVisible && not state.tipViewProps.onlyPrimaryText then VISIBLE else GONE
+          ]
+          [ PrimaryButton.view (push <<< TipViewPrimaryButtonClick) (continueWithTipButtonConfig state)
           ]
       ]
+  ]
 
 tipsView :: forall w. QuoteListModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 tipsView state push = 
@@ -733,7 +733,7 @@ tipsViewConfig state = let
   , isVisible = state.tipViewProps.isVisible
   , customerTipArray = state.customerTipArray
   , customerTipArrayWithValues = state.customerTipArrayWithValues
-  , enableTips = state.appConfig.enableTips
+  , enableTips = state.appConfig.tipsEnabled
   , showTipInfo = false
   }
   in tipsViewConfig'
