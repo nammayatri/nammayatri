@@ -229,7 +229,6 @@ library
       Domain.Types.RentalDetails
       Domain.Types.SavedReqLocation
       Domain.Types.SearchRequest
-      Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
       Domain.Types.UtilsTH
@@ -288,7 +287,6 @@ library
       Storage.Beam.RentalDetails
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchRequest
-      Storage.Beam.SearchRequest.SearchReqLocation
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.SystemConfigs
       Storage.Beam.TripTerms
@@ -360,10 +358,10 @@ library
       Storage.Queries.RideExtra
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchRequest
-      Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.Transformers.AppInstalls
       Storage.Queries.Transformers.MerchantConfig
+      Storage.Queries.Transformers.SearchReqLocation
       Storage.Queries.TripTerms
       Storage.Queries.WhiteListOrg
       Tools.AadhaarVerification
@@ -428,6 +426,7 @@ library
       Domain.Types.RegistrationToken
       Domain.Types.Ride
       Domain.Types.RiderConfig
+      Domain.Types.SearchReqLocation
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
@@ -472,6 +471,7 @@ library
       Storage.Beam.RegistrationToken
       Storage.Beam.Ride
       Storage.Beam.RiderConfig
+      Storage.Beam.SearchReqLocation
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
@@ -524,6 +524,7 @@ library
       Storage.Queries.RegistrationToken
       Storage.Queries.Ride
       Storage.Queries.RiderConfig
+      Storage.Queries.SearchReqLocation
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
