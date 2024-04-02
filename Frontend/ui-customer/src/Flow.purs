@@ -3858,7 +3858,7 @@ searchLocationFlow = do
                   }
                   })
       void $ pure $ removeAllPolylines "" 
-      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints, labelId = getNewIDWithTag "LocateOnMapSLSPin"}
+      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints}
       searchLocationFlow 
 
     searchPlaceFlow :: String -> SearchLocationScreenState -> FlowBT String Unit
@@ -4025,7 +4025,7 @@ predictionClickedFlow prediction state = do
       let focussedField = show currTextField
       if locServiceable then do 
         let {sourceLoc, destinationLoc, updatedState} = mkSrcAndDestLoc placeLat placeLon state currTextField prediction city
-        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = placeLat, lon = placeLon, geoJson = geoJson, points = pickUpPoints, labelId = getNewIDWithTag "LocateOnMapSLSPin" }
+        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = placeLat, lon = placeLon, geoJson = geoJson, points = pickUpPoints }
         modifyScreenState 
           $ SearchLocationScreenStateType 
               (\slsScreen -> slsScreen{ props {locUnserviceable = false}
@@ -4041,7 +4041,7 @@ predictionClickedFlow prediction state = do
               $ SearchLocationScreenStateType 
                     (\slsState -> slsState {props { searchLocStage = ConfirmLocationStage}
                                       , data {latLonOnMap = updatedState, confirmLocCategory = getZoneType specialLocCategory, nearByGates = pickUpPoints, defaultGate = defaultPP }})  
-            liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig {goToCurrentLocation = false, lat = placeLat, lon = placeLon, geoJson = geoJson, points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapSLSPin" }
+            liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig {goToCurrentLocation = false, lat = placeLat, lon = placeLon, geoJson = geoJson, points = pickUpPoints, zoomLevel = zoomLevel }
             searchLocationFlow
 
         else do 
@@ -4078,7 +4078,7 @@ checkForBothLocs state sourceLoc destinationLoc =
         $ SearchLocationScreenStateType 
             (\slsState -> slsState {props { searchLocStage = ConfirmLocationStage, focussedTextField = Just SearchLocPickup}
                               , data {latLonOnMap = fromMaybe SearchLocationScreenData.dummyLocationInfo sourceLoc, confirmLocCategory = getZoneType specialLocCategory, nearByGates = pickUpPoints, defaultGate = defaultPP}})
-      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig {goToCurrentLocation = false, lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints , zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapSLSPin" }
+      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig {goToCurrentLocation = false, lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints , zoomLevel = zoomLevel }
       searchLocationFlow
       else enterRideSearchFLow
   else do 
