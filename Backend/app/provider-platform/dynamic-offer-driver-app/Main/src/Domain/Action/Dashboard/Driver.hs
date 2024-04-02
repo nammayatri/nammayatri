@@ -1903,8 +1903,12 @@ updateRCInvalidStatus _ _ req = do
 updateVehicleVariant :: ShortId DM.Merchant -> Context.City -> Common.UpdateVehicleVariantReq -> Flow APISuccess
 updateVehicleVariant _ _ req = do
   vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
+  rcNumber <- decrypt vehicleRC.certificateNumber
   let variant = castVehicleVariant req.vehicleVariant
+  mVehicle <- QVehicle.findByRegistrationNo rcNumber
   RCQuery.updateVehicleVariant vehicleRC.id (Just variant) Nothing Nothing
+  whenJust mVehicle $ \vehicle -> do
+    QVehicle.updateVehicleVariant vehicle.driverId variant
   pure Success
 
 bulkReviewRCVariant :: ShortId DM.Merchant -> Context.City -> [Common.ReviewRCVariantReq] -> Flow [Common.ReviewRCVariantRes]
