@@ -76,9 +76,7 @@ rideScheduledScreen initialState =
               let response = RideBookingListRes { list : []}
               doAff do liftEffect $ push $ action response
             else getBookingList action flowStatusAction (count - 1) duration push state
-      else do
-        void $ pure $ toast "There is no Ride Scheduled for you" -- TODO-codex : Translation
-        pure unit
+      else pure unit
 
 view :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 view push state =
