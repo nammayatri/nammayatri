@@ -437,9 +437,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             Handler handler = new Handler(handlerThread.getLooper());
 
             handler.postDelayed(() -> {
-                Intent showMessage = new Intent(getApplicationContext(), OverlayMessagingService.class);
-                showMessage.putExtra("payload", payload.toString());
-                startService(showMessage);
+                try {
+                    Intent showMessage = new Intent(getApplicationContext(), OverlayMessagingService.class);
+                    showMessage.putExtra("payload", payload.toString());
+                    startService(showMessage);
+                } catch (Exception e) {
+                    Log.e(LOG_TAG, e.getMessage());
+                }
             }, delay * 1000);
 
         } catch (Exception e) {
