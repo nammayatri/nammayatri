@@ -14,11 +14,10 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'release-apk-to-prod/**'
 
 jobs:
   deploy:
+    if: "contains(github.event.head_commit.message, '[RELEASE-APK]')"
     # if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
     strategy:
