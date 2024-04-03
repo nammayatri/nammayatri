@@ -25,16 +25,22 @@ jobs:
             fastlane_cm: NY
             key_alias: KEYSTORE_KEY_ALIAS
             local_properties: LOCAL_PROPERTIES 
+            config_path: app/src/user/nammaYatri/assets
+            config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriconsumer/android/cug/config.json'
           - name: ManaYatri
             keystore: ANDROID_KEYSTORE_FILE_MY 
             fastlane_cm: MY
             key_alias: KEYSTORE_KEY_ALIAS_MY
             local_properties: LOCAL_PROPERTIES_MY 
+            config_path: app/src/user/manaYatri/assets
+            config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriconsumer/android/cug/config.json'
           - name: Yatri
             keystore: ANDROID_KEYSTORE_FILE_Y 
             fastlane_cm: Y
             key_alias: KEYSTORE_KEY_ALIAS_Y
             local_properties: LOCAL_PROPERTIES_Y 
+            config_path: app/src/user/yatri/assets
+            config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriconsumer/android/cug/config.json'
           # Add more variants as needed
     defaults:
       run:
@@ -69,6 +75,27 @@ jobs:
         with:
           path: ~/.gradle/wrapper/
           key: cache-clean-wrapper-${{ matrix.os }}-${{ matrix.jdk }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Run Python script to extract JSA files
+        run: python bundleFetch.py "$FASTLANE_CMD"
+        env: 
+          FASTLANE_CMD: ${{ matrix.variant.fastlane_cm }}
+
+      - name: Move JSA files to specific path
+        run: |
+          mv -f configs/* "$CONFIG_PATH"
+        env: 
+          CONFIG_PATH: ${{ matrix.variant.config_path }}
 
       - name: Grant Permission to Execute
         run: chmod +x gradlew
