@@ -61,6 +61,8 @@ primaryButtonConfig state =
       , id = "RentalConfirmBooking"
       , alpha = if state.props.showPrimaryButton then 1.0 else 0.4
       , isClickable = state.props.showPrimaryButton
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       }
   in primaryButtonConfig'
 

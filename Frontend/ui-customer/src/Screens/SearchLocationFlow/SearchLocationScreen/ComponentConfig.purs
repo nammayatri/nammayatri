@@ -71,7 +71,9 @@ locationTagBarConfig state globalProps =
             height : WRAP_CONTENT ,
             width : WRAP_CONTENT,
             padding : Padding 8 8 8 8 ,
-            id : item.id
+            id : item.id,
+            enableRipple : false,
+            rippleColor : Color.rippleShade
           })
         [ { image : home.image, text : home.text, id : home.id },
           { image : work.image, text : work.text, id : work.id },
