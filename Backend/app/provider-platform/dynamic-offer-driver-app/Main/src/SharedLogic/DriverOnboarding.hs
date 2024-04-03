@@ -168,8 +168,8 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
       ..
     }
 
-makeVehicleFromRC :: UTCTime -> Id Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Vehicle
-makeVehicleFromRC now driverId merchantId certificateNumber rc =
+makeVehicleFromRC :: UTCTime -> Id Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> Vehicle
+makeVehicleFromRC now driverId merchantId certificateNumber rc merchantOpCityId =
   Vehicle
     { driverId,
       capacity = rc.vehicleCapacity,
@@ -184,7 +184,22 @@ makeVehicleFromRC now driverId merchantId certificateNumber rc =
       registrationNo = certificateNumber,
       registrationCategory = Nothing,
       vehicleClass = fromMaybe "Unkown" rc.vehicleClass,
+      merchantOperatingCityId = Just merchantOpCityId,
       vehicleName = Nothing,
+      airConditioned = rc.airConditioned,
+      luggageCapacity = rc.luggageCapacity,
+      vehicleRating = rc.vehicleRating,
       createdAt = now,
       updatedAt = now
     }
+
+makeVehicleAPIEntity :: Vehicle -> VehicleAPIEntity
+makeVehicleAPIEntity Vehicle {..} = VehicleAPIEntity {..}
+
+getCategory :: Variant -> Category
+getCategory SEDAN = CAR
+getCategory SUV = CAR
+getCategory HATCHBACK = CAR
+getCategory AUTO_RICKSHAW = AUTO_CATEGORY
+getCategory TAXI = CAR
+getCategory TAXI_PLUS = CAR

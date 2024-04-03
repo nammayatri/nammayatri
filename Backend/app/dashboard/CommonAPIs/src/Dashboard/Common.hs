@@ -62,6 +62,12 @@ data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
 
 $(mkHttpInstancesForEnum ''Variant)
 
+data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''Category)
+
 data VerificationStatus = PENDING | VALID | INVALID
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

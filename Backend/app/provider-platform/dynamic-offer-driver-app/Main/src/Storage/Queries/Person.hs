@@ -63,8 +63,8 @@ import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLicense ()
 import Storage.Queries.DriverQuote ()
 import qualified Storage.Queries.DriverRCAssociation ()
-import Storage.Queries.Instances.DriverInformation ()
 import Storage.Queries.Instances.Person ()
+import Storage.Queries.OrphanInstances.DriverInformation ()
 import Storage.Queries.Person.GetNearestDrivers as Reexport
 import Storage.Queries.Person.GetNearestDriversCurrentlyOnRide as Reexport
 import Storage.Queries.Person.GetNearestGoHomeDrivers as Reexport

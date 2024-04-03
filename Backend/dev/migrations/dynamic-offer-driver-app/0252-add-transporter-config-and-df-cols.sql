@@ -19,6 +19,3 @@ ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN stage_updated_at timest
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN bill_number int;
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN autopay_payment_stage text;
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN fee_without_discount int;
-
-
-ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payer_vpa text;

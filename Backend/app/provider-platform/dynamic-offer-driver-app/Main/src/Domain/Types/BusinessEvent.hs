@@ -18,7 +18,7 @@ module Domain.Types.BusinessEvent where
 import Domain.Types.Booking (Booking)
 import Domain.Types.Person (Driver)
 import Domain.Types.Ride (Ride)
-import Domain.Types.Vehicle.Variant (Variant)
+import Domain.Types.Vehicle (Variant)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)

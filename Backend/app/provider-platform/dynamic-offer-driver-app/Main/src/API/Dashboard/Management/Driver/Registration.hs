@@ -34,6 +34,9 @@ type API =
     :<|> Common.RegisterRCAPI
     :<|> Common.GenerateAadhaarOtpAPI
     :<|> Common.VerifyAadhaarOtpAPI
+    :<|> Common.UnderReviewDriversListAPI
+    :<|> Common.DriverDocumentInfoAPI
+    :<|> Common.UpdateDocumentAPI
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city =
@@ -44,6 +47,9 @@ handler merchantId city =
     :<|> registerRC merchantId city
     :<|> generateAadhaarOtp merchantId city
     :<|> verifyAadhaarOtp merchantId city
+    :<|> underReviewDriversList merchantId city
+    :<|> driverDocumentInfo merchantId city
+    :<|> updateDocument merchantId city
 
 documentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler Common.DocumentsListResponse
 documentsList merchantShortId opCity = withFlowHandlerAPI . DReg.documentsList merchantShortId opCity
@@ -65,3 +71,12 @@ generateAadhaarOtp merchantShortId opCity driverId_ = withFlowHandlerAPI . DReg.
 
 verifyAadhaarOtp :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.VerifyAadhaarOtpReq -> FlowHandler Common.VerifyAadhaarOtpRes
 verifyAadhaarOtp merchantShortId opCity driverId_ = withFlowHandlerAPI . DReg.verifyAadhaarOtp merchantShortId opCity driverId_
+
+underReviewDriversList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> FlowHandler Common.UnderReviewDriversListResponse
+underReviewDriversList merchantShortId opCity limit = withFlowHandlerAPI . DReg.underReviewDriversList merchantShortId opCity limit
+
+driverDocumentInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler [Common.DriverDocument]
+driverDocumentInfo merchantShortId opCity = withFlowHandlerAPI . DReg.driverDocumentInfo merchantShortId opCity
+
+updateDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Image -> Common.UpdateDocumentRequest -> FlowHandler APISuccess
+updateDocument merchantShortId opCity imageId = withFlowHandlerAPI . DReg.updateDocument merchantShortId opCity imageId

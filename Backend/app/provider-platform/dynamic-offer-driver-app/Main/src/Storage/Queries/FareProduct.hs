@@ -24,7 +24,7 @@ import Domain.Types.Common
 import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import Domain.Types.Vehicle.Variant (Variant (..))
+import Domain.Types.Vehicle (Variant (..))
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common

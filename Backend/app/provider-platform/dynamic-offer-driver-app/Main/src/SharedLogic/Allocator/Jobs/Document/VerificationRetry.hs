@@ -17,9 +17,9 @@ module SharedLogic.Allocator.Jobs.Document.VerificationRetry
   )
 where
 
+import qualified Domain.Types.DocumentVerificationConfig as DTO
 import Domain.Types.IdfyVerification
-import qualified Domain.Types.Image as Image
-import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DTO
+import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
@@ -29,7 +29,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.GoogleTranslate (TranslateFlow)
-import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as QODC
+import qualified Storage.CachedQueries.DocumentVerificationConfig as QODC
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -47,14 +47,14 @@ retryDocumentVerificationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   let jobData = jobInfo.jobData
   verificationReq <- IVQuery.findByRequestId jobData.requestId >>= fromMaybeM (InternalError "Verification request not found")
   person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
-  onboardingDocumentConfig <- QODC.findByMerchantOpCityIdAndDocumentType person.merchantOperatingCityId (castDoctype verificationReq.docType) >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantOperatingCityId.getId (show verificationReq.docType))
-  let maxRetryCount = onboardingDocumentConfig.maxRetryCount
+  documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId verificationReq.docType (fromMaybe Vehicle.CAR verificationReq.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show verificationReq.docType))
+  let maxRetryCount = documentVerificationConfig.maxRetryCount
   if (fromMaybe 0 verificationReq.retryCount) <= maxRetryCount
     then do
       documentNumber <- decrypt verificationReq.documentNumber
       IVQuery.updateStatus "source_down_retried" verificationReq.requestId
       case verificationReq.docType of
-        Image.VehicleRegistrationCertificate -> do
+        DTO.VehicleRegistrationCertificate -> do
           verifyRes <-
             Verification.verifyRC person.merchantId person.merchantOperatingCityId
               Verification.VerifyRCReq {rcNumber = documentNumber, driverId = person.id.getId}
@@ -62,7 +62,7 @@ retryDocumentVerificationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             Verification.AsyncResp Verification.VerifyAsyncResp {..} -> do
               mkNewVerificationEntity verificationReq requestId
             _ -> pure ()
-        Image.DriverLicense -> do
+        DTO.DriverLicense -> do
           whenJust verificationReq.driverDateOfBirth $ \dob -> do
             verifyRes <-
               Verification.verifyDLAsync person.merchantId person.merchantOperatingCityId $
@@ -73,16 +73,6 @@ retryDocumentVerificationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       IVQuery.updateStatus "source_down_failed" verificationReq.requestId
   return Complete
   where
-    castDoctype :: Image.ImageType -> DTO.DocumentType
-    castDoctype docType =
-      case docType of
-        Image.VehicleRegistrationCertificate -> DTO.RC
-        Image.DriverLicense -> DTO.DL
-        Image.VehiclePermit -> DTO.RC
-        Image.VehiclePUC -> DTO.RC
-        Image.VehicleInsurance -> DTO.RC
-        Image.VehicleFitnessCertificate -> DTO.RC
-
     mkNewVerificationEntity verificationReq requestId = do
       now <- getCurrentTime
       newId <- generateGUID

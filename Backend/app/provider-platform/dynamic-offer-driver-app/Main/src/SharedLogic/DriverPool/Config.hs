@@ -27,7 +27,7 @@ import qualified Domain.Types.Cac as DTC
 import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified Domain.Types.Vehicle as Variant
 import EulerHS.Language as L (getOption)
 import qualified EulerHS.Language as L
 import qualified GHC.List as GL

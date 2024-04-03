@@ -6,5 +6,3 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN updated_at timestamp 
 
 ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN hometown character varying(255);
 ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN languages_spoken text[] DEFAULT '{}'::text[];
-
-ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN vehicle_name character varying(255);

@@ -15,7 +15,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
-  { certificateNumberEncrypted :: B.C f Kernel.Prelude.Text,
+  { airConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    certificateNumberEncrypted :: B.C f Kernel.Prelude.Text,
     certificateNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     documentImageId :: B.C f Kernel.Prelude.Text,
     failedRules :: B.C f [Kernel.Prelude.Text],
@@ -23,6 +24,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     fleetOwnerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     insuranceValidity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    luggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     manufacturerModel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     permitExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     pucExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -34,6 +36,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     vehicleEnergyType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleManufacturer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleModel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant),
     verificationStatus :: B.C f Domain.Types.IdfyVerification.VerificationStatus,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

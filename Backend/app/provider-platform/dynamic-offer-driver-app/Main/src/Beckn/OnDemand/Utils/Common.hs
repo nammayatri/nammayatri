@@ -48,7 +48,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as DVeh
-import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified Domain.Types.Vehicle as Variant
 import EulerHS.Prelude hiding (id, state, view, (%~), (^?))
 import qualified EulerHS.Prelude as Prelude
 import GHC.Float (double2Int)

@@ -30,7 +30,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.Vehicle as SV
-import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified Domain.Types.Vehicle as Variant
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -39,6 +39,7 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import SharedLogic.DriverOnboarding
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
@@ -129,9 +130,9 @@ updateVehicle admin driverId req = do
                 registrationCategory = req.registrationCategory <|> vehicle.registrationCategory
                }
 
-  _ <- QV.updateVehicleRec updatedVehicle
+  _ <- QV.updateByPrimaryKey updatedVehicle
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateVehicle : ") (show updatedVehicle)
-  return $ SV.makeVehicleAPIEntity updatedVehicle
+  return $ makeVehicleAPIEntity updatedVehicle
 
 getVehicle :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
 getVehicle (personId, _, _) registrationNoM vehicleIdM = do
@@ -140,7 +141,7 @@ getVehicle (personId, _, _) registrationNoM vehicleIdM = do
     (Nothing, Nothing) -> throwError $ InvalidRequest "You should pass registration number and vehicle id."
     _ -> B.runInReplica $ QV.findByAnyOf registrationNoM vehicleIdM >>= fromMaybeM (VehicleDoesNotExist personId.getId)
   hasAccess user vehicle
-  return . GetVehicleRes $ SV.makeVehicleAPIEntity vehicle
+  return . GetVehicleRes $ makeVehicleAPIEntity vehicle
   where
     hasAccess user vehicle =
       when (user.merchantId /= vehicle.merchantId) $
@@ -156,7 +157,7 @@ buildVehicleRes personList vehicle = do
           personList
   return
     VehicleRes
-      { vehicle = SV.makeVehicleAPIEntity vehicle,
+      { vehicle = makeVehicleAPIEntity vehicle,
         driver = mkDriverObj <$> mdriver
       }
 

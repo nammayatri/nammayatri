@@ -4,6 +4,7 @@
 
 module Domain.Types.Image where
 
+import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Kernel.Prelude
@@ -14,7 +15,7 @@ import qualified Tools.Error
 data Image = Image
   { failureReason :: Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError,
     id :: Kernel.Types.Id.Id Domain.Types.Image.Image,
-    imageType :: Domain.Types.Image.ImageType,
+    imageType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     isValid :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -24,14 +25,3 @@ data Image = Image
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data ImageType
-  = DriverLicense
-  | VehicleRegistrationCertificate
-  | VehiclePermit
-  | VehicleInsurance
-  | VehiclePUC
-  | VehicleFitnessCertificate
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ImageType)

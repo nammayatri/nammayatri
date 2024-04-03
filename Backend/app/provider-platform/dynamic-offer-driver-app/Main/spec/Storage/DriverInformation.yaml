@@ -1,0 +1,142 @@
+imports:
+  Money: Kernel.Types.Common
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+
+DriverInformation:
+  tableName: driver_information
+  types:
+    DriverMode:
+      enum: "ONLINE,OFFLINE,SILENT"
+      derive: "HttpInstance"
+    DriverAutoPayStatus:
+      enum: "PENDING,ACTIVE,SUSPENDED,PAUSED_PSP,CANCELLED_PSP,MANDATE_FAILED,MANDATE_EXPIRED"
+      derive: "HttpInstance"
+    DriverSummary:
+      totalEarnings: Money
+      bonusEarned: Money
+      totalCompletedTrips: Int
+      lateNightTrips: Int
+      lastRegistered: UTCTime
+    DriverMissedOpp:
+      cancellationRate: Int
+      ridesCancelled: Int
+      totalRides: Int
+      missedEarnings: Money
+    Badges:
+      badgeName: Text
+      badgeCount: Int
+    DriverBadges:
+      recordType: NewType
+      driverBadges: '[Badges]'
+
+  fields:
+    driverId: Id Person
+    adminId: Maybe (Id Person)
+    active: Bool
+    onRide: Bool
+    enabled: Bool
+    blocked: Bool
+    numOfLocks: Int
+    verified: Bool
+    subscribed: Bool
+    paymentPending: Bool
+    referralCode: Maybe Text
+    referredByDriverId: Maybe (Id Person)
+    totalReferred: Maybe Int
+    lastEnabledOn: Maybe UTCTime
+    canDowngradeToSedan: Bool
+    canDowngradeToHatchback: Bool
+    canDowngradeToTaxi: Bool
+    canSwitchToRental: Bool
+    mode: Maybe DriverMode
+    aadhaarVerified: Bool
+    autoPayStatus: Maybe DriverAutoPayStatus
+    blockedReason: Maybe Text
+    blockExpiryTime: Maybe UTCTime
+    payerVpa: Maybe Text
+    enabledAt: Maybe UTCTime
+    compAadhaarImagePath: Maybe Text
+    availableUpiApps: Maybe Text
+    blockStateModifier: Maybe Text
+    driverDob: Maybe UTCTime
+    airConditionScore: Maybe Double
+
+  default:
+    active: "false"
+    verified: "false"
+    onRide: "false"
+    numOfLocks: "0"
+    enabled: "false"
+    blocked: "false"
+    totalReferred: "0"
+    paymentPending: "false"
+    subscribed: "true"
+    canDowngradeToSedan: "false"
+    canDowngradeToHatchback: "false"
+    canDowngradeToTaxi: "false"
+    canSwitchToRental: "false"
+    aadhaarVerified: "false"
+
+  constraints:
+    driverId: PrimaryKey
+
+  beamType:
+    canSwitchToRental: Maybe Bool
+
+  fromTType:
+    canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+
+  toTType:
+    canSwitchToRental: Kernel.Prelude.Just|I
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  queries:
+    updateSubscription:
+      kvFunction: updateOneWithKV
+      params: [subscribed]
+      where: driverId
+    updateAadhaarVerifiedState:
+      kvFunction: updateOneWithKV
+      params: [aadhaarVerified]
+      where: driverId
+    updatePendingPayment:
+      kvFunction: updateOneWithKV
+      params: [paymentPending]
+      where: driverId
+    updateCompAadhaarImagePath:
+      kvFunction: updateOneWithKV
+      params: [compAadhaarImagePath]
+      where: driverId
+    updateDriverDob:
+      kvFunction: updateOneWithKV
+      params: [driverDob]
+      where: driverId
+    updateDriverDowngradeForSuv: #check
+      kvFunction: updateOneWithKV
+      params: [canDowngradeToHatchback, canDowngradeToTaxi]
+      where: driverId
+    updateDriverInformation: #check
+      kvFunction: updateOneWithKV
+      params: [canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, availableUpiApps]
+      where: driverId
+    updateOnRide:
+      kvFunction: updateOneWithKV
+      params: [onRide]
+      where: driverId
+    updateActivity:
+      kvFunction: updateOneWithKV
+      params: [active, mode]
+      where: driverId
+    addReferralCode: #check
+      kvFunction: updateOneWithKV
+      params: [referralCode, referredByDriverId]
+      where: driverId
+    incrementReferralCountByPersonId:
+      kvFunction: updateOneWithKV
+      params: [totalReferred]
+      where: driverId

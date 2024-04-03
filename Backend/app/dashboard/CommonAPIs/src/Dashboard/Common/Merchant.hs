@@ -53,8 +53,8 @@ data MerchantEndpoint
   | DriverPoolConfigUpdateEndpoint
   | DriverPoolConfigCreateEndpoint
   | DriverIntelligentPoolConfigUpdateEndpoint
-  | OnboardingDocumentConfigUpdateEndpoint
-  | OnboardingDocumentConfigCreateEndpoint
+  | DocumentVerificationConfigUpdateEndpoint
+  | DocumentVerificationConfigCreateEndpoint
   | MapsServiceConfigUpdateEndpoint
   | MapsServiceConfigUsageUpdateEndpoint
   | SmsServiceConfigUpdateEndpoint

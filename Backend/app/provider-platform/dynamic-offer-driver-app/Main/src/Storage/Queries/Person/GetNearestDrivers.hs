@@ -13,7 +13,6 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
-import Kernel.Utils.GenericPretty
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
@@ -31,7 +30,7 @@ data NearestDriversResult = NearestDriversResult
     lon :: Double,
     mode :: Maybe DriverInfo.DriverMode
   }
-  deriving (Generic, Show, PrettyShow, HasCoordinates)
+  deriving (Generic, Show, HasCoordinates)
 
 getNearestDrivers ::
   (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, EsqDBFlow m r, CacheFlow m r) =>

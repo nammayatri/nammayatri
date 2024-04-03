@@ -21,6 +21,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.BookingCancellationReas
 import qualified "dynamic-offer-driver-app" Storage.Beam.BusinessEvent as BusinessEvent
 import qualified "dynamic-offer-driver-app" Storage.Beam.CallStatus as CallStatus
 import qualified "dynamic-offer-driver-app" Storage.Beam.CancellationReason as CancellationReason
+import qualified "dynamic-offer-driver-app" Storage.Beam.DocumentVerificationConfig as MerchantDocumentVerificationConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest as DriverGoHomeRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation as DriverHomeLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverBlockReason as DriverBlockReason
@@ -65,7 +66,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantMessag
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantPaymentMethod as MerchantPaymentMethod
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
-import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.OnboardingDocumentConfig as MerchantOnboardingDocumentConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.TransporterConfig as TransporterConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.Message as Message
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageReport as MessageReport
@@ -139,7 +139,7 @@ data DBCreateObject
   | MerchantPaymentMethodObject MerchantPaymentMethod.MerchantPaymentMethod
   | MerchantServiceConfigObject MerchantServiceConfig.MerchantServiceConfig
   | MerchantServiceUsageConfigObject MerchantServiceUsageConfig.MerchantServiceUsageConfig
-  | MerchantOnboardingDocumentConfigObject MerchantOnboardingDocumentConfig.OnboardingDocumentConfig
+  | MerchantDocumentVerificationConfigObject MerchantDocumentVerificationConfig.DocumentVerificationConfig
   | TransporterConfigObject TransporterConfig.TransporterConfig
   | MessageObject Message.Message
   | MessageReportObject MessageReport.MessageReport
@@ -226,7 +226,7 @@ modelName (MerchantMessageObject _) = "MerchantMessage"
 modelName (MerchantPaymentMethodObject _) = "MerchantPaymentMethod"
 modelName (MerchantServiceConfigObject _) = "MerchantServiceConfig"
 modelName (MerchantServiceUsageConfigObject _) = "MerchantServiceUsageConfig"
-modelName (MerchantOnboardingDocumentConfigObject _) = "MerchantOnboardingDocumentConfig"
+modelName (MerchantDocumentVerificationConfigObject _) = "MerchantDocumentVerificationConfig"
 modelName (TransporterConfigObject _) = "TransporterConfig"
 modelName (MessageObject _) = "Message"
 modelName (MessageReportObject _) = "MessageReport"

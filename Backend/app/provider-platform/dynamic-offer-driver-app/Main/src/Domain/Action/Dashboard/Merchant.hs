@@ -22,9 +22,9 @@ module Domain.Action.Dashboard.Merchant
     driverPoolConfigCreate,
     driverIntelligentPoolConfig,
     driverIntelligentPoolConfigUpdate,
-    onboardingDocumentConfig,
-    onboardingDocumentConfigUpdate,
-    onboardingDocumentConfigCreate,
+    documentVerificationConfig,
+    documentVerificationConfigUpdate,
+    documentVerificationConfigCreate,
     merchantUpdate,
     serviceUsageConfig,
     smsServiceConfigUpdate,
@@ -48,6 +48,7 @@ import Data.Csv
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
+import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverPoolConfig as DDPC
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FarePolicy as FarePolicy
@@ -63,7 +64,6 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
-import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DODC
 import qualified Domain.Types.Merchant.Overlay as DMO
 import qualified Domain.Types.Merchant.TransporterConfig as DTC
 import qualified Domain.Types.Plan as Plan
@@ -84,6 +84,7 @@ import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, 
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DriverFee as SDF
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.FarePolicy as CQFP
 import qualified Storage.CachedQueries.FareProduct as CQFProduct
@@ -97,7 +98,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as CQODC
 import qualified Storage.CachedQueries.Merchant.Overlay as CQMO
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
@@ -435,18 +435,21 @@ driverIntelligentPoolConfigUpdate merchantShortId opCity req = do
   pure Success
 
 ---------------------------------------------------------------------
-onboardingDocumentConfig :: ShortId DM.Merchant -> Context.City -> Maybe Common.DocumentType -> Flow Common.OnboardingDocumentConfigRes
-onboardingDocumentConfig merchantShortId opCity mbReqDocumentType = do
+documentVerificationConfig :: ShortId DM.Merchant -> Context.City -> Maybe Common.DocumentType -> Maybe Common.Category -> Flow Common.DocumentVerificationConfigRes
+documentVerificationConfig merchantShortId opCity mbReqDocumentType mbCategory = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  configs <- case mbReqDocumentType of
-    Nothing -> CQODC.findAllByMerchantOpCityId merchantOpCityId
-    Just reqDocumentType -> maybeToList <$> CQODC.findByMerchantOpCityIdAndDocumentType merchantOpCityId (castDocumentType reqDocumentType)
-  pure $ mkOnboardingDocumentConfigRes <$> configs
+  configs <- case (mbReqDocumentType, mbCategory) of
+    (Nothing, Nothing) -> CQDVC.findAllByMerchantOpCityId merchantOpCityId
+    (Just reqDocumentType, Nothing) -> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId (castDocumentType reqDocumentType)
+    (Nothing, Just category) -> CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId (castCategory category)
+    (Just reqDocumentType, Just category) -> maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (castDocumentType reqDocumentType) (castCategory category)
 
-mkOnboardingDocumentConfigRes :: DODC.OnboardingDocumentConfig -> Common.OnboardingDocumentConfigItem
-mkOnboardingDocumentConfigRes DODC.OnboardingDocumentConfig {..} =
-  Common.OnboardingDocumentConfigItem
+  pure $ mkDocumentVerificationConfigRes <$> configs
+
+mkDocumentVerificationConfigRes :: DVC.DocumentVerificationConfig -> Common.DocumentVerificationConfigItem
+mkDocumentVerificationConfigRes DVC.DocumentVerificationConfig {..} =
+  Common.DocumentVerificationConfigItem
     { documentType = castDDocumentType documentType,
       vehicleClassCheckType = castDVehicleClassCheckType vehicleClassCheckType,
       supportedVehicleClasses = castDSupportedVehicleClasses supportedVehicleClasses,
@@ -454,15 +457,16 @@ mkOnboardingDocumentConfigRes DODC.OnboardingDocumentConfig {..} =
       ..
     }
 
-castDSupportedVehicleClasses :: DODC.SupportedVehicleClasses -> Common.SupportedVehicleClasses
+castDSupportedVehicleClasses :: DVC.SupportedVehicleClasses -> Common.SupportedVehicleClasses
 castDSupportedVehicleClasses = \case
-  DODC.DLValidClasses cfg -> Common.DLValidClasses cfg
-  DODC.RCValidClasses cfg -> Common.RCValidClasses (castDClassVariantMap <$> cfg)
+  DVC.DLValidClasses cfg -> Common.DLValidClasses cfg
+  DVC.RCValidClasses cfg -> Common.RCValidClasses (castDClassVariantMap <$> cfg)
 
-castDClassVariantMap :: DODC.VehicleClassVariantMap -> Common.VehicleClassVariantMap
-castDClassVariantMap DODC.VehicleClassVariantMap {..} =
+castDClassVariantMap :: DVC.VehicleClassVariantMap -> Common.VehicleClassVariantMap
+castDClassVariantMap DVC.VehicleClassVariantMap {..} =
   Common.VehicleClassVariantMap
     { vehicleVariant = castDVehicleVariant vehicleVariant,
+      vehicleModel = fromMaybe "" vehicleModel,
       ..
     }
 
@@ -475,53 +479,56 @@ castDVehicleVariant = \case
   DVeh.TAXI -> Common.TAXI
   DVeh.TAXI_PLUS -> Common.TAXI_PLUS
 
-castDVehicleClassCheckType :: DODC.VehicleClassCheckType -> Common.VehicleClassCheckType
+castDVehicleClassCheckType :: DVC.VehicleClassCheckType -> Common.VehicleClassCheckType
 castDVehicleClassCheckType = \case
-  DODC.Infix -> Common.Infix
-  DODC.Prefix -> Common.Prefix
-  DODC.Suffix -> Common.Suffix
+  DVC.Infix -> Common.Infix
+  DVC.Prefix -> Common.Prefix
+  DVC.Suffix -> Common.Suffix
 
-castDDocumentType :: DODC.DocumentType -> Common.DocumentType
+castDDocumentType :: DVC.DocumentType -> Common.DocumentType
 castDDocumentType = \case
-  DODC.RC -> Common.RC
-  DODC.DL -> Common.DL
+  DVC.VehicleRegistrationCertificate -> Common.RC
+  DVC.DriverLicense -> Common.DL
+  _ -> Common.RC -- fix later
 
 ---------------------------------------------------------------------
-onboardingDocumentConfigUpdate ::
+documentVerificationConfigUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.DocumentType ->
-  Common.OnboardingDocumentConfigUpdateReq ->
+  Common.Category ->
+  Common.DocumentVerificationConfigUpdateReq ->
   Flow APISuccess
-onboardingDocumentConfigUpdate merchantShortId opCity reqDocumentType req = do
-  -- runRequestValidation Common.validateOnboardingDocumentConfigUpdateReq req
+documentVerificationConfigUpdate merchantShortId opCity reqDocumentType reqCategory req = do
+  -- runRequestValidation Common.validateDocumentVerificationConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   let documentType = castDocumentType reqDocumentType
+  let category = castCategory reqCategory
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQODC.findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType >>= fromMaybeM (OnboardingDocumentConfigDoesNotExist merchantOpCityId.getId $ show documentType)
+  config <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType category >>= fromMaybeM (DocumentVerificationConfigDoesNotExist merchantOpCityId.getId $ show documentType)
   let updConfig =
         config{checkExtraction = maybe config.checkExtraction (.value) req.checkExtraction,
                checkExpiry = maybe config.checkExpiry (.value) req.checkExpiry,
                supportedVehicleClasses = maybe config.supportedVehicleClasses castSupportedVehicleClasses req.supportedVehicleClasses,
                vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType,
-               rcNumberPrefix = maybe config.rcNumberPrefix (.value) req.rcNumberPrefix,
                rcNumberPrefixList = maybe config.rcNumberPrefixList (.value) req.rcNumberPrefixList,
                maxRetryCount = maybe config.maxRetryCount (.value) req.maxRetryCount
               }
-  _ <- CQODC.update updConfig
-  CQODC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> onboardingDocumentConfigUpdate : " $ show merchant.id <> "documentType : " <> show documentType
+  _ <- CQDVC.update updConfig
+  CQDVC.clearCache merchantOpCityId
+  logTagInfo "dashboard -> documentVerificationConfigUpdate : " $ show merchant.id <> "documentType : " <> show documentType
   pure Success
 
-castSupportedVehicleClasses :: Common.SupportedVehicleClasses -> DODC.SupportedVehicleClasses
+castSupportedVehicleClasses :: Common.SupportedVehicleClasses -> DVC.SupportedVehicleClasses
 castSupportedVehicleClasses = \case
-  Common.DLValidClasses cfg -> DODC.DLValidClasses cfg
-  Common.RCValidClasses cfg -> DODC.RCValidClasses (castClassVariantMap <$> cfg)
+  Common.DLValidClasses cfg -> DVC.DLValidClasses cfg
+  Common.RCValidClasses cfg -> DVC.RCValidClasses (castClassVariantMap <$> cfg)
 
-castClassVariantMap :: Common.VehicleClassVariantMap -> DODC.VehicleClassVariantMap
+castClassVariantMap :: Common.VehicleClassVariantMap -> DVC.VehicleClassVariantMap
 castClassVariantMap Common.VehicleClassVariantMap {..} =
-  DODC.VehicleClassVariantMap
+  DVC.VehicleClassVariantMap
     { vehicleVariant = castVehicleVariant vehicleVariant,
+      vehicleModel = Just vehicleModel,
       ..
     }
 
@@ -534,54 +541,73 @@ castVehicleVariant = \case
   Common.TAXI -> DVeh.TAXI
   Common.TAXI_PLUS -> DVeh.TAXI_PLUS
 
-castVehicleClassCheckType :: Common.VehicleClassCheckType -> DODC.VehicleClassCheckType
+castVehicleClassCheckType :: Common.VehicleClassCheckType -> DVC.VehicleClassCheckType
 castVehicleClassCheckType = \case
-  Common.Infix -> DODC.Infix
-  Common.Prefix -> DODC.Prefix
-  Common.Suffix -> DODC.Suffix
+  Common.Infix -> DVC.Infix
+  Common.Prefix -> DVC.Prefix
+  Common.Suffix -> DVC.Suffix
 
-castDocumentType :: Common.DocumentType -> DODC.DocumentType
+castDocumentType :: Common.DocumentType -> DVC.DocumentType
 castDocumentType = \case
-  Common.RC -> DODC.RC
-  Common.DL -> DODC.DL
+  Common.RC -> DVC.VehicleRegistrationCertificate
+  Common.DL -> DVC.DriverLicense
+
+castCategory :: Common.Category -> DVeh.Category
+castCategory = \case
+  Common.CAR -> DVeh.CAR
+  Common.MOTORCYCLE -> DVeh.MOTORCYCLE
+  Common.TRAIN -> DVeh.TRAIN
+  Common.BUS -> DVeh.BUS
+  Common.FLIGHT -> DVeh.FLIGHT
+  Common.AUTO_CATEGORY -> DVeh.AUTO_CATEGORY
 
 ---------------------------------------------------------------------
-onboardingDocumentConfigCreate ::
+documentVerificationConfigCreate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.DocumentType ->
-  Common.OnboardingDocumentConfigCreateReq ->
+  Common.Category ->
+  Common.DocumentVerificationConfigCreateReq ->
   Flow APISuccess
-onboardingDocumentConfigCreate merchantShortId opCity reqDocumentType req = do
-  -- runRequestValidation Common.validateOnboardingDocumentConfigCreateReq req
+documentVerificationConfigCreate merchantShortId opCity reqDocumentType reqCategory req = do
+  -- runRequestValidation Common.validateDocumentVerificationConfigCreateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let documentType = castDocumentType reqDocumentType
-  mbConfig <- CQODC.findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType
-  whenJust mbConfig $ \_ -> throwError (OnboardingDocumentConfigAlreadyExists merchantOpCityId.getId $ show documentType)
-  newConfig <- buildOnboardingDocumentConfig merchant.id merchantOpCityId documentType req
-  _ <- CQODC.create newConfig
+  let category = castCategory reqCategory
+  mbConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType category
+  whenJust mbConfig $ \_ -> throwError (DocumentVerificationConfigAlreadyExists merchantOpCityId.getId $ show documentType)
+  newConfig <- buildDocumentVerificationConfig merchant.id merchantOpCityId documentType req
+  _ <- CQDVC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
-  CQODC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> onboardingDocumentConfigCreate : " $ show merchant.id <> "documentType : " <> show documentType
+  CQDVC.clearCache merchantOpCityId
+  logTagInfo "dashboard -> documentVerificationConfigCreate : " $ show merchant.id <> "documentType : " <> show documentType
   pure Success
 
-buildOnboardingDocumentConfig ::
+buildDocumentVerificationConfig ::
   MonadTime m =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  DODC.DocumentType ->
-  Common.OnboardingDocumentConfigCreateReq ->
-  m DODC.OnboardingDocumentConfig
-buildOnboardingDocumentConfig merchantId merchantOpCityId documentType Common.OnboardingDocumentConfigCreateReq {..} = do
+  DVC.DocumentType ->
+  Common.DocumentVerificationConfigCreateReq ->
+  m DVC.DocumentVerificationConfig
+buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.DocumentVerificationConfigCreateReq {..} = do
   now <- getCurrentTime
   pure
-    DODC.OnboardingDocumentConfig
+    DVC.DocumentVerificationConfig
       { merchantId = merchantId,
         merchantOperatingCityId = merchantOpCityId,
         vehicleClassCheckType = castVehicleClassCheckType vehicleClassCheckType,
         supportedVehicleClasses = castSupportedVehicleClasses supportedVehicleClasses,
         rcNumberPrefixList = fromMaybe [] rcNumberPrefixList,
+        dependencyDocumentType = [],
+        description = Nothing,
+        disableWarning = Nothing,
+        isDisabled = False,
+        isHidden = False,
+        isMandatory = False,
+        title = "Empty title",
+        vehicleCategory = DVeh.AUTO_CATEGORY,
         updatedAt = now,
         createdAt = now,
         ..
@@ -844,8 +870,8 @@ createMerchantOperatingCity merchantShortId city req = do
   newMerchantServiceConfigs <- mapM (buildMerchantServiceConfig newOperatingCity.id) merchantServiceConfigs
 
   -- onboarding document config
-  onboardingDocumentConfigs <- CQODC.findAllByMerchantOpCityId baseOperatingCityId
-  newOnboardingDocumentConfigs <- mapM (buildNewOnboardingDocumentConfig newOperatingCity.id) onboardingDocumentConfigs
+  documentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId baseOperatingCityId
+  newDocumentVerificationConfigs <- mapM (buildNewDocumentVerificationConfig newOperatingCity.id) documentVerificationConfigs
 
   -- transporter config
   transporterConfig <- CQTC.findByMerchantOpCityId baseOperatingCityId Nothing Nothing >>= fromMaybeM (InvalidRequest "Transporter Config not found")
@@ -869,7 +895,7 @@ createMerchantOperatingCity merchantShortId city req = do
   mapM_ CQMPM.create newMerchantPaymentMethods
   CQMSUC.create newMerchantServiceUsageConfig
   mapM_ CQMSC.create newMerchantServiceConfigs
-  mapM_ CQODC.create newOnboardingDocumentConfigs
+  mapM_ CQDVC.create newDocumentVerificationConfigs
   CQTC.create newTransporterConfig
   whenJust (find (\exophone -> exophone.exophoneType == DExophone.CALL_RIDE) exophones) $ \exophone -> do
     exophone' <- buildNewExophone newOperatingCity.id exophone
@@ -1030,10 +1056,10 @@ createMerchantOperatingCity merchantShortId city req = do
             ..
           }
 
-    buildNewOnboardingDocumentConfig newCityId DODC.OnboardingDocumentConfig {..} = do
+    buildNewDocumentVerificationConfig newCityId DVC.DocumentVerificationConfig {..} = do
       now <- getCurrentTime
       return $
-        DODC.OnboardingDocumentConfig
+        DVC.DocumentVerificationConfig
           { merchantOperatingCityId = newCityId,
             rcNumberPrefixList = fromMaybe rcNumberPrefixList req.rcNumberPrefixList,
             createdAt = now,
@@ -1057,6 +1083,7 @@ data CSVRow = CSVRow
     vehicleVariant :: Text,
     manufacturer :: Text,
     manufacturerModel :: Text,
+    vehicleModel :: Text,
     reviewRequired :: Text
   }
 
@@ -1069,6 +1096,7 @@ instance FromNamedRecord CSVRow where
       <*> r .: "manufacturer"
       <*> r .: "manufacturer_model"
       <*> r .: "review_required"
+      <*> r .: "vehicle_model"
 
 updateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> Context.City -> Common.UpdateOnboardingVehicleVariantMappingReq -> Flow APISuccess
 updateOnboardingVehicleVariantMapping merchantShortId opCity req = do
@@ -1077,9 +1105,9 @@ updateOnboardingVehicleVariantMapping merchantShortId opCity req = do
   logTagInfo "Updating onboarding vehicle variant mapping for merchant: " (show merchant.id <> " and city: " <> show opCity)
   configs <- readCsv req.file
   logTagInfo "Read file: " (show configs)
-  CQODC.updateSupportedVehicleClassesJSON merchantOpCity.id (DODC.RCValidClasses configs)
+  CQDVC.updateSupportedVehicleClassesJSON merchantOpCity.id (DVC.RCValidClasses configs)
   logTagInfo "Read file Done" ""
-  CQODC.clearCache merchantOpCity.id
+  CQDVC.clearCache merchantOpCity.id
   return Success
   where
     readCsv csvFile = do
@@ -1088,7 +1116,7 @@ updateOnboardingVehicleVariantMapping merchantShortId opCity req = do
         Left err -> throwError (InvalidRequest $ show err)
         Right (_, v) -> V.imapM makeConfig v >>= (pure . V.toList)
 
-    makeConfig :: Int -> CSVRow -> Flow DODC.VehicleClassVariantMap
+    makeConfig :: Int -> CSVRow -> Flow DVC.VehicleClassVariantMap
     makeConfig idx row = do
       let cleanField = replaceEmpty . T.toLower . T.strip
           replaceEmpty = \case
@@ -1104,13 +1132,15 @@ updateOnboardingVehicleVariantMapping merchantShortId opCity req = do
             _ -> False
       vehicleVariant <- readMaybe (T.unpack row.vehicleVariant) & fromMaybeM (InvalidRequest $ "Invalid vehicle variant: " <> show row.vehicleVariant <> " at row: " <> show idx)
       vehicleClass <- cleanField row.vehicleClass & fromMaybeM (InvalidRequest $ "Vehicle class cannot be empty or without constraint: " <> show row.vehicleClass <> " at row: " <> show idx)
+      vehicleModel <- cleanField row.vehicleModel & fromMaybeM (InvalidRequest $ "Vehicle Model cannot be empty or without constraint: " <> show row.vehicleModel <> " at row: " <> show idx)
       return $
-        DODC.VehicleClassVariantMap
+        DVC.VehicleClassVariantMap
           { vehicleClass,
             vehicleCapacity = cleanField row.vehicleCapacity >>= readMaybe . T.unpack,
             vehicleVariant,
             manufacturer = cleanField row.manufacturer,
             manufacturerModel = cleanField row.manufacturerModel,
             reviewRequired = cleanField row.reviewRequired <&> (mapToBool . T.toLower),
+            vehicleModel = Just vehicleModel,
             bodyType = Nothing
           }

@@ -115,7 +115,10 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
     registerDL :: Id Driver.Driver -> Registration.RegisterDLReq -> Euler.EulerClient APISuccess,
     registerRC :: Id Driver.Driver -> Registration.RegisterRCReq -> Euler.EulerClient APISuccess,
     generateAadhaarOtp :: Id Driver.Driver -> Registration.GenerateAadhaarOtpReq -> Euler.EulerClient Registration.GenerateAadhaarOtpRes,
-    verifyAadhaarOtp :: Id Driver.Driver -> Registration.VerifyAadhaarOtpReq -> Euler.EulerClient Registration.VerifyAadhaarOtpRes
+    verifyAadhaarOtp :: Id Driver.Driver -> Registration.VerifyAadhaarOtpReq -> Euler.EulerClient Registration.VerifyAadhaarOtpRes,
+    underReviewDriversList :: Maybe Int -> Maybe Int -> Euler.EulerClient Registration.UnderReviewDriversListResponse,
+    driverDocumentInfo :: Id Driver.Driver -> Euler.EulerClient [Registration.DriverDocument],
+    updateDocument :: Id Driver.Image -> Registration.UpdateDocumentRequest -> Euler.EulerClient APISuccess
   }
 
 data DriversAPIs = DriversAPIs
@@ -151,9 +154,9 @@ data MerchantAPIs = MerchantAPIs
     driverPoolConfigCreate :: Meters -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigCreateReq -> Euler.EulerClient APISuccess,
     driverIntelligentPoolConfig :: Euler.EulerClient Merchant.DriverIntelligentPoolConfigRes,
     driverIntelligentPoolConfigUpdate :: Merchant.DriverIntelligentPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
-    onboardingDocumentConfig :: Maybe Merchant.DocumentType -> Euler.EulerClient Merchant.OnboardingDocumentConfigRes,
-    onboardingDocumentConfigUpdate :: Merchant.DocumentType -> Merchant.OnboardingDocumentConfigUpdateReq -> Euler.EulerClient APISuccess,
-    onboardingDocumentConfigCreate :: Merchant.DocumentType -> Merchant.OnboardingDocumentConfigCreateReq -> Euler.EulerClient APISuccess,
+    documentVerificationConfig :: Maybe Merchant.DocumentType -> Maybe Common.Category -> Euler.EulerClient Merchant.DocumentVerificationConfigRes,
+    documentVerificationConfigUpdate :: Merchant.DocumentType -> Common.Category -> Merchant.DocumentVerificationConfigUpdateReq -> Euler.EulerClient APISuccess,
+    documentVerificationConfigCreate :: Merchant.DocumentType -> Common.Category -> Merchant.DocumentVerificationConfigCreateReq -> Euler.EulerClient APISuccess,
     serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
     mapsServiceConfigUpdate :: Merchant.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
@@ -322,7 +325,10 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> registerDL
       :<|> registerRC
       :<|> generateAadhaarOtp
-      :<|> verifyAadhaarOtp = driverRegistrationClient
+      :<|> verifyAadhaarOtp
+      :<|> underReviewDriversList
+      :<|> driverDocumentInfo
+      :<|> updateDocument = driverRegistrationClient
 
     rideList
       :<|> multipleRideEnd
@@ -344,9 +350,9 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> driverPoolConfigCreate
       :<|> driverIntelligentPoolConfig
       :<|> driverIntelligentPoolConfigUpdate
-      :<|> onboardingDocumentConfig
-      :<|> onboardingDocumentConfigUpdate
-      :<|> onboardingDocumentConfigCreate
+      :<|> documentVerificationConfig
+      :<|> documentVerificationConfigUpdate
+      :<|> documentVerificationConfigCreate
       :<|> serviceUsageConfig
       :<|> mapsServiceConfigUpdate
       :<|> mapsServiceUsageConfigUpdate

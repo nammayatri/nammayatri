@@ -1,0 +1,22 @@
+CREATE TABLE atlas_driver_offer_bpp.document_verification_config ();
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN check_expiry boolean NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN check_extraction boolean NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN dependency_document_type text[] NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN description text ;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN disable_warning text ;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN document_type text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_disabled boolean NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_hidden boolean NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_mandatory boolean NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN max_retry_count integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN rc_number_prefix_list text[] NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN supported_vehicle_classes_json json NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN title text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN vehicle_category text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN vehicle_class_check_type text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD PRIMARY KEY ( document_type, merchant_operating_city_id, vehicle_category);

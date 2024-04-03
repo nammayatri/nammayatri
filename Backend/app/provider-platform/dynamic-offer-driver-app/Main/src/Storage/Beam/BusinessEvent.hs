@@ -17,7 +17,7 @@ module Storage.Beam.BusinessEvent where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.BusinessEvent as Domain
-import Domain.Types.Vehicle.Variant (Variant)
+import Domain.Types.Vehicle (Variant)
 import Kernel.Prelude
 import Tools.Beam.UtilsTH
 

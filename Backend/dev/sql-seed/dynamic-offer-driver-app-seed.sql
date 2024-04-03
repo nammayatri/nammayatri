@@ -165,18 +165,6 @@ ALTER TABLE atlas_driver_offer_bpp.registration_token OWNER TO atlas_driver_offe
 CREATE INDEX idx_16435_entity_id ON atlas_driver_offer_bpp.registration_token USING btree (entity_id);
 CREATE INDEX idx_16435_entity_type ON atlas_driver_offer_bpp.registration_token USING btree (entity_type);
 
-CREATE TABLE atlas_driver_offer_bpp.driver_information (
-driver_id character(36) NOT NULL,
-active boolean DEFAULT false NOT NULL,
-on_ride boolean DEFAULT false NOT NULL,
-created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-enabled boolean NOT NULL
-,CONSTRAINT  driver_information_pkey PRIMARY KEY (driver_id)
-,CONSTRAINT  driver_information_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES atlas_driver_offer_bpp.person(id)
-);
-ALTER TABLE atlas_driver_offer_bpp.driver_information OWNER TO atlas_driver_offer_bpp_user;
-
 CREATE TABLE atlas_driver_offer_bpp.driver_location (
 driver_id character(36) NOT NULL,
 lat double precision NOT NULL,
@@ -221,26 +209,5 @@ fare double precision NOT NULL
 ,CONSTRAINT  fare_policy_per_extra_km_rate_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES atlas_driver_offer_bpp.organization(id)
 );
 ALTER TABLE atlas_driver_offer_bpp.fare_policy_per_extra_km_rate OWNER TO atlas_driver_offer_bpp_user;
-
-CREATE TABLE atlas_driver_offer_bpp.vehicle (
-id character(36) NOT NULL,
-capacity bigint,
-category character varying(255),
-make character varying(255),
-model character varying(255) NOT NULL,
-size character varying(255),
-variant character varying(255) NOT NULL,
-color character varying(255) NOT NULL,
-energy_type character varying(255),
-registration_no character varying(255) NOT NULL,
-registration_category character varying(255),
-organization_id character(36),
-created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-,CONSTRAINT  idx_16451_primary PRIMARY KEY (id)
-,CONSTRAINT  unique_registration_no UNIQUE (registration_no)
-);
-ALTER TABLE atlas_driver_offer_bpp.vehicle OWNER TO atlas_driver_offer_bpp_user;
-CREATE INDEX idx_16451_organization_id ON atlas_driver_offer_bpp.vehicle USING btree (organization_id);
 
 

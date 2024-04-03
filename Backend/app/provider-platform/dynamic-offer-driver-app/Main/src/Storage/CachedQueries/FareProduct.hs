@@ -18,7 +18,7 @@ module Storage.CachedQueries.FareProduct where
 import qualified Domain.Types.Common as DTC
 import Domain.Types.FareProduct
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
-import Domain.Types.Vehicle.Variant (Variant (..))
+import Domain.Types.Vehicle (Variant (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis

@@ -349,36 +349,36 @@ instance IsBaseError FareParametersError where
     FareParametersNotFound fareParamsId -> Just $ "FareParameters with fareParametersId \"" <> show fareParamsId <> "\" not found."
     FareParametersDoNotExist rideId -> Just $ "FareParameters for ride \"" <> show rideId <> "\" do not exist."
 
-data OnboardingDocumentConfigError
-  = OnboardingDocumentConfigNotFound Text Text
-  | OnboardingDocumentConfigDoesNotExist Text Text
-  | OnboardingDocumentConfigAlreadyExists Text Text
+data DocumentVerificationConfigError
+  = DocumentVerificationConfigNotFound Text Text
+  | DocumentVerificationConfigDoesNotExist Text Text
+  | DocumentVerificationConfigAlreadyExists Text Text
   deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'HTTPException ''OnboardingDocumentConfigError
+instanceExceptionWithParent 'HTTPException ''DocumentVerificationConfigError
 
-instance IsBaseError OnboardingDocumentConfigError where
-  toMessage (OnboardingDocumentConfigNotFound merchantOperatingCityId doctype) =
+instance IsBaseError DocumentVerificationConfigError where
+  toMessage (DocumentVerificationConfigNotFound merchantOperatingCityId doctype) =
     Just $
-      "OnboardingDocumentConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and docType \"" <> show doctype <> "\" not found."
-  toMessage (OnboardingDocumentConfigDoesNotExist merchantOperatingCityId doctype) =
+      "DocumentVerificationConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and docType \"" <> show doctype <> "\" not found."
+  toMessage (DocumentVerificationConfigDoesNotExist merchantOperatingCityId doctype) =
     Just $
-      "OnboardingDocumentConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and docType \"" <> show doctype <> "\" does not exist."
-  toMessage (OnboardingDocumentConfigAlreadyExists merchantOperatingCityId doctype) =
+      "DocumentVerificationConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and docType \"" <> show doctype <> "\" does not exist."
+  toMessage (DocumentVerificationConfigAlreadyExists merchantOperatingCityId doctype) =
     Just $
-      "OnboardingDocumentConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and docType \"" <> show doctype <> "\" already exists."
+      "DocumentVerificationConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and docType \"" <> show doctype <> "\" already exists."
 
-instance IsHTTPError OnboardingDocumentConfigError where
+instance IsHTTPError DocumentVerificationConfigError where
   toErrorCode = \case
-    OnboardingDocumentConfigNotFound {} -> "ONBOARDING_DOCUMENT_CONFIG_NOT_FOUND"
-    OnboardingDocumentConfigDoesNotExist {} -> "ONBOARDING_DOCUMENT_CONFIG_DOES_NOT_EXIST"
-    OnboardingDocumentConfigAlreadyExists {} -> "ONBOARDING_DOCUMENT_CONFIG_ALREADY_EXISTS"
+    DocumentVerificationConfigNotFound {} -> "ONBOARDING_DOCUMENT_CONFIG_NOT_FOUND"
+    DocumentVerificationConfigDoesNotExist {} -> "ONBOARDING_DOCUMENT_CONFIG_DOES_NOT_EXIST"
+    DocumentVerificationConfigAlreadyExists {} -> "ONBOARDING_DOCUMENT_CONFIG_ALREADY_EXISTS"
   toHttpCode = \case
-    OnboardingDocumentConfigNotFound {} -> E500
-    OnboardingDocumentConfigDoesNotExist {} -> E400
-    OnboardingDocumentConfigAlreadyExists {} -> E400
+    DocumentVerificationConfigNotFound {} -> E500
+    DocumentVerificationConfigDoesNotExist {} -> E400
+    DocumentVerificationConfigAlreadyExists {} -> E400
 
-instance IsAPIError OnboardingDocumentConfigError
+instance IsAPIError DocumentVerificationConfigError
 
 newtype IssueReportError
   = IssueReportDoNotExist Text

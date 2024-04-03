@@ -145,7 +145,6 @@ import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
-import Kernel.Utils.GenericPretty (PrettyShow)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
@@ -321,7 +320,7 @@ newtype GetNearbySearchRequestsRes = GetNearbySearchRequestsRes
   { searchRequestsForDriver :: [SearchRequestForDriverAPIEntity]
   }
   deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, PrettyShow)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverOfferReq = DriverOfferReq
   { offeredFare :: Maybe Money,
@@ -490,7 +489,7 @@ setActivity (personId, _merchantId, merchantOpCityId) isActive mode = do
     unless (driverInfo.enabled) $ throwError DriverAccountDisabled
     unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
-  void $ QDriverInformation.updateActivity driverId isActive (mode <|> Just DriverInfo.OFFLINE)
+  void $ QDriverInformation.updateActivity isActive (mode <|> Just DriverInfo.OFFLINE) driverId
   pure APISuccess.Success
 
 activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> m APISuccess.APISuccess
@@ -633,7 +632,7 @@ buildDriverEntityRes (person, driverInfo) = do
         lastName = person.lastName,
         mobileNumber = decMobNum,
         rating,
-        linkedVehicle = SV.makeVehicleAPIEntity <$> vehicleMB,
+        linkedVehicle = makeVehicleAPIEntity <$> vehicleMB,
         active = driverInfo.active,
         onRide = driverInfo.onRide,
         enabled = driverInfo.enabled,
@@ -718,7 +717,7 @@ updateDriver (personId, _, merchantOpCityId) req = do
 
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
   QPerson.updatePersonRec personId updPerson
-  QDriverInformation.updateDriverInformation person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi updDriverInfo.canSwitchToRental updDriverInfo.availableUpiApps
+  QDriverInformation.updateDriverInformation updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi updDriverInfo.canSwitchToRental updDriverInfo.availableUpiApps person.id
   driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (updPerson, updDriverInfo)
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId
@@ -905,7 +904,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
     thereAreActiveQuotes = do
       driverUnlockDelay <- asks (.driverUnlockDelay)
       activeQuotes <- QDrQt.findActiveQuotesByDriverId driverId driverUnlockDelay
-      logPretty DEBUG ("active quotes for driverId = " <> driverId.getId) activeQuotes
+      logDebug $ "active quotes for driverId = " <> driverId.getId <> show activeQuotes
       pure $ not $ null activeQuotes
     getQuoteLimit dist vehicleVariant tripCategory txnId = do
       driverPoolCfg <- DP.getDriverPoolConfig merchantOpCityId vehicleVariant tripCategory dist (Just txnId) (Just "transactionId")

@@ -76,10 +76,10 @@ addReferral (personId, _, _) req = do
     then return AlreadyReferred
     else do
       dr <- B.runInReplica (QDR.findByRefferalCode $ Id req.value) >>= fromMaybeM (InvalidReferralCode req.value)
-      DriverInformation.addReferralCode personId req.value dr.driverId
+      DriverInformation.addReferralCode (Just req.value) (Just dr.driverId) personId
       referredByDriver <- B.runInReplica (DriverInformation.findById dr.driverId) >>= fromMaybeM DriverInfoNotFound
       let newtotalRef = fromMaybe 0 referredByDriver.totalReferred + 1
-      DriverInformation.incrementReferralCountByPersonId dr.driverId newtotalRef
+      DriverInformation.incrementReferralCountByPersonId (Just newtotalRef) dr.driverId
       return Success
 
 getReferredDrivers :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow GetReferredDriverRes

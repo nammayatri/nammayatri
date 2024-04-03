@@ -21,9 +21,6 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_scheduled boolean;
 -- atlas_driver_offer_bpp.drop_not_null_if_exists('atlas_driver_offer_bpp', 'booking', 'estimated_distance');
 -- atlas_driver_offer_bpp.drop_not_null_if_exists('atlas_driver_offer_bpp', 'booking', 'estimated_duration');
 
--- DRIVER INFORMATION --
-ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN can_switch_to_rental boolean;
-
 -- DRIVER QUOTE --
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN trip_category text;
 -- atlas_driver_offer_bpp.drop_not_null_if_exists('atlas_driver_offer_bpp', 'driver_quote', 'distance');

@@ -175,6 +175,7 @@ library
       Domain.Action.UI.DriverOnboarding.Referral
       Domain.Action.UI.DriverOnboarding.Status
       Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
+      Domain.Action.UI.DriverOnboardingV2
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
       Domain.Action.UI.ExotelEndRide
@@ -224,7 +225,6 @@ library
       Domain.Types.Driver.GoHomeFeature.DriverHomeLocation
       Domain.Types.DriverBlockReason
       Domain.Types.DriverFee
-      Domain.Types.DriverInformation
       Domain.Types.DriverLocation
       Domain.Types.DriverPlan
       Domain.Types.DriverQuote
@@ -261,7 +261,6 @@ library
       Domain.Types.Merchant.MerchantPaymentMethod
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
-      Domain.Types.Merchant.OnboardingDocumentConfig
       Domain.Types.Merchant.Overlay
       Domain.Types.Merchant.TransporterConfig
       Domain.Types.Message.Message
@@ -283,8 +282,6 @@ library
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
       Domain.Types.UtilsTH
-      Domain.Types.Vehicle
-      Domain.Types.Vehicle.Variant
       Domain.Types.WhiteListOrg
       Environment
       Lib.DriverCoins.Coins
@@ -359,7 +356,6 @@ library
       Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation
       Storage.Beam.DriverBlockReason
       Storage.Beam.DriverFee
-      Storage.Beam.DriverInformation
       Storage.Beam.DriverPlan
       Storage.Beam.DriverQuote
       Storage.Beam.DriverStats
@@ -402,7 +398,6 @@ library
       Storage.Beam.Merchant.MerchantPaymentMethod
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
-      Storage.Beam.Merchant.OnboardingDocumentConfig
       Storage.Beam.Merchant.Overlay
       Storage.Beam.Merchant.TransporterConfig
       Storage.Beam.Message.Message
@@ -422,11 +417,11 @@ library
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
       Storage.Beam.SystemConfigs
-      Storage.Beam.Vehicle
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.BapMetadata
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
+      Storage.CachedQueries.DocumentVerificationConfig
       Storage.CachedQueries.Driver.DriverImage
       Storage.CachedQueries.Driver.GoHomeRequest
       Storage.CachedQueries.DriverBlockReason
@@ -449,7 +444,6 @@ library
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.Merchant.MerchantState
-      Storage.CachedQueries.Merchant.OnboardingDocumentConfig
       Storage.CachedQueries.Merchant.Overlay
       Storage.CachedQueries.Merchant.TransporterConfig
       Storage.CachedQueries.Plan
@@ -475,13 +469,14 @@ library
       Storage.Queries.Coins.CoinsConfig
       Storage.Queries.Coins.PurchaseHistory
       Storage.Queries.DailyStatsExtra
+      Storage.Queries.DocumentVerificationConfigExtra
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
       Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation
       Storage.Queries.DriverBlockReason
       Storage.Queries.DriverFee
-      Storage.Queries.DriverInformation
       Storage.Queries.DriverInformation.Internal
+      Storage.Queries.DriverInformationExtra
       Storage.Queries.DriverLicenseExtra
       Storage.Queries.DriverLocation.Internal
       Storage.Queries.DriverPlan
@@ -510,7 +505,6 @@ library
       Storage.Queries.Geometry
       Storage.Queries.GoHomeConfig
       Storage.Queries.ImageExtra
-      Storage.Queries.Instances.DriverInformation
       Storage.Queries.Instances.Person
       Storage.Queries.Invoice
       Storage.Queries.KioskLocation
@@ -527,7 +521,6 @@ library
       Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
-      Storage.Queries.Merchant.OnboardingDocumentConfig
       Storage.Queries.Merchant.Overlay
       Storage.Queries.Merchant.TransporterConfig
       Storage.Queries.Message.Message
@@ -553,12 +546,13 @@ library
       Storage.Queries.SearchTry
       Storage.Queries.Status
       Storage.Queries.Transformers.CancellationReason
+      Storage.Queries.Transformers.DocumentVerificationConfig
       Storage.Queries.Transformers.QuestionInformation
       Storage.Queries.Transformers.ReelsData
       Storage.Queries.Transformers.Ride
       Storage.Queries.TranslationsExtra
-      Storage.Queries.Vehicle
       Storage.Queries.Vehicle.Internal
+      Storage.Queries.VehicleExtra
       Storage.Queries.VehicleRegistrationCertificateExtra
       Storage.Queries.WhiteListOrg
       Tools.AadhaarVerification
@@ -581,9 +575,11 @@ library
       Tools.Verification
       Tools.Whatsapp
       API.Action.UI.Cac
+      API.Action.UI.DriverOnboardingV2
       API.Action.UI.LmsModule
       API.Action.UI.Reels
       API.Action.UI.SpecialLocation
+      API.Types.UI.DriverOnboardingV2
       API.Types.UI.LmsModule
       API.Types.UI.Reels
       Domain.Types.AadhaarOtpReq
@@ -594,6 +590,8 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.DailyStats
+      Domain.Types.DocumentVerificationConfig
+      Domain.Types.DriverInformation
       Domain.Types.DriverLicense
       Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPoolConfig
@@ -620,7 +618,13 @@ library
       Domain.Types.SubscriptionConfig
       Domain.Types.Translations
       Domain.Types.ValueAddNP
+      Domain.Types.Vehicle
+      Domain.Types.VehicleFitnessCertificate
+      Domain.Types.VehicleInsurance
+      Domain.Types.VehiclePermit
+      Domain.Types.VehiclePUC
       Domain.Types.VehicleRegistrationCertificate
+      Domain.Types.VehicleServiceTier
       Domain.Types.Volunteer
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
@@ -630,6 +634,8 @@ library
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.DailyStats
+      Storage.Beam.DocumentVerificationConfig
+      Storage.Beam.DriverInformation
       Storage.Beam.DriverLicense
       Storage.Beam.DriverModuleCompletion
       Storage.Beam.DriverPoolConfig
@@ -656,7 +662,13 @@ library
       Storage.Beam.SubscriptionConfig
       Storage.Beam.Translations
       Storage.Beam.ValueAddNP
+      Storage.Beam.Vehicle
+      Storage.Beam.VehicleFitnessCertificate
+      Storage.Beam.VehicleInsurance
+      Storage.Beam.VehiclePermit
+      Storage.Beam.VehiclePUC
       Storage.Beam.VehicleRegistrationCertificate
+      Storage.Beam.VehicleServiceTier
       Storage.Beam.Volunteer
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
@@ -666,6 +678,8 @@ library
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.DailyStats
+      Storage.Queries.DocumentVerificationConfig
+      Storage.Queries.DriverInformation
       Storage.Queries.DriverLicense
       Storage.Queries.DriverModuleCompletion
       Storage.Queries.DriverPoolConfig
@@ -685,6 +699,8 @@ library
       Storage.Queries.ModuleCompletionInformation
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.DailyStats
+      Storage.Queries.OrphanInstances.DocumentVerificationConfig
+      Storage.Queries.OrphanInstances.DriverInformation
       Storage.Queries.OrphanInstances.DriverLicense
       Storage.Queries.OrphanInstances.DriverRCAssociation
       Storage.Queries.OrphanInstances.DriverReferral
@@ -693,6 +709,7 @@ library
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.Translations
+      Storage.Queries.OrphanInstances.Vehicle
       Storage.Queries.OrphanInstances.VehicleRegistrationCertificate
       Storage.Queries.OrphanInstances.Volunteer
       Storage.Queries.PlanTranslation
@@ -704,7 +721,13 @@ library
       Storage.Queries.SubscriptionConfig
       Storage.Queries.Translations
       Storage.Queries.ValueAddNP
+      Storage.Queries.Vehicle
+      Storage.Queries.VehicleFitnessCertificate
+      Storage.Queries.VehicleInsurance
+      Storage.Queries.VehiclePermit
+      Storage.Queries.VehiclePUC
       Storage.Queries.VehicleRegistrationCertificate
+      Storage.Queries.VehicleServiceTier
       Storage.Queries.Volunteer
   other-modules:
       Paths_dynamic_offer_driver_app

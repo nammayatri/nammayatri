@@ -19,7 +19,7 @@ import Domain.Types.Booking
 import Domain.Types.BusinessEvent
 import Domain.Types.Person (Driver)
 import Domain.Types.Ride
-import Domain.Types.Vehicle.Variant (Variant)
+import Domain.Types.Vehicle (Variant)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common

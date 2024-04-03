@@ -824,12 +824,12 @@ addVehicle merchantShortId opCity reqDriverId req = do
   runVerifyRCFlow personId merchant merchantOpCityId req Nothing
   checkIfVehicleCreatedInRC <- QVehicle.findById personId
   unless (isJust checkIfVehicleCreatedInRC) $ do
-    vehicle <- buildVehicle merchantId personId req
+    vehicle <- buildVehicle merchantId merchantOpCityId personId req
     -- Esq.runTransaction $ do
     QVehicle.create vehicle
     transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     when (vehicle.variant == DVeh.SUV) $
-      QDriverInfo.updateDriverDowngradeForSuv personId transporterConfig.canSuvDowngradeToTaxi transporterConfig.canSuvDowngradeToHatchback
+      QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
 
   logTagInfo "dashboard -> addVehicle : " (show personId)
   pure Success
@@ -1143,17 +1143,19 @@ runVerifyRCFlow personId merchant merchantOpCityId req multipleRC = do
             imageId = "",
             operatingCity = "Bangalore", -- TODO: this needs to be fixed properly
             dateOfRegistration = Nothing,
+            vehicleCategory = Nothing,
             multipleRC = multipleRC
           }
   void $ DomainRC.verifyRC True (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq (Just $ castVehicleVariant req.variant)
 
-buildVehicle :: MonadFlow m => Id DM.Merchant -> Id DP.Person -> Common.AddVehicleReq -> m DVeh.Vehicle
-buildVehicle merchantId personId req = do
+buildVehicle :: MonadFlow m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DP.Person -> Common.AddVehicleReq -> m DVeh.Vehicle
+buildVehicle merchantId merchantOperatingCityId personId req = do
   now <- getCurrentTime
   return $
     DVeh.Vehicle
       { driverId = personId,
         merchantId = merchantId,
+        merchantOperatingCityId = Just merchantOperatingCityId,
         variant = castVehicleVariant req.variant,
         model = req.model,
         color = req.colour,
@@ -1166,6 +1168,9 @@ buildVehicle merchantId personId req = do
         energyType = req.energyType,
         registrationCategory = Nothing,
         vehicleClass = req.vehicleClass,
+        airConditioned = Nothing,
+        luggageCapacity = Nothing,
+        vehicleRating = Nothing,
         createdAt = now,
         updatedAt = now
       }
@@ -1282,7 +1287,7 @@ unlinkAadhaar merchantShortId opCity driverId = do
   _ <- B.runInReplica $ AV.findByDriverId personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
 
   AV.deleteByDriverId personId
-  QDriverInfo.updateAadhaarVerifiedState driverId_ False
+  QDriverInfo.updateAadhaarVerifiedState False driverId_
   unless (transporterConfig.aadhaarVerificationRequired) $ QDriverInfo.updateEnabledVerifiedState driverId_ False (Just False)
   logTagInfo "dashboard -> unlinkAadhaar : " (show personId)
   pure Success
@@ -1455,7 +1460,7 @@ clearOnRideStuckDrivers merchantShortId _ dbSyncTime = do
   driverIds <-
     mapM
       ( \dI -> do
-          QDriverInfo.updateOnRide (cast dI.driverInfo.driverId) False
+          QDriverInfo.updateOnRide False (cast dI.driverInfo.driverId)
           void $ LF.rideDetails dI.ride.id SRide.CANCELLED merchant.id dI.ride.driverId dI.ride.fromLocation.lat dI.ride.fromLocation.lon
           return (cast dI.driverInfo.driverId)
       )
@@ -1549,7 +1554,7 @@ updateByPhoneNumber merchantShortId _ phoneNumber req = do
     Nothing -> do
       aadhaarEntity <- AVD.mkAadhaar driver.id req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) Nothing True Nothing
       AV.create aadhaarEntity
-  QDriverInfo.updateAadhaarVerifiedState (cast driver.id) True
+  QDriverInfo.updateAadhaarVerifiedState True (cast driver.id)
   pure Success
 
 fleetRemoveVehicle :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Flow APISuccess
@@ -1909,7 +1914,7 @@ updateVehicleVariant _ _ req = do
   mVehicle <- QVehicle.findByRegistrationNo rcNumber
   RCQuery.updateVehicleVariant vehicleRC.id (Just variant) Nothing Nothing
   whenJust mVehicle $ \vehicle -> do
-    QVehicle.updateVehicleVariant vehicle.driverId variant
+    QVehicle.updateVehicleVariant variant vehicle.driverId
   pure Success
 
 bulkReviewRCVariant :: ShortId DM.Merchant -> Context.City -> [Common.ReviewRCVariantReq] -> Flow [Common.ReviewRCVariantRes]
@@ -1931,4 +1936,4 @@ bulkReviewRCVariant _ _ req = do
       RCQuery.updateVehicleVariant vehicleRC.id mbVariant rcReq.markReviewed (not <$> rcReq.markReviewed)
       whenJust mVehicle $ \vehicle -> do
         whenJust mbVariant $ \variant -> do
-          QVehicle.updateVehicleVariant vehicle.driverId variant
+          QVehicle.updateVehicleVariant variant vehicle.driverId

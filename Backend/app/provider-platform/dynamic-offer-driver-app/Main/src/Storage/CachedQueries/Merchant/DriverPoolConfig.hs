@@ -25,7 +25,7 @@ where
 
 import Domain.Types.DriverPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id

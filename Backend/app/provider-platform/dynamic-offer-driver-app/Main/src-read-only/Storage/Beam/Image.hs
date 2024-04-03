@@ -6,7 +6,7 @@
 module Storage.Beam.Image where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.Image
+import qualified Domain.Types.DocumentVerificationConfig
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -16,7 +16,7 @@ import qualified Tools.Error
 data ImageT f = ImageT
   { failureReason :: B.C f (Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError),
     id :: B.C f Kernel.Prelude.Text,
-    imageType :: B.C f Domain.Types.Image.ImageType,
+    imageType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
     isValid :: B.C f Kernel.Prelude.Bool,
     merchantId :: B.C f Kernel.Prelude.Text,
     personId :: B.C f Kernel.Prelude.Text,

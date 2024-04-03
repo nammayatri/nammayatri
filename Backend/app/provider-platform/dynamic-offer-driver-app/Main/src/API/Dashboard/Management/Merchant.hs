@@ -36,9 +36,9 @@ type API =
            :<|> Common.DriverPoolConfigCreateAPI
            :<|> Common.DriverIntelligentPoolConfigAPI
            :<|> Common.DriverIntelligentPoolConfigUpdateAPI
-           :<|> Common.OnboardingDocumentConfigAPI
-           :<|> Common.OnboardingDocumentConfigUpdateAPI
-           :<|> Common.OnboardingDocumentConfigCreateAPI
+           :<|> Common.DocumentVerificationConfigAPI
+           :<|> Common.DocumentVerificationConfigUpdateAPI
+           :<|> Common.DocumentVerificationConfigCreateAPI
            :<|> Common.ServiceUsageConfigAPI
            :<|> Common.MapsServiceConfigUpdateAPI
            :<|> Common.MapsServiceUsageConfigUpdateAPI
@@ -64,9 +64,9 @@ handler merchantId city =
     :<|> driverPoolConfigCreate merchantId city
     :<|> driverIntelligentPoolConfig merchantId city
     :<|> driverIntelligentPoolConfigUpdate merchantId city
-    :<|> onboardingDocumentConfig merchantId city
-    :<|> onboardingDocumentConfigUpdate merchantId city
-    :<|> onboardingDocumentConfigCreate merchantId city
+    :<|> documentVerificationConfig merchantId city
+    :<|> documentVerificationConfigUpdate merchantId city
+    :<|> documentVerificationConfigCreate merchantId city
     :<|> serviceUsageConfig merchantId city
     :<|> mapsServiceConfigUpdate merchantId city
     :<|> mapsServiceUsageConfigUpdate merchantId city
@@ -148,28 +148,31 @@ driverIntelligentPoolConfigUpdate ::
   FlowHandler APISuccess
 driverIntelligentPoolConfigUpdate merchantShortId opCity = withFlowHandlerAPI . DMerchant.driverIntelligentPoolConfigUpdate merchantShortId opCity
 
-onboardingDocumentConfig ::
+documentVerificationConfig ::
   ShortId DM.Merchant ->
   Context.City ->
   Maybe Common.DocumentType ->
-  FlowHandler Common.OnboardingDocumentConfigRes
-onboardingDocumentConfig merchantShortId opCity = withFlowHandlerAPI . DMerchant.onboardingDocumentConfig merchantShortId opCity
+  Maybe Common.Category ->
+  FlowHandler Common.DocumentVerificationConfigRes
+documentVerificationConfig merchantShortId opCity category = withFlowHandlerAPI . DMerchant.documentVerificationConfig merchantShortId opCity category
 
-onboardingDocumentConfigUpdate ::
+documentVerificationConfigUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.DocumentType ->
-  Common.OnboardingDocumentConfigUpdateReq ->
+  Common.Category ->
+  Common.DocumentVerificationConfigUpdateReq ->
   FlowHandler APISuccess
-onboardingDocumentConfigUpdate merchantShortId opCity documentType = withFlowHandlerAPI . DMerchant.onboardingDocumentConfigUpdate merchantShortId opCity documentType
+documentVerificationConfigUpdate merchantShortId opCity documentType category = withFlowHandlerAPI . DMerchant.documentVerificationConfigUpdate merchantShortId opCity documentType category
 
-onboardingDocumentConfigCreate ::
+documentVerificationConfigCreate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.DocumentType ->
-  Common.OnboardingDocumentConfigCreateReq ->
+  Common.Category ->
+  Common.DocumentVerificationConfigCreateReq ->
   FlowHandler APISuccess
-onboardingDocumentConfigCreate merchantShortId opCity documentType = withFlowHandlerAPI . DMerchant.onboardingDocumentConfigCreate merchantShortId opCity documentType
+documentVerificationConfigCreate merchantShortId opCity documentType category = withFlowHandlerAPI . DMerchant.documentVerificationConfigCreate merchantShortId opCity documentType category
 
 serviceUsageConfig ::
   ShortId DM.Merchant ->

@@ -32,7 +32,7 @@ import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyRentalDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
 import Domain.Types.Merchant
-import Domain.Types.Vehicle.Variant
+import Domain.Types.Vehicle
 import Kernel.Prelude as KP
 import Kernel.Types.Cac
 import Kernel.Types.Common

@@ -55,9 +55,9 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.Clickhouse.Ride (getCompletedRidesByDriver, getEarningsByDriver, getEarningsByIds, getRidesByIdAndStatus)
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner, findIdsByFleetOwnerAndVehicle)
 import qualified Storage.Queries.Booking as QBooking
-import Storage.Queries.Instances.DriverInformation ()
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
+import Storage.Queries.OrphanInstances.DriverInformation ()
 import Storage.Queries.OrphanInstances.Ride ()
 import Storage.Queries.RideDetails ()
 import Storage.Queries.RiderDetails ()
