@@ -124,6 +124,7 @@ view push state =
 customHeaderView :: forall w. (Action -> Effect Unit) -> LmsQuizScreenState -> PrestoDOM (Effect Unit) w
 customHeaderView push state =
   let moduleName = maybe "" (\moduleInfo -> moduleInfo ^. _name) state.props.selectedTranslatedModule
+      sw = (screenWidth unit) - 305
   in
   linearLayout
   [ width $ MATCH_PARENT
@@ -152,7 +153,7 @@ customHeaderView push state =
         ] <> (FontStyle.h3 LanguageStyle)
       , linearLayout [ weight 1.0][]
       , linearLayout
-        [ width $ WRAP_CONTENT
+        [ width $ V sw
         , height $ WRAP_CONTENT
         , orientation HORIZONTAL
         , gravity CENTER
@@ -166,6 +167,9 @@ customHeaderView push state =
           ,textView $
            [ text $ getStringFromLocal state.props.selectedLanguage (getKeyAccordingtoSelectedLanguage state.props.selectedLanguage)
            , color Color.blue800
+           , ellipsize true
+           , maxLines 1
+           , width $ V (sw - 19)
            ] <> FontStyle.body1 LanguageStyle
         ]
      ]
