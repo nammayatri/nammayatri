@@ -227,6 +227,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
           ride <- QRide.getActiveByDriverId driverId
           getTravelledDistance ride estimatedDistance
       )
+      transportConfig.recomputeIfPickupDropNotOutsideOfThreshold
       snapToRoad'
   where
     snapToRoadWithService req = do

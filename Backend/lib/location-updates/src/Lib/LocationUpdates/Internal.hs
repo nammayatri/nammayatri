@@ -64,7 +64,8 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     isDistanceCalculationFailed :: Id person -> m Bool,
     updateDistance :: Id person -> HighPrecMeters -> Int -> Int -> m (),
     updateRouteDeviation :: Id person -> [LatLong] -> m Bool,
-    getTravelledDistance :: Id person -> Meters -> m Meters
+    getTravelledDistance :: Id person -> Meters -> m Meters,
+    getRecomputeIfPickupDropNotOutsideOfThreshold :: Bool
   }
 
 --------------------------------------------------------------------------------
@@ -140,7 +141,8 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist pi
   let currentLastTwoPoints = takeLastTwo (toList waypoints)
   Redis.setExp (lastTwoOnRidePointsRedisKey driverId) currentLastTwoPoints 21600 -- 6 hours
   routeDeviation <- updateRouteDeviation driverId (toList modifiedWaypoints)
-  let snapToRoadCallCondition = routeDeviation || pickupDropOutsideThreshold
+  let recomputeIfPickupDropNotOutsideOfThreshold = getRecomputeIfPickupDropNotOutsideOfThreshold
+  let snapToRoadCallCondition = (routeDeviation && recomputeIfPickupDropNotOutsideOfThreshold) || pickupDropOutsideThreshold
   if ending
     then do
       if snapToRoadCallCondition
@@ -216,9 +218,10 @@ mkRideInterpolationHandler ::
   (Id person -> HighPrecMeters -> Int -> Int -> m ()) ->
   (Id person -> [LatLong] -> m Bool) ->
   (Id person -> Meters -> m Meters) ->
+  Bool ->
   (Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
   RideInterpolationHandler person m
-mkRideInterpolationHandler isEndRide updateDistance updateRouteDeviation getTravelledDistance snapToRoadCall =
+mkRideInterpolationHandler isEndRide updateDistance updateRouteDeviation getTravelledDistance getRecomputeIfPickupDropNotOutsideOfThreshold snapToRoadCall =
   RideInterpolationHandler
     { batchSize = 98,
       addPoints = addPointsImplementation,
@@ -236,7 +239,8 @@ mkRideInterpolationHandler isEndRide updateDistance updateRouteDeviation getTrav
       updateRouteDeviation,
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation,
-      getTravelledDistance
+      getTravelledDistance,
+      getRecomputeIfPickupDropNotOutsideOfThreshold
     }
 
 makeWaypointsRedisKey :: Id person -> Text
