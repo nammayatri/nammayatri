@@ -201,7 +201,6 @@ library
       Domain.Types.BlackListOrg
       Domain.Types.Booking
       Domain.Types.Booking.API
-      Domain.Types.Booking.BookingLocation
       Domain.Types.Booking.Type
       Domain.Types.BookingCancellationReason
       Domain.Types.CacType
@@ -254,7 +253,6 @@ library
       Storage.Beam.BecknRequest
       Storage.Beam.BlackListOrg
       Storage.Beam.Booking
-      Storage.Beam.Booking.BookingLocation
       Storage.Beam.BookingCancellationReason
       Storage.Beam.CancellationReason
       Storage.Beam.Common
@@ -318,7 +316,6 @@ library
       Storage.Queries.AppInstallsExtra
       Storage.Queries.BlackListOrg
       Storage.Queries.Booking
-      Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
       Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationReason
@@ -396,6 +393,7 @@ library
       Domain.Types.AadhaarVerification
       Domain.Types.AppInstalls
       Domain.Types.BecknConfig
+      Domain.Types.BookingLocation
       Domain.Types.BppDetails
       Domain.Types.BusinessHour
       Domain.Types.CallbackRequest
@@ -445,6 +443,7 @@ library
       Storage.Beam.AadhaarVerification
       Storage.Beam.AppInstalls
       Storage.Beam.BecknConfig
+      Storage.Beam.BookingLocation
       Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
       Storage.Beam.CallbackRequest
@@ -494,6 +493,7 @@ library
       Storage.Queries.AadhaarVerification
       Storage.Queries.AppInstalls
       Storage.Queries.BecknConfig
+      Storage.Queries.BookingLocation
       Storage.Queries.BppDetails
       Storage.Queries.BusinessHour
       Storage.Queries.CallbackRequest

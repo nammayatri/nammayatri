@@ -1,0 +1,96 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Version: Kernel.Types.Version
+  Price: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  Person: Domain.Types.Person
+  Client: Domain.Types.Client
+  Location: Domain.Types.Location
+  Language: Kernel.External.Maps
+  Currency: Kernel.Utils.Common
+  Money: Kernel.Utils.Common
+  Centesimal: Kernel.Utils.Common
+  LocationAddress: Domain.Types.LocationAddress
+
+BookingLocation:
+  tableName: booking_location
+
+  derives: "Generic, Show, Eq, Kernel.External.Maps.HasCoordinates.HasCoordinates"
+
+  fields:
+    id: Id BookingLocation
+    lat: Double
+    lon: Double
+    address: LocationAddress
+
+  types:
+    BookingLocationAPIEntity:
+      lat: Double
+      lon: Double
+      street: Maybe Text
+      door: Maybe Text
+      city: Maybe Text
+      state: Maybe Text
+      country: Maybe Text
+      building: Maybe Text
+      areaCode: Maybe Text
+      area: Maybe Text
+      ward: Maybe Text
+      placeId: Maybe Text
+
+  beamFields:
+    address:
+      street: Maybe Text
+      door: Maybe Text
+      city: Maybe Text
+      state: Maybe Text
+      country: Maybe Text
+      building: Maybe Text
+      areaCode: Maybe Text
+      area: Maybe Text
+      ward: Maybe Text
+      placeId: Maybe Text
+
+  toTType:
+    street: Domain.Types.LocationAddress.street|I
+    door: Domain.Types.LocationAddress.door|I
+    city: Domain.Types.LocationAddress.city|I
+    state: Domain.Types.LocationAddress.state|I
+    country: Domain.Types.LocationAddress.country|I
+    building: Domain.Types.LocationAddress.building|I
+    areaCode: Domain.Types.LocationAddress.areaCode|I
+    area: Domain.Types.LocationAddress.area|I
+    ward: Domain.Types.LocationAddress.ward|I
+    placeId: Domain.Types.LocationAddress.placeId|I
+
+  fromTType:
+    address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId}|E
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  excludedDefaultQueries:
+    - createMany
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  sqlType:
+    street: character varying(255)
+    door: character varying(255)
+    city: character varying(255)
+    state: character varying(255)
+    country: character varying(255)
+    building: character varying(255)
+    areaCode: character varying(255)
+    area: character varying(255)
+    ward: character varying(255)
+    placeId: text
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    updateAddress:
+      kvFunction: updateOneWithKV
+      params: [address]
+      where: id

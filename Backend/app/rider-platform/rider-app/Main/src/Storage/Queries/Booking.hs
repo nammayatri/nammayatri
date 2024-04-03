@@ -19,9 +19,9 @@ import Control.Applicative
 import Data.List (sortBy)
 import Data.Ord
 import qualified Database.Beam as B
-import qualified Domain.Types.Booking.BookingLocation as DBBL
 import Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.Booking.Type as DRB
+import qualified Domain.Types.BookingLocation as DBBL
 import Domain.Types.Estimate (Estimate)
 import Domain.Types.FarePolicy.FareProductType as DFF
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
@@ -45,7 +45,7 @@ import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.Queries.Booking.BookingLocation as QBBL
+import qualified Storage.Queries.BookingLocation as QBBL
 import qualified Storage.Queries.DriverOffer ()
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM

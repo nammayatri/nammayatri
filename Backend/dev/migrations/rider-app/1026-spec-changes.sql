@@ -2,22 +2,6 @@ CREATE TABLE atlas_app.quote_bak_1026 AS TABLE atlas_app.quote;
 CREATE TABLE atlas_app.ride_booking_bak_1026 AS TABLE atlas_app.ride_booking;
 CREATE TABLE atlas_app.search_request_location_1026 AS TABLE atlas_app.search_request_location;
 
-CREATE TABLE atlas_app.booking_location (
-   id CHARACTER(36) PRIMARY KEY NOT NULL,
-   lat DOUBLE PRECISION NOT NULL,
-   lon DOUBLE PRECISION NOT NULL,
-   city CHARACTER VARYING(255),
-   state CHARACTER VARYING(255),
-   country CHARACTER VARYING(255),
-   street CHARACTER VARYING(255),
-   door CHARACTER VARYING(255),
-   building CHARACTER VARYING(255),
-   area_code CHARACTER VARYING(255),
-   area CHARACTER VARYING(255),
-   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-
 INSERT INTO
    atlas_app.booking_location (
       SELECT
