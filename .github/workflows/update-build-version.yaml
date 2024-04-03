@@ -55,7 +55,7 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         branch: release-apk-to-prod
-        title: "Update versionCode and versionName"
+        title: "[BOT]Update versionCode and versionName"
         body: "Automated pull request to update versionCode and versionName."
         delete-branch: true
-
+        commit-message: "[RELEASE-APK] Initiating apk generation"
