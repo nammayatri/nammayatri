@@ -2,7 +2,6 @@ console.log("APP_PERF INDEX_BUNDLE_START : ", new Date().getTime());
 import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
-import * as purescript from "./output/Main";
 
 window.events = {};
 try {
@@ -134,6 +133,7 @@ window.setManualEvents = setManualEvents;
 window.__FN_INDEX = 0;
 window.__PROXY_FN = top.__PROXY_FN || {};
 
+const purescript = require("./output/Main");
 // if (window.__OS == "WEB") {
 //   purescript.main();
 // }
