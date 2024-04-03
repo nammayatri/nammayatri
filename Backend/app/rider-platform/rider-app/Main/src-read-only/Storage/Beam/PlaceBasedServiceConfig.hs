@@ -9,12 +9,9 @@ import qualified Data.Aeson
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantServiceConfig
-import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.TicketPlace
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data PlaceBasedServiceConfigT f = PlaceBasedServiceConfigT
@@ -29,8 +26,7 @@ data PlaceBasedServiceConfigT f = PlaceBasedServiceConfigT
   deriving (Generic, B.Beamable)
 
 instance B.Table PlaceBasedServiceConfigT where
-  data PrimaryKey PlaceBasedServiceConfigT f = PlaceBasedServiceConfigId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey PlaceBasedServiceConfigT f = PlaceBasedServiceConfigId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = PlaceBasedServiceConfigId . placeId
 
 type PlaceBasedServiceConfig = PlaceBasedServiceConfigT Identity

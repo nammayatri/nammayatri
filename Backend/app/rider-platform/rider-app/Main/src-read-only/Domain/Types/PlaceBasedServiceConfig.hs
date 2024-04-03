@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -16,11 +15,11 @@ import qualified Tools.Beam.UtilsTH
 
 data PlaceBasedServiceConfigD (s :: UsageSafety) = PlaceBasedServiceConfig
   { merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    serviceConfig :: Domain.Types.Merchant.MerchantServiceConfig.ServiceConfigD s,
-    placeId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    updatedAt :: UTCTime,
-    createdAt :: UTCTime
+    placeId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
+    serviceConfig :: Domain.Types.Merchant.MerchantServiceConfig.ServiceConfigD s,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)
 
