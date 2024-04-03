@@ -390,6 +390,8 @@ primaryButtonConfig state = let
       , background = state.primaryButtonConfig.background
        , height = state.primaryButtonConfig.height
       , id = "RateCardButton"
+      , enableRipple = state.primaryButtonConfig.enableRipple
+      , rippleColor = state.primaryButtonConfig.rippleColor
       }
   in primaryButtonConfig'
 

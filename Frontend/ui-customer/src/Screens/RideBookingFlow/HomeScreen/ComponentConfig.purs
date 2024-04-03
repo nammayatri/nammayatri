@@ -1972,6 +1972,8 @@ locationTagBarConfig state  = let
             height : WRAP_CONTENT ,
             width : WRAP_CONTENT,
             padding : Padding 8 8 8 8 ,
+            enableRipple : true,
+            rippleColor : Color.rippleShade,
             id : item.id
           })
         [ { image : "ny_ic_intercity", text : "Intercity", id : "INTER_CITY" },

@@ -66,6 +66,8 @@ type ButtonConfig =
   , cornerRadius :: Number
   , background :: String
   , visibility :: Visibility
+  , enableRipple :: Boolean
+  , rippleColor :: String
   }
 
 config :: Config 
@@ -97,5 +99,7 @@ config = {
     , background : Color.black900
     , height : V 54
     , visibility : GONE
+    , enableRipple : true
+    , rippleColor : Color.rippleShade
     }
 }

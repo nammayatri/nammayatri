@@ -47,6 +47,8 @@ primaryButtonConfig state =
       , margin = (MarginHorizontal 16 16)
       , isClickable = true
       , id = "GoHomeButton"
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       }
   in
     primaryButtonConfig'
