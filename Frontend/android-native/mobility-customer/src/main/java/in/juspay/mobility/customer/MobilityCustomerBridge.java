@@ -68,6 +68,7 @@ import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.mobility.common.MapRemoteConfig;
 import in.juspay.mobility.common.MobilityCommonBridge;
+import in.juspay.mobility.common.map.Camera;
 
 public class MobilityCustomerBridge extends MobilityCommonBridge {
 
@@ -188,8 +189,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         return result.toString();
     }
 
+    @Deprecated
     @JavascriptInterface
     public void updateRoute(String _payload) {
+
         ExecutorManager.runOnMainThread(() -> {
             if (googleMap != null) {
                 try {
@@ -242,7 +245,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                             currMarker.setAnchor(0.5f, 0);
                             mapUpdate.isMapMoved = false;
                             mapUpdate.isMapIdle = true;
-                            animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, zoomLevel, ZoomType.ZOOM);
+                            Camera.animateCamera(googleMap, destMarker.getPosition().latitude, destMarker.getPosition().longitude, zoomLevel, Camera.ZoomType.ZOOM);
                         } else {
                             double destinationLat = path.get(0).latitude;
                             double destinationLon = path.get(0).longitude;
@@ -272,12 +275,11 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         });
     }
 
+    @Deprecated
     private void animateMarkerNew(String src, LatLng destination, final Marker marker) {
         if (marker != null) {
 
             LatLng startPosition = marker.getPosition();
-
-
             ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1);
             valueAnimator.setDuration(2000); // TODO :: get this value from Loacl Storage to maintain sync with PS
             valueAnimator.setInterpolator(new LinearInterpolator());
@@ -378,7 +380,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     }
 
     //endregion
-
+    @Deprecated // Use SphericalUtil.computeHeading
     private float bearingBetweenLocations(LatLng latLng1, LatLng latLng2) {
         double PI = 3.14159;
         double lat1 = latLng1.latitude * PI / 180;
@@ -456,7 +458,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     @JavascriptInterface
     public void fetchAndUpdateCurrentLocation(String callback, boolean shouldFallback) {
         if (!isLocationPermissionEnabled()) return;
-        updateLastKnownLocation(callback, true, ZoomType.ZOOM,shouldFallback);
+        updateLastKnownLocation(callback, true, Camera.ZoomType.ZOOM,shouldFallback);
     }
 
     //region Others

@@ -2551,3 +2551,37 @@ export const jBridgeMethodExists = function (method) {
   }
   return false;
 }
+
+export const drawRouteV2 = (config) => {
+  console.log("Inside drawRouteV2", config);
+  if(JBridge.drawRouteV2){
+    console.log("Inside drawRouteV2 If hhhh");
+    JBridge.drawRouteV2(JSON.stringify(config));
+    return true;
+  }
+  return false;
+} 
+
+export const updateRouteV2 = (config) => {
+  if(JBridge.updateRouteV2){
+    JBridge.updateRouteV2(JSON.stringify(config));
+    return true;
+  }
+  return false;
+}
+
+export const addMarkerV2 = (config) => {
+  if(JBridge.addMarkerV2){
+    JBridge.addMarkerV2(JSON.stringify(config));
+    return true;
+  }
+  return false;
+}
+
+export const updateMarkerV2 = (config) => {
+  if(JBridge.updateMarkerV2){
+    JBridge.updateMarkerV2(JSON.stringify(config));
+    return true;
+  }
+  return false;
+}

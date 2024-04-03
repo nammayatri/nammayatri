@@ -32,7 +32,7 @@ import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Uncurried (runEffectFn1, runEffectFn9)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, getValueFromIdMap, liftFlow, os, updatePushInIdMap, safeMarginTopWithDefault, screenWidth, safeMarginBottomWithDefault, safeMarginTop)
 import Helpers.Utils (FetchImageFrom(..), fetchImage, storeCallBackCustomer, makeNumber, getDefaultPixelSize, zoneLabelIcon)
-import JBridge (animateCamera, drawRoute, enableMyLocation, getExtendedPath, isCoordOnPath, removeAllPolylines, removeMarker, showMap, updateRoute, updateRouteConfig, startChatListenerService, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, clearChatMessages, getKeyInSharedPrefKeys, scrollOnResume, setMapPadding, getLayoutBounds, defaultMarkerConfig)
+import JBridge (animateCamera, drawRoute, enableMyLocation, getExtendedPath, isCoordOnPath, removeAllPolylines, removeMarker, showMap, updateRoute, updateRouteConfig, startChatListenerService, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, clearChatMessages, getKeyInSharedPrefKeys, scrollOnResume, setMapPadding, getLayoutBounds, drawRouteV2, drawRouteV2Config, defaultMarkerConfig, updateRouteV2, updateRouteV2Config)
 import Mobility.Prelude (boolToVisibility)
 import Prelude
 import PrestoDOM (PrestoDOM, Screen, BottomSheetState(..), onAnimationEnd, onBackPressed, onClick, afterRender)
@@ -838,7 +838,35 @@ driverLocationTracking push action duration id routeState = do
               srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
               destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = ride.destination }
             addSosMarkers state.data.sosStatus point
-            void $ liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
+            -- void $ liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
+            -- liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" ride.destination specialLocationTag
+            isDrawRouteV2 <- liftFlow $ runEffectFn1 drawRouteV2 drawRouteV2Config{
+              id = "DefaultRoute",
+              points = newPoints,
+              startMarker {
+                id = "startMarker",
+                bitmapMarker {
+                  primaryText = srcMarkerConfig.primaryText,
+                  pointerImage = srcMarkerConfig.pointerIcon,
+                  labelImage = srcMarkerConfig.labelImage,
+                  visible = true,
+                  ptrImgMagnifier = 1.5
+                }
+              },
+              endMarker {
+                id = "endMarker",
+                bitmapMarker {
+                  primaryText = destMarkerConfig.primaryText,
+                  pointerImage = destMarkerConfig.pointerIcon,
+                  labelImage = destMarkerConfig.labelImage,
+                  visible = true
+                }
+              }
+            }
+
+            -- Fallback for drawRouteV2. Remove when drawRouteV2 is stable
+            when (not isDrawRouteV2) $ void $ liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
+
             liftFlow $ animateCamera srcLat srcLon 16.0 "ZOOM"
             void $ delay $ Milliseconds duration
             void
@@ -887,6 +915,13 @@ driverLocationTracking push action duration id routeState = do
       liftFlow
         $ runEffectFn1 updateRoute
             updateRouteConfig { json = newPoints, destMarker = markers.destMarker, eta = (HSConfig.metersToKm locationResp.distance true), srcMarker = markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel, autoZoom = false }
+
+      isUpdateRouteV2 <- liftFlow $ runEffectFn1 updateRouteV2 updateRouteV2Config {
+        id = "DefaultRoute",
+        points = newPoints
+      }
+      when (not isUpdateRouteV2) $  liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker = markers.destMarker, eta = (HSConfig.metersToKm locationResp.distance true), srcMarker = markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel, autoZoom = false }
+
       case mbPoint of
         Just point -> addSosMarkers state.data.sosStatus point
         Nothing -> pure unit

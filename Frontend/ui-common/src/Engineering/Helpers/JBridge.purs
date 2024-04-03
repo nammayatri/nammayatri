@@ -660,3 +660,144 @@ showDatePicker push action= do
   let (TimePicker timeResp hour minute) = timePicker
   liftEffect $ push $ action dateResp year month day timeResp hour minute
   
+
+
+----------------- Route -----------------
+
+foreign import drawRouteV2 :: EffectFn1 DrawRouteV2Config Boolean
+
+type DrawRouteV2Config = {
+  points :: Locations,
+  style :: String,
+  color :: String,
+  width :: Int,
+  startMarker :: AddMarkerV2Config,
+  endMarker :: AddMarkerV2Config,
+  intermediateMarkers :: Array AddMarkerV2Config,
+  id :: String,
+  straightLine :: Boolean,
+  animationConfig :: RouteAnimationConfig
+}
+
+type RouteAnimationConfig = {
+  color :: String,
+  animation :: Boolean
+}
+
+drawRouteV2Config :: DrawRouteV2Config
+drawRouteV2Config = {
+  points : {
+    points : []
+  },
+  style : "LineString",
+  color : "#323643",
+  width : 8,
+  startMarker : addMarkerV2Config,
+  endMarker : addMarkerV2Config,
+  intermediateMarkers : [],
+  id : "",
+  straightLine : false,
+  animationConfig : {
+    color : "#D1D5DB",
+    animation : false
+  }
+}
+
+
+foreign import updateRouteV2 :: EffectFn1 UpdateRouteV2Config Boolean
+
+type UpdateRouteV2Config = {
+  points :: Locations,
+  id :: String
+}
+
+updateRouteV2Config :: UpdateRouteV2Config 
+updateRouteV2Config = {
+  points : {
+    points : []
+  },
+  id : ""
+}
+
+----------------- Markers -----------------
+
+foreign import addMarkerV2 :: EffectFn1 AddMarkerV2Config Boolean
+
+type AddMarkerV2Config = {
+  title :: String,
+  lat :: Number,
+  lon :: Number,
+  visible :: Boolean,
+  flat :: Boolean,
+  id :: String,
+  hideInfoWindow :: Boolean,
+  onClick :: String,
+  bitImage :: String,
+  bitImageSize :: Int,
+  anchorU :: Number,
+  anchorV :: Number,
+  bitmapMarker :: BitmapMarkerConfig,
+  rotational :: Boolean,
+  rotationDegree :: Number -- [-180 to 180 ]
+}
+
+addMarkerV2Config :: AddMarkerV2Config
+addMarkerV2Config = {
+  title : "",
+  lat : 0.0,
+  lon : 0.0,
+  visible : true,
+  flat : false,
+  id : "",
+  hideInfoWindow : false,
+  onClick : "",
+  anchorU : 0.5,
+  anchorV : 0.5,
+  bitImage : "",
+  bitImageSize : 0,
+  bitmapMarker : bitmapMarkerConfig,
+  rotational : false,
+  rotationDegree : 0.0
+}
+
+
+bitmapMarkerConfig :: BitmapMarkerConfig
+bitmapMarkerConfig = {
+  pointerImage : "",
+  ptrImgHeight : 0,
+  ptrImgWidth : 0,
+  visible : false,
+  actionImage : "",
+  textColor : "#FFFFFF",
+  backgroundColor : "#454545",
+  primaryText : "",
+  secondaryText : "",
+  textMaxSize : 30,
+  labelImage : "",
+  labelActionImage : "",
+  ptrImgMagnifier : 0.0,
+  ptrImgVis : true
+}
+
+type BitmapMarkerConfig = {
+  pointerImage :: String,
+  ptrImgHeight :: Int,
+  ptrImgWidth :: Int,
+  visible :: Boolean,
+  actionImage :: String,
+  textColor :: String,
+  backgroundColor :: String,
+  primaryText :: String,
+  secondaryText :: String,
+  textMaxSize :: Int,
+  labelImage :: String,
+  labelActionImage :: String,
+  ptrImgMagnifier :: Number,
+  ptrImgVis :: Boolean
+} 
+
+
+foreign import updateMarkerV2 :: EffectFn1 AddMarkerV2Config Boolean
+
+
+

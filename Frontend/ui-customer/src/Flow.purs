@@ -64,6 +64,8 @@ import Foreign.Generic (decodeJSON, encodeJSON)
 import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding)
 import JBridge as JB
 import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, zoneLabelIcon, transformGeoJsonFeature)
+import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage)
+import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
 import Log (printLog)
@@ -858,8 +860,43 @@ homeScreenFlow = do
           Just points -> do
             let sourceMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = srcMarker, primaryText = points.source.place, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = sourceSpecialTagIcon, position{ lat = points.source.lat, lng = points.source.lng } }
                 destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = destMarker, primaryText = points.destination.place, labelImage = destSpecialTagIcon, position{ lat = points.destination.lat, lng = points.destination.lng } }
-            lift $ lift $ liftFlow $ updateMarker sourceMarkerConfig
-            lift $ lift $ liftFlow $ updateMarker destMarkerConfig
+            -- lift $ lift $ liftFlow $ updateMarker sourceMarkerConfig
+            -- lift $ lift $ liftFlow $ updateMarker destMarkerConfig
+            isUpdateMarkerV2 <- lift $ lift $ liftFlow $ runEffectFn1 JB.updateMarkerV2 JB.addMarkerV2Config {
+              id = "startMarker",
+              lat = sourceMarkerConfig.position.lat,
+              lon = sourceMarkerConfig.position.lng,
+              anchorU = 0.5,
+              anchorV = 0.0,
+              bitmapMarker {
+                pointerImage = sourceMarkerConfig.pointerIcon,
+                primaryText = sourceMarkerConfig.primaryText,
+                secondaryText = sourceMarkerConfig.secondaryText,
+                labelImage = sourceMarkerConfig.labelImage,
+                visible = true
+              }
+            }
+
+            void $ lift $ lift $ liftFlow $ runEffectFn1 JB.updateMarkerV2 JB.addMarkerV2Config {
+              id = "endMarker",
+              lat = destMarkerConfig.position.lat,
+              lon = destMarkerConfig.position.lng,
+              anchorU = 0.5,
+              anchorV = 0.0,
+              bitmapMarker {
+                pointerImage = destMarkerConfig.pointerIcon,
+                primaryText = destMarkerConfig.primaryText,
+                secondaryText = destMarkerConfig.secondaryText,
+                labelImage = destMarkerConfig.labelImage,
+                visible = true
+              }
+            }
+
+            when (not isUpdateMarkerV2) do 
+              lift $ lift $ liftFlow $ updateMarker sourceMarkerConfig
+              lift $ lift $ liftFlow $ updateMarker destMarkerConfig
+
+            pure unit
           Nothing -> pure unit
         homeScreenFlow
     GET_SELECT_LIST state -> do
@@ -2415,17 +2452,6 @@ referralScreenFlow = do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreen.initData)
       void $ lift $ lift $ liftFlow $ adjustViewWithKeyboard "true"
       homeScreenFlow
-
-drawDottedRoute :: HomeScreenState -> FlowBT String Unit
-drawDottedRoute state = do
-  void $ pure $ removeAllPolylines ""
-  let srcMarkerConfig = defaultMarkerConfig{ pointerIcon = "ny_ic_auto_map" }
-      destMarkerConfig = defaultMarkerConfig{ pointerIcon = if state.props.currentStage == RideAccepted then "src_marker" else "dest_marker" }
-      srcLat = state.data.driverInfoCardState.driverLat
-      srcLng = state.data.driverInfoCardState.driverLng
-      destLat = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
-      destLng = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-  void $ liftFlowBT $ runEffectFn9 drawRoute (Remote.walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
 
 isForLostAndFound :: Boolean
 isForLostAndFound = true

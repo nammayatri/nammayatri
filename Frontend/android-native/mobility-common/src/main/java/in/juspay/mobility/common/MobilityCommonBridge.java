@@ -16,7 +16,6 @@ import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_OK;
 import static android.content.Context.MODE_PRIVATE;
-import static in.juspay.hyper.core.JuspayCoreLib.getApplicationContext;
 import static in.juspay.mobility.common.Utils.captureImage;
 import static in.juspay.mobility.common.Utils.drawableToBitmap;
 import static in.juspay.mobility.common.Utils.encodeImageToBase64;
@@ -183,14 +182,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
-import java.util.Objects;
-import java.util.TimeZone;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.constants.LogCategory;
@@ -200,7 +196,11 @@ import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.common.map.Camera;
+import in.juspay.mobility.common.map.MarkerHandler;
+import in.juspay.mobility.common.map.RouteHandler;
 import in.juspay.mobility.common.services.MobilityCallAPI;
+import in.juspay.mobility.common.utils.SharedPref;
 
 public class MobilityCommonBridge extends HyperBridge {
 
@@ -234,7 +234,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected Marker userPositionMarker;
     private final UICallBacks callBack;
     private final FusedLocationProviderClient client;
-    protected Polyline polyline = null;
+    @Deprecated protected Polyline polyline = null;
     protected HashMap<String, JSONObject> markersElement = new HashMap<>();
     //Location
     protected double lastLatitudeValue;
@@ -258,8 +258,8 @@ public class MobilityCommonBridge extends HyperBridge {
     // Others
     private LottieAnimationView animationView;
     protected Method[] methods = null;
-    protected Polyline overlayPolylines = null;
-    protected boolean isAnimationNeeded = false;
+    @Deprecated protected Polyline overlayPolylines = null;
+    @Deprecated protected boolean isAnimationNeeded = false;
     private PaymentPage paymentPage;
 
     protected  Receivers receivers;
@@ -267,7 +267,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected int animationDuration = 400;
     protected JSONObject locateOnMapConfig = null;
     protected String downloadLayout;
-    protected int labelTextSize = 30;
+    @Deprecated protected int labelTextSize = 30;
 
     protected HashMap<String,CircleRippleEffect> circleRipples = new HashMap<>();
     protected HashMap<String, GroundOverlay> groundOverlays = new HashMap<>();
@@ -278,8 +278,12 @@ public class MobilityCommonBridge extends HyperBridge {
     protected AppType app;
     protected MapUpdate mapUpdate = new MapUpdate();
     private MapRemoteConfig mapRemoteConfig;
+
+    @Nullable private RouteHandler routeHandler = null;
+    @Nullable private MarkerHandler markerHandler = null;
     protected LocateOnMapManager locateOnMapManager = null;
-    private Timer polylineAnimationTimer = null;
+    @Deprecated private Timer polylineAnimationTimer = null;
+    protected SharedPref sharedPref;
 
     protected enum AppType {
         CONSUMER, PROVIDER
@@ -374,9 +378,13 @@ public class MobilityCommonBridge extends HyperBridge {
         receivers.initReceiver();
         callBack = this::callImageUploadCallBack;
         Utils.registerCallback(callBack);
+
+        sharedPref = SharedPref.getSharedPref(bridgeComponents);
+
         fetchAndUpdateLastKnownLocation();
     }
 
+    @Deprecated // Use Map Class
     public MapRemoteConfig getMapRemoteConfig() {
         try {
             if(this.mapRemoteConfig == null) {
@@ -829,9 +837,9 @@ public class MobilityCommonBridge extends HyperBridge {
                                         }
                                     }
                                 } else if (mapMode.equals(MapMode.HOTSPOT) && SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(nearestPoint.getDouble("lat"), nearestPoint.getDouble("long"))) < goToNearestPointWithinRadius) {
-                                    animateCamera(nearestPoint.getDouble("lat"), nearestPoint.getDouble("long"), 20.0f, ZoomType.NO_ZOOM);
+                                    animateCamera(nearestPoint.getDouble("lat"), nearestPoint.getDouble("long"), 20.0f, Camera.ZoomType.NO_ZOOM);
                                 } else if (!lat.equals("0.0") && !lon.equals("0.0")) {
-                                    animateCamera(Double.parseDouble(lat), Double.parseDouble(lon), 20.0f, ZoomType.NO_ZOOM);
+                                    animateCamera(Double.parseDouble(lat), Double.parseDouble(lon), 20.0f, Camera.ZoomType.NO_ZOOM);
                                 }
                             }catch (Exception e) {
                                 e.printStackTrace();
@@ -865,7 +873,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                             }
                                         }
                                         if (SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(nearestPointLat, nearestPointLng)) > 1)
-                                            animateCamera(nearestPointLat, nearestPointLng, 20.0f, ZoomType.NO_ZOOM);
+                                            animateCamera(nearestPointLat, nearestPointLng, 20.0f, Camera.ZoomType.NO_ZOOM);
                                     } else {
                                         zoneName = "LatLon";
                                     }
@@ -881,7 +889,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                         }
                                     }
                                     if (SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(nearestPointLat, nearestPointLng)) > 1 && nearestPointDistance <= goToNearestPointWithinRadius)
-                                        animateCamera(nearestPointLat, nearestPointLng, 20.0f, ZoomType.NO_ZOOM);
+                                        animateCamera(nearestPointLat, nearestPointLng, 20.0f, Camera.ZoomType.NO_ZOOM);
                                     zoneName = "LatLon";
                                 }
 
@@ -1095,7 +1103,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                                     markerConfig.setLabelImage(labelImage);
                                                     addZoneMarker(zoneMarkerLat, zoneMarkerLon, "selectedZoneGate", selectedSpotIcon, markerConfig);
                                                 }
-                                                animateCamera(zoneMarkerLat, zoneMarkerLon, 20.0f, ZoomType.NO_ZOOM);
+                                                animateCamera(zoneMarkerLat, zoneMarkerLon, 20.0f, Camera.ZoomType.NO_ZOOM);
                                             }
                                         }
                                     }
@@ -1218,7 +1226,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 }
 
                 googleMap.setOnMarkerClickListener(marker -> {
-                    animateCamera(marker.getPosition().latitude, marker.getPosition().longitude, 20.0f, ZoomType.NO_ZOOM);
+                    animateCamera(marker.getPosition().latitude, marker.getPosition().longitude, 20.0f, Camera.ZoomType.NO_ZOOM);
                     if (locateOnMapManager != null && !locateOnMapManager.markerCallback.equals("") && locateOnMapManager.markerCallbackTags.contains(marker.getTag())) {
                         String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');", locateOnMapManager.markerCallback, marker.getTag(), marker.getPosition().latitude, marker.getPosition().longitude);
                         bridgeComponents.getJsCallback().addJsToWebView(js);
@@ -1287,26 +1295,6 @@ public class MobilityCommonBridge extends HyperBridge {
             });
         } catch (Exception e) {
             Log.i(MAPS, "LocateOnMap Exit Error for ", e);
-        }
-    }
-
-    protected void dottedLineFromCurrentPosition(Double lat,Double lon,Boolean dottedLineVisible,Double dottedLineRange,String dottedLineColor) {
-        if (googleMap != null && dottedLineVisible) {
-            if (polyline != null) {
-                polyline.remove();
-                polyline = null;
-            }
-            if (SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(lastLatitudeValue, lastLongitudeValue)) < dottedLineRange)
-                drawDottedLine(googleMap.getCameraPosition().target.latitude, googleMap.getCameraPosition().target.longitude, lastLatitudeValue, lastLongitudeValue, dottedLineColor);
-        }
-    }
-
-    private void drawDottedLine(Double srcLat, Double srcLon, Double destLat, Double destLon, String color) {
-        if (googleMap != null) {
-            PolylineOptions polylineOptions = new PolylineOptions();
-            polylineOptions.add(new LatLng(srcLat, srcLon));
-            polylineOptions.add(new LatLng(destLat, destLon));
-            polyline = setRouteCustomTheme(polylineOptions, Color.parseColor(color), "DOT", 8);
         }
     }
 
@@ -1407,7 +1395,7 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void getCurrentPosition(String callback, boolean shouldFallBack) {
         if (!isLocationPermissionEnabled()) return;
-        updateLastKnownLocation(callback, false, ZoomType.ZOOM,shouldFallBack);
+        updateLastKnownLocation(callback, false, Camera.ZoomType.ZOOM,shouldFallBack);
     }
 
     @SuppressLint("MissingPermission")
@@ -1445,6 +1433,7 @@ public class MobilityCommonBridge extends HyperBridge {
     //endregion
 
     // region Maps
+    @Deprecated // Use Marker Class
     @JavascriptInterface
     public void removeMarker(final String title) {
         ExecutorManager.runOnMainThread(() -> {
@@ -1460,13 +1449,14 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
+    @Deprecated // Use Camera Class
     @JavascriptInterface
     public void animateCamera(final double lat, final double lng, final float zoom, final String zoomType) {
         ExecutorManager.runOnMainThread(() -> {
             try {
                 if (googleMap != null) {
                     LatLng latLngObj = new LatLng(lat, lng);
-                    if (zoomType.equals(ZoomType.NO_ZOOM)) {
+                    if (zoomType.equals(Camera.ZoomType.NO_ZOOM)) {
                         CameraPosition cameraPosition = new CameraPosition.Builder()
                                 .target(latLngObj)
                                 .zoom(googleMap.getCameraPosition().zoom)
@@ -1483,6 +1473,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
+    @Deprecated // Use Marker Class
     @SuppressLint("PotentialBehaviorOverride")
     @JavascriptInterface
     public void upsertMarkerLabel(String configString) {
@@ -1534,6 +1525,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
+    @Deprecated // Use Marker Class
     @JavascriptInterface
     public void upsertMarker(final String title, final String lat, final String lng, final int markerSize, final float anchorV, final float anchorV1) {
         ExecutorManager.runOnMainThread(() -> {
@@ -1600,6 +1592,7 @@ public class MobilityCommonBridge extends HyperBridge {
         return "NO_COORDINATE_FOUND";
     }
 
+    @Deprecated // Use Marker Class
     private MarkerOptions makeMarkerObject(final String title, final double lat, final double lng, final int markerSize, final float anchorV, final float anchorV1) {
         try {
             MarkerOptions markerOptions = new MarkerOptions()
@@ -1671,7 +1664,7 @@ public class MobilityCommonBridge extends HyperBridge {
     public void getLocationName(String latitude, String longitude, String defaultText, String callback) {
         if (!isLocationPermissionEnabled()) return;
 
-        updateLastKnownLocation(null, false, ZoomType.ZOOM,true);
+        updateLastKnownLocation(null, false, Camera.ZoomType.ZOOM,true);
 
         if (defaultText.equals(CURRENT_LOCATION_LATLON)) {
             latitude = String.valueOf(lastLatitudeValue);
@@ -1771,6 +1764,8 @@ public class MobilityCommonBridge extends HyperBridge {
                     Log.e(MAPS, javascript);
                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                 }
+                routeHandler = new RouteHandler(googleMap, bridgeComponents);
+                markerHandler = new MarkerHandler(googleMap, bridgeComponents);
             });
         }
     }
@@ -2022,6 +2017,7 @@ public class MobilityCommonBridge extends HyperBridge {
         groundOverlays.clear();
     }
 
+    @Deprecated // Use Route Class
     private void checkAndAnimatePolyline(final int staticColor, final String style, final int polylineWidth, PolylineOptions polylineOptions, JSONObject mapRouteConfigObject){
         try{
             isAnimationNeeded = mapRouteConfigObject != null && mapRouteConfigObject.optBoolean("isAnimation", false);
@@ -2116,6 +2112,8 @@ public class MobilityCommonBridge extends HyperBridge {
             e.printStackTrace();
         }
     }
+
+    @Deprecated // Use Route Class
     @JavascriptInterface
     public void drawRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String type, final String mapRouteConfig) {
         onMapUpdate(null,null);
@@ -2137,7 +2135,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         double lat = coordinate.getDouble("lat");
                         int vehicleSizeTagIcon = mapRouteConfigObject.getInt("vehicleSizeTagIcon");
                         upsertMarker(sourceIcon, String.valueOf(lat), String.valueOf(lng), vehicleSizeTagIcon, 0.5f, 0.5f);
-                        animateCamera(lat,lng,20.0f, ZoomType.ZOOM);
+                        animateCamera(lat,lng,20.0f, Camera.ZoomType.ZOOM);
                         return;
                     }
                     JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
@@ -2213,6 +2211,44 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public void drawRouteV2(final String config) {
+        onMapUpdate(null,null);
+        Log.i("DRAW_ROUTE_V2", config);
+        try {
+            JSONObject configObj = new JSONObject(config);
+            if(routeHandler != null)
+                routeHandler.drawRoute(markerHandler, configObj);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @JavascriptInterface
+    public void updateRouteV2(final String config){
+        Log.i("UPDATE_ROUTE_V2", config);
+        try {
+            JSONObject configObj = new JSONObject(config);
+            if(routeHandler != null)
+                routeHandler.updateRote(markerHandler, configObj);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    @JavascriptInterface
+    public void updateMarkerV2(final String config){
+        Log.i("Update_Marker_V2", config);
+        try {
+            JSONObject configObj = new JSONObject(config);
+            if(markerHandler != null)
+                markerHandler.updateMarker(configObj);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    @Deprecated // Use Marker Class
+    @JavascriptInterface
     public void updateMarker(final String markerConfigString) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -2242,6 +2278,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
+    @Deprecated // Use Marker Class
     @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n", "LongLogTag"})
     protected Bitmap getMarkerBitmapFromView(String pointerImage, boolean isInvisiblePointer, String actionImage, MarkerType markerType, MarkerConfig markerConfig) {
         Context context = bridgeComponents.getContext();
@@ -2347,6 +2384,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
+    @Deprecated // Use Marker Class
     private void setLabelImageAction(View customMarkerView, String labelActionImage) {
         if (!labelActionImage.equals("")) {
             Context context = bridgeComponents.getContext();
@@ -2356,6 +2394,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
+    @Deprecated // Use Marker Class
     private void setMarkerActionImage(String actionImage, String primaryText, View customMarkerView) {
         Context context = bridgeComponents.getContext();
         if (actionImage != null) {
@@ -2369,6 +2408,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
+    @Deprecated // Use Marker Class
     private void setMarkerPointerImage(String pointerImage, Boolean isInvisiblePointer, MarkerType markerType, View customMarkerView) {
         Context context = bridgeComponents.getContext();
         ImageView pointer = customMarkerView.findViewById(R.id.pointer_img);
@@ -2394,6 +2434,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
+    @Deprecated // Use Marker Class
     private void setMarkerlabelImage(String labelImageName, View customMarkerView) {
         try {
             Context context = bridgeComponents.getContext();
@@ -2454,6 +2495,8 @@ public class MobilityCommonBridge extends HyperBridge {
         background.setBackground(drawable);
     }
 
+    
+    @Deprecated
     @JavascriptInterface
     public void removeAllPolylines(String stringifyArray) {
         ExecutorManager.runOnMainThread(() -> {
@@ -2490,9 +2533,20 @@ public class MobilityCommonBridge extends HyperBridge {
                 polylineAnimationTimer = null;
             }
         });
+        clearMapOverlays();
+    }
+    
+    @JavascriptInterface
+    public void clearMapOverlays(){
+        if (routeHandler != null) {
+            routeHandler.removeAllRoutes(markerHandler);
+        }
+        if (markerHandler != null) {
+            markerHandler.removeAllMarkers();
+        }
     }
 
-    @JavascriptInterface
+    @Deprecated
     public void moveCamera(final double source_latitude, final double source_longitude, final double destination_latitude, final double destination_longitude, final JSONArray json_coordinates) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -2567,6 +2621,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
+    @Deprecated
     public Polyline setRouteCustomTheme(PolylineOptions options, int color, String style, final int width) {
         PatternItem DOT = new Dot();
         PatternItem GAP = new Gap(10);
@@ -2589,6 +2644,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
     // endregion
 
+    @Deprecated
     @JavascriptInterface
     public void showMap(final String pureScriptId, boolean isEnableCurrentLocation, final String mapType, final float zoom, final String callback, final String mapConfig) {
         try {
@@ -2618,30 +2674,31 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
+
+
     // region Shared Preference Utils
+    @Deprecated // Use SharedPref Utils Class in native side functions
     @JavascriptInterface
     public void setKeysInSharedPrefs(String key, String value) {
-        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
-        sharedPref.edit().putString(key, value).apply();
-        if (key.equals(bridgeComponents.getContext().getString(R.string.LANGUAGE_KEY))) {
-            Utils.updateLocaleResource(value, bridgeComponents.getContext());
-        }
+        sharedPref.setKeysInSharedPrefs(key, value);
     }
 
+    @Deprecated // Use SharedPref Utils Class in native side functions
     @JavascriptInterface
     public String getKeysInSharedPref(String key) {
-        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
-        return sharedPref.getString(key, "__failed");
+        return sharedPref.getKeysInSharedPref(key);
     }
 
+    @Deprecated // Use SharedPref Utils Class in native side functions
     @JavascriptInterface
     public String getKeyInNativeSharedPrefKeys(String key) {
-        return getKeysInSharedPref(key);
+        return sharedPref.getKeyInNativeSharedPrefKeys(key);
     }
 
+    @Deprecated // Use SharedPref Utils Class in native side functions
     @JavascriptInterface
     public void setEnvInNativeSharedPrefKeys(String key, String value) {
-        setKeysInSharedPrefs(key, value);
+        sharedPref.setEnvInNativeSharedPrefKeys(key, value);
     }
 
     //endregion
@@ -3557,11 +3614,6 @@ public class MobilityCommonBridge extends HyperBridge {
             default:
                 return ImageView.ScaleType.FIT_CENTER;
         }
-    }
-
-    public static class ZoomType {
-        public static final String NO_ZOOM = "NO_ZOOM";
-        public static final String ZOOM = "ZOOM";
     }
 
     public enum MarkerType {

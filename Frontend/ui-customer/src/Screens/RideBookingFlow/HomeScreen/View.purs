@@ -74,7 +74,7 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone)
-import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition)
+import JBridge
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -2743,7 +2743,37 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                     destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker }
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
                 _ <- pure $ removeAllPolylines ""
-                _ <- liftFlow $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
+                -- _ <- liftFlow $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
+                -- _ <- liftFlow $ drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" specialLocationTag
+                void $ pure $ spy "drawRouteV2Config" "HomeScreenView_DOT"
+                isDrawRouteV2 <- liftFlow $ runEffectFn1 drawRouteV2 drawRouteV2Config{
+                  id = "DefaultRoute",
+                  points = walkCoordinate srcLat srcLon dstLat dstLon,
+                  style = "DOT",
+                  straightLine = true,
+                  startMarker {
+                    id = "startMarker",
+                    bitmapMarker {
+                      primaryText = srcMarkerConfig.primaryText,
+                      pointerImage = srcMarkerConfig.pointerIcon,
+                      labelImage = srcMarkerConfig.labelImage,
+                      visible = true
+                    }
+                  },
+                  endMarker {
+                    id = "endMarker",
+                    bitmapMarker {
+                      primaryText = destMarkerConfig.primaryText,
+                      pointerImage = destMarkerConfig.pointerIcon,
+                      labelImage = destMarkerConfig.labelImage,
+                      visible = true
+                    }
+                  }
+                }
+
+                -- Fallback for drawRouteV2. Remove when drawRouteV2 is stable
+                when (not isDrawRouteV2) $ void $ liftFlow $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
+
                 void $ delay $ Milliseconds duration
                 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
               else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) then do
@@ -2758,11 +2788,44 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                             newPoints = if length routePoints > 1 then
                                           getExtendedPath (walkCoordinates routes.points)
                                         else
-                                          walkCoordinate srcLat srcLon dstLat dstLon
+                                          walkCoordinate srcLat srcLon dstLat 0.0
                             newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
                             srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
                             destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = getMarkerPrimaryText routes.distance }
-                        void $ liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
+                        -- void $ liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
+                        -- liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" (metersToKm routes.distance (state.props.currentStage == RideStarted)) specialLocationTag
+
+                        isDrawRouteV2 <- liftFlow $ runEffectFn1 drawRouteV2 $ drawRouteV2Config{
+                          id = "DefaultRoute",
+                          points = newPoints,
+                          startMarker {
+                            id = "startMarker",
+                            rotational = true,
+                            bitmapMarker {
+                              primaryText = srcMarkerConfig.primaryText,
+                              pointerImage = srcMarkerConfig.pointerIcon,
+                              labelImage = srcMarkerConfig.labelImage,
+                              visible = true
+                            }
+                          },
+                          endMarker {
+                            id = "endMarker",
+                            anchorU = 0.5,
+                            anchorV = 0.0,
+                            bitmapMarker {
+                              primaryText = destMarkerConfig.primaryText,
+                              pointerImage = destMarkerConfig.pointerIcon,
+                              labelImage = destMarkerConfig.labelImage,
+                              visible = true
+                            }
+                          },
+                          animationConfig{
+                            animation = specialLocationTag.isAnimation
+                          }
+                        }
+                        -- fall back to old drawRoute if drawRouteV2 not there
+                        when (not isDrawRouteV2) $ void $ liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
+
                         _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
                         void $ delay $ Milliseconds duration
                         driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState expCounter
@@ -2782,7 +2845,15 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                                       specialLocationConfig "" sourceSpecialTagIcon true getPolylineAnimationConfig
                                                     else
                                                       specialLocationConfig "" destSpecialTagIcon false getPolylineAnimationConfig
-                          liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta = getMarkerPrimaryText locationResp.distance, srcMarker = markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel}
+                          -- liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta = getMarkerPrimaryText locationResp.distance, srcMarker = markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel}
+                          -- liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta =  (metersToKm locationResp.distance (state.props.currentStage == RideStarted)), srcMarker =  markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel}
+                          isUpdateRouteV2 <- liftFlow $ runEffectFn1 updateRouteV2 updateRouteV2Config { 
+                            id = "DefaultRoute", 
+                            points = newPoints 
+                          }
+                          -- Fall back to old updateRoute if updateRouteV2 not there
+                          when (not isUpdateRouteV2) $ liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta = getMarkerPrimaryText locationResp.distance, srcMarker = markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel}
+
                           _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
                           void $ delay $ Milliseconds duration
                           driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter

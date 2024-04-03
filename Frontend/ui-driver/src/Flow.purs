@@ -134,6 +134,7 @@ import Helpers.API as HelpersAPI
 import LocalStorage.Cache (getValueFromCache)
 import Effect.Unsafe (unsafePerformEffect)
 
+
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
     liftFlowBT $ markPerformance "BASE_APP_FLOW_START"
@@ -2256,32 +2257,115 @@ homeScreenFlow = do
         let coors = (walkCoordinate srcLon srcLat destLon destLat)
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
         void $ pure $ removeAllPolylines ""
-        void $ liftFlowBT $ runEffectFn9 drawRoute coors "DOT" "#323643" false srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+        -- void $ liftFlowBT $ runEffectFn9 drawRoute coors "DOT" "#323643" false srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+        -- liftFlowBT $ drawRoute coors "DOT" "#323643" false "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+        isDrawRouteV2 <- liftFlowBT $ runEffectFn1 JB.drawRouteV2 JB.drawRouteV2Config {
+          points = coors,
+          straightLine = true,
+          style = "DOT",
+          startMarker {
+            id = "startMarker",
+            anchorU = 0.5,
+            anchorV = 0.0,
+            bitmapMarker {
+              primaryText = srcMarkerConfig.primaryText,
+              pointerImage = srcMarkerConfig.pointerIcon,
+              visible = true
+            }
+          },
+          endMarker {
+            id = "endMarker",
+            anchorU = 0.5,
+            anchorV = 0.0,
+            bitmapMarker {
+              primaryText = destMarkerConfig.primaryText,
+              pointerImage = destMarkerConfig.pointerIcon,
+              visible = true
+            }
+          }
+        }
+        
+        -- Fallback for drawRouteV2. Remove when drawRouteV2 is stable
+        when (not isDrawRouteV2) $ void $ liftFlowBT $ runEffectFn9 drawRoute coors "DOT" "#323643" false srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+        
         homeScreenFlow
-      else if not null state.data.route then do
-        let shortRoute = (state.data.route !! 0)
-        case shortRoute of
-          Just (Route route) -> do
-            let coor = walkCoordinates route.points
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
-            pure $ removeMarker "ic_vehicle_side"
-            void $ pure $ removeAllPolylines ""
-            void $ liftFlowBT $ runEffectFn9 drawRoute coor "LineString" "#323643" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
-            pure unit
-          Nothing -> pure unit
-      else do
-        GetRouteResp routeApiResponse <- Remote.getRouteBT (makeGetRouteReq srcLat srcLon destLat destLon) routeType
-        let shortRoute = (routeApiResponse !! 0)
-        case shortRoute of
-          Just (Route route) -> do
-            let coor = walkCoordinates route.points
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
-            pure $ removeMarker "ny_ic_auto"
-            void $ pure $ removeAllPolylines ""
-            void $ liftFlowBT $ runEffectFn9 drawRoute coor "ic_vehicle_side" "#323643" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
-            pure unit
-          Nothing -> pure unit
-      homeScreenFlow
+        else if not null state.data.route then do
+          let shortRoute = (state.data.route !! 0)
+          case shortRoute of
+            Just (Route route) -> do
+              let coor = walkCoordinates route.points
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
+              pure $ removeMarker "ic_vehicle_side"
+              void $ pure $ removeAllPolylines ""
+              -- void $ liftFlowBT $ runEffectFn9 drawRoute coor "LineString" "#323643" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+              -- liftFlowBT $ drawRoute coor "LineString" "#323643" true "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+              isDrawRouteV2 <-liftFlowBT $ runEffectFn1 JB.drawRouteV2 JB.drawRouteV2Config {
+                points = coor,
+                startMarker {
+                  anchorU = 0.5,
+                  anchorV = 0.0,
+                  id = "startMarker",
+                  bitmapMarker {
+                    primaryText = srcMarkerConfig.primaryText,
+                    pointerImage = srcMarkerConfig.pointerIcon,
+                    visible = true
+                  }
+                },
+                endMarker {
+                  id = "endMarker",
+                  anchorU = 0.5,
+                  anchorV = 0.0,
+                  bitmapMarker {
+                    primaryText = destMarkerConfig.primaryText,
+                    pointerImage = destMarkerConfig.pointerIcon,
+                    visible = true
+                  }
+                }
+              }
+
+              when (not isDrawRouteV2) $ void $ liftFlowBT $ runEffectFn9 drawRoute coor "LineString" "#323643" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+              pure unit
+            Nothing -> pure unit
+          homeScreenFlow
+          else do
+            GetRouteResp routeApiResponse <- Remote.getRouteBT (makeGetRouteReq srcLat srcLon destLat destLon) routeType
+            let shortRoute = (routeApiResponse !! 0)
+            case shortRoute of
+              Just (Route route) -> do
+                let coor = walkCoordinates route.points
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
+                pure $ removeMarker "ny_ic_auto"
+                void $ pure $ removeAllPolylines ""
+                -- void $ liftFlowBT $ runEffectFn9 drawRoute coor "ic_vehicle_side" "#323643" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+                -- liftFlowBT $ drawRoute coor "ic_vehicle_side" "#323643" true "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+                isDrawRouteV2 <- liftFlowBT $ runEffectFn1 JB.drawRouteV2 JB.drawRouteV2Config {
+                  points = coor,
+                  startMarker {
+                    id = "startMarker",
+                    anchorU = 0.5,
+                    anchorV = 0.0,
+                    bitmapMarker {
+                      primaryText = srcMarkerConfig.primaryText,
+                      pointerImage = srcMarkerConfig.pointerIcon,
+                      visible = true
+                    }
+                  },
+                  endMarker {
+                    id = "endMarker",
+                    anchorU = 0.5,
+                    anchorV = 0.0,
+                    bitmapMarker {
+                      primaryText = destMarkerConfig.primaryText,
+                      pointerImage = destMarkerConfig.pointerIcon,
+                      visible = true
+                    }
+                  }
+                }
+
+                when (not isDrawRouteV2) $ void $ liftFlowBT $ runEffectFn9 drawRoute coor "ic_vehicle_side" "#323643" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+                pure unit
+              Nothing -> pure unit
+            homeScreenFlow
     UPDATE_STAGE stage -> do
       void $ updateStage $ HomeScreenStage stage
       homeScreenFlow

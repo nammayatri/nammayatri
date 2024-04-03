@@ -35,14 +35,14 @@ import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
 import Foreign.Object (empty)
 import Helpers.Utils (decodeError, getTime)
-import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig, Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
 import JBridge as JB
+import JBridge 
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
-import Prelude (not, Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when, (<$>))
+import Prelude 
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
 import Screens.Types (TicketServiceData, AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), City(..), AutoCompleteReqType(..))
@@ -59,8 +59,8 @@ import ConfigProvider as CP
 import Locale.Utils
 import MerchantConfig.Types (GeoCodeConfig)
 import Debug
-import Effect.Uncurried (runEffectFn9)
 import Engineering.Helpers.BackTrack (liftFlowBT)
+import Effect.Uncurried
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -740,14 +740,53 @@ drawMapRoute srcLat srcLng destLat destLng sourceMarkerConfig destMarkerConfig r
         callDrawRoute :: Maybe Route -> FlowBT String (Maybe Route)
         callDrawRoute route = do
             case route of
-                Just (Route routes) ->
-                    if (routes.distance <= 50000) then do
-                      void $ liftFlowBT $ runEffectFn9 drawRoute (walkCoordinates routes.points) "LineString" "#323643" true sourceMarkerConfig destMarkerConfig 8 routeType specialLocation
-                      pure route
-                    else do
-                      void $ liftFlowBT $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false sourceMarkerConfig destMarkerConfig 8 routeType specialLocation
-                      pure route 
+                -- Just (Route routes) ->
+                --     if (routes.distance <= 50000) then do
+                --       void $ liftFlowBT $ runEffectFn9 drawRoute (walkCoordinates routes.points) "LineString" "#323643" true sourceMarkerConfig destMarkerConfig 8 routeType specialLocation
+                --       pure route
+                --     else do
+                --       void $ liftFlowBT $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false sourceMarkerConfig destMarkerConfig 8 routeType specialLocation
+                --       pure route 
+                Just (Route routes) -> do
+                  --   lift $ lift $ liftFlow $ drawRoute (walkCoordinates routes.points) "LineString" "#323643" true markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress specialLocation
+                    isDrawRouteV2 <- lift $ lift $ liftFlow $ runEffectFn1 drawRouteV2 drawRouteV2Config {
+                      id = "DefaultRoute",
+                      points = walkCoordinates routes.points,
+                      straightLine = routes.distance >= 50000,
+                      style = if  routes.distance <= 50000 then "LineString" else  "DOT",
+                      startMarker {
+                          id = "startMarker",
+                          anchorU = 0.5,
+                          anchorV = 0.0,
+                          bitmapMarker {
+                            primaryText = sourceMarkerConfig.primaryText,
+                            pointerImage = sourceMarkerConfig.pointerIcon,
+                            labelImage = sourceMarkerConfig.labelImage,
+                            visible = true
+                          }
+                      },
+                      endMarker {
+                        id = "endMarker",
+                        anchorU = 0.5,
+                        anchorV = 0.0,
+                        bitmapMarker {
+                        primaryText = destMarkerConfig.primaryText,
+                        pointerImage = destMarkerConfig.pointerIcon,
+                        labelImage = destMarkerConfig.labelImage,
+                        visible = true
+                        }
+                      }
+                    }
+
+                    -- Fallback for drawRouteV2. Remove when drawRouteV2 is stable
+                    when (not isDrawRouteV2) $ void $ liftFlowBT $ runEffectFn9 drawRoute (walkCoordinates routes.points) (if routes.distance <= 50000 then "LineString" else  "DOT") "#323643" (routes.distance < 50000) sourceMarkerConfig destMarkerConfig 8 routeType specialLocation
+
+                    pure route
+                    
                 Nothing -> pure route
+
+
+
 
 type Markers = {
     srcMarker :: String,
