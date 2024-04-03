@@ -44,15 +44,16 @@ onSearch _ reqV2 = withFlowHandlerBecknAPI do
     messageId <- Utils.getMessageIdText reqV2.onSearchReqContext
 
     whenJust mbDOnSearchReq $ \request -> do
-      Redis.whenWithLockRedis (onSearchLockKey messageId) 60 $ do
+      let bppSubId = request.providerInfo.providerId
+      Redis.whenWithLockRedis (onSearchLockKey messageId bppSubId) 60 $ do
         validatedRequest <- DOnSearch.validateRequest request
         fork "on search processing" $ do
-          Redis.whenWithLockRedis (onSearchProcessingLockKey messageId) 60 $
+          Redis.whenWithLockRedis (onSearchProcessingLockKey messageId bppSubId) 60 $
             DOnSearch.onSearch messageId validatedRequest
     pure Ack
 
-onSearchLockKey :: Text -> Text
-onSearchLockKey id = "Customer:OnSearch:MessageId-" <> id
+onSearchLockKey :: Text -> Text -> Text
+onSearchLockKey msgId bppSubscriberId = "Customer:OnSearch:MessageId-" <> msgId <> "-bppSubscriberId-" <> bppSubscriberId
 
-onSearchProcessingLockKey :: Text -> Text
-onSearchProcessingLockKey id = "Customer:OnSearch:Processing:MessageId-" <> id
+onSearchProcessingLockKey :: Text -> Text -> Text
+onSearchProcessingLockKey msgId bppSubscriberId = "Customer:OnSearch:Processing:MessageId-" <> msgId <> "-bppSubscriberId-" <> bppSubscriberId
