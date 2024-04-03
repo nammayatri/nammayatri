@@ -60,19 +60,21 @@ findFullSpecialLocationsByMerchantOperatingCityId mocId = do
   mapM makeFullSpecialLocation mbRes
 
 findSpecialLocationByLatLongFull :: Transactionable m => LatLong -> Int -> m (Maybe SpecialLocationFull)
-findSpecialLocationByLatLongFull point radius = do
+findSpecialLocationByLatLongFull point _ = do
   mbRes <-
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
-      where_ $ pointCloseByOrWithin (point.lon, point.lat) (val radius)
+      -- where_ $ pointCloseByOrWithin (point.lon, point.lat) (val radius) -- heavy query, can use later with caching
+      where_ $ containsPoint (point.lon, point.lat)
       return (specialLocation, F.getGeomGeoJSON)
   mapM makeFullSpecialLocation (listToMaybe mbRes)
 
 findSpecialLocationByLatLongNearby :: Transactionable m => LatLong -> Int -> m (Maybe (D.SpecialLocation, Text))
-findSpecialLocationByLatLongNearby point radius = do
+findSpecialLocationByLatLongNearby point _ = do
   Esq.findOne $ do
     specialLocation <- from $ table @SpecialLocationT
-    where_ $ pointCloseByOrWithin (point.lon, point.lat) (val radius)
+    -- where_ $ pointCloseByOrWithin (point.lon, point.lat) (val radius) -- heavy query, can use later with caching
+    where_ $ containsPoint (point.lon, point.lat)
     return (specialLocation, F.getGeomGeoJSON)
 
 findPickupSpecialLocationByLatLong :: Transactionable m => LatLong -> m (Maybe D.SpecialLocation)
