@@ -656,7 +656,8 @@ getCityConfig cityConfig cityName = do
                               domain : ""
                             , customerAppId : ""
                             , driverAppId : ""
-                          }
+                          },
+                          waitingCharges : 1.50
                         }
   fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
   

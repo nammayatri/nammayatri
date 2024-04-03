@@ -2101,8 +2101,17 @@ type DriverSavedLocationScreenData = {
   savedLocationsArray :: Array GoToLocation,
   predictions :: Array PredictionItem,
   saveLocationObject :: SaveLocationObject,
-  maxGotoLocations :: Int
+  maxGotoLocations :: Int,
+  locationSelectType :: LocationSelectType
 }
+
+data LocationSelectType = SET_LOC | CURRENT_LOC
+
+derive instance genericLocationSelectType :: Generic LocationSelectType _
+instance showLocationSelectType :: Show LocationSelectType where show = genericShow
+instance eqLocationSelectType :: Eq LocationSelectType where eq = genericEq
+instance decodeLocationSelectType :: Decode LocationSelectType where decode = defaultEnumDecode
+instance encodeLocationSelectType :: Encode LocationSelectType where encode = defaultEnumEncode
 
 type GoToLocation = {
   id :: String,

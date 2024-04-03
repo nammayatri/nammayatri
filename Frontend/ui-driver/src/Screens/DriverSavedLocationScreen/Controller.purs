@@ -28,7 +28,7 @@ import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, setText)
 import Engineering.Helpers.Commons as EHC
-import JBridge (addMarker, exitLocateOnMap, getCurrentLatLong, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestLocation, showMarker, toggleBtnLoader, locateOnMapConfig)
+import JBridge (addMarker, exitLocateOnMap, getCurrentLatLong, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestLocation, showMarker, toggleBtnLoader, locateOnMapConfig, currentPosition)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -39,9 +39,10 @@ import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.DriverSavedLocationScreen.Transformer (getLocationArray, tagAlreadySaved)
-import Screens.Types (DriverSavedLocationScreenState, GoToScrEntryType(..), Location(..), PredictionItem(..), SavedLocationScreenType(..))
+import Screens.Types (DriverSavedLocationScreenState, GoToScrEntryType(..), Location(..), PredictionItem(..), SavedLocationScreenType(..),LocationSelectType(..))
 import Services.API (GetHomeLocationsRes(..))
 import Common.Resources.Constants (zoomLevel)
+import Helpers.Utils(getCurrentLocation, LatLon(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -66,7 +67,7 @@ data Action
   | DebounceCallback String Boolean
   | ConfirmLocEDT String
   | MAPREADY String String String
-  | LocateOnMap
+  | LocateOnMap LocationSelectType
   | UpdateLocation String String String
   | ConfirmChangesAC PrimaryButton.Action
   | SuggestionClick PredictionItem
@@ -114,7 +115,11 @@ eval (UpdateLocation _ lat lon) state = case NUM.fromString lat, NUM.fromString 
   Just latitute, Just longitute -> exit $ UpdateConfirmLocation state { data { saveLocationObject { position { lat = latitute, lon = longitute } } } }
   _, _ -> continue state
 
-eval LocateOnMap state = do
+eval (LocateOnMap check ) state = do
+  void $ pure $ JB.hideKeyboardOnNavigation true
+  if check == CURRENT_LOC then do
+    void $ pure $ currentPosition ""
+  else pure unit
   exit $ ChangeView state { props { viewType = LOCATE_ON_MAP } }
 
 eval (ConfirmLocEDT val) state =

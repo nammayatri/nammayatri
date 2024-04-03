@@ -105,7 +105,8 @@ type CityConfig = {
   vehicleNSImg :: String,
   variantSubscriptionConfig :: VariantSubscriptionConfig,
   showEarningSection :: Boolean,
-  referral :: Referral
+  referral :: Referral,
+  waitingCharges :: Number
 }
 
 type Referral = {

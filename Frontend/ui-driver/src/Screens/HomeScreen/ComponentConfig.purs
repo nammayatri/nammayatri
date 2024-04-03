@@ -736,10 +736,10 @@ requestInfoCardConfig _ = let
       text = getString $ WHAT_IS_NAMMA_YATRI_BONUS "WHAT_IS_NAMMA_YATRI_BONUS"
     }
   , primaryText {
-      text = getString BONUS_PRIMARY_TEXT
+      text = getString $ BONUS_PRIMARY_TEXT "BONUS_PRIMARY_TEXT"
     }
   , secondaryText {
-      text = getString BONUS_SECONDARY_TEXT,
+      text = getString $ BONUS_SECONDARY_TEXT "BONUS_SECONDARY_TEXT",
       visibility = VISIBLE
     }
   , imageConfig {
@@ -754,34 +754,36 @@ requestInfoCardConfig _ = let
   in requestInfoCardConfig'
 
 waitTimeInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
-waitTimeInfoCardConfig state = RequestInfoCard.config {
-    title {
-      text = getString WAIT_TIMER
+waitTimeInfoCardConfig state = 
+  let cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  in
+    RequestInfoCard.config {
+      title {
+        text = getString WAIT_TIMER
+      }
+    , primaryText {
+        text = if rideInProgress then 
+                getVarString THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY [show maxWaitTimeInMinutes] else getString HOW_LONG_WAITED_FOR_PICKUP,
+        padding = Padding 16 16 0 0
+      }
+    , secondaryText {
+        text = getString $ CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ("₹" <> (show cityConfig.waitingCharges)) (show maxWaitTimeInMinutes),
+        visibility = if rideInProgress then GONE else VISIBLE,
+        padding = PaddingLeft 16
+      }
+    , imageConfig {
+        imageUrl = fetchImage FF_ASSET "ny_ic_waiting_auto",
+        height = V 130,
+        width = V 130,
+        padding = Padding 0 4 1 0
+      }
+    , buttonConfig {
+        text = getString GOT_IT,
+        padding = PaddingVertical 16 20
+      }
     }
-  , primaryText {
-      text = if rideInProgress then 
-              getVarString THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY [show maxWaitTimeInMinutes] else getString HOW_LONG_WAITED_FOR_PICKUP,
-      padding = Padding 16 16 0 0
-    }
-  , secondaryText {
-      text = getVarString CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE [show maxWaitTimeInMinutes],
-      visibility = if rideInProgress then GONE else VISIBLE,
-      padding = PaddingLeft 16
-    }
-  , imageConfig {
-      imageUrl = fetchImage FF_ASSET "ny_ic_waiting_auto",
-      height = V 130,
-      width = V 130,
-      padding = Padding 0 4 1 0
-    }
-  , buttonConfig {
-      text = getString GOT_IT,
-      padding = PaddingVertical 16 20
-    }
-  }
-  where rideInProgress = state.data.activeRide.status == SA.INPROGRESS
-        maxWaitTimeInMinutes = Int.floor $ Int.toNumber state.data.config.waitTimeConfig.thresholdTime / 60.0
-
+    where rideInProgress = state.data.activeRide.status == SA.INPROGRESS
+          maxWaitTimeInMinutes = Int.floor $ Int.toNumber state.data.config.waitTimeConfig.thresholdTime / 60.0
 
 makePaymentState :: ST.HomeScreenState -> MakePaymentModal.MakePaymentModalState
 makePaymentState state = 
@@ -1469,7 +1471,7 @@ gotoCounterStrings popupType =
   case popupType of 
     MORE_GOTO_RIDES -> PopupReturn { primaryText : getString MORE_GOTO_RIDE_COMING
                               , secondaryText : getString MORE_GOTO_RIDE_COMING_DESC
-                              , imageURL : getImage "ny_ic_goto_more_rides" "ny_ic_goto_more_rides,https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_goto_more_rides.png"
+                              , imageURL : getImage "ny_ic_goto_more_rides" ",https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_goto_more_rides.png"
                               , buttonText : getString OKAY
                               }
     REDUCED 0 -> PopupReturn { primaryText : getString GOTO_REDUCED_TO_ZERO
@@ -1489,7 +1491,7 @@ gotoCounterStrings popupType =
                               }
     REACHED_HOME -> PopupReturn { primaryText : getString GOTO_LOC_REACHED
                               , secondaryText : getString YOU_ARE_ALMOST_AT_LOCATION
-                              , imageURL : getImage "ny_ic_goto_arrived" "ny_ic_goto_arrived,https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_goto_arrived.png"
+                              , imageURL : getImage "ny_ic_goto_arrived" ",https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_goto_arrived.png"
                               , buttonText : getString OK_GOT_IT
                               }
     NO_POPUP_VIEW -> PopupReturn { primaryText : "" , secondaryText : "" , imageURL : "" , buttonText : "" }

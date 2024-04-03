@@ -115,7 +115,8 @@ dummyCityConfig = {
                         domain : ""
                       , customerAppId : ""
                       , driverAppId : ""
-                    }
+                    },
+                    waitingCharges : 1.50
                   }
           
 type VehicleInfo = {

@@ -152,7 +152,8 @@ config =
                   domain : "https://nammayatri.in"
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
-              }
+              },
+              waitingCharges : 1.50
             },
             {
               cityName : "Hyderabad",
@@ -180,7 +181,8 @@ config =
                   domain : "https://www.manayatri.in"
                 , customerAppId : "in.mobility.manayatri"
                 , driverAppId : "in.mobility.manayatripartner"
-              }
+              },
+              waitingCharges : 2.00
             },
             {
               cityName : "Mysore",
@@ -208,7 +210,8 @@ config =
                   domain : "https://nammayatri.in"
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
-              }
+              },
+              waitingCharges : 1.50
             },
             {
               cityName : "Delhi",
@@ -236,7 +239,8 @@ config =
                   domain : "https://nammayatri.in"
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
-              }
+              },
+              waitingCharges : 0.75
             },
             {
               cityName : "Chennai",
@@ -264,7 +268,8 @@ config =
                   domain : "https://nammayatri.in"
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
-              }
+              },
+              waitingCharges : 1.00
             },
             {
               cityName : "Coimbatore",
@@ -292,7 +297,8 @@ config =
                   domain : "https://nammayatri.in"
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
-              }
+              },
+              waitingCharges : 1.50
             },
             {
               cityName : "Puducherry",
@@ -320,7 +326,8 @@ config =
                   domain : "https://nammayatri.in"
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
-              }
+              },
+              waitingCharges : 1.50
             },
             {
               cityName : "Gurugram",
@@ -348,7 +355,8 @@ config =
                   domain : "https://nammayatri.in"
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
-              }
+              },
+              waitingCharges : 1.50
             },
             {             
               cityName : "Noida",
@@ -376,7 +384,8 @@ config =
                   domain : "https://nammayatri.in"
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
-              }
+              },
+              waitingCharges : 1.50
             },
             {
               cityName : "TamilNaduCities",
@@ -404,7 +413,8 @@ config =
                   domain : "https://nammayatri.in"
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
-              }
+              },
+              waitingCharges : 1.50
             },
             {
               cityName : "Kolkata",
@@ -436,7 +446,8 @@ config =
                   domain : "https://www.yatrisathi.in"
                 , customerAppId : "in.juspay.jatrisaathi"
                 , driverAppId : "in.juspay.jatrisaathidriver"
-              }
+              },
+              waitingCharges : 1.50
             }
             --, For future use
             -- {

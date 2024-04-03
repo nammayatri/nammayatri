@@ -42,7 +42,7 @@ import PrestoDOM.Animation as PrestoAnim
 import Screens.DriverSavedLocationScreen.ComponentConfig (confirmDeletePopupConfig, locationListItemConfig, primaryButtonConfig)
 import Screens.DriverSavedLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.DriverSavedLocationScreen.Transformer (tagAlreadySaved)
-import Screens.Types (DriverSavedLocationScreenState, GoToScrEntryType(..), PredictionItem, SavedLocationScreenType(..))
+import Screens.Types (DriverSavedLocationScreenState, GoToScrEntryType(..), PredictionItem, SavedLocationScreenType(..), LocationSelectType(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
@@ -265,7 +265,7 @@ bottomButtons state push =
             [ weight 1.0
             , height WRAP_CONTENT
             , gravity CENTER
-            , onClick push $ const LocateOnMap
+            , onClick push $ const $ LocateOnMap SET_LOC
             ]
             [ imageView
                 [ height $ V 18
@@ -291,7 +291,7 @@ bottomButtons state push =
             [ weight 1.0
             , height WRAP_CONTENT
             , gravity CENTER
-            , onClick push $ const LocateOnMap
+            , onClick push $ const $ LocateOnMap CURRENT_LOC
             ]
             [ imageView
                 [ height $ V 18

@@ -20,7 +20,7 @@ import Prelude
 
 import Common.Types.App as Common
 import Data.Maybe (Maybe(..))
-import Screens.Types (DriverSavedLocationScreenState, SavedLocationScreenType(..))
+import Screens.Types (DriverSavedLocationScreenState, SavedLocationScreenType(..), LocationSelectType(..))
 import ConfigProvider
 
 initData :: DriverSavedLocationScreenState
@@ -49,6 +49,7 @@ initData =
           , address: ""
           , tag: ""
           }
+      , locationSelectType : SET_LOC
       }
   , props:
       { viewType: GoToList
