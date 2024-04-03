@@ -154,3 +154,6 @@ jobs:
           bash releaseApp.sh "$FASTLANE_CMD"
         env: 
           FASTLANE_CMD: ${{ matrix.variant.fastlane_cm }}
+      
+      - name: Increment Version for the app
+        run: python updateLocalVersion.py customer
