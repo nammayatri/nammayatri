@@ -16,7 +16,7 @@ module Domain.Action.UI.DriverCoin where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin as DCoins hiding (CoinStatus)
 import Data.OpenApi hiding (title)
-import Data.Time (UTCTime (UTCTime, utctDay))
+import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import Domain.Types.Coins.CoinHistory
 import Domain.Types.Coins.PurchaseHistory
 import qualified Domain.Types.Merchant as DM
@@ -36,6 +36,7 @@ import SharedLogic.DriverFee (delCoinAdjustedInSubscriptionByDriverIdKey, getCoi
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import Storage.Queries.Coins.CoinHistory as CHistory
 import Storage.Queries.Coins.PurchaseHistory as PHistory
+import Storage.Queries.DailyStatsExtra as DS
 import Storage.Queries.DriverPlan as DPlan
 import Storage.Queries.DriverStats as QDS
 import Storage.Queries.Person as Person
@@ -78,6 +79,11 @@ data CoinsUsageRes = CoinsUsageRes
     coinConvertedTocashLeft :: HighPrecMoney,
     coinConversionRate :: HighPrecMoney,
     coinUsageHistory :: [CoinUsageHistoryItem]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data RideStatusPastDaysRes = RideStatusPastDaysRes
+  { rideCountPopupValue :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -206,9 +212,9 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
   let stepFunctionToConvertCoins = transporterConfig.stepFunctionToConvertCoins
       timeDiffFromUtc = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
   when (coins < stepFunctionToConvertCoins) $
-    throwError $ CoinConversionToCash driverId.getId coins
+    throwError $ CoinConversionToCash driverId.getId coins stepFunctionToConvertCoins
   when (coins `mod` stepFunctionToConvertCoins /= 0) $
-    throwError $ CoinUsedForConverting driverId.getId coins
+    throwError $ CoinUsedForConverting driverId.getId coins stepFunctionToConvertCoins
   let istTime = addUTCTime timeDiffFromUtc now
       currentDate = show $ utctDay istTime
       calculatedAmount = fromIntegral coins * transporterConfig.coinConversionRate
@@ -239,3 +245,18 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
     else do
       throwError $ InsufficientCoins driverId.getId coins
   pure Success
+
+getRideStatusPastDays :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow RideStatusPastDaysRes
+getRideStatusPastDays (driverId, merchantId_, merchantOpCityId) = do
+  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  unless (transporterConfig.coinFeature) $
+    throwError $ CoinServiceUnavailable merchantId_.getId
+  localTimeToday <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let localDateToday = utctDay localTimeToday
+      pastDays = toInteger $ transporterConfig.pastDaysRideCounter
+      daysAgo = addDays (- pastDays) localDateToday
+  dailyRideSummary <- DS.findAllInRangeByDriverId driverId daysAgo localDateToday
+  let ridesExceedThreshold = case dailyRideSummary of
+        [] -> False
+        _ -> all (\res -> res.numRides > transporterConfig.pastDaysRideCounter) dailyRideSummary
+  pure $ RideStatusPastDaysRes {rideCountPopupValue = ridesExceedThreshold}
