@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
 
 module Domain.Action.Beckn.OnSearch
   ( DOnSearchReq (..),
@@ -109,6 +110,7 @@ data EstimateInfo = EstimateInfo
     validTill :: UTCTime,
     serviceTierName :: Maybe Text
   }
+  deriving (Show)
 
 data NightShiftInfo = NightShiftInfo
   { nightShiftCharge :: Price,
@@ -116,19 +118,23 @@ data NightShiftInfo = NightShiftInfo
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
   }
+  deriving (Show)
 
 newtype WaitingChargesInfo = WaitingChargesInfo
   { waitingChargePerMin :: Maybe Price
   }
+  deriving (Show)
 
 data EstimateBreakupInfo = EstimateBreakupInfo
   { title :: Text,
     price :: BreakupPriceInfo
   }
+  deriving (Show)
 
 newtype BreakupPriceInfo = BreakupPriceInfo
   { value :: Price
   }
+  deriving (Show)
 
 data QuoteInfo = QuoteInfo
   { vehicleVariant :: VehicleVariant,
@@ -196,7 +202,9 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       logTagError "onSearch" "disability tag enabled search estimates discarded, not supported for OFF-US transactions"
       pure ()
     else do
+      logDebug $ "ProviderId:-" <> show providerInfo.providerId <> ",estimatesInfo:-" <> show estimatesInfo
       estimates <- traverse (buildEstimate providerInfo now searchRequest) (filterEstimtesByPrefference estimatesInfo)
+      logDebug $ "ProviderId:-" <> show providerInfo.providerId <> ",builded estimates:-" <> show estimates
       quotes <- traverse (buildQuote requestId providerInfo now searchRequest) (filterQuotesByPrefference quotesInfo)
       merchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId merchantOperatingCityId
       let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
@@ -204,6 +212,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
         triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
       let lockKey = DQ.estimateBuildLockKey searchRequest.id.getId
       Redis.withLockRedis lockKey 5 $ do
+        logDebug $ "ProviderId:-" <> show providerInfo.providerId <> ",DB created estimates:-" <> show estimates
         _ <- QEstimate.createMany estimates
         _ <- QQuote.createMany quotes
         _ <- QPFS.updateStatus searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = searchRequest.id, validTill = searchRequest.validTill}

@@ -42,6 +42,9 @@ onSearch _ reqV2 = withFlowHandlerBecknAPI do
     logInfo $ "OnSearch received:-" <> show reqV2
     mbDOnSearchReq <- TaxiACL.buildOnSearchReqV2 reqV2
     messageId <- Utils.getMessageIdText reqV2.onSearchReqContext
+    case mbDOnSearchReq of
+      Nothing -> logDebug $ "MessageId:-" <> messageId <> ",DomainOnSearchReq:-Nothing"
+      Just dOnSearchReq -> logDebug $ "MessageId:-" <> messageId <> ",DomainOnSearchReq:-" <> show dOnSearchReq.estimatesInfo
 
     whenJust mbDOnSearchReq $ \request -> do
       Redis.whenWithLockRedis (onSearchLockKey messageId) 60 $ do
