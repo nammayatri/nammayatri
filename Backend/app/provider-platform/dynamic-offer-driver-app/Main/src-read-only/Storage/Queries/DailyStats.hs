@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.DailyStats where
+module Storage.Queries.DailyStats (module Storage.Queries.DailyStats, module ReExport) where
 
 import qualified Data.Text
 import qualified Data.Time.Calendar
@@ -18,6 +18,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DailyStats as Beam
+import Storage.Queries.DailyStatsExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DailyStats.DailyStats -> m ())
 create = createWithKV
@@ -57,31 +58,3 @@ updateByPrimaryKey (Domain.Types.DailyStats.DailyStats {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq id]]
-
-instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
-  fromTType' (Beam.DailyStatsT {..}) = do
-    pure $
-      Just
-        Domain.Types.DailyStats.DailyStats
-          { driverId = Kernel.Types.Id.Id driverId,
-            id = id,
-            merchantLocalDate = merchantLocalDate,
-            numRides = numRides,
-            totalDistance = totalDistance,
-            totalEarnings = totalEarnings,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
-  toTType' (Domain.Types.DailyStats.DailyStats {..}) = do
-    Beam.DailyStatsT
-      { Beam.driverId = Kernel.Types.Id.getId driverId,
-        Beam.id = id,
-        Beam.merchantLocalDate = merchantLocalDate,
-        Beam.numRides = numRides,
-        Beam.totalDistance = totalDistance,
-        Beam.totalEarnings = totalEarnings,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }

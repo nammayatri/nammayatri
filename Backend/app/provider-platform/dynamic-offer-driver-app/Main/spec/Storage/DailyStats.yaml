@@ -35,3 +35,6 @@ DailyStats:
       params: [totalEarnings, numRides, totalDistance]
       where:
         and: [driverId, merchantLocalDate]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
