@@ -282,5 +282,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.kaptureDisposition = kaptureDisposition,
         BeamTC.fakeOtpMobileNumbers = fakeOtpMobileNumbers,
         BeamTC.dummyFromLocation = Just $ toJSON dummyFromLocation,
-        BeamTC.dummyToLocation = Just $ toJSON dummyToLocation
+        BeamTC.dummyToLocation = Just $ toJSON dummyToLocation,
+        BeamTC.pastDaysRideCounter = pastDaysRideCounter
       }

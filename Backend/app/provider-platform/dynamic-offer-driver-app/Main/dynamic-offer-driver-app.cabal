@@ -474,6 +474,7 @@ library
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
       Storage.Queries.Coins.PurchaseHistory
+      Storage.Queries.DailyStatsExtra
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
       Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation
@@ -683,6 +684,7 @@ library
       Storage.Queries.MetaData
       Storage.Queries.ModuleCompletionInformation
       Storage.Queries.OrphanInstances.CancellationReason
+      Storage.Queries.OrphanInstances.DailyStats
       Storage.Queries.OrphanInstances.DriverLicense
       Storage.Queries.OrphanInstances.DriverRCAssociation
       Storage.Queries.OrphanInstances.DriverReferral
