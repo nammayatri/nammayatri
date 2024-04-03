@@ -250,7 +250,8 @@ public class RideRequestUtils {
 
         if(Settings.canDrawOverlays(context)){
             try{
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                Handler handler = new Handler();
+                handler.postDelayed(() -> {
                     context.startActivity(restartIntent);
                     Utils.minimizeApp(context);
                 }, 5000);
