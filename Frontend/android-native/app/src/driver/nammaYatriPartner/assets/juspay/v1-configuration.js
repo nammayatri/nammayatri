@@ -202,7 +202,8 @@ window.getMerchantConfig = function () {
             "domain" : "https://nammayatri.in"
           , "customerAppId" : "in.juspay.nammayatri"
           , "driverAppId" : "in.juspay.nammayatripartner"
-        }
+        },
+        "waitingCharges" : 1.50
       },
       {
         "cityName" : "Hyderabad",
@@ -234,7 +235,8 @@ window.getMerchantConfig = function () {
             "domain" : "https://www.manayatri.in"
           , "customerAppId" : "in.mobility.manayatri"
           , "driverAppId" : "in.mobility.manayatripartner"
-        }
+        },
+        "waitingCharges" : 2.00
       },
       {
         "cityName" : "Mysore",
@@ -266,7 +268,8 @@ window.getMerchantConfig = function () {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
-      }
+      },
+      "waitingCharges" : 1.50
       },
       {
         "cityName" : "Delhi",
@@ -298,7 +301,8 @@ window.getMerchantConfig = function () {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
-      }
+      },
+      "waitingCharges" : 0.75
       },
       {
         "cityName" : "Chennai",
@@ -330,7 +334,8 @@ window.getMerchantConfig = function () {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
-      }
+      },
+      "waitingCharges" : 1.00
       },
       {
         "cityName" : "Coimbatore",
@@ -362,7 +367,8 @@ window.getMerchantConfig = function () {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
-      }
+      },
+      "waitingCharges" : 1.50
       },
       {
         "cityName" : "Puducherry",
@@ -394,7 +400,8 @@ window.getMerchantConfig = function () {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
-      }
+      },
+      "waitingCharges" : 1.50
       },
       {
         "cityName" : "Tumakuru",
@@ -425,7 +432,8 @@ window.getMerchantConfig = function () {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
-      }
+      },
+      "waitingCharges" : 1.50
       },
       {
         "cityName" : "Gurugram",
@@ -457,7 +465,8 @@ window.getMerchantConfig = function () {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
-      }
+      },
+      "waitingCharges" : 1.50
       },
       {
         "cityName" : "Noida",
@@ -488,7 +497,8 @@ window.getMerchantConfig = function () {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
-      }
+      },
+      "waitingCharges" : 1.50
       },
       {
         "cityName" : "TamilNaduCities",
@@ -520,7 +530,8 @@ window.getMerchantConfig = function () {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
-      }
+      },
+      "waitingCharges" : 1.50
       },
       {
         "cityName" : "Minneapolis",
@@ -551,7 +562,8 @@ window.getMerchantConfig = function () {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
-      }
+      },
+      "waitingCharges" : 1.50
       }
   ]
   , "dashboard" : {

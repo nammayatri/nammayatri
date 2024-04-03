@@ -511,7 +511,8 @@ estimatedFareView push config =
           calculateCharges :: Int -> Number
           calculateCharges sec =
             let min = Int.floor $ Int.toNumber sec / 60.0
-            in 1.5 * Int.toNumber min
+                cityConfig = HU.getCityConfig config.appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+            in cityConfig.waitingCharges * Int.toNumber min
 
 waitTimeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 waitTimeView push config =

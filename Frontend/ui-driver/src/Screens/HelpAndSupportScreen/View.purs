@@ -289,7 +289,7 @@ testRideRequestView state push =
             ][ imageView
                 [ width $ V 64
                 , height $ V 64
-                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_dummy_ride_request"
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_dummy_ride_request"
                 ]
              , linearLayout
                 [ width WRAP_CONTENT

@@ -547,7 +547,7 @@ driverAnalyticsView state push =
               , margin (Margin 0 16 0 16)
               , background Color.lightGreyShade
               ][]
-            , infoTileView state {primaryText: "₹ " <> EHC.formatCurrencyWithCommas analyticsData.bonusEarned , subText: (getString NAMMA_BONUS), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+            , infoTileView state {primaryText: "₹ " <> EHC.formatCurrencyWithCommas analyticsData.bonusEarned , subText: (getString $ NAMMA_BONUS "NAMMA_BONUS"), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
             ]
           else infoCard state push {key : (getString $ EARNED_ON_APP "EARNED_ON_APP"), value : "₹" <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings) , value1 : "", infoImageUrl : "", postfixImage : "", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}
         ]

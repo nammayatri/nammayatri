@@ -121,7 +121,7 @@ testRideConfirmationConfig state = let
     cornerRadius = PTD.Corners 15.0 true true true true,
     topTextVisibility = true,
     coverImageConfig {
-      imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_dummy_ride_request"
+      imageUrl = fetchImage FF_ASSET "ny_ic_dummy_ride_request"
     , visibility = boolToVisibility $ not (popupType)
     , margin = Margin 16 20 16 0
     , height = V 200

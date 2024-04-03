@@ -2370,7 +2370,7 @@ homeScreenFlow = do
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp, gotoPopupType = ST.NO_POPUP_VIEW})
       updateDriverDataToStates
       homeScreenFlow
-    GOT_DRIVER_STATS driverStats -> do      
+    GOT_DRIVER_STATS driverStats -> do
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { driverRideStats = Just $ driverStats }      
       updateDriverDataToStates      
       homeScreenFlow
