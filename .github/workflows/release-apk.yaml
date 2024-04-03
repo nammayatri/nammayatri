@@ -11,14 +11,11 @@ name: Release (Production)
 #         description: "New version name for the build"
 
 on:
-  pull_request:
+  push:
     branches:
       - main
-    types:
-      - closed
-      - synchronize
     paths:
-      - 'release-apk-to-prod'
+      - 'release-apk-to-prod/**'
 
 jobs:
   deploy:
