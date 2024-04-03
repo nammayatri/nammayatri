@@ -66,7 +66,7 @@ import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.dataModel.VariantConfig;
 import in.juspay.mobility.common.services.TLSSocketFactory;
-
+import static in.juspay.mobility.common.MobilityCommonBridge.isServiceRunning;
 
 public class RideRequestUtils {
     private final static int rideReqNotificationId = 5032023;
@@ -237,25 +237,32 @@ public class RideRequestUtils {
     }
 
     public static void restartLocationService(Context context) {
-        Intent locationService = new Intent(context, LocationUpdateService.class);
-        locationService.putExtra("StartingSource", "TRIGGER_SERVICE");
-        locationService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(locationService);
-        } else {
-            context.startService(locationService);
-        }
-        Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-        restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (!isServiceRunning(context, LocationUpdateService.class.getName())) {
+            Intent locationService = new Intent(context, LocationUpdateService.class);
+            locationService.putExtra("StartingSource", "TRIGGER_SERVICE");
+            locationService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    context.startForegroundService(locationService);
+                else
+                    context.startService(locationService);
 
-        if(Settings.canDrawOverlays(context)){
-            try{
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    context.startActivity(restartIntent);
-                    Utils.minimizeApp(context);
-                }, 5000);
-            } catch (Exception e) {
-                Log.e("BootUpReceiver", "Unable to Start Widget Service");
+            } catch (Exception e){
+                Log.e(LOG_TAG, e.getMessage());
+            }
+            Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+            restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+            SharedPreferences sharedPrefs = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String activityStatus = sharedPrefs.getString("ACTIVITY_STATUS", "null");
+            if(Settings.canDrawOverlays(context) && activityStatus.equals("onDestroy")){
+                try{
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        context.startActivity(restartIntent);
+                        Utils.minimizeApp(context);
+                    }, 5000);
+                } catch (Exception e) {
+                    Log.e("BootUpReceiver", "Unable to Start Widget Service");
+                }
             }
         }
     }
