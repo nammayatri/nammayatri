@@ -39,7 +39,6 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CRiderConfig
 import qualified Storage.CachedQueries.Person as CQP
 import Storage.Queries.Geometry (findGeometriesContaining)
 import Tools.Error
@@ -72,9 +71,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
   case mbNearestOpAndCurrentCity of
     Just (NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity}) -> do
       let city = Just nearestOperatingCity.city
-      merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId nearestOperatingCity.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId:- " <> merchantId.getId <> " ,city:- " <> show nearestOperatingCity.city)
-      cityConfig <- CRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id
-      specialLocationBody <- runInReplica $ QSpecialLocation.findSpecialLocationByLatLongFull location $ maybe 150 (.specialZoneRadius) cityConfig -- default as 150 meters
+      specialLocationBody <- runInReplica $ QSpecialLocation.findSpecialLocationByLatLongFull location
       return ServiceabilityRes {serviceable = True, currentCity = Just currentCity.city, specialLocation = specialLocationBody, geoJson = (.geoJson) =<< specialLocationBody, ..}
     Nothing -> return ServiceabilityRes {city = Nothing, currentCity = Nothing, serviceable = False, specialLocation = Nothing, geoJson = Nothing, ..}
 
