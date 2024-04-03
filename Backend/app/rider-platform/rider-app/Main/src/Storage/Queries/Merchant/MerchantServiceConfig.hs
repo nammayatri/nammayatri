@@ -42,6 +42,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceConfig as BeamMSC
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
 
 -- create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantServiceConfig -> m ()
@@ -57,6 +59,23 @@ findByMerchantOpCityIdAndService ::
   ServiceName ->
   m (Maybe MerchantServiceConfig)
 findByMerchantOpCityIdAndService (Id merchantId) (Id merchantOperatingCity) serviceName = do
+  resp <- findByMerchantOpCityIdAndService' (Id merchantId) (Id merchantOperatingCity) serviceName
+  case resp of
+    Just msc -> return $ Just msc
+    Nothing -> do
+      logError $ show (MerchantServiceConfigNotFound (merchantId <> "mocId" <> merchantOperatingCity) "ServiceName" (show serviceName))
+      merchant <- CQM.findById (Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
+      merchantOperatingCity' <- CQMOC.findByMerchantShortIdAndCity merchant.shortId merchant.defaultCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchant.defaultCity)
+      resp' <- findByMerchantOpCityIdAndService' (Id merchantId) (merchantOperatingCity'.id) serviceName >>= fromMaybeM (MerchantServiceConfigNotFound (merchantId <> "mocId" <> merchantOperatingCity'.id.getId) "ServiceName" (show serviceName))
+      return $ Just resp'
+
+findByMerchantOpCityIdAndService' ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  ServiceName ->
+  m (Maybe MerchantServiceConfig)
+findByMerchantOpCityIdAndService' (Id merchantId) (Id merchantOperatingCity) serviceName = do
   findOneWithKV
     [ Se.And
         [ Se.Is BeamMSC.merchantId $ Se.Eq merchantId,
