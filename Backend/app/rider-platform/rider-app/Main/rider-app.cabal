@@ -187,6 +187,7 @@ library
       Domain.Action.UI.Profile
       Domain.Action.UI.Quote
       Domain.Action.UI.Registration
+      Domain.Action.UI.RentalDetails
       Domain.Action.UI.Ride
       Domain.Action.UI.Route
       Domain.Action.UI.SavedReqLocation
@@ -208,6 +209,7 @@ library
       Domain.Types.Common
       Domain.Types.DriverOffer
       Domain.Types.Estimate
+      Domain.Types.Extra.RentalDetails
       Domain.Types.FarePolicy.FareBreakup
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.FeedbackForm
@@ -226,7 +228,6 @@ library
       Domain.Types.Person.PersonFlowStatus
       Domain.Types.PlaceBasedServiceConfig
       Domain.Types.Quote
-      Domain.Types.RentalDetails
       Domain.Types.SavedReqLocation
       Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
@@ -282,7 +283,6 @@ library
       Storage.Beam.Person.PersonFlowStatus
       Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.Quote
-      Storage.Beam.RentalDetails
       Storage.Beam.SavedReqLocation
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.SystemConfigs
@@ -350,13 +350,14 @@ library
       Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.Quote
       Storage.Queries.RegistrationTokenExtra
-      Storage.Queries.RentalDetails
+      Storage.Queries.RentalDetailsExtra
       Storage.Queries.RideExtra
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchRequestExtra
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.Transformers.AppInstalls
       Storage.Queries.Transformers.MerchantConfig
+      Storage.Queries.Transformers.RentalDetails
       Storage.Queries.Transformers.SearchReqLocation
       Storage.Queries.Transformers.SearchRequest
       Storage.Queries.TripTerms
@@ -422,6 +423,7 @@ library
       Domain.Types.PersonStats
       Domain.Types.Rating
       Domain.Types.RegistrationToken
+      Domain.Types.RentalDetails
       Domain.Types.Ride
       Domain.Types.RiderConfig
       Domain.Types.SearchReqLocation
@@ -469,6 +471,7 @@ library
       Storage.Beam.PersonStats
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
+      Storage.Beam.RentalDetails
       Storage.Beam.Ride
       Storage.Beam.RiderConfig
       Storage.Beam.SearchReqLocation
@@ -520,11 +523,13 @@ library
       Storage.Queries.OrphanInstances.LocationMapping
       Storage.Queries.OrphanInstances.PersonStats
       Storage.Queries.OrphanInstances.RegistrationToken
+      Storage.Queries.OrphanInstances.RentalDetails
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.PersonStats
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
+      Storage.Queries.RentalDetails
       Storage.Queries.Ride
       Storage.Queries.RiderConfig
       Storage.Queries.SearchReqLocation
