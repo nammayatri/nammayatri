@@ -1,0 +1,75 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  UTCTime: Kernel.Prelude
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+
+Vehicle:
+  tableName: vehicle
+
+  types:
+    Category:
+      enum: "CAR,MOTORCYCLE,TRAIN,BUS,FLIGHT,AUTO_CATEGORY"
+      derive: "HttpInstance"
+    RegistrationCategory:
+      enum: "COMMERCIAL,PERSONAL,OTHER,PUBLIC"
+      derive: "HttpInstance"
+    Variant:
+      enum: "SEDAN,SUV,HATCHBACK,AUTO_RICKSHAW,TAXI,TAXI_PLUS"
+      derive: "HttpInstance,Enum,Bounded"
+    VehicleAPIEntity:
+      driverId: Id Person
+      variant: Variant
+      model: Text
+      color: Text
+      vehicleName: Maybe Text
+      registrationNo: Text
+      category: Maybe Category
+      capacity: Maybe Int
+      createdAt: UTCTime
+
+  fields:
+    driverId: Id Person
+    merchantId: Id Merchant
+    variant: Variant
+    model: Text
+    color: Text
+    vehicleName: Maybe Text
+    registrationNo: Text
+    capacity: Maybe Int
+    category: Maybe Category
+    make: Maybe Text
+    size: Maybe Text
+    energyType: Maybe Text
+    registrationCategory: Maybe RegistrationCategory
+    vehicleClass: Text
+    airConditioned: Maybe Bool
+    luggageCapacity: Maybe Int
+    vehicleRating: Maybe Double
+
+  constraints:
+    driverId: PrimaryKey
+    registrationNo: SecondaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: driverId
+    findByRegistrationNo:
+      kvFunction: findOneWithKV
+      where: registrationNo
+    updateVehicleName:
+      kvFunction: updateWithKV
+      params: [vehicleName]
+      where: driverId
+    updateVehicleModel:
+      kvFunction: updateWithKV
+      params: [model]
+      where: driverId
+    updateVehicleVariant:
+      kvFunction: updateWithKV
+      params: [variant]
+      where: driverId

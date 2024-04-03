@@ -46,7 +46,7 @@ cancelBooking booking mbDriver transporter = do
   bookingCancellationReason <- case mbDriver of
     Nothing -> buildBookingCancellationReason booking.id Nothing mbRide transporterId'
     Just driver -> do
-      QDI.updateOnRide driver.id False
+      QDI.updateOnRide False driver.id
       buildBookingCancellationReason booking.id (Just driver.id) mbRide transporterId'
 
   QRB.updateStatus booking.id DRB.CANCELLED
@@ -54,7 +54,7 @@ cancelBooking booking mbDriver transporter = do
   whenJust mbRide $ \ride -> do
     void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
     QRide.updateStatus ride.id SRide.CANCELLED
-    QDI.updateOnRide (cast ride.driverId) False
+    QDI.updateOnRide False (cast ride.driverId)
     void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
   fork "cancelBooking - Notify BAP" $ do

@@ -25,7 +25,7 @@ import Domain.Types.Person
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchRequestForDriver
 import Domain.Types.SearchTry
-import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -63,4 +63,4 @@ data DriverQuote = DriverQuote
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, PrettyShow, Eq)
+  deriving (Generic, Show, Eq)

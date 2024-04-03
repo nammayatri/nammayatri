@@ -28,7 +28,7 @@ import qualified Domain.Action.UI.Vehicle as DVehicle
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
-import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified Domain.Types.Vehicle as Variant
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id

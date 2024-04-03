@@ -17,7 +17,6 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
-import Kernel.Utils.GenericPretty
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.Booking.Internal as Int
 import qualified Storage.Queries.DriverInformation.Internal as Int
@@ -41,7 +40,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     distanceFromDriverToDestination :: Meters,
     mode :: Maybe DriverInfo.DriverMode
   }
-  deriving (Generic, Show, PrettyShow, HasCoordinates)
+  deriving (Generic, Show, HasCoordinates)
 
 getNearestDriversCurrentlyOnRide ::
   (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) =>

@@ -207,6 +207,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             compAadhaarImagePath = Nothing,
             availableUpiApps = Nothing,
             driverDob = (.driverDob) =<< mbDriverLicense,
+            airConditionScore = Nothing,
             merchantOperatingCityId = Just merchantOpCityId
           }
   QDriverStats.createInitialDriverStats driverId
@@ -429,5 +430,5 @@ logout (personId, _, _) = do
       >>= fromMaybeM (PersonNotFound personId.getId)
   _ <- QP.updateDeviceToken uperson.id Nothing
   QR.deleteByPersonId personId
-  when (uperson.role == SP.DRIVER) $ void (QD.updateActivity (cast uperson.id) False (Just DriverInfo.OFFLINE))
+  when (uperson.role == SP.DRIVER) $ void (QD.updateActivity False (Just DriverInfo.OFFLINE) (cast uperson.id))
   pure Success

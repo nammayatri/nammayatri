@@ -85,7 +85,7 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
   QRideD.create rideDetails
-  QDI.updateOnRide (cast driver.id) True
+  QDI.updateOnRide True (cast driver.id)
   void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}

@@ -26,7 +26,6 @@ WHERE inv.driver_fee_id = df.id;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_plan_mandatory boolean not null default false;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN free_trial_days int not null default 0;
 
-ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN enabled_at timestamp with time zone;
 update atlas_driver_offer_bpp.driver_information set enabled_at = last_enabled_on;
 
 UPDATE atlas_driver_offer_bpp.driver_information di

@@ -2,7 +2,7 @@ imports:
   LmsCategory: Domain.Types.LmsModule
   LmsModule: Domain.Types.LmsModule
   LmsBonus: Domain.Types.LmsModule
-  Variant: Domain.Types.Vehicle.Variant
+  Variant: Domain.Types.Vehicle
   Maybe: Data.Maybe
   Text: Data.Text
   Bool: Kernel.Prelude

@@ -17,13 +17,15 @@ instance FromTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegi
     pure $
       Just
         Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate
-          { certificateNumber = EncryptedHashed (Encrypted certificateNumberEncrypted) certificateNumberHash,
+          { airConditioned = airConditioned,
+            certificateNumber = EncryptedHashed (Encrypted certificateNumberEncrypted) certificateNumberHash,
             documentImageId = Kernel.Types.Id.Id documentImageId,
             failedRules = failedRules,
             fitnessExpiry = fitnessExpiry,
             fleetOwnerId = fleetOwnerId,
             id = Kernel.Types.Id.Id id,
             insuranceValidity = insuranceValidity,
+            luggageCapacity = luggageCapacity,
             manufacturerModel = manufacturerModel,
             permitExpiry = permitExpiry,
             pucExpiry = pucExpiry,
@@ -35,6 +37,7 @@ instance FromTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegi
             vehicleEnergyType = vehicleEnergyType,
             vehicleManufacturer = vehicleManufacturer,
             vehicleModel = vehicleModel,
+            vehicleRating = vehicleRating,
             vehicleVariant = vehicleVariant,
             verificationStatus = verificationStatus,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
@@ -46,7 +49,8 @@ instance FromTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegi
 instance ToTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate where
   toTType' (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate {..}) = do
     Beam.VehicleRegistrationCertificateT
-      { Beam.certificateNumberEncrypted = certificateNumber & unEncrypted . encrypted,
+      { Beam.airConditioned = airConditioned,
+        Beam.certificateNumberEncrypted = certificateNumber & unEncrypted . encrypted,
         Beam.certificateNumberHash = certificateNumber & hash,
         Beam.documentImageId = Kernel.Types.Id.getId documentImageId,
         Beam.failedRules = failedRules,
@@ -54,6 +58,7 @@ instance ToTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegist
         Beam.fleetOwnerId = fleetOwnerId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.insuranceValidity = insuranceValidity,
+        Beam.luggageCapacity = luggageCapacity,
         Beam.manufacturerModel = manufacturerModel,
         Beam.permitExpiry = permitExpiry,
         Beam.pucExpiry = pucExpiry,
@@ -65,6 +70,7 @@ instance ToTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegist
         Beam.vehicleEnergyType = vehicleEnergyType,
         Beam.vehicleManufacturer = vehicleManufacturer,
         Beam.vehicleModel = vehicleModel,
+        Beam.vehicleRating = vehicleRating,
         Beam.vehicleVariant = vehicleVariant,
         Beam.verificationStatus = verificationStatus,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

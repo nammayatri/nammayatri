@@ -5,7 +5,7 @@ imports:
   PoolSortingType: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   Seconds: Kernel.Types.Common
   IndianState: Kernel.Types.Beckn.Context
-  Variant: Domain.Types.Vehicle.Variant
+  Variant: Domain.Types.Vehicle
 
 DriverPoolConfig:
   tableName: driver_pool_config

@@ -32,3 +32,8 @@ ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD COLUMN name_on_card tex
 
 ALTER TABLE atlas_driver_offer_bpp.idfy_verification DROP CONSTRAINT idfy_verification_pkey;
 ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD COLUMN vehicle_category text ;

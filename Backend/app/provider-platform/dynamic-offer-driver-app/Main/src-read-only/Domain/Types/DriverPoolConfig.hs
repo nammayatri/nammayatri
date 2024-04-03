@@ -6,7 +6,7 @@ module Domain.Types.DriverPoolConfig where
 
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Vehicle.Variant
+import qualified Domain.Types.Vehicle
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -40,6 +40,6 @@ data DriverPoolConfig = DriverPoolConfig
     tripCategory :: Kernel.Prelude.Text,
     tripDistance :: Kernel.Types.Common.Meters,
     updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant.Variant
+    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

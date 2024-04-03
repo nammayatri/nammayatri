@@ -1,0 +1,31 @@
+imports:
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  DocumentVerificationConfig: Domain.Types.DocumentVerificationConfig
+  DocumentType: Domain.Types.DocumentVerificationConfig
+
+module: DriverOnboardingV2
+types:
+  DocumentVerificationConfigList:
+    autos: Maybe [DocumentVerificationConfigAPIEntity]
+    cabs: Maybe [DocumentVerificationConfigAPIEntity]
+    bikes: Maybe [DocumentVerificationConfigAPIEntity]
+
+  DocumentVerificationConfigAPIEntity:
+    documentType: DocumentType
+    title: Text
+    description: Maybe Text
+    isMandatory: Bool
+    isDisabled: Bool
+    disableWarning: Maybe Text
+    isHidden: Bool
+    dependencyDocumentType: '[DocumentType]'
+    checkExtraction: Bool
+    checkExpiry: Bool
+    rcNumberPrefixList: '[Text]'
+
+apis:
+  - GET:
+      endpoint: /onboarding/configs
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: DocumentVerificationConfigList

@@ -25,7 +25,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.QuestionInformation as DTQI
 import qualified Domain.Types.QuestionModuleMapping as DTQMM
 import qualified Domain.Types.ReelsData as DTRD
-import qualified Domain.Types.Vehicle.Variant
+import qualified Domain.Types.Vehicle
 import qualified Environment
 import EulerHS.Prelude hiding (id, length)
 import Kernel.External.Types (Language (..))
@@ -44,7 +44,7 @@ import qualified Storage.Queries.Person as QPerson
 import Tools.Auth
 import Tools.Error
 
-getLmsListAllModules :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.Vehicle.Variant.Variant) -> Environment.Flow API.Types.UI.LmsModule.LmsGetModuleRes
+getLmsListAllModules :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.Vehicle.Variant) -> Environment.Flow API.Types.UI.LmsModule.LmsGetModuleRes
 getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage _mbLimit _mbOffset _mbVariant = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)

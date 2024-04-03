@@ -34,6 +34,7 @@ data DriverRegistrationEndpoint
   | RegisterRCEndpoint
   | GenerateAadhaarOtpEndpoint
   | VerifyAadhaarOtpEndpoint
+  | UpdateDocumentEndpoint
   | AuthEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
@@ -50,6 +51,7 @@ data UnderReviewDriversListResponse = UnderReviewDriversListResponse
   { drivers :: [UnderReviewDriver],
     summary :: Summary
   }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data UnderReviewDriver = UnderReviewDriver
   { driverId :: Id Driver,
@@ -76,6 +78,7 @@ data DriverDocument = DriverDocument
   { documentType :: DocumentType,
     documentStatus :: VerificationStatus,
     documentImageId :: Maybe (Id Image),
+    documentImages :: [Id Image],
     documentId :: Maybe (Id Document),
     documentInfo :: Maybe DocumentInfo
   }
@@ -84,29 +87,80 @@ data DriverDocument = DriverDocument
 -- Approve/Reject Document --------------
 type UpdateDocumentAPI =
   "documents"
-    :> Capture "documentId" (Id Document)
+    :> Capture "documentImageId" (Id Image)
     :> "update"
     :> ReqBody '[JSON] UpdateDocumentRequest
     :> Post '[JSON] APISuccess
 
 data UpdateDocumentRequest = Approve ApproveDetails | Reject RejectDetails
-  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateDocumentRequest where
+  hideSecrets = identity
 
 data RejectDetails = RejectDetails
   { reason :: Text,
     documentImageId :: Maybe (Id Image)
   }
-  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-data ApproveDetails
-  = RC RCApproveDetails
-  | DL
-  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data FitnessApproveDetails = FitnessApproveDetails
+  { applicationNumber :: Text,
+    categoryOfVehicle :: Maybe Text,
+    documentImageId :: Id Image,
+    fitnessExpiry :: UTCTime,
+    inspectingAuthority :: Maybe Text,
+    inspectingOn :: Maybe UTCTime,
+    nextInspectionDate :: Maybe UTCTime,
+    rcNumber :: Text,
+    receiptDate :: Maybe UTCTime
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data VInsuranceApproveDetails = VInsuranceApproveDetails
+  { documentImageId :: Id Image,
+    insuredName :: Maybe Text,
+    issueDate :: Maybe UTCTime,
+    limitsOfLiability :: Maybe Text,
+    policyExpiry :: UTCTime,
+    policyNumber :: Text,
+    policyProvider :: Text,
+    rcNumber :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data VPermitApproveDetails = VPermitApproveDetails
+  { documentImageId :: Id Image,
+    issueDate :: Maybe UTCTime,
+    nameOfPermitHolder :: Maybe Text,
+    permitExpiry :: UTCTime,
+    permitNumber :: Text,
+    purposeOfJourney :: Maybe Text,
+    rcNumber :: Text,
+    regionCovered :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data VPUCApproveDetails = VPUCApproveDetails
+  { documentImageId :: Id Image,
+    pucExpiry :: UTCTime,
+    rcNumber :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 newtype RCApproveDetails = RCApproveDetails
   { vehicleVariant :: Variant
   }
-  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data ApproveDetails
+  = RC RCApproveDetails
+  | DL
+  | VehiclePermit VPermitApproveDetails
+  | VehiclePUC VPUCApproveDetails
+  | VehicleInsurance VInsuranceApproveDetails
+  | VehicleFitnessCertificate FitnessApproveDetails
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- driver documents list API --------------
 -- ----------------------------------------
@@ -154,13 +208,13 @@ data DocumentType
 data UploadDocumentReq = UploadDocumentReq
   { imageBase64 :: Text,
     imageType :: DocumentType,
-    rcId :: Maybe Text
+    rcNumber :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data UploadDocumentTReq = UploadDocumentTReq
   { imageType :: DocumentType,
-    rcId :: Maybe Text
+    rcNumber :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON)
 

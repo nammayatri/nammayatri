@@ -101,7 +101,7 @@ driverMakingInactiveService = startService "driverMakingInactiveService" $ withR
       countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
       log INFO "Make driver inactive"
       -- Esq.runTransaction $
-      DrInfo.updateActivity (cast driver.id) False (Just OFFLINE)
+      DrInfo.updateActivity False (Just OFFLINE) (cast driver.id)
 
       smsCfg <- asks (.smsCfg)
       driverInactiveSmsTemplate <- asks (.driverInactiveSmsTemplate)

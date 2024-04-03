@@ -1,0 +1,31 @@
+imports:
+  Variant: Domain.Types.Vehicle
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+
+VehicleServiceTier:
+  tableName: vehicle_service_tier
+
+  types:
+    ServiceTierType:
+      enum: "COMFY,ECO,PREMIUM,SUV"
+
+  fields:
+    id: Id VehicleServiceTier
+    serviceTierType: ServiceTierType
+    name: Text
+    shortDescription: Maybe Text
+    longDescription: Maybe Text
+    seatingCapacity: Int
+    airConditioned: Maybe Double
+    luggageCapacity: Maybe Int
+    driverRating: Maybe Double
+    vehicleRating: Maybe Double
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    allowedVehicleVariant: '[Variant]'
+
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithOptionsKV
+      where: merchantOperatingCityId

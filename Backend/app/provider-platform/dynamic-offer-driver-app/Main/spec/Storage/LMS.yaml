@@ -7,7 +7,7 @@ imports:
   Maybe: Kernel.Prelude
   LmsBonus: Domain.Types.LmsModule
   Person: Domain.Types.Person
-  Variant: Domain.Types.Vehicle.Variant
+  Variant: Domain.Types.Vehicle
   QuizQuestion: Domain.Types.LmsEnumTypes
   Value: Data.Aeson
   ReelRowButtonConfig: Domain.Types.ReelsData

@@ -25,24 +25,30 @@ where
 
 -- temp import for backward compatibility should be removed later
 
+import qualified Control.Monad.Extra as Extra
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Action.UI.Plan as DAPlan
 import Domain.Types.AadhaarVerification as AV
+import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as DL
 import qualified Domain.Types.IdfyVerification as IV
-import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
+import Domain.Types.Plan as Plan
+import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
 import Environment
+import qualified EulerHS.Prelude as EP
 import Kernel.External.Encryption
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error
-import SharedLogic.DriverOnboarding (enableAndTriggerOnboardingAlertsAndMessages)
+import SharedLogic.DriverOnboarding
+import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import Storage.CachedQueries.Merchant.TransporterConfig
 import qualified Storage.Queries.AadhaarVerification as SAV
@@ -53,6 +59,7 @@ import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.Translations as MTQuery
+import qualified Storage.Queries.Vehicle as Vehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 
 -- PENDING means "pending verification"
@@ -63,11 +70,29 @@ data ResponseStatus = NO_DOC_AVAILABLE | PENDING | VALID | FAILED | INVALID | LI
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data StatusRes = StatusRes
-  { dlVerificationStatus :: ResponseStatus,
-    dlVerficationMessage :: Text,
-    rcVerificationStatus :: ResponseStatus,
-    rcVerficationMessage :: Text,
-    aadhaarVerificationStatus :: ResponseStatus
+  { dlVerificationStatus :: ResponseStatus, -- deprecated
+    dlVerficationMessage :: Text, -- deprecated
+    rcVerificationStatus :: ResponseStatus, -- deprecated
+    rcVerficationMessage :: Text, -- deprecated
+    aadhaarVerificationStatus :: ResponseStatus, -- deprecated
+
+    --- use these fields
+    driverDocuments :: [DocumentStatusItem],
+    vehicleDocuments :: [VehicleDocumentItem]
+  }
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data VehicleDocumentItem = VehicleDocumentItem
+  { registrationNo :: Text,
+    vehicleCategory :: DVeh.Category,
+    documents :: [DocumentStatusItem]
+  }
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data DocumentStatusItem = DocumentStatusItem
+  { documentType :: DVC.DocumentType,
+    verificationStatus :: ResponseStatus,
+    verificationMessage :: Maybe Text
   }
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -77,15 +102,194 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   merchantOperatingCity <- SMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   (dlStatus, mDL, dlVerficationMessage) <- getDLAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit merchantOperatingCity.language
-  (rcStatus, mRC, rcVerficationMessage) <- getRCAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit multipleRC merchantOperatingCity.language
+  (rcStatus, _, rcVerficationMessage) <- getRCAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit multipleRC merchantOperatingCity.language
   (aadhaarStatus, _) <- getAadhaarStatus personId
 
-  when (rcStatus == VALID && isNothing multipleRC) $
-    activateRCAutomatically personId merchantId merchantOpCityId mRC
+  let driverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto]
+  let vehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.SubscriptionPlan]
 
-  when (dlStatus == VALID && rcStatus == VALID && (aadhaarStatus == VALID || not transporterConfig.aadhaarVerificationRequired)) $ do
-    enableDriver merchantOpCityId personId mDL
-  return $ StatusRes {dlVerificationStatus = dlStatus, dlVerficationMessage = dlVerficationMessage, rcVerificationStatus = rcStatus, rcVerficationMessage = rcVerficationMessage, aadhaarVerificationStatus = aadhaarStatus}
+  driverDocuments <-
+    driverDocumentTypes `forM` \docType -> do
+      mbStatus <- getProcessedDriverDocuments docType personId
+      case mbStatus of
+        Just status -> do
+          message <- documentStatusMessage status Nothing docType merchantOperatingCity.language
+          return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
+        Nothing -> do
+          (status, mbReason) <- getInProgressDriverDocuments docType personId transporterConfig.onboardingTryLimit
+          message <- documentStatusMessage status mbReason docType merchantOperatingCity.language
+          return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
+  vehicles <- do
+    associations <- DRAQuery.findAllLinkedByDriverId personId
+    if null associations
+      then return []
+      else RCQuery.findById `mapM` ((.rcId) <$> associations) >>= (return . catMaybes)
+  vehicleDocuments <-
+    vehicles `forM` \vehicleRC -> do
+      registrationNo <- decrypt vehicleRC.certificateNumber
+      documents <-
+        vehicleDocumentTypes `forM` \docType -> do
+          mbStatus <- getProcessedVehicleDocuments docType personId vehicleRC
+          case mbStatus of
+            Just status -> do
+              message <- documentStatusMessage status Nothing docType merchantOperatingCity.language
+              return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
+            Nothing -> do
+              (status, mbReason) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit
+              message <- documentStatusMessage status mbReason docType merchantOperatingCity.language
+              return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
+      return $ VehicleDocumentItem {registrationNo, vehicleCategory = getCategory (fromMaybe DVeh.AUTO_RICKSHAW vehicleRC.vehicleVariant), documents}
+
+  -- check if driver is enabled if not then if all mandatory docs are verified then enable the driver
+  forM_ vehicleDocuments $ \vehicleDoc -> do
+    mbVehicle <- Vehicle.findById personId -- check everytime
+    EP.whenNothing_ mbVehicle $ do
+      allVehicleDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType vehicleDoc.vehicleCategory doc.verificationStatus) (documents vehicleDoc)
+      allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType vehicleDoc.vehicleCategory doc.verificationStatus) driverDocuments
+      when (allVehicleDocsVerified && allDriverDocsVerified) $ do
+        enableDriver merchantOpCityId personId mDL
+        activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo
+
+  return $
+    StatusRes
+      { dlVerificationStatus = dlStatus,
+        dlVerficationMessage = dlVerficationMessage,
+        rcVerificationStatus = rcStatus,
+        rcVerficationMessage = rcVerficationMessage,
+        aadhaarVerificationStatus = aadhaarStatus,
+        driverDocuments,
+        vehicleDocuments
+      }
+
+enableDriver :: Id DMOC.MerchantOperatingCity -> Id SP.Person -> Maybe DL.DriverLicense -> Flow ()
+enableDriver _ _ Nothing = return ()
+enableDriver merchantOpCityId personId (Just dl) = do
+  driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  unless driverInfo.enabled $ do
+    enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId True
+    whenJust dl.driverName $ \name -> Person.updateName personId name
+
+activateRCAutomatically :: Id SP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Flow ()
+activateRCAutomatically personId merchantId merchantOpCityId rcNumber = do
+  let rcStatusReq =
+        DomainRC.RCStatusReq
+          { rcNo = rcNumber,
+            isActivate = True
+          }
+  void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) rcStatusReq
+
+checkIfDocumentValid :: Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> DVeh.Category -> ResponseStatus -> Flow Bool
+checkIfDocumentValid merchantOperatingCityId docType category status = do
+  mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId docType category
+  case mbVerificationConfig of
+    Just verificationConfig -> do
+      if verificationConfig.isMandatory
+        then case status of
+          VALID -> return True
+          MANUAL_VERIFICATION_REQUIRED -> return True
+          _ -> return False
+        else return True
+    Nothing -> return True
+
+getProcessedDriverDocuments :: DVC.DocumentType -> Id SP.Person -> Flow (Maybe ResponseStatus)
+getProcessedDriverDocuments docType driverId =
+  case docType of
+    DVC.DriverLicense -> do
+      mbDL <- DLQuery.findByDriverId driverId
+      return $ mapStatus <$> (mbDL <&> (.verificationStatus))
+    DVC.AadhaarCard -> do
+      mbAadhaarCard <- SAV.findByDriverId driverId
+      return $ boolToStatus <$> (mbAadhaarCard <&> (.isVerified))
+    DVC.PanCard -> return Nothing
+    DVC.Permissions -> return $ Just VALID
+    DVC.ProfilePhoto -> return Nothing
+    _ -> return Nothing
+  where
+    boolToStatus :: Bool -> ResponseStatus
+    boolToStatus = \case
+      True -> VALID
+      False -> MANUAL_VERIFICATION_REQUIRED
+
+getProcessedVehicleDocuments :: DVC.DocumentType -> Id SP.Person -> RC.VehicleRegistrationCertificate -> Flow (Maybe ResponseStatus)
+getProcessedVehicleDocuments docType driverId vehicleRC =
+  case docType of
+    DVC.VehicleRegistrationCertificate -> return $ Just $ mapStatus vehicleRC.verificationStatus
+    DVC.SubscriptionPlan -> do
+      mbPlan <- snd <$> DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION driverId -- fix later on basis of vehicle category
+      return $ Just $ boolToStatus (isJust mbPlan)
+    DVC.VehiclePermit -> return Nothing
+    DVC.VehicleFitnessCertificate -> return Nothing
+    DVC.VehicleInsurance -> return Nothing
+    DVC.VehiclePUC -> return Nothing
+    _ -> return Nothing
+  where
+    boolToStatus :: Bool -> ResponseStatus
+    boolToStatus = \case
+      True -> VALID
+      False -> NO_DOC_AVAILABLE
+
+getInProgressDriverDocuments :: DVC.DocumentType -> Id SP.Person -> Int -> Flow (ResponseStatus, Maybe Text)
+getInProgressDriverDocuments docType driverId onboardingTryLimit =
+  case docType of
+    DVC.DriverLicense -> checkIfUnderProgress DVC.DriverLicense driverId onboardingTryLimit
+    DVC.AadhaarCard -> checkIfImageUploaded DVC.AadhaarCard driverId
+    DVC.PanCard -> checkIfImageUploaded DVC.PanCard driverId
+    DVC.Permissions -> return (VALID, Nothing)
+    DVC.ProfilePhoto -> checkIfImageUploaded DVC.ProfilePhoto driverId
+    _ -> return (NO_DOC_AVAILABLE, Nothing)
+
+getInProgressVehicleDocuments :: DVC.DocumentType -> Id SP.Person -> Int -> Flow (ResponseStatus, Maybe Text)
+getInProgressVehicleDocuments docType driverId onboardingTryLimit =
+  case docType of
+    DVC.VehicleRegistrationCertificate -> checkIfUnderProgress DVC.VehicleRegistrationCertificate driverId onboardingTryLimit
+    DVC.SubscriptionPlan -> return (NO_DOC_AVAILABLE, Nothing)
+    DVC.VehiclePermit -> checkIfImageUploaded DVC.VehiclePermit driverId
+    DVC.VehicleFitnessCertificate -> checkIfImageUploaded DVC.VehicleFitnessCertificate driverId
+    DVC.VehicleInsurance -> checkIfImageUploaded DVC.VehicleInsurance driverId
+    DVC.VehiclePUC -> checkIfImageUploaded DVC.VehiclePUC driverId
+    _ -> return (NO_DOC_AVAILABLE, Nothing)
+
+checkIfImageUploaded :: DVC.DocumentType -> Id SP.Person -> Flow (ResponseStatus, Maybe Text)
+checkIfImageUploaded docType driverId = do
+  images <- IQuery.findRecentByPersonIdAndImageType driverId docType
+  if null images
+    then return (NO_DOC_AVAILABLE, Nothing)
+    else return (MANUAL_VERIFICATION_REQUIRED, Nothing)
+
+checkIfUnderProgress :: DVC.DocumentType -> Id SP.Person -> Int -> Flow (ResponseStatus, Maybe Text)
+checkIfUnderProgress docType driverId onboardingTryLimit = do
+  mbVerificationReq <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId docType
+  case mbVerificationReq of
+    Just verificationReq -> do
+      if verificationReq.status == "pending"
+        then return (PENDING, Nothing)
+        else return (FAILED, verificationReq.idfyResponse)
+    Nothing -> do
+      images <- IQuery.findRecentByPersonIdAndImageType driverId docType
+      if length images > onboardingTryLimit
+        then return (LIMIT_EXCEED, Nothing)
+        else return (NO_DOC_AVAILABLE, Nothing)
+
+documentStatusMessage :: ResponseStatus -> Maybe Text -> DVC.DocumentType -> Language -> Flow Text
+documentStatusMessage status mbReason docType language = do
+  case (status, docType) of
+    (VALID, _) -> toVerificationMessage DocumentValid language
+    (MANUAL_VERIFICATION_REQUIRED, _) -> toVerificationMessage VerificationInProgress language
+    (PENDING, _) -> toVerificationMessage VerificationInProgress language
+    (LIMIT_EXCEED, _) -> toVerificationMessage LimitExceed language
+    (NO_DOC_AVAILABLE, _) -> toVerificationMessage NoDcoumentFound language
+    (INVALID, DVC.DriverLicense) -> toVerificationMessage DLInvalid language
+    (INVALID, DVC.VehicleRegistrationCertificate) -> toVerificationMessage RCInvalid language
+    (INVALID, _) -> toVerificationMessage DocumentInvalid language
+    (FAILED, _) -> do
+      case mbReason of
+        Just res
+          | "id_not_found" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
+          | "source_down" `T.isInfixOf` res -> toVerificationMessage VerificationInProgress language
+          | "TIMEOUT" `T.isInfixOf` res -> toVerificationMessage VerficationFailed language
+          | "BAD_REQUEST" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
+          | otherwise -> toVerificationMessage Other language
+        Nothing -> toVerificationMessage Other language
 
 getAadhaarStatus :: Id SP.Person -> Flow (ResponseStatus, Maybe AV.AadhaarVerification)
 getAadhaarStatus personId = do
@@ -104,10 +308,10 @@ getDLAndStatus driverId merchantOpCityId onboardingTryLimit language = do
     case mDriverLicense of
       Just driverLicense -> do
         let status = mapStatus driverLicense.verificationStatus
-        msg <- verificationStatusCheck status language Image.DriverLicense
+        msg <- verificationStatusCheck status language DVC.DriverLicense
         return (status, msg)
       Nothing -> do
-        (status, message) <- checkIfInVerification driverId merchantOpCityId onboardingTryLimit Image.DriverLicense language
+        (status, message) <- checkIfInVerification driverId merchantOpCityId onboardingTryLimit DVC.DriverLicense language
         return (status, message)
   return (status, mDriverLicense, message)
 
@@ -116,7 +320,7 @@ getRCAndStatus driverId merchantOpCityId onboardingTryLimit multipleRC language 
   associations <- DRAQuery.findAllLinkedByDriverId driverId
   if null associations
     then do
-      (status, message) <- checkIfInVerification driverId merchantOpCityId onboardingTryLimit Image.VehicleRegistrationCertificate language
+      (status, message) <- checkIfInVerification driverId merchantOpCityId onboardingTryLimit DVC.VehicleRegistrationCertificate language
       return (status, Nothing, message)
     else do
       mVehicleRCs <- RCQuery.findById `mapM` ((.rcId) <$> associations)
@@ -127,7 +331,7 @@ getRCAndStatus driverId merchantOpCityId onboardingTryLimit multipleRC language 
           case firstRC of
             Just vehicleRC -> do
               let status = mapStatus vehicleRC.verificationStatus
-              message <- verificationStatusCheck status language Image.VehicleRegistrationCertificate
+              message <- verificationStatusCheck status language DVC.VehicleRegistrationCertificate
               return (status, Just vehicleRC, message)
             Nothing -> do
               msg <- toVerificationMessage NoDcoumentFound language
@@ -143,7 +347,7 @@ getRCAndStatus driverId merchantOpCityId onboardingTryLimit multipleRC language 
               case mVehicleRC of
                 Just vehicleRC -> do
                   let status = mapStatus vehicleRC.verificationStatus
-                  message <- verificationStatusCheck status language Image.VehicleRegistrationCertificate
+                  message <- verificationStatusCheck status language DVC.VehicleRegistrationCertificate
                   return (status, Just vehicleRC, message)
                 Nothing -> do
                   msg <- toVerificationMessage NoDcoumentFound language
@@ -155,17 +359,17 @@ mapStatus = \case
   IV.VALID -> VALID
   IV.INVALID -> INVALID
 
-verificationStatusCheck :: ResponseStatus -> Language -> Image.ImageType -> Flow Text
+verificationStatusCheck :: ResponseStatus -> Language -> DVC.DocumentType -> Flow Text
 verificationStatusCheck status language img = do
   case (status, img) of
-    (INVALID, Image.DriverLicense) -> toVerificationMessage DLInvalid language
-    (INVALID, Image.VehicleRegistrationCertificate) -> toVerificationMessage RCInvalid language
+    (INVALID, DVC.DriverLicense) -> toVerificationMessage DLInvalid language
+    (INVALID, DVC.VehicleRegistrationCertificate) -> toVerificationMessage RCInvalid language
     _ -> toVerificationMessage DocumentValid language
 
-checkIfInVerification :: Id SP.Person -> Id DMOC.MerchantOperatingCity -> Int -> Image.ImageType -> Language -> Flow (ResponseStatus, Text)
-checkIfInVerification driverId merchantOpCityId onboardingTryLimit docType language = do
+checkIfInVerification :: Id SP.Person -> Id DMOC.MerchantOperatingCity -> Int -> DVC.DocumentType -> Language -> Flow (ResponseStatus, Text)
+checkIfInVerification driverId _merchantOpCityId onboardingTryLimit docType language = do
   verificationReq <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId docType
-  images <- IQuery.findRecentByPersonIdAndImageType driverId merchantOpCityId docType
+  images <- IQuery.findRecentByPersonIdAndImageType driverId docType
   verificationStatusWithMessage onboardingTryLimit (length images) verificationReq language
 
 verificationStatusWithMessage :: Int -> Int -> Maybe IV.IdfyVerification -> Language -> Flow (ResponseStatus, Text)
@@ -199,25 +403,6 @@ getMessageFromResponse language response = do
       | otherwise -> toVerificationMessage Other language
     Nothing -> toVerificationMessage Other language
 
-enableDriver :: Id DMOC.MerchantOperatingCity -> Id SP.Person -> Maybe DL.DriverLicense -> Flow ()
-enableDriver _ _ Nothing = return ()
-enableDriver merchantOpCityId personId (Just dl) = do
-  driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  unless driverInfo.enabled $ do
-    enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId True
-    whenJust dl.driverName $ \name -> Person.updateName personId name
-
-activateRCAutomatically :: Id SP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe RC.VehicleRegistrationCertificate -> Flow ()
-activateRCAutomatically _ _ _ Nothing = return ()
-activateRCAutomatically personId merchantId merchantOpCityId (Just rc) = do
-  rcNumber <- decrypt rc.certificateNumber
-  let rcStatusReq =
-        DomainRC.RCStatusReq
-          { rcNo = rcNumber,
-            isActivate = True
-          }
-  void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) rcStatusReq
-
 data VerificationMessage
   = InvalidDocumentNumber
   | VerficationFailed
@@ -225,6 +410,7 @@ data VerificationMessage
   | LimitExceed
   | DLInvalid
   | RCInvalid
+  | DocumentInvalid
   | DocumentValid
   | VerificationInProgress
   | Other

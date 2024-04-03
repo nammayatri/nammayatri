@@ -24,6 +24,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.BookingCancellationReas
 import qualified "dynamic-offer-driver-app" Storage.Beam.BusinessEvent as BusinessEvent
 import qualified "dynamic-offer-driver-app" Storage.Beam.CallStatus as CallStatus
 import qualified "dynamic-offer-driver-app" Storage.Beam.CancellationReason as CancellationReason
+import qualified "dynamic-offer-driver-app" Storage.Beam.DocumentVerificationConfig as MerchantDocumentVerificationConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest as DriverGoHomeRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation as DriverHomeLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverBlockReason as DriverBlockReason
@@ -68,7 +69,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantMessag
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantPaymentMethod as MerchantPaymentMethod
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
-import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.OnboardingDocumentConfig as MerchantOnboardingDocumentConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.TransporterConfig as TransporterConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.Message as Message
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageReport as MessageReport
@@ -144,7 +144,7 @@ data DeleteModel
   | MerchantPaymentMethodDelete
   | MerchantServiceConfigDelete
   | MerchantServiceUsageConfigDelete
-  | MerchantOnboardingDocumentConfigDelete
+  | MerchantDocumentVerificationConfigDelete
   | TransporterConfigDelete
   | MessageDelete
   | MessageReportDelete
@@ -228,7 +228,7 @@ getTagDelete MerchantMessageDelete = "MerchantMessageOptions"
 getTagDelete MerchantPaymentMethodDelete = "MerchantPaymentMethodOptions"
 getTagDelete MerchantServiceConfigDelete = "MerchantServiceConfigOptions"
 getTagDelete MerchantServiceUsageConfigDelete = "MerchantServiceUsageConfigOptions"
-getTagDelete MerchantOnboardingDocumentConfigDelete = "MerchantOnboardingDocumentConfigOptions"
+getTagDelete MerchantDocumentVerificationConfigDelete = "MerchantDocumentVerificationConfigOptions"
 getTagDelete TransporterConfigDelete = "TransporterConfigOptions"
 getTagDelete MessageDelete = "MessageOptions"
 getTagDelete MessageReportDelete = "MessageReportOptions"
@@ -308,7 +308,7 @@ parseTagDelete "MerchantMessageOptions" = return MerchantMessageDelete
 parseTagDelete "MerchantPaymentMethodOptions" = return MerchantPaymentMethodDelete
 parseTagDelete "MerchantServiceConfigOptions" = return MerchantServiceConfigDelete
 parseTagDelete "MerchantServiceUsageConfigOptions" = return MerchantServiceUsageConfigDelete
-parseTagDelete "MerchantOnboardingDocumentConfigOptions" = return MerchantOnboardingDocumentConfigDelete
+parseTagDelete "MerchantDocumentVerificationConfigOptions" = return MerchantDocumentVerificationConfigDelete
 parseTagDelete "TransporterConfigOptions" = return TransporterConfigDelete
 parseTagDelete "MessageOptions" = return MessageDelete
 parseTagDelete "MessageReportOptions" = return MessageReportDelete
@@ -391,7 +391,7 @@ data DBDeleteObject
   | MerchantPaymentMethodDeleteOptions DeleteModel (Where Postgres MerchantPaymentMethod.MerchantPaymentMethodT)
   | MerchantServiceConfigDeleteOptions DeleteModel (Where Postgres MerchantServiceConfig.MerchantServiceConfigT)
   | MerchantServiceUsageConfigDeleteOptions DeleteModel (Where Postgres MerchantServiceUsageConfig.MerchantServiceUsageConfigT)
-  | MerchantOnboardingDocumentConfigDeleteOptions DeleteModel (Where Postgres MerchantOnboardingDocumentConfig.OnboardingDocumentConfigT)
+  | MerchantDocumentVerificationConfigDeleteOptions DeleteModel (Where Postgres MerchantDocumentVerificationConfig.DocumentVerificationConfigT)
   | TransporterConfigDeleteOptions DeleteModel (Where Postgres TransporterConfig.TransporterConfigT)
   | MessageDeleteOptions DeleteModel (Where Postgres Message.MessageT)
   | MessageReportDeleteOptions DeleteModel (Where Postgres MessageReport.MessageReportT)
@@ -585,9 +585,9 @@ instance FromJSON DBDeleteObject where
       MerchantServiceUsageConfigDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ MerchantServiceUsageConfigDeleteOptions deleteModel whereClause
-      MerchantOnboardingDocumentConfigDelete -> do
+      MerchantDocumentVerificationConfigDelete -> do
         whereClause <- parseDeleteCommandValues contents
-        return $ MerchantOnboardingDocumentConfigDeleteOptions deleteModel whereClause
+        return $ MerchantDocumentVerificationConfigDeleteOptions deleteModel whereClause
       TransporterConfigDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ TransporterConfigDeleteOptions deleteModel whereClause

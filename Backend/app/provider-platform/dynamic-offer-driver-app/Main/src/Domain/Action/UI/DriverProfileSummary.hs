@@ -21,7 +21,6 @@ import Domain.Types.Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DR
 import Domain.Types.Vehicle (VehicleAPIEntity)
-import qualified Domain.Types.Vehicle as SV
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
@@ -30,6 +29,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverOnboarding as SD
 import qualified Storage.Queries.Booking as BQ
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import Storage.Queries.DriverStats
@@ -114,7 +114,7 @@ getDriverProfileSummary (driverId, _, _) = do
         totalRidesAssigned = fromMaybe 0 driverStats.totalRidesAssigned,
         mobileNumber = decMobNum,
         rating = SP.roundToOneDecimal <$> person.rating,
-        linkedVehicle = SV.makeVehicleAPIEntity <$> vehicleMB,
+        linkedVehicle = SD.makeVehicleAPIEntity <$> vehicleMB,
         totalDistanceTravelled = driverStats.totalDistance,
         language = person.language,
         alternateNumber = decaltMobNum,

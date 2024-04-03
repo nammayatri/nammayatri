@@ -18,7 +18,7 @@ module Storage.Beam.FareProduct where
 import qualified Database.Beam as B
 import Domain.Types.Common
 import qualified Domain.Types.FareProduct as Domain
-import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
 import Tools.Beam.UtilsTH
 

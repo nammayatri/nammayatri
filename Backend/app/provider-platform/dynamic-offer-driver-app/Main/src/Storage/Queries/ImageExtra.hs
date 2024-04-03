@@ -4,9 +4,9 @@
 module Storage.Queries.ImageExtra where
 
 import qualified Data.Time as DT
+import Domain.Types.DocumentVerificationConfig
 import Domain.Types.Image
 import Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
@@ -26,10 +26,10 @@ import qualified Storage.Queries.Person as QP
 import Tools.Error
 
 -- Extra code goes here --
-findRecentByPersonIdAndImageType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Id DMOC.MerchantOperatingCity -> ImageType -> m [Image]
-findRecentByPersonIdAndImageType personId merchantOpCityId imgtype = do
-  _ <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+findRecentByPersonIdAndImageType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> m [Image]
+findRecentByPersonIdAndImageType personId imgtype = do
+  person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  transporterConfig <- QTC.findByMerchantOpCityId person.merchantOperatingCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
       onBoardingRetryTimeInHours' = intToNominalDiffTime onboardingRetryTimeInHours
   now <- getCurrentTime

@@ -27,7 +27,7 @@ import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSSL
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified Domain.Types.Vehicle as Variant
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -87,7 +87,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     rideFrequencyScore :: Maybe Double,
     customerCancellationDues :: HighPrecMoney
   }
-  deriving (Generic, Show, PrettyShow)
+  deriving (Generic, Show)
 
 data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   { searchRequestId :: Id DST.SearchTry, -- TODO: Deprecated, to be removed
@@ -123,7 +123,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     isValueAddNP :: Bool,
     driverPickUpCharges :: Maybe Money
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe Money -> Seconds -> Variant.Variant -> Bool -> Bool -> Maybe Money -> SearchRequestForDriverAPIEntity
 makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleVariant isTranslated isValueAddNP driverPickUpCharges =

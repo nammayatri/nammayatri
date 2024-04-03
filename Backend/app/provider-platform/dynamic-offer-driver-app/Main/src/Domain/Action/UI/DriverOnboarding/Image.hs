@@ -19,11 +19,11 @@ import AWS.S3 as S3
 import qualified Data.ByteString as BS
 import Data.Text as T hiding (length)
 import Data.Time.Format.ISO8601
+import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Image as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.VehicleRegistrationCertificate as RC
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
@@ -39,20 +39,21 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.TransporterConfig
 import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Error
 import qualified Tools.Verification as Verification
 
 data ImageValidateRequest = ImageValidateRequest
   { image :: Text,
-    imageType :: Domain.ImageType,
-    rcId :: Maybe (Id RC.VehicleRegistrationCertificate) -- for PUC, Permit, Insurance and Fitness
+    imageType :: DVC.DocumentType,
+    rcNumber :: Maybe Text -- for PUC, Permit, Insurance and Fitness
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
 data ImageValidateFileRequest = ImageValidateFileRequest
   { image :: FilePath,
-    imageType :: Domain.ImageType,
-    rcId :: Maybe (Id RC.VehicleRegistrationCertificate) -- for PUC, Permit, Insurance and Fitness
+    imageType :: DVC.DocumentType,
+    rcNumber :: Maybe Text -- for PUC, Permit, Insurance and Fitness
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -61,7 +62,7 @@ instance FromMultipart Tmp ImageValidateFileRequest where
     ImageValidateFileRequest
       <$> fmap fdPayload (lookupFile "image" form)
       <*> fmap (read . T.unpack) (lookupInput "imageType" form)
-      <*> fmap (readMaybe . T.unpack) (lookupInput "rcId" form)
+      <*> fmap (readMaybe . T.unpack) (lookupInput "rcNumber" form)
 
 newtype ImageValidateResponse = ImageValidateResponse
   {imageId :: Id Domain.Image}
@@ -77,9 +78,9 @@ createPath ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>
   Text ->
   Text ->
-  Domain.ImageType ->
+  DVC.DocumentType ->
   m Text
-createPath driverId merchantId imageType = do
+createPath driverId merchantId documentType = do
   pathPrefix <- asks (.s3Env.pathPrefix)
   now <- getCurrentTime
   let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
@@ -87,7 +88,7 @@ createPath driverId merchantId imageType = do
     ( pathPrefix <> "/driver-onboarding/" <> "org-" <> merchantId <> "/"
         <> driverId
         <> "/"
-        <> show imageType
+        <> show documentType
         <> "/"
         <> fileName
         <> ".png"
@@ -103,7 +104,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
   let merchantId = person.merchantId
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
-  images <- Query.findRecentByPersonIdAndImageType personId merchantOpCityId imageType
+  images <- Query.findRecentByPersonIdAndImageType personId imageType
   unless isDashboard $ do
     transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let onboardingTryLimit = transporterConfig.onboardingTryLimit
@@ -115,7 +116,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
 
   imagePath <- createPath personId.getId merchantId.getId imageType
   void $ fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
-  imageEntity <- mkImage personId merchantId imagePath imageType False rcId
+  imageEntity <- mkImage personId merchantId imagePath imageType False rcNumber
   Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
@@ -137,13 +138,14 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
       unless (maybe False (60 <) detectedImage.confidence) $
         throwImageError id_ ImageLowQuality
 
-castImageType :: Domain.ImageType -> Verification.ImageType
-castImageType Domain.DriverLicense = Verification.DriverLicense
-castImageType Domain.VehicleRegistrationCertificate = Verification.VehicleRegistrationCertificate
-castImageType Domain.VehiclePermit = Verification.VehiclePermit
-castImageType Domain.VehiclePUC = Verification.VehiclePUC
-castImageType Domain.VehicleInsurance = Verification.VehicleInsurance
-castImageType Domain.VehicleFitnessCertificate = Verification.VehicleFitnessCertificate
+castImageType :: DVC.DocumentType -> Verification.ImageType
+castImageType DVC.DriverLicense = Verification.DriverLicense
+castImageType DVC.VehicleRegistrationCertificate = Verification.VehicleRegistrationCertificate
+castImageType DVC.VehiclePermit = Verification.VehiclePermit
+castImageType DVC.VehiclePUC = Verification.VehiclePUC
+castImageType DVC.VehicleInsurance = Verification.VehicleInsurance
+castImageType DVC.VehicleFitnessCertificate = Verification.VehicleFitnessCertificate
+castImageType _ = Verification.VehicleRegistrationCertificate -- Fix Later
 
 validateImageFile ::
   Bool ->
@@ -152,30 +154,31 @@ validateImageFile ::
   Flow ImageValidateResponse
 validateImageFile isDashboard (personId, merchantId, merchantOpCityId) ImageValidateFileRequest {..} = do
   image' <- L.runIO $ base64Encode <$> BS.readFile image
-  validateImage isDashboard (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcId
+  validateImage isDashboard (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcNumber
 
 mkImage ::
-  (MonadGuid m, MonadTime m) =>
+  (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id Person.Person ->
   Id DM.Merchant ->
   Text ->
-  Domain.ImageType ->
+  DVC.DocumentType ->
   Bool ->
-  Maybe (Id RC.VehicleRegistrationCertificate) ->
+  Maybe Text ->
   m Domain.Image
-mkImage personId_ merchantId s3Path imageType_ isValid mbRcId = do
+mkImage personId_ merchantId s3Path documentType_ isValid mbRcNumber = do
   id <- generateGUID
   now <- getCurrentTime
+  mbRC <- maybe (pure Nothing) QRC.findLastVehicleRCWrapper mbRcNumber
   return $
     Domain.Image
       { id,
         personId = personId_,
         merchantId,
         s3Path,
-        imageType = imageType_,
+        imageType = documentType_,
         isValid,
         failureReason = Nothing,
-        rcId = getId <$> mbRcId,
+        rcId = (getId . (.id)) <$> mbRC,
         createdAt = now,
         updatedAt = now
       }

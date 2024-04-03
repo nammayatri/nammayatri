@@ -18,7 +18,6 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
-import Kernel.Utils.GenericPretty
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal as Int
 import qualified Storage.Queries.DriverInformation.Internal as Int
@@ -47,7 +46,7 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     lon :: Double,
     mode :: Maybe DriverInfo.DriverMode
   }
-  deriving (Generic, Show, PrettyShow, HasCoordinates)
+  deriving (Generic, Show, HasCoordinates)
 
 getNearestGoHomeDrivers ::
   (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) =>

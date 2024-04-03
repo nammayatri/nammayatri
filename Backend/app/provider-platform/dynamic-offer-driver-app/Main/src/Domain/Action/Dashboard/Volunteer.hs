@@ -21,7 +21,7 @@ import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Location as Domain
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Vehicle.Variant as Domain
+import qualified Domain.Types.Vehicle as Domain
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude

@@ -7,7 +7,7 @@ module Storage.Beam.LmsModule where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.LmsModule
-import qualified Domain.Types.Vehicle.Variant
+import qualified Domain.Types.Vehicle
 import Kernel.External.Encryption
 import qualified Kernel.External.Types
 import Kernel.Prelude
@@ -26,7 +26,7 @@ data LmsModuleT f = LmsModuleT
     noOfVideos :: B.C f Kernel.Prelude.Int,
     rank :: B.C f Kernel.Prelude.Int,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    variant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant.Variant),
+    variant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)

@@ -1,6 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.driver_information
-ADD COLUMN comp_aadhaar_image_path TEXT;
-
 ALTER TABLE atlas_driver_offer_bpp.transporter_config
 ADD COLUMN aadhaar_image_resize_config JSON;
 

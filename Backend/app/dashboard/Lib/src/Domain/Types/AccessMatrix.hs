@@ -225,6 +225,9 @@ data UserActionType
   | BULK_REVIEW_RC_VARIANT
   | UPDATE_SAFETY_CENTER
   | UPDATE_VEHICLE_VARIANT
+  | UNDER_REVIEW_DRIVERS_LIST
+  | DRIVER_DOCUMENT_INFO
+  | UPDATE_DOCUMENT
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

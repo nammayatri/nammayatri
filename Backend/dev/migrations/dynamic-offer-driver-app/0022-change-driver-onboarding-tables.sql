@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN verified boolean DEFAULT false NOT NULL;
