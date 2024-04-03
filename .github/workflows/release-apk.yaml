@@ -1,17 +1,28 @@
 name: Release (Production)
 
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       versionCode:
+#         required: true
+#         description: "New version code for the build"
+#       versionName:
+#         required: true
+#         description: "New version name for the build"
+
 on:
-  workflow_dispatch:
-    inputs:
-      versionCode:
-        required: true
-        description: "New version code for the build"
-      versionName:
-        required: true
-        description: "New version name for the build"
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+      - synchronize
+    paths:
+      - 'release-apk-to-prod'
 
 jobs:
   deploy:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
     strategy:
       matrix:
