@@ -58,7 +58,7 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
       QLM.create dropLocMapBooking
       QLM.create dropLocMapRide
       routeInfo :: RouteInfo <- Redis.get (bookingRequestKeySoftUpdate booking.id.getId) >>= fromMaybeM (InternalError $ "BookingRequestRoute not found for bookingId: " <> booking.id.getId)
-      multipleRoutes <- Redis.get $ multipleRouteKeySoftUpdate booking.id.getId
+      multipleRoutes :: Maybe RouteAndDeviationInfo <- Redis.get $ multipleRouteKeySoftUpdate booking.id.getId
       Redis.setExp (searchRequestKey booking.transactionId) routeInfo 3600
       whenJust multipleRoutes $ \allRoutes -> do
         Redis.setExp (multipleRouteKey booking.transactionId) allRoutes 3600

@@ -1895,11 +1895,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1714263391,
-        "narHash": "sha256-0gTug1LbmkmH014ieR4TJa0HPa7OugRWacXyx3YxRnY=",
+        "lastModified": 1714459225,
+        "narHash": "sha256-lQCawrYsfTRD8Fuu+JLMzpJvsX5BI4aY8+uS+ohs64o=",
         "owner": "nammayatri",
         "repo": "location-tracking-service",
-        "rev": "018b67d4a72f5a57f188968c2b5467ad87393daf",
+        "rev": "c4bf07bb793655d837ff97d716c62a5f2723de35",
         "type": "github"
       },
       "original": {
@@ -3915,11 +3915,11 @@
     },
     "services-flake_2": {
       "locked": {
-        "lastModified": 1713949670,
-        "narHash": "sha256-VB10l42Da+H8YfT/fOwj6O9Mwj+FftktkM325rrCJek=",
+        "lastModified": 1714900811,
+        "narHash": "sha256-Fchg/W+n9jJJPYQjZFWVB8aT7WwSH+9PsLGkT+qAioY=",
         "owner": "juspay",
         "repo": "services-flake",
-        "rev": "4c9fd4fb3ba650085a9860fe5751fe005358ef17",
+        "rev": "1f7c1cdc98934ce3ff08fd6106155806827c9d47",
         "type": "github"
       },
       "original": {
@@ -3945,11 +3945,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1715185085,
-        "narHash": "sha256-tbBhzJy3j9rzQ0b8DH0/BEwniWskLp+wqQ8kB8onk5g=",
+        "lastModified": 1715264553,
+        "narHash": "sha256-WhKPbznKQpSvS+NHnY2lpyK1EODDopVbMOCfPnMAmE0=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "3e801151c67e814509372125c4296d036c767abd",
+        "rev": "f8a7ac9a886a625ec43495a918b501cb43b2d9fc",
         "type": "github"
       },
       "original": {
