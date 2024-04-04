@@ -1,3 +1,4 @@
+console.log("APP_PERF INDEX_BUNDLE_START : ", new Date().getTime());
 import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
@@ -27,24 +28,24 @@ if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){
   Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
     return blackListFunctions.indexOf(fnName) == -1
   }).forEach(fnName => {
-    window.JBridgeProxy = window.JBridgeProxy || {};
-    window.JBridgeProxy[fnName] = window.JBridge[fnName];
-    window.JBridge[fnName] = function () {
-      let params = Object.values(arguments).join(", ");
-      if (fnName === "callAPI") {
-        params = arguments[1].split("/").splice(6).join("/");
-      }
-      let shouldLog = true;
-      if (window.appConfig) {
+      window.JBridgeProxy = window.JBridgeProxy || {};
+      window.JBridgeProxy[fnName] = window.JBridge[fnName];
+      window.JBridge[fnName] = function () {
+        let params = Object.values(arguments).join(", ");
+        if (fnName === "callAPI") {
+          params = arguments[1].split("/").splice(6).join("/");
+        }
+        let shouldLog = true;
+        if (window.appConfig) {
         shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
-      }
-      if (shouldLog) {
+        }
+        if (shouldLog) {
         window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
-      }
-      const result = window.JBridgeProxy[fnName](...arguments);
-      return result;
-    };
-  });
+        }
+        const result = window.JBridgeProxy[fnName](...arguments);
+        return result;
+      };
+    });
 }
 
 function guid() {
@@ -150,6 +151,7 @@ function callInitiateResult () {
     event: "jp_consuming_backpress",
     payload: { jp_consuming_backpress: true }
   }
+  console.log("APP_PERF INDEX_BUNDLE_INITIATE_RESULT : ", new Date().getTime());
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
 }
@@ -172,6 +174,10 @@ window.onMerchantEvent = function (_event, globalPayload) {
   const appName = clientPaylod.appName;
   window.appName = appName;
   if (_event == "initiate") {
+    console.log(
+      "APP_PERF INDEX_BUNDLE_INITIATE_START : ",
+      new Date().getTime()
+    );
     let clientId = clientPaylod.clientId;
     if (clientId.includes("_ios"))
     {
@@ -190,41 +196,43 @@ window.onMerchantEvent = function (_event, globalPayload) {
     console.log(window.merchantID);
     try {
       if (
-        clientPaylod.payload &&
-        clientPaylod.payload.hasOwnProperty("onCreateTimeStamp") &&
-        clientPaylod.payload.hasOwnProperty("initiateTimeStamp") &&
+        clientPaylod.hasOwnProperty("onCreateTimeStamp") &&
+        clientPaylod.hasOwnProperty("initiateTimeStamp") &&
         typeof window.events.onCreateToInitiateDuration === "undefined" &&
         typeof window.events.initAppToInitiateDuration === "undefined"
       ) {
         window.events.onCreateToInitiateDuration =
-          new Date().getTime() - clientPaylod.payload.onCreateTimeStamp;
+          new Date().getTime() - clientPaylod.onCreateTimeStamp;
         window.events.initAppToInitiateDuration =
-          new Date().getTime() - clientPaylod.payload.initiateTimeStamp;
-        window.events.onCreateToHomeScreenRenderDuration =
-          new Date(clientPaylod.payload.onCreateTimeStamp);
-        window.events.initAppToHomeScreenRenderDuration = 
-          new Date(clientPaylod.payload.initiateTimeStamp);
+          new Date().getTime() - clientPaylod.initiateTimeStamp;
+        window.events.onCreateToHomeScreenRenderDuration = new Date(
+          clientPaylod.onCreateTimeStamp
+        );
+        window.events.initAppToHomeScreenRenderDuration = new Date(
+          clientPaylod.initiateTimeStamp
+        );
       }
     } catch (err) {}
     callInitiateResult();
   } else if (_event == "process") {
+    console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
     console.warn("Process called");
     window.__payload.sdkVersion = "2.0.1"
-     try {
-      const parsedPayload = window.__payload;
+    try {
+      const clientPaylod = window.__payload.payload;
       if (
-        parsedPayload.payload &&
-        Object.prototype.hasOwnProperty.call(parsedPayload.payload,"initiateTimeStamp") &&
+        clientPaylod &&
+        clientPaylod.hasOwnProperty("initiateTimeStamp") &&
         typeof window.events.initAppToProcessDuration === "undefined" &&
         typeof window.events.onCreateToProcessDuration === "undefined"
       ) {
         window.events.onCreateToProcessDuration =
-          new Date().getTime() - parsedPayload.payload.onCreateTimeStamp;
+          new Date().getTime() - clientPaylod.onCreateTimeStamp;
         window.events.initAppToProcessDuration =
-          new Date().getTime() - parsedPayload.payload.initiateTimeStamp;
+          new Date().getTime() - clientPaylod.initiateTimeStamp;
       }
     } catch (err) {
-      console.error(err)
+      console.error(err);
     }
     if (clientPaylod.action == "notification" && clientPaylod.notification_content && clientPaylod.notification_content.type) {
       window.callNotificationCallBack(clientPaylod.notification_content.type);
@@ -340,7 +348,7 @@ window["onEvent'"] = function (_event, args) {
   } else {
     purescript.onEvent(_event)();
   }
-}
+};
 
 window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
   console.log("onEvent Payload", jsonPayload);
@@ -379,3 +387,4 @@ if(sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.inclu
   logger.disableLogger();
   Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;","null");
 }
+console.log("APP_PERF INDEX_BUNDLE_END : ", new Date().getTime());

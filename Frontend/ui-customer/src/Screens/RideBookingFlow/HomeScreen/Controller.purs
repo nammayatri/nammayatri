@@ -1717,12 +1717,14 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
     case state.props.currentStage of
       HomeScreen   -> do
         _ <- pure $ performHapticFeedback unit
+        let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.DestinationSearch" "true"
         let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
         exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}, data{source= state.data.source}}
       ConfirmingLocation -> do
         _ <- pure $ performHapticFeedback unit
         _ <- pure $ exitLocateOnMap ""
         _ <- pure $ updateLocalStage FindingEstimate
+        let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.ConfirmLocation" "true"
         let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_confirm_pickup"
         let updatedState = state{props{currentStage = FindingEstimate, locateOnMap = false}}
         updateAndExit updatedState $  (UpdatedSource updatedState)
@@ -1947,6 +1949,7 @@ eval (CancelRidePopUpAction (CancelRidePopUp.ClearOptions)) state = do
   continue state { props { cancelDescription = "", cancelReasonCode = "", cancelRideActiveIndex = Nothing } }
 
 eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnClick)) state = do
+    let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".CancelRide") "true"
     _ <- pure $ performHapticFeedback unit
     let newState = state{props{autoScroll = false, isCancelRide = false,currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = NoView }}
     case state.props.cancelRideActiveIndex of
@@ -1974,7 +1977,7 @@ eval (PredictionClickedAction (LocationListItemController.OnClick item)) state =
 
 eval (SuggestedDestinationClicked item) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_sd_list_item"
-  let _ = unsafePerformEffect $ Events.addEventData "External.OneClick.SuggestedDestinationClicked" "true"
+  let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.SuggestedDestination" "true"
   locationSelected item true state{props{isSource = Just false, rideSearchProps{sessionId = generateSessionId unit}, suggestedRideFlow = true}, data{source = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source, nearByPickUpPoints = [], polygonCoordinates = ""}}
 
 eval (PredictionClickedAction (LocationListItemController.FavClick item)) state = do
@@ -2168,6 +2171,7 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
 
 
 eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryButtonClick PrimaryButtonController.OnClick)) state = do
+  let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".Tip") "true"
   let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
       customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
   _ <- pure $ clearTimerWithId state.props.timerId
@@ -2342,8 +2346,12 @@ eval (StartLocationTracking item) state = do
 eval (GetEstimates (GetQuotesRes quotesRes)) state = do
   logInfo "estimates_and_quotes" quotesRes
   case null quotesRes.quotes of
-    false -> specialZoneFlow quotesRes.quotes state
-    true -> estimatesListFlow quotesRes.estimates state 
+    false -> do
+      let _ = unsafePerformEffect $ Events.addEventData ("External.Search." <> state.props.searchId <> ".Type") "Quotes"      
+      specialZoneFlow quotesRes.quotes state
+    true -> do
+      let _ = unsafePerformEffect $ Events.addEventData ("External.Search." <> state.props.searchId <> ".Type") "Estimates"
+      estimatesListFlow quotesRes.estimates state 
 
 
 eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
@@ -2551,7 +2559,7 @@ eval (UpdateETA currentETA currentDistance) state = do
 
 eval (RepeatRide index item) state = do 
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_repeat_trip"
-  let _ = unsafePerformEffect $ Events.addEventData "External.OneClick.RepeatRideClicked" "true"
+  let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.RepeatRide" "true"
   void $ pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS (show true)
   void $ pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ "4" 
   void $ pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ "8000.0" 
@@ -2608,6 +2616,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC ChooseVehic
   continue state{ props{ defaultPickUpPoint = "", selectedEstimateHeight = height } }
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
+  let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".ChooseVehicle") "true"
   if config.activeIndex == config.index then 
     continueWithCmd state [do
       pure (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config)))
@@ -2621,7 +2630,8 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
       continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
       else continue newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
-eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state =
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state = do
+  let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".RateCard") "true"
   continue state{ props { showRateCard = true }
                 , data {  rateCard {  onFirstPage = false
                                     , vehicleVariant = config.vehicleVariant
@@ -2630,7 +2640,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
                                     }}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
-  let _ = unsafePerformEffect $ Events.addEventData "External.SearchId" state.props.searchId
+  let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".BookNow") "true"
   _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
   void $ pure $ setValueToLocalStore SELECTED_VARIANT (state.data.selectedEstimatesObject.vehicleVariant)
   if state.data.currentSearchResultType == QUOTES then  do
