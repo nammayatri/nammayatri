@@ -14,21 +14,22 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VehiclePermitT f = VehiclePermitT
-  { documentImageId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    issueDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    nameOfPermitHolder :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    permitExpiry :: (B.C f Kernel.Prelude.UTCTime),
-    permitNumberEncrypted :: (B.C f Kernel.Prelude.Text),
-    permitNumberHash :: (B.C f Kernel.External.Encryption.DbHash),
-    purposeOfJourney :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    rcId :: (B.C f Kernel.Prelude.Text),
-    regionCovered :: (B.C f Kernel.Prelude.Text),
-    verificationStatus :: (B.C f Domain.Types.IdfyVerification.VerificationStatus),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { documentImageId :: B.C f Kernel.Prelude.Text,
+    driverId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    issueDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    nameOfPermitHolder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    permitExpiry :: B.C f Kernel.Prelude.UTCTime,
+    permitNumberEncrypted :: B.C f Kernel.Prelude.Text,
+    permitNumberHash :: B.C f Kernel.External.Encryption.DbHash,
+    purposeOfJourney :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    rcId :: B.C f Kernel.Prelude.Text,
+    regionCovered :: B.C f Kernel.Prelude.Text,
+    verificationStatus :: B.C f Domain.Types.IdfyVerification.VerificationStatus,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -38,6 +39,6 @@ instance B.Table VehiclePermitT where
 
 type VehiclePermit = VehiclePermitT Identity
 
-$(enableKVPG (''VehiclePermitT) [('id)] [])
+$(enableKVPG ''VehiclePermitT ['id] [])
 
-$(mkTableInstances (''VehiclePermitT) "vehicle_permit")
+$(mkTableInstances ''VehiclePermitT "vehicle_permit")

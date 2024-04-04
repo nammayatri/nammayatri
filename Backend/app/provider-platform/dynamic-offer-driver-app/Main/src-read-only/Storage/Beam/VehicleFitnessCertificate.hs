@@ -14,22 +14,23 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VehicleFitnessCertificateT f = VehicleFitnessCertificateT
-  { applicationNumberEncrypted :: (B.C f Kernel.Prelude.Text),
-    applicationNumberHash :: (B.C f Kernel.External.Encryption.DbHash),
-    categoryOfVehicle :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    documentImageId :: (B.C f Kernel.Prelude.Text),
-    fitnessExpiry :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    inspectingAuthority :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    inspectingOn :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    nextInspectionDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    rcId :: (B.C f Kernel.Prelude.Text),
-    receiptDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    verificationStatus :: (B.C f Domain.Types.IdfyVerification.VerificationStatus),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { applicationNumberEncrypted :: B.C f Kernel.Prelude.Text,
+    applicationNumberHash :: B.C f Kernel.External.Encryption.DbHash,
+    categoryOfVehicle :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    documentImageId :: B.C f Kernel.Prelude.Text,
+    driverId :: B.C f Kernel.Prelude.Text,
+    fitnessExpiry :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    inspectingAuthority :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    inspectingOn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    nextInspectionDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    rcId :: B.C f Kernel.Prelude.Text,
+    receiptDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    verificationStatus :: B.C f Domain.Types.IdfyVerification.VerificationStatus,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -39,6 +40,6 @@ instance B.Table VehicleFitnessCertificateT where
 
 type VehicleFitnessCertificate = VehicleFitnessCertificateT Identity
 
-$(enableKVPG (''VehicleFitnessCertificateT) [('id)] [])
+$(enableKVPG ''VehicleFitnessCertificateT ['id] [])
 
-$(mkTableInstances (''VehicleFitnessCertificateT) "vehicle_fitness_certificate")
+$(mkTableInstances ''VehicleFitnessCertificateT "vehicle_fitness_certificate")

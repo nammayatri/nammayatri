@@ -8,6 +8,7 @@ import qualified Domain.Types.IdfyVerification
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -16,6 +17,7 @@ import qualified Tools.Beam.UtilsTH
 
 data VehicleInsuranceE e = VehicleInsurance
   { documentImageId :: Kernel.Types.Id.Id Domain.Types.Image.Image,
+    driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleInsurance.VehicleInsurance,
     insuredName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issueDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -43,6 +45,7 @@ instance EncryptedItem VehicleInsurance where
     pure
       VehicleInsurance
         { documentImageId = documentImageId entity,
+          driverId = driverId entity,
           id = id entity,
           insuredName = insuredName entity,
           issueDate = issueDate entity,
@@ -62,6 +65,7 @@ instance EncryptedItem VehicleInsurance where
     pure
       ( VehicleInsurance
           { documentImageId = documentImageId entity,
+            driverId = driverId entity,
             id = id entity,
             insuredName = insuredName entity,
             issueDate = issueDate entity,
