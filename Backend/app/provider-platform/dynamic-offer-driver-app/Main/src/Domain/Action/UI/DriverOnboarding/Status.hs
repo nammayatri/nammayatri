@@ -82,7 +82,8 @@ data StatusRes = StatusRes
 
     --- use these fields
     driverDocuments :: [DocumentStatusItem],
-    vehicleDocuments :: [VehicleDocumentItem]
+    vehicleDocuments :: [VehicleDocumentItem],
+    enabled :: Bool
   }
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -184,6 +185,7 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
     when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC) $
       activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo
 
+  driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   return $
     StatusRes
       { dlVerificationStatus = dlStatus,
@@ -192,7 +194,8 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
         rcVerficationMessage = rcVerficationMessage,
         aadhaarVerificationStatus = aadhaarStatus,
         driverDocuments,
-        vehicleDocuments
+        vehicleDocuments,
+        enabled = driverInfo.enabled
       }
 
 enableDriver :: Id DMOC.MerchantOperatingCity -> Id SP.Person -> Maybe DL.DriverLicense -> Flow ()
@@ -316,7 +319,7 @@ documentStatusMessage :: ResponseStatus -> Maybe Text -> DVC.DocumentType -> Lan
 documentStatusMessage status mbReason docType language = do
   case (status, docType) of
     (VALID, _) -> toVerificationMessage DocumentValid language
-    (MANUAL_VERIFICATION_REQUIRED, _) -> toVerificationMessage VerificationInProgress language
+    (MANUAL_VERIFICATION_REQUIRED, _) -> toVerificationMessage UnderManualReview language
     (PENDING, _) -> toVerificationMessage VerificationInProgress language
     (LIMIT_EXCEED, _) -> toVerificationMessage LimitExceed language
     (NO_DOC_AVAILABLE, _) -> toVerificationMessage NoDcoumentFound language
@@ -455,6 +458,7 @@ data VerificationMessage
   | DocumentInvalid
   | DocumentValid
   | VerificationInProgress
+  | UnderManualReview
   | Other
   deriving (Show, Eq, Ord)
 
