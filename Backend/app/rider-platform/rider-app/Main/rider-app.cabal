@@ -385,6 +385,7 @@ library
       Domain.Types.CallStatus
       Domain.Types.CancellationReason
       Domain.Types.Client
+      Domain.Types.ClientPersonInfo
       Domain.Types.DriverOffer
       Domain.Types.Estimate
       Domain.Types.Exophone
@@ -455,6 +456,7 @@ library
       Storage.Beam.CallStatus
       Storage.Beam.CancellationReason
       Storage.Beam.Client
+      Storage.Beam.ClientPersonInfo
       Storage.Beam.DriverOffer
       Storage.Beam.Estimate
       Storage.Beam.Exophone
@@ -525,6 +527,7 @@ library
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
       Storage.Queries.Client
+      Storage.Queries.ClientPersonInfo
       Storage.Queries.DriverOffer
       Storage.Queries.Estimate
       Storage.Queries.Exophone

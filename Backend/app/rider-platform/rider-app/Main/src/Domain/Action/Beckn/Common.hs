@@ -18,16 +18,22 @@ module Domain.Action.Beckn.Common where
 import qualified Data.HashMap.Strict as HM
 import Data.Time hiding (getCurrentTime)
 import Domain.Action.UI.HotSpot
+import qualified Domain.Types.BecknConfig as BecknConfig
+import qualified Domain.Types.Booking as BT
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.Client as DC
+import qualified Domain.Types.ClientPersonInfo as DPCI
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.HotSpot
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Beam.Functions
+import Kernel.Beam.Functions as B
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -45,6 +51,7 @@ import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
@@ -347,6 +354,14 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         case minTripDistanceForReferralCfg of
           Just distance -> updRide.chargeableDistance >= Just distance && not person.hasTakenValidRide
           Nothing -> True
+  mbPersonFirstRideInfo <- QCP.findByPersonIdAndVehicleCategory booking.riderId $ Just (DVST.castServiceTierToCategory booking.vehicleServiceTierType)
+  case mbPersonFirstRideInfo of
+    Just personFirstRideInfo -> do
+      QCP.updateHasTakenValidRideCount (personFirstRideInfo.rideCount + 1) booking.riderId $ Just (DVST.castServiceTierToCategory booking.vehicleServiceTierType)
+    Nothing -> do
+      totalCount <- B.runInReplica $ QRB.findCountByRideIdStatusAndVehicleServiceTierType booking.riderId BT.COMPLETED (getListOfServiceTireTypes $ DVST.castServiceTierToCategory booking.vehicleServiceTierType)
+      personClientInfo <- buildPersonClientInfo booking.riderId booking.clientId booking.merchantOperatingCityId booking.merchantId (DVST.castServiceTierToCategory booking.vehicleServiceTierType) (totalCount + 1)
+      QCP.create personClientInfo
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
@@ -386,6 +401,12 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           { id = guid,
             ..
           }
+
+getListOfServiceTireTypes :: BecknConfig.VehicleCategory -> [DVST.VehicleServiceTierType]
+getListOfServiceTireTypes BecknConfig.CAB = [DVST.SEDAN, DVST.SUV, DVST.HATCHBACK, DVST.TAXI, DVST.TAXI_PLUS, DVST.ECO, DVST.COMFY, DVST.PREMIUM]
+getListOfServiceTireTypes BecknConfig.AUTO_RICKSHAW = [DVST.AUTO_RICKSHAW]
+getListOfServiceTireTypes BecknConfig.MOTORCYCLE = [DVST.BIKE]
+getListOfServiceTireTypes BecknConfig.METRO = []
 
 farePaidReqHandler :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => ValidatedFarePaidReq -> m ()
 farePaidReqHandler req = void $ QRB.updatePaymentStatus req.booking.id req.paymentStatus
@@ -590,3 +611,20 @@ validateBookingCancelledReq BookingCancelledReq {..} = do
   where
     isBookingCancellable booking =
       booking.status `elem` [DRB.NEW, DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.TRIP_ASSIGNED]
+
+buildPersonClientInfo :: MonadFlow m => Id DPerson.Person -> Maybe (Id DC.Client) -> Id DMOC.MerchantOperatingCity -> Id DMerchant.Merchant -> BecknConfig.VehicleCategory -> Int -> m DPCI.ClientPersonInfo
+buildPersonClientInfo personId clientId cityId merchantId vehicleCategory rideCount = do
+  now <- getCurrentTime
+  id <- generateGUID
+  return
+    DPCI.ClientPersonInfo
+      { id = id,
+        personId = personId,
+        clientId = clientId,
+        merchantOperatingCityId = cityId,
+        merchantId = merchantId,
+        vehicleCategory = Just vehicleCategory,
+        rideCount = rideCount,
+        createdAt = now,
+        updatedAt = now
+      }

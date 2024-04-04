@@ -168,6 +168,7 @@ castServiceTierToVariant = \case
   DVST.SUV -> Vehicle.SUV
   DVST.TAXI_PLUS -> Vehicle.TAXI_PLUS
   DVST.AUTO_RICKSHAW -> Vehicle.AUTO_RICKSHAW
+  DVST.BIKE -> Vehicle.BIKE
   _ -> Vehicle.SEDAN
 
 castVariantToServiceTier :: Vehicle.Variant -> DVST.ServiceTierType
@@ -178,3 +179,4 @@ castVariantToServiceTier = \case
   Vehicle.SUV -> DVST.SUV
   Vehicle.TAXI_PLUS -> DVST.TAXI_PLUS
   Vehicle.AUTO_RICKSHAW -> DVST.AUTO_RICKSHAW
+  Vehicle.BIKE -> DVST.BIKE
