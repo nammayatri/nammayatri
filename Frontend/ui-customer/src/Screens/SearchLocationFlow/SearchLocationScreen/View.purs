@@ -108,8 +108,19 @@ view globalProps push state =
   where
 
     markerView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
-    markerView push state = let 
-      imageName = if currentStageOn state ConfirmLocationStage then "ny_ic_src_marker" else MB.maybe "" ( \ currField -> if currField == SearchLocPickup then "ny_ic_src_marker" else (if state.props.actionType == SearchLocationAction then "ny_ic_dest_marker" else "ny_ic_blue_marker")) state.props.focussedTextField 
+    markerView push state = let
+      actionType = state.props.actionType
+      currentStage = currentStageOn state ConfirmLocationStage
+      focusedField = state.props.focussedTextField
+      imageName =
+        if actionType == AddingStopAction then
+          "ny_ic_blue_marker"
+        else if currentStage then
+          "ny_ic_src_marker"
+        else case focusedField of
+          MB.Just SearchLocPickup -> "ny_ic_src_marker"
+          MB.Just _ -> if actionType == SearchLocationAction then "ny_ic_dest_marker" else "ny_ic_blue_marker"
+          MB.Nothing -> "ny_ic_blue_marker"  
       labelText = if DS.length state.data.defaultGate > state.appConfig.mapConfig.labelTextSize then
                                   (DS.take (state.appConfig.mapConfig.labelTextSize - 3) state.data.defaultGate) <> "..."
                                else
@@ -732,4 +743,4 @@ type InfoState = {
 
 currentStageOn :: SearchLocationScreenState ->  SearchLocationStage -> Boolean
 currentStageOn state stage  = 
-  stage == state.props.searchLocStage 
+  stage == state.props.searchLocStage
