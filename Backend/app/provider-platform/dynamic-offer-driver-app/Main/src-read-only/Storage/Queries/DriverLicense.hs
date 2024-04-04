@@ -13,24 +13,24 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverLicense as Beam
 import Storage.Queries.DriverLicenseExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverLicense.DriverLicense -> m ())
+create :: KvDbFlow m r => (Domain.Types.DriverLicense.DriverLicense -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverLicense.DriverLicense] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.DriverLicense.DriverLicense] -> m ())
 createMany = traverse_ create
 
-deleteByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+deleteByDriverId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByDriverId (Kernel.Types.Id.Id driverId) = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq driverId]
 
-findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverLicense.DriverLicense))
+findByDriverId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverLicense.DriverLicense))
 findByDriverId (Kernel.Types.Id.Id driverId) = do findOneWithKV [Se.Is Beam.driverId $ Se.Eq driverId]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverLicense.DriverLicense -> m (Maybe Domain.Types.DriverLicense.DriverLicense))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.DriverLicense.DriverLicense -> m (Maybe Domain.Types.DriverLicense.DriverLicense))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
 updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.IdfyVerification.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
@@ -39,9 +39,10 @@ updateVerificationStatus verificationStatus (Kernel.Types.Id.Id documentImageId1
   updateWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.documentImageId1 $ Se.Eq documentImageId1]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverLicense.DriverLicense -> m (Maybe Domain.Types.DriverLicense.DriverLicense))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.DriverLicense.DriverLicense -> m (Maybe Domain.Types.DriverLicense.DriverLicense))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverLicense.DriverLicense -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.DriverLicense.DriverLicense -> m ())
 updateByPrimaryKey (Domain.Types.DriverLicense.DriverLicense {..}) = do
   _now <- getCurrentTime
   updateWithKV

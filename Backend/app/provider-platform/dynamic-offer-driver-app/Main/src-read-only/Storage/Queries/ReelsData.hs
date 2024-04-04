@@ -14,19 +14,19 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.ReelsData as Beam
 import Storage.Queries.Transformers.ReelsData
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ReelsData.ReelsData -> m ())
+create :: KvDbFlow m r => (Domain.Types.ReelsData.ReelsData -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ReelsData.ReelsData] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.ReelsData.ReelsData] -> m ())
 createMany = traverse_ create
 
 findAllByMerchantOpCityIdLanguageAndKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> Kernel.Prelude.Text -> m [Domain.Types.ReelsData.ReelsData])
 findAllByMerchantOpCityIdLanguageAndKey (Kernel.Types.Id.Id merchantOperatingCityId) language reelKey = do
   findAllWithKV
@@ -37,10 +37,10 @@ findAllByMerchantOpCityIdLanguageAndKey (Kernel.Types.Id.Id merchantOperatingCit
         ]
     ]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.ReelsData.ReelsData -> m (Maybe Domain.Types.ReelsData.ReelsData))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.ReelsData.ReelsData -> m (Maybe Domain.Types.ReelsData.ReelsData))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ReelsData.ReelsData -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.ReelsData.ReelsData -> m ())
 updateByPrimaryKey (Domain.Types.ReelsData.ReelsData {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -13,25 +13,25 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as Beam
 import qualified Storage.Cac.FarePolicy
 import qualified Storage.Queries.FareParameters
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.Estimate -> m ())
+create :: KvDbFlow m r => (Domain.Types.Estimate.Estimate -> m ())
 create tbl = do Kernel.Prelude.whenJust tbl.fareParams Storage.Queries.FareParameters.create; createWithKV tbl
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Estimate.Estimate] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.Estimate.Estimate] -> m ())
 createMany = traverse_ create
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.Estimate -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.Estimate.Estimate -> m ())
 updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -13,46 +13,42 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverRCAssociation as Beam
 import Storage.Queries.DriverRCAssociationExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverRCAssociation.DriverRCAssociation -> m ())
+create :: KvDbFlow m r => (Domain.Types.DriverRCAssociation.DriverRCAssociation -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverRCAssociation.DriverRCAssociation] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.DriverRCAssociation.DriverRCAssociation] -> m ())
 createMany = traverse_ create
 
 deactivateRCForDriver ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
 deactivateRCForDriver isRcActive (Kernel.Types.Id.Id driverId) (Kernel.Types.Id.Id rcId) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.isRcActive isRcActive, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.rcId $ Se.Eq rcId]]
 
-deleteByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+deleteByDriverId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByDriverId (Kernel.Types.Id.Id driverId) = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq driverId]
 
-findActiveAssociationByDriver ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.DriverRCAssociation.DriverRCAssociation))
+findActiveAssociationByDriver :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.DriverRCAssociation.DriverRCAssociation))
 findActiveAssociationByDriver (Kernel.Types.Id.Id driverId) isRcActive = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.isRcActive $ Se.Eq isRcActive]]
 
 findActiveAssociationByRC ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.DriverRCAssociation.DriverRCAssociation))
 findActiveAssociationByRC (Kernel.Types.Id.Id rcId) isRcActive = do findOneWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.isRcActive $ Se.Eq isRcActive]]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverRCAssociation.DriverRCAssociation -> m (Maybe Domain.Types.DriverRCAssociation.DriverRCAssociation))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.DriverRCAssociation.DriverRCAssociation -> m (Maybe Domain.Types.DriverRCAssociation.DriverRCAssociation))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.DriverRCAssociation.DriverRCAssociation -> m (Maybe Domain.Types.DriverRCAssociation.DriverRCAssociation))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.DriverRCAssociation.DriverRCAssociation -> m (Maybe Domain.Types.DriverRCAssociation.DriverRCAssociation))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverRCAssociation.DriverRCAssociation -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.DriverRCAssociation.DriverRCAssociation -> m ())
 updateByPrimaryKey (Domain.Types.DriverRCAssociation.DriverRCAssociation {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -10,20 +10,20 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Client as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Client.Client -> m ())
+create :: KvDbFlow m r => (Domain.Types.Client.Client -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Client.Client] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.Client.Client] -> m ())
 createMany = traverse_ create
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Client.Client -> m (Maybe Domain.Types.Client.Client))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Client.Client -> m (Maybe Domain.Types.Client.Client))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Client.Client -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.Client.Client -> m ())
 updateByPrimaryKey (Domain.Types.Client.Client {..}) = do
   _now <- getCurrentTime
   updateWithKV

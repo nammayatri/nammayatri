@@ -11,23 +11,23 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BapMetadata as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BapMetadata.BapMetadata -> m ())
+create :: KvDbFlow m r => (Domain.Types.BapMetadata.BapMetadata -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BapMetadata.BapMetadata] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.BapMetadata.BapMetadata] -> m ())
 createMany = traverse_ create
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> m (Maybe Domain.Types.BapMetadata.BapMetadata))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> m (Maybe Domain.Types.BapMetadata.BapMetadata))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> m (Maybe Domain.Types.BapMetadata.BapMetadata))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> m (Maybe Domain.Types.BapMetadata.BapMetadata))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BapMetadata.BapMetadata -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.BapMetadata.BapMetadata -> m ())
 updateByPrimaryKey (Domain.Types.BapMetadata.BapMetadata {..}) = do
   _now <- getCurrentTime
   updateWithKV

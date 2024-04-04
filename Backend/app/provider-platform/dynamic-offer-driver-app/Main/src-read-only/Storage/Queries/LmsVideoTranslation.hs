@@ -13,47 +13,41 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.LmsVideoTranslation as Beam
 import qualified Storage.Queries.Transformers.ReelsData
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LmsVideoTranslation.LmsVideoTranslation -> m ())
+create :: KvDbFlow m r => (Domain.Types.LmsVideoTranslation.LmsVideoTranslation -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.LmsVideoTranslation.LmsVideoTranslation] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.LmsVideoTranslation.LmsVideoTranslation] -> m ())
 createMany = traverse_ create
 
-getAllTranslationsForVideoId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m [Domain.Types.LmsVideoTranslation.LmsVideoTranslation])
+getAllTranslationsForVideoId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m [Domain.Types.LmsVideoTranslation.LmsVideoTranslation])
 getAllTranslationsForVideoId (Kernel.Types.Id.Id videoId) = do findAllWithKV [Se.Is Beam.videoId $ Se.Eq videoId]
 
 getVideoByLanguageAndVideoId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> Kernel.External.Types.Language -> m (Maybe Domain.Types.LmsVideoTranslation.LmsVideoTranslation))
 getVideoByLanguageAndVideoId (Kernel.Types.Id.Id videoId) language = do findOneWithKV [Se.And [Se.Is Beam.videoId $ Se.Eq videoId, Se.Is Beam.language $ Se.Eq language]]
 
-updateCompletedWatchCount ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> Kernel.External.Types.Language -> m ())
+updateCompletedWatchCount :: KvDbFlow m r => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> Kernel.External.Types.Language -> m ())
 updateCompletedWatchCount completedWatchCount (Kernel.Types.Id.Id videoId) language = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.completedWatchCount completedWatchCount, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.videoId $ Se.Eq videoId, Se.Is Beam.language $ Se.Eq language]]
 
-updateViewCount ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> Kernel.External.Types.Language -> m ())
+updateViewCount :: KvDbFlow m r => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> Kernel.External.Types.Language -> m ())
 updateViewCount viewCount (Kernel.Types.Id.Id videoId) language = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.viewCount viewCount, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.videoId $ Se.Eq videoId, Se.Is Beam.language $ Se.Eq language]]
 
 findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m (Maybe Domain.Types.LmsVideoTranslation.LmsVideoTranslation))
 findByPrimaryKey language (Kernel.Types.Id.Id videoId) = do findOneWithKV [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.videoId $ Se.Eq videoId]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LmsVideoTranslation.LmsVideoTranslation -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.LmsVideoTranslation.LmsVideoTranslation -> m ())
 updateByPrimaryKey (Domain.Types.LmsVideoTranslation.LmsVideoTranslation {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -14,27 +14,28 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Image as Beam
 import Storage.Queries.ImageExtra as ReExport
 import qualified Tools.Error
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Image.Image -> m ())
+create :: KvDbFlow m r => (Domain.Types.Image.Image -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Image.Image] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.Image.Image] -> m ())
 createMany = traverse_ create
 
 addFailureReason :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
-addFailureReason failureReason (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.failureReason failureReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+addFailureReason failureReason (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.failureReason failureReason] [Se.Is Beam.id $ Se.Eq id]
 
-deleteByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+deleteByPersonId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByPersonId (Kernel.Types.Id.Id personId) = do deleteWithKV [Se.Is Beam.personId $ Se.Eq personId]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.Image.Image))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.Image.Image))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
+findByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.Image.Image])
 findByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.Image.Image])
 findByMerchantId (Kernel.Types.Id.Id merchantId) = do findAllWithKV [Se.Is Beam.merchantId $ Se.Eq merchantId]
 
@@ -57,13 +58,13 @@ updateIsValidAndFailureReason isValid failureReason (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.isValid isValid, Se.Set Beam.failureReason failureReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-updateToValid :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+updateToValid :: KvDbFlow m r => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
 updateToValid isValid (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.isValid isValid, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.Image.Image))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.Image.Image))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Image.Image -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.Image.Image -> m ())
 updateByPrimaryKey (Domain.Types.Image.Image {..}) = do
   _now <- getCurrentTime
   updateWithKV

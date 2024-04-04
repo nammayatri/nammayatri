@@ -11,25 +11,25 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.QuestionModuleMapping as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m ())
+create :: KvDbFlow m r => (Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.QuestionModuleMapping.QuestionModuleMapping] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.QuestionModuleMapping.QuestionModuleMapping] -> m ())
 createMany = traverse_ create
 
-findAllWithModuleId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m [Domain.Types.QuestionModuleMapping.QuestionModuleMapping])
+findAllWithModuleId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m [Domain.Types.QuestionModuleMapping.QuestionModuleMapping])
 findAllWithModuleId (Kernel.Types.Id.Id moduleId) = do findAllWithKV [Se.Is Beam.moduleId $ Se.Eq moduleId]
 
 findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m (Maybe Domain.Types.QuestionModuleMapping.QuestionModuleMapping))
 findByPrimaryKey (Kernel.Types.Id.Id moduleId) (Kernel.Types.Id.Id questionId) = do findOneWithKV [Se.And [Se.Is Beam.moduleId $ Se.Eq moduleId, Se.Is Beam.questionId $ Se.Eq questionId]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m ())
 updateByPrimaryKey (Domain.Types.QuestionModuleMapping.QuestionModuleMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV

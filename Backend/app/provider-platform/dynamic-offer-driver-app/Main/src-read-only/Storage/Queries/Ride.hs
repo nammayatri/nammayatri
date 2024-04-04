@@ -8,6 +8,6 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import Storage.Queries.RideExtra as ReExport
 import Storage.Queries.Transformers.Ride

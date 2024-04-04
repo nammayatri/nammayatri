@@ -12,27 +12,23 @@ import qualified Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.PlanTranslation as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PlanTranslation.PlanTranslation -> m ())
+create :: KvDbFlow m r => (Domain.Types.PlanTranslation.PlanTranslation -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PlanTranslation.PlanTranslation] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.PlanTranslation.PlanTranslation] -> m ())
 createMany = traverse_ create
 
-findByPlanIdAndLanguage ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Plan.Plan -> Kernel.External.Types.Language -> m (Maybe Domain.Types.PlanTranslation.PlanTranslation))
+findByPlanIdAndLanguage :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Plan.Plan -> Kernel.External.Types.Language -> m (Maybe Domain.Types.PlanTranslation.PlanTranslation))
 findByPlanIdAndLanguage (Kernel.Types.Id.Id planId) language = do findOneWithKV [Se.Is Beam.planId $ Se.Eq planId, Se.Is Beam.language $ Se.Eq language]
 
-findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.Plan.Plan -> m (Maybe Domain.Types.PlanTranslation.PlanTranslation))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.Plan.Plan -> m (Maybe Domain.Types.PlanTranslation.PlanTranslation))
 findByPrimaryKey language (Kernel.Types.Id.Id planId) = do findOneWithKV [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.planId $ Se.Eq planId]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PlanTranslation.PlanTranslation -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.PlanTranslation.PlanTranslation -> m ())
 updateByPrimaryKey (Domain.Types.PlanTranslation.PlanTranslation {..}) = do
   _now <- getCurrentTime
   updateWithKV

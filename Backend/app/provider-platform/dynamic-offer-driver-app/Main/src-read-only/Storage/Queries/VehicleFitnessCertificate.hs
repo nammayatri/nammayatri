@@ -14,14 +14,14 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.VehicleFitnessCertificate as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate -> m ())
+create :: KvDbFlow m r => (Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate] -> m ())
 createMany = traverse_ create
 
 findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate))
@@ -32,17 +32,14 @@ findByRcIdAndDriverId ::
   (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate])
 findByRcIdAndDriverId (Kernel.Types.Id.Id rcId) (Kernel.Types.Id.Id driverId) = do findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.driverId $ Se.Eq driverId]]
 
-updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.IdfyVerification.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
-updateVerificationStatus verificationStatus (Kernel.Types.Id.Id documentImageId) = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.documentImageId $ Se.Eq documentImageId]
+findByRcIdAndDriverId :: KvDbFlow m r =>
+  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate])
+findByRcIdAndDriverId (Kernel.Types.Id.Id rcId) (Kernel.Types.Id.Id driverId) = do findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.driverId $ Se.Eq driverId]]
 
-findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate -> m (Maybe Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate -> m (Maybe Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate -> m ())
 updateByPrimaryKey (Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate {..}) = do
   _now <- getCurrentTime
   updateWithKV
