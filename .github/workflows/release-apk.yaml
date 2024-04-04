@@ -160,13 +160,10 @@ jobs:
           git stash
           python updateLocalVersion.py customer
       
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: apk-released
-          title: "[BOT]APK released successfully, incrementing the versions"
-          body: "Automated pull request to update versionCode and versionName."
-          delete-branch: true
-          commit-message: "[BOT] Version incremented successfully"
-
+      - name: Commit changes
+        run: |
+          git config --local user.email ${{ secrets.NAMMA_BOT_EMAIL }}
+          git config --local user.name "namma-bot"
+          git add versions.txt
+          git commit -m "[BOT] updating version code and name post successful release"
+          git push https://${{ secrets.NAMMA_BOT_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
