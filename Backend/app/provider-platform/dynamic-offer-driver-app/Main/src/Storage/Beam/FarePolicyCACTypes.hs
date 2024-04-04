@@ -16,8 +16,7 @@ data FarePolicyProgressiveDetailsPerExtraKmRateSection = FarePolicyProgressiveDe
   deriving (Generic, FromJSON, ToJSON)
 
 data FarePolicyRentalDetailsDistanceBuffers = FarePolicyRentalDetailsDistanceBuffers
-  { farePolicyId :: Text,
-    rideDuration :: Seconds,
+  { rideDuration :: Seconds,
     bufferKms :: Int
   }
   deriving (Generic, FromJSON, ToJSON)
