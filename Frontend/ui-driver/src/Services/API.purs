@@ -4619,3 +4619,38 @@ instance standardEncodeUpdateAirConditionUpdateResponse :: StandardEncode Update
 instance showUpdateAirConditionUpdateResponse :: Show UpdateAirConditionUpdateResponse where show = genericShow
 instance decodeUpdateAirConditionUpdateResponse :: Decode UpdateAirConditionUpdateResponse where decode = defaultDecode
 instance encodeUpdateAirConditionUpdateResponse  :: Encode UpdateAirConditionUpdateResponse where encode = defaultEncode
+
+
+--------------------------------------------------------- Get Token Api ------------------------------------------------
+data ServiceName = HyperVerge
+
+data GetSdkTokenReq = GetSdkTokenReq String ServiceName
+newtype GetSdkTokenResp = GetSdkTokenResp {
+  token :: String
+}
+
+
+instance makeGetSdkTokenReq  :: RestEndpoint GetSdkTokenReq GetSdkTokenResp where
+    makeRequest reqBody@(GetSdkTokenReq exp svc) headers = defaultMakeRequest GET (EP.getSdkToken exp (show svc)) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericGetSdkTokenReq :: Generic GetSdkTokenReq _
+instance showGetSdkTokenReq :: Show GetSdkTokenReq where show = genericShow
+instance standardEncodeGetSdkTokenReq :: StandardEncode GetSdkTokenReq where standardEncode _ = standardEncode{}
+instance decodeGetSdkTokenReq :: Decode GetSdkTokenReq where decode = defaultDecode
+instance encodeGetSdkTokenReq :: Encode GetSdkTokenReq where encode = defaultEncode
+
+derive instance genericServiceName :: Generic ServiceName _
+instance showServiceName :: Show ServiceName where show = genericShow
+instance decodeServiceName :: Decode ServiceName where decode = defaultEnumDecode
+instance encodeServiceName :: Encode ServiceName where encode = defaultEnumEncode
+instance standardEncodeServiceName :: StandardEncode ServiceName where standardEncode _ = standardEncode {}
+
+
+derive instance genericGetSdkTokenResp :: Generic GetSdkTokenResp _
+derive instance newtypeGetSdkTokenResp :: Newtype GetSdkTokenResp _
+instance standardEncodeGetSdkTokenResp :: StandardEncode GetSdkTokenResp where standardEncode (GetSdkTokenResp rsp) = standardEncode rsp
+instance showGetSdkTokenResp :: Show GetSdkTokenResp where show = genericShow
+instance decodeGetSdkTokenResp :: Decode GetSdkTokenResp where decode = defaultDecode
+instance encodeGetSdkTokenResp :: Encode GetSdkTokenResp where encode = defaultEncode

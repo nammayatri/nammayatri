@@ -2552,3 +2552,19 @@ export const jBridgeMethodExists = function (method) {
   }
   return false;
 }
+
+export const initHVSdk = function (accessToken) {
+    return function (workFLowId) {
+      return function (transactionId) {
+        return function (useLocation) {
+          return function (defLanguageCode) {
+            return function (inputJson) {
+              return function () {
+                return JBridge.initHVSdk(accessToken, workFLowId, transactionId, useLocation, defLanguageCode, inputJson);
+              }
+            }
+          }
+        }
+      }
+    }
+}

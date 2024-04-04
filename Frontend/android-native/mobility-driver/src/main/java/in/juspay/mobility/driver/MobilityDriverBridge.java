@@ -10,6 +10,7 @@
 package in.juspay.mobility.driver;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.app.Activity.RESULT_OK;
 import static android.content.Context.WINDOW_SERVICE;
 
 import android.Manifest;
@@ -48,6 +49,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
@@ -88,10 +90,16 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.Map;
 
+import co.hyperverge.hyperkyc.HyperKyc;
+import co.hyperverge.hyperkyc.data.models.HyperKycConfig;
+import co.hyperverge.hyperkyc.data.models.result.HyperKycResult;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
@@ -110,6 +118,7 @@ import in.juspay.mobility.app.R;
 public class MobilityDriverBridge extends MobilityCommonBridge {
 
     private static final String LOG_TAG = "MobilityDriverBridge";
+    private static final int HV_REQUEST_CODE = 54;
 
     // Media Utils
     public static YouTubePlayerView youTubePlayerView;
@@ -622,6 +631,27 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+
+            case HV_REQUEST_CODE:
+                if (resultCode == RESULT_OK) {
+                    HyperKycResult result = data.getParcelableExtra("hyperKycResult");
+                    switch (result.getStatus()) {
+                        case "USER_CANCELLED":
+                            return true;
+                        case "ERROR":
+                            return true;
+                        case "AUTO_APPROVED":
+                            return true;
+                        case "AUTO_DECLINED":
+                            return true;
+                        case "NEEDS_REVIEW":
+                            return true;
+                    }
+                }
+                break;
+        }
+
         return super.onActivityResult(requestCode, resultCode, data);
     }
 
@@ -778,6 +808,41 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         }else{
             return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED);
         }
+    }
+
+    @JavascriptInterface
+    public void initHVSdk(String accessToken,  String workFlowId, String transactionId, boolean useLocation, String defLanguageCode, String inputsJson) {
+        HyperKycConfig config = new HyperKycConfig(accessToken, workFlowId, transactionId);
+        config.setUseLocation(useLocation);
+        config.setDefaultLangCode(defLanguageCode);
+        if (inputsJson != null) {
+            Map<String, String> inpMap = new HashMap<>();
+            JSONObject jsonObject;
+            try {
+                jsonObject = new JSONObject(inputsJson);
+            }
+            catch (JSONException e) {
+                Log.e("Unable To parse given JSON", inputsJson);
+                e.printStackTrace();
+                return;
+            }
+            for (Iterator<String> it = jsonObject.keys(); it.hasNext(); ) {
+                String key = it.next();
+                try {
+                    inpMap.put(key, jsonObject.getString(key));
+                }
+                catch (JSONException e) {
+                    Log.e("Unable find Specified Key", inputsJson);
+                    e.printStackTrace();
+                    return;
+                }
+            }
+            if (inpMap.size() > 0)  config.setInputs(inpMap);
+            else System.out.println("Empty json passed as input so not initializing inputs in config");
+        }
+        else System.out.println("Not initializing inputs as inputs json passed is null");
+        Intent hyperKycIntent = new HyperKyc.Contract().createIntent(bridgeComponents.getContext(), config);
+        bridgeComponents.getActivity().startActivityForResult(hyperKycIntent, 54, null);
     }
 }
 

@@ -1492,3 +1492,13 @@ mkUpdateDriverVehiclesServiceTier ridePreferences =
             tiers : tierArray,
             airConditioned : Nothing
         }
+
+
+------------------------------------------------------------------------ Get Token -------------------------------------------------------------------------------
+getSdkToken :: String -> ServiceName -> FlowBT String GetSdkTokenResp
+getSdkToken expiry serviceName = do
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.getSdkToken expiry (show serviceName)) identity errorHandler (lift $ lift $ callAPI headers (GetSdkTokenReq expiry serviceName))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
