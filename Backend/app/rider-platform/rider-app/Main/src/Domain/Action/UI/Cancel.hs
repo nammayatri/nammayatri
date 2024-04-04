@@ -107,7 +107,7 @@ data CancellationDuesDetailsRes = CancellationDuesDetailsRes
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-softCancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> m CancelRes
+softCancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, KvDbFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> m CancelRes
 softCancel bookingId _ = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
@@ -128,7 +128,7 @@ softCancel bookingId _ = do
         ..
       }
 
-cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
+cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, KvDbFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
 cancel bookingId _ req = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
@@ -197,7 +197,7 @@ cancel bookingId _ req = do
             ..
           }
 
-isBookingCancellable :: (CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> m Bool
+isBookingCancellable :: KvDbFlow m r => SRB.Booking -> m Bool
 isBookingCancellable booking
   | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.NEW] = pure True
   | booking.status == SRB.TRIP_ASSIGNED = do
@@ -206,7 +206,7 @@ isBookingCancellable booking
   | otherwise = pure False
 
 mkDomainCancelSearch ::
-  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) =>
+  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], KvDbFlow m r, Esq.EsqDBReplicaFlow m r) =>
   Id Person.Person ->
   Id DEstimate.Estimate ->
   m CancelSearch
@@ -240,7 +240,7 @@ mkDomainCancelSearch personId estimateId = do
           }
 
 cancelSearch ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id Person.Person ->
   CancelSearch ->
   m ()
@@ -260,8 +260,7 @@ cancelSearch personId dcr = do
 
 driverDistanceToPickup ::
   ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     Maps.HasCoordinates tripStartPos,
     Maps.HasCoordinates tripEndPos
   ) =>

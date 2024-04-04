@@ -47,9 +47,8 @@ appInstallsHitsCountKey deviceToken = "BAP:AppInstalls:createAppInstallsDetails:
 
 createAppInstallsDetails ::
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
-    EsqDBFlow m r,
-    EncFlow m r,
-    CacheFlow m r
+    KvDbFlow m r,
+    EncFlow m r
   ) =>
   AppInstallsReq ->
   m APISuccess.APISuccess

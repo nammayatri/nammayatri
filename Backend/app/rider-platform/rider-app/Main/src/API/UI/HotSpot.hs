@@ -75,7 +75,7 @@ filterAccordingMaxFrequency threshold =
         sumOfFrequency >= threshold
     )
 
-groupAndFilterHotSpotWithPrecision :: (CacheFlow m r, EsqDBFlow m r) => HotSpotConfig -> Int -> Int -> [HotSpot] -> m [HotSpot]
+groupAndFilterHotSpotWithPrecision :: KvDbFlow m r => HotSpotConfig -> Int -> Int -> [HotSpot] -> m [HotSpot]
 groupAndFilterHotSpotWithPrecision hotSpotConfig precision geohashPerGroup geohashes = do
   let sortLexicographically = Dl.sortBy (\gh1 gh2 -> compare (gh2._geoHash) (gh1._geoHash)) geohashes
       grouped = Dl.groupBy (\gh1 gh2 -> Dl.take precision (Dt.unpack gh1._geoHash) == Dl.take precision (Dt.unpack gh2._geoHash)) sortLexicographically
@@ -87,9 +87,7 @@ sortWithFrequency :: HotSpotConfig -> [HotSpot] -> [HotSpot]
 sortWithFrequency HotSpotConfig {..} = Dl.sortOn $ Down . (\x -> do (x._manualMovedSaved * weightOfManualSaved) + (x._manualMovedPickup * weightOfManualPickup) + (x._nonManualMovedPickup * weightOfAutoPickup) + (x._nonManualMovedSaved * weightOfAutoSaved) + (x._tripStart * weightOfTripStart) + (x._tripEnd * weightOfTripEnd) + (x._specialLocation * weightOfSpecialLocation))
 
 getHotspot ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Maps.LatLong ->
   Id Merchant.Merchant ->
   m HotSpotResponse

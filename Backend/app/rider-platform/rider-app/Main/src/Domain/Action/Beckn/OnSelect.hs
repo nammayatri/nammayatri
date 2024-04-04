@@ -220,7 +220,7 @@ validateRequest DOnSelectReq {..} = do
       { ..
       }
   where
-    duplicateCheckCond :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => [Text] -> Text -> m Bool
+    duplicateCheckCond :: (KvDbFlow m r, EsqDBReplicaFlow m r) => [Text] -> Text -> m Bool
     duplicateCheckCond [] _ = return False
     duplicateCheckCond (bppQuoteId_ : _) bppId_ =
       isJust <$> runInReplica (QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_)

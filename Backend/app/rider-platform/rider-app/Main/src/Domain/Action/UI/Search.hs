@@ -162,8 +162,7 @@ data SearchRes = SearchRes
   }
 
 hotSpotUpdate ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     HasField "hotSpotExpiry" r Seconds
   ) =>
   Id Merchant ->
@@ -178,8 +177,7 @@ hotSpotUpdate merchantId mbFavourite origin isSourceManuallyMoved = case mbFavou
     frequencyUpdator merchantId origin.gps (Just origin.address) (bool NonManualPickup ManualPickup (isSourceManuallyMoved == Just True))
 
 updateForSpecialLocation ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     EventStreamFlow m r,
     HasField "hotSpotExpiry" r Seconds
@@ -199,14 +197,12 @@ updateForSpecialLocation merchantId origin mbIsSpecialLocation = do
         Nothing -> return ()
 
 search ::
-  ( CacheFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     ClickhouseFlow m r,
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
-    EsqDBFlow m r,
     HasBAPMetrics m r,
-    MonadFlow m,
     EventStreamFlow m r,
     HasField "hotSpotExpiry" r Seconds,
     HasFlowEnv m r '["collectRouteData" ::: Bool]

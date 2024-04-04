@@ -194,9 +194,7 @@ data DFareBreakup = DFareBreakup
 
 rideAssignedReqHandler ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
+    KvDbFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
@@ -280,9 +278,7 @@ rideAssignedReqHandler req = do
 
 rideStartedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
+    KvDbFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
@@ -318,9 +314,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
 
 rideCompletedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
+    KvDbFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     ClickhouseFlow m r,
@@ -432,9 +426,7 @@ farePaidReqHandler req = void $ QRB.updatePaymentStatus req.booking.id req.payme
 
 driverArrivedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
+    KvDbFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
@@ -452,10 +444,8 @@ driverArrivedReqHandler ValidatedDriverArrivedReq {..} = do
 
 bookingCancelledReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     ClickhouseFlow m r,
-    MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,

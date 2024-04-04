@@ -232,7 +232,7 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
               estimatedDistanceWithUnit = distance
             }
 
-getActiveSos :: (CacheFlow m r, EsqDBFlow m r) => Maybe DRide.Ride -> Id Person.Person -> m (Maybe DSos.SosStatus)
+getActiveSos :: KvDbFlow m r => Maybe DRide.Ride -> Id Person.Person -> m (Maybe DSos.SosStatus)
 getActiveSos mbRide personId = do
   case mbRide of
     Nothing -> return Nothing
@@ -244,7 +244,7 @@ getActiveSos mbRide personId = do
           return $ mockSos <&> (.status)
         Just sos -> return $ Just sos.status
 
-buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> Id Person.Person -> m BookingAPIEntity
+buildBookingAPIEntity :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Booking -> Id Person.Person -> m BookingAPIEntity
 buildBookingAPIEntity booking personId = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
   mbRide <- runInReplica $ QRide.findByRBId booking.id

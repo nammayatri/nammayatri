@@ -231,7 +231,7 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
     maxLimit = 20
     defaultLimit = 10
 
-buildRideListItem :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => QRide.RideItem -> m Common.RideListItem
+buildRideListItem :: (EncFlow m r, KvDbFlow m r) => QRide.RideItem -> m Common.RideListItem
 buildRideListItem QRide.RideItem {..} = do
   customerPhoneNo <- mapM decrypt person.mobileNumber
   pure
@@ -434,7 +434,7 @@ castCancellationSource = \case
   DBCReason.ByApplication -> Common.ByApplication
 
 bookingCancel ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   BookingCancelledReq ->
   m ()
 bookingCancel BookingCancelledReq {..} = do

@@ -31,7 +31,7 @@ import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
 import qualified Storage.Queries.WhiteListOrg as Queries
 
-findBySubscriberIdAndDomainAndMerchantId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Domain -> Id Merchant -> m (Maybe WhiteListOrg)
+findBySubscriberIdAndDomainAndMerchantId :: KvDbFlow m r => ShortId Subscriber -> Domain -> Id Merchant -> m (Maybe WhiteListOrg)
 findBySubscriberIdAndDomainAndMerchantId subscriberId domain merchantId =
   Hedis.safeGet (makeShortIdAndDomainAndMerchantIdKey subscriberId domain merchantId) >>= \case
     Just a -> return . Just $ coerce @(WhiteListOrgD 'Unsafe) @WhiteListOrg a
@@ -64,7 +64,7 @@ makeShortIdAndDomainAndMerchantIdKey :: ShortId Subscriber -> Domain -> Id Merch
 makeShortIdAndDomainAndMerchantIdKey subscriberId domain merchantId =
   "CachedQueries:WhiteListOrg:SubscriberId-" <> subscriberId.getShortId <> "-Domain-" <> show domain <> "-MerchantId-" <> merchantId.getId
 
-countTotalSubscribers :: (CacheFlow m r, EsqDBFlow m r) => m Int
+countTotalSubscribers :: KvDbFlow m r => m Int
 countTotalSubscribers = do
   Hedis.safeGet "CachedQueries:WhiteListOrg:TotalSubscribers" >>= \case
     Just a -> return a

@@ -58,7 +58,7 @@ makeFeedbackFormAPIEntity response = map convertGroup groupedEntities
           answerType = res.answerType
         }
 
-feedbackForm :: (CacheFlow m r, EsqDBFlow m r, HasCacheFeedbackFormConfig r) => Maybe Int -> m FeedbackFormList
+feedbackForm :: (KvDbFlow m r, HasCacheFeedbackFormConfig r) => Maybe Int -> m FeedbackFormList
 feedbackForm ratingValue =
   do
     case ratingValue of

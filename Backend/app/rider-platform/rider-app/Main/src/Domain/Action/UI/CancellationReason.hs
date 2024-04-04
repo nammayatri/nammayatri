@@ -37,6 +37,6 @@ makeCancellationReasonAPIEntity :: DCR.CancellationReason -> CancellationReasonA
 makeCancellationReasonAPIEntity DCR.CancellationReason {..} =
   CancellationReasonAPIEntity {..}
 
-list :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => DCR.CancellationStage -> m [CancellationReasonAPIEntity]
+list :: (KvDbFlow m r, EsqDBReplicaFlow m r) => DCR.CancellationStage -> m [CancellationReasonAPIEntity]
 list cancStage = do
   map makeCancellationReasonAPIEntity <$> runInReplica (QCR.findAll cancStage)

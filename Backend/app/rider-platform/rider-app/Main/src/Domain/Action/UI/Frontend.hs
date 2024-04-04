@@ -100,7 +100,7 @@ getPersonFlowStatus personId merchantId mIsPolling = do
           _ <- QPFS.updateStatus personId DPFS.IDLE
           return $ GetPersonFlowStatusRes (Just personStatus) DPFS.IDLE isValueAddNp
 
-notifyEvent :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], Esq.EsqDBReplicaFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Id DP.Person -> NotifyEventReq -> m NotifyEventResp
+notifyEvent :: (KvDbFlow m r, EncFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], Esq.EsqDBReplicaFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Id DP.Person -> NotifyEventReq -> m NotifyEventResp
 notifyEvent personId req = do
   _ <- case req.event of
     RATE_DRIVER_SKIPPED -> QPFS.updateStatus personId DPFS.IDLE
@@ -112,9 +112,8 @@ notifyEvent personId req = do
   pure APISuccess.Success
 
 handleRideTracking ::
-  ( CacheFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
-    EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
@@ -174,12 +173,12 @@ handleRideTracking personId _ (Just isPolling) DPFS.DRIVER_ARRIVED {..} = do
   return $ GetPersonFlowStatusRes Nothing updatedStatus Nothing -- isValueAddNP is Nothing as its not needed in rideStage
 handleRideTracking _ _ _ status = return $ GetPersonFlowStatusRes Nothing status Nothing -- isValueAddNP is Nothing as its not needed in rideStage
 
-updateStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id DP.Person -> DPFS.FlowStatus -> m ()
+updateStatus :: KvDbFlow m r => Id DP.Person -> DPFS.FlowStatus -> m ()
 updateStatus personId updatedStatus = do
   _ <- QPFS.updateStatus personId updatedStatus
   QPFS.clearCache personId
 
-getTrackUrl :: (Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SRide.Ride -> Maybe BaseUrl -> m (Maybe BaseUrl)
+getTrackUrl :: (Esq.EsqDBReplicaFlow m r, KvDbFlow m r) => Id SRide.Ride -> Maybe BaseUrl -> m (Maybe BaseUrl)
 getTrackUrl rideId mTrackUrl = do
   case mTrackUrl of
     Nothing -> do

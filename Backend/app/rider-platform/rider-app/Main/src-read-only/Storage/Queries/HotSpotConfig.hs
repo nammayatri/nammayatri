@@ -10,23 +10,23 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.HotSpotConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.HotSpotConfig.HotSpotConfig -> m ())
+create :: KvDbFlow m r => (Domain.Types.HotSpotConfig.HotSpotConfig -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.HotSpotConfig.HotSpotConfig] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.HotSpotConfig.HotSpotConfig] -> m ())
 createMany = traverse_ create
 
-findConfigByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.HotSpotConfig.HotSpotConfig -> m (Maybe Domain.Types.HotSpotConfig.HotSpotConfig))
+findConfigByMerchantId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.HotSpotConfig.HotSpotConfig -> m (Maybe Domain.Types.HotSpotConfig.HotSpotConfig))
 findConfigByMerchantId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.HotSpotConfig.HotSpotConfig -> m (Maybe Domain.Types.HotSpotConfig.HotSpotConfig))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.HotSpotConfig.HotSpotConfig -> m (Maybe Domain.Types.HotSpotConfig.HotSpotConfig))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.HotSpotConfig.HotSpotConfig -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.HotSpotConfig.HotSpotConfig -> m ())
 updateByPrimaryKey (Domain.Types.HotSpotConfig.HotSpotConfig {..}) = do
   updateWithKV
     [ Se.Set Beam.blockRadius blockRadius,

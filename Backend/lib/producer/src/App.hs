@@ -20,9 +20,10 @@ import Environment
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as L
+import Kernel.Beam.ART.ARTUtils as ART
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
-import Kernel.Beam.Types (KafkaConn (..), Tables (..))
+import Kernel.Beam.Types (FilePathForART (..), KafkaConn (..), Tables (..))
 import Kernel.Prelude
 import Kernel.Tools.LoopGracefully (loopGracefully)
 import qualified Kernel.Tools.Metrics.Init as Metrics
@@ -43,6 +44,7 @@ startProducer = do
 
 startProducerWithEnv :: L.FlowRuntime -> AppCfg -> AppEnv -> IO ()
 startProducerWithEnv flowRt appCfg appEnv = do
+  artFilePath <- ART.getFilePath ("ART/data.log" :: FilePath)
   runFlow
     flowRt
     ( ( prepareConnectionRider
@@ -56,6 +58,7 @@ startProducerWithEnv flowRt appCfg appEnv = do
       )
         >> L.setOption KafkaConn appEnv.kafkaProducerTools
         >> L.setOption Tables (KUC.Tables [] [] [] False)
+        >> L.setOption FilePathForART artFilePath
     )
   runFlowR flowRt appEnv $ do
     loopGracefully $ bool [PF.runProducer] [PF.runReviver, PF.runProducer] appEnv.runReviver

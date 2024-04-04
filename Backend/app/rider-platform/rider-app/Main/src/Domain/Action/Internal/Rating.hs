@@ -24,7 +24,6 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.Types.APISuccess (APISuccess (Success))
-import Kernel.Types.CacheFlow
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
@@ -44,9 +43,7 @@ data FeedbackReq = FeedbackReq
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 rating ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["internalAPIKey" ::: Text]
   ) =>
@@ -78,7 +75,7 @@ rating apiKey FeedbackReq {..} = do
   pure Success
 
 calculateAverageRating ::
-  (EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (KvDbFlow m r, EncFlow m r, CacheFlow m r) =>
   Id DP.Person ->
   Int ->
   Int ->

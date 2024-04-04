@@ -92,7 +92,7 @@ validateSendIssueReq SendIssueReq {..} =
 
 type SendIssueRes = APISuccess
 
-sendIssue :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> SendIssueReq -> m SendIssueRes
+sendIssue :: (EncFlow m r, KvDbFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> SendIssueReq -> m SendIssueRes
 sendIssue (personId, merchantId) request = do
   runRequestValidation validateSendIssueReq request
   newIssue <- buildDBIssue personId request
@@ -110,7 +110,7 @@ sendIssue (personId, merchantId) request = do
       logTagInfo "Create Ticket API failed - " $ show err
   return Success
 
-safetyCheckSupport :: (EncFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, MonadFlow m) => (Id Person.Person, Id Merchant.Merchant) -> SafetyCheckSupportReq -> m SendIssueRes
+safetyCheckSupport :: (EncFlow m r, KvDbFlow m r, EsqDBReplicaFlow m r, MonadFlow m) => (Id Person.Person, Id Merchant.Merchant) -> SafetyCheckSupportReq -> m SendIssueRes
 safetyCheckSupport (personId, merchantId) req = do
   ride <- runInReplica $ QRide.findActiveByRBId req.bookingId >>= fromMaybeM (RideDoesNotExist "")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -179,7 +179,7 @@ mkTicket issue person phoneNumber disposition queue = do
         rideDescription = Just rideDesc
       }
 
-mkRideInfo :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Ride.Ride -> Person.Person -> Maybe Text -> m Ticket.RideInfo
+mkRideInfo :: KvDbFlow m r => Maybe Ride.Ride -> Person.Person -> Maybe Text -> m Ticket.RideInfo
 mkRideInfo mbRide person mbPhoneNumber = do
   now <- getCurrentTime
   pure $
@@ -214,7 +214,7 @@ mkRideInfo mbRide person mbPhoneNumber = do
           area = (.address.area) =<< mbLocAPIEnt
         }
 
-callbackRequest :: (CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> m APISuccess
+callbackRequest :: KvDbFlow m r => Id Person.Person -> m APISuccess
 callbackRequest personId = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   newCallbackRequest <- buildCallbackRequest person

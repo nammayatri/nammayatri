@@ -12,24 +12,24 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Station as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Station.Station -> m ())
+create :: KvDbFlow m r => (Domain.Types.Station.Station -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Station.Station] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.Station.Station] -> m ())
 createMany = traverse_ create
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByStationCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Station.Station))
+findByStationCode :: KvDbFlow m r => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Station.Station))
 findByStationCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
 
 getTicketPlacesByMerchantOperatingCityIdAndVehicleType ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Station.FRFSVehicleType -> m [Domain.Types.Station.Station])
 getTicketPlacesByMerchantOperatingCityIdAndVehicleType (Kernel.Types.Id.Id merchantOperatingCityId) vehicleType = do
   findAllWithKV
@@ -39,13 +39,13 @@ getTicketPlacesByMerchantOperatingCityIdAndVehicleType (Kernel.Types.Id.Id merch
         ]
     ]
 
-getTicketPlacesByVehicleType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Station.FRFSVehicleType -> m [Domain.Types.Station.Station])
+getTicketPlacesByVehicleType :: KvDbFlow m r => (Domain.Types.Station.FRFSVehicleType -> m [Domain.Types.Station.Station])
 getTicketPlacesByVehicleType vehicleType = do findAllWithKV [Se.Is Beam.vehicleType $ Se.Eq vehicleType]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Station.Station -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.Station.Station -> m ())
 updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
   _now <- getCurrentTime
   updateWithKV

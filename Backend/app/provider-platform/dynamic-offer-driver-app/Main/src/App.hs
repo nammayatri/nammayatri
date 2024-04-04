@@ -27,9 +27,10 @@ import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
+import qualified Kernel.Beam.ART.ARTUtils as ART
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
-import Kernel.Beam.Types (KafkaConn (..))
+import Kernel.Beam.Types (FilePathForART (..), KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
@@ -90,6 +91,7 @@ runDynamicOfferDriverApp' :: AppCfg -> IO ()
 runDynamicOfferDriverApp' appCfg = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
+  artFilePath <- ART.getFilePath ("ART/data.log" :: FilePath)
   appEnv <-
     try (buildAppEnv appCfg)
       >>= handleLeftIO @SomeException exitBuildingAppEnvFailure "Couldn't build AppEnv: "
@@ -110,6 +112,7 @@ runDynamicOfferDriverApp' appCfg = do
             appCfg.kvConfigUpdateFrequency
         )
           >> L.setOption KafkaConn appEnv.kafkaProducerTools
+          >> L.setOption FilePathForART artFilePath
       )
 
     flowRt' <- runFlowR flowRt appEnv $ do

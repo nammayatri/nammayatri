@@ -10,23 +10,23 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.ServiceCategory as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ServiceCategory.ServiceCategory -> m ())
+create :: KvDbFlow m r => (Domain.Types.ServiceCategory.ServiceCategory -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ServiceCategory.ServiceCategory] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.ServiceCategory.ServiceCategory] -> m ())
 createMany = traverse_ create
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> m (Maybe Domain.Types.ServiceCategory.ServiceCategory))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> m (Maybe Domain.Types.ServiceCategory.ServiceCategory))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> m (Maybe Domain.Types.ServiceCategory.ServiceCategory))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> m (Maybe Domain.Types.ServiceCategory.ServiceCategory))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ServiceCategory.ServiceCategory -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.ServiceCategory.ServiceCategory -> m ())
 updateByPrimaryKey (Domain.Types.ServiceCategory.ServiceCategory {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -18,9 +18,10 @@ import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
+import Kernel.Beam.ART.ARTUtils as ART
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
-import Kernel.Beam.Types (KafkaConn (..))
+import Kernel.Beam.Types (FilePathForART (..), KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
 import Kernel.Prelude
@@ -62,6 +63,7 @@ runRiderAppScheduler configModifier = do
   handlerCfg <- configModifier <$> readDhallConfigDefault "rider-app-scheduler"
   handlerEnv <- buildHandlerEnv handlerCfg
   hostname <- getPodName
+  artFilePath <- ART.getFilePath ("ART/data.log" :: FilePath)
   let loggerRt = L.getEulerLoggerRuntime hostname handlerCfg.appCfg.loggerConfig
 
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
@@ -76,6 +78,7 @@ runRiderAppScheduler configModifier = do
             handlerCfg.appCfg.kvConfigUpdateFrequency
         )
           >> L.setOption KafkaConn handlerEnv.kafkaProducerTools
+          >> L.setOption FilePathForART artFilePath
       )
     -- R.withFlowRuntime (Just loggerRt) \flowRt -> do
     flowRt' <- runFlowR flowRt handlerEnv $ do

@@ -24,7 +24,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.LocationMapping as QLM
 
-buildPickUpLocationMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m DLM.LocationMapping
+buildPickUpLocationMapping :: KvDbFlow m r => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m DLM.LocationMapping
 buildPickUpLocationMapping locationId entityId tag merchantId merchantOperatingCityId = do
   id <- generateGUID
   let order = 0
@@ -35,7 +35,7 @@ buildPickUpLocationMapping locationId entityId tag merchantId merchantOperatingC
   QLM.updatePastMappingVersions entityId order
   return DLM.LocationMapping {..}
 
-buildDropLocationMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m DLM.LocationMapping
+buildDropLocationMapping :: KvDbFlow m r => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m DLM.LocationMapping
 buildDropLocationMapping locationId entityId tag merchantId merchantOperatingCityId = do
   id <- generateGUID
   noOfEntries <- QLM.countOrders entityId

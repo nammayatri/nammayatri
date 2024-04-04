@@ -40,7 +40,7 @@ import Tools.Auth
 import Tools.Error
 import Tools.Notifications
 
-getFollowRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Log m) => (Maybe (Id Person.Person), Id Merchant.Merchant) -> m [Followers]
+getFollowRide :: (KvDbFlow m r, EncFlow m r, Log m) => (Maybe (Id Person.Person), Id Merchant.Merchant) -> m [Followers]
 getFollowRide (mbPersonId, _) = do
   id <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   emContacts <- PDEN.findAllByContactPersonId id

@@ -14,7 +14,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, withFlowHandlerAPI)
+import Kernel.Utils.Common (KvDbFlow, withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
@@ -41,7 +41,7 @@ dashboardIssueHandle =
       findByMerchantShortIdAndCity = castfindByMerchantShortIdAndCity
     }
 
-castPersonById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Person -> m (Maybe Common.Person)
+castPersonById :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Id Common.Person -> m (Maybe Common.Person)
 castPersonById driverId = do
   person <- runInReplica $ QP.findById (cast driverId)
   return $ fmap castPerson person
@@ -57,7 +57,7 @@ castPersonById driverId = do
           merchantOperatingCityId = cast person.merchantOperatingCityId
         }
 
-castfindByMerchantShortIdAndCity :: (CacheFlow m r, EsqDBFlow m r) => ShortId Common.Merchant -> Context.City -> m (Maybe Common.MerchantOperatingCity)
+castfindByMerchantShortIdAndCity :: KvDbFlow m r => ShortId Common.Merchant -> Context.City -> m (Maybe Common.MerchantOperatingCity)
 castfindByMerchantShortIdAndCity (ShortId merchantShortId) opCity = do
   merchantOpCity <- CQMOC.findByMerchantShortIdAndCity (ShortId merchantShortId) opCity
   return $ fmap castMerchantOperatingCity merchantOpCity

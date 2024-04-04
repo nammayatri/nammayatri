@@ -4,7 +4,7 @@
 
 module Domain.Types.FRFSTicket where
 
-import Data.Aeson
+import Data.Aeson (eitherDecode)
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
