@@ -13,25 +13,25 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DocumentVerificationConfig as Beam
 import Storage.Queries.DocumentVerificationConfigExtra as ReExport
 import Storage.Queries.Transformers.DocumentVerificationConfig
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig -> m ())
+create :: KvDbFlow m r => (Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig] -> m ())
 createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig])
 findAllByMerchantOpCityId limit offset (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId] (Se.Asc Beam.order) limit offset
 
 findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Vehicle.Category -> m (Maybe Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig))
 findByPrimaryKey documentType (Kernel.Types.Id.Id merchantOperatingCityId) vehicleCategory = do
   findOneWithKV
@@ -42,7 +42,7 @@ findByPrimaryKey documentType (Kernel.Types.Id.Id merchantOperatingCityId) vehic
         ]
     ]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig -> m ())
 updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV

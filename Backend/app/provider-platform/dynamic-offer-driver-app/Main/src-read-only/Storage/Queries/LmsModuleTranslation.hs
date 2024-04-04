@@ -12,30 +12,26 @@ import qualified Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.LmsModuleTranslation as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LmsModuleTranslation.LmsModuleTranslation -> m ())
+create :: KvDbFlow m r => (Domain.Types.LmsModuleTranslation.LmsModuleTranslation -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.LmsModuleTranslation.LmsModuleTranslation] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.LmsModuleTranslation.LmsModuleTranslation] -> m ())
 createMany = traverse_ create
 
-getAllTranslationsByModuleId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m [Domain.Types.LmsModuleTranslation.LmsModuleTranslation])
+getAllTranslationsByModuleId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m [Domain.Types.LmsModuleTranslation.LmsModuleTranslation])
 getAllTranslationsByModuleId (Kernel.Types.Id.Id moduleId) = do findAllWithKV [Se.Is Beam.moduleId $ Se.Eq moduleId]
 
-getByModuleIdAndLanguage ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.External.Types.Language -> m (Maybe Domain.Types.LmsModuleTranslation.LmsModuleTranslation))
+getByModuleIdAndLanguage :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.External.Types.Language -> m (Maybe Domain.Types.LmsModuleTranslation.LmsModuleTranslation))
 getByModuleIdAndLanguage (Kernel.Types.Id.Id moduleId) language = do findOneWithKV [Se.And [Se.Is Beam.moduleId $ Se.Eq moduleId, Se.Is Beam.language $ Se.Eq language]]
 
-findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe Domain.Types.LmsModuleTranslation.LmsModuleTranslation))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe Domain.Types.LmsModuleTranslation.LmsModuleTranslation))
 findByPrimaryKey language (Kernel.Types.Id.Id moduleId) = do findOneWithKV [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.moduleId $ Se.Eq moduleId]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LmsModuleTranslation.LmsModuleTranslation -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.LmsModuleTranslation.LmsModuleTranslation -> m ())
 updateByPrimaryKey (Domain.Types.LmsModuleTranslation.LmsModuleTranslation {..}) = do
   _now <- getCurrentTime
   updateWithKV

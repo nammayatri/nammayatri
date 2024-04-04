@@ -14,19 +14,19 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.SubscriptionConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SubscriptionConfig.SubscriptionConfig -> m ())
+create :: KvDbFlow m r => (Domain.Types.SubscriptionConfig.SubscriptionConfig -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SubscriptionConfig.SubscriptionConfig] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.SubscriptionConfig.SubscriptionConfig] -> m ())
 createMany = traverse_ create
 
 findSubscriptionConfigsByMerchantOpCityIdAndServiceName ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Domain.Types.Plan.ServiceNames -> m (Maybe Domain.Types.SubscriptionConfig.SubscriptionConfig))
 findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName = do
   findOneWithKV
@@ -37,7 +37,7 @@ findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId 
     ]
 
 findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> m (Maybe Domain.Types.SubscriptionConfig.SubscriptionConfig))
 findByPrimaryKey serviceName merchantOperatingCityId = do
   findOneWithKV
@@ -47,7 +47,7 @@ findByPrimaryKey serviceName merchantOperatingCityId = do
         ]
     ]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SubscriptionConfig.SubscriptionConfig -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.SubscriptionConfig.SubscriptionConfig -> m ())
 updateByPrimaryKey (Domain.Types.SubscriptionConfig.SubscriptionConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV

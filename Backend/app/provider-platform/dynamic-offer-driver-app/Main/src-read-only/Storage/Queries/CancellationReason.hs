@@ -10,24 +10,24 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as Beam
 import Storage.Queries.Transformers.CancellationReason
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CancellationReason.CancellationReason -> m ())
+create :: KvDbFlow m r => (Domain.Types.CancellationReason.CancellationReason -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.CancellationReason.CancellationReason] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.CancellationReason.CancellationReason] -> m ())
 createMany = traverse_ create
 
-findAll :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Bool -> m [Domain.Types.CancellationReason.CancellationReason])
+findAll :: KvDbFlow m r => (Maybe Int -> Maybe Int -> Kernel.Prelude.Bool -> m [Domain.Types.CancellationReason.CancellationReason])
 findAll limit offset enabled = do findAllWithOptionsDb [Se.Is Beam.enabled $ Se.Eq enabled] (Se.Desc Beam.priority) limit offset
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CancellationReason.CancellationReasonCode -> m (Maybe Domain.Types.CancellationReason.CancellationReason))
+findByPrimaryKey :: KvDbFlow m r => (Domain.Types.CancellationReason.CancellationReasonCode -> m (Maybe Domain.Types.CancellationReason.CancellationReason))
 findByPrimaryKey reasonCode = do findOneWithKV [Se.And [Se.Is Beam.reasonCode $ Se.Eq (reasonCodeToText reasonCode)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CancellationReason.CancellationReason -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.CancellationReason.CancellationReason -> m ())
 updateByPrimaryKey (Domain.Types.CancellationReason.CancellationReason {..}) = do
   _now <- getCurrentTime
   updateWithKV

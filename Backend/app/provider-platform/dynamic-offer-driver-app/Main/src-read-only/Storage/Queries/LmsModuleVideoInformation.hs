@@ -11,32 +11,28 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.LmsModuleVideoInformation as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m ())
+create :: KvDbFlow m r => (Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation] -> m ())
 createMany = traverse_ create
 
-findByVideoId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m (Maybe Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation))
+findByVideoId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m (Maybe Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation))
 findByVideoId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
 getAllVideos ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> [Domain.Types.LmsModuleVideoInformation.VideoStatus] -> m [Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation])
 getAllVideos (Kernel.Types.Id.Id moduleId) videoStatus = do findAllWithKV [Se.And [Se.Is Beam.moduleId $ Se.Eq moduleId, Se.Is Beam.videoStatus $ Se.In videoStatus]]
 
-findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m (Maybe Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m (Maybe Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m ())
 updateByPrimaryKey (Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation {..}) = do
   _now <- getCurrentTime
   updateWithKV
