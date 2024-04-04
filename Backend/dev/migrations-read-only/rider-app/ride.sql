@@ -47,7 +47,13 @@ ALTER TABLE atlas_app.ride ALTER COLUMN vehicle_color DROP NOT NULL;
 ALTER TABLE atlas_app.ride ADD COLUMN currency character varying(255) ;
 
 
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN vehicle_service_tier_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN traveled_distance_value double precision ;
+ALTER TABLE atlas_app.ride ADD COLUMN distance_unit character varying(255) ;
+ALTER TABLE atlas_app.ride ADD COLUMN chargeable_distance_value double precision ;

@@ -82,8 +82,8 @@ data RideCompletedInfo = RideCompletedInfo
     fare :: Money,
     totalFare :: Money,
     fareBreakups :: [OnStatusFareBreakup],
-    chargeableDistance :: HighPrecMeters,
-    traveledDistance :: HighPrecMeters,
+    chargeableDistance :: Distance,
+    traveledDistance :: Distance,
     paymentUrl :: Maybe Text
   }
 
@@ -161,7 +161,7 @@ isStatusChanged bookingOldStatus bookingNewStatus rideEntity = do
 
 onStatus ::
   ( MonadFlow m,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
+    HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
     CacheFlow m r,
     EsqDBFlow m r,
     HasBAPMetrics m r,
@@ -214,7 +214,7 @@ onStatus req = do
 
 validateRequest ::
   ( MonadFlow m,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
+    HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
     CacheFlow m r,
     EsqDBFlow m r,
     HasBAPMetrics m r,

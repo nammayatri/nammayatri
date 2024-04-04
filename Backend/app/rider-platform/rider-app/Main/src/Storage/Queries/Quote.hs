@@ -97,7 +97,7 @@ instance FromTType' BeamQ.Quote Quote where
 
     quoteDetails <- case fareProductType of
       DFFP.ONE_WAY -> do
-        distanceToNearestDriver' <- distanceToNearestDriver & fromMaybeM (QuoteFieldNotPresent "distanceToNearestDriver")
+        distanceToNearestDriver' <- (mkDistanceWithDefault distanceUnit distanceToNearestDriverValue <$> distanceToNearestDriver) & fromMaybeM (QuoteFieldNotPresent "distanceToNearestDriver")
         pure . DQ.OneWayDetails $
           DQ.OneWayQuoteDetails
             { distanceToNearestDriver = distanceToNearestDriver'
@@ -177,7 +177,9 @@ instance ToTType' BeamQ.Quote Quote where
             BeamQ.providerId = providerId,
             BeamQ.itemId = itemId,
             BeamQ.providerUrl = showBaseUrl providerUrl,
-            BeamQ.distanceToNearestDriver = distanceToNearestDriver,
+            BeamQ.distanceToNearestDriver = distanceToHighPrecMeters <$> distanceToNearestDriver,
+            BeamQ.distanceToNearestDriverValue = distanceToNearestDriver <&> (.value),
+            BeamQ.distanceUnit = distanceToNearestDriver <&> (.unit),
             BeamQ.vehicleVariant = vehicleServiceTierType,
             BeamQ.serviceTierName = serviceTierName,
             BeamQ.serviceTierShortDesc = serviceTierShortDesc,

@@ -64,7 +64,8 @@ getInvoice (mbPersonId, merchantId) from to = do
                   source = maybe notAvailableText (\source -> fromMaybe notAvailableText source.fullAddress) mbSource,
                   totalAmount = maybe notAvailableText show ride.totalFare,
                   vehicleNumber = fromMaybe notAvailableText ride.vehicleNumber,
-                  chargeableDistance = ride.chargeableDistance
+                  chargeableDistance = ride.chargeableDistance,
+                  chargeableDistanceWithUnit = highPrecMetersToDistance <$> ride.chargeableDistance
                 }
         Nothing -> return Nothing
     getFareBreakup bookingId (tag, title) = do

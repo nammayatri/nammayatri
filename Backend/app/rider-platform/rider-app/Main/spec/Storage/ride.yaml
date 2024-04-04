@@ -40,6 +40,7 @@ Ride:
       computedPrice: Maybe Money
       computedPriceWithCurrency: Maybe PriceAPIEntity
       chargeableRideDistance: Maybe HighPrecMeters
+      chargeableRideDistanceWithUnit: Maybe Distance
       driverArrivalTime: Maybe UTCTime
       rideStartTime: Maybe UTCTime
       rideEndTime: Maybe UTCTime
@@ -77,8 +78,8 @@ Ride:
     trackingUrl: Maybe BaseUrl
     fare: Maybe Price
     totalFare: Maybe Price
-    chargeableDistance: Maybe HighPrecMeters
-    traveledDistance: Maybe HighPrecMeters
+    chargeableDistance: Maybe Distance
+    traveledDistance: Maybe Distance
     driverArrivalTime: Maybe UTCTime
     rideStartTime: Maybe UTCTime
     rideEndTime: Maybe UTCTime
@@ -117,6 +118,7 @@ Ride:
     vehicleNumber: character varying(255)
     vehicleVariant: character varying(60)
 
+# FIXME separate distanceUnit/currency for each column
   beamFields:
     toLocation: {}
     fromLocation: {}
@@ -125,6 +127,13 @@ Ride:
       fare: Maybe HighPrecMoney
     totalFare:
       totalFare: Maybe HighPrecMoney
+    chargeableDistance:
+      chargeableDistanceValue: Maybe HighPrecDistance
+      chargeableDistance: Maybe HighPrecMeters
+      distanceUnit: Maybe DistanceUnit
+    traveledDistance:
+      traveledDistanceValue: Maybe HighPrecDistance
+      traveledDistance: Maybe HighPrecMeters
 
   fromTType:
     toLocation: Storage.Queries.Extra.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
@@ -132,12 +141,19 @@ Ride:
     fare: fmap (Kernel.Types.Common.mkPrice currency) fare|E
     totalFare: fmap (Kernel.Types.Common.mkPrice currency) totalFare|E
     trackingUrl: Kernel.Prelude.mapM Kernel.Prelude.parseBaseUrl|IM
+    chargeableDistance: Kernel.Types.Common.mkDistanceWithDefault distanceUnit chargeableDistanceValue <$> chargeableDistance|E
+    traveledDistance: Kernel.Types.Common.mkDistanceWithDefault distanceUnit traveledDistanceValue <$> traveledDistance|E
 
   toTType:
     fare: Kernel.Prelude.fmap (.amount)|I
     totalFare: Kernel.Prelude.fmap (.amount)|I
     currency: Kernel.Prelude.fmap (.currency)|I
     trackingUrl: Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl|I
+    chargeableDistance: Kernel.Prelude.fmap Kernel.Types.Common.distanceToHighPrecMeters|I
+    chargeableDistanceValue: Kernel.Prelude.fmap (.value)|I
+    distanceUnit: Kernel.Prelude.fmap (.unit)|I
+    traveledDistance: Kernel.Prelude.fmap Kernel.Types.Common.distanceToHighPrecMeters|I
+    traveledDistanceValue: Kernel.Prelude.fmap (.value)|I
 
   beamType:
     fare: Maybe HighPrecMoney

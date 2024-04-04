@@ -148,12 +148,12 @@ cancel bookingId _ req = do
             let merchantOperatingCityId = booking.merchantOperatingCityId
             disToPickup <- driverDistanceToPickup booking.merchantId merchantOperatingCityId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
             -- Temporary for debug issue with huge values
-            let disToPickupThreshold = 1000000 --1000km can be max valid distance
-            disToPickupUpd :: Meters <-
+            let disToPickupThreshold = Distance 1000000 Meter --1000km can be max valid distance
+            disToPickupUpd :: Distance <-
               if abs disToPickup > disToPickupThreshold
                 then do
                   logWarning $ "Invalid disToPickup received: " <> show disToPickup
-                  pure (-1)
+                  pure $ Distance (-1) Meter
                 else do
                   logInfo $ "Valid disToPickup received: " <> show disToPickup
                   pure disToPickup
@@ -264,7 +264,7 @@ driverDistanceToPickup ::
   Id DMOC.MerchantOperatingCity ->
   tripStartPos ->
   tripEndPos ->
-  m Meters
+  m Distance
 driverDistanceToPickup merchantId merchantOperatingCityId tripStartPos tripEndPos = do
   distRes <-
     Maps.getDistanceForCancelRide merchantId merchantOperatingCityId $
@@ -273,7 +273,7 @@ driverDistanceToPickup merchantId merchantOperatingCityId tripStartPos tripEndPo
           destination = tripEndPos,
           travelMode = Just Maps.CAR
         }
-  return $ distRes.distance
+  return $ metersToDistance distRes.distance
 
 disputeCancellationDues :: (Id Person.Person, Id Merchant.Merchant) -> Flow APISuccess
 disputeCancellationDues (personId, merchantId) = do

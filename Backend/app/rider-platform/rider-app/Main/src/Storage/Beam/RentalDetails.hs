@@ -28,6 +28,8 @@ data RentalDetailsT f = RentalDetailsT
     perExtraMinRateAmount :: B.C f (Maybe HighPrecMoney),
     perExtraKmRateAmount :: B.C f (Maybe HighPrecMoney),
     includedKmPerHr :: B.C f Kilometers,
+    includedDistancePerHrValue :: B.C f (Maybe HighPrecDistance),
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     plannedPerKmRate :: B.C f Money,
     nightShiftCharge :: B.C f (Maybe Money),
     plannedPerKmRateAmount :: B.C f (Maybe HighPrecMoney),

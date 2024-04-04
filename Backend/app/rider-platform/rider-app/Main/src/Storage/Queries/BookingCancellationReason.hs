@@ -77,7 +77,7 @@ instance FromTType' BeamBCR.BookingCancellationReason BookingCancellationReason 
             reasonStage = reasonStage,
             additionalInfo = additionalInfo,
             driverCancellationLocation = LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon,
-            driverDistToPickup = driverDistToPickup
+            driverDistToPickup = mkDistanceWithDefaultMeters distanceUnit driverDistToPickupValue <$> driverDistToPickup
           }
 
 instance ToTType' BeamBCR.BookingCancellationReason BookingCancellationReason where
@@ -92,5 +92,7 @@ instance ToTType' BeamBCR.BookingCancellationReason BookingCancellationReason wh
         BeamBCR.additionalInfo = additionalInfo,
         BeamBCR.driverCancellationLocationLat = driverCancellationLocation <&> (.lat),
         BeamBCR.driverCancellationLocationLon = driverCancellationLocation <&> (.lon),
-        BeamBCR.driverDistToPickup = driverDistToPickup
+        BeamBCR.driverDistToPickup = distanceToMeters <$> driverDistToPickup,
+        BeamBCR.driverDistToPickupValue = driverDistToPickup <&> (.value),
+        BeamBCR.distanceUnit = driverDistToPickup <&> (.unit)
       }

@@ -30,6 +30,8 @@ data DriverOfferT f = DriverOfferT
     driverName :: B.C f Text,
     durationToPickup :: B.C f (Maybe Int),
     distanceToPickup :: B.C f (Maybe HighPrecMeters),
+    distanceToPickupValue :: B.C f (Maybe HighPrecDistance),
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     validTill :: B.C f UTCTime,
     bppQuoteId :: B.C f Text,
     rating :: B.C f (Maybe Centesimal),

@@ -65,9 +65,9 @@ data QuoteDetails
   deriving (PrettyShow) via Showable QuoteDetails
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
-  { distanceToNearestDriver :: HighPrecMeters
+  { distanceToNearestDriver :: Distance
   }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, PrettyShow)
+  deriving (Generic, Show, PrettyShow)
 
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
@@ -110,8 +110,9 @@ instance FromJSON QuoteAPIDetails where
 instance ToSchema QuoteAPIDetails where
   declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
 
-newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
-  { distanceToNearestDriver :: HighPrecMeters
+data OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
+  { distanceToNearestDriver :: HighPrecMeters,
+    distanceToNearestDriverWithUnit :: Distance
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -123,12 +124,18 @@ newtype OneWaySpecialZoneQuoteAPIDetails = OneWaySpecialZoneQuoteAPIDetails
 mkQuoteAPIDetails :: QuoteDetails -> QuoteAPIDetails
 mkQuoteAPIDetails = \case
   RentalDetails details -> RentalAPIDetails $ DRentalDetails.mkRentalDetailsAPIEntity details
-  OneWayDetails OneWayQuoteDetails {..} -> OneWayAPIDetails OneWayQuoteAPIDetails {..}
+  OneWayDetails OneWayQuoteDetails {..} ->
+    OneWayAPIDetails
+      OneWayQuoteAPIDetails
+        { distanceToNearestDriver = distanceToHighPrecMeters distanceToNearestDriver,
+          distanceToNearestDriverWithUnit = distanceToNearestDriver
+        }
   DriverOfferDetails DDriverOffer.DriverOffer {..} ->
-    let distanceToPickup' = distanceToPickup <|> (Just . HighPrecMeters $ toCentesimal 0) -- TODO::remove this default value
+    let distanceToPickup' = (distanceToHighPrecMeters <$> distanceToPickup) <|> (Just . HighPrecMeters $ toCentesimal 0) -- TODO::remove this default value
+        distanceToPickupWithUnit' = distanceToPickup <|> Just (Distance 0 Meter) -- TODO::remove this default value
         durationToPickup' = durationToPickup <|> Just 0 -- TODO::remove this default value
         rating' = rating <|> Just (toCentesimal 500) -- TODO::remove this default value
-     in DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', durationToPickup = durationToPickup', rating = rating', ..}
+     in DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickupWithUnit', durationToPickup = durationToPickup', rating = rating', ..}
   OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
   InterCityDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> InterCityAPIDetails DSpecialZoneQuote.InterCityQuoteAPIEntity {..}
 

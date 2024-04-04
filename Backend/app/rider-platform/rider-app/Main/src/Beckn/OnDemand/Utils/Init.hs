@@ -93,7 +93,7 @@ castDPaymentType :: DMPM.PaymentType -> Text
 castDPaymentType DMPM.ON_FULFILLMENT = show Enums.ON_FULFILLMENT
 castDPaymentType DMPM.POSTPAID = show Enums.ON_FULFILLMENT
 
-mkFulfillmentTags :: Maybe HighPrecMeters -> Maybe [Spec.TagGroup]
+mkFulfillmentTags :: Maybe Distance -> Maybe [Spec.TagGroup]
 mkFulfillmentTags mbMaxDistance = do
   if isJust mbMaxDistance
     then
@@ -118,7 +118,7 @@ mkFulfillmentTags mbMaxDistance = do
                                 descriptorShortDesc = Nothing
                               },
                         tagDisplay = (\_ -> Just True) =<< mbMaxDistance,
-                        tagValue = (Just . show) =<< mbMaxDistance
+                        tagValue = (Just . show . distanceToHighPrecMeters) =<< mbMaxDistance
                       }
                   ]
             }

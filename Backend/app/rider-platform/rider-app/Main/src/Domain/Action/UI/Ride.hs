@@ -137,7 +137,7 @@ getDriverLoc rideId = do
         unless (isJust mbIsOnTheWayNotified) $ do
           Notify.notifyDriverOnTheWay booking.riderId
           Redis.setExp driverOnTheWay () merchant.driverOnTheWayNotifyExpiry.getSeconds
-        when (isNothing mbHasReachedNotified && distance <= merchant.arrivedPickupThreshold) $ do
+        when (isNothing mbHasReachedNotified && distance <= distanceToMeters merchant.arrivedPickupThreshold) $ do
           Notify.notifyDriverHasReached booking.riderId ride.otp ride.vehicleNumber
           Redis.setExp driverHasReached () 1500
   return $
@@ -223,7 +223,7 @@ editLocation rideId (_, merchantId) req = do
     let initialLatLong = Maps.LatLong {lat = initialLocationForRide.lat, lon = initialLocationForRide.lon}
         currentLatLong = pickup.gps
     let distance = CD.distanceBetweenInMeters initialLatLong currentLatLong
-    when (distance > merchant.editPickupDistanceThreshold) do
+    when (distance > distanceToHighPrecMeters merchant.editPickupDistanceThreshold) do
       throwError EditPickupLocationNotServiceable
 
     res <- try @_ @SomeException (CallBPP.callGetDriverLocation ride.trackingUrl)
@@ -231,7 +231,7 @@ editLocation rideId (_, merchantId) req = do
       Right res' -> do
         let curDriverLocation = res'.currPoint
         let distanceOfDriverFromChangingPickup = CD.distanceBetweenInMeters curDriverLocation currentLatLong
-        when (distanceOfDriverFromChangingPickup < merchant.driverDistanceThresholdFromPickup) do
+        when (distanceOfDriverFromChangingPickup < distanceToHighPrecMeters merchant.driverDistanceThresholdFromPickup) do
           throwError $ DriverAboutToReachAtInitialPickup (show distanceOfDriverFromChangingPickup)
       Left err -> do
         logTagInfo "DriverLocationFetchFailed" $ show err

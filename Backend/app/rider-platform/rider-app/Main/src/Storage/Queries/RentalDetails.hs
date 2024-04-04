@@ -40,6 +40,7 @@ instance FromTType' BeamRS.RentalDetails RentalDetails where
             perExtraMinRate = mkPriceWithDefault perExtraMinRateAmount currency perExtraMinRate,
             perExtraKmRate = mkPriceWithDefault perExtraKmRateAmount currency perExtraKmRate,
             plannedPerKmRate = mkPriceWithDefault plannedPerKmRateAmount currency plannedPerKmRate,
+            includedDistancePerHr = mkDistanceWithDefaultMeters distanceUnit includedDistancePerHrValue $ kilometersToMeters includedKmPerHr,
             ..
           }
 
@@ -55,7 +56,9 @@ instance ToTType' BeamRS.RentalDetails RentalDetails where
         BeamRS.perHourChargeAmount = Just perHourCharge.amount,
         BeamRS.perExtraMinRateAmount = Just perExtraMinRate.amount,
         BeamRS.perExtraKmRateAmount = Just perExtraKmRate.amount,
-        BeamRS.includedKmPerHr = includedKmPerHr,
+        BeamRS.includedKmPerHr = metersToKilometers $ distanceToMeters includedDistancePerHr,
+        BeamRS.includedDistancePerHrValue = Just includedDistancePerHr.value,
+        BeamRS.distanceUnit = Just includedDistancePerHr.unit,
         BeamRS.plannedPerKmRate = plannedPerKmRate.amountInt,
         BeamRS.nightShiftCharge = (.nightShiftCharge.amountInt) <$> nightShiftInfo,
         BeamRS.plannedPerKmRateAmount = Just plannedPerKmRate.amount,

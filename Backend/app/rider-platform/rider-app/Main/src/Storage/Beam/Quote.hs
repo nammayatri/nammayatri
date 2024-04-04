@@ -35,6 +35,8 @@ data QuoteT f = QuoteT
     providerUrl :: B.C f Text,
     itemId :: B.C f Text,
     distanceToNearestDriver :: B.C f (Maybe HighPrecMeters),
+    distanceToNearestDriverValue :: B.C f (Maybe HighPrecDistance),
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     vehicleVariant :: B.C f DVST.VehicleServiceTierType,
     serviceTierName :: B.C f (Maybe Text),
     serviceTierShortDesc :: B.C f (Maybe Text),

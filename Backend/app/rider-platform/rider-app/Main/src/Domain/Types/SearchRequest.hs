@@ -23,7 +23,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMeters, Price, Seconds)
+import Kernel.Types.Common (Distance, Price, Seconds)
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Tools.Beam.UtilsTH
@@ -44,8 +44,8 @@ data SearchRequest = SearchRequest
     clientId :: Maybe (Id DC.Client),
     fromLocation :: DLoc.Location,
     toLocation :: Maybe DLoc.Location,
-    distance :: Maybe HighPrecMeters,
-    maxDistance :: Maybe HighPrecMeters,
+    distance :: Maybe Distance,
+    maxDistance :: Maybe Distance,
     estimatedRideDuration :: Maybe Seconds,
     device :: Maybe Text,
     merchantId :: Id DMerchant.Merchant,

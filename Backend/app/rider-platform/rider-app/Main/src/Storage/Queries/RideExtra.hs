@@ -21,6 +21,7 @@ import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Types.Common (distanceToHighPrecMeters)
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
@@ -95,7 +96,9 @@ updateMultiple rideId ride = do
       Se.Set BeamR.fare (ride.fare <&> (.amount)),
       Se.Set BeamR.totalFare (ride.totalFare <&> (.amount)),
       Se.Set BeamR.currency (ride.fare <&> (.currency)),
-      Se.Set BeamR.chargeableDistance ride.chargeableDistance,
+      Se.Set BeamR.chargeableDistance (distanceToHighPrecMeters <$> ride.chargeableDistance),
+      Se.Set BeamR.chargeableDistanceValue (ride.chargeableDistance <&> (.value)),
+      Se.Set BeamR.distanceUnit (ride.chargeableDistance <&> (.unit)),
       Se.Set BeamR.rideStartTime ride.rideStartTime,
       Se.Set BeamR.rideEndTime ride.rideEndTime,
       Se.Set BeamR.endOtp ride.endOtp,

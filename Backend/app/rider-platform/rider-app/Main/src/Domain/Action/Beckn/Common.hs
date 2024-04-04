@@ -108,8 +108,8 @@ data RideCompletedReq = RideCompletedReq
     fare :: Price,
     totalFare :: Price,
     fareBreakups :: [DFareBreakup],
-    chargeableDistance :: Maybe HighPrecMeters,
-    traveledDistance :: Maybe HighPrecMeters,
+    chargeableDistance :: Maybe Distance,
+    traveledDistance :: Maybe Distance,
     paymentUrl :: Maybe Text,
     tripEndLocation :: Maybe LatLong,
     endOdometerReading :: Maybe Centesimal,
@@ -122,8 +122,8 @@ data ValidatedRideCompletedReq = ValidatedRideCompletedReq
     fare :: Price,
     totalFare :: Price,
     fareBreakups :: [DFareBreakup],
-    chargeableDistance :: Maybe HighPrecMeters,
-    traveledDistance :: Maybe HighPrecMeters,
+    chargeableDistance :: Maybe Distance,
+    traveledDistance :: Maybe Distance,
     paymentUrl :: Maybe Text,
     tripEndLocation :: Maybe LatLong,
     endOdometerReading :: Maybe Centesimal,
@@ -308,7 +308,7 @@ rideCompletedReqHandler ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
+    HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r,
@@ -473,7 +473,7 @@ validateRideAssignedReq ::
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
+    HasField "minTripDistanceForReferralCfg" r (Maybe Distance)
   ) =>
   RideAssignedReq ->
   m ValidatedRideAssignedReq
@@ -490,7 +490,7 @@ validateRideStartedReq ::
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
+    HasField "minTripDistanceForReferralCfg" r (Maybe Distance)
   ) =>
   RideStartedReq ->
   m ValidatedRideStartedReq
@@ -508,7 +508,7 @@ validateDriverArrivedReq ::
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
+    HasField "minTripDistanceForReferralCfg" r (Maybe Distance)
   ) =>
   DriverArrivedReq ->
   m ValidatedDriverArrivedReq
@@ -527,7 +527,7 @@ validateRideCompletedReq ::
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
+    HasField "minTripDistanceForReferralCfg" r (Maybe Distance)
   ) =>
   RideCompletedReq ->
   m (Either ValidatedRideCompletedReq ValidatedFarePaidReq)
@@ -562,7 +562,7 @@ validateBookingCancelledReq ::
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
+    HasField "minTripDistanceForReferralCfg" r (Maybe Distance)
   ) =>
   BookingCancelledReq ->
   m ValidatedBookingCancelledReq
