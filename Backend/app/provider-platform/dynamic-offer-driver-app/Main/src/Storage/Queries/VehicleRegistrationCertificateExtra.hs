@@ -73,7 +73,7 @@ findByRCAndExpiry certNumber expiry = do
 findAllById :: KvDbFlow m r => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
 findAllById rcIds = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ map (.getId) rcIds]
 
-findLastVehicleRCWrapper :: (MonadFlow m, EncFlow m r, KvDbFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
+findLastVehicleRCWrapper :: (EncFlow m r, KvDbFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCWrapper certNumber = do
   certNumberHash <- getDbHash certNumber
   runInReplica $ findLastVehicleRC certNumberHash

@@ -549,8 +549,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
           _ -> pure ()
 
 calcFinalOrderAmounts ::
-  ( MonadFlow m,
-    KvDbFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r
   ) =>
   Id Merchant ->

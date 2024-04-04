@@ -17,12 +17,12 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSTicketBookingPayment as Beam
 import Storage.Queries.FRFSTicketBookingPayment as Reexport
 
-findNewTBPByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe DFRFSTicketBookingPayment.FRFSTicketBookingPayment)
+findNewTBPByBookingId :: KvDbFlow m r => Id DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe DFRFSTicketBookingPayment.FRFSTicketBookingPayment)
 findNewTBPByBookingId (Id bookingId) =
   findAllWithOptionsKV [Se.Is Beam.frfsTicketBookingId $ Se.Eq bookingId] (Se.Desc Beam.createdAt) (Just 1) Nothing <&> listToMaybe

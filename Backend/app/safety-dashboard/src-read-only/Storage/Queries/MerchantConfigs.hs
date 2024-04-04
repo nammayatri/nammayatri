@@ -12,31 +12,31 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantConfigs as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantConfigs.MerchantConfigs -> m ())
+create :: KvDbFlow m r => (Domain.Types.MerchantConfigs.MerchantConfigs -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantConfigs.MerchantConfigs] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.MerchantConfigs.MerchantConfigs] -> m ())
 createMany = traverse_ create
 
-findByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m (Maybe Domain.Types.MerchantConfigs.MerchantConfigs))
+findByMerchantId :: KvDbFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m (Maybe Domain.Types.MerchantConfigs.MerchantConfigs))
 findByMerchantId merchantId = do findOneWithKV [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId)]
 
-findByRequestWebHook :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> m ([Domain.Types.MerchantConfigs.MerchantConfigs]))
+findByRequestWebHook :: KvDbFlow m r => (Kernel.Prelude.Bool -> m ([Domain.Types.MerchantConfigs.MerchantConfigs]))
 findByRequestWebHook requestWebHook = do findAllWithKV [Se.Is Beam.requestWebHook $ Se.Eq requestWebHook]
 
-updateRequestWebHookById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.MerchantConfigs.MerchantConfigs -> m ())
+updateRequestWebHookById :: KvDbFlow m r => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.MerchantConfigs.MerchantConfigs -> m ())
 updateRequestWebHookById requestWebHook (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.requestWebHook requestWebHook, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantConfigs.MerchantConfigs -> m (Maybe Domain.Types.MerchantConfigs.MerchantConfigs))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.MerchantConfigs.MerchantConfigs -> m (Maybe Domain.Types.MerchantConfigs.MerchantConfigs))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantConfigs.MerchantConfigs -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.MerchantConfigs.MerchantConfigs -> m ())
 updateByPrimaryKey (Domain.Types.MerchantConfigs.MerchantConfigs {..}) = do
   _now <- getCurrentTime
   updateWithKV

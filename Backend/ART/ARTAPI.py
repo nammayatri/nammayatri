@@ -5,22 +5,6 @@ import re
 import os
 from datetime import datetime, timedelta
 
-
-import subprocess
-
-def flush_redis_clusters():
-    clusters = [
-        {"port": 6379, "name": "Main Cluster"},
-        {"port": 30001, "name": "Cluster 1"},
-        {"port": 30002, "name": "Cluster 2"},
-        {"port": 30003, "name": "Cluster 3"}
-    ]
-
-    for cluster in clusters:
-        print(f"[+] Flushed Redis {cluster['name']}")
-        subprocess.run(["redis-cli", "-p", str(cluster['port']), "FLUSHALL"])
-
-
 def clean_file(filename):
     dummy_line ='{"dataTimestamp":"2024-03-14T07:10:25.215311256Z","whereClauseText":""}'
     with open(filename, 'w') as file:

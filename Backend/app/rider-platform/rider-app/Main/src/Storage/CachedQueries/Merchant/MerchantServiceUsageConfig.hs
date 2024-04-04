@@ -48,10 +48,10 @@ import qualified Storage.Queries.MerchantServiceUsageConfig as Queries
 import qualified System.Environment as Se
 import System.Random
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
+create :: KvDbFlow m r => MerchantServiceUsageConfig -> m ()
 create = Queries.create
 
-findByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
+findByMerchantOperatingCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantOperatingCityId id = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
@@ -81,7 +81,7 @@ findByMerchantOperatingCityId id = do
           Just <$> getMerchantServiceUsageConfigFromCACStrict id toss
     else getCfgFromCache id
 
-getMerchantServiceUsageConfigFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m MerchantServiceUsageConfig
+getMerchantServiceUsageConfigFromCACStrict :: KvDbFlow m r => Id MerchantOperatingCity -> Int -> m MerchantServiceUsageConfig
 getMerchantServiceUsageConfigFromCACStrict id' toss = do
   context <- liftIO $ CM.hashMapToString $ HashMap.fromList [(Text.pack "merchantOperatingCityId", DA.String (getId id'))]
   tenant <- liftIO $ Se.lookupEnv "RIDER_TENANT"
@@ -90,7 +90,7 @@ getMerchantServiceUsageConfigFromCACStrict id' toss = do
   let parsedConfig = DA.Object (DAKM.fromList formattedConfig) ^? _JSON :: Maybe (MerchantServiceUsageConfigD 'Unsafe)
   return $ coerce @(MerchantServiceUsageConfigD 'Unsafe) @MerchantServiceUsageConfig $ fromMaybe (error $ Text.pack $ "Could not find merchantServiceUsageConfig corresponding to the stated merchantOperatingCityId : " <> show id') parsedConfig
 
-getCfgFromCache :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
+getCfgFromCache :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
 getCfgFromCache id =
   Hedis.safeGet (makeMerchantOperatingCityIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceUsageConfigD 'Unsafe) @MerchantServiceUsageConfig a
@@ -110,5 +110,5 @@ clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache merchanOperatingCityId = do
   Hedis.del (makeMerchantOperatingCityIdKey merchanOperatingCityId)
 
-updateMerchantServiceUsageConfig :: (CacheFlow m r, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
+updateMerchantServiceUsageConfig :: KvDbFlow m r => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig

@@ -11,7 +11,7 @@
     };
 
     namma-dsl = {
-      url = "github:nammayatri/namma-dsl";
+      url = "github:nammayatri/namma-dsl/backend/KVDbFlow-in-dsl";
     };
 
     haskell-cac = {

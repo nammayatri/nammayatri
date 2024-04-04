@@ -42,10 +42,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.MerchantServiceConfig as Queries
 
--- create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
+-- create :: KvDbFlow m r => MerchantServiceConfig -> m ()
 -- create = Queries.create
 
--- findAllMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [MerchantServiceConfig]
+-- findAllMerchantOpCityId :: KvDbFlow m r=> Id MerchantOperatingCity -> m [MerchantServiceConfig]
 -- findAllMerchantOpCityId id =
 --   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
 --     Just a -> return $ fmap (coerce @(MerchantServiceConfigD 'Unsafe) @MerchantServiceConfig) a
@@ -60,7 +60,7 @@ import qualified Storage.Queries.MerchantServiceConfig as Queries
 -- makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 -- makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:MerchantServiceConfig:MerchantOperatingCityId-" <> id.getId
 
-findByMerchantOpCityIdAndService :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> ServiceName -> m (Maybe MerchantServiceConfig)
+findByMerchantOpCityIdAndService :: KvDbFlow m r => Id Merchant -> Id DMOC.MerchantOperatingCity -> ServiceName -> m (Maybe MerchantServiceConfig)
 findByMerchantOpCityIdAndService id mocId serviceName =
   Hedis.safeGet (makeMerchantIdAndServiceKey id mocId serviceName) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceConfigD 'Unsafe) @MerchantServiceConfig a
@@ -108,5 +108,5 @@ clearCache :: Hedis.HedisFlow m r => Id Merchant -> Id DMOC.MerchantOperatingCit
 clearCache merchantId mocId serviceName = do
   Hedis.del (makeMerchantIdAndServiceKey merchantId mocId serviceName)
 
-upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
+upsertMerchantServiceConfig :: KvDbFlow m r => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig = Queries.upsertMerchantServiceConfig

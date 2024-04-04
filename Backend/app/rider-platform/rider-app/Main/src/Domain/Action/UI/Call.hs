@@ -269,7 +269,6 @@ getCustomerAndDriverPhones ride booking = do
 
 throwCallError ::
   ( HasCallStack,
-    MonadFlow m,
     KvDbFlow m r,
     IsBaseException e
   ) =>

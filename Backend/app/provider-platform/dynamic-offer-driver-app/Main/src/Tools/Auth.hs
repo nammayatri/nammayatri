@@ -80,7 +80,7 @@ verifyAdmin user = do
     throwError AccessDenied
   return user
 
-verifyToken :: (HasEsqEnv m r, MonadFlow m, KvDbFlow m r) => RegToken -> m SR.RegistrationToken
+verifyToken :: (HasEsqEnv m r, KvDbFlow m r) => RegToken -> m SR.RegistrationToken
 verifyToken regToken = do
   QR.findByToken regToken
     >>= Utils.fromMaybeM (InvalidToken regToken)
@@ -94,7 +94,7 @@ validateAdmin regToken = do
       >>= fromMaybeM (PersonNotFound entityId)
   verifyAdmin user
 
-verifyPerson :: (HasEsqEnv m r, Redis.HedisFlow m r, HasField "authTokenCacheExpiry" r Seconds, MonadFlow m, KvDbFlow m r) => RegToken -> m (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity)
+verifyPerson :: (HasEsqEnv m r, Redis.HedisFlow m r, HasField "authTokenCacheExpiry" r Seconds, KvDbFlow m r) => RegToken -> m (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity)
 verifyPerson token = do
   let key = authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)

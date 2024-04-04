@@ -27,6 +27,7 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
     maxRetryCount :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    order :: B.C f Kernel.Prelude.Int,
     rcNumberPrefixList :: B.C f [Kernel.Prelude.Text],
     supportedVehicleClassesJSON :: B.C f Data.Aeson.Value,
     title :: B.C f Kernel.Prelude.Text,

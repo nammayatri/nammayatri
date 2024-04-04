@@ -242,7 +242,7 @@ sendAsyncNotification driverToNotify merchantId merchantOperatingCityId subscrip
             description = "Driver fee mandate notification"
           }
 
-handleNotificationFailureAfterRetiresEnd :: (MonadFlow m, KvDbFlow m r) => Id DF.DriverFee -> m ()
+handleNotificationFailureAfterRetiresEnd :: KvDbFlow m r => Id DF.DriverFee -> m ()
 handleNotificationFailureAfterRetiresEnd driverFeeId = do
   QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverFeeId] Nothing
   QDF.updateAutoPayToManual driverFeeId

@@ -10,7 +10,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Suspect as Beam
 import Storage.Queries.OrphanInstances.Suspect
@@ -18,7 +18,7 @@ import Storage.Queries.Transformers.Suspect
 
 -- Extra code goes here --
 
-findAllByDlOrVoterId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Kernel.Prelude.Text] -> [Kernel.Prelude.Text] -> m [Domain.Types.Suspect.Suspect]
+findAllByDlOrVoterId :: KvDbFlow m r => [Kernel.Prelude.Text] -> [Kernel.Prelude.Text] -> m [Domain.Types.Suspect.Suspect]
 findAllByDlOrVoterId dls voterIds = do
   let dlList = map Just dls
       voterIdList = map Just voterIds
@@ -29,7 +29,7 @@ findAllByDlOrVoterId dls voterIds = do
         ]
     ]
 
-findByDlInRange :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Maybe Text -> m (Maybe Domain.Types.Suspect.Suspect)
+findByDlInRange :: KvDbFlow m r => Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Maybe Text -> m (Maybe Domain.Types.Suspect.Suspect)
 findByDlInRange startDate endDate dl = do
   findOneWithKV
     [ Se.And
@@ -40,7 +40,7 @@ findByDlInRange startDate endDate dl = do
     ]
 
 updateFlaggedCounterByKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Int -> Domain.Types.Suspect.FlaggedStatus -> [Domain.Types.Suspect.FlaggedBy] -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
 updateFlaggedCounterByKey flaggedCounter flaggedStatus flaggedBy key = do
   now <- getCurrentTime
@@ -52,7 +52,7 @@ updateFlaggedCounterByKey flaggedCounter flaggedStatus flaggedBy key = do
     ]
     [Se.Or [Se.Is Beam.voterId $ Se.Eq key, Se.Is Beam.dl $ Se.Eq key]]
 
-findByVoterIdInRange :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Maybe Text -> m (Maybe Domain.Types.Suspect.Suspect)
+findByVoterIdInRange :: KvDbFlow m r => Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Maybe Text -> m (Maybe Domain.Types.Suspect.Suspect)
 findByVoterIdInRange startDate endDate voterId = do
   findOneWithKV
     [ Se.And
@@ -62,7 +62,7 @@ findByVoterIdInRange startDate endDate voterId = do
         ]
     ]
 
-findAllByDlOrVoterIdAndFlaggedStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Kernel.Prelude.Text] -> [Kernel.Prelude.Text] -> Domain.Types.Suspect.FlaggedStatus -> m [Domain.Types.Suspect.Suspect]
+findAllByDlOrVoterIdAndFlaggedStatus :: KvDbFlow m r => [Kernel.Prelude.Text] -> [Kernel.Prelude.Text] -> Domain.Types.Suspect.FlaggedStatus -> m [Domain.Types.Suspect.Suspect]
 findAllByDlOrVoterIdAndFlaggedStatus dls voterIds flaggedStatus = do
   let dlList = map Just dls
       voterIdList = map Just voterIds
@@ -76,7 +76,7 @@ findAllByDlOrVoterIdAndFlaggedStatus dls voterIds flaggedStatus = do
         ]
     ]
 
-findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Int -> Int -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> m [Domain.Types.Suspect.Suspect]
+findAll :: KvDbFlow m r => Int -> Int -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> m [Domain.Types.Suspect.Suspect]
 findAll limit offset startDate endDate = do
   findAllWithOptionsKV
     [ Se.And
@@ -89,7 +89,7 @@ findAll limit offset startDate endDate = do
     (Just limit)
     (Just offset)
 
-findAllByIds :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Kernel.Types.Id.Id Domain.Types.Suspect.Suspect] -> m [Domain.Types.Suspect.Suspect]
+findAllByIds :: KvDbFlow m r => [Kernel.Types.Id.Id Domain.Types.Suspect.Suspect] -> m [Domain.Types.Suspect.Suspect]
 findAllByIds ids = do
   let idList = map Kernel.Types.Id.getId ids
   findAllWithKV

@@ -19,11 +19,9 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import Domain.Types.Person
 import Kernel.Prelude
-import Kernel.Types.CacheFlow
-import Kernel.Types.Common
-import Kernel.Utils.Logging
+import Kernel.Utils.Common
 
-getFrontendConfigs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) => Person -> Maybe Int -> m (Maybe DA.Object)
+getFrontendConfigs :: (KvDbFlow m r, Log m) => Person -> Maybe Int -> m (Maybe DA.Object)
 getFrontendConfigs person mbToss = do
   ghcCond <- liftIO $ CM.hashMapToString $ HM.fromList [(T.pack "city", (DA.String . T.pack . show) person.currentCity)]
   contextValue <- case mbToss of

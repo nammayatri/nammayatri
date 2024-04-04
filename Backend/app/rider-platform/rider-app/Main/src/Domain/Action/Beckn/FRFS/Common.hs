@@ -48,7 +48,7 @@ data DTicket = DTicket
     status :: Text
   }
 
-getMerchantOperatingCityFromBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m DMOC.MerchantOperatingCity
+getMerchantOperatingCityFromBooking :: KvDbFlow m r => DFRFSTicketBooking.FRFSTicketBooking -> m DMOC.MerchantOperatingCity
 getMerchantOperatingCityFromBooking tBooking = do
   moCityId <- case tBooking.merchantOperatingCityId of
     Nothing -> do

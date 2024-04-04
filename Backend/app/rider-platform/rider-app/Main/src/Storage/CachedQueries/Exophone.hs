@@ -36,19 +36,19 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Exophone as Queries
 
-findAllByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m [Exophone]
+findAllByMerchantOperatingCityId :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> m [Exophone]
 findAllByMerchantOperatingCityId merchantOperatingCityId =
   Hedis.safeGet (makeMerchantOperatingCityIdKey merchantOperatingCityId) >>= \case
     Just a -> return a
     Nothing -> cacheExophones merchantOperatingCityId /=<< Queries.findAllByMerchantOperatingCityId merchantOperatingCityId
 
-findByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
+findByPhone :: KvDbFlow m r => Text -> m (Maybe Exophone)
 findByPhone phone = find (\exophone -> exophone.primaryPhone == phone || exophone.backupPhone == phone) <$> findAllByPhone phone
 
-findByPrimaryPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
+findByPrimaryPhone :: KvDbFlow m r => Text -> m (Maybe Exophone)
 findByPrimaryPhone phone = find (\exophone -> exophone.primaryPhone == phone) <$> findAllByPhone phone
 
-findAllByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m [Exophone]
+findAllByPhone :: KvDbFlow m r => Text -> m [Exophone]
 findAllByPhone phone =
   Hedis.safeGet (makePhoneKey phone) >>= \case
     Nothing -> do
@@ -62,10 +62,10 @@ findAllByPhone phone =
         Just a -> return a
         Nothing -> cacheExophones merchantOperatingCityId /=<< Queries.findAllByPhone phone
 
-findAllExophones :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Exophone]
+findAllExophones :: KvDbFlow m r => m [Exophone]
 findAllExophones = Queries.findAllExophones
 
-findByMerchantOperatingCityIdAndService :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> CallService -> m [Exophone]
+findByMerchantOperatingCityIdAndService :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> CallService -> m [Exophone]
 findByMerchantOperatingCityIdAndService merchantOperatingCityId service =
   Hedis.safeGet (makeMerchantOperatingCityIdAndServiceKey merchantOperatingCityId service) >>= \case
     Just a -> return a
@@ -114,11 +114,11 @@ patternKey :: Text
 patternKey = "CachedQueries:Exophones:*"
 
 -- create :: Exophone -> Esq.SqlDB ()
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Exophone -> m ()
+create :: KvDbFlow m r => Exophone -> m ()
 create = Queries.create
 
-updateAffectedPhones :: (MonadFlow m, EsqDBFlow m r) => [Text] -> m ()
+updateAffectedPhones :: KvDbFlow m r => [Text] -> m ()
 updateAffectedPhones = Queries.updateAffectedPhones
 
-deleteByMerchantOperatingCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
+deleteByMerchantOperatingCityId :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> m ()
 deleteByMerchantOperatingCityId = Queries.deleteByMerchantOperatingCityId

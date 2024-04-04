@@ -33,7 +33,6 @@ import qualified Tools.Notifications as TN
 
 sendOverlayToDriver ::
   ( KvDbFlow m r,
-    MonadFlow m,
     Esq.EsqDBReplicaFlow m r,
     ServiceFlow m r,
     Esq.Transactionable m,

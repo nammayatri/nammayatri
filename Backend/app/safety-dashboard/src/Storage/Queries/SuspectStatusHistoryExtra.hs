@@ -13,14 +13,14 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SuspectStatusHistory as Beam
 import Storage.Queries.OrphanInstances.SuspectStatusHistory
 
 -- Extra code goes here --
 
-findAllByDlAndNotAdminApprovalStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.SuspectFlagRequest.AdminApproval -> m ([Domain.Types.SuspectStatusHistory.SuspectStatusHistory])
+findAllByDlAndNotAdminApprovalStatus :: KvDbFlow m r => Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.SuspectFlagRequest.AdminApproval -> m ([Domain.Types.SuspectStatusHistory.SuspectStatusHistory])
 findAllByDlAndNotAdminApprovalStatus limit offset dl approval = do
   findAllWithOptionsKV
     [ Se.Or
@@ -38,7 +38,7 @@ findAllByDlAndNotAdminApprovalStatus limit offset dl approval = do
     limit
     offset
 
-findAllByVoterIdAndNotAdminApprovalStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.SuspectFlagRequest.AdminApproval -> m ([Domain.Types.SuspectStatusHistory.SuspectStatusHistory])
+findAllByVoterIdAndNotAdminApprovalStatus :: KvDbFlow m r => Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.SuspectFlagRequest.AdminApproval -> m ([Domain.Types.SuspectStatusHistory.SuspectStatusHistory])
 findAllByVoterIdAndNotAdminApprovalStatus limit offset voterId approval = do
   findAllWithOptionsKV
     [ Se.Or
@@ -56,7 +56,7 @@ findAllByVoterIdAndNotAdminApprovalStatus limit offset voterId approval = do
     limit
     offset
 
-findAllByVoterIdAndMerchantIdAndNotFlagStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> Domain.Types.Suspect.FlaggedStatus -> m ([Domain.Types.SuspectStatusHistory.SuspectStatusHistory])
+findAllByVoterIdAndMerchantIdAndNotFlagStatus :: KvDbFlow m r => Text -> Text -> Domain.Types.Suspect.FlaggedStatus -> m ([Domain.Types.SuspectStatusHistory.SuspectStatusHistory])
 findAllByVoterIdAndMerchantIdAndNotFlagStatus voterId merchantShortId flaggedStatus = do
   findAllWithOptionsKV
     [ Se.Or
@@ -74,7 +74,7 @@ findAllByVoterIdAndMerchantIdAndNotFlagStatus voterId merchantShortId flaggedSta
     Nothing
     Nothing
 
-findAllByDlAndMerchantIdAndNotFlagStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> Domain.Types.Suspect.FlaggedStatus -> m ([Domain.Types.SuspectStatusHistory.SuspectStatusHistory])
+findAllByDlAndMerchantIdAndNotFlagStatus :: KvDbFlow m r => Text -> Text -> Domain.Types.Suspect.FlaggedStatus -> m ([Domain.Types.SuspectStatusHistory.SuspectStatusHistory])
 findAllByDlAndMerchantIdAndNotFlagStatus dl merchantShortId flaggedStatus = do
   findAllWithOptionsKV
     [ Se.Or

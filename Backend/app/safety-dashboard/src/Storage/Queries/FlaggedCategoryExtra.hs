@@ -11,14 +11,14 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FlaggedCategory as Beam
 import Storage.Queries.OrphanInstances.FlaggedCategory
 
 -- Extra code goes here --
 
-findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Int -> Int -> m [Domain.Types.FlaggedCategory.FlaggedCategory]
+findAll :: KvDbFlow m r => Int -> Int -> m [Domain.Types.FlaggedCategory.FlaggedCategory]
 findAll limit offset = do
   findAllWithOptionsKV
     [ Se.Is Beam.id $ Se.Not $ Se.Eq ""
@@ -27,7 +27,7 @@ findAll limit offset = do
     (Just limit)
     (Just offset)
 
-countAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m Int
+countAll :: KvDbFlow m r => m Int
 countAll = do
   res <- findAllWithKV [Se.Is Beam.id $ Se.Not $ Se.Eq ""]
   pure $ length res

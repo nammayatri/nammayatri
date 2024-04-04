@@ -32,7 +32,7 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
 
 buildSearchReqV2 ::
-  (MonadFlow m, KvDbFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (KvDbFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DSearch.SearchRes ->
   m Spec.SearchReq
 buildSearchReqV2 DSearch.SearchRes {..} = do

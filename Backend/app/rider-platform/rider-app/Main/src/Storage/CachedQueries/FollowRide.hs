@@ -18,11 +18,10 @@ import Domain.Types.Booking
 import Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 
-isKeyExists :: (CacheFlow m r, EsqDBFlow m r) => Text -> m Bool
+isKeyExists :: KvDbFlow m r => Text -> m Bool
 isKeyExists key = do
   Hedis.safeGet key >>= \case
     Just a -> return a

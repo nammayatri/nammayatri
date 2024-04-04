@@ -11,27 +11,27 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FlaggedCategory as Beam
 import Storage.Queries.FlaggedCategoryExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FlaggedCategory.FlaggedCategory -> m ())
+create :: KvDbFlow m r => (Domain.Types.FlaggedCategory.FlaggedCategory -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FlaggedCategory.FlaggedCategory] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.FlaggedCategory.FlaggedCategory] -> m ())
 createMany = traverse_ create
 
-deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FlaggedCategory.FlaggedCategory -> m ())
+deleteById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.FlaggedCategory.FlaggedCategory -> m ())
 deleteById (Kernel.Types.Id.Id id) = do deleteWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.FlaggedCategory.FlaggedCategory))
+findByName :: KvDbFlow m r => (Kernel.Prelude.Text -> m (Maybe Domain.Types.FlaggedCategory.FlaggedCategory))
 findByName name = do findOneWithKV [Se.Is Beam.name $ Se.Eq name]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FlaggedCategory.FlaggedCategory -> m (Maybe Domain.Types.FlaggedCategory.FlaggedCategory))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.FlaggedCategory.FlaggedCategory -> m (Maybe Domain.Types.FlaggedCategory.FlaggedCategory))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FlaggedCategory.FlaggedCategory -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.FlaggedCategory.FlaggedCategory -> m ())
 updateByPrimaryKey (Domain.Types.FlaggedCategory.FlaggedCategory {..}) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.createdAt createdAt, Se.Set Beam.name name, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

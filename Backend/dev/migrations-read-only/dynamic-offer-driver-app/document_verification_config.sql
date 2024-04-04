@@ -22,6 +22,7 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN updat
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD PRIMARY KEY ( document_type, merchant_operating_city_id, vehicle_category);
 
 
+
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN "order" integer NOT NULL default 0;
