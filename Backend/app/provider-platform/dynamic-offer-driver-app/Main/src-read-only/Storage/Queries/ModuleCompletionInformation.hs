@@ -12,28 +12,26 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.ModuleCompletionInformation as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation -> m ())
+create :: KvDbFlow m r => (Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation] -> m ())
 createMany = traverse_ create
 
-findAllByCompletionId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m [Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation])
+findAllByCompletionId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m [Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation])
 findAllByCompletionId (Kernel.Types.Id.Id completionId) = do findAllWithKV [Se.Is Beam.completionId $ Se.Eq completionId]
 
 findAllByCompletionIdAndEntity ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> Domain.Types.ModuleCompletionInformation.ModuleEntity -> m [Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation])
 findAllByCompletionIdAndEntity (Kernel.Types.Id.Id completionId) entity = do findAllWithKV [Se.And [Se.Is Beam.completionId $ Se.Eq completionId, Se.Is Beam.entity $ Se.Eq entity]]
 
 findAllByCompletionIdAndEntityAndStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Domain.Types.ModuleCompletionInformation.ModuleEntity -> Domain.Types.ModuleCompletionInformation.EntityStatus -> Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m [Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation])
 findAllByCompletionIdAndEntityAndStatus entity entityStatus (Kernel.Types.Id.Id completionId) = do
   findAllWithKV
@@ -45,7 +43,7 @@ findAllByCompletionIdAndEntityAndStatus entity entityStatus (Kernel.Types.Id.Id 
     ]
 
 findByCompletionIdAndEntityAndEntityId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Maybe Int -> Maybe Int -> Domain.Types.ModuleCompletionInformation.ModuleEntity -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m [Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation])
 findByCompletionIdAndEntityAndEntityId limit offset entity entityId (Kernel.Types.Id.Id completionId) = do
   findAllWithOptionsKV
@@ -60,7 +58,7 @@ findByCompletionIdAndEntityAndEntityId limit offset entity entityId (Kernel.Type
     offset
 
 findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> Domain.Types.ModuleCompletionInformation.ModuleEntity -> Kernel.Prelude.Text -> m (Maybe Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation))
 findByPrimaryKey attempt (Kernel.Types.Id.Id completionId) entity entityId = do
   findOneWithKV
@@ -72,7 +70,7 @@ findByPrimaryKey attempt (Kernel.Types.Id.Id completionId) entity entityId = do
         ]
     ]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation -> m ())
 updateByPrimaryKey (Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation {..}) = do
   _now <- getCurrentTime
   updateWithKV
