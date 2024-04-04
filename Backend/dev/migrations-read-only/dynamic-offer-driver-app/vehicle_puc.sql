@@ -10,3 +10,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_puc ADD COLUMN merchant_operating_cit
 ALTER TABLE atlas_driver_offer_bpp.vehicle_puc ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_puc ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_puc ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_puc ADD COLUMN driver_id character varying(36) NOT NULL;

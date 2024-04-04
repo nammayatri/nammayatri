@@ -4,7 +4,9 @@
 
 module Storage.Queries.VehicleFitnessCertificate where
 
+import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleFitnessCertificate
+import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -20,6 +22,11 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate] -> m ())
 createMany = traverse_ create
 
+findByRcIdAndDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate])
+findByRcIdAndDriverId (Kernel.Types.Id.Id rcId) (Kernel.Types.Id.Id driverId) = do findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.driverId $ Se.Eq driverId]]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate -> m (Maybe Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate))
@@ -29,10 +36,11 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.applicationNumberEncrypted ((applicationNumber & unEncrypted . encrypted)),
+    [ Se.Set Beam.applicationNumberEncrypted (applicationNumber & unEncrypted . encrypted),
       Se.Set Beam.applicationNumberHash (applicationNumber & hash),
       Se.Set Beam.categoryOfVehicle categoryOfVehicle,
       Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
+      Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.fitnessExpiry fitnessExpiry,
       Se.Set Beam.inspectingAuthority inspectingAuthority,
       Se.Set Beam.inspectingOn inspectingOn,
@@ -55,6 +63,7 @@ instance FromTType' Beam.VehicleFitnessCertificate Domain.Types.VehicleFitnessCe
           { applicationNumber = EncryptedHashed (Encrypted applicationNumberEncrypted) applicationNumberHash,
             categoryOfVehicle = categoryOfVehicle,
             documentImageId = Kernel.Types.Id.Id documentImageId,
+            driverId = Kernel.Types.Id.Id driverId,
             fitnessExpiry = fitnessExpiry,
             id = Kernel.Types.Id.Id id,
             inspectingAuthority = inspectingAuthority,
@@ -72,10 +81,11 @@ instance FromTType' Beam.VehicleFitnessCertificate Domain.Types.VehicleFitnessCe
 instance ToTType' Beam.VehicleFitnessCertificate Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate where
   toTType' (Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate {..}) = do
     Beam.VehicleFitnessCertificateT
-      { Beam.applicationNumberEncrypted = ((applicationNumber & unEncrypted . encrypted)),
-        Beam.applicationNumberHash = (applicationNumber & hash),
+      { Beam.applicationNumberEncrypted = applicationNumber & unEncrypted . encrypted,
+        Beam.applicationNumberHash = applicationNumber & hash,
         Beam.categoryOfVehicle = categoryOfVehicle,
         Beam.documentImageId = Kernel.Types.Id.getId documentImageId,
+        Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.fitnessExpiry = fitnessExpiry,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.inspectingAuthority = inspectingAuthority,

@@ -16,3 +16,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_insurance ADD COLUMN merchant_operati
 ALTER TABLE atlas_driver_offer_bpp.vehicle_insurance ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_insurance ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_insurance ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_insurance ADD COLUMN driver_id character varying(36) NOT NULL;

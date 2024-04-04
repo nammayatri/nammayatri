@@ -17,13 +17,14 @@ module Domain.Action.UI.DriverOnboarding.Image where
 
 import AWS.S3 as S3
 import qualified Data.ByteString as BS
-import Data.Text as T hiding (length)
+import qualified Data.Text as T hiding (length)
 import Data.Time.Format.ISO8601
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Image as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
@@ -37,6 +38,7 @@ import Servant.Multipart
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.TransporterConfig
+import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
@@ -62,7 +64,12 @@ instance FromMultipart Tmp ImageValidateFileRequest where
     ImageValidateFileRequest
       <$> fmap fdPayload (lookupFile "image" form)
       <*> fmap (read . T.unpack) (lookupInput "imageType" form)
-      <*> fmap (readMaybe . T.unpack) (lookupInput "rcNumber" form)
+      <*> parseMaybeInput "rcNumber" form
+
+parseMaybeInput :: Read b => Text -> MultipartData tag -> Either String (Maybe b)
+parseMaybeInput fieldName form = case lookupInput fieldName form of
+  Right val -> Right $ readMaybe (T.unpack val)
+  Left _ -> Right Nothing
 
 newtype ImageValidateResponse = ImageValidateResponse
   {imageId :: Id Domain.Image}
@@ -104,6 +111,18 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
   let merchantId = person.merchantId
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
+  let rcDependentDocuments = [DVC.VehiclePUC, DVC.VehiclePermit, DVC.VehicleInsurance, DVC.VehicleFitnessCertificate]
+  mbRcId <-
+    if imageType `elem` rcDependentDocuments
+      then case rcNumber of
+        Just rcNo -> do
+          rc <- QRC.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
+          mbAssoc <- QDRCA.findLatestByRCIdAndDriverId rc.id personId
+          when (isNothing mbAssoc) $ throwError RCNotLinked
+          return $ Just rc.id
+        Nothing -> throwError $ RCMandatory (show imageType)
+      else return Nothing
+
   images <- Query.findRecentByPersonIdAndImageType personId imageType
   unless isDashboard $ do
     transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -116,7 +135,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
 
   imagePath <- createPath personId.getId merchantId.getId imageType
   void $ fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
-  imageEntity <- mkImage personId merchantId imagePath imageType False rcNumber
+  imageEntity <- mkImage personId merchantId imagePath imageType False mbRcId
   Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
@@ -163,12 +182,11 @@ mkImage ::
   Text ->
   DVC.DocumentType ->
   Bool ->
-  Maybe Text ->
+  Maybe (Id DVRC.VehicleRegistrationCertificate) ->
   m Domain.Image
-mkImage personId_ merchantId s3Path documentType_ isValid mbRcNumber = do
+mkImage personId_ merchantId s3Path documentType_ isValid mbRcId = do
   id <- generateGUID
   now <- getCurrentTime
-  mbRC <- maybe (pure Nothing) QRC.findLastVehicleRCWrapper mbRcNumber
   return $
     Domain.Image
       { id,
@@ -178,7 +196,7 @@ mkImage personId_ merchantId s3Path documentType_ isValid mbRcNumber = do
         imageType = documentType_,
         isValid,
         failureReason = Nothing,
-        rcId = (getId . (.id)) <$> mbRC,
+        rcId = getId <$> mbRcId,
         createdAt = now,
         updatedAt = now
       }

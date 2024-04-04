@@ -4,7 +4,9 @@
 
 module Storage.Queries.VehicleInsurance where
 
+import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleInsurance
+import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -20,6 +22,11 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VehicleInsurance.VehicleInsurance] -> m ())
 createMany = traverse_ create
 
+findByRcIdAndDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehicleInsurance.VehicleInsurance])
+findByRcIdAndDriverId (Kernel.Types.Id.Id rcId) (Kernel.Types.Id.Id driverId) = do findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.driverId $ Se.Eq driverId]]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleInsurance.VehicleInsurance -> m (Maybe Domain.Types.VehicleInsurance.VehicleInsurance))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
@@ -28,11 +35,12 @@ updateByPrimaryKey (Domain.Types.VehicleInsurance.VehicleInsurance {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
+      Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.insuredName insuredName,
       Se.Set Beam.issueDate issueDate,
       Se.Set Beam.limitsOfLiability limitsOfLiability,
       Se.Set Beam.policyExpiry policyExpiry,
-      Se.Set Beam.policyNumberEncrypted ((policyNumber & unEncrypted . encrypted)),
+      Se.Set Beam.policyNumberEncrypted (policyNumber & unEncrypted . encrypted),
       Se.Set Beam.policyNumberHash (policyNumber & hash),
       Se.Set Beam.policyProvider policyProvider,
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
@@ -50,6 +58,7 @@ instance FromTType' Beam.VehicleInsurance Domain.Types.VehicleInsurance.VehicleI
       Just
         Domain.Types.VehicleInsurance.VehicleInsurance
           { documentImageId = Kernel.Types.Id.Id documentImageId,
+            driverId = Kernel.Types.Id.Id driverId,
             id = Kernel.Types.Id.Id id,
             insuredName = insuredName,
             issueDate = issueDate,
@@ -69,13 +78,14 @@ instance ToTType' Beam.VehicleInsurance Domain.Types.VehicleInsurance.VehicleIns
   toTType' (Domain.Types.VehicleInsurance.VehicleInsurance {..}) = do
     Beam.VehicleInsuranceT
       { Beam.documentImageId = Kernel.Types.Id.getId documentImageId,
+        Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.insuredName = insuredName,
         Beam.issueDate = issueDate,
         Beam.limitsOfLiability = limitsOfLiability,
         Beam.policyExpiry = policyExpiry,
-        Beam.policyNumberEncrypted = ((policyNumber & unEncrypted . encrypted)),
-        Beam.policyNumberHash = (policyNumber & hash),
+        Beam.policyNumberEncrypted = policyNumber & unEncrypted . encrypted,
+        Beam.policyNumberHash = policyNumber & hash,
         Beam.policyProvider = policyProvider,
         Beam.rcId = Kernel.Types.Id.getId rcId,
         Beam.verificationStatus = verificationStatus,
