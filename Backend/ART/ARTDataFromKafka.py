@@ -32,7 +32,7 @@ def handleAPIdata(APIdata):
     try :
         for line in APIdata:
             parsableLine = json.loads(line)
-            if "queryData" in line and len (parsableLine["queryData"]["tableObject"]) == 0:
+            if "queryData" in line and len (parsableLine["queryData"]["tableObject"]) == 0 and "find" in parsableLine["queryType"] :
                 continue
             else :
                 handledData.append(line)
@@ -159,21 +159,28 @@ data_path = getFilePath("data.log")
 input_path_mocked_data = getFilePath("artRunner.log")
 diff_checker_file_path_mocked_data = getFilePath("APIdataArtRunner.log")
 
+
+
+#--------------------------------- data for art Mocker ---------------------------------#
+
 def write_data_for_art_mocker(path):
     groupedRequestIds, nullRequestIds, groupedRequestIdsForDiffChecker = process_log_file(path)
     write_grouped_data_to_file(groupedRequestIds, nullRequestIds, output_log_file_path_grouped)
     write_diff_checker_data_to_file(groupedRequestIdsForDiffChecker, diff_checker_file_path_mocker)
     print("** Done!! writing data for ART Mocker **\n")
 
-def write_data_for_art_diff_checker(path):
-    write_grouped_data_to_file_art_runner, null_requestIds, diff_checker_data = process_log_file(path)
-    write_diff_checker_data_to_file (diff_checker_data, diff_checker_file_path_mocked_data)
-    print("** Done!! writing data for ART Runner **\n")
-
-
 
 # process data for ART mocker
 write_data_for_art_mocker(input_file_path)
+
+
+
+#--------------------------------- data for art Diff Checker ---------------------------------#
+def write_data_for_art_diff_checker(path):
+    _ , _ , diff_checker_data = process_log_file(path)
+    write_diff_checker_data_to_file (diff_checker_data, diff_checker_file_path_mocked_data)
+    print("** Done!! writing data for ART Runner **\n")
+
 
 # process data for ART mocked diff checker
 write_data_for_art_diff_checker(input_path_mocked_data)
