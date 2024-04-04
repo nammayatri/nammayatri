@@ -41,7 +41,7 @@ import Kernel.Storage.Hedis as Redis
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
 import Kernel.Types.App
 import Kernel.Types.Cache
-import Kernel.Types.Common (HighPrecMeters, Seconds)
+import Kernel.Types.Common (Distance, HighPrecMeters, Seconds, highPrecMetersToDistance)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Error
 import Kernel.Types.Flow
@@ -207,7 +207,7 @@ data AppEnv = AppEnv
     cacheTranslationConfig :: CacheTranslationConfig,
     cacheFeedbackFormConfig :: CacheFeedbackFormConfig,
     maxEmergencyNumberCount :: Int,
-    minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
+    minTripDistanceForReferralCfg :: Maybe Distance,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
@@ -260,7 +260,7 @@ buildAppEnv cfg@AppCfg {..} = do
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   serviceClickhouseEnv <- createConn riderClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
-  return AppEnv {..}
+  return AppEnv {minTripDistanceForReferralCfg = highPrecMetersToDistance <$> minTripDistanceForReferralCfg, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

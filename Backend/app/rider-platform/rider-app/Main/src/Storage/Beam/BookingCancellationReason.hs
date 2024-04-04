@@ -34,7 +34,9 @@ data BookingCancellationReasonT f = BookingCancellationReasonT
     additionalInfo :: B.C f (Maybe Text),
     driverCancellationLocationLat :: B.C f (Maybe Double),
     driverCancellationLocationLon :: B.C f (Maybe Double),
-    driverDistToPickup :: B.C f (Maybe Meters)
+    driverDistToPickup :: B.C f (Maybe Meters),
+    driverDistToPickupValue :: B.C f (Maybe HighPrecDistance),
+    distanceUnit :: B.C f (Maybe DistanceUnit)
   }
   deriving (Generic, B.Beamable)
 

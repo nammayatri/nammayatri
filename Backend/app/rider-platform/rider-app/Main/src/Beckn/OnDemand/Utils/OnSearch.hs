@@ -200,11 +200,11 @@ getRentalPerExtraKmRate tagGroups currency = do
   perExtraKmRate <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency perExtraKmRate
 
-getRentalIncludedKmPerHr :: Maybe [Spec.TagGroup] -> Maybe Kilometers
+getRentalIncludedKmPerHr :: Maybe [Spec.TagGroup] -> Maybe Distance
 getRentalIncludedKmPerHr tagGroups = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_HOUR_DISTANCE_KM tagGroups
   includedKmPerHr <- DecimalValue.valueFromString tagValue
-  Just . Kilometers $ roundToIntegral includedKmPerHr
+  Just . metersToDistance . kilometersToMeters . Kilometers $ roundToIntegral includedKmPerHr
 
 getRentalPlannedPerKmRate :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getRentalPlannedPerKmRate tagGroups currency = do

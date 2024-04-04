@@ -155,7 +155,7 @@ data QuoteDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneQuoteDetails
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
-  { distanceToNearestDriver :: HighPrecMeters
+  { distanceToNearestDriver :: Distance
   }
 
 newtype OneWaySpecialZoneQuoteDetails = OneWaySpecialZoneQuoteDetails
@@ -171,7 +171,7 @@ data RentalQuoteDetails = RentalQuoteDetails
     baseFare :: Price,
     perHourCharge :: Price,
     perExtraMinRate :: Price,
-    includedKmPerHr :: Kilometers,
+    includedDistancePerHr :: Distance, -- it was Kilometers
     plannedPerKmRate :: Price,
     perExtraKmRate :: Price,
     nightShiftInfo :: Maybe NightShiftInfo

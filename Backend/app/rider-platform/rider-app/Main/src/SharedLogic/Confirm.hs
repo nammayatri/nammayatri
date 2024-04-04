@@ -74,7 +74,7 @@ data DConfirmRes = DConfirmRes
     searchRequestId :: Id DSReq.SearchRequest,
     merchant :: DM.Merchant,
     city :: Context.City,
-    maxEstimatedDistance :: Maybe HighPrecMeters,
+    maxEstimatedDistance :: Maybe Distance,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
   }
   deriving (Show, Generic)
@@ -123,7 +123,7 @@ confirm DConfirmReq {..} = do
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
   activeBooking <- QRideB.findLatestByRiderId personId
   scheduledBookings <- QRideB.findByRiderIdAndStatus personId [DRB.CONFIRMED]
-  let searchDist = round $ fromMaybe 0 $ (.getHighPrecMeters) <$> searchRequest.distance
+  let searchDist = round $ fromMaybe 0 $ distanceToHighPrecMeters <$> searchRequest.distance
       searchDur = fromMaybe 0 $ (.getSeconds) <$> searchRequest.estimatedRideDuration
       overlap = any (checkOverlap searchDist searchDur searchRequest.startTime) scheduledBookings
   case (activeBooking, overlap) of

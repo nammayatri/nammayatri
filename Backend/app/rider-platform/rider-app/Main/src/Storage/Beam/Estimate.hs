@@ -39,6 +39,8 @@ data EstimateT f = EstimateT
     currency :: B.C f (Maybe Currency),
     estimatedDuration :: B.C f (Maybe Seconds),
     estimatedDistance :: B.C f (Maybe HighPrecMeters),
+    estimatedDistanceValue :: B.C f (Maybe HighPrecDistance),
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     device :: B.C f (Maybe Text),
     providerId :: B.C f Text,
     providerUrl :: B.C f Text,

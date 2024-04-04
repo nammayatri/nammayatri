@@ -87,7 +87,7 @@ data Booking = Booking
     fromLocation :: DLoc.Location,
     initialPickupLocation :: DLoc.Location,
     estimatedFare :: Price,
-    estimatedDistance :: Maybe HighPrecMeters,
+    estimatedDistance :: Maybe Distance,
     estimatedDuration :: Maybe Seconds,
     discount :: Maybe Price,
     estimatedTotalFare :: Price,
@@ -121,19 +121,19 @@ newtype RentalBookingDetails = RentalBookingDetails
 
 data OneWayBookingDetails = OneWayBookingDetails
   { toLocation :: DLoc.Location,
-    distance :: HighPrecMeters
+    distance :: Distance
   }
   deriving (Show)
 
 data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails
   { toLocation :: DLoc.Location,
-    distance :: HighPrecMeters,
+    distance :: Distance,
     otpCode :: Maybe Text
   }
   deriving (Show)
 
 data InterCityBookingDetails = InterCityBookingDetails
   { toLocation :: DLoc.Location,
-    distance :: HighPrecMeters
+    distance :: Distance
   }
   deriving (Show)

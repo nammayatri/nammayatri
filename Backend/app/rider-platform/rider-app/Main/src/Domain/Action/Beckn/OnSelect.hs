@@ -78,7 +78,7 @@ data QuoteInfo = QuoteInfo
 data DriverOfferQuoteDetails = DriverOfferQuoteDetails
   { driverName :: Text,
     durationToPickup :: Maybe Int, -- Seconds?
-    distanceToPickup :: Maybe HighPrecMeters,
+    distanceToPickup :: Maybe Distance,
     validTill :: UTCTime,
     rating :: Maybe Centesimal,
     bppDriverQuoteId :: Text

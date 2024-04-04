@@ -53,14 +53,14 @@ data MerchantD (s :: UsageSafety) = Merchant
     aadhaarKeyExpiryTime :: Seconds,
     mediaFileSizeUpperLimit :: Int,
     mediaFileUrlPattern :: Text,
-    editPickupDistanceThreshold :: HighPrecMeters,
-    driverDistanceThresholdFromPickup :: HighPrecMeters,
+    editPickupDistanceThreshold :: Distance,
+    driverDistanceThresholdFromPickup :: Distance,
     numOfAllowedEditPickupLocationAttemptsThreshold :: Int,
     publicMediaFileUrlPattern :: Text,
     scheduleRideBufferTime :: NominalDiffTime,
     fakeOtpMobileNumbers :: [Text],
     kaptureDisposition :: Text,
-    arrivedPickupThreshold :: Meters,
+    arrivedPickupThreshold :: Distance,
     driverOnTheWayNotifyExpiry :: Seconds
   }
   deriving (Generic, Show)

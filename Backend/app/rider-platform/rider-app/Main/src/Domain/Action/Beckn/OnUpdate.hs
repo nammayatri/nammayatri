@@ -208,7 +208,7 @@ onUpdate ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
+    HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r,
@@ -254,7 +254,7 @@ validateRequest ::
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
+    HasField "minTripDistanceForReferralCfg" r (Maybe Distance)
   ) =>
   OnUpdateReq ->
   m ValidatedOnUpdateReq

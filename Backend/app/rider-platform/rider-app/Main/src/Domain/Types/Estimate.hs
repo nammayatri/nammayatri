@@ -48,7 +48,7 @@ data Estimate = Estimate
     estimatedTotalFare :: Price,
     totalFareRange :: FareRange,
     estimatedDuration :: Maybe Seconds,
-    estimatedDistance :: Maybe HighPrecMeters,
+    estimatedDistance :: Maybe Distance,
     device :: Maybe Text,
     providerId :: Text,
     providerUrl :: BaseUrl,

@@ -41,7 +41,7 @@ data DriverOffer = DriverOffer
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     driverName :: Text,
     durationToPickup :: Maybe Int, -- Seconds?
-    distanceToPickup :: Maybe HighPrecMeters,
+    distanceToPickup :: Maybe Distance,
     validTill :: UTCTime,
     bppQuoteId :: Text,
     rating :: Maybe Centesimal,
@@ -54,6 +54,7 @@ data DriverOfferAPIEntity = DriverOfferAPIEntity
   { driverName :: Text,
     durationToPickup :: Maybe Int, -- Seconds?
     distanceToPickup :: Maybe HighPrecMeters,
+    distanceToPickupWithUnit :: Maybe Distance,
     validTill :: UTCTime,
     rating :: Maybe Centesimal
   }

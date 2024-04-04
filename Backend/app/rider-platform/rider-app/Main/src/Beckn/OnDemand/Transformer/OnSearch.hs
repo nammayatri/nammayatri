@@ -46,7 +46,7 @@ buildRentalQuoteInfo item quoteId_ currency = do
   perHourCharge <- Beckn.OnDemand.Utils.OnSearch.getRentalPerHourCharge itemTags currency
   perExtraMinRate <- Beckn.OnDemand.Utils.OnSearch.getRentalPerExtraMinRate itemTags currency
   perExtraKmRate <- Beckn.OnDemand.Utils.OnSearch.getRentalPerExtraKmRate itemTags currency
-  includedKmPerHr <- Beckn.OnDemand.Utils.OnSearch.getRentalIncludedKmPerHr itemTags
+  includedDistancePerHr <- Beckn.OnDemand.Utils.OnSearch.getRentalIncludedKmPerHr itemTags
   plannedPerKmRate <- Beckn.OnDemand.Utils.OnSearch.getRentalPlannedPerKmRate itemTags currency
   let nightShiftInfo = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
   Just $ Domain.Action.Beckn.OnSearch.RentalQuoteDetails {..}

@@ -15,6 +15,7 @@ data FareBreakup = FareBreakup {price :: Data.Text.Text, title :: Data.Text.Text
 
 data InvoiceRes = InvoiceRes
   { chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
+    chargeableDistanceWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     date :: Kernel.Prelude.UTCTime,
     destination :: Data.Text.Text,
     driverName :: Data.Text.Text,

@@ -25,7 +25,7 @@ data RentalDetails = RentalDetails
     perHourCharge :: Price,
     perExtraMinRate :: Price,
     perExtraKmRate :: Price,
-    includedKmPerHr :: Kilometers,
+    includedDistancePerHr :: Distance, -- Kilometers,
     plannedPerKmRate :: Price,
     nightShiftInfo :: Maybe NightShiftInfo
   }
@@ -64,6 +64,7 @@ data RentalDetailsAPIEntity = RentalDetailsAPIEntity
     perHourChargeWithCurrency :: PriceAPIEntity,
     perExtraMinRateWithCurrency :: PriceAPIEntity,
     includedKmPerHr :: Kilometers,
+    includedDistancePerHrWithUnit :: Distance,
     plannedPerKmRate :: Money,
     perExtraKmRate :: Money,
     plannedPerKmRateWithCurrency :: PriceAPIEntity,
@@ -89,5 +90,7 @@ mkRentalDetailsAPIEntity RentalDetails {..} = do
       plannedPerKmRateWithCurrency = mkPriceAPIEntity plannedPerKmRate,
       perExtraKmRateWithCurrency = mkPriceAPIEntity perExtraKmRate,
       nightShiftInfo = mkNightShiftInfoAPIEntity <$> nightShiftInfo,
+      includedKmPerHr = metersToKilometers $ distanceToMeters includedDistancePerHr,
+      includedDistancePerHrWithUnit = includedDistancePerHr,
       ..
     }

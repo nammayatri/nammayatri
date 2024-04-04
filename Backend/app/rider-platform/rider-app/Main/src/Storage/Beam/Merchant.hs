@@ -70,12 +70,16 @@ data MerchantT f = MerchantT
     mediaFileSizeUpperLimit :: B.C f Int,
     mediaFileUrlPattern :: B.C f Text,
     editPickupDistanceThreshold :: B.C f HighPrecMeters,
+    editPickupDistanceThresholdValue :: B.C f (Maybe HighPrecDistance),
     driverDistanceThresholdFromPickup :: B.C f HighPrecMeters,
+    driverDistanceThresholdFromPickupValue :: B.C f (Maybe HighPrecDistance),
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     numOfAllowedEditPickupLocationAttemptsThreshold :: B.C f Int,
     publicMediaFileUrlPattern :: B.C f Text,
     kaptureDisposition :: B.C f Text,
     fakeOtpMobileNumbers :: B.C f [Text],
     arrivedPickupThreshold :: B.C f (Maybe Meters),
+    arrivedPickupThresholdValue :: B.C f (Maybe HighPrecDistance),
     driverOnTheWayNotifyExpiry :: B.C f (Maybe Seconds)
   }
   deriving (Generic, B.Beamable)

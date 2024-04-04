@@ -28,6 +28,8 @@ data RideT f = RideT
     driverName :: C f (Maybe Text),
     vehicleNumber :: C f (Maybe Text),
     chargeableDistance :: C f (Maybe HighPrecMeters),
+    -- chargeableDistanceValue :: C f (Maybe HighPrecDistance), -- FIXME uncomment
+    -- distanceUnit :: C f (Maybe HighPrecDistance), -- FIXME uncomment
     totalFare :: C f (Maybe HighPrecMoney),
     rideStartTime :: C f (Maybe UTCTime),
     rideEndTime :: C f (Maybe UTCTime),

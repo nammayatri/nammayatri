@@ -375,7 +375,7 @@ instance FromTType' BeamB.Booking Booking where
             merchantOperatingCityId = merchantOperatingCityId',
             specialLocationTag = specialLocationTag,
             createdAt = createdAt,
-            estimatedDistance = estimatedDistance,
+            estimatedDistance = mkDistanceWithDefault distanceUnit estimatedDistanceValue <$> estimatedDistance,
             estimatedDuration = estimatedDuration,
             updatedAt = updatedAt,
             initialPickupLocation = initialPickupLocation,
@@ -387,7 +387,7 @@ instance FromTType' BeamB.Booking Booking where
       buildOneWayDetails mbToLocid = do
         toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
         toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way booking")
-        distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
+        distance' <- (mkDistanceWithDefault distanceUnit distanceValue <$> distance) & fromMaybeM (InternalError "distance is null for one way booking")
         pure
           DRB.OneWayBookingDetails
             { toLocation = toLocation,
@@ -396,7 +396,7 @@ instance FromTType' BeamB.Booking Booking where
       buildInterCityDetails mbToLocid = do
         toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
         toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way booking")
-        distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
+        distance' <- (mkDistanceWithDefault distanceUnit distanceValue <$> distance) & fromMaybeM (InternalError "distance is null for one way booking")
         pure
           DRB.InterCityBookingDetails
             { toLocation = toLocation,
@@ -405,7 +405,7 @@ instance FromTType' BeamB.Booking Booking where
       buildOneWaySpecialZoneDetails mbToLocid = do
         toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
         toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way special zone booking")
-        distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
+        distance' <- (mkDistanceWithDefault distanceUnit distanceValue <$> distance) & fromMaybeM (InternalError "distance is null for one way booking")
         pure
           DRB.OneWaySpecialZoneBookingDetails
             { distance = distance',
@@ -456,14 +456,17 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.currency = Just estimatedFare.currency,
             BeamB.otpCode = otpCode,
             BeamB.vehicleVariant = vehicleServiceTierType,
-            BeamB.distance = distance,
+            BeamB.distance = distanceToHighPrecMeters <$> distance,
+            BeamB.distanceValue = distance <&> (.value),
+            BeamB.distanceUnit = distance <&> (.unit),
             BeamB.tripTermsId = getId <$> (tripTerms <&> (.id)),
             BeamB.isScheduled = Just isScheduled,
             BeamB.stopLocationId = stopLocationId,
             BeamB.merchantId = getId merchantId,
             BeamB.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
             BeamB.specialLocationTag = specialLocationTag,
-            BeamB.estimatedDistance = estimatedDistance,
+            BeamB.estimatedDistance = distanceToHighPrecMeters <$> estimatedDistance,
+            BeamB.estimatedDistanceValue = estimatedDistance <&> (.value),
             BeamB.estimatedDuration = estimatedDuration,
             BeamB.createdAt = createdAt,
             BeamB.updatedAt = updatedAt,

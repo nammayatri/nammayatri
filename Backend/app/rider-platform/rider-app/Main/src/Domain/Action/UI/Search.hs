@@ -333,8 +333,8 @@ search personId req bundleVersion clientVersion clientId device = do
       fromLocation
       merchantOperatingCity
       (listToMaybe stopLocations) --- Take first stop, handle multiple stops later
-      (metersToHighPrecMeters <$> longestRouteDistance)
-      (metersToHighPrecMeters <$> shortestRouteDistance)
+      (metersToDistance <$> longestRouteDistance)
+      (metersToDistance <$> shortestRouteDistance)
       startTime
       bundleVersion
       clientVersion
@@ -420,8 +420,8 @@ buildSearchRequest ::
   Location.Location ->
   DMOC.MerchantOperatingCity ->
   Maybe Location.Location ->
-  Maybe HighPrecMeters ->
-  Maybe HighPrecMeters ->
+  Maybe Distance ->
+  Maybe Distance ->
   UTCTime ->
   Maybe Version ->
   Maybe Version ->

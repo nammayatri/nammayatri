@@ -165,8 +165,8 @@ getOffers searchRequest = do
         SQuote.OneWayDetails details -> Just details.distanceToNearestDriver
         SQuote.RentalDetails _ -> Nothing
         SQuote.DriverOfferDetails details -> details.distanceToPickup
-        SQuote.OneWaySpecialZoneDetails _ -> Just $ metersToHighPrecMeters $ Meters 0
-        SQuote.InterCityDetails _ -> Just $ metersToHighPrecMeters $ Meters 0
+        SQuote.OneWaySpecialZoneDetails _ -> Just $ Distance 0 Meter
+        SQuote.InterCityDetails _ -> Just $ Distance 0 Meter
     creationTime :: OfferRes -> UTCTime
     creationTime (OnDemandCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
     creationTime (Metro Metro.MetroOffer {createdAt}) = createdAt
