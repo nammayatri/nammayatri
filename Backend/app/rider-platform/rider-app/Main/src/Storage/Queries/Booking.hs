@@ -134,7 +134,7 @@ findByBPPBookingId (Id bppRbId) = findOneWithKV [Se.Is BeamB.bppBookingId $ Se.E
 findByTransactionId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Booking)
 findByTransactionId transactionId =
   findAllWithKVAndConditionalDB
-    [ Se.Is BeamB.transactionId $ Se.Eq transactionId
+    [ Se.Is BeamB.riderTransactionId $ Se.Eq transactionId
     ]
     (Just (Se.Desc BeamB.createdAt))
     <&> listToMaybe
@@ -349,7 +349,7 @@ instance FromTType' BeamB.Booking Booking where
       Just
         Booking
           { id = Id id,
-            transactionId = transactionId,
+            transactionId = riderTransactionId,
             clientId = Id <$> clientId,
             bppBookingId = Id <$> bppBookingId,
             quoteId = Id <$> quoteId,
@@ -433,7 +433,7 @@ instance ToTType' BeamB.Booking Booking where
      in BeamB.BookingT
           { BeamB.id = getId id,
             BeamB.clientId = getId <$> clientId,
-            BeamB.transactionId = transactionId,
+            BeamB.riderTransactionId = transactionId,
             BeamB.fareProductType = fareProductType,
             BeamB.bppBookingId = getId <$> bppBookingId,
             BeamB.quoteId = getId <$> quoteId,

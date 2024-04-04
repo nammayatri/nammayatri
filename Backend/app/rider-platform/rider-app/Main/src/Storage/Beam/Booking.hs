@@ -26,7 +26,7 @@ import Tools.Beam.UtilsTH
 
 data BookingT f = BookingT
   { id :: B.C f Text,
-    transactionId :: B.C f Text,
+    riderTransactionId :: B.C f Text,
     fulfillmentId :: B.C f (Maybe Text),
     clientId :: B.C f (Maybe Text),
     itemId :: B.C f Text,
@@ -73,6 +73,6 @@ instance B.Table BookingT where
 
 type Booking = BookingT Identity
 
-$(enableKVPG ''BookingT ['id] [['bppBookingId], ['riderId], ['quoteId], ['transactionId]])
+$(enableKVPG ''BookingT ['id] [['bppBookingId], ['riderId], ['quoteId], ['riderTransactionId]])
 
-$(mkTableInstancesWithTModifier ''BookingT "booking" [("bppBookingId", "bpp_ride_booking_id")])
+$(mkTableInstancesWithTModifier ''BookingT "booking" [("bppBookingId", "bpp_ride_booking_id"), ("riderTransactionId", "transaction_id")])
