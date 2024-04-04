@@ -161,6 +161,7 @@ jobs:
           python updateLocalVersion.py customer
       
       - name: Commit changes
+        continue-on-error: true
         run: |
           git config --local user.email ${{ secrets.NAMMA_BOT_EMAIL }}
           git config --local user.name "namma-bot"
