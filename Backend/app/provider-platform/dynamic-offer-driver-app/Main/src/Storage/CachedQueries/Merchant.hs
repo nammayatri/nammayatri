@@ -36,13 +36,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant as Queries
 
-findById :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
+findById :: KvDbFlow m r => Id Merchant -> m (Maybe Merchant)
 findById id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
     Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
 
-findBySubscriberId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId :: KvDbFlow m r => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeSubscriberIdKey subscriberId) >>= \case
     Nothing -> findAndCache
@@ -53,7 +53,7 @@ findBySubscriberId subscriberId =
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findBySubscriberId subscriberId
 
-findByShortId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: KvDbFlow m r => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeShortIdKey shortId) >>= \case
     Nothing -> findAndCache
@@ -90,14 +90,14 @@ makeSubscriberIdKey subscriberId = "driver-offer:CachedQueries:Merchant:Subscrib
 makeShortIdKey :: ShortId Merchant -> Text
 makeShortIdKey shortId = "driver-offer:CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> m ()
+update :: KvDbFlow m r => Merchant -> m ()
 update = Queries.update
 
-updateGeofencingConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
+updateGeofencingConfig :: KvDbFlow m r => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
 updateGeofencingConfig = Queries.updateGeofencingConfig
 
-loadAllProviders :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Merchant]
+loadAllProviders :: KvDbFlow m r => m [Merchant]
 loadAllProviders = Queries.loadAllProviders
 
-findAllShortIdById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Merchant] -> m [ShortId Merchant]
+findAllShortIdById :: KvDbFlow m r => [Id Merchant] -> m [ShortId Merchant]
 findAllShortIdById = Queries.findAllShortIdById

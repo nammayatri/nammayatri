@@ -38,8 +38,7 @@ import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 
 isSearchTryValid ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     Log m
   ) =>
   Id SearchTry ->
@@ -50,8 +49,7 @@ isSearchTryValid searchTryId = do
   pure $ status == DST.ACTIVE && validTill > now
 
 isReceivedMaxDriverQuotes ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     Log m
   ) =>
   DriverPoolConfig ->
@@ -62,8 +60,7 @@ isReceivedMaxDriverQuotes driverPoolCfg searchTryId = do
   pure (totalQuotesRecieved >= driverPoolCfg.maxDriverQuotesRequired)
 
 getRescheduleTime ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     Log m
   ) =>
   Seconds ->
@@ -94,6 +91,6 @@ createRescheduleTime ::
 createRescheduleTime singleBatchProcessTime lastProcTime = do
   return $ fromIntegral singleBatchProcessTime `addUTCTime` lastProcTime
 
-cancelSearchTry :: (CacheFlow m r, EsqDBFlow m r) => Id SearchTry -> m ()
+cancelSearchTry :: KvDbFlow m r => Id SearchTry -> m ()
 -- cancelSearchTry searchTryId = Esq.runTransaction $ QST.updateStatus searchTryId DST.CANCELLED
 cancelSearchTry searchTryId = QST.updateStatus searchTryId DST.CANCELLED

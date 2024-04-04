@@ -18,7 +18,7 @@ import Storage.Queries.OrphanInstances.DailyStats
 
 -- Extra code goes here --
 
-findAllInRangeByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id SP.Person -> Day -> Day -> m [DailyStats]
+findAllInRangeByDriverId :: KvDbFlow m r => Id SP.Person -> Day -> Day -> m [DailyStats]
 findAllInRangeByDriverId (Id driverId) from to = do
   findAllWithKV
     [ Se.And

@@ -12,7 +12,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Translations as Beam
 import qualified Storage.Beam.Translations as BeamEMT
@@ -20,7 +20,7 @@ import Storage.Queries.OrphanInstances.Translations
 
 -- Extra code goes here --
 
-findByErrorAndLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Kernel.External.Types.Language -> m (Maybe Domain.Types.Translations.Translations)
+findByErrorAndLanguage :: KvDbFlow m r => Text -> Kernel.External.Types.Language -> m (Maybe Domain.Types.Translations.Translations)
 findByErrorAndLanguage messageKey language = do
   maybeTranslation <- findOneWithKV [Se.And [Se.Is BeamEMT.messageKey $ Se.Eq messageKey, Se.Is BeamEMT.language $ Se.Eq language]]
   case maybeTranslation of

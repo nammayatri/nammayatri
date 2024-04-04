@@ -19,14 +19,14 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (..))
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Rating as Beam
 import qualified Storage.Beam.Rating as BeamR
 import Storage.Queries.OrphanInstances.Rating
 
-findAllRatingUsersCountByPerson :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Types.Person.Person -> m Int
+findAllRatingUsersCountByPerson :: KvDbFlow m r => Id Domain.Types.Person.Person -> m Int
 findAllRatingUsersCountByPerson (Id driverId) = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $

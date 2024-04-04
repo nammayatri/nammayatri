@@ -30,16 +30,16 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.MerchantPaymentMethod as Queries
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantPaymentMethod -> m ()
+create :: KvDbFlow m r => MerchantPaymentMethod -> m ()
 create = Queries.create
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m [MerchantPaymentMethod]
+findAllByMerchantOpCityId :: (KvDbFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m [MerchantPaymentMethod]
 findAllByMerchantOpCityId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey id) >>= \case
     Just a -> return $ fmap (coerce @(MerchantPaymentMethodD 'Unsafe) @MerchantPaymentMethod) a
     Nothing -> cacheMerchantPaymentMethods id /=<< Queries.findAllByMerchantOpCityId id
 
-findByIdAndMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantPaymentMethod -> Id MerchantOperatingCity -> m (Maybe MerchantPaymentMethod)
+findByIdAndMerchantOpCityId :: KvDbFlow m r => Id MerchantPaymentMethod -> Id MerchantOperatingCity -> m (Maybe MerchantPaymentMethod)
 findByIdAndMerchantOpCityId id merchantId = find (\mpm -> mpm.id == id) <$> findAllByMerchantOpCityId merchantId
 
 cacheMerchantPaymentMethods :: (CacheFlow m r) => Id MerchantOperatingCity -> [MerchantPaymentMethod] -> m ()

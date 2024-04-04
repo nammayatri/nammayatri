@@ -38,25 +38,25 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Exophone as Queries
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m [Exophone]
+findAllByMerchantOpCityId :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> m [Exophone]
 findAllByMerchantOpCityId merchantOpCityId =
   Hedis.safeGet (makeMerchantOpCityIdKey merchantOpCityId) >>= \case
     Just a -> return a
     Nothing -> cacheExophones merchantOpCityId /=<< Queries.findAllByMerchantOpCityId merchantOpCityId
 
-findAllCallExophoneByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m [Exophone]
+findAllCallExophoneByMerchantOpCityId :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> m [Exophone]
 findAllCallExophoneByMerchantOpCityId merchantOpCityId = filter (\exophone -> exophone.exophoneType == CALL_RIDE) <$> findAllByMerchantOpCityId merchantOpCityId
 
-findByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
+findByPhone :: KvDbFlow m r => Text -> m (Maybe Exophone)
 findByPhone phone = find (\exophone -> (exophone.primaryPhone == phone || exophone.backupPhone == phone) && exophone.exophoneType == CALL_RIDE) <$> findAllByPhone phone
 
-findByEndRidePhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
+findByEndRidePhone :: KvDbFlow m r => Text -> m (Maybe Exophone)
 findByEndRidePhone phone = find (\exophone -> (exophone.primaryPhone == phone || exophone.backupPhone == phone) && exophone.exophoneType == END_RIDE) <$> findAllByPhone phone
 
-findByPrimaryPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
+findByPrimaryPhone :: KvDbFlow m r => Text -> m (Maybe Exophone)
 findByPrimaryPhone phone = find (\exophone -> exophone.primaryPhone == phone && exophone.exophoneType == CALL_RIDE) <$> findAllByPhone phone
 
-findAllByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m [Exophone]
+findAllByPhone :: KvDbFlow m r => Text -> m [Exophone]
 findAllByPhone phone =
   Hedis.safeGet (makePhoneKey phone) >>= \case
     Nothing -> do
@@ -70,10 +70,10 @@ findAllByPhone phone =
         Just a -> return a
         Nothing -> cacheExophones merchantOpCityId /=<< Queries.findAllByPhone phone
 
-findAllExophones :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Exophone]
+findAllExophones :: KvDbFlow m r => m [Exophone]
 findAllExophones = Queries.findAllExophones
 
-findByMerchantOpCityIdServiceAndExophoneType :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> CallService -> ExophoneType -> m [Exophone]
+findByMerchantOpCityIdServiceAndExophoneType :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> CallService -> ExophoneType -> m [Exophone]
 findByMerchantOpCityIdServiceAndExophoneType merchantOpCityId service exophoneType =
   Hedis.safeGet (makeMerchantOpCityIdServiceExophoneTypeKey merchantOpCityId service exophoneType) >>= \case
     Just a -> return a
@@ -121,11 +121,11 @@ makeMerchantOpCityIdServiceExophoneTypeKey merchantOpCityId service exophoneType
 patternKey :: Text
 patternKey = "CachedQueries:Exophones:*"
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Exophone -> m ()
+create :: KvDbFlow m r => Exophone -> m ()
 create = Queries.create
 
-updateAffectedPhones :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Text] -> m ()
+updateAffectedPhones :: KvDbFlow m r => [Text] -> m ()
 updateAffectedPhones = Queries.updateAffectedPhones
 
-deleteByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
+deleteByMerchantOpCityId :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> m ()
 deleteByMerchantOpCityId = Queries.deleteByMerchantOpCityId

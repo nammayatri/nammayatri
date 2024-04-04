@@ -24,7 +24,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Queries.ReelsData as SQReels
 
-findAllByMerchantOpCityIdLanguageAndKey :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id DMMOC.MerchantOperatingCity -> Language -> Text -> m [DTRD.ReelsData]
+findAllByMerchantOpCityIdLanguageAndKey :: KvDbFlow m r => Id DMMOC.MerchantOperatingCity -> Language -> Text -> m [DTRD.ReelsData]
 findAllByMerchantOpCityIdLanguageAndKey merchantOpCityId language key =
   Hedis.safeGet (makeReelsDataKeyByMerchantIOpCityIdLanguageAndKey merchantOpCityId language key) >>= \case
     Just a -> pure a

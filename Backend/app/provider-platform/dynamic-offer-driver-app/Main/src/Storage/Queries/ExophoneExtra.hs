@@ -21,14 +21,14 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as Beam
 import qualified Storage.Beam.Exophone as BeamE
 import Storage.Queries.OrphanInstances.Exophone
 
-updateAffectedPhones :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m ()
+updateAffectedPhones :: KvDbFlow m r => [Text] -> m ()
 updateAffectedPhones primaryPhones = do
   now <- getCurrentTime
   dbConf <- getMasterBeamConfig
@@ -51,13 +51,13 @@ updateAffectedPhones primaryPhones = do
                 B.||?. B.sqlBool_ (B.concat_ [B.val_ indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryPhones))
           )
 
-findAllExophones :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [Exophone]
+findAllExophones :: KvDbFlow m r => m [Exophone]
 findAllExophones = findAllWithDb [Se.Is BeamE.id $ Se.Not $ Se.Eq $ getId ""]
 
-findAllByPhone :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [Exophone]
+findAllByPhone :: KvDbFlow m r => Text -> m [Exophone]
 findAllByPhone phone = do
   merchIds <- findAllMerchantIdsByPhone phone
   findAllWithKV [Se.Is BeamE.merchantOperatingCityId $ Se.In $ getId <$> merchIds]
 
-findAllMerchantIdsByPhone :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [Id DMOC.MerchantOperatingCity]
+findAllMerchantIdsByPhone :: KvDbFlow m r => Text -> m [Id DMOC.MerchantOperatingCity]
 findAllMerchantIdsByPhone phone = findAllWithKV [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]] <&> (DE.merchantOperatingCityId <$>)

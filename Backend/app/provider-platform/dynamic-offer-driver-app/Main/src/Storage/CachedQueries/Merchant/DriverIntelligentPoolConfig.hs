@@ -39,7 +39,6 @@ import Domain.Types.Merchant.DriverIntelligentPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
 import qualified EulerHS.Language as L
 import qualified GHC.List as GL
-import Kernel.Beam.Lib.Utils (pushToKafka)
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -53,16 +52,16 @@ import qualified System.Environment as SE
 import qualified System.Environment as Se
 import System.Random
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverIntelligentPoolConfig -> m ()
+create :: KvDbFlow m r => DriverIntelligentPoolConfig -> m ()
 create = Queries.create
 
-getDriverIntelligentPoolConfigFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
+getDriverIntelligentPoolConfigFromDB :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
 getDriverIntelligentPoolConfigFromDB id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return . Just $ coerce @(DriverIntelligentPoolConfigD 'Unsafe) @DriverIntelligentPoolConfig a
     Nothing -> flip whenJust cacheDriverIntelligentPoolConfig /=<< Queries.findByMerchantOpCityId id
 
-getConfigFromCACStrict :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Maybe Text -> String -> m DriverIntelligentPoolConfig
+getConfigFromCACStrict :: KvDbFlow m r => Maybe Text -> Maybe Text -> String -> m DriverIntelligentPoolConfig
 getConfigFromCACStrict srId idName dipcCond = do
   tenant <- liftIO (SE.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
   gen <- newStdGen
@@ -89,7 +88,7 @@ getConfigFromCACStrict srId idName dipcCond = do
     pushToKafka cacData "cac-data" ""
   pure result
 
-cacFallbackHelper :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Maybe Text -> String -> m DriverIntelligentPoolConfig
+cacFallbackHelper :: KvDbFlow m r => Maybe Text -> Maybe Text -> String -> m DriverIntelligentPoolConfig
 cacFallbackHelper srId idName context = do
   mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
   mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
@@ -98,7 +97,7 @@ cacFallbackHelper srId idName context = do
   _ <- initializeCACThroughConfig CM.createClientFromConfig (fromMaybe (error "Config not found for DriverIntelligentPoolConfig in db") config) tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
   getConfigFromCACStrict srId idName context
 
-getDriverIntelligentPoolConfigFromCAC :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m DriverIntelligentPoolConfig
+getDriverIntelligentPoolConfigFromCAC :: KvDbFlow m r => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m DriverIntelligentPoolConfig
 getDriverIntelligentPoolConfigFromCAC id srId idName = do
   dipcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id))]
   gen <- newStdGen
@@ -130,7 +129,7 @@ getDriverIntelligentPoolConfigFromCAC id srId idName = do
     )
     res
 
-getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m DriverIntelligentPoolConfig
+getConfigFromInMemory :: KvDbFlow m r => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m DriverIntelligentPoolConfig
 getConfigFromInMemory id srId idName = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
   dipc <- L.getOption (DTC.DriverIntelligentPoolConfig id.getId)
@@ -157,7 +156,7 @@ getConfigFromInMemory id srId idName = do
     (getDriverIntelligentPoolConfigFromCAC id srId idName)
     isExp
 
-findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m (Maybe DriverIntelligentPoolConfig)
+findByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m (Maybe DriverIntelligentPoolConfig)
 findByMerchantOpCityId id srId idName = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
@@ -185,7 +184,7 @@ makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:DriverIntelligentPoolCo
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantOpCityIdKey
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverIntelligentPoolConfig -> m ()
+update :: KvDbFlow m r => DriverIntelligentPoolConfig -> m ()
 update = Queries.update
 
 makeCACDriverIntelligentPoolConfigKey :: Text -> Text

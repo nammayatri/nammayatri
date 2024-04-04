@@ -29,23 +29,23 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m (Maybe Merchant)
+findById :: KvDbFlow m r => Id Merchant -> m (Maybe Merchant)
 findById (Id merchantId) = findOneWithKV [Se.Is BeamM.id $ Se.Eq merchantId]
 
-findBySubscriberId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId :: KvDbFlow m r => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId (ShortId subscriberId) = findOneWithKV [Se.Is BeamM.subscriberId $ Se.Eq subscriberId]
 
-findByShortId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: KvDbFlow m r => ShortId Merchant -> m (Maybe Merchant)
 findByShortId (ShortId shortId) = findOneWithKV [Se.Is BeamM.shortId $ Se.Eq shortId]
 
-loadAllProviders :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [Merchant]
+loadAllProviders :: KvDbFlow m r => m [Merchant]
 loadAllProviders = do
   findAllWithDb [Se.And [Se.Is BeamM.status $ Se.Eq DM.APPROVED, Se.Is BeamM.enabled $ Se.Eq True]]
 
-findAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [Merchant]
+findAll :: KvDbFlow m r => m [Merchant]
 findAll = findAllWithDb [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
 
-update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> m ()
+update :: KvDbFlow m r => Merchant -> m ()
 update org = do
   now <- getCurrentTime
   updateOneWithKV
@@ -58,13 +58,13 @@ update org = do
     ]
     [Se.Is BeamM.id (Se.Eq (getId org.id))]
 
-findAllShortIdById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Merchant] -> m [ShortId Merchant]
+findAllShortIdById :: KvDbFlow m r => [Id Merchant] -> m [ShortId Merchant]
 findAllShortIdById merchantIds =
   (DM.shortId <$>)
     <$> findAllWithKV
       [Se.Is BeamM.id $ Se.In (getId <$> merchantIds)]
 
-updateGeofencingConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
+updateGeofencingConfig :: KvDbFlow m r => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
 updateGeofencingConfig merchantId originRestriction destinationRestriction = do
   now <- getCurrentTime
   updateOneWithKV

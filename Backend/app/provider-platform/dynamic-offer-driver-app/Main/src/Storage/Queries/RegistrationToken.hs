@@ -27,13 +27,13 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DRT.RegistrationToken -> m ()
+create :: KvDbFlow m r => DRT.RegistrationToken -> m ()
 create = createWithKV
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id RegistrationToken -> m (Maybe RegistrationToken)
+findById :: KvDbFlow m r => Id RegistrationToken -> m (Maybe RegistrationToken)
 findById (Id registrationTokenId) = findOneWithKV [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
 
-setVerified :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id RegistrationToken -> m ()
+setVerified :: KvDbFlow m r => Id RegistrationToken -> m ()
 setVerified (Id rtId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -42,10 +42,10 @@ setVerified (Id rtId) = do
     ]
     [Se.Is BeamRT.id (Se.Eq rtId)]
 
-findByToken :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => RegToken -> m (Maybe RegistrationToken)
+findByToken :: KvDbFlow m r => RegToken -> m (Maybe RegistrationToken)
 findByToken token = findOneWithKV [Se.Is BeamRT.token $ Se.Eq token]
 
-updateAttempts :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Int -> Id RegistrationToken -> m ()
+updateAttempts :: KvDbFlow m r => Int -> Id RegistrationToken -> m ()
 updateAttempts attempts (Id rtId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -54,19 +54,19 @@ updateAttempts attempts (Id rtId) = do
     ]
     [Se.Is BeamRT.id (Se.Eq rtId)]
 
-deleteByPersonId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
+deleteByPersonId :: KvDbFlow m r => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamRT.entityId (Se.Eq personId)]
 
-deleteByPersonIdExceptNew :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id RegistrationToken -> m ()
+deleteByPersonIdExceptNew :: KvDbFlow m r => Id Person -> Id RegistrationToken -> m ()
 deleteByPersonIdExceptNew (Id personId) (Id newRT) = deleteWithKV [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Not $ Se.Eq newRT)]]
 
-findAllByPersonId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [RegistrationToken]
+findAllByPersonId :: KvDbFlow m r => Id Person -> m [RegistrationToken]
 findAllByPersonId personId = findAllWithKV [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
 
-getAlternateNumberAttempts :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m Int
+getAlternateNumberAttempts :: KvDbFlow m r => Id Person -> m Int
 getAlternateNumberAttempts (Id personId) = findOneWithKV [Se.Is BeamRT.entityId $ Se.Eq personId] <&> maybe 5 DRT.attempts
 
-updateMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Text -> m ()
+updateMerchantOperatingCityId :: KvDbFlow m r => Text -> Text -> Text -> m ()
 updateMerchantOperatingCityId entityId opCityId merchantId = do
   now <- getCurrentTime
   updateWithKV

@@ -12,7 +12,7 @@ import Kernel.Utils.Common
 import qualified Storage.Queries.SubscriptionConfig as Queries
 
 findSubscriptionConfigsByMerchantOpCityIdAndServiceName ::
-  (CacheFlow m r, MonadFlow m, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity.MerchantOperatingCity ->
   ServiceNames ->
   m (Maybe SubscriptionConfig)

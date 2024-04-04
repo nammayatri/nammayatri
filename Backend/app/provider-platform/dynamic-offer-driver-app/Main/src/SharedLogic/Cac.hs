@@ -19,15 +19,12 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Prelude
-import Kernel.Types.CacheFlow
-import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Error.Throwing
-import Kernel.Utils.Logging
+import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchantOpCity
 import Tools.Error
 
-getFrontendConfigs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) => Id MerchantOperatingCity -> Maybe Int -> m (Maybe DA.Object)
+getFrontendConfigs :: (KvDbFlow m r, Log m) => Id MerchantOperatingCity -> Maybe Int -> m (Maybe DA.Object)
 getFrontendConfigs merchantOpCityId mbToss = do
   city <- (QMerchantOpCity.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)) <&> (.city)
   ghcCond <- liftIO $ CM.hashMapToString $ HM.fromList [(T.pack "city", (DA.String . T.pack . show) city)]

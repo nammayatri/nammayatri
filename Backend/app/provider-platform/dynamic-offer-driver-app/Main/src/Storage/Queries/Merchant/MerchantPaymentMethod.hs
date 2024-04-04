@@ -24,16 +24,15 @@ import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.MerchantPaymentMethod
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantPaymentMethod as BeamMPM
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantPaymentMethod -> m ()
+create :: KvDbFlow m r => MerchantPaymentMethod -> m ()
 create = createWithKV
 
-findAllByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m [MerchantPaymentMethod]
+findAllByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m [MerchantPaymentMethod]
 findAllByMerchantOpCityId (Id merchantOperatingCityId) = findAllWithOptionsKV [Se.Is BeamMPM.merchantOperatingCityId $ Se.Eq merchantOperatingCityId] (Se.Desc BeamMPM.priority) Nothing Nothing
 
 instance FromTType' BeamMPM.MerchantPaymentMethod MerchantPaymentMethod where

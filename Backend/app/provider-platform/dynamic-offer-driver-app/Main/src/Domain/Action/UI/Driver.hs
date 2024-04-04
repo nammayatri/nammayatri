@@ -446,8 +446,7 @@ data GetCityResp = GetCityResp
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 getInformation ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CacheFlow m r,
@@ -477,7 +476,7 @@ getInformation (personId, merchantId, merchantOpCityId) mbToss = do
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId Nothing
   makeDriverInformationRes merchantOpCityId driverEntity merchant driverReferralCode driverStats driverGoHomeInfo (Just currentDues) (Just manualDues) mbMd5Digest
 
-setActivity :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
+setActivity :: KvDbFlow m r => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, _merchantId, merchantOpCityId) isActive mode = do
   void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
@@ -497,7 +496,7 @@ setActivity (personId, _merchantId, merchantOpCityId) isActive mode = do
   void $ QDriverInformation.updateActivity isActive (mode <|> Just DriverInfo.OFFLINE) driverId
   pure APISuccess.Success
 
-activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> m APISuccess.APISuccess
+activateGoHomeFeature :: KvDbFlow m r => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> m APISuccess.APISuccess
 activateGoHomeFeature (driverId, _merchantId, merchantOpCityId) driverHomeLocationId driverLocation = do
   goHomeConfig <- CQGHC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId")
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
@@ -515,7 +514,7 @@ activateGoHomeFeature (driverId, _merchantId, merchantOpCityId) driverHomeLocati
   activateDriverGoHomeRequest merchantOpCityId driverId driverHomeLocation goHomeConfig dghInfo
   pure APISuccess.Success
 
-deactivateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess.APISuccess
+deactivateGoHomeFeature :: KvDbFlow m r => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess.APISuccess
 deactivateGoHomeFeature (personId, _, merchantOpCityId) = do
   goHomeConfig <- CQGHC.findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId")
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
@@ -531,7 +530,7 @@ deactivateGoHomeFeature (personId, _, merchantOpCityId) = do
     else CQDGR.deactivateDriverGoHomeRequest merchantOpCityId driverId DDGR.FAILED ghInfo Nothing
   pure APISuccess.Success
 
-addHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> AddHomeLocationReq -> m APISuccess.APISuccess
+addHomeLocation :: KvDbFlow m r => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> AddHomeLocationReq -> m APISuccess.APISuccess
 addHomeLocation (driverId, merchantId, merchantOpCityId) req = do
   cfg <- CQGHC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId")
   unless (cfg.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
@@ -546,7 +545,7 @@ addHomeLocation (driverId, merchantId, merchantOpCityId) req = do
   QDHL.create =<< buildDriverHomeLocation driverId req
   pure APISuccess.Success
 
-buildDriverHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> AddHomeLocationReq -> m DDHL.DriverHomeLocation
+buildDriverHomeLocation :: KvDbFlow m r => Id SP.Person -> AddHomeLocationReq -> m DDHL.DriverHomeLocation
 buildDriverHomeLocation driverId req = do
   id <- generateGUID
   now <- getCurrentTime
@@ -561,7 +560,7 @@ buildDriverHomeLocation driverId req = do
         ..
       }
 
-updateHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> UpdateHomeLocationReq -> m APISuccess.APISuccess
+updateHomeLocation :: KvDbFlow m r => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> UpdateHomeLocationReq -> m APISuccess.APISuccess
 updateHomeLocation (driverId, merchantId, merchantOpCityId) homeLocationId req = do
   goHomeConfig <- CQGHC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId")
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
@@ -588,7 +587,7 @@ updateHomeLocation (driverId, merchantId, merchantOpCityId) homeLocationId req =
           tag = req.tag
         }
 
-getHomeLocations :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m GetHomeLocationsRes
+getHomeLocations :: KvDbFlow m r => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m GetHomeLocationsRes
 getHomeLocations (driverId, _, _) = do
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
@@ -596,7 +595,7 @@ getHomeLocations (driverId, _, _) = do
   driverHomeLocations <- QDHL.findAllByDriverId driverId
   return . GetHomeLocationsRes $ DDHL.makeDriverHomeLocationAPIEntity <$> driverHomeLocations
 
-deleteHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> m APISuccess.APISuccess
+deleteHomeLocation :: KvDbFlow m r => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> m APISuccess.APISuccess
 deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
   goHomeConfig <- CQGHC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId")
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
@@ -608,7 +607,7 @@ deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
   QDHL.deleteById driverHomeLocationId
   return APISuccess.Success
 
-buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), EsqDBFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
+buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), KvDbFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
   transporterConfig <- CQTC.findByMerchantOpCityId person.merchantOperatingCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   driverPlan <- snd <$> DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION person.id
@@ -672,7 +671,7 @@ buildDriverEntityRes (person, driverInfo) = do
         isVehicleSupported = isVehicleSupported
       }
 
-deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m) => SP.Person -> Id SP.Person -> m APISuccess
+deleteDriver :: (KvDbFlow m r, Redis.HedisFlow m r, MonadReader r m) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
   driver <-
     QPerson.findById driverId
@@ -690,8 +689,7 @@ deleteDriver admin driverId = do
   return Success
 
 updateDriver ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CacheFlow m r,
@@ -772,8 +770,7 @@ updateDriver (personId, _, merchantOpCityId) req = do
         throwError $ InvalidRequest "Driver with TAXI_PLUS can't downgrade to either sedan or hatchback"
 
 updateMetaData ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r
   ) =>
@@ -785,7 +782,7 @@ updateMetaData (personId, _, _) req = do
   QMeta.updateMetaData req.device req.deviceOS req.deviceDateTime req.appPermissions personId
   return Success
 
-makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> m DriverInformationRes
+makeDriverInformationRes :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> m DriverInformationRes
 makeDriverInformationRes merchantOpCityId DriverEntityRes {..} org referralCode driverStats dghInfo currentDues manualDues md5DigestHash = do
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   CQGHC.findByMerchantOpCityId merchantOpCityId (Just id.getId) (Just "driverId") >>= \cfg ->
@@ -802,9 +799,8 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} org referralCode 
         }
 
 getNearbySearchRequests ::
-  ( EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    CacheFlow m r
+  ( KvDbFlow m r,
+    EsqDBReplicaFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m GetNearbySearchRequestsRes
@@ -999,7 +995,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
       return driverFCMPulledList
 
 getStats ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (EsqDBReplicaFlow m r, KvDbFlow m r, EncFlow m r, CacheFlow m r) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Day ->
   m DriverStatsRes
@@ -1131,7 +1127,7 @@ validationCheck DriverAlternateNumberReq {..} = do
     ]
 
 validate ::
-  ( EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CacheFlow m r,
@@ -1220,7 +1216,7 @@ verifyAuth (personId, _, _) req = do
 
 resendOtp ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
-    EsqDBFlow m r,
+    KvDbFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CacheFlow m r
@@ -1263,7 +1259,7 @@ resendOtp (personId, merchantId, merchantOpCityId) req = do
   return $ ResendAuth {auth = otpCode, attemptsLeft = updAttempt}
 
 remove ::
-  ( EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CacheFlow m r
@@ -1282,7 +1278,7 @@ remove (personId, _, _) = do
 
 -- history should be on basis of invoice instead of driverFee id
 getDriverPayments ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (EsqDBReplicaFlow m r, KvDbFlow m r, EncFlow m r, CacheFlow m r) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Day ->
   Maybe Day ->
@@ -1345,7 +1341,7 @@ getDriverPayments (personId, _, merchantOpCityId) mbFrom mbTo mbStatus mbLimit m
       ]
 
 clearDriverDues ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (EsqDBReplicaFlow m r, KvDbFlow m r, EncFlow m r, CacheFlow m r) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ServiceNames ->
   Maybe SPayment.DeepLinkData ->
@@ -1416,7 +1412,7 @@ data ManualInvoiceHistory = ManualInvoiceHistory
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 getDriverPaymentsHistoryV2 ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (EsqDBReplicaFlow m r, KvDbFlow m r, EncFlow m r, CacheFlow m r) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe INV.InvoicePaymentMode ->
   Maybe Int ->
@@ -1445,7 +1441,7 @@ getDriverPaymentsHistoryV2 (driverId, _, merchantOpCityId) mPaymentMode mbLimit 
 
   return HistoryEntityV2 {autoPayInvoices, manualPayInvoices}
 
-mkManualPaymentEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => INV.Invoice -> Map (Id DDF.DriverFee) DDF.DriverFee -> TransporterConfig -> m (Maybe ManualInvoiceHistory)
+mkManualPaymentEntity :: KvDbFlow m r => INV.Invoice -> Map (Id DDF.DriverFee) DDF.DriverFee -> TransporterConfig -> m (Maybe ManualInvoiceHistory)
 mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' transporterConfig = do
   allEntriesByInvoiceId <- QINV.findAllByInvoiceId manualInvoice.id
   allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntriesByInvoiceId <&> (.driverFeeId))
@@ -1523,7 +1519,7 @@ data DriverFeeInfoEntity = DriverFeeInfoEntity
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 getHistoryEntryDetailsEntityV2 ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (EsqDBReplicaFlow m r, KvDbFlow m r, EncFlow m r, CacheFlow m r) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Text ->
   ServiceNames ->
@@ -1555,7 +1551,7 @@ getHistoryEntryDetailsEntityV2 (driverId, _, merchantOpCityId) invoiceShortId se
     mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
 
 mkDriverFeeInfoEntity ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   [DDF.DriverFee] ->
   Maybe INV.InvoiceStatus ->
   TransporterConfig ->
@@ -1588,7 +1584,7 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
     )
     driverFees
 
-getCity :: (CacheFlow m r, EsqDBFlow m r) => GetCityReq -> m GetCityResp
+getCity :: KvDbFlow m r => GetCityReq -> m GetCityResp
 getCity req = do
   let latlng = LatLong {lat = req.lat, lon = req.lon}
   geometry <-
@@ -1615,7 +1611,7 @@ data DriverFeeResp = DriverFeeResp
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-getDownloadInvoiceData :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Maybe Day -> m [DriverFeeResp]
+getDownloadInvoiceData :: (EsqDBReplicaFlow m r, KvDbFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Maybe Day -> m [DriverFeeResp]
 getDownloadInvoiceData (personId, _merchantId, merchantOpCityId) from mbTo = do
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
@@ -1659,7 +1655,7 @@ getDownloadInvoiceData (personId, _merchantId, merchantOpCityId) from mbTo = do
 
 getDummyRideRequest ::
   ( EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     EncFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int]
