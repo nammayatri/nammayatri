@@ -37,8 +37,7 @@ import Tools.Error
 type AckResp = AckResponse
 
 callBasedEndRide ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
+  ( KvDbFlow m r,
     HasField "enableAPILatencyLogging" r Bool,
     HasField
       "minTripDistanceForReferralCfg"

@@ -171,7 +171,7 @@ type EndRideFlow m r =
   )
 
 driverEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (EndRideFlow m r, KvDbFlow m r, EncFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
@@ -182,7 +182,7 @@ driverEndRide handle rideId req = do
     $ DriverReq req
 
 callBasedEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (EndRideFlow m r, KvDbFlow m r, EncFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   CallBasedEndRideReq ->
@@ -190,7 +190,7 @@ callBasedEndRide ::
 callBasedEndRide handle rideId = endRide handle rideId . CallBasedReq
 
 dashboardEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (EndRideFlow m r, KvDbFlow m r, EncFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardEndRideReq ->
@@ -203,7 +203,7 @@ dashboardEndRide handle rideId req = do
   return APISuccess.Success
 
 cronJobEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (EndRideFlow m r, KvDbFlow m r, EncFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   CronJobEndRideReq ->
@@ -216,7 +216,7 @@ cronJobEndRide handle rideId req = do
   return APISuccess.Success
 
 endRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (EndRideFlow m r, KvDbFlow m r, EncFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->

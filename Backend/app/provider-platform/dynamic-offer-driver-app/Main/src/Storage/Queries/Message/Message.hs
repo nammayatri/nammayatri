@@ -22,7 +22,6 @@ import Domain.Types.Message.Message
 import Domain.Types.Message.MessageTranslation as DomainMT
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -32,16 +31,16 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Message.MessageTranslation as MT
 import Tools.Error
 
-createMessage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Message -> m ()
+createMessage :: KvDbFlow m r => Message -> m ()
 createMessage msg = do
   let mT = fmap (fn msg.id) (msg.messageTranslations)
       fn id' (Domain.Types.Message.Message.MessageTranslation language_ title_ description_ shortDescription_ label_ createdAt_) = DomainMT.MessageTranslation id' language_ title_ label_ description_ shortDescription_ createdAt_
   MT.createMany mT >> createWithKV msg
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Message -> m ()
+create :: KvDbFlow m r => Message -> m ()
 create = createWithKV
 
-findAllOnboardingMessages :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> m [RawMessage]
+findAllOnboardingMessages :: KvDbFlow m r => Merchant -> DMOC.MerchantOperatingCity -> m [RawMessage]
 findAllOnboardingMessages merchantParam moCity = do
   messages <-
     findAllWithDb
@@ -56,12 +55,12 @@ findAllOnboardingMessages merchantParam moCity = do
       ]
   pure $ map castToRawMessage messages
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Message -> m (Maybe RawMessage)
+findById :: KvDbFlow m r => Id Message -> m (Maybe RawMessage)
 findById (Id messageId) = do
   message <- findOneWithKV [Se.Is BeamM.id $ Se.Eq messageId]
   pure $ castToRawMessage <$> message
 
-findAllWithLimitOffset :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Int -> Maybe Int -> Merchant -> DMOC.MerchantOperatingCity -> m [RawMessage]
+findAllWithLimitOffset :: KvDbFlow m r => Maybe Int -> Maybe Int -> Merchant -> DMOC.MerchantOperatingCity -> m [RawMessage]
 findAllWithLimitOffset mbLimit mbOffset merchantParam moCity = do
   messages <-
     findAllWithOptionsDb
@@ -79,7 +78,7 @@ findAllWithLimitOffset mbLimit mbOffset merchantParam moCity = do
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
 
-updateMessageLikeCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Message -> Int -> m ()
+updateMessageLikeCount :: KvDbFlow m r => Id Message -> Int -> m ()
 updateMessageLikeCount messageId value = do
   findById messageId >>= \case
     Nothing -> pure ()
@@ -89,7 +88,7 @@ updateMessageLikeCount messageId value = do
         [Se.Set BeamM.likeCount $ likeCount + value]
         [Se.Is BeamM.id (Se.Eq $ getId messageId)]
 
-updateMessageViewCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Message -> Int -> m ()
+updateMessageViewCount :: KvDbFlow m r => Id Message -> Int -> m ()
 updateMessageViewCount messageId value = do
   findById messageId >>= \case
     Just msg -> do

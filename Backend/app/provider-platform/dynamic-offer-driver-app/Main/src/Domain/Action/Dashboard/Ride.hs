@@ -238,8 +238,7 @@ rideRoute merchantShortId opCity reqRideId = do
 ---------------------------------------------------------------------
 rideInfo ::
   ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]
   ) =>
   Id DM.Merchant ->
@@ -333,9 +332,7 @@ rideInfo merchantId merchantOpCityId reqRideId = do
       }
 
 calculateLocations ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id SRB.Booking ->
   Maybe (Id DLoc.Location) ->
   m (Maybe DLoc.Location, Maybe DLoc.Location)
@@ -356,9 +353,7 @@ mkLocationAPIEntity DLoc.Location {..} = do
   Common.LocationAPIEntity {..}
 
 mkLocationFromLocationMapping ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Text ->
   Int ->
   m (Maybe DLoc.Location)

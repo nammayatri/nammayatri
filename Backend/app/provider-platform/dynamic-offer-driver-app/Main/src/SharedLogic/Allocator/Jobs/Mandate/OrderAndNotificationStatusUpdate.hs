@@ -22,9 +22,7 @@ import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Notification as QNTF
 
 notificationAndOrderStatusUpdate ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
+  ( KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r,
     ServiceFlow m r,
     Esq.Transactionable m,
@@ -61,10 +59,10 @@ notificationAndOrderStatusUpdate (Job {id, jobInfo}) = withLogTag ("JobId-" <> i
     then return Complete
     else ReSchedule <$> getRescheduledTime transporterConfig
 
-getRescheduledTime :: (MonadTime m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m UTCTime
+getRescheduledTime :: (MonadTime m, KvDbFlow m r) => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
 
-updateInvoicesPendingToFailedAfterRetry :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
+updateInvoicesPendingToFailedAfterRetry :: (MonadFlow m, KvDbFlow m r) => TransporterConfig -> m ()
 updateInvoicesPendingToFailedAfterRetry transporterConfig = do
   let timeCheckLimit = transporterConfig.orderAndNotificationStatusCheckTimeLimit
       opCityId = transporterConfig.merchantOperatingCityId

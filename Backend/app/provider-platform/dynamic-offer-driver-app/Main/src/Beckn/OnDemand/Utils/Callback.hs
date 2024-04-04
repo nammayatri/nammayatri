@@ -32,8 +32,7 @@ import TransactionLogs.Types
 withCallback ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions],
     HasShortDurationRetryCfg r c,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
   ) =>
@@ -44,7 +43,7 @@ withCallback = withCallback' withShortRetry
 withCallback' ::
   (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]) =>
   (m () -> m ()) ->
-  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, CacheFlow m r) =>
+  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], KvDbFlow m r) =>
   DM.Merchant ->
   WithBecknCallback api callback_success m
 withCallback' doWithCallback transporter action api cbUrl internalEndPointHashMap fromError f = do

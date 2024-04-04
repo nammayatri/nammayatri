@@ -316,7 +316,7 @@ mkFullAddress Common.Address {..} = do
 isEmpty :: Maybe Text -> Bool
 isEmpty = maybe True (T.null . T.strip)
 
-buildLocationMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DL.Location -> Text -> Bool -> Maybe (Id DM.Merchant) -> Maybe (Id DMOC.MerchantOperatingCity) -> m DLM.LocationMapping
+buildLocationMapping :: KvDbFlow m r => Id DL.Location -> Text -> Bool -> Maybe (Id DM.Merchant) -> Maybe (Id DMOC.MerchantOperatingCity) -> m DLM.LocationMapping
 buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCityId = do
   id <- generateGUID
   now <- getCurrentTime

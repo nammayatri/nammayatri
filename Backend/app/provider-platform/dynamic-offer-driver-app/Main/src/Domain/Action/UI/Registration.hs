@@ -129,8 +129,7 @@ authHitsCountKey person = "BPP:Registration:auth:" <> getId person.id <> ":hitsC
 
 auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r
   ) =>
@@ -209,7 +208,7 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDe
       authId = SR.id token
   return $ AuthRes {attempts, authId}
 
-createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> m ()
+createDriverDetails :: (EncFlow m r, KvDbFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> m ()
 createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
   now <- getCurrentTime
   let driverId = cast personId
@@ -327,9 +326,7 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
       }
 
 makeSession ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r
   ) =>
   SmsSessionConfig ->
@@ -369,7 +366,7 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp merchan
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
+createDriverWithDetails :: (EncFlow m r, KvDbFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard Nothing
@@ -379,9 +376,8 @@ createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersio
 
 verify ::
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
-    EsqDBFlow m r,
+    KvDbFlow m r,
     EncFlow m r,
-    CacheFlow m r,
     EsqDBReplicaFlow m r
   ) =>
   Id SR.RegistrationToken ->
@@ -421,9 +417,8 @@ verify tokenId req = do
         throwError TokenExpired
 
 callWhatsappOptApi ::
-  ( EsqDBFlow m r,
-    EncFlow m r,
-    CacheFlow m r
+  ( KvDbFlow m r,
+    EncFlow m r
   ) =>
   Text ->
   Id SP.Person ->
@@ -436,19 +431,18 @@ callWhatsappOptApi mobileNo personId hasOptedIn merchantId merchantOpCityId = do
   void $ Whatsapp.whatsAppOptAPI merchantId merchantOpCityId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
   QP.updateWhatsappNotificationEnrollStatus (Just status) personId
 
-checkRegistrationTokenExists :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id SR.RegistrationToken -> m SR.RegistrationToken
+checkRegistrationTokenExists :: KvDbFlow m r => Id SR.RegistrationToken -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
   QR.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-checkPersonExists :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m SP.Person
+checkPersonExists :: KvDbFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
   QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
 
 resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
-    EsqDBFlow m r,
-    EncFlow m r,
-    CacheFlow m r
+    KvDbFlow m r,
+    EncFlow m r
   ) =>
   Id SR.RegistrationToken ->
   m ResendAuthRes
@@ -475,7 +469,7 @@ resend tokenId = do
   _ <- QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
-cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => Id SP.Person -> m ()
+cleanCachedTokens :: (KvDbFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
   regTokens <- QR.findAllByPersonId personId.getId
   for_ regTokens $ \regToken -> do
@@ -483,8 +477,7 @@ cleanCachedTokens personId = do
     void $ Redis.del key
 
 logout ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
+  ( KvDbFlow m r,
     Redis.HedisFlow m r
   ) =>
   (Id SP.Person, Id DO.Merchant, Id DMOC.MerchantOperatingCity) ->

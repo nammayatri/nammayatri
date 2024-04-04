@@ -29,7 +29,6 @@ import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.Vehicle as Veh
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
-import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -85,8 +84,7 @@ data InitRes = InitRes
   }
 
 handler ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EventStreamFlow m r
   ) =>
   Id DM.Merchant ->
@@ -120,8 +118,7 @@ handler merchantId req validatedReq = do
   pure InitRes {vehicleVariant = req.vehicleVariant, ..}
   where
     buildBooking ::
-      ( CacheFlow m r,
-        EsqDBFlow m r,
+      ( KvDbFlow m r,
         HasField "vehicleServiceTier" q DVST.ServiceTierType,
         HasField "distance" q (Maybe Meters),
         HasField "estimatedFare" q HighPrecMoney,
@@ -191,7 +188,7 @@ handler merchantId req validatedReq = do
         mbPaymentMethod & fromMaybeM (InvalidRequest "Payment method not allowed")
       pure (mbPaymentMethod, Nothing) -- TODO : Remove paymentUrl from here altogether
 
-findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
+findRandomExophone :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
 findRandomExophone merchantOpCityId = do
   merchantServiceUsageConfig <- CMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   exophones <- CQExophone.findByMerchantOpCityIdServiceAndExophoneType merchantOpCityId merchantServiceUsageConfig.getExophone DExophone.CALL_RIDE
@@ -201,9 +198,7 @@ findRandomExophone merchantOpCityId = do
   getRandomElement nonEmptyExophones
 
 validateRequest ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DM.Merchant ->
   InitReq ->
   m ValidatedInitReq

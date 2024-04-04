@@ -114,8 +114,7 @@ callOnSelectV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     CoreMetrics m,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
@@ -156,8 +155,7 @@ callOnUpdateV2 ::
     MonadFlow m,
     CoreMetrics m,
     HasHttpClientOptions r c,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
   ) =>
@@ -177,8 +175,7 @@ callOnStatusV2 ::
     MonadFlow m,
     CoreMetrics m,
     HasHttpClientOptions r c,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
   ) =>
@@ -198,8 +195,7 @@ callOnCancelV2 ::
     MonadFlow m,
     CoreMetrics m,
     HasHttpClientOptions r c,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
   ) =>
@@ -221,8 +217,7 @@ callOnConfirmV2 ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
-    EsqDBFlow m r,
-    CacheFlow m r,
+    KvDbFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DM.Merchant ->
@@ -254,8 +249,7 @@ buildBppUrl (Id transporterId) =
     <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
 
 sendRideAssignedUpdateToBAP ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -354,8 +348,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
         else return $ (getId driverId) `elem` specialDrivers
 
 sendRideStartedUpdateToBAP ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
@@ -388,8 +381,7 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
   void $ callOnStatusV2 rideStartedMsgV2 retryConfig merchant.id
 
 sendRideCompletedUpdateToBAP ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
@@ -420,16 +412,14 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id
 
 sendBookingCancelledUpdateToBAP ::
-  ( EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
-    CacheFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     CoreMetrics m,
-    CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -447,8 +437,7 @@ sendDriverOffer ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     CoreMetrics m,
     HasPrettyLogger m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
@@ -498,8 +487,7 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
           }
 
 sendDriverArrivalUpdateToBAP ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -532,8 +520,7 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
 
 sendStopArrivalUpdateToBAP ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -564,8 +551,7 @@ sendStopArrivalUpdateToBAP booking ride driver vehicle = do
     void $ callOnUpdateV2 stopArrivedMsgV2 retryConfig merchant.id
 
 sendNewMessageToBAP ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -599,8 +585,7 @@ sendNewMessageToBAP booking ride message = do
     void $ callOnUpdateV2 newMessageMsgV2 retryConfig merchant.id
 
 sendUpdateEditDestToBAP ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -637,8 +622,7 @@ sendUpdateEditDestToBAP booking ride bookingUpdateReqDetails newDestination curr
     void $ callOnUpdateV2 sUpdateEditDestToBAP retryConfig merchant.id
 
 sendSafetyAlertToBAP ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -673,8 +657,7 @@ sendSafetyAlertToBAP booking ride reason driver vehicle = do
     void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig merchant.id
 
 sendEstimateRepetitionUpdateToBAP ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -709,8 +692,7 @@ sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource dri
     void $ callOnUpdateV2 estimateRepMsgV2 retryConfig merchant.id
 
 sendQuoteRepetitionUpdateToBAP ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,

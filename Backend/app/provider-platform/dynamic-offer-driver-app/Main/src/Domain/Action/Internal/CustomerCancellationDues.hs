@@ -20,7 +20,6 @@ import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (getDbHash)
 import Kernel.Prelude
 import Kernel.Types.APISuccess
-import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -60,9 +59,7 @@ data CustomerCancellationDuesSyncReq = CustomerCancellationDuesSyncReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 disputeCancellationDues ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r
   ) =>
   Id Merchant ->
@@ -96,9 +93,7 @@ disputeCancellationDues merchantId merchantCity apiKey CancellationDuesReq {..} 
   pure Success
 
 getCancellationDuesDetails ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r
   ) =>
   Id Merchant ->
@@ -129,9 +124,7 @@ getCancellationDuesDetails merchantId merchantCity apiKey CancellationDuesReq {.
       }
 
 customerCancellationDuesSync ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r
   ) =>
   Id Merchant ->

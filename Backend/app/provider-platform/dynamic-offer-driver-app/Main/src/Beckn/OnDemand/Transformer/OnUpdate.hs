@@ -41,7 +41,7 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.FareParameters as QFP
 
 buildOnUpdateReqV2 ::
-  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, EncFlow m r, KvDbFlow m r) =>
   Context.Action ->
   Context.Domain ->
   Text ->
@@ -66,7 +66,7 @@ buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country b
       }
 
 mkOnUpdateMessageV2 ::
-  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, EncFlow m r, KvDbFlow m r) =>
   OU.OnUpdateBuildReq ->
   Maybe FarePolicyD.FullFarePolicy ->
   DBC.BecknConfig ->
@@ -79,7 +79,7 @@ mkOnUpdateMessageV2 req mbFarePolicy becknConfig = do
       }
 
 buildOnUpdateReqOrderV2 ::
-  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, EncFlow m r, KvDbFlow m r) =>
   OU.OnUpdateBuildReq ->
   Maybe FarePolicyD.FullFarePolicy ->
   DBC.BecknConfig ->

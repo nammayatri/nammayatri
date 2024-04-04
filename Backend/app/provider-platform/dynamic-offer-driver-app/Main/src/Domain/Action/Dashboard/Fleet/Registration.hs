@@ -142,6 +142,10 @@ createFleetOwnerInfo personId merchantId mbFleetType mbGstNumber = do
   QFOI.create fleetOwnerInfo
 
 fleetOwnerLogin ::
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    KvDbFlow m r,
+    EncFlow m r
+  ) =>
   FleetOwnerLoginReq ->
   Flow APISuccess
 fleetOwnerLogin req = do
@@ -194,6 +198,9 @@ buildFleetOwnerAuthReq merchantId' FleetOwnerRegisterReq {..} =
     }
 
 fleetOwnerVerify ::
+  ( KvDbFlow m r,
+    EncFlow m r
+  ) =>
   FleetOwnerLoginReq ->
   Flow APISuccess
 fleetOwnerVerify req = do

@@ -55,7 +55,7 @@ data UpdateOrgAdminProfileReq = UpdateOrgAdminProfileReq
 
 type UpdateOrgAdminProfileRes = OrgAdminProfileRes
 
-getProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> m OrgAdminProfileRes
+getProfile :: (KvDbFlow m r, EncFlow m r) => SP.Person -> m OrgAdminProfileRes
 getProfile admin = do
   let merchantId = admin.merchantId
   org <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -63,7 +63,7 @@ getProfile admin = do
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
   return $ makeOrgAdminProfileRes personAPIEntity (DM.makeMerchantAPIEntity org)
 
-updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
+updateProfile :: (KvDbFlow m r, EncFlow m r, MonadFlow m) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
 updateProfile admin req = do
   let merchantId = admin.merchantId
       updAdmin =

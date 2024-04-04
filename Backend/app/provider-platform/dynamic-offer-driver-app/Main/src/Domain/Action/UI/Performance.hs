@@ -6,10 +6,10 @@ import qualified Domain.Types.Person as SP
 import Domain.Types.RiderDetails ()
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (EsqDBFlow, EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Types.Error (PersonError (PersonNotFound))
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, fromMaybeM)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM)
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderDetails as QRD
@@ -27,7 +27,7 @@ newtype PerformanceRes = PerformanceRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-getDriverPerformance :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m PerformanceRes
+getDriverPerformance :: (KvDbFlow m r, EsqDBReplicaFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m PerformanceRes
 getDriverPerformance (driverId, _, _) = do
   _ <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   allRefferedCustomers <- QRD.findAllReferredByDriverId driverId

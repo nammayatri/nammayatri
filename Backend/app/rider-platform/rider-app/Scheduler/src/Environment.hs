@@ -85,6 +85,8 @@ data HandlerEnv = HandlerEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
+    isArtReplayerEnabled :: Bool,
+    dbFunctions :: DbFunctions,
     cacConfig :: CacConfig
   }
   deriving (Generic)
@@ -101,6 +103,8 @@ buildHandlerEnv HandlerCfg {..} = do
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Just kafkaProducerTools
+  isArtReplayerEnabled <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "IS_ART_REPLAYER_ENABLED"
+  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDBFunction
   hedisEnv <- connectHedis appCfg.hedisCfg ("rider-app-scheduler:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("ras:n_c:" <>)
   hedisClusterEnv <-

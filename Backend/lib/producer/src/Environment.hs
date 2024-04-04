@@ -93,7 +93,9 @@ data AppEnv = AppEnv
     kafkaProducerTools :: KafkaProducerTools,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    isArtReplayerEnabled :: Bool,
+    dbFunctions :: DbFunctions
   }
   deriving (Generic)
 
@@ -109,6 +111,8 @@ buildAppEnv AppCfg {..} = do
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Just kafkaProducerTools
+  isArtReplayerEnabled <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "IS_ART_REPLAYER_ENABLED"
+  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDBFunction
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

@@ -68,8 +68,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
     unless isReallocated $ BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
 
 cancelRideTransaction ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
+  ( KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r,
     LT.HasLocationService m r
   ) =>

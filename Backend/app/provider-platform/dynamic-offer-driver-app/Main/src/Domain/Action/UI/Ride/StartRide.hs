@@ -95,7 +95,7 @@ buildStartRideHandle merchantId merchantOpCityId = do
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
-type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r)
+type StartRideFlow m r = (MonadThrow m, Log m, KvDbFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r)
 
 driverStartRide ::
   (StartRideFlow m r) =>

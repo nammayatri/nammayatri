@@ -40,7 +40,7 @@ newtype DriverRideSummaryListResp = DriverRideSummaryListResp
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-listDailyRidesSummary :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Id Merchant.Merchant -> Id DM.MerchantOperatingCity -> [Day] -> m DriverRideSummaryListResp
+listDailyRidesSummary :: KvDbFlow m r => Id DP.Person -> Id Merchant.Merchant -> Id DM.MerchantOperatingCity -> [Day] -> m DriverRideSummaryListResp
 listDailyRidesSummary driverId _ _ req = do
   dailyStatsList <- mapM (SQDS.findByDriverIdAndDate driverId) req
   let list = mkRideSummaryList (catMaybes dailyStatsList)

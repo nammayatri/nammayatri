@@ -21,7 +21,6 @@ import qualified Domain.Types.RiderDetails as DRD
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (encrypt, getDbHash)
 import Kernel.Types.APISuccess
-import Kernel.Types.App
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -40,9 +39,7 @@ data RefereeLinkInfoReq = RefereeLinkInfoReq
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 linkReferee ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r
   ) =>
   Id Merchant ->

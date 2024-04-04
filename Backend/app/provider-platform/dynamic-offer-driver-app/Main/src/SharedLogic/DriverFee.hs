@@ -56,7 +56,7 @@ data PlatformFee = PlatformFee
     currency :: Currency
   }
 
-groupDriverFeeByInvoices :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Currency -> [DDF.DriverFee] -> m [DriverFeeByInvoice]
+groupDriverFeeByInvoices :: (EsqDBReplicaFlow m r, KvDbFlow m r) => Currency -> [DDF.DriverFee] -> m [DriverFeeByInvoice]
 groupDriverFeeByInvoices currency driverFees_ = do
   let pendingFees = filter (\df -> elem df.status [DDF.PAYMENT_PENDING, DDF.PAYMENT_OVERDUE]) driverFees_
 
@@ -67,13 +67,13 @@ groupDriverFeeByInvoices currency driverFees_ = do
 
   return ([pendingFeeInvoiceResp | pendingFeeInvoiceResp.totalFee /= 0] <> otherInvoiceResp)
   where
-    getUniqueInvoiceIds :: (EsqDBReplicaFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [DDF.DriverFee] -> Id INV.Invoice -> m [Id INV.Invoice]
+    getUniqueInvoiceIds :: (EsqDBReplicaFlow m r, MonadFlow m, KvDbFlow m r) => [DDF.DriverFee] -> Id INV.Invoice -> m [Id INV.Invoice]
     getUniqueInvoiceIds driverFees pendingFeeInvoiceId = do
       invoices <- (QINV.findValidByDriverFeeId . (.id)) `mapM` driverFees
       let uniqueInvoicesIds = map (.id) (mergeSortAndRemoveDuplicate invoices)
       return $ filter (pendingFeeInvoiceId /=) uniqueInvoicesIds
 
-    getInvoiceIdForPendingFees :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [DDF.DriverFee] -> m (Id INV.Invoice)
+    getInvoiceIdForPendingFees :: (EsqDBReplicaFlow m r, KvDbFlow m r) => [DDF.DriverFee] -> m (Id INV.Invoice)
     getInvoiceIdForPendingFees pendingFees = do
       invoices <- (runInReplica . QINV.findActiveManualInvoiceByFeeId . (.id)) `mapM` pendingFees
       let sortedInvoices = mergeSortAndRemoveDuplicate invoices
@@ -89,7 +89,7 @@ groupDriverFeeByInvoices currency driverFees_ = do
               inactivateInvoices rest
               return invoice.id
 
-    inactivateInvoices :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [INV.Invoice] -> m ()
+    inactivateInvoices :: KvDbFlow m r => [INV.Invoice] -> m ()
     inactivateInvoices = mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id))
 
     mergeSortAndRemoveDuplicate :: [[INV.Invoice]] -> [INV.Invoice]
@@ -97,7 +97,7 @@ groupDriverFeeByInvoices currency driverFees_ = do
       let uniqueInvoices = DL.nubBy (\x y -> x.id == y.id) (concat invoices)
       sortOn (Down . (.createdAt)) uniqueInvoices
 
-    insertInvoiceAgainstDriverFee :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [DDF.DriverFee] -> m (Id INV.Invoice)
+    insertInvoiceAgainstDriverFee :: KvDbFlow m r => [DDF.DriverFee] -> m (Id INV.Invoice)
     insertInvoiceAgainstDriverFee driverFees = do
       invoiceId <- generateGUID
       invoiceShortId <- generateShortId
@@ -126,7 +126,7 @@ groupDriverFeeByInvoices currency driverFees_ = do
         }
 
     buildDriverFeeByInvoice ::
-      (EsqDBReplicaFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+      (EsqDBReplicaFlow m r, MonadFlow m, KvDbFlow m r) =>
       [DDF.DriverFee] ->
       Maybe DDF.DriverFeeStatus ->
       Id INV.Invoice ->
@@ -155,7 +155,7 @@ groupDriverFeeByInvoices currency driverFees_ = do
 
       return $ DriverFeeByInvoice {..}
 
-changeAutoPayFeesAndInvoicesForDriverFeesToManual :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DDF.DriverFee] -> [Id DDF.DriverFee] -> m ()
+changeAutoPayFeesAndInvoicesForDriverFeesToManual :: KvDbFlow m r => [Id DDF.DriverFee] -> [Id DDF.DriverFee] -> m ()
 changeAutoPayFeesAndInvoicesForDriverFeesToManual alldriverFeeIdsInBatch validDriverFeeIds = do
   let driverFeeIdsToBeShiftedToManual = alldriverFeeIdsInBatch \\ validDriverFeeIds
   QDF.updateToManualFeeByDriverFeeIds driverFeeIdsToBeShiftedToManual
@@ -178,7 +178,7 @@ calculatePlatformFeeAttr totalFee plan = do
       sgst = HighPrecMoney (toRational plan.sgstPercentage) * platformFee
   (platformFee, cgst, sgst)
 
-setCoinToCashUsedAmount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DDF.DriverFee -> HighPrecMoney -> m ()
+setCoinToCashUsedAmount :: KvDbFlow m r => DDF.DriverFee -> HighPrecMoney -> m ()
 setCoinToCashUsedAmount driverFee totalFee = do
   coinAdjustedInSubscriptionKeyExists <- getCoinAdjustedInSubscriptionByDriverIdKey (cast driverFee.driverId)
   let integralTotalFee = double2Int $ realToFrac totalFee
@@ -192,13 +192,13 @@ mkCoinAdjustedInSubscriptionByDriverIdKey driverId = "DriverCoinUsedInSubscripti
 coinToCashProcessingLockKey :: Id Person -> Text
 coinToCashProcessingLockKey (Id driverId) = "CoinToCash:Processing:DriverId" <> driverId
 
-getCoinAdjustedInSubscriptionByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Int)
+getCoinAdjustedInSubscriptionByDriverIdKey :: KvDbFlow m r => Id Person -> m (Maybe Int)
 getCoinAdjustedInSubscriptionByDriverIdKey driverId = Hedis.withCrossAppRedis $ Hedis.get (mkCoinAdjustedInSubscriptionByDriverIdKey driverId)
 
-delCoinAdjustedInSubscriptionByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
+delCoinAdjustedInSubscriptionByDriverIdKey :: KvDbFlow m r => Id Person -> m ()
 delCoinAdjustedInSubscriptionByDriverIdKey driverId = Hedis.withCrossAppRedis $ Hedis.del (mkCoinAdjustedInSubscriptionByDriverIdKey driverId)
 
-setCoinAdjustedInSubscriptionByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Integer -> m ()
+setCoinAdjustedInSubscriptionByDriverIdKey :: KvDbFlow m r => Id Person -> Integer -> m ()
 setCoinAdjustedInSubscriptionByDriverIdKey driverId count = do
   _ <- Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) count
   Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) 2592000 -- expire in 30 days
@@ -206,19 +206,19 @@ setCoinAdjustedInSubscriptionByDriverIdKey driverId count = do
 notificationSchedulerKey :: UTCTime -> UTCTime -> Id MOC.MerchantOperatingCity -> ServiceNames -> Text
 notificationSchedulerKey startTime endTime merchantOpCityId serviceName = "NotificationScheduler:st:" <> show startTime <> ":et:" <> show endTime <> ":opCityid:" <> merchantOpCityId.getId <> ":serviceName:" <> show serviceName
 
-isNotificationSchedulerRunningKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => UTCTime -> UTCTime -> Id MOC.MerchantOperatingCity -> ServiceNames -> m (Maybe Bool)
+isNotificationSchedulerRunningKey :: KvDbFlow m r => UTCTime -> UTCTime -> Id MOC.MerchantOperatingCity -> ServiceNames -> m (Maybe Bool)
 isNotificationSchedulerRunningKey startTime endTime merchantOpCityId serviceName = Hedis.withCrossAppRedis $ Hedis.get (notificationSchedulerKey startTime endTime merchantOpCityId serviceName)
 
-setIsNotificationSchedulerRunningKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => UTCTime -> UTCTime -> Id MOC.MerchantOperatingCity -> ServiceNames -> Bool -> m ()
+setIsNotificationSchedulerRunningKey :: KvDbFlow m r => UTCTime -> UTCTime -> Id MOC.MerchantOperatingCity -> ServiceNames -> Bool -> m ()
 setIsNotificationSchedulerRunningKey startTime endTime merchantOpCityId serviceName isNotificationSchedulerRunning = do
   Hedis.withCrossAppRedis $ Hedis.setExp (notificationSchedulerKey startTime endTime merchantOpCityId serviceName) isNotificationSchedulerRunning (3600 * 24) -- one day expiry
 
 createDriverFeeForServiceInSchedulerKey :: ServiceNames -> Id MOC.MerchantOperatingCity -> Text
 createDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId = "CreateDriverFeeFor:service:" <> show serviceName <> ":opCityid:" <> merchantOpCityId.getId
 
-toCreateDriverFeeForService :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ServiceNames -> Id MOC.MerchantOperatingCity -> m (Maybe Bool)
+toCreateDriverFeeForService :: KvDbFlow m r => ServiceNames -> Id MOC.MerchantOperatingCity -> m (Maybe Bool)
 toCreateDriverFeeForService serviceName merchantOpCityId = Hedis.withCrossAppRedis $ Hedis.get (createDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId)
 
-setCreateDriverFeeForServiceInSchedulerKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ServiceNames -> Id MOC.MerchantOperatingCity -> Bool -> m ()
+setCreateDriverFeeForServiceInSchedulerKey :: KvDbFlow m r => ServiceNames -> Id MOC.MerchantOperatingCity -> Bool -> m ()
 setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId createDriverFeeForService = do
   Hedis.withCrossAppRedis $ Hedis.setExp (createDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId) createDriverFeeForService (3600 * 24) -- one day expiry

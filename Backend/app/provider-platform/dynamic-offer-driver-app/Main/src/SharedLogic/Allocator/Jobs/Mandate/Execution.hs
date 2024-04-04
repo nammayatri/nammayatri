@@ -37,8 +37,7 @@ import Tools.Error
 import qualified Tools.Payment as TPayment
 
 startMandateExecutionForDriver ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EncFlow m r,
     HasShortDurationRetryCfg r c
@@ -96,10 +95,7 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
         )
 
 buildExecutionRequestAndInvoice ::
-  ( MonadFlow m,
-    CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   DF.DriverFee ->
   NTF.Notification ->
   UTCTime ->
@@ -142,8 +138,7 @@ asyncExecutionCall ::
   ( MonadFlow m,
     HasShortDurationRetryCfg r c,
     EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r
   ) =>
   ExecutionData ->

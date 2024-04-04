@@ -80,6 +80,18 @@ newtype CancelSearchReq = CancelSearchReq
   deriving (Show)
 
 cancel ::
+  ( KvDbFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    HasHttpClientOptions r c,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasLongDurationRetryCfg r c,
+    EventStreamFlow m r,
+    LT.HasLocationService m r,
+    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
   CancelReq ->
   DM.Merchant ->
   SRB.Booking ->
@@ -152,7 +164,7 @@ cancel req merchant booking mbActiveSearchTry = do
             ..
           }
 
-customerCancellationChargesCalculation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DTC.TransporterConfig -> SRB.Booking -> Maybe Meters -> m ()
+customerCancellationChargesCalculation :: (MonadFlow m, KvDbFlow m r) => DTC.TransporterConfig -> SRB.Booking -> Maybe Meters -> m ()
 customerCancellationChargesCalculation transporterConfig booking disToPickup = do
   logInfo $ "Entered CustomerCancellationDuesCalculation: " <> show disToPickup
   whenJust disToPickup $ \driverDistToPickup -> do
@@ -174,8 +186,7 @@ customerCancellationChargesCalculation transporterConfig booking disToPickup = d
       QRD.updateCancellationDues riderId (rider.cancellationDues + transporterConfig.cancellationFee)
 
 cancelSearch ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r
   ) =>
   Id DM.Merchant ->
@@ -191,9 +202,7 @@ cancelSearch _merchantId searchTry = do
     Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver_ driverReq.searchTryId
 
 validateCancelSearchRequest ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DM.Merchant ->
   SignatureAuthResult ->
   CancelSearchReq ->
@@ -204,8 +213,7 @@ validateCancelSearchRequest merchantId _ req = do
   QST.findTryByRequestId searchReq.id >>= fromMaybeM (SearchTryDoesNotExist $ "searchRequestId-" <> searchReq.id.getId)
 
 validateCancelRequest ::
-  ( EsqDBFlow m r,
-    CacheFlow m r
+  ( KvDbFlow m r
   ) =>
   Id DM.Merchant ->
   SignatureAuthResult ->

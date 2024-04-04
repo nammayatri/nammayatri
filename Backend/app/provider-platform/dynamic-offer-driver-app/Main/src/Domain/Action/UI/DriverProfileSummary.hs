@@ -66,7 +66,7 @@ data DriverProfleSummaryRes = DriverProfleSummaryRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-getDriverProfileSummary :: (CacheFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m DriverProfleSummaryRes
+getDriverProfileSummary :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, KvDbFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m DriverProfleSummaryRes
 getDriverProfileSummary (driverId, _, _) = do
   person <- B.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   vehicleMB <- B.runInReplica $ QVehicle.findById person.id

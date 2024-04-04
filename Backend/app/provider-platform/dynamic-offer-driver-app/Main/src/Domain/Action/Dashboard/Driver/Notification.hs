@@ -61,9 +61,8 @@ sendDummyRideRequestToDriver merchantShortId opCity driverId = do
 
 triggerDummyRideRequest ::
   ( EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     EncFlow m r,
-    CacheFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   DP.Person ->

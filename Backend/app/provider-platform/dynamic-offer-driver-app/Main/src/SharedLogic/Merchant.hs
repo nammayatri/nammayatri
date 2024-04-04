@@ -23,7 +23,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
 
-findMerchantByShortId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ShortId DM.Merchant -> m DM.Merchant
+findMerchantByShortId :: KvDbFlow m r => ShortId DM.Merchant -> m DM.Merchant
 findMerchantByShortId merchantShortId = do
   CQM.findByShortId merchantShortId
     >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)

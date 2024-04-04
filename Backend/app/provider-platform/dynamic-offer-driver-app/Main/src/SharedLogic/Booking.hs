@@ -27,8 +27,7 @@ import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
 
 cancelBooking ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
+  ( KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],

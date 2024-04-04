@@ -31,14 +31,14 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 
-createTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
+createTicket :: (EncFlow m r, KvDbFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
 createTicket = runWithServiceConfig Ticket.createTicket
 
-updateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp
+updateTicket :: (EncFlow m r, KvDbFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp
 updateTicket = runWithServiceConfig Ticket.updateTicket
 
 runWithServiceConfig ::
-  (EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  (EncFlow m r, KvDbFlow m r) =>
   (TIT.IssueTicketServiceConfig -> req -> m resp) ->
   Id Merchant ->
   Id MerchantOperatingCity ->

@@ -206,8 +206,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
 
 driverDistanceToPickup ::
   ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     Maps.HasCoordinates tripStartPos,
     Maps.HasCoordinates tripEndPos
   ) =>

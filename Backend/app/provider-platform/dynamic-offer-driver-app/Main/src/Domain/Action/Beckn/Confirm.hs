@@ -164,8 +164,7 @@ handler merchant req validatedQuote = do
         }
 
 validateRequest ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HasPrettyLogger m r,
     HasHttpClientOptions r c,

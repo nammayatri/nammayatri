@@ -13,9 +13,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.Queries.DriverFee as QDF
 
 badDebtCalculation ::
-  ( CacheFlow m r,
-    MonadFlow m,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
