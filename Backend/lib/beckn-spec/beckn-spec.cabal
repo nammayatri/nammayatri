@@ -211,6 +211,7 @@ library
       BecknV2.OnDemand.Utils.Payment
       BecknV2.Utils
       Domain.Types
+      IGM.Types
   other-modules:
       Paths_beckn_spec
   hs-source-dirs:
