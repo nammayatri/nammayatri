@@ -40,6 +40,7 @@ import Domain.Types.Plan as Plan
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
 import Environment
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Types
 import Kernel.Prelude
@@ -103,8 +104,10 @@ data DocumentStatusItem = DocumentStatusItem
 statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Flow StatusRes
 statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
   -- multipleRC flag is temporary to support backward compatibility
+  person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   merchantOperatingCity <- SMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  let language = fromMaybe merchantOperatingCity.language person.language
   (dlStatus, mDL, dlVerficationMessage) <- getDLAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit merchantOperatingCity.language
   (rcStatus, _, rcVerficationMessage) <- getRCAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit multipleRC merchantOperatingCity.language
   (aadhaarStatus, _) <- getAadhaarStatus personId
@@ -117,41 +120,68 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
       mbStatus <- getProcessedDriverDocuments docType personId
       case mbStatus of
         Just status -> do
-          message <- documentStatusMessage status Nothing docType merchantOperatingCity.language
+          message <- documentStatusMessage status Nothing docType language
           return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
         Nothing -> do
           (status, mbReason) <- getInProgressDriverDocuments docType personId transporterConfig.onboardingTryLimit
-          message <- documentStatusMessage status mbReason docType merchantOperatingCity.language
+          message <- documentStatusMessage status mbReason docType language
           return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
-  vehicles <- do
-    associations <- DRAQuery.findAllLinkedByDriverId personId
-    if null associations
-      then return []
-      else RCQuery.findById `mapM` ((.rcId) <$> associations) >>= (return . catMaybes)
-  vehicleDocuments <-
-    vehicles `forM` \vehicleRC -> do
-      registrationNo <- decrypt vehicleRC.certificateNumber
-      let verifiedVehicleCategory' = getCategory <$> vehicleRC.vehicleVariant
+
+  processedVehicleDocuments <- do
+    processedVehicles <- do
+      associations <- DRAQuery.findAllLinkedByDriverId personId
+      if null associations
+        then return []
+        else RCQuery.findById `mapM` ((.rcId) <$> associations) >>= (return . catMaybes)
+    processedVehicles `forM` \processedVehicle -> do
+      registrationNo <- decrypt processedVehicle.certificateNumber
       documents <-
         vehicleDocumentTypes `forM` \docType -> do
-          mbStatus <- getProcessedVehicleDocuments docType personId vehicleRC
+          mbStatus <- getProcessedVehicleDocuments docType personId processedVehicle
           case mbStatus of
             Just status -> do
-              message <- documentStatusMessage status Nothing docType merchantOperatingCity.language
+              message <- documentStatusMessage status Nothing docType language
               return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
             Nothing -> do
               (status, mbReason) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit
-              message <- documentStatusMessage status mbReason docType merchantOperatingCity.language
+              message <- documentStatusMessage status mbReason docType language
               return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
-      return $ VehicleDocumentItem {registrationNo, userSelectedVehicleCategory = fromMaybe (fromMaybe DVeh.CAR verifiedVehicleCategory') vehicleRC.userPassedVehicleCategory, verifiedVehicleCategory = verifiedVehicleCategory', documents}
+      return $
+        VehicleDocumentItem
+          { registrationNo,
+            userSelectedVehicleCategory = fromMaybe (maybe DVeh.CAR getCategory processedVehicle.vehicleVariant) processedVehicle.userPassedVehicleCategory,
+            verifiedVehicleCategory = getCategory <$> processedVehicle.vehicleVariant,
+            documents
+          }
 
+  inprogressVehicleDocuments <- do
+    inprogressVehicle <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing personId DVC.VehicleRegistrationCertificate
+    case inprogressVehicle of
+      Just verificationReq -> do
+        registrationNo <- decrypt verificationReq.documentNumber
+        documents <-
+          vehicleDocumentTypes `forM` \docType -> do
+            (status, mbReason) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit
+            message <- documentStatusMessage status mbReason docType language
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
+        return $
+          [ VehicleDocumentItem
+              { registrationNo,
+                userSelectedVehicleCategory = fromMaybe DVeh.CAR verificationReq.vehicleCategory,
+                verifiedVehicleCategory = Nothing,
+                documents
+              }
+          ]
+      Nothing -> return []
+
+  let vehicleDocuments = processedVehicleDocuments <> inprogressVehicleDocuments
   -- check if driver is enabled if not then if all mandatory docs are verified then enable the driver
   forM_ vehicleDocuments $ \vehicleDoc -> do
     allVehicleDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus) (documents vehicleDoc)
     allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus) driverDocuments
     when (allVehicleDocsVerified && allDriverDocsVerified) $ enableDriver merchantOpCityId personId mDL
     mbVehicle <- Vehicle.findById personId -- check everytime
-    when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified) $
+    when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC) $
       activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo
 
   return $
