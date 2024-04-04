@@ -10,23 +10,21 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SuspectStatusHistory as Beam
 import Storage.Queries.SuspectStatusHistoryExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SuspectStatusHistory.SuspectStatusHistory -> m ())
+create :: KvDbFlow m r => (Domain.Types.SuspectStatusHistory.SuspectStatusHistory -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SuspectStatusHistory.SuspectStatusHistory] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.SuspectStatusHistory.SuspectStatusHistory] -> m ())
 createMany = traverse_ create
 
-findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.SuspectStatusHistory.SuspectStatusHistory -> m (Maybe Domain.Types.SuspectStatusHistory.SuspectStatusHistory))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.SuspectStatusHistory.SuspectStatusHistory -> m (Maybe Domain.Types.SuspectStatusHistory.SuspectStatusHistory))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SuspectStatusHistory.SuspectStatusHistory -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.SuspectStatusHistory.SuspectStatusHistory -> m ())
 updateByPrimaryKey (Domain.Types.SuspectStatusHistory.SuspectStatusHistory {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -13,38 +13,36 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SuspectStatusChangeRequest as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest -> m ())
+create :: KvDbFlow m r => (Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest] -> m ())
 createMany = traverse_ create
 
-findAllByMerchantId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m ([Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest]))
+findAllByMerchantId :: KvDbFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m ([Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest]))
 findAllByMerchantId merchantId = do findAllWithKV [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId)]
 
-findAllByReqStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SuspectFlagRequest.AdminApproval -> m ([Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest]))
+findAllByReqStatus :: KvDbFlow m r => (Domain.Types.SuspectFlagRequest.AdminApproval -> m ([Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest]))
 findAllByReqStatus reqStatus = do findAllWithKV [Se.Is Beam.reqStatus $ Se.Eq reqStatus]
 
-findBySuspectId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest))
+findBySuspectId :: KvDbFlow m r => (Kernel.Prelude.Text -> m (Maybe Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest))
 findBySuspectId suspectId = do findOneWithKV [Se.Is Beam.suspectId $ Se.Eq suspectId]
 
 findBySuspectIdAndMerchantId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m (Maybe Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest))
 findBySuspectIdAndMerchantId suspectId merchantId = do findOneWithKV [Se.And [Se.Is Beam.suspectId $ Se.Eq suspectId, Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId)]]
 
 findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Types.Id.Id Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest -> m (Maybe Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest -> m ())
 updateByPrimaryKey (Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest {..}) = do
   _now <- getCurrentTime
   updateWithKV

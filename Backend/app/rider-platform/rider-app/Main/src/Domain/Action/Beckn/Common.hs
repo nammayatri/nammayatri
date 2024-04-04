@@ -374,7 +374,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
             ..
           }
 
-farePaidReqHandler :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => ValidatedFarePaidReq -> m ()
+farePaidReqHandler :: KvDbFlow m r => ValidatedFarePaidReq -> m ()
 farePaidReqHandler req = void $ QRB.updatePaymentStatus req.booking.id req.paymentStatus
 
 driverArrivedReqHandler ::
@@ -458,8 +458,7 @@ mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId =
     }
 
 validateRideAssignedReq ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
@@ -475,8 +474,7 @@ validateRideAssignedReq RideAssignedReq {..} = do
     isAssignable booking = booking.status `elem` [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW]
 
 validateRideStartedReq ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
@@ -493,8 +491,7 @@ validateRideStartedReq RideStartedReq {..} = do
   return $ ValidatedRideStartedReq {..}
 
 validateDriverArrivedReq ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
@@ -512,8 +509,7 @@ validateDriverArrivedReq DriverArrivedReq {..} = do
     isValidRideStatus status = status == DRide.NEW
 
 validateRideCompletedReq ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
@@ -547,8 +543,7 @@ validateRideCompletedReq RideCompletedReq {..} = do
       return . Right $ ValidatedFarePaidReq {booking, paymentStatus = fromJust paymentStatus} -- fromJust is safe here because of above check.
 
 validateBookingCancelledReq ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,

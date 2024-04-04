@@ -66,7 +66,7 @@ createSavedReqLocation riderId sreq = do
   _ <- QSavedReqLocation.create location
   return APISuccess.Success
 
-getSavedReqLocations :: (MonadFlow m, KvDbFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> m SavedReqLocationsListRes
+getSavedReqLocations :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> m SavedReqLocationsListRes
 getSavedReqLocations riderId = do
   savedLocations <- runInReplica $ QSavedReqLocation.findAllByRiderId riderId
   return $ SavedReqLocationsListRes $ SavedReqLocation.makeSavedReqLocationAPIEntity <$> savedLocations

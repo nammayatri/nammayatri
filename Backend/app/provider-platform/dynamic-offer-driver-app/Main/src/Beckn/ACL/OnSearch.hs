@@ -20,14 +20,13 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified Domain.Action.Beckn.Search as DSearch
 import Domain.Types.BecknConfig
 import Kernel.Prelude
-import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
 
 mkOnSearchRequest ::
-  (MonadFlow m, KvDbFlow m r) =>
+  KvDbFlow m r =>
   DSearch.DSearchRes ->
   Context.Action ->
   Context.Domain ->

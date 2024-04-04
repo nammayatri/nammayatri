@@ -99,6 +99,7 @@ instance
     HasField "esqDBEnv" r EsqDBEnv,
     HasField "enablePrometheusMetricLogging" r Bool,
     HasField "enableRedisLatencyLogging" r Bool,
+    (HasField "dbFunctions" r DbFunctions),
     HasARTFlow r,
     HasCoreMetrics r,
     HasCacheConfig r

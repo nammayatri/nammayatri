@@ -46,14 +46,14 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
 
--- create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantServiceConfig -> m ()
+-- create :: KvDbFlow m r=> MerchantServiceConfig -> m ()
 -- create = createWithKV
 
--- findAllMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [MerchantServiceConfig]
+-- findAllMerchantOpCityId :: KvDbFlow m r=> Id DMOC.MerchantOperatingCity -> m [MerchantServiceConfig]
 -- findAllMerchantOpCityId (Id merchantOperatingCityId) = findAllWithKV [Se.Is BeamMSC.merchantOperatingCityId $ Se.Eq $ Just merchantOperatingCityId]
 
 findByMerchantOpCityIdAndService ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id Merchant ->
   Id DMOC.MerchantOperatingCity ->
   ServiceName ->
@@ -70,7 +70,7 @@ findByMerchantOpCityIdAndService (Id merchantId) (Id merchantOperatingCity) serv
       return $ Just resp'
 
 findByMerchantOpCityIdAndService' ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id Merchant ->
   Id DMOC.MerchantOperatingCity ->
   ServiceName ->
@@ -84,7 +84,7 @@ findByMerchantOpCityIdAndService' (Id merchantId) (Id merchantOperatingCity) ser
         ]
     ]
 
-upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
+upsertMerchantServiceConfig :: KvDbFlow m r => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig merchantServiceConfig = do
   now <- getCurrentTime
   let (_serviceName, configJSON) = BeamMSC.getServiceNameConfigJSON merchantServiceConfig.serviceConfig

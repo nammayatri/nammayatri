@@ -15,7 +15,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as Beam
@@ -23,7 +23,7 @@ import Storage.Queries.OrphanInstances.Exophone
 
 -- Extra code goes here --
 
-updateAffectedPhones :: (MonadFlow m, EsqDBFlow m r) => [Text] -> m ()
+updateAffectedPhones :: KvDbFlow m r => [Text] -> m ()
 updateAffectedPhones primaryPhones = do
   now <- getCurrentTime
   dbConf <- getMasterBeamConfig
@@ -46,13 +46,13 @@ updateAffectedPhones primaryPhones = do
                 B.||?. B.sqlBool_ (B.concat_ [B.val_ indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryPhones))
           )
 
-findAllExophones :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Domain.Types.Exophone.Exophone]
+findAllExophones :: KvDbFlow m r => m [Domain.Types.Exophone.Exophone]
 findAllExophones = findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Not $ Se.Eq ""]
 
-findAllMerchantOperatingCityIdsByPhone :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m [Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity]
+findAllMerchantOperatingCityIdsByPhone :: KvDbFlow m r => Text -> m [Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity]
 findAllMerchantOperatingCityIdsByPhone phone = findAllWithKV [Se.Or [Se.Is Beam.primaryPhone $ Se.Eq phone, Se.Is Beam.backupPhone $ Se.Eq phone]] <&> (Domain.Types.Exophone.merchantOperatingCityId <$>)
 
-findAllByPhone :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m [Domain.Types.Exophone.Exophone]
+findAllByPhone :: KvDbFlow m r => Text -> m [Domain.Types.Exophone.Exophone]
 findAllByPhone phone = do
   merchOpCityIds <- findAllMerchantOperatingCityIdsByPhone phone
   findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.In $ Kernel.Types.Id.getId <$> merchOpCityIds]

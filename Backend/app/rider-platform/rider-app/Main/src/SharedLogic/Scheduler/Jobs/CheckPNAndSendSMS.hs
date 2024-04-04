@@ -28,7 +28,6 @@ import qualified Tools.SMS as Sms
 
 checkPNAndSendSMS ::
   ( KvDbFlow m r,
-    MonadFlow m,
     EncFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig]
   ) =>
@@ -45,7 +44,6 @@ checkPNAndSendSMS Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
 
 sendSMS ::
   ( KvDbFlow m r,
-    MonadFlow m,
     EncFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig]
   ) =>

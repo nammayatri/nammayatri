@@ -12,18 +12,18 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Notification as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Notification.Notification -> m ())
+create :: KvDbFlow m r => (Domain.Types.Notification.Notification -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Notification.Notification] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.Notification.Notification] -> m ())
 createMany = traverse_ create
 
 findByMerchantIdAndreadStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Domain.Types.Notification.NotificationCategory -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m (Maybe Domain.Types.Notification.Notification))
 findByMerchantIdAndreadStatus notificationCategory readStatus merchantId = do
   findOneWithKV
@@ -34,21 +34,19 @@ findByMerchantIdAndreadStatus notificationCategory readStatus merchantId = do
         ]
     ]
 
-findByReceiverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> m ([Domain.Types.Notification.Notification]))
+findByReceiverId :: KvDbFlow m r => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> m ([Domain.Types.Notification.Notification]))
 findByReceiverId limit offset receiverId = do findAllWithOptionsKV [Se.And [Se.Is Beam.receiverId $ Se.Eq receiverId]] (Se.Desc Beam.createdAt) limit offset
 
-findByReceiverIdAndId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Notification.Notification -> m (Maybe Domain.Types.Notification.Notification))
+findByReceiverIdAndId :: KvDbFlow m r => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Notification.Notification -> m (Maybe Domain.Types.Notification.Notification))
 findByReceiverIdAndId receiverId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.receiverId $ Se.Eq receiverId, Se.Is Beam.id $ Se.Eq id]]
 
-updateReadStatusById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Notification.Notification -> m ())
+updateReadStatusById :: KvDbFlow m r => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Notification.Notification -> m ())
 updateReadStatusById readStatus (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.readStatus readStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Notification.Notification -> m (Maybe Domain.Types.Notification.Notification))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Notification.Notification -> m (Maybe Domain.Types.Notification.Notification))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Notification.Notification -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.Notification.Notification -> m ())
 updateByPrimaryKey (Domain.Types.Notification.Notification {..}) = do
   _now <- getCurrentTime
   updateWithKV

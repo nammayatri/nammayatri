@@ -95,7 +95,9 @@ def process_log_file(input_file_path):
                         continue
                     if requestId not in requestIds:
                         requestIds[requestId] = []
-                    requestIds[requestId].append([line, parsableLine['timestamp']])
+                    # check if the line is not there corresponding to its requestId , get all the lines for that requestId not the list of line and timestamp
+                    if line not in (line[0] for line in requestIds[requestId]):
+                        requestIds[requestId].append([line, parsableLine['timestamp']])
                     if "requestMethod" in line :
                         apiPath = parsableLine["request"]["rawPathInfo"].replace('"', "")
                         if apiPath not in requestIdForAPI :

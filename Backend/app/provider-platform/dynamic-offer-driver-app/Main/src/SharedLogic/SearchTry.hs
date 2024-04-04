@@ -189,10 +189,8 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
       return searchTry
 
 buildSearchTry ::
-  ( MonadFlow m,
-    CacheFlow m r,
-    Metrics.CoreMetrics m,
-    EsqDBFlow m r
+  ( Metrics.CoreMetrics m,
+    KvDbFlow m r
   ) =>
   Id DM.Merchant ->
   DSR.SearchRequest ->

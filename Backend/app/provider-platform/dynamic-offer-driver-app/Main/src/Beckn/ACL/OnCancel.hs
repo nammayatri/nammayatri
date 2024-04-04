@@ -53,8 +53,7 @@ import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 
 buildOnCancelMessageV2 ::
-  ( MonadFlow m,
-    KvDbFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>

@@ -265,7 +265,7 @@ processPayment _ driver orderId sendNotification (serviceName, subsConfig) invoi
     when (sendNotification && subsConfig.sendInAppFcmNotifications) $ notifyPaymentSuccessIfNotNotified driver orderId
 
 updatePaymentStatus ::
-  (MonadFlow m, KvDbFlow m r) =>
+  KvDbFlow m r =>
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
   DP.ServiceNames ->

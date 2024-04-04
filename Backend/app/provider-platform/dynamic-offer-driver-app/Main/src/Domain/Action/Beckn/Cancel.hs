@@ -155,7 +155,7 @@ cancel req merchant booking = do
             ..
           }
 
-customerCancellationChargesCalculation :: (MonadFlow m, KvDbFlow m r) => DTC.TransporterConfig -> SRB.Booking -> Maybe Meters -> m ()
+customerCancellationChargesCalculation :: KvDbFlow m r => DTC.TransporterConfig -> SRB.Booking -> Maybe Meters -> m ()
 customerCancellationChargesCalculation transporterConfig booking disToPickup = do
   logInfo $ "Entered CustomerCancellationDuesCalculation: " <> show disToPickup
   whenJust disToPickup $ \driverDistToPickup -> do

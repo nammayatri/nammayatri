@@ -19,10 +19,10 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.RentalDetails as BeamRS
 
-createRentalDetails :: (MonadFlow m, EsqDBFlow m r) => RentalDetails -> m ()
+createRentalDetails :: KvDbFlow m r => RentalDetails -> m ()
 createRentalDetails = createWithKV
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id RentalDetails -> m (Maybe RentalDetails)
+findById :: KvDbFlow m r => Id RentalDetails -> m (Maybe RentalDetails)
 findById rentalDetailsId = findOneWithKV [Se.Is BeamRS.id $ Se.Eq (getId rentalDetailsId)]
 
 instance FromTType' BeamRS.RentalDetails RentalDetails where

@@ -151,7 +151,7 @@ verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
       pure res
     Nothing -> throwError TransactionIdNotFound
 
-fetchAndCacheAadhaarImage :: (MonadFlow m, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m), KvDbFlow m r) => Person.Person -> DriverInformation -> m (Maybe Text)
+fetchAndCacheAadhaarImage :: (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m), KvDbFlow m r) => Person.Person -> DriverInformation -> m (Maybe Text)
 fetchAndCacheAadhaarImage driver driverInfo =
   if driverInfo.aadhaarVerified
     then case driverInfo.compAadhaarImagePath of
@@ -169,7 +169,7 @@ fetchAndCacheAadhaarImage driver driverInfo =
               Right _ -> CQDI.cacheDriverImageByDriverId driverInfo.driverId compImage >> return (Just compImage)
     else pure Nothing
 
-backfillAadhaarImage :: (MonadFlow m, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m), KvDbFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> AadhaarVerification -> m (Maybe Text)
+backfillAadhaarImage :: (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m), KvDbFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> AadhaarVerification -> m (Maybe Text)
 backfillAadhaarImage person merchantOpCityId aadhaarVerification =
   case aadhaarVerification.driverImage of
     Nothing -> return Nothing
@@ -185,13 +185,13 @@ backfillAadhaarImage person merchantOpCityId aadhaarVerification =
             Left _ -> return $ Just image
             Right _ -> return $ Just compImage
 
-uploadOriginalAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, KvDbFlow m r) => Person.Person -> Text -> ImageType -> m (Text, Either SomeException ())
+uploadOriginalAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadTime m, KvDbFlow m r) => Person.Person -> Text -> ImageType -> m (Text, Either SomeException ())
 uploadOriginalAadhaarImage person image imageType = do
   orgImageFilePath <- S3.createFilePath "/driver-aadhaar-photo/" ("driver-" <> getId person.id) S3.Image (parseImageExtension imageType)
   resultOrg <- try @_ @SomeException $ S3.put (unpack orgImageFilePath) image
   pure (orgImageFilePath, resultOrg)
 
-uploadCompressedAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, KvDbFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> ImageType -> m (Text, Either SomeException ())
+uploadCompressedAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadTime m, KvDbFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> ImageType -> m (Text, Either SomeException ())
 uploadCompressedAadhaarImage person merchantOpCityId image imageType = do
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound (merchantOpCityId.getId))
   let mbconfig = transporterConfig.aadhaarImageResizeConfig

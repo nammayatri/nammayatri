@@ -87,7 +87,7 @@ bookingStatus bookingId _ = do
           additionalInfo = Nothing
         }
 
-bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> m BookingListRes
+bookingList :: (KvDbFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> m BookingListRes
 bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId = do
   rbList <- runInReplica $ QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId
   logInfo $ "rbList: test " <> show rbList
@@ -150,7 +150,7 @@ validateStopReq booking isEdit = do
     SRB.OneWaySpecialZoneDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in special zone rides"
     SRB.InterCityDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in intercity rides"
 
-buildLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => StopReq -> m Location
+buildLocation :: KvDbFlow m r => StopReq -> m Location
 buildLocation req = do
   id <- generateGUID
   now <- getCurrentTime
@@ -164,7 +164,7 @@ buildLocation req = do
         ..
       }
 
-buildLocationMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Location -> Text -> Bool -> Maybe (Id DM.Merchant) -> Maybe (Id DMOC.MerchantOperatingCity) -> m DLM.LocationMapping
+buildLocationMapping :: KvDbFlow m r => Id Location -> Text -> Bool -> Maybe (Id DM.Merchant) -> Maybe (Id DMOC.MerchantOperatingCity) -> m DLM.LocationMapping
 buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCityId = do
   id <- generateGUID
   now <- getCurrentTime

@@ -186,7 +186,7 @@ makeOfferListCacheKey includeDriverId req = do
         _ -> show offerListingMetric'
 
 sendLinkTroughChannelProvided ::
-  (MonadFlow m, KvDbFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig) =>
+  (KvDbFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig) =>
   Maybe Payment.PaymentLinks ->
   Id DP.Person ->
   Maybe HighPrecMoney ->

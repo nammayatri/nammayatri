@@ -11,23 +11,23 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.PortalConfigs as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PortalConfigs.PortalConfigs -> m ())
+create :: KvDbFlow m r => (Domain.Types.PortalConfigs.PortalConfigs -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PortalConfigs.PortalConfigs] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.PortalConfigs.PortalConfigs] -> m ())
 createMany = traverse_ create
 
-findByConfigName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.PortalConfigs.PortalConfigs))
+findByConfigName :: KvDbFlow m r => (Kernel.Prelude.Text -> m (Maybe Domain.Types.PortalConfigs.PortalConfigs))
 findByConfigName configName = do findOneWithKV [Se.Is Beam.configName $ Se.Eq configName]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PortalConfigs.PortalConfigs -> m (Maybe Domain.Types.PortalConfigs.PortalConfigs))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.PortalConfigs.PortalConfigs -> m (Maybe Domain.Types.PortalConfigs.PortalConfigs))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PortalConfigs.PortalConfigs -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.PortalConfigs.PortalConfigs -> m ())
 updateByPrimaryKey (Domain.Types.PortalConfigs.PortalConfigs {..}) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.configName configName, Se.Set Beam.createdAt createdAt, Se.Set Beam.updatedAt _now, Se.Set Beam.value value] [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

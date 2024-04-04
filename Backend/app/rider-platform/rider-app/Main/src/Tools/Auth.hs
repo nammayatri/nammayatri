@@ -56,8 +56,7 @@ instance VerificationMethod VerifyToken where
     \If you don't have a token, use registration endpoints."
 
 verifyPerson ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     Redis.HedisFlow m r,
     HasField "authTokenCacheExpiry" r Seconds
   ) =>
@@ -87,15 +86,14 @@ authTokenCacheKey regToken =
   "rider-platform:authTokenCacheKey:" <> regToken
 
 verifyPersonAction ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     Redis.HedisFlow m r,
     HasField "authTokenCacheExpiry" r Seconds
   ) =>
   VerificationAction VerifyToken m
 verifyPersonAction = VerificationAction verifyPerson
 
-verifyToken :: (CacheFlow m r, EsqDBFlow m r) => RegToken -> m SR.RegistrationToken
+verifyToken :: KvDbFlow m r => RegToken -> m SR.RegistrationToken
 verifyToken token =
   RegistrationToken.findByToken token
     >>= Utils.fromMaybeM (InvalidToken token)

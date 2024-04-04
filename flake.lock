@@ -2014,15 +2014,16 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1712767997,
-        "narHash": "sha256-/AnsiLfI7a0k6ey1e7G+blhlbFCQ5O8BZy665JDnwCo=",
+        "lastModified": 1712234752,
+        "narHash": "sha256-lxtayKnMuO1DFOsfyVykZNctvjgdWiuO25BoG1DuLGQ=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "20c533d7afedd8e434d2537ccf9af3d127f56ee9",
+        "rev": "0d6f5143f1322db7ca0a0ce670880a8bd43fc248",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/KVDbFlow-in-dsl",
         "repo": "namma-dsl",
         "type": "github"
       }
@@ -3818,11 +3819,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1713076596,
-        "narHash": "sha256-2VN7yqyN6zC4SpQxMhuYZ1LfpXwtv2CKqPIxp+izQV4=",
+        "lastModified": 1713175674,
+        "narHash": "sha256-vGNMkRVWhm0cmR/wc7l49T6inTvOxqWlpg72HnkORrc=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "5f808479e5768c55e833a5fcb0e857c0fc0d48c9",
+        "rev": "b872f3fb0e2e9e5c175aaef74ea17ca35982fd09",
         "type": "github"
       },
       "original": {
