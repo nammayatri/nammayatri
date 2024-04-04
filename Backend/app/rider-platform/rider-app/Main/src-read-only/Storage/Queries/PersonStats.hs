@@ -26,6 +26,11 @@ createMany = traverse_ create
 findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.PersonStats.PersonStats))
 findByPersonId (Kernel.Types.Id.Id personId) = do findOneWithKV [Se.Is Beam.personId $ Se.Eq personId]
 
+updateReferralCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateReferralCount referralCount (Kernel.Types.Id.Id personId) = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.referralCount referralCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.personId $ Se.Eq personId]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.PersonStats.PersonStats))
 findByPrimaryKey (Kernel.Types.Id.Id personId) = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq personId]]
 
@@ -39,6 +44,7 @@ updateByPrimaryKey (Domain.Types.PersonStats.PersonStats {..}) = do
       Se.Set Beam.eveningPeakRides eveningPeakRides,
       Se.Set Beam.morningPeakRides morningPeakRides,
       Se.Set Beam.offPeakRides offPeakRides,
+      Se.Set Beam.referralCount referralCount,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.userCancelledRides userCancelledRides,
       Se.Set Beam.weekdayRides weekdayRides,

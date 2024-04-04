@@ -76,7 +76,9 @@ data PersonT f = PersonT
     useFakeOtp :: B.C f (Maybe Text),
     followsRide :: B.C f Bool,
     falseSafetyAlarmCount :: B.C f (Maybe Int),
-    safetyCenterDisabledOnDate :: B.C f (Maybe UTCTime)
+    safetyCenterDisabledOnDate :: B.C f (Maybe UTCTime),
+    referredByCustomer :: B.C f (Maybe Text),
+    customerReferralCode :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
