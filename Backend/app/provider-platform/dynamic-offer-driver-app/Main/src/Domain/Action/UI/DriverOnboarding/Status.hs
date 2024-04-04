@@ -46,6 +46,7 @@ import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Kernel.Utils.Error
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -159,20 +160,25 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
     inprogressVehicle <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing personId DVC.VehicleRegistrationCertificate
     case inprogressVehicle of
       Just verificationReq -> do
-        registrationNo <- decrypt verificationReq.documentNumber
-        documents <-
-          vehicleDocumentTypes `forM` \docType -> do
-            (status, mbReason) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit
-            message <- documentStatusMessage status mbReason docType language
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
-        return $
-          [ VehicleDocumentItem
-              { registrationNo,
-                userSelectedVehicleCategory = fromMaybe DVeh.CAR verificationReq.vehicleCategory,
-                verifiedVehicleCategory = Nothing,
-                documents
-              }
-          ]
+        registrationNoEither <- try @_ @SomeException (decrypt verificationReq.documentNumber)
+        case registrationNoEither of
+          Left err -> do
+            logError $ "Error while decrypting document number: " <> (verificationReq.documentNumber & unEncrypted . encrypted) <> " with err: " <> show err
+            return []
+          Right registrationNo -> do
+            documents <-
+              vehicleDocumentTypes `forM` \docType -> do
+                (status, mbReason) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit
+                message <- documentStatusMessage status mbReason docType language
+                return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
+            return $
+              [ VehicleDocumentItem
+                  { registrationNo,
+                    userSelectedVehicleCategory = fromMaybe DVeh.CAR verificationReq.vehicleCategory,
+                    verifiedVehicleCategory = Nothing,
+                    documents
+                  }
+              ]
       Nothing -> return []
 
   let vehicleDocuments = processedVehicleDocuments <> inprogressVehicleDocuments
