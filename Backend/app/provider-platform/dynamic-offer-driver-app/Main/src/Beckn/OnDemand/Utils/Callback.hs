@@ -28,8 +28,7 @@ import Servant.Client
 withCallback ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions],
     HasShortDurationRetryCfg r c,
-    CacheFlow m r,
-    EsqDBFlow m r
+    KvDbFlow m r
   ) =>
   DM.Merchant ->
   WithBecknCallback api callback_success m
@@ -37,7 +36,7 @@ withCallback = withCallback' withShortRetry
 
 withCallback' ::
   (m () -> m ()) ->
-  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, CacheFlow m r) =>
+  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], KvDbFlow m r) =>
   DM.Merchant ->
   WithBecknCallback api callback_success m
 withCallback' doWithCallback transporter action api cbUrl internalEndPointHashMap fromError f = do

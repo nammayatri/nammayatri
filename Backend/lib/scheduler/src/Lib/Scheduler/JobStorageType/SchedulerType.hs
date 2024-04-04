@@ -22,7 +22,6 @@ module Lib.Scheduler.JobStorageType.SchedulerType where
 import qualified Data.ByteString as BS
 import qualified Data.Map as M
 import Data.Singletons
-import Kernel.Beam.Functions (FromTType'')
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.Id

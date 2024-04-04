@@ -73,7 +73,7 @@ handler merchantId req ride = do
   calculateAverageRating driverId merchant.minimumDriverRatesCount
 
 calculateAverageRating ::
-  (CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (KvDbFlow m r, EncFlow m r) =>
   Id DP.Person ->
   Int ->
   m ()

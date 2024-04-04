@@ -115,8 +115,7 @@ getStatus ::
     Transactionable m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
+    KvDbFlow m r,
     EventStreamFlow m r,
     MonadFlow m
   ) =>
@@ -227,7 +226,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
   pure Ack
   where
     getInvoicesAndServiceWithServiceConfigByOrderId ::
-      (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) =>
+      (KvDbFlow m r, EsqDBReplicaFlow m r) =>
       DOrder.PaymentOrder ->
       m ([INV.Invoice], DP.ServiceNames, DSC.SubscriptionConfig, DP.Driver)
     getInvoicesAndServiceWithServiceConfigByOrderId order = do
@@ -242,10 +241,8 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
       return (invoices', serviceName', serviceConfig, driver)
 
 processPayment ::
-  ( MonadFlow m,
-    CacheFlow m r,
-    EsqDBReplicaFlow m r,
-    EsqDBFlow m r
+  ( KvDbFlow m r,
+    EsqDBReplicaFlow m r
   ) =>
   Id DM.Merchant ->
   DP.Driver ->
@@ -268,7 +265,7 @@ processPayment _ driver orderId sendNotification (serviceName, subsConfig) invoi
     when (sendNotification && subsConfig.sendInAppFcmNotifications) $ notifyPaymentSuccessIfNotNotified driver orderId
 
 updatePaymentStatus ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, KvDbFlow m r) =>
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
   DP.ServiceNames ->
@@ -290,7 +287,7 @@ updatePaymentStatus driverId merchantOpCityId serviceName = do
               fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst
         )
 
-notifyPaymentSuccessIfNotNotified :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> Id DOrder.PaymentOrder -> m ()
+notifyPaymentSuccessIfNotNotified :: KvDbFlow m r => DP.Person -> Id DOrder.PaymentOrder -> m ()
 notifyPaymentSuccessIfNotNotified driver orderId = do
   let key = "driver-offer:SuccessNotif-" <> orderId.getId
   sendNotificationIfNotSent key 86400 $ do
@@ -300,7 +297,7 @@ shouldSendSuccessNotification :: Payment.MandateStatus -> Bool
 shouldSendSuccessNotification mandateStatus = mandateStatus `notElem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]
 
 notifyAndUpdateInvoiceStatusIfPaymentFailed ::
-  (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) =>
+  (KvDbFlow m r, EsqDBReplicaFlow m r) =>
   Id DP.Person ->
   Id DOrder.PaymentOrder ->
   Payment.TransactionStatus ->
@@ -343,15 +340,13 @@ sendNotificationIfNotSent key expiry actions = do
     actions
 
 pdnNotificationStatus ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
     MonadFlow m,
     HasShortDurationRetryCfg r c,
     ServiceFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     EncFlow m r
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -376,7 +371,7 @@ pdnNotificationStatus (_, merchantId, opCity) notificationId = do
         }
 
 processNotification ::
-  (CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (KvDbFlow m r, EncFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   DNTF.Notification ->
   Payment.NotificationStatus ->
@@ -417,7 +412,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
     QNTF.updateNotificationStatusAndResponseInfoById notification.id notificationStatus respCode respMessage
 
 processMandate ::
-  (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, EventStreamFlow m r) =>
+  (KvDbFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) =>
   (DP.ServiceNames, DSC.SubscriptionConfig) ->
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Payment.MandateStatus ->

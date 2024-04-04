@@ -53,9 +53,8 @@ newtype FleetOwnerVerifyRes = FleetOwnerVerifyRes
 
 fleetOwnerLogin ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    EsqDBFlow m r,
-    EncFlow m r,
-    CacheFlow m r
+    KvDbFlow m r,
+    EncFlow m r
   ) =>
   FleetOwnerLoginReq ->
   m APISuccess
@@ -92,9 +91,8 @@ fleetOwnerLogin req = do
   pure Success
 
 fleetOwnerVerify ::
-  ( EsqDBFlow m r,
-    EncFlow m r,
-    CacheFlow m r
+  ( KvDbFlow m r,
+    EncFlow m r
   ) =>
   FleetOwnerLoginReq ->
   m APISuccess

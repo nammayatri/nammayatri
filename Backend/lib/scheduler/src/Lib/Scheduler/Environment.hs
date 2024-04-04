@@ -110,7 +110,9 @@ data SchedulerEnv = SchedulerEnv
     cacheConfig :: CacheConfig,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    isArtReplayerEnabled :: Bool,
+    dbFunctions :: DbFunctions
   }
   deriving (Generic)
 
@@ -130,7 +132,7 @@ type JobCreator r m = (JobCreatorEnv r, JobMonad r m)
 
 type JobExecutor r m = (HasField "streamName" r Text, HasField "maxShards" r Int, HasField "groupName" r Text, HasField "schedulerSetName" r Text, JobMonad r m)
 
-type JobMonad r m = (HasField "schedulerType" r SchedulerType, MonadReader r m, HedisFlow m r, MonadFlow m, EsqDBFlow m r)
+type JobMonad r m = (HasField "schedulerType" r SchedulerType, MonadReader r m, HedisFlow m r, MonadFlow m, KvDbFlow m r)
 
 runSchedulerM :: HasSchemaName SystemConfigsT => SchedulerConfig -> SchedulerEnv -> SchedulerM a -> IO a
 runSchedulerM schedulerConfig env action = do

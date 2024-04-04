@@ -54,8 +54,7 @@ import Tools.Error
 
 buildOnCancelMessageV2 ::
   ( MonadFlow m,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>

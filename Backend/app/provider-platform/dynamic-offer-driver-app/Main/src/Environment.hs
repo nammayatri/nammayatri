@@ -21,7 +21,6 @@ import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import EulerHS.Prelude
 import Kernel.Beam.Functions (getArtDbFunctions, getDBFunction)
-import Kernel.Beam.Lib.Utils (DbFunctions)
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude (NominalDiffTime, (>>>=))

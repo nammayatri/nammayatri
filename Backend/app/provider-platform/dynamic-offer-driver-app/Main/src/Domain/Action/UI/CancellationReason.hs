@@ -26,7 +26,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Utils.Common
 import qualified Storage.Queries.CancellationReason as QCR
 
-list :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => m [CancellationReasonAPIEntity]
+list :: (KvDbFlow m r, EsqDBReplicaFlow m r) => m [CancellationReasonAPIEntity]
 list = do
   let cancellationReasons = QCR.findAll Nothing Nothing True
   fmap makeCancellationReasonAPIEntity <$> runInReplica cancellationReasons

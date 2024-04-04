@@ -33,7 +33,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (KvDbFlow)
 import Kernel.Utils.Error
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.Queries.Person as QPerson
@@ -56,7 +56,7 @@ data LeaderBoardRes = LeaderBoardRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 getDailyDriverLeaderBoard ::
-  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r) =>
+  (KvDbFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r) =>
   (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Day ->
   m LeaderBoardRes
@@ -116,7 +116,7 @@ getLastDayOfYear :: Integer -> Day
 getLastDayOfYear year = fromGregorian year 12 31
 
 getWeeklyDriverLeaderBoard ::
-  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) =>
+  (KvDbFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r) =>
   (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Day ->
   Day ->
