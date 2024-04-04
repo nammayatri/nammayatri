@@ -57,29 +57,20 @@ mkCacParseInstance name = do
   let instanceDec = InstanceD Nothing [] (AppT (ConT ''CheckParse) (ConT name)) [mapTableFunc]
   return [instanceDec]
 
-mkCacParseInstanceList :: Name -> String -> Q [Dec]
-mkCacParseInstanceList name parseName = do
-  let tableColumn = mkName "columnName"
+mkCacParseInstanceList :: Name -> Q [Dec]
+mkCacParseInstanceList name = do
+  let _ = mkName "columnName"
       value = mkName "value"
-      -- typeName = mkName $ "[" ++ (nameBase name) ++ "]"
       pN = mkName "Proxy"
-  let fieldExpressions =
-        [ Match
-            (LitP (StringL parseName))
-            --    (NormalB ((VarE 'checkField) `AppE` (SigE (ConE 'Proxy) (AppT (ConT 'Proxy) fieldType)) `AppE` VarE value))
-            (NormalB (VarE 'checkField `AppE` (ConE pN `AppTypeE` AppT ListT (ConT name)) `AppE` VarE value))
-            []
-        ]
-          <> [Match WildP (NormalB (ConE 'True)) []]
-  let bodyExpr = CaseE (VarE tableColumn) fieldExpressions
-  let mapTableFunc = FunD 'checkParse [Clause [WildP, VarP tableColumn, VarP value] (NormalB bodyExpr) []]
+  let bodyExpr = NormalB (VarE 'checkField `AppE` (ConE pN `AppTypeE` AppT ListT (ConT name)) `AppE` VarE value)
+  let mapTableFunc = FunD 'checkParse [Clause [WildP, WildP, VarP value] bodyExpr []]
   let instanceDec = InstanceD Nothing [] (AppT (ConT ''CheckParse) (AppT ListT (ConT name))) [mapTableFunc]
   return [instanceDec]
 
 -- | Will generate string for simple testing in repl. Using: putStrLn testSplice
-mkCacInstancesDebug :: Name -> String -> Q [Dec]
-mkCacInstancesDebug name kk = do
-  decs <- mkCacParseInstanceList name kk
+mkCacInstancesDebug :: Name -> Q [Dec]
+mkCacInstancesDebug name = do
+  decs <- mkCacParseInstanceList name
   testFunc <- mkTestSplice decs
   pure $ decs <> testFunc
 
