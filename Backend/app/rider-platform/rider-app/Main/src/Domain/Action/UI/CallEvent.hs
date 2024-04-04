@@ -22,7 +22,6 @@ where
 import Data.Aeson
 import qualified Domain.Types.Ride as Ride
 import Kernel.Beam.Functions (runInReplica)
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -41,12 +40,12 @@ data CallEventReq = CallEventReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-logCallEvent :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r, CacheFlow m r) => CallEventReq -> m APISuccess.APISuccess
+logCallEvent :: (KvDbFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) => CallEventReq -> m APISuccess.APISuccess
 logCallEvent CallEventReq {..} = do
   sendCallDataToKafka Nothing (Just rideId) (Just callType) Nothing Nothing User (Just exophoneNumber)
   pure APISuccess.Success
 
-sendCallDataToKafka :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r, CacheFlow m r) => Maybe Text -> Maybe (Id Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> EventTriggeredBy -> Maybe Text -> m ()
+sendCallDataToKafka :: (KvDbFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) => Maybe Text -> Maybe (Id Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> EventTriggeredBy -> Maybe Text -> m ()
 sendCallDataToKafka vendor mRideId callType callSid callStatus triggeredBy exophoneNumber = do
   case mRideId of
     Just rideId -> do

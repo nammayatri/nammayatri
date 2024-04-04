@@ -209,8 +209,7 @@ callTrack ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     MonadFlow m,
     CoreMetrics m,
-    EsqDBFlow m r,
-    CacheFlow m r,
+    KvDbFlow m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   DB.Booking ->

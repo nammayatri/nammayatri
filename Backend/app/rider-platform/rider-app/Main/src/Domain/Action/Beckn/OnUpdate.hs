@@ -200,9 +200,7 @@ data BreakupPriceInfo = BreakupPriceInfo
 
 onUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
+    KvDbFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
@@ -249,8 +247,7 @@ onUpdate = \case
     Notify.notifyOnStopReached booking ride
 
 validateRequest ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,

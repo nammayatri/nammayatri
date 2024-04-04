@@ -28,13 +28,12 @@ import Kernel.Storage.Hedis
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, isExpired)
+import Kernel.Utils.Common (KvDbFlow, isExpired)
 import Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import Storage.CachedQueries.Maps.LocationMapCache
 
 frequencyUpdator ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     HasField "hotSpotExpiry" r Seconds
   ) =>
   Id Merchant ->
@@ -86,8 +85,7 @@ frequencyUpdator merchantId latLong _ movement = do
         & updatedAt ?~ now
 
 filterAndUpdateHotSpotWithExpiry ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     HasField "hotSpotExpiry" r Seconds
   ) =>
   Text ->
@@ -106,8 +104,7 @@ filterAndUpdateHotSpotWithExpiry geohash hotSpots hotSpotExpiry = do
   hSetExp makeHotSpotKey geohash filterWithExpiry expTime
 
 removeExpiredHotSpots ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     HasField "hotSpotExpiry" r Seconds
   ) =>
   Id Merchant ->

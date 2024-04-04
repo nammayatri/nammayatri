@@ -147,7 +147,7 @@ let defaultImports =
           [ "Kernel.Beam.Functions"
           , "Kernel.Prelude"
           , "Kernel.External.Encryption"
-          , "Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow, getCurrentTime, fromMaybeM)"
+          , "Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow, KvDbFlow, getCurrentTime, fromMaybeM)"
           , "Kernel.Types.Error"
           ]
         , _qualifiedImports = [ "Sequelize as Se" ]

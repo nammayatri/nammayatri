@@ -4,7 +4,6 @@
 
 module Domain.Types.FRFSTicket where
 
-import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person

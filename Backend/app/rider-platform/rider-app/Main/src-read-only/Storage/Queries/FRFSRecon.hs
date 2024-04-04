@@ -12,20 +12,20 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSRecon as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSRecon.FRFSRecon -> m ())
+create :: KvDbFlow m r => (Domain.Types.FRFSRecon.FRFSRecon -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSRecon.FRFSRecon] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.FRFSRecon.FRFSRecon] -> m ())
 createMany = traverse_ create
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSRecon.FRFSRecon -> m (Maybe Domain.Types.FRFSRecon.FRFSRecon))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.FRFSRecon.FRFSRecon -> m (Maybe Domain.Types.FRFSRecon.FRFSRecon))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSRecon.FRFSRecon -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.FRFSRecon.FRFSRecon -> m ())
 updateByPrimaryKey (Domain.Types.FRFSRecon.FRFSRecon {..}) = do
   _now <- getCurrentTime
   updateWithKV

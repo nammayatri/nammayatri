@@ -55,10 +55,8 @@ data ServiceabilityRes = ServiceabilityRes
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
 checkServiceability ::
-  ( CacheFlow m r,
-    EsqDBReplicaFlow m r,
-    MonadFlow m,
-    EsqDBFlow m r
+  ( EsqDBReplicaFlow m r,
+    KvDbFlow m r
   ) =>
   (GeofencingConfig -> GeoRestriction) ->
   (Id Person.Person, Id Merchant.Merchant) ->
@@ -86,10 +84,8 @@ data CityState = CityState
   }
 
 getNearestOperatingAndCurrentCity ::
-  ( CacheFlow m r,
-    EsqDBReplicaFlow m r,
-    MonadFlow m,
-    EsqDBFlow m r
+  ( EsqDBReplicaFlow m r,
+    KvDbFlow m r
   ) =>
   (GeofencingConfig -> GeoRestriction) ->
   (Id Person.Person, Id Merchant.Merchant) ->
@@ -103,10 +99,8 @@ getNearestOperatingAndCurrentCity settingAccessor (personId, merchantId) shouldU
     Nothing -> throwError RideNotServiceable
 
 getNearestOperatingAndCurrentCity' ::
-  ( CacheFlow m r,
-    EsqDBReplicaFlow m r,
-    MonadFlow m,
-    EsqDBFlow m r
+  ( EsqDBReplicaFlow m r,
+    KvDbFlow m r
   ) =>
   (GeofencingConfig -> GeoRestriction) ->
   (Id Person.Person, Id Merchant.Merchant) ->
@@ -146,7 +140,7 @@ getNearestOperatingAndCurrentCity' settingAccessor (personId, merchantId) should
     upsertPersonCityInformation personId merchantId shouldUpdatePerson (Just nearestOperatingCity.city)
   return mbNearestOpAndCurrentCity
 
-upsertPersonCityInformation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> Id Merchant.Merchant -> Bool -> Maybe Context.City -> m ()
+upsertPersonCityInformation :: KvDbFlow m r => Id Person.Person -> Id Merchant.Merchant -> Bool -> Maybe Context.City -> m ()
 upsertPersonCityInformation personId merchantId shouldUpdatePerson mbCity = when shouldUpdatePerson $
   whenJust mbCity $ \city' -> do
     personCityInfo <- CQP.findCityInfoById personId >>= fromMaybeM (PersonCityInformationDoesNotExist $ "personId:- " <> personId.getId)

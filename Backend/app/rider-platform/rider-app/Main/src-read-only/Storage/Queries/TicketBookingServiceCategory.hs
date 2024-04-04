@@ -13,27 +13,27 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketBookingServiceCategory as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m ())
+create :: KvDbFlow m r => (Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory] -> m ())
 createMany = traverse_ create
 
 findAllByTicketBookingServiceId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m [Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory])
 findAllByTicketBookingServiceId (Kernel.Types.Id.Id ticketBookingServiceId) = do findAllWithKV [Se.Is Beam.ticketBookingServiceId $ Se.Eq ticketBookingServiceId]
 
 findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m (Maybe Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m ())
 updateByPrimaryKey (Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory {..}) = do
   _now <- getCurrentTime
   updateWithKV

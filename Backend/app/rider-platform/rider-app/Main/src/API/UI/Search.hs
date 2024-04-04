@@ -103,7 +103,7 @@ checkSearchRateLimit personId = do
 searchHitsCountKey :: Id Person.Person -> Text
 searchHitsCountKey personId = "BAP:Ride:search:" <> getId personId <> ":hitsCount"
 
-updateVersions :: (CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> Maybe Version -> Maybe Version -> m ()
+updateVersions :: KvDbFlow m r => Id Person.Person -> Maybe Version -> Maybe Version -> m ()
 updateVersions personId mbBundleVersion mbClientVersion = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
   -- DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion

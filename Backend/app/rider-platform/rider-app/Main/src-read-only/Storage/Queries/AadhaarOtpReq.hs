@@ -12,23 +12,23 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.AadhaarOtpReq as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.AadhaarOtpReq.AadhaarOtpReq -> m ())
+create :: KvDbFlow m r => (Domain.Types.AadhaarOtpReq.AadhaarOtpReq -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.AadhaarOtpReq.AadhaarOtpReq] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.AadhaarOtpReq.AadhaarOtpReq] -> m ())
 createMany = traverse_ create
 
-deleteByPersonIdForGenerate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+deleteByPersonIdForGenerate :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByPersonIdForGenerate (Kernel.Types.Id.Id personId) = do deleteWithKV [Se.Is Beam.personId $ Se.Eq personId]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.AadhaarOtpReq.AadhaarOtpReq -> m (Maybe Domain.Types.AadhaarOtpReq.AadhaarOtpReq))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.AadhaarOtpReq.AadhaarOtpReq -> m (Maybe Domain.Types.AadhaarOtpReq.AadhaarOtpReq))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.AadhaarOtpReq.AadhaarOtpReq -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.AadhaarOtpReq.AadhaarOtpReq -> m ())
 updateByPrimaryKey (Domain.Types.AadhaarOtpReq.AadhaarOtpReq {..}) = do
   _now <- getCurrentTime
   updateWithKV

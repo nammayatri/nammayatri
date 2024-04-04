@@ -48,7 +48,7 @@ data BuildSendOTPMessageReq = BuildSendOTPMessageReq
   }
   deriving (Generic)
 
-buildSendOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendOTPMessageReq -> m Text
+buildSendOTPMessage :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendOTPMessageReq -> m Text
 buildSendOTPMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_OTP
@@ -64,7 +64,7 @@ data BuildSendBookingOTPMessageReq = BuildSendBookingOTPMessageReq
   }
   deriving (Generic)
 
-buildSendBookingOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendBookingOTPMessageReq -> m Text
+buildSendBookingOTPMessage :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendBookingOTPMessageReq -> m Text
 buildSendBookingOTPMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_BOOKING_OTP
@@ -77,7 +77,7 @@ buildSendBookingOTPMessage merchantOperatingCityId req = do
 data BuildGenericMessageReq = BuildGenericMessageReq {}
   deriving (Generic)
 
-buildGenericMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> DMM.MessageKey -> BuildGenericMessageReq -> m Text
+buildGenericMessage :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> DMM.MessageKey -> BuildGenericMessageReq -> m Text
 buildGenericMessage merchantOpCityId messageKey _ = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCityId messageKey
@@ -95,7 +95,7 @@ data BuildSOSAlertMessageReq = BuildSOSAlertMessageReq
   }
   deriving (Generic)
 
-buildSOSAlertMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSOSAlertMessageReq -> m Text
+buildSOSAlertMessage :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> BuildSOSAlertMessageReq -> m Text
 buildSOSAlertMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_SOS_ALERT
@@ -110,7 +110,7 @@ newtype BuildMarkRideAsSafeMessageReq = BuildMarkRideAsSafeMessageReq
   }
   deriving (Generic)
 
-buildMarkRideAsSafeMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildMarkRideAsSafeMessageReq -> m Text
+buildMarkRideAsSafeMessage :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> BuildMarkRideAsSafeMessageReq -> m Text
 buildMarkRideAsSafeMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.MARK_RIDE_AS_SAFE
@@ -125,7 +125,7 @@ data BuildFollowRideMessageReq = BuildFollowRideMessageReq
   }
   deriving (Generic)
 
-buildFollowRideStartedMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFollowRideMessageReq -> m Text
+buildFollowRideStartedMessage :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> BuildFollowRideMessageReq -> m Text
 buildFollowRideStartedMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.FOLLOW_RIDE
@@ -141,7 +141,7 @@ data BuildAddedAsEmergencyContactMessageReq = BuildAddedAsEmergencyContactMessag
   }
   deriving (Generic)
 
-buildAddedAsEmergencyContactMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildAddedAsEmergencyContactMessageReq -> m Text
+buildAddedAsEmergencyContactMessage :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> BuildAddedAsEmergencyContactMessageReq -> m Text
 buildAddedAsEmergencyContactMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.ADDED_AS_EMERGENCY_CONTACT
