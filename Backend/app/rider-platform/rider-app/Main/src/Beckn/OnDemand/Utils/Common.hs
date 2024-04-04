@@ -32,7 +32,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, (%~))
-import Kernel.External.Maps as Maps
+import qualified Kernel.External.Maps as Maps
 import qualified Kernel.Prelude as KP
 import Kernel.Types.App
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
@@ -190,6 +190,7 @@ castVehicleVariant = \case
   VehVar.AUTO_RICKSHAW -> (show Enums.AUTO_RICKSHAW, "AUTO_RICKSHAW")
   VehVar.TAXI -> (show Enums.CAB, "TAXI")
   VehVar.TAXI_PLUS -> (show Enums.CAB, "TAXI_PLUS")
+  VehVar.BIKE -> (show Enums.BIKE, "BIKE")
 
 parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
 parseVehicleVariant mbCategory mbVariant =
@@ -200,6 +201,7 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just VehVar.AUTO_RICKSHAW
     (Just "CAB", Just "TAXI") -> Just VehVar.TAXI
     (Just "CAB", Just "TAXI_PLUS") -> Just VehVar.TAXI_PLUS
+    (Just "MOTORCYCLE", Just "BIKE") -> Just VehVar.BIKE
     _ -> Nothing
 
 castCancellationSourceV2 :: Text -> SBCR.CancellationSource
@@ -313,6 +315,7 @@ mapVariantToVehicle variant = do
     VehVar.TAXI -> CAB
     VehVar.SUV -> CAB
     VehVar.TAXI_PLUS -> CAB
+    VehVar.BIKE -> MOTORCYCLE
     VehVar.AUTO_RICKSHAW -> AUTO_RICKSHAW
 
 getServiceTierType :: Spec.Item -> Maybe DVST.VehicleServiceTierType

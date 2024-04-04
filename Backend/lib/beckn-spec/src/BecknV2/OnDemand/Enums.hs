@@ -30,6 +30,7 @@ data VehicleCategory
   = -- ..fulfillments.vehicle.category
     AUTO_RICKSHAW
   | CAB
+  | BIKE
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data FulfillmentType

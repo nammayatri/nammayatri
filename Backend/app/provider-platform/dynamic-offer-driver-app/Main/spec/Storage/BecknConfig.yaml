@@ -36,7 +36,7 @@ BecknConfig:
 
   types:
     VehicleCategory:
-      enum: "CAB, AUTO_RICKSHAW, METRO"
+      enum: "CAB, AUTO_RICKSHAW, METRO, MOTORCYCLE"
 
     PaymentCollectedBy:
       enum: "BAP, BPP"

@@ -40,7 +40,9 @@ import qualified Data.HashMap.Strict as HM
 import Data.List (nubBy)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Registration as DR
-import Domain.Types.Booking.Type as DBooking
+import qualified Domain.Types.BecknConfig as BecknConfig
+import Domain.Types.Booking as DBooking
+import qualified Domain.Types.ClientPersonInfo as DCP
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
@@ -75,6 +77,7 @@ import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.Disability as QD
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
@@ -92,6 +95,9 @@ data ProfileRes = ProfileRes
     maskedDeviceToken :: Maybe Text,
     hasTakenRide :: Bool,
     hasTakenValidRide :: Bool,
+    hasTakenValidAutoRide :: Bool,
+    hasTakenValidCabRide :: Bool,
+    hasTakenValidBikeRide :: Bool,
     referralCode :: Maybe Text,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
     language :: Maybe Maps.Language,
@@ -181,6 +187,10 @@ getPersonDetails (personId, _) mbToss = do
   frntndfgs <- if useCACConfig then getFrontendConfigs person mbToss else return $ Just DAKM.empty
   let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
   isSafetyCenterDisabled_ <- SLP.checkSafetyCenterDisabled person
+  hasTakenValidRide <- QCP.findAllByPersonId personId
+  let hasTakenValidFirstCabRide = validRideCount hasTakenValidRide BecknConfig.CAB
+  let hasTakenValidFirstAutoRide = validRideCount hasTakenValidRide BecknConfig.AUTO_RICKSHAW
+  let hasTakenValidFirstBikeRide = validRideCount hasTakenValidRide BecknConfig.MOTORCYCLE
   newCustomerReferralCode <-
     if (isNothing person.customerReferralCode)
       then do
@@ -192,20 +202,29 @@ getPersonDetails (personId, _) mbToss = do
             pure $ Just newCustomerReferralCode
           else pure Nothing
       else pure person.customerReferralCode
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode =
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide =
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
           hasTakenRide = hasTakenValidRide,
           frontendConfigHash = md5DigestHash,
+          hasTakenValidAutoRide = hasTakenAutoRide,
+          hasTakenValidCabRide = hasTakenCabRide,
+          hasTakenValidBikeRide = hasTakenValidFirstBikeRide,
           isSafetyCenterDisabled = isSafetyCenterDisabled_,
           customerReferralCode = newCustomerReferralCode,
           bundleVersion = clientBundleVersion,
           clientVersion = clientSdkVersion,
           ..
         }
+
+validRideCount :: [DCP.ClientPersonInfo] -> BecknConfig.VehicleCategory -> Bool
+validRideCount hasTakenValidRide vehicleCategory =
+  case find (\info -> info.vehicleCategory == Just vehicleCategory) hasTakenValidRide of
+    Just info -> info.rideCount == 1
+    Nothing -> False
 
 updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion]) => Id Person.Person -> UpdateProfileReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
 updatePerson personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do

@@ -40,7 +40,8 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm -- FIXME make datatype to [
     hatchback :: Kilometers,
     autorickshaw :: Kilometers,
     taxi :: Kilometers,
-    taxiplus :: Kilometers
+    taxiplus :: Kilometers,
+    bike :: Kilometers
   }
   deriving (Generic, Show, FromJSON, ToJSON, Read)
 

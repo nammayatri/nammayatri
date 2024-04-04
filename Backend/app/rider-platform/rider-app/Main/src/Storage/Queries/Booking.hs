@@ -31,6 +31,7 @@ import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
+import Domain.Types.VehicleServiceTier
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
@@ -177,6 +178,14 @@ findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
               B.all_ (BeamCommon.booking BeamCommon.atlasDB)
 
   pure $ either (const 0) (\r -> if null r then 0 else head r) res
+
+findCountByRideIdStatusAndVehicleServiceTierType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> [VehicleServiceTierType] -> m Int
+findCountByRideIdStatusAndVehicleServiceTierType (Id personId) status vehicleServiceTierType =
+  findAllWithKV
+    [ Se.And
+        [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status, Se.Is BeamB.vehicleVariant $ Se.In vehicleServiceTierType]
+    ]
+    <&> length
 
 findByRiderIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> [BookingStatus] -> m [Booking]
 findByRiderIdAndStatus (Id personId) statusList = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.In statusList]]

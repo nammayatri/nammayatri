@@ -16,7 +16,7 @@ Vehicle:
       enum: "COMMERCIAL,PERSONAL,OTHER,PUBLIC"
       derive: "HttpInstance"
     Variant:
-      enum: "SEDAN,SUV,HATCHBACK,AUTO_RICKSHAW,TAXI,TAXI_PLUS"
+      enum: "SEDAN,SUV,HATCHBACK,AUTO_RICKSHAW,TAXI,TAXI_PLUS,BIKE"
       derive: "HttpInstance,Enum,Bounded"
     VehicleAPIEntity:
       driverId: Id Person
