@@ -24,19 +24,18 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Plan
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Plan as BeamP
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Plan -> m ()
+create :: KvDbFlow m r => Plan -> m ()
 create = createWithKV
 
-fetchAllPlan :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [Plan]
+fetchAllPlan :: KvDbFlow m r => m [Plan]
 fetchAllPlan = findAllWithKV [Se.Is BeamP.id $ Se.Not $ Se.Eq $ getId ""]
 
-findByIdAndPaymentModeWithServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Plan -> PaymentMode -> ServiceNames -> m (Maybe Plan)
+findByIdAndPaymentModeWithServiceName :: KvDbFlow m r => Id Plan -> PaymentMode -> ServiceNames -> m (Maybe Plan)
 findByIdAndPaymentModeWithServiceName (Id planId) paymentMode serviceName = do
   findOneWithKV
     [ Se.And
@@ -46,7 +45,7 @@ findByIdAndPaymentModeWithServiceName (Id planId) paymentMode serviceName = do
         ]
     ]
 
-findByMerchantOpCityIdWithServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> ServiceNames -> m [Plan]
+findByMerchantOpCityIdWithServiceName :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> ServiceNames -> m [Plan]
 findByMerchantOpCityIdWithServiceName (Id merchantOpCityId) serviceName = do
   findAllWithKV
     [ Se.And
@@ -56,7 +55,7 @@ findByMerchantOpCityIdWithServiceName (Id merchantOpCityId) serviceName = do
     ]
 
 findByMerchantOpCityIdAndPaymentModeWithServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   PaymentMode ->
   ServiceNames ->
@@ -77,7 +76,7 @@ findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOpCityId) paymen
     ]
 
 findByMerchantOpCityIdAndTypeWithServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   PlanType ->
   ServiceNames ->

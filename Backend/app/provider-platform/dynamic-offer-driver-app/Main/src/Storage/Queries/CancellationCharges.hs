@@ -18,12 +18,11 @@ module Storage.Queries.CancellationCharges where
 import Domain.Types.CancellationCharges
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Beam.CancellationCharges as BeamCC
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => CancellationCharges -> m ()
+create :: KvDbFlow m r => CancellationCharges -> m ()
 create = createWithKV
 
 instance FromTType' BeamCC.CancellationCharges CancellationCharges where

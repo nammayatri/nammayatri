@@ -191,7 +191,7 @@ newtype DriverRideListRes = DriverRideListRes
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 listDriverRides ::
-  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  (EsqDBReplicaFlow m r, EncFlow m r, KvDbFlow m r) =>
   Id DP.Person ->
   Maybe Integer ->
   Maybe Integer ->
@@ -218,8 +218,7 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
 
 mkDriverRideRes ::
   ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r
+    KvDbFlow m r
   ) =>
   RD.RideDetails ->
   Maybe Text ->
@@ -300,9 +299,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       }
 
 calculateLocations ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DRB.Booking ->
   Maybe (Id DLoc.Location) ->
   m (Maybe DLoc.Location, Maybe DLoc.Location)
@@ -317,7 +314,7 @@ calculateLocations bookingId stopLocationId = do
       lastLoc <- mkLocationFromLocationMapping bookingId.getId (maxOrder - 1)
       return (nextLoc, lastLoc)
 
-arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id DRide.Ride -> LatLong -> m APISuccess
+arrivedAtPickup :: (EncFlow m r, CacheFlow m r, KvDbFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."

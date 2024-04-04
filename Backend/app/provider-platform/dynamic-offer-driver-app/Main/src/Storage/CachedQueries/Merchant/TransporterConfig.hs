@@ -41,7 +41,6 @@ import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
 import qualified EulerHS.Language as L
 import qualified GHC.List as GL
-import Kernel.Beam.Lib.Utils (pushToKafka)
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude as KP
@@ -68,10 +67,10 @@ valueToText val = case val of
   String text -> text
   _ -> error "Not a string"
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
+create :: KvDbFlow m r => TransporterConfig -> m ()
 create = Queries.create
 
-getTransporterConfigFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m (Maybe TransporterConfig)
+getTransporterConfigFromCACStrict :: KvDbFlow m r => Id MerchantOperatingCity -> Int -> m (Maybe TransporterConfig)
 getTransporterConfigFromCACStrict id' toss = do
   context <- liftIO $ CM.hashMapToString $ HashMap.fromList [(Text.pack "merchantOperatingCityId", DA.String (getId id'))]
   tenant <- liftIO $ Se.lookupEnv "TENANT"
@@ -96,7 +95,7 @@ getTransporterConfigFromCACStrict id' toss = do
     (pure . Just)
     res
 
-createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m (Maybe TransporterConfig)
+createThroughConfigHelper :: KvDbFlow m r => Id MerchantOperatingCity -> Int -> m (Maybe TransporterConfig)
 createThroughConfigHelper id' toss = do
   mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
   mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
@@ -122,7 +121,7 @@ parsingMiddleware km =
       newObject = KP.foldr DAKM.delete newObject'' ["fcmUrl", "fcmServiceAccount", "fcmTokenKeyPrefix"]
    in DAKM.insert "fcmConfig" (toJSON fcmConfig) newObject
 
-getConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> Maybe Text -> Maybe Text -> m (Maybe TransporterConfig)
+getConfig :: KvDbFlow m r => Id MerchantOperatingCity -> Int -> Maybe Text -> Maybe Text -> m (Maybe TransporterConfig)
 getConfig id toss stickId idName = do
   confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(Text.pack "merchantOperatingCityId", DA.String (getId id))]
   tenant <- liftIO $ Se.lookupEnv "TENANT"
@@ -150,7 +149,7 @@ getConfig id toss stickId idName = do
     )
     res
 
-getConfigFromMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m (Maybe TransporterConfig)
+getConfigFromMemory :: KvDbFlow m r => Id MerchantOperatingCity -> Int -> m (Maybe TransporterConfig)
 getConfigFromMemory id toss = do
   value <- L.getOption (DTC.TransporterConfig id.getId)
   maybe
@@ -173,13 +172,13 @@ getConfigFromMemory id toss = do
     )
     value
 
-getTransporterConfigFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
+getTransporterConfigFromDB :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
 getTransporterConfigFromDB id = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
     Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantOpCityId id
 
-findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m (Maybe TransporterConfig)
+findByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m (Maybe TransporterConfig)
 findByMerchantOpCityId id mbstickId idName = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
@@ -194,7 +193,7 @@ findByMerchantOpCityId id mbstickId idName = do
   logDebug $ "transporterConfig we recieved for merchantOperatingCityId:" <> getId id <> " is:" <> show config
   pure config
 
-findByMerchantOpCityIdCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m (Maybe TransporterConfig)
+findByMerchantOpCityIdCAC :: KvDbFlow m r => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m (Maybe TransporterConfig)
 findByMerchantOpCityIdCAC id (Just stickId) idName = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
   isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "atlas_driver_offer_bpp_v2" tenant)
@@ -241,11 +240,11 @@ makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:TransporterConfig:Merch
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantOpCityIdKey
 
-updateFCMConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()
+updateFCMConfig :: KvDbFlow m r => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()
 updateFCMConfig = Queries.updateFCMConfig
 
-updateReferralLinkPassword :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> m ()
+updateReferralLinkPassword :: KvDbFlow m r => Id MerchantOperatingCity -> Text -> m ()
 updateReferralLinkPassword = Queries.updateReferralLinkPassword
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
+update :: KvDbFlow m r => TransporterConfig -> m ()
 update = Queries.update

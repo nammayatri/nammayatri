@@ -24,7 +24,7 @@ import Storage.Beam.Booking as BeamB
 import Storage.Queries.Instances.Person ()
 
 getBookingInfo ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   [DriverQuote] ->
   m [Booking.Booking]
 getBookingInfo driverQuote =

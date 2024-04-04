@@ -35,7 +35,7 @@ data FareProducts = FareProducts
   }
 
 getPickupSpecialLocation ::
-  (EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  (KvDbFlow m r, EsqDBReplicaFlow m r) =>
   Id Merchant ->
   DSpecialLocation.SpecialLocation ->
   m (DSpecialLocation.SpecialLocation, Int)
@@ -44,7 +44,7 @@ getPickupSpecialLocation merchantId pickupSpecialLocation = do
   return (pickupSpecialLocation, maybe 999 (.pickupPriority) pickupSpecialLocationPriority)
 
 getDropSpecialLocation ::
-  (EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  (KvDbFlow m r, EsqDBReplicaFlow m r) =>
   Id Merchant ->
   DSpecialLocation.SpecialLocation ->
   m (DSpecialLocation.SpecialLocation, Int)

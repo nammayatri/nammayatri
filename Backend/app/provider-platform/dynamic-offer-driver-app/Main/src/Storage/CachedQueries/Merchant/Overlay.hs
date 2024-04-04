@@ -32,10 +32,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.Overlay as Queries
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Overlay -> m ()
+create :: KvDbFlow m r => Overlay -> m ()
 create = Queries.create
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [Overlay]
+findAllByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m [Overlay]
 findAllByMerchantOpCityId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return $ fmap (coerce @(OverlayD 'Unsafe) @Overlay) a
@@ -50,7 +50,7 @@ cacheOverlayForCity merchantOperatingCityId cfg = do
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:Overlay:MerchantOperatingCityId-" <> id.getId
 
-findByMerchantOpCityIdPNKeyLangaugeUdf :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
+findByMerchantOpCityIdPNKeyLangaugeUdf :: KvDbFlow m r => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
 findByMerchantOpCityIdPNKeyLangaugeUdf id pnKey language udf1 =
   Hedis.safeGet (makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1) >>= \case
     Just a -> return . Just $ coerce @(OverlayD 'Unsafe) @Overlay a

@@ -21,15 +21,14 @@ import Data.Function hiding (id)
 import Data.Maybe
 import Domain.Types.Feedback.Feedback
 import Kernel.Beam.Functions
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Beam.Feedback.Feedback as BeamF
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Feedback -> m ()
+create :: KvDbFlow m r => Feedback -> m ()
 create = createWithKV
 
-createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Feedback] -> m ()
+createMany :: KvDbFlow m r => [Feedback] -> m ()
 createMany = traverse_ create
 
 instance FromTType' BeamF.Feedback Feedback where

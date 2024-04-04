@@ -24,7 +24,7 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Coins.PurchaseHistory as BeamDC
 
-getPurchasedHistory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> Maybe Integer -> Maybe Integer -> m [PurchaseHistory]
+getPurchasedHistory :: KvDbFlow m r => Id SP.Person -> Maybe Integer -> Maybe Integer -> m [PurchaseHistory]
 getPurchasedHistory (Id driverId) mbLimit mbOffset = do
   let limitVal = maybe 10 fromInteger mbLimit
       offsetVal = maybe 0 fromInteger mbOffset
@@ -34,7 +34,7 @@ getPurchasedHistory (Id driverId) mbLimit mbOffset = do
     (Just limitVal)
     (Just offsetVal)
 
-createPurchaseHistory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => PurchaseHistory -> m ()
+createPurchaseHistory :: KvDbFlow m r => PurchaseHistory -> m ()
 createPurchaseHistory = createWithKV
 
 instance FromTType' BeamDC.PurchaseHistory PurchaseHistory where

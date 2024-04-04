@@ -52,7 +52,7 @@ type LanguageDictionary = M.Map Maps.Language DSR.SearchRequest
 
 sendSearchRequestToDrivers ::
   ( Log m,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r,
     TranslateFlow m r,
     CacheFlow m r,
@@ -113,7 +113,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
     buildSearchRequestForDriver ::
       ( MonadFlow m,
         Redis.HedisFlow m r,
-        EsqDBFlow m r,
+        KvDbFlow m r,
         CacheFlow m r
       ) =>
       HashMap.HashMap DVST.ServiceTierType SDP.TripQuoteDetail ->
@@ -175,7 +175,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
               }
       pure searchRequestForDriver
 
-buildTranslatedSearchReqLocation :: (TranslateFlow m r, EsqDBFlow m r, CacheFlow m r) => DLoc.Location -> Maybe Maps.Language -> m DLoc.Location
+buildTranslatedSearchReqLocation :: (TranslateFlow m r, KvDbFlow m r) => DLoc.Location -> Maybe Maps.Language -> m DLoc.Location
 buildTranslatedSearchReqLocation DLoc.Location {..} mbLanguage = do
   areaRegional <- case mbLanguage of
     Nothing -> return address.area
@@ -202,8 +202,7 @@ buildTranslatedSearchReqLocation DLoc.Location {..} mbLanguage = do
 
 translateSearchReq ::
   ( TranslateFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
+    KvDbFlow m r
   ) =>
   DSR.SearchRequest ->
   Maps.Language ->
@@ -220,9 +219,8 @@ translateSearchReq DSR.SearchRequest {..} language = do
 
 addLanguageToDictionary ::
   ( TranslateFlow m r,
-    CacheFlow m r,
-    EncFlow m r,
-    EsqDBFlow m r
+    KvDbFlow m r,
+    EncFlow m r
   ) =>
   DSR.SearchRequest ->
   LanguageDictionary ->

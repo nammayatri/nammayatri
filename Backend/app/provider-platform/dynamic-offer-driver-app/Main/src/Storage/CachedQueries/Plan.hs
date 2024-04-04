@@ -10,7 +10,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Plan as Queries
 
-findByIdAndPaymentModeWithServiceName :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Plan -> PaymentMode -> ServiceNames -> m (Maybe Plan)
+findByIdAndPaymentModeWithServiceName :: KvDbFlow m r => Id Plan -> PaymentMode -> ServiceNames -> m (Maybe Plan)
 findByIdAndPaymentModeWithServiceName (Id planId) paymentMode serviceName =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makePlanIdAndPaymentModeKey (Id planId) paymentMode serviceName) >>= \case
     Just a -> pure a
@@ -22,7 +22,7 @@ cacheByIdAndPaymentMode (Id planId) paymentMode serviceName plan = do
   Hedis.withCrossAppRedis $ Hedis.setExp (makePlanIdAndPaymentModeKey (Id planId) paymentMode serviceName) plan expTime
 
 ------------------- -----------------------
-findByMerchantOpCityIdWithServiceName :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> ServiceNames -> m [Plan]
+findByMerchantOpCityIdWithServiceName :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> ServiceNames -> m [Plan]
 findByMerchantOpCityIdWithServiceName (Id merchantOperatingCityId) serviceName =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey (Id merchantOperatingCityId) serviceName) >>= \case
     Just a -> pure a
@@ -35,7 +35,7 @@ cacheByMerchantId (Id merchantOperatingCityId) serviceName plans = do
 
 ------------------- -----------------------
 findByMerchantOpCityIdAndPaymentModeWithServiceName ::
-  (CacheFlow m r, MonadFlow m, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   PaymentMode ->
   ServiceNames ->
@@ -58,7 +58,7 @@ cacheByMerchantIdAndPaymentMode (Id merchantOperatingCityId) paymentMode service
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdAndPaymentModeKey (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated) plans expTime
 
-findByMerchantOpCityIdAndTypeWithServiceName :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> PlanType -> ServiceNames -> m [Plan]
+findByMerchantOpCityIdAndTypeWithServiceName :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> PlanType -> ServiceNames -> m [Plan]
 findByMerchantOpCityIdAndTypeWithServiceName (Id merchantOperatingCityId) planType serviceName =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndTypeKey (Id merchantOperatingCityId) planType serviceName) >>= \case
     Just a -> pure a
@@ -70,7 +70,7 @@ cacheByMerchantIdAndType (Id merchantOperatingCityId) planType serviceName plans
   Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdAndTypeKey (Id merchantOperatingCityId) planType serviceName) plans expTime
 
 ------------------- -----------------------
-fetchAllPlan :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => m [Plan]
+fetchAllPlan :: KvDbFlow m r => m [Plan]
 fetchAllPlan =
   Hedis.withCrossAppRedis (Hedis.safeGet makeAllPlanKey) >>= \case
     Just a -> pure a

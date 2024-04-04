@@ -59,9 +59,7 @@ data EditLocationReq = EditLocationReq
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 notifyOnNewSearchRequestAvailable ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
@@ -99,9 +97,7 @@ notifyOnNewSearchRequestAvailable merchantOpCityId personId mbDeviceToken entity
 
 -- | Send FCM "cancel" notification to driver
 notifyOnCancel ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Booking ->
   Person ->
@@ -159,9 +155,7 @@ notifyOnCancel merchantOpCityId booking person cancellationSource = do
       _ -> throwError (InternalError "Unexpected cancellation reason.")
 
 notifyOnRegistration ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   RegistrationToken ->
   Id Person ->
@@ -192,9 +186,7 @@ notifyOnRegistration merchantOpCityId regToken personId mbToken = do
           ]
 
 notifyDriver ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   FCM.FCMNotificationType ->
   Text ->
@@ -207,9 +199,7 @@ notifyDriver merchantOpCityId = sendNotificationToDriver merchantOpCityId FCM.SH
 -- Send notification to device, i.e. notifications that should not be shown to the user,
 -- but contains payload used by the app
 notifyDevice ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   FCM.FCMNotificationType ->
   Text ->
@@ -220,9 +210,7 @@ notifyDevice ::
 notifyDevice merchantOpCityId = sendNotificationToDriver merchantOpCityId FCM.DO_NOT_SHOW (Just FCM.HIGH)
 
 sendNotificationToDriver ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   FCM.FCMShowNotification ->
   Maybe FCM.FCMAndroidMessagePriority ->
@@ -253,9 +241,7 @@ sendNotificationToDriver merchantOpCityId displayOption priority notificationTyp
       FCMNotificationBody message
 
 sendMessageToDriver ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   FCM.FCMShowNotification ->
   Maybe FCM.FCMAndroidMessagePriority ->
@@ -286,9 +272,7 @@ sendMessageToDriver merchantOpCityId displayOption priority notificationType not
       FCMNotificationBody message
 
 notifyDriverNewAllocation ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Id bookingId ->
   Id Person ->
@@ -318,9 +302,7 @@ notifyDriverNewAllocation merchantOpCityId bookingId personId mbToken = do
         }
 
 notifyFarePolicyChange ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Id coordinatorId ->
   Maybe FCM.FCMRecipientToken ->
@@ -348,9 +330,7 @@ notifyFarePolicyChange merchantOpCityId coordinatorId mbToken = do
         }
 
 notifyDiscountChange ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Id coordinatorId ->
   Maybe FCM.FCMRecipientToken ->
@@ -378,9 +358,7 @@ notifyDiscountChange merchantOpCityId coordinatorId mbToken = do
         }
 
 notifyDriverClearedFare ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
   Id SearchTry ->
@@ -411,9 +389,7 @@ notifyDriverClearedFare merchantOpCityId driver sReqId fare = do
         }
 
 notifyOnCancelSearchRequest ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
   Id SearchTry ->
@@ -443,9 +419,7 @@ notifyOnCancelSearchRequest merchantOpCityId person searchTryId = do
           ]
 
 notifyPaymentFailed ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
@@ -475,9 +449,7 @@ notifyPaymentFailed merchantOpCityId personId mbDeviceToken orderId = do
           ]
 
 notifyPaymentPending ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
@@ -507,9 +479,7 @@ notifyPaymentPending merchantOpCityId personId mbDeviceToken orderId = do
           ]
 
 notifyPaymentSuccess ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
   Id DOrder.PaymentOrder ->
@@ -539,9 +509,7 @@ notifyPaymentSuccess merchantOpCityId person orderId = do
           ]
 
 notifyPaymentModeManualOnCancel ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
@@ -570,9 +538,7 @@ notifyPaymentModeManualOnCancel merchantOpCityId personId mbDeviceToken = do
           ]
 
 notifyPaymentModeManualOnPause ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
@@ -601,9 +567,7 @@ notifyPaymentModeManualOnPause merchantOpCityId personId mbDeviceToken = do
           ]
 
 notifyPaymentModeManualOnSuspend ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
   m ()
@@ -632,9 +596,7 @@ notifyPaymentModeManualOnSuspend merchantOpCityId person = do
           ]
 
 sendOverlay ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
   FCM.FCMOverlayReq ->
@@ -660,9 +622,7 @@ sendOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} = do
     body = FCMNotificationBody $ fromMaybe "Description" description
 
 notifyPickupOrDropLocationChange ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Person ->
   EditLocationReq ->
   m ()
@@ -778,9 +738,7 @@ data StopReq = StopReq
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 notifyStopModification ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Person ->
   StopReq ->
   m ()

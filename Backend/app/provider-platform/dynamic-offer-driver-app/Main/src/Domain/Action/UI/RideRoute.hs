@@ -26,7 +26,7 @@ import SharedLogic.Ride
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 
-rideRoute :: (MonadFlow m, EncFlow m r, HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Ride -> (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> m RouteInfo
+rideRoute :: (MonadFlow m, EncFlow m r, HedisFlow m r, KvDbFlow m r) => Id Ride -> (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> m RouteInfo
 rideRoute rideId (_, _, _) = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)

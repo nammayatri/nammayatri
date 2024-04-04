@@ -31,10 +31,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.MerchantMessage as Queries
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantMessage -> m ()
+create :: KvDbFlow m r => MerchantMessage -> m ()
 create = Queries.create
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [MerchantMessage]
+findAllByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m [MerchantMessage]
 findAllByMerchantOpCityId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return $ fmap (coerce @(MerchantMessageD 'Unsafe) @MerchantMessage) a
@@ -49,7 +49,7 @@ cacheMerchantMessageForCity merchantOperatingCityId cfg = do
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId
 
-findByMerchantOpCityIdAndMessageKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> m (Maybe MerchantMessage)
+findByMerchantOpCityIdAndMessageKey :: KvDbFlow m r => Id MerchantOperatingCity -> MessageKey -> m (Maybe MerchantMessage)
 findByMerchantOpCityIdAndMessageKey id messageKey =
   Hedis.safeGet (makeMerchantOpCityIdAndMessageKey id messageKey) >>= \case
     Just a -> return . Just $ coerce @(MerchantMessageD 'Unsafe) @MerchantMessage a

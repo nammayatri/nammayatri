@@ -27,22 +27,22 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation as BeamDHL
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.DriverHomeLocation -> m ()
+create :: KvDbFlow m r => Domain.DriverHomeLocation -> m ()
 create = createWithKV
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.DriverHomeLocation -> m (Maybe Domain.DriverHomeLocation)
+findById :: KvDbFlow m r => Id Domain.DriverHomeLocation -> m (Maybe Domain.DriverHomeLocation)
 findById (ID.Id driverHomeLocId) = findOneWithKV [Se.Is BeamDHL.id $ Se.Eq driverHomeLocId]
 
-findAllByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m [Domain.DriverHomeLocation]
+findAllByDriverId :: KvDbFlow m r => Id Driver -> m [Domain.DriverHomeLocation]
 findAllByDriverId (ID.Id driverId) = findAllWithKV [Se.Is BeamDHL.driverId $ Se.Eq driverId]
 
-deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.DriverHomeLocation -> m ()
+deleteById :: KvDbFlow m r => Id Domain.DriverHomeLocation -> m ()
 deleteById (ID.Id driverHomeLocId) = deleteWithKV [Se.Is BeamDHL.id $ Se.Eq driverHomeLocId]
 
-deleteByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m ()
+deleteByDriverId :: KvDbFlow m r => Id Driver -> m ()
 deleteByDriverId (ID.Id driverId) = deleteWithKV [Se.Is BeamDHL.driverId $ Se.Eq driverId]
 
-updateHomeLocationById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.DriverHomeLocation -> Domain.UpdateDriverHomeLocation -> m ()
+updateHomeLocationById :: KvDbFlow m r => Id Domain.DriverHomeLocation -> Domain.UpdateDriverHomeLocation -> m ()
 updateHomeLocationById homeLocationId driverHomeLocation = do
   now <- getCurrentTime
   updateOneWithKV

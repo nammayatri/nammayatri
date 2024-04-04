@@ -29,8 +29,7 @@ import qualified Storage.Queries.DriverInformation as QDriverInfo
 unblockDriver ::
   ( TranslateFlow m r,
     EsqDBReplicaFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r
+    KvDbFlow m r
   ) =>
   Job 'UnblockDriver ->
   m ExecutionResult

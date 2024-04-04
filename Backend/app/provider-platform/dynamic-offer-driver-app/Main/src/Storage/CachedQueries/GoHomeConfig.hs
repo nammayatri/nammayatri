@@ -30,7 +30,7 @@ import Domain.Types.GoHomeConfig
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import EulerHS.Language as L (getOption, setOption)
 import qualified GHC.List as GL
-import Kernel.Beam.Lib.Utils (pushToKafka)
+import Kernel.Beam.Lib.Utils (KvDbFlow, pushToKafka)
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -38,7 +38,6 @@ import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
 import Kernel.Tools.Metrics.CoreMetrics.Types (incrementSystemConfigsFailedCounter)
 import Kernel.Types.Cac
 import Kernel.Types.CacheFlow (CacheFlow)
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging
@@ -49,10 +48,10 @@ import qualified System.Environment as Se
 import System.Random
 import Tools.Error (GenericError (..))
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => GoHomeConfig -> m ()
+create :: KvDbFlow m r => GoHomeConfig -> m ()
 create = Queries.create
 
-getGoHomeConfigFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Int -> Maybe Text -> Maybe Text -> String -> Id MerchantOperatingCity -> m GoHomeConfig
+getGoHomeConfigFromCACStrict :: KvDbFlow m r => Int -> Maybe Text -> Maybe Text -> String -> Id MerchantOperatingCity -> m GoHomeConfig
 getGoHomeConfigFromCACStrict toss stickyId idName context id' = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
   config <- liftIO $ CM.evalExperimentAsString (fromMaybe "atlas_driver_offer_bpp_v2" tenant) context toss
@@ -73,7 +72,7 @@ getGoHomeConfigFromCACStrict toss stickyId idName context id' = do
     )
     res9
 
-createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Int -> Maybe Text -> Maybe Text -> String -> Id MerchantOperatingCity -> m GoHomeConfig
+createThroughConfigHelper :: KvDbFlow m r => Int -> Maybe Text -> Maybe Text -> String -> Id MerchantOperatingCity -> m GoHomeConfig
 createThroughConfigHelper toss stickyId idName context id' = do
   mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
   mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
@@ -82,7 +81,7 @@ createThroughConfigHelper toss stickyId idName context id' = do
   _ <- initializeCACThroughConfig CM.createClientFromConfig (fromMaybe (error "config not found for goHomeConfig in db") config) tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
   getGoHomeConfigFromCACStrict toss stickyId idName context id'
 
-getGoHomeConfigFromCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> Maybe Text -> Maybe Text -> m GoHomeConfig
+getGoHomeConfigFromCAC :: KvDbFlow m r => Id MerchantOperatingCity -> Int -> Maybe Text -> Maybe Text -> m GoHomeConfig
 getGoHomeConfigFromCAC id' toss stickyId idName = do
   context <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id'))]
   tenant <- liftIO $ Se.lookupEnv "TENANT"
@@ -101,7 +100,7 @@ getGoHomeConfigFromCAC id' toss stickyId idName = do
     )
     res9
 
-getGoHomeConfigFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
+getGoHomeConfigFromDB :: KvDbFlow m r => Id MerchantOperatingCity -> m GoHomeConfig
 getGoHomeConfigFromDB id = do
   logDebug "Fetching goHomeConfig from DB"
   Hedis.safeGet (makeGoHomeKey id) >>= \case
@@ -112,7 +111,7 @@ getGoHomeConfigFromDB id = do
       Hedis.setExp (makeGoHomeKey id) cfg expTime
       return cfg
 
-findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m GoHomeConfig
+findByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m GoHomeConfig
 findByMerchantOpCityId id stickyId idName = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
@@ -140,7 +139,7 @@ findByMerchantOpCityId id stickyId idName = do
   logDebug $ "goHomeConfig we recieved for merchantOpCityId:" <> getId id <> " is:" <> show config
   pure config
 
-getConfigsFromMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
+getConfigsFromMemory :: KvDbFlow m r => Id MerchantOperatingCity -> m GoHomeConfig
 getConfigsFromMemory id = do
   ghc <- L.getOption (DTC.GoHomeConfig id.getId)
   maybe

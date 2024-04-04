@@ -20,16 +20,15 @@ import Domain.Types.KioskLocationTranslation
 import Kernel.Beam.Functions
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.KioskLocationTranslation as BeamKT
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KioskLocationTranslation -> m ()
+create :: KvDbFlow m r => KioskLocationTranslation -> m ()
 create = createWithKV
 
-findByKioskLocationIdAndLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id KioskLocation.KioskLocation -> Language -> m (Maybe KioskLocationTranslation)
+findByKioskLocationIdAndLanguage :: KvDbFlow m r => Id KioskLocation.KioskLocation -> Language -> m (Maybe KioskLocationTranslation)
 findByKioskLocationIdAndLanguage (Id kioskLocationId) language = findOneWithKV [Se.And [Se.Is BeamKT.kioskLocationId $ Se.Eq kioskLocationId, Se.Is BeamKT.language $ Se.Eq language]]
 
 instance FromTType' BeamKT.KioskLocationTranslation KioskLocationTranslation where

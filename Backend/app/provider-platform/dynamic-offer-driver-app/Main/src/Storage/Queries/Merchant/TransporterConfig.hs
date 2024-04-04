@@ -33,13 +33,13 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => TransporterConfig -> m ()
+create :: KvDbFlow m r => TransporterConfig -> m ()
 create = createWithKV
 
-findByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
+findByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
 findByMerchantOpCityId (Id merchantOperatingCityId) = findOneWithKV [Se.Is BeamTC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
-updateFCMConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()
+updateFCMConfig :: KvDbFlow m r => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()
 updateFCMConfig (Id merchantOperatingCityId) fcmUrl fcmServiceAccount = do
   now <- getCurrentTime
   updateOneWithKV
@@ -49,7 +49,7 @@ updateFCMConfig (Id merchantOperatingCityId) fcmUrl fcmServiceAccount = do
     ]
     [Se.Is BeamTC.merchantOperatingCityId (Se.Eq merchantOperatingCityId)]
 
-updateReferralLinkPassword :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Text -> m ()
+updateReferralLinkPassword :: KvDbFlow m r => Id MerchantOperatingCity -> Text -> m ()
 updateReferralLinkPassword (Id merchantOperatingCityId) newPassword = do
   now <- getCurrentTime
   updateOneWithKV
@@ -58,7 +58,7 @@ updateReferralLinkPassword (Id merchantOperatingCityId) newPassword = do
     ]
     [Se.Is BeamTC.merchantOperatingCityId (Se.Eq merchantOperatingCityId)]
 
-update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => TransporterConfig -> m ()
+update :: KvDbFlow m r => TransporterConfig -> m ()
 update config = do
   now <- getCurrentTime
   updateOneWithKV

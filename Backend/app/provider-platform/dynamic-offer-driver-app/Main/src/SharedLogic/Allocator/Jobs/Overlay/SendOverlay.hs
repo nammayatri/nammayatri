@@ -32,8 +32,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Tools.Notifications as TN
 
 sendOverlayToDriver ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     MonadFlow m,
     Esq.EsqDBReplicaFlow m r,
     ServiceFlow m r,
@@ -115,7 +114,7 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
 getRescheduledTime :: (MonadTime m) => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
 
-sendOverlay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> Text -> Maybe Text -> HighPrecMoney -> m ()
+sendOverlay :: KvDbFlow m r => DP.Person -> Text -> Maybe Text -> HighPrecMoney -> m ()
 sendOverlay driver overlayKey udf1 amount = do
   mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId overlayKey (fromMaybe ENGLISH driver.language) udf1
   whenJust mOverlay $ \overlay -> do
@@ -124,22 +123,22 @@ sendOverlay driver overlayKey udf1 amount = do
     fork ("sending overlay to driver with driverId " <> (show driver.id)) $ do
       TN.sendOverlay driver.merchantOperatingCityId driver $ TN.mkOverlayReq overlay description okButtonText overlay.cancelButtonText overlay.endPoint
 
-getSendOverlaySchedulerDriverIdsLength :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id AnyJob -> m Integer
+getSendOverlaySchedulerDriverIdsLength :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> Id AnyJob -> m Integer
 getSendOverlaySchedulerDriverIdsLength merchantOpCityId jobId = Hedis.lLen $ makeSendOverlaySchedulerDriverIdsKey merchantOpCityId jobId
 
-getFirstNSendOverlaySchedulerDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id AnyJob -> Integer -> m [Id DP.Person]
+getFirstNSendOverlaySchedulerDriverIds :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> Id AnyJob -> Integer -> m [Id DP.Person]
 getFirstNSendOverlaySchedulerDriverIds merchantOpCityId jobId num = Hedis.lRange (makeSendOverlaySchedulerDriverIdsKey merchantOpCityId jobId) 0 (num -1)
 
-deleteNSendOverlaySchedulerDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id AnyJob -> Integer -> m ()
+deleteNSendOverlaySchedulerDriverIds :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> Id AnyJob -> Integer -> m ()
 deleteNSendOverlaySchedulerDriverIds merchantOpCityId jobId num = Hedis.lTrim (makeSendOverlaySchedulerDriverIdsKey merchantOpCityId jobId) num (-1)
 
-addSendOverlaySchedulerDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id AnyJob -> NonEmpty (Id DP.Person) -> m ()
+addSendOverlaySchedulerDriverIds :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> Id AnyJob -> NonEmpty (Id DP.Person) -> m ()
 addSendOverlaySchedulerDriverIds merchantOpCityId jobId = Hedis.rPush (makeSendOverlaySchedulerDriverIdsKey merchantOpCityId jobId)
 
 makeSendOverlaySchedulerDriverIdsKey :: Id DMOC.MerchantOperatingCity -> Id AnyJob -> Text
 makeSendOverlaySchedulerDriverIdsKey merchantOpCityId jobId = "SendOverlayScheduler:merchantOpCityId-" <> merchantOpCityId.getId <> ":jobId-" <> jobId.getId
 
-getLastScheduledJobTime :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id AnyJob -> TimeOfDay -> Seconds -> m UTCTime
+getLastScheduledJobTime :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> Id AnyJob -> TimeOfDay -> Seconds -> m UTCTime
 getLastScheduledJobTime merchantOpCityId jobId scheduledTime timeDiffFromUtc = do
   Hedis.get (makeLastScheduledTimeJobKey merchantOpCityId jobId) >>= \case
     Nothing -> do
@@ -149,14 +148,14 @@ getLastScheduledJobTime merchantOpCityId jobId scheduledTime timeDiffFromUtc = d
       pure lastScheduledTime
     Just lastScheduledTime -> pure lastScheduledTime
 
-setLastScheduledJobTime :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id AnyJob -> UTCTime -> m ()
+setLastScheduledJobTime :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> Id AnyJob -> UTCTime -> m ()
 setLastScheduledJobTime merchantOpCityId jobId = Hedis.set (makeLastScheduledTimeJobKey merchantOpCityId jobId)
 
 makeLastScheduledTimeJobKey :: Id DMOC.MerchantOperatingCity -> Id AnyJob -> Text
 makeLastScheduledTimeJobKey merchantOpCityId jobId = "SendOverlayScheduler:lastScheduledTime:merchantOpCityId-" <> merchantOpCityId.getId <> ":jobId" <> jobId.getId
 
 getBatchedDriverIds ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id AnyJob ->

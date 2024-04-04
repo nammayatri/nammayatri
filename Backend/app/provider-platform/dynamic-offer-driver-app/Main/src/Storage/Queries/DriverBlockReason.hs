@@ -19,13 +19,12 @@ import Data.Function
 import Domain.Types.DriverBlockReason
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Sequelize as Se
 import qualified Storage.Beam.DriverBlockReason as BeamDBR
 
-findAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [DriverBlockReason]
+findAll :: KvDbFlow m r => m [DriverBlockReason]
 findAll = findAllWithKV [Se.Is BeamDBR.reasonCode $ Se.Not $ Se.Eq ""]
 
 instance FromTType' BeamDBR.DriverBlockReason DriverBlockReason where

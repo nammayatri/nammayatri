@@ -15,7 +15,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverReferral as Beam
@@ -25,7 +25,7 @@ import Storage.Queries.OrphanInstances.DriverReferral
 -- Extra code goes here --
 
 getLastRefferalCode ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) =>
+  (KvDbFlow m r, Log m) =>
   m Integer
 getLastRefferalCode = do
   dbConf <- getMasterBeamConfig

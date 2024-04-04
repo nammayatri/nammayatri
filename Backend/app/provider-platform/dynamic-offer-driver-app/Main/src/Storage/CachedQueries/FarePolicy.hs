@@ -33,7 +33,6 @@ import Domain.Types.FarePolicy
 import EulerHS.Language as L (getOption)
 import qualified EulerHS.Language as L
 import qualified GHC.List as GL
-import Kernel.Beam.Lib.Utils (pushToKafka)
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Hedis
@@ -77,7 +76,7 @@ findFarePolicyFromCACHelper id cond toss = do
   _ <- initializeCACThroughConfig CM.createClientFromConfig (fromMaybe (error "Config not found for DriverIntelligentPoolConfig in db") config) tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
   findFarePolicyFromCACStrict id cond toss
 
-findFarePolicyFromCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Int -> Maybe Text -> Maybe Text -> m (Maybe FarePolicy)
+findFarePolicyFromCAC :: KvDbFlow m r => Id FarePolicy -> Int -> Maybe Text -> Maybe Text -> m (Maybe FarePolicy)
 findFarePolicyFromCAC id toss txnId idName = do
   fp <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "farePolicyId", DA.String (getId id))]
   tenant <- liftIO $ SE.lookupEnv "TENANT"
@@ -91,7 +90,7 @@ findFarePolicyFromCAC id toss txnId idName = do
     pushToKafka cacData "cac-data" ""
   pure config
 
-getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Int -> m (Maybe FarePolicy)
+getConfigFromInMemory :: KvDbFlow m r => Id FarePolicy -> Int -> m (Maybe FarePolicy)
 getConfigFromInMemory id toss = do
   fp <- L.getOption (DTC.FarePolicy id.getId)
   maybe
@@ -114,7 +113,7 @@ getConfigFromInMemory id toss = do
     )
     fp
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Maybe Text -> Id FarePolicy -> m (Maybe FarePolicy)
+findById :: KvDbFlow m r => Maybe Text -> Maybe Text -> Id FarePolicy -> m (Maybe FarePolicy)
 findById txnId idName id = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
@@ -173,8 +172,8 @@ clearCacheById :: HedisFlow m r => Id FarePolicy -> m ()
 clearCacheById fid = Hedis.withCrossAppRedis $ do
   Hedis.del (makeIdKey fid)
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
+update :: KvDbFlow m r => FarePolicy -> m ()
 update = Queries.update
 
-update' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
+update' :: KvDbFlow m r => FarePolicy -> m ()
 update' = Queries.update'

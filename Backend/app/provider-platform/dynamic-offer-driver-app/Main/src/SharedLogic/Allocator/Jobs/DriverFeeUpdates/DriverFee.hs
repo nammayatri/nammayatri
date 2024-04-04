@@ -68,8 +68,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Tools.Payment as TPayment
 
 calculateDriverFeeForDrivers ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     MonadFlow m,
     HasShortDurationRetryCfg r c,
@@ -205,7 +204,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
         }
 
 processDriverFee ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (MonadFlow m, CacheFlow m r, KvDbFlow m r, EncFlow m r) =>
   PaymentMode ->
   DriverFee ->
   SubscriptionConfig ->
@@ -233,7 +232,7 @@ processDriverFee paymentMode driverFee subscriptionConfig = do
       QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
 
 processRestFee ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (MonadFlow m, CacheFlow m r, KvDbFlow m r, EncFlow m r) =>
   PaymentMode ->
   DriverFee ->
   SubscriptionConfig ->
@@ -267,7 +266,7 @@ makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transport
     }
 
 getFinalOrderAmount ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (MonadFlow m, CacheFlow m r, KvDbFlow m r, EncFlow m r) =>
   HighPrecMoney ->
   Id Merchant ->
   TransporterConfig ->
@@ -330,7 +329,7 @@ getFreqAndBaseAmountcase planBaseAmount = case planBaseAmount of
   MONTHLY_BASE amount -> ("MONTHLY" :: Text, amount)
 
 driverFeeSplitter ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (MonadFlow m, CacheFlow m r, KvDbFlow m r, EncFlow m r) =>
   PaymentMode ->
   Plan ->
   HighPrecMoney ->
@@ -357,7 +356,7 @@ getRescheduledTime :: (MonadFlow m) => NominalDiffTime -> m UTCTime
 getRescheduledTime gap = addUTCTime gap <$> getCurrentTime
 
 updateSerialOrderForInvoicesInWindow ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id DriverFee ->
   Id MerchantOperatingCity ->
   UTCTime ->
@@ -375,7 +374,7 @@ updateSerialOrderForInvoicesInWindow driverFeeId merchantOpCityId startTime endT
     QDF.updateBillNumberById (Just (fromInteger billNumber')) driverFeeId
 
 getOrGenerateDriverFeeDataBasedOnServiceName ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   ServiceNames ->
   UTCTime ->
   UTCTime ->
@@ -441,7 +440,7 @@ mkInvoiceAgainstDriverFee driverFee (isCoinCleared, isAutoPay) = do
       }
 
 scheduleJobs ::
-  (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType) =>
+  (KvDbFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType) =>
   TransporterConfig ->
   UTCTime ->
   UTCTime ->
@@ -551,8 +550,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
 
 calcFinalOrderAmounts ::
   ( MonadFlow m,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     EncFlow m r
   ) =>
   Id Merchant ->
@@ -585,8 +583,7 @@ autopayInvoiceGeneratedNudgeKey :: Text
 autopayInvoiceGeneratedNudgeKey = "INVOICE_GENERATED_AUTOPAY"
 
 sendManualPaymentLink ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     MonadFlow m,
     EsqDBReplicaFlow m r,
@@ -616,7 +613,7 @@ sendManualPaymentLink Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       ReSchedule <$> getRescheduledTime subscriptionConfigs.genericJobRescheduleTime
 
 processAndSendManualPaymentLink ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) =>
+  (EsqDBReplicaFlow m r, KvDbFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) =>
   [DPlan.DriverPlan] ->
   SubscriptionConfig ->
   Id Merchant ->
@@ -653,7 +650,7 @@ processAndSendManualPaymentLink driverPlansToProccess subscriptionConfigs mercha
         QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName driverId serviceName endTime
 
 errorCatchAndHandle ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) =>
+  (EsqDBReplicaFlow m r, KvDbFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) =>
   Id Driver ->
   Either SomeException a ->
   SubscriptionConfig ->
@@ -686,5 +683,5 @@ isEligibleForRetryInNextBatch key maxCount = do
 mkManualLinkErrorTrackingByDriverIdKey :: Id Driver -> Text
 mkManualLinkErrorTrackingByDriverIdKey driverId = "ErrorRetryCountFor:DriverId:" <> driverId.getId
 
-getsetManualLinkErrorTrackingKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Maybe Int)
+getsetManualLinkErrorTrackingKey :: KvDbFlow m r => Id Driver -> m (Maybe Int)
 getsetManualLinkErrorTrackingKey driverId = Hedis.get (mkManualLinkErrorTrackingByDriverIdKey driverId)

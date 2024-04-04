@@ -32,7 +32,7 @@ import qualified Domain.Types.ServiceTierType as DVST
 import EulerHS.Language as L (getOption)
 import qualified EulerHS.Language as L
 import qualified GHC.List as GL
-import Kernel.Beam.Lib.Utils (pushToKafka)
+import Kernel.Beam.Lib.Utils (KvDbFlow, pushToKafka)
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude as KP
 import qualified Kernel.Storage.Hedis as Hedis
@@ -59,7 +59,7 @@ data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
   deriving (Generic)
 
 getSearchDriverPoolConfig ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity ->
   Maybe Meters ->
   SL.Area ->
@@ -70,7 +70,7 @@ getSearchDriverPoolConfig merchantOpCityId mbDist area = do
   getDriverPoolConfigHelper merchantOpCityId serviceTier tripCategory mbDist area Nothing Nothing
 
 getDriverPoolConfigFromDB ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity ->
   Maybe DVST.ServiceTierType ->
   String ->
@@ -96,7 +96,7 @@ getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist 
             Just cfg -> return cfg
             Nothing -> findDriverPoolConfig configs Nothing "All" distance area
 
-getConfigFromCACStrict :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Maybe Text -> String -> m DriverPoolConfig
+getConfigFromCACStrict :: KvDbFlow m r => Maybe Text -> Maybe Text -> String -> m DriverPoolConfig
 getConfigFromCACStrict srId idName context = do
   tenant <- liftIO (SE.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
   gen <- newStdGen
@@ -127,7 +127,7 @@ getConfigFromCACStrict srId idName context = do
     )
     res
 
-helper :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Maybe Text -> String -> m DriverPoolConfig
+helper :: KvDbFlow m r => Maybe Text -> Maybe Text -> String -> m DriverPoolConfig
 helper srId idName context = do
   mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
   mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
@@ -136,7 +136,7 @@ helper srId idName context = do
   _ <- initializeCACThroughConfig CM.createClientFromConfig (fromMaybe (error "Config not found in db for driverPoolConfig") config) tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
   getConfigFromCACStrict srId idName context
 
-getDriverPoolConfigFromCAC :: (CacheFlow m r, EsqDBFlow m r) => String -> Maybe Text -> Maybe Text -> m DriverPoolConfig
+getDriverPoolConfigFromCAC :: KvDbFlow m r => String -> Maybe Text -> Maybe Text -> m DriverPoolConfig
 getDriverPoolConfigFromCAC dpcCond srId idName = do
   tenant <- liftIO (SE.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
   gen <- newStdGen
@@ -171,7 +171,7 @@ doubleToInt :: Double -> Int
 doubleToInt = floor
 
 -- TODO :: Need To Handle `area` Properly In CAC
-getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe DVST.ServiceTierType -> String -> Meters -> Maybe Text -> Maybe Text -> m DriverPoolConfig
+getConfigFromInMemory :: KvDbFlow m r => Id MerchantOperatingCity -> Maybe DVST.ServiceTierType -> String -> Meters -> Maybe Text -> Maybe Text -> m DriverPoolConfig
 getConfigFromInMemory id mbvst tripCategory dist srId idName = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
   let roundeDist = doubleToInt (fromIntegral (dist.getMeters) / 1000)
@@ -216,7 +216,7 @@ getConfigFromInMemory id mbvst tripCategory dist srId idName = do
           getDriverPoolConfigFromCAC dpcCond'' srId idName
 
 getDriverPoolConfigHelper ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity ->
   Maybe DVST.ServiceTierType ->
   String ->
@@ -237,7 +237,7 @@ getDriverPoolConfigHelper merchantOpCityId serviceTier tripCategory mbDist area 
       getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist
 
 getDriverPoolConfig ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity ->
   DVST.ServiceTierType ->
   DTC.TripCategory ->
