@@ -354,6 +354,7 @@ calculateFareParameters params = do
             SUV -> avgSpeedOfVehicle.suv.getKilometers
             HATCHBACK -> avgSpeedOfVehicle.hatchback.getKilometers
             AUTO_RICKSHAW -> avgSpeedOfVehicle.autorickshaw.getKilometers
+            BIKE -> avgSpeedOfVehicle.bike.getKilometers
             TAXI -> avgSpeedOfVehicle.taxi.getKilometers
             TAXI_PLUS -> avgSpeedOfVehicle.taxiplus.getKilometers
             ECO -> avgSpeedOfVehicle.hatchback.getKilometers
