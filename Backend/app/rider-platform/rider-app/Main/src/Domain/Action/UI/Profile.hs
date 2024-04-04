@@ -39,6 +39,7 @@ import Data.Digest.Pure.MD5 as MD5
 import qualified Data.HashMap.Strict as HM
 import Data.List (nubBy)
 import qualified Data.Text as T
+import qualified Domain.Action.UI.Registration as DR
 import Domain.Types.Booking.Type as DBooking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
@@ -76,6 +77,7 @@ import qualified Storage.Queries.Disability as QD
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
 import qualified Storage.Queries.Person.PersonDisability as PDisability
+import qualified Storage.Queries.PersonStats as QPS
 import Tools.Error
 
 data ProfileRes = ProfileRes
@@ -100,7 +102,8 @@ data ProfileRes = ProfileRes
     clientVersion :: Maybe Version,
     followsRide :: Bool,
     frontendConfigHash :: Maybe Text,
-    isSafetyCenterDisabled :: Bool
+    isSafetyCenterDisabled :: Bool,
+    customerReferralCode :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -176,15 +179,23 @@ getPersonDetails (personId, _) mbToss = do
   frntndfgs <- if useCACConfig then getFrontendConfigs person mbToss else return $ Just DAKM.empty
   let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
   isSafetyCenterDisabled_ <- SLP.checkSafetyCenterDisabled person
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_
+  newCustomerReferralCode <-
+    if (isNothing person.customerReferralCode)
+      then do
+        newCustomerReferralCode <- DR.generateCustomerReferralCode
+        void $ QPerson.updateCustomerReferralCode personId newCustomerReferralCode
+        pure $ Just newCustomerReferralCode
+      else pure person.customerReferralCode
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ =
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode =
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
           hasTakenRide = hasTakenValidRide,
           frontendConfigHash = md5DigestHash,
           isSafetyCenterDisabled = isSafetyCenterDisabled_,
+          customerReferralCode = newCustomerReferralCode,
           ..
         }
 
@@ -246,22 +257,33 @@ updateDisability hasDisability mbDisability personId = do
 
 validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id Person.Person -> Text -> m (Maybe Text)
 validateRefferalCode personId refCode = do
-  unless (TU.validateAllDigitWithMinLength 6 refCode) (throwError $ InvalidRequest "Referral Code must have 6 digits")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
   when (person.hasTakenValidRide) do
     throwError (InvalidRequest "You have been already referred by someone")
-  case person.referralCode of
-    Just code ->
-      if code /= refCode
-        then throwError (InvalidRequest "Referral Code is not same")
-        else return Nothing -- idempotent behaviour
-    Nothing -> do
-      merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-      case (person.mobileNumber, person.mobileCountryCode) of
-        (Just mobileNumber, Just countryCode) -> do
-          void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode
-          return $ Just refCode
-        _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
+  let isCustomerReferralCode = T.isPrefixOf "C" refCode
+  if isCustomerReferralCode
+    then do
+      unless (TU.validateAlphaNumericWithLength refCode 6) (throwError $ InvalidRequest "Referral Code must have 6 digits and must be Alphanumeric")
+      referredByPerson <- QPerson.findPersonByCustomerReferralCode refCode >>= fromMaybeM (InvalidRequest "Invalid ReferralCode")
+      when (personId == referredByPerson.id) (throwError $ InvalidRequest "Cannot refer yourself")
+      stats <- QPS.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
+      void $ QPS.updateReferralCount (stats.referralCount + 1) personId
+      void $ QPerson.updateReferredByCustomer personId referredByPerson.id.getId
+      return $ Just refCode
+    else do
+      unless (TU.validateAllDigitWithMinLength 6 refCode) (throwError $ InvalidRequest "Referral Code must have 6 digits")
+      case person.referralCode of
+        Just code ->
+          if code /= refCode
+            then throwError (InvalidRequest "Referral Code is not same")
+            else return Nothing -- idempotent behaviour
+        Nothing -> do
+          merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+          case (person.mobileNumber, person.mobileCountryCode) of
+            (Just mobileNumber, Just countryCode) -> do
+              void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode
+              return $ Just refCode
+            _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
 
 updateDefaultEmergencyNumbers ::
   Id Person.Person ->

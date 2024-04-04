@@ -17,3 +17,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_fitness_certificate ADD COLUMN mercha
 ALTER TABLE atlas_driver_offer_bpp.vehicle_fitness_certificate ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_fitness_certificate ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_fitness_certificate ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_fitness_certificate ADD COLUMN driver_id character varying(36) NOT NULL;

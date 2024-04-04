@@ -65,6 +65,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.pucExpiry pucExpiry,
       Se.Set Beam.reviewRequired reviewRequired,
       Se.Set Beam.reviewedAt reviewedAt,
+      Se.Set Beam.userPassedVehicleCategory userPassedVehicleCategory,
       Se.Set Beam.vehicleCapacity vehicleCapacity,
       Se.Set Beam.vehicleClass vehicleClass,
       Se.Set Beam.vehicleColor vehicleColor,

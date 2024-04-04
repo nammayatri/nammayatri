@@ -16,3 +16,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_permit ADD COLUMN merchant_operating_
 ALTER TABLE atlas_driver_offer_bpp.vehicle_permit ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_permit ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_permit ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_permit ADD COLUMN driver_id character varying(36) NOT NULL;

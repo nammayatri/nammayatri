@@ -24,6 +24,7 @@ module Domain.Action.UI.Registration
     verify,
     resend,
     logout,
+    generateCustomerReferralCode,
   )
 where
 
@@ -359,7 +360,9 @@ buildPerson req mobileNumber notificationToken bundleVersion clientVersion merch
         useFakeOtp,
         followsRide = False,
         falseSafetyAlarmCount = 0,
-        safetyCenterDisabledOnDate = Nothing
+        safetyCenterDisabledOnDate = Nothing,
+        referredByCustomer = Nothing,
+        customerReferralCode = Nothing
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -447,6 +450,9 @@ verify tokenId req = do
   void $ RegistrationToken.setVerified True tokenId
   void $ Person.updateDeviceToken person.id deviceToken
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
+  when (isNothing person.referralCode) $ do
+    newCustomerReferralCode <- generateCustomerReferralCode
+    void $ Person.updateCustomerReferralCode person.id newCustomerReferralCode
   return $ AuthVerifyRes token personAPIEntity
   where
     checkForExpiry authExpiry updatedAt =
@@ -513,6 +519,7 @@ createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion 
             eveningPeakRides = 0,
             morningPeakRides = 0,
             weekendPeakRides = 0,
+            referralCount = 0,
             createdAt = now,
             updatedAt = now
           }
@@ -599,3 +606,9 @@ updatePersonIdForEmergencyContacts :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r
 updatePersonIdForEmergencyContacts personId mobileNumber merchantId = do
   dbHash <- getDbHash mobileNumber
   QPDEN.updateEmergencyContactPersonId dbHash personId merchantId
+
+generateCustomerReferralCode :: MonadFlow m => m Text
+generateCustomerReferralCode = do
+  aplhaNumericCode <- generateAplhaNumbericCode 5
+  let referralCode = "C" <> aplhaNumericCode
+  pure referralCode

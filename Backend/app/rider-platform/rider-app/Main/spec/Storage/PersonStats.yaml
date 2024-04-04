@@ -17,11 +17,15 @@ PersonStats:
     eveningPeakRides : Int
     morningPeakRides : Int
     weekendPeakRides : Int
+    referralCount : Int
     createdAt : UTCTime
     updatedAt : UTCTime
 
   constraints:
     personId: PrimaryKey
+
+  default:
+    referralCount: "0"
 
   beamType:
     createdAt: Maybe UTCTime
@@ -35,6 +39,10 @@ PersonStats:
   queries:
     findByPersonId:
       kvFunction: findOneWithKV
+      where: personId
+    updateReferralCount:
+      kvFunction: updateOneWithKV
+      params: [referralCount]
       where: personId
 
   extraOperations:

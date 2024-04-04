@@ -4,7 +4,9 @@
 
 module Storage.Queries.VehiclePUC where
 
+import qualified Domain.Types.Person
 import qualified Domain.Types.VehiclePUC
+import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -20,6 +22,11 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VehiclePUC.VehiclePUC] -> m ())
 createMany = traverse_ create
 
+findByRcIdAndDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehiclePUC.VehiclePUC])
+findByRcIdAndDriverId (Kernel.Types.Id.Id rcId) (Kernel.Types.Id.Id driverId) = do findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.driverId $ Se.Eq driverId]]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehiclePUC.VehiclePUC -> m (Maybe Domain.Types.VehiclePUC.VehiclePUC))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
@@ -28,6 +35,7 @@ updateByPrimaryKey (Domain.Types.VehiclePUC.VehiclePUC {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
+      Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.pucExpiry pucExpiry,
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
       Se.Set Beam.verificationStatus verificationStatus,
@@ -44,6 +52,7 @@ instance FromTType' Beam.VehiclePUC Domain.Types.VehiclePUC.VehiclePUC where
       Just
         Domain.Types.VehiclePUC.VehiclePUC
           { documentImageId = Kernel.Types.Id.Id documentImageId,
+            driverId = Kernel.Types.Id.Id driverId,
             id = Kernel.Types.Id.Id id,
             pucExpiry = pucExpiry,
             rcId = Kernel.Types.Id.Id rcId,
@@ -58,6 +67,7 @@ instance ToTType' Beam.VehiclePUC Domain.Types.VehiclePUC.VehiclePUC where
   toTType' (Domain.Types.VehiclePUC.VehiclePUC {..}) = do
     Beam.VehiclePUCT
       { Beam.documentImageId = Kernel.Types.Id.getId documentImageId,
+        Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.pucExpiry = pucExpiry,
         Beam.rcId = Kernel.Types.Id.getId rcId,

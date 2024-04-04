@@ -26,8 +26,8 @@ import Tools.Auth
 
 mkDocumentVerificationConfigAPIEntity :: Language -> Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig -> Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity
 mkDocumentVerificationConfigAPIEntity language Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} = do
-  mbTitle <- MTQuery.findByErrorAndLanguage (show documentType) language
-  mbDescription <- MTQuery.findByErrorAndLanguage (show documentType) language
+  mbTitle <- MTQuery.findByErrorAndLanguage ((show documentType) <> "_Title") language
+  mbDescription <- MTQuery.findByErrorAndLanguage ((show documentType) <> "_Description") language
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity
       { title = maybe title (.message) mbTitle,

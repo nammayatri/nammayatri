@@ -26,8 +26,6 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     getAllLinkedRCs,
     LinkedRC (..),
     DeleteRCReq (..),
-    activateRC,
-    validateRCActivation,
     convertTextToUTC,
     makeFleetOwnerKey,
   )
@@ -246,13 +244,13 @@ onVerifyRC person mbVerificationReq output = do
     else do
       now <- getCurrentTime
       id <- generateGUID
-      let vehicleCategory = fromMaybe Vehicle.CAR (mbVerificationReq >>= (.vehicleCategory))
-      rCConfigs <- SCO.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId ODC.VehicleRegistrationCertificate vehicleCategory >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show ODC.VehicleRegistrationCertificate))
+      let mbVehicleCategory = mbVerificationReq >>= (.vehicleCategory)
+      rCConfigs <- SCO.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId ODC.VehicleRegistrationCertificate (fromMaybe Vehicle.CAR mbVehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show ODC.VehicleRegistrationCertificate))
       mEncryptedRC <- encrypt `mapM` output.registrationNumber
       modelNamesHashMap <- asks (.modelNamesHashMap)
       let mbFitnessEpiry = convertTextToUTC output.fitnessUpto <|> convertTextToUTC output.permitValidityUpto <|> Just (DT.UTCTime (TO.fromOrdinalDate 1900 1) 0)
       fleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) output.registrationNumber
-      let mVehicleRC = createRC person.merchantId person.merchantOperatingCityId rCConfigs output id (maybe "" (.documentImageId1) mbVerificationReq) now ((.dashboardPassedVehicleVariant) =<< mbVerificationReq) fleetOwnerId modelNamesHashMap <$> mEncryptedRC <*> mbFitnessEpiry
+      let mVehicleRC = createRC person.merchantId person.merchantOperatingCityId mbVehicleCategory rCConfigs output id (maybe "" (.documentImageId1) mbVerificationReq) now ((.dashboardPassedVehicleVariant) =<< mbVerificationReq) fleetOwnerId modelNamesHashMap <$> mEncryptedRC <*> mbFitnessEpiry
       case mVehicleRC of
         Just vehicleRC -> do
           RCQuery.upsert vehicleRC
@@ -281,8 +279,8 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) req@RCStatusReq {..} = do
   now <- getCurrentTime
   if req.isActivate
     then do
-      validateRCActivation driverId merchantOpCityId rc
-      activateRC driverId merchantId merchantOpCityId now rc
+      validated <- validateRCActivation driverId merchantOpCityId rc
+      when validated $ activateRC driverId merchantId merchantOpCityId now rc
     else do
       deactivateRC rc driverId
   return Success
@@ -301,7 +299,7 @@ removeVehicle driverId = do
   when (isJust isOnRide) $ throwError RCVehicleOnRide
   VQuery.deleteById driverId -- delete the vehicle entry too for the driver
 
-validateRCActivation :: Id Person.Person -> Id DMOC.MerchantOperatingCity -> Domain.VehicleRegistrationCertificate -> Flow ()
+validateRCActivation :: Id Person.Person -> Id DMOC.MerchantOperatingCity -> Domain.VehicleRegistrationCertificate -> Flow Bool
 validateRCActivation driverId merchantOpCityId rc = do
   now <- getCurrentTime
   _ <- DAQuery.findLinkedByRCIdAndDriverId driverId rc.id now >>= fromMaybeM (InvalidRequest "RC not linked to driver. Please link.")
@@ -310,8 +308,11 @@ validateRCActivation driverId merchantOpCityId rc = do
   mActiveAssociation <- DAQuery.findActiveAssociationByRC rc.id True
   case mActiveAssociation of
     Just activeAssociation -> do
-      when (activeAssociation.driverId == driverId) $ throwError (InvalidRequest "RC already active with driver requested")
-      deactivateIfWeCanDeactivate activeAssociation.driverId now (deactivateRC rc)
+      if (activeAssociation.driverId == driverId)
+        then return False
+        else do
+          deactivateIfWeCanDeactivate activeAssociation.driverId now (deactivateRC rc)
+          return True
     Nothing -> do
       -- check if vehicle of that rc number is already with other driver
       mVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
@@ -321,6 +322,7 @@ validateRCActivation driverId merchantOpCityId rc = do
             then deactivateIfWeCanDeactivate vehicle.driverId now removeVehicle
             else removeVehicle driverId
         Nothing -> return ()
+      return True
   where
     deactivateIfWeCanDeactivate :: Id Person.Person -> UTCTime -> (Id Person.Person -> Flow ()) -> Flow ()
     deactivateIfWeCanDeactivate oldDriverId now deactivateFunc = do
@@ -403,6 +405,7 @@ getAllLinkedRCs (driverId, _, _) = do
 createRC ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe Vehicle.Category ->
   ODC.DocumentVerificationConfig ->
   VT.RCVerificationResponse ->
   Id Domain.VehicleRegistrationCertificate ->
@@ -414,12 +417,12 @@ createRC ::
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   Domain.VehicleRegistrationCertificate
-createRC merchantId merchantOperatingCityId rcconfigs output id imageId now mbVariant mbFleetOwnerId modelNamesHashMap edl expiry = do
+createRC merchantId merchantOperatingCityId vehicleCategory rcconfigs output id imageId now mbVariant mbFleetOwnerId modelNamesHashMap edl expiry = do
   let insuranceValidity = convertTextToUTC output.insuranceValidity
   let vehicleClass = output.vehicleClass
-  let vehicleCategory = output.vehicleCategory
+  let vehicleClassCategory = output.vehicleCategory
   let vehicleCapacity = (readMaybe . T.unpack) =<< readFromJson =<< output.seatingCapacity
-  let (verificationStatus, reviewRequired, variant, mbVehicleModel) = validateRCStatus mbVariant rcconfigs expiry insuranceValidity vehicleClass vehicleCategory now vehicleCapacity output.manufacturer output.bodyType output.manufacturerModel
+  let (verificationStatus, reviewRequired, variant, mbVehicleModel) = validateRCStatus mbVariant rcconfigs expiry insuranceValidity vehicleClass vehicleClassCategory now vehicleCapacity output.manufacturer output.bodyType output.manufacturerModel
   Domain.VehicleRegistrationCertificate
     { id,
       documentImageId = imageId,
@@ -442,6 +445,7 @@ createRC merchantId merchantOperatingCityId rcconfigs output id imageId now mbVa
       fleetOwnerId = mbFleetOwnerId,
       merchantId = Just merchantId,
       merchantOperatingCityId = Just merchantOperatingCityId,
+      userPassedVehicleCategory = vehicleCategory,
       airConditioned = Nothing,
       luggageCapacity = Nothing,
       vehicleRating = Nothing,
