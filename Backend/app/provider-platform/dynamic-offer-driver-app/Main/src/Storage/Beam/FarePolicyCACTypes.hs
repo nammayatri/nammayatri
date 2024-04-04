@@ -34,6 +34,6 @@ data FarePolicySlabsDetailsSlab = FarePolicySlabsDetailsSlab
   }
   deriving (Generic, FromJSON, ToJSON)
 
-$(mkCacParseInstanceList ''FarePolicyProgressiveDetailsPerExtraKmRateSection "farePolicyProgressiveDetailsPerExtraKmRateSection")
-$(mkCacParseInstanceList ''FarePolicyRentalDetailsDistanceBuffers "farePolicyRentalDetailsDistanceBuffers")
-$(mkCacParseInstanceList ''FarePolicySlabsDetailsSlab "farePolicySlabsDetailsSlab")
+$(mkCacParseInstanceList ''FarePolicyProgressiveDetailsPerExtraKmRateSection)
+$(mkCacParseInstanceList ''FarePolicyRentalDetailsDistanceBuffers)
+$(mkCacParseInstanceList ''FarePolicySlabsDetailsSlab)

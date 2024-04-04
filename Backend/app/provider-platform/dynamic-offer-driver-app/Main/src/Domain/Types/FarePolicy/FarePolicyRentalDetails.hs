@@ -27,6 +27,7 @@ import Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDi
 import Kernel.Prelude
 import Kernel.Types.Cac
 import Kernel.Types.Common
+import Kernel.Utils.Logging
 
 data FPRentalDetailsD (s :: UsageSafety) = FPRentalDetails
   { baseFare :: Money,
@@ -57,8 +58,11 @@ parsingMiddlewareForRental config configMap key' =
   let fPRDDB = nonEmpty $ jsonToFPRentalDetailsDistanceBuffers config key'
    in DAKM.insert "distanceBuffers" (DA.toJSON fPRDDB) configMap
 
-jsonToFPRentalDetails :: String -> String -> Maybe FPRentalDetails
-jsonToFPRentalDetails config key' =
-  let fPRD' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicyRentalDetails:") (itraversed . indices (Text.isPrefixOf "farePolicyRentalDetails:" . DAK.toText)))
+jsonToFPRentalDetails :: MonadFlow m => String -> String -> m (Maybe FPRentalDetails)
+jsonToFPRentalDetails config key' = do
+  let fPRD' = config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicyRentalDetails:") (itraversed . indices (Text.isPrefixOf "farePolicyRentalDetails:" . DAK.toText))
       fpRD'' = parsingMiddlewareForRental config (DAKM.fromList fPRD') key'
-   in Object fpRD'' ^? _JSON :: (Maybe FPRentalDetails)
+      res = Object fpRD'' ^? _JSON :: (Maybe FPRentalDetails)
+  when (isNothing res) do
+    logDebug $ "FarePolicyRentalDetails from CAC Not Parsable: " <> show fPRD' <> " after middle parsing" <> show fpRD'' <> " for key: " <> Text.pack key'
+  pure res
