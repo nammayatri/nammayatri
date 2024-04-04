@@ -853,7 +853,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
         progressDialog = inflater.inflate(R.layout.loading_screen_overlay, null);
         apiLoader = inflater.inflate(R.layout.api_loader, null);
-        View dismissLoader = progressDialog.findViewById(R.id.loaderOverlay);
+        String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
+        View dismissLoader = vehicleVariant == "AUTO_RICKSHAW" ? progressDialog.findViewById(R.id.loaderOverlay) : progressDialog.findViewById(R.id.cabLoaderOverlay);
         dismissLoader.setOnClickListener(view -> {
             Handler handler = new Handler(Looper.getMainLooper());
             handler.post(this::cleanUp);
