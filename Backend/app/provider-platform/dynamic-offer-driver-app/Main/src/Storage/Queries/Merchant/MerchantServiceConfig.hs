@@ -35,6 +35,7 @@ import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
+import Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Verification.Interface as Verification
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude as P
@@ -107,6 +108,7 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
       Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> valueToMaybe configJSON
       Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> valueToMaybe configJSON
       Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> valueToMaybe configJSON
+      Domain.TokenizationService Tokenize.HyperVerge -> Domain.TokenizationServiceConfig . Tokenize.HyperVergeTokenizationServiceConfig <$> valueToMaybe configJSON
 
     pure $
       Just
@@ -167,3 +169,5 @@ instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
           Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
           Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
           Notification.GRPCConfig cfg -> (Domain.NotificationService Notification.GRPC, toJSON cfg)
+        Domain.TokenizationServiceConfig tokenizationConfig -> case tokenizationConfig of
+          Tokenize.HyperVergeTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.HyperVerge, toJSON cfg)

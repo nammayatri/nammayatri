@@ -1189,3 +1189,21 @@ instance IsAPIError DriverOnboardingError
 instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
 
 $(mkBeamInstancesForEnum ''DriverOnboardingError)
+
+data TokenizationResponseError
+  = ServiceConfigError Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''TokenizationResponseError
+
+instance IsBaseError TokenizationResponseError where
+  toMessage = \case
+    ServiceConfigError msg -> Just $ "Service Config Error. Error msg : " <> msg
+
+instance IsHTTPError TokenizationResponseError where
+  toErrorCode = \case
+    ServiceConfigError _ -> "SERVICE_CONFIG_ERROR"
+  toHttpCode = \case
+    ServiceConfigError _ -> E500
+
+instance IsAPIError TokenizationResponseError
