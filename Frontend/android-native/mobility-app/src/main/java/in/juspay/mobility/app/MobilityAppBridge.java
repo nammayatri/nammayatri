@@ -455,7 +455,7 @@ public class MobilityAppBridge extends HyperBridge {
 
     //region Chat Utiils
     @JavascriptInterface
-    public static void sendMessage(final String message) {
+    public void sendMessage(final String message) {
         for (SendMessageCallBack sendMessageCallBack : sendMessageCallBacks) {
             sendMessageCallBack.sendMessage(message);
         }

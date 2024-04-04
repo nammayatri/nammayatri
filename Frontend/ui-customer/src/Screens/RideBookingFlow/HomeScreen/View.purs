@@ -249,7 +249,6 @@ screen initialState =
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               RideStarted -> do
                 -- _ <- pure $ enableMyLocation false
-                when (not initialState.props.chatcallbackInitiated && not initialState.props.isSpecialZone && initialState.data.fareProductType == FPT.RENTAL) $ startChatSerivces push initialState.data.driverInfoCardState.bppRideId "Customer" false
                 --   _ <- clearChatMessages
                 --   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
                 --   _ <- storeCallBackOpenChatScreen push OpenChatScreen
@@ -267,9 +266,10 @@ screen initialState =
                   pure unit
                 else
                   pure unit
+                let isRental = initialState.data.fareProductType == FPT.RENTAL
                 case initialState.data.contactList of
-                  Nothing -> void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ updateEmergencyContacts push initialState
-                  Just contacts -> validateAndStartChat contacts push initialState
+                  Nothing -> if (isRental && initialState.props.chatcallbackInitiated) then pure unit else void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ updateEmergencyContacts push initialState
+                  Just contacts -> if (isRental && not initialState.props.chatcallbackInitiated) then startChatSerivces push initialState.data.driverInfoCardState.bppRideId "Customer" false else  validateAndStartChat contacts push initialState
                 when (initialState.data.fareProductType /= FPT.RENTAL) $ do 
                   void $ push RemoveChat
                 pure unit
@@ -4182,9 +4182,12 @@ computeListItem push = do
     
 updateEmergencyContacts :: (Action -> Effect Unit) -> HomeScreenState -> FlowBT String Unit
 updateEmergencyContacts push state = do
-  contacts <- getFormattedContacts
-  void $ liftFlowBT $ push (UpdateContacts contacts)
-  void $ liftFlowBT $ validateAndStartChat contacts push state
+  if state.data.fareProductType == FPT.RENTAL && not state.props.chatcallbackInitiated 
+    then liftFlowBT $ startChatSerivces push state.data.driverInfoCardState.bppRideId "Customer" false 
+    else do
+      contacts <- getFormattedContacts
+      void $ liftFlowBT $ push (UpdateContacts contacts)
+      void $ liftFlowBT $ validateAndStartChat contacts push state
 
 validateAndStartChat :: Array NewContacts ->  (Action -> Effect Unit) -> HomeScreenState -> Effect Unit
 validateAndStartChat contacts push state = do

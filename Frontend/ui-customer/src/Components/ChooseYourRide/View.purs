@@ -126,7 +126,7 @@ addTipView push state =
   , gravity CENTER
   , clickable true
   , onClick push $ const $ if state.tipViewProps.stage == DEFAULT then AddTip else NoAction 
-  , visibility $ boolToVisibility state.enableTips
+  , visibility $ boolToVisibility (state.enableTips && not state.intercity)
   ] $ (case state.tipViewProps.stage of 
           DEFAULT -> [defaultTipView push state]
           TIP_AMOUNT_SELECTED -> [selectTipView push state]
