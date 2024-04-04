@@ -163,6 +163,6 @@ jobs:
         uses: peter-evans/enable-pull-request-automerge@v3
         continue-on-error: true
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_ASSET }}
           merge-method: rebase
           pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
