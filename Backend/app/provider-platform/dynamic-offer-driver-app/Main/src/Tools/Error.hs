@@ -1170,3 +1170,25 @@ instance IsAPIError DriverOnboardingError
 instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
 
 $(mkBeamInstancesForEnum ''DriverOnboardingError)
+
+data HyperVergeRsponseError
+  = HyperVergeResponseDecodingError Text
+  | ServiceConfigError Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''HyperVergeRsponseError
+
+instance IsBaseError HyperVergeRsponseError where
+  toMessage = \case
+    HyperVergeResponseDecodingError msg -> Just $ "Error Decoding HV Response. Error msg : " <> msg
+    ServiceConfigError msg -> Just $ "Service Config Error. Error msg : " <> msg
+
+instance IsHTTPError HyperVergeRsponseError where
+  toErrorCode = \case
+    HyperVergeResponseDecodingError _ -> "HYPERVERGE_RESPONSE_DECODING_ERROR"
+    ServiceConfigError _ -> "SERVICE_CONFIG_ERROR"
+  toHttpCode = \case
+    HyperVergeResponseDecodingError _ -> E500
+    ServiceConfigError _ -> E500
+
+instance IsAPIError HyperVergeRsponseError

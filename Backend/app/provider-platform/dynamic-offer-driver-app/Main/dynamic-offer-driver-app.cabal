@@ -203,6 +203,7 @@ library
       Domain.Action.UI.Route
       Domain.Action.UI.SafetyWebhook
       Domain.Action.UI.SpecialLocation
+      Domain.Action.UI.Tokenization
       Domain.Action.UI.Transporter
       Domain.Action.UI.Whatsapp
       Domain.Types.Beckn.Status
@@ -582,9 +583,11 @@ library
       API.Action.UI.LmsModule
       API.Action.UI.Reels
       API.Action.UI.SpecialLocation
+      API.Action.UI.Tokenization
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.LmsModule
       API.Types.UI.Reels
+      API.Types.UI.Tokenization
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
       Domain.Types.AadhaarVerification

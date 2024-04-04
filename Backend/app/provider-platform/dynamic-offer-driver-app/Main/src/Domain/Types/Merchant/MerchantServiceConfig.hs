@@ -30,6 +30,8 @@ import Kernel.External.Notification.Interface.Types
 import Kernel.External.Payment.Interface as Payment
 import Kernel.External.SMS as Sms
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
+import qualified Kernel.External.Tokenize.Interface.Types as TokenizeIntTypes
+import qualified Kernel.External.Tokenize.Types as TokenizeTypes
 import qualified Kernel.External.Verification as Verification
 import Kernel.External.Verification.Interface.Types
 import Kernel.External.Whatsapp.Interface as Whatsapp
@@ -51,6 +53,7 @@ data ServiceName
   | RentalPaymentService Payment.PaymentService
   | IssueTicketService Ticket.IssueTicketService
   | NotificationService Notification.NotificationService
+  | TokenizationService TokenizeTypes.TokenizationService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -68,6 +71,7 @@ instance Show ServiceName where
   show (RentalPaymentService s) = "RentalPayment_" <> show s
   show (IssueTicketService s) = "Ticket_" <> show s
   show (NotificationService s) = "Notification_" <> show s
+  show (TokenizationService s) = "Tokenization_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -118,6 +122,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Notification_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (TokenizationService v1, r2)
+                 | r1 <- stripPrefix "Tokenization_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -135,6 +143,7 @@ data ServiceConfigD (s :: UsageSafety)
   | RentalPaymentServiceConfig !PaymentServiceConfig
   | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
   | NotificationServiceConfig !NotificationServiceConfig
+  | TokenizationServiceConfig !TokenizeIntTypes.TokenizationServiceConfig
   deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -191,6 +200,8 @@ getServiceName osc = case osc.serviceConfig of
     Notification.FCMConfig _ -> NotificationService Notification.FCM
     Notification.PayTMConfig _ -> NotificationService Notification.PayTM
     Notification.GRPCConfig _ -> NotificationService Notification.GRPC
+  TokenizationServiceConfig tokenizationConfig -> case tokenizationConfig of
+    TokenizeIntTypes.HyperVergeTokenizationServiceConfig _ -> TokenizationService TokenizeTypes.HyperVerge
 
 buildMerchantServiceConfig ::
   MonadTime m =>

@@ -27,6 +27,8 @@ import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
+import qualified Kernel.External.Tokenize.Interface.Types as TokenizeIntTypes
+import qualified Kernel.External.Tokenize.Types as TokenizeTypes
 import qualified Kernel.External.Verification.Interface as Verification
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
@@ -83,6 +85,8 @@ getServiceNameConfigJSON = \case
     Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
     Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
     Notification.GRPCConfig cfg -> (Domain.NotificationService Notification.GRPC, toJSON cfg)
+  Domain.TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of
+    TokenizeIntTypes.HyperVergeTokenizationServiceConfig cfg -> (Domain.TokenizationService TokenizeTypes.HyperVerge, toJSON cfg)
 
 $(enableKVPG ''MerchantServiceConfigT ['serviceName, 'merchantId] [])
 
