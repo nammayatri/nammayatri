@@ -17,6 +17,7 @@ data PersonStats = PersonStats
     morningPeakRides :: Kernel.Prelude.Int,
     offPeakRides :: Kernel.Prelude.Int,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    referralCount :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
     userCancelledRides :: Kernel.Prelude.Int,
     weekdayRides :: Kernel.Prelude.Int,

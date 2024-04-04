@@ -116,7 +116,9 @@ data PersonE e = Person
     useFakeOtp :: Maybe Text,
     followsRide :: Bool,
     falseSafetyAlarmCount :: Int,
-    safetyCenterDisabledOnDate :: Maybe UTCTime
+    safetyCenterDisabledOnDate :: Maybe UTCTime,
+    referredByCustomer :: Maybe Text,
+    customerReferralCode :: Maybe Text
   }
   deriving (Generic)
 
