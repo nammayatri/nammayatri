@@ -92,7 +92,11 @@ screen initialState =
   }
   where
   getMetroStatusEvent push = do
-    void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusPooling initialState.data.bookingId initialState.data.validUntil 3000.0 initialState push MetroPaymentStatusAction
+    let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+    if city == ST.Chennai then
+      void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusPooling initialState.data.bookingId initialState.data.validUntil 3000.0 initialState push MetroPaymentStatusAction
+    else
+      void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusfinitePooling initialState.data.bookingId initialState.data.validUntil 5 5000.0 initialState push MetroPaymentStatusAction
     pure $ pure unit
 --------------------------------------------------------------------------------------------
 -- Spy is required to debug the flow
@@ -126,6 +130,41 @@ metroPaymentStatusPooling bookingId validUntil delayDuration state push action =
                   metroPaymentStatusPooling bookingId validUntil delayDuration state push action
           _ -> pure unit
       Left _ -> pure unit
+  else pure unit
+
+
+metroPaymentStatusfinitePooling :: forall action. String -> String -> Int -> Number -> ST.MetroTicketStatusScreenState -> (action -> Effect Unit) -> (MetroTicketBookingStatus -> action) -> Flow GlobalState Unit
+metroPaymentStatusfinitePooling bookingId validUntil count delayDuration state push action = do
+  let diffSec = runFn2 JB.differenceBetweenTwoUTC  validUntil (getCurrentUTC "")
+  if count > 0 then do
+    if (getValueToLocalStore METRO_PAYMENT_STATUS_POOLING) == "true" && bookingId /= "" then do
+      ticketStatus <-  Remote.getMetroBookingStatus bookingId 
+      void $ pure $ spy "metroPaymentStatusfinitePooling" ticketStatus
+      case ticketStatus of
+        Right (API.GetMetroBookingStatusResp resp) -> do
+          let (MetroTicketBookingStatus statusResp) = resp
+          case statusResp.payment of
+            Just (FRFSBookingPaymentAPI paymentInfo) -> do
+              if paymentInfo.status == "NEW" then do
+                void $ pure $ spy "case 1" paymentInfo.status
+                _ <- pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+                doAff do liftEffect $ push $ action resp
+              else if ((DA.any (_ == statusResp.status) ["CONFIRMED", "FAILED", "EXPIRED"])) then do
+                  void $ pure $ spy "case 2" statusResp.status
+                  _ <- pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+                  doAff do liftEffect $ push $ action resp
+              else do
+                  if (diffSec + 2) < 0 then do
+                    void $ pure $ spy "case 3" (show diffSec)
+                    _ <- pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+                    doAff do liftEffect $ push $ action resp
+                  else do
+                    void $ pure $ spy "case 4" bookingId
+                    void $ delay $ Milliseconds delayDuration
+                    metroPaymentStatusfinitePooling bookingId validUntil (count - 1) delayDuration state push action
+            _ -> pure unit
+        Left _ -> pure unit
+    else pure unit
   else pure unit
 
 view :: forall w . (Action -> Effect Unit) -> ST.MetroTicketStatusScreenState -> PrestoDOM (Effect Unit) w
