@@ -62,7 +62,7 @@ notificationAndOrderStatusUpdate (Job {id, jobInfo}) = withLogTag ("JobId-" <> i
 getRescheduledTime :: (MonadTime m, KvDbFlow m r) => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
 
-updateInvoicesPendingToFailedAfterRetry :: (MonadFlow m, KvDbFlow m r) => TransporterConfig -> m ()
+updateInvoicesPendingToFailedAfterRetry :: KvDbFlow m r => TransporterConfig -> m ()
 updateInvoicesPendingToFailedAfterRetry transporterConfig = do
   let timeCheckLimit = transporterConfig.orderAndNotificationStatusCheckTimeLimit
       opCityId = transporterConfig.merchantOperatingCityId

@@ -6,14 +6,14 @@ import Domain.Types.Location
 import qualified Domain.Types.LocationMapping as DLM
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM)
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Tools.Error
 
-getToLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m (Maybe Location)
+getToLocation :: KvDbFlow m r => Text -> Text -> Maybe Text -> Maybe Text -> m (Maybe Location)
 getToLocation id bookingId merchantId merchantOperatingCityId = do
   mappings <- QLM.findByEntityId id
   mbToLocationMapping <-
@@ -27,7 +27,7 @@ getToLocation id bookingId merchantId merchantOperatingCityId = do
       else QLM.getLatestEndByEntityId id
   maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
 
-getFromLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m Location
+getFromLocation :: KvDbFlow m r => Text -> Text -> Maybe Text -> Maybe Text -> m Location
 getFromLocation id bookingId merchantId merchantOperatingCityId = do
   mappings <- QLM.findByEntityId id
   fromLocationMapping <-

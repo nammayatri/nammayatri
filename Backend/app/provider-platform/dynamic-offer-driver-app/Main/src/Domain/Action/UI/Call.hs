@@ -272,7 +272,6 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
 
 throwCallError ::
   ( HasCallStack,
-    MonadFlow m,
     KvDbFlow m r,
     IsBaseException e
   ) =>
@@ -285,12 +284,12 @@ throwCallError callSid err merchantId callService = do
   QCallStatus.updateCallError (Just (show err)) callService merchantId (Id callSid)
   throwError err
 
-getCallStatus :: (MonadFlow m, KvDbFlow m r) => Id SCS.CallStatus -> m GetCallStatusRes
+getCallStatus :: KvDbFlow m r => Id SCS.CallStatus -> m GetCallStatusRes
 getCallStatus callStatusId = do
   runInReplica $ QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> makeCallStatusAPIEntity
 
 -- | Get customer's mobile phone
-getCustomerPhone :: (EncFlow m r, MonadFlow m, KvDbFlow m r) => DB.Booking -> m Text
+getCustomerPhone :: (EncFlow m r, KvDbFlow m r) => DB.Booking -> m Text
 getCustomerPhone booking = do
   riderId <-
     booking.riderId
@@ -300,7 +299,7 @@ getCustomerPhone booking = do
   return $ riderDetails.mobileCountryCode <> decMobNum
 
 -- | Get driver's mobile phone
-getDriverPhone :: (EncFlow m r, MonadFlow m, KvDbFlow m r) => SRide.Ride -> m Text
+getDriverPhone :: (EncFlow m r, KvDbFlow m r) => SRide.Ride -> m Text
 getDriverPhone ride = do
   driver <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   decMobNum <- mapM decrypt driver.mobileNumber
@@ -308,7 +307,7 @@ getDriverPhone ride = do
   phonenum & fromMaybeM (InternalError "Driver has no phone number.")
 
 -- | Returns phones pair or throws an error
-getCustomerAndDriverPhones :: (EncFlow m r, MonadFlow m, KvDbFlow m r) => SRide.Ride -> DB.Booking -> m (Text, Text)
+getCustomerAndDriverPhones :: (EncFlow m r, KvDbFlow m r) => SRide.Ride -> DB.Booking -> m (Text, Text)
 getCustomerAndDriverPhones ride booking = do
   customerPhone <- getCustomerPhone booking
   driverPhone <- getDriverPhone ride

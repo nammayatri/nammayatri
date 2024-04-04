@@ -51,7 +51,6 @@ sendACOverlay overlayKey person = do
 
 sendOverlayToDriver ::
   ( KvDbFlow m r,
-    MonadFlow m,
     Esq.EsqDBReplicaFlow m r,
     ServiceFlow m r,
     Esq.Transactionable m,

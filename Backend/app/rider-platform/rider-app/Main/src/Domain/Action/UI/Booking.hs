@@ -180,7 +180,7 @@ validateStopReq booking isEdit = do
     SRB.OneWaySpecialZoneDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in special zone rides"
     SRB.InterCityDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in intercity rides"
 
-buildLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => StopReq -> m Location
+buildLocation :: KvDbFlow m r => StopReq -> m Location
 buildLocation req = do
   id <- generateGUID
   now <- getCurrentTime
@@ -194,7 +194,7 @@ buildLocation req = do
         ..
       }
 
-buildLocationMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Location -> Text -> Bool -> Maybe (Id DM.Merchant) -> Maybe (Id DMOC.MerchantOperatingCity) -> Int -> m DLM.LocationMapping
+buildLocationMapping :: KvDbFlow m r => Id Location -> Text -> Bool -> Maybe (Id DM.Merchant) -> Maybe (Id DMOC.MerchantOperatingCity) -> Int -> m DLM.LocationMapping
 buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCityId prevOrder = do
   id <- generateGUID
   now <- getCurrentTime

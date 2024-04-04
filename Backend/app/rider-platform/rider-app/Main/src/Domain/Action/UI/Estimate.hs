@@ -79,7 +79,7 @@ data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Estimate -> m EstimateAPIEntity
+mkEstimateAPIEntity :: KvDbFlow m r => Estimate -> m EstimateAPIEntity
 mkEstimateAPIEntity Estimate {..} = do
   valueAddNPRes <- QNP.isValueAddNP providerId
   (bppDetails :: BppDetails) <- CQBppDetails.findBySubscriberIdAndDomain providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found " <> providerId)

@@ -55,7 +55,7 @@ data ValidatedOnTrackReq = ValidatedOnTrackReq
     trackingLocation :: Maybe TrackingLocation
   }
 
-onTrack :: (CacheFlow m r, EsqDBFlow m r) => ValidatedOnTrackReq -> m ()
+onTrack :: KvDbFlow m r => ValidatedOnTrackReq -> m ()
 onTrack ValidatedOnTrackReq {..} = do
   if isValueAddNP
     then do
@@ -66,7 +66,7 @@ onTrack ValidatedOnTrackReq {..} = do
         logDebug $ "Updating tracking location for ride:" <> show ride.id <> " to " <> show trackingLocation'
         void $ Hedis.setExp (Common.mkRideTrackingRedisKey ride.id.getId) trackingLocation' 60
 
-validateRequest :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => OnTrackReq -> m ValidatedOnTrackReq
+validateRequest :: (KvDbFlow m r, EsqDBReplicaFlow m r) => OnTrackReq -> m ValidatedOnTrackReq
 validateRequest OnTrackReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId:" <> bppRideId.getId)
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)

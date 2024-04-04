@@ -67,7 +67,7 @@ buildStatusReq DStatusReq {..} = do
         }
 
 buildStatusReqV2 ::
-  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
+  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], KvDbFlow m r) =>
   DStatusReq ->
   m Spec.StatusReq
 buildStatusReqV2 DStatusReq {..} = do

@@ -75,8 +75,7 @@ buildTrackReqV2 ::
   ( MonadFlow m,
     HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CacheFlow m r,
-    EsqDBFlow m r
+    KvDbFlow m r
   ) =>
   TrackBuildReq ->
   m Spec.TrackReq

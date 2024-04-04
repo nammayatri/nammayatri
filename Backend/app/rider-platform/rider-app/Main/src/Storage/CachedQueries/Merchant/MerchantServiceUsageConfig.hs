@@ -33,16 +33,16 @@ import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.MerchantServiceUsageConfig as Queries
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
+create :: KvDbFlow m r => MerchantServiceUsageConfig -> m ()
 create = Queries.create
 
-getMerchantServiceUsageConfigFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
+getMerchantServiceUsageConfigFromDB :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
 getMerchantServiceUsageConfigFromDB id = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOperatingCityIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceUsageConfigD 'Unsafe) @MerchantServiceUsageConfig a
     Nothing -> flip whenJust cacheMerchantServiceUsageConfig /=<< Queries.findByMerchantOperatingCityId id
 
-findByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
+findByMerchantOperatingCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantOperatingCityId = getMerchantServiceUsageConfigFromDB
 
 cacheMerchantServiceUsageConfig :: (CacheFlow m r) => MerchantServiceUsageConfig -> m ()
@@ -59,5 +59,5 @@ clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache merchanOperatingCityId = do
   Hedis.del (makeMerchantOperatingCityIdKey merchanOperatingCityId)
 
-updateMerchantServiceUsageConfig :: (CacheFlow m r, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
+updateMerchantServiceUsageConfig :: KvDbFlow m r => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig

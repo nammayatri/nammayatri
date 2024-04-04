@@ -24,13 +24,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.VehicleServiceTier as Queries
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m [VehicleServiceTier]
+findAllByMerchantOpCityId :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> m [VehicleServiceTier]
 findAllByMerchantOpCityId merchantOpCityId =
   Hedis.safeGet (makeMerchantOpCityIdKey merchantOpCityId) >>= \case
     Just a -> return a
     Nothing -> cacheByMerchantOpCityId merchantOpCityId /=<< Queries.findAllByMerchantOpCityId merchantOpCityId
 
-findByServiceTierTypeAndCityId :: (CacheFlow m r, EsqDBFlow m r) => ServiceTierType -> Id DMOC.MerchantOperatingCity -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier)
+findByServiceTierTypeAndCityId :: KvDbFlow m r => ServiceTierType -> Id DMOC.MerchantOperatingCity -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier)
 findByServiceTierTypeAndCityId serviceTier merchantOpCityId =
   Hedis.safeGet (makeServiceTierTypeAndCityIdKey merchantOpCityId serviceTier) >>= \case
     Just a -> return a

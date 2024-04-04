@@ -441,7 +441,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
         then transporterConfig.considerSpecialZoneRideChargesInFreeTrial || freeTrialDaysLeft <= 0
         else freeTrialDaysLeft <= 0
 
-    getPlanAndPushToDefualtIfEligible :: (MonadFlow m, KvDbFlow m r) => TransporterConfig -> Int -> m (Maybe DriverPlan)
+    getPlanAndPushToDefualtIfEligible :: KvDbFlow m r => TransporterConfig -> Int -> m (Maybe DriverPlan)
     getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft' = do
       mbDriverPlan' <- findByDriverIdWithServiceName (cast driverId) serviceName
       let planMandatory = transporterConfig.isPlanMandatory
@@ -455,7 +455,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
             (_, _, True) -> assignDefaultPlan
             _ -> return mbDriverPlan'
         else return mbDriverPlan'
-    assignDefaultPlan :: (MonadFlow m, KvDbFlow m r) => m (Maybe DriverPlan)
+    assignDefaultPlan :: KvDbFlow m r => m (Maybe DriverPlan)
     assignDefaultPlan = do
       plans <- CQP.findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId DEFAULT serviceName
       case plans of
@@ -571,7 +571,7 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
       if (DTC.isRideOtpBooking <$> mbBookingCategory) == Just True then (1, totalFee') else (0, 0)
 
 getPlan ::
-  (MonadFlow m, KvDbFlow m r) =>
+  KvDbFlow m r =>
   Maybe DriverPlan ->
   ServiceNames ->
   Id DMOC.MerchantOperatingCity ->

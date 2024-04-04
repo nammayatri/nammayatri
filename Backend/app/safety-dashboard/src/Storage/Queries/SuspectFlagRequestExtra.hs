@@ -12,12 +12,12 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SuspectFlagRequest as Beam
 import Storage.Queries.OrphanInstances.SuspectFlagRequest
 
-findAllByDlAndVoterIdAndMerchantIdAndAdminApproval :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Kernel.Prelude.Text] -> [Kernel.Prelude.Text] -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Domain.Types.SuspectFlagRequest.AdminApproval -> m [Domain.Types.SuspectFlagRequest.SuspectFlagRequest]
+findAllByDlAndVoterIdAndMerchantIdAndAdminApproval :: KvDbFlow m r => [Kernel.Prelude.Text] -> [Kernel.Prelude.Text] -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Domain.Types.SuspectFlagRequest.AdminApproval -> m [Domain.Types.SuspectFlagRequest.SuspectFlagRequest]
 findAllByDlAndVoterIdAndMerchantIdAndAdminApproval dls voterIds merchantId adminApproval = do
   let dlList = map Just dls
       voterIdList = map Just voterIds
@@ -32,7 +32,7 @@ findAllByDlAndVoterIdAndMerchantIdAndAdminApproval dls voterIds merchantId admin
         ]
     ]
 
-findAllPAByDlAndVoterIdAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Maybe Kernel.Prelude.Text] -> [Maybe Kernel.Prelude.Text] -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
+findAllPAByDlAndVoterIdAndMerchantId :: KvDbFlow m r => [Maybe Kernel.Prelude.Text] -> [Maybe Kernel.Prelude.Text] -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
 findAllPAByDlAndVoterIdAndMerchantId dls voterIds merchantId = do
   findAllWithKV
     [ Se.And
@@ -45,7 +45,7 @@ findAllPAByDlAndVoterIdAndMerchantId dls voterIds merchantId = do
         ]
     ]
 
-findAllApprovedByDlAndVoterIdAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Maybe Kernel.Prelude.Text] -> [Maybe Kernel.Prelude.Text] -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
+findAllApprovedByDlAndVoterIdAndMerchantId :: KvDbFlow m r => [Maybe Kernel.Prelude.Text] -> [Maybe Kernel.Prelude.Text] -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
 findAllApprovedByDlAndVoterIdAndMerchantId dls voterIds merchantId = do
   findAllWithKV
     [ Se.And
@@ -58,7 +58,7 @@ findAllApprovedByDlAndVoterIdAndMerchantId dls voterIds merchantId = do
         ]
     ]
 
-findByMerchantIdAndDl' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Maybe Kernel.Prelude.Text -> m (Maybe (Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
+findByMerchantIdAndDl' :: KvDbFlow m r => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Maybe Kernel.Prelude.Text -> m (Maybe (Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
 findByMerchantIdAndDl' merchantId dl = do
   findOneWithKV
     [ Se.And
@@ -71,7 +71,7 @@ findByMerchantIdAndDl' merchantId dl = do
         ]
     ]
 
-findByMerchantIdAndVoterId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Maybe Kernel.Prelude.Text -> m (Maybe (Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
+findByMerchantIdAndVoterId :: KvDbFlow m r => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Maybe Kernel.Prelude.Text -> m (Maybe (Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
 findByMerchantIdAndVoterId merchantId voterId = do
   findOneWithKV
     [ Se.And
@@ -84,7 +84,7 @@ findByMerchantIdAndVoterId merchantId voterId = do
         ]
     ]
 
-updateAllWIthDlAndFlaggedStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> FlaggedStatus -> m ()
+updateAllWIthDlAndFlaggedStatus :: KvDbFlow m r => Text -> FlaggedStatus -> m ()
 updateAllWIthDlAndFlaggedStatus dl flaggedStatus = do
   now <- getCurrentTime
   updateWithKV
@@ -94,7 +94,7 @@ updateAllWIthDlAndFlaggedStatus dl flaggedStatus = do
     [ Se.Is Beam.dl $ Se.Eq (Just dl)
     ]
 
-updateAllWithVoteIdAndFlaggedStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> FlaggedStatus -> m ()
+updateAllWithVoteIdAndFlaggedStatus :: KvDbFlow m r => Text -> FlaggedStatus -> m ()
 updateAllWithVoteIdAndFlaggedStatus voterId flaggedStatus = do
   now <- getCurrentTime
   updateWithKV
@@ -104,10 +104,10 @@ updateAllWithVoteIdAndFlaggedStatus voterId flaggedStatus = do
     [ Se.Is Beam.voterId $ Se.Eq (Just voterId)
     ]
 
-updateManyAdminApprovalById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.SuspectFlagRequest.AdminApproval -> Text -> [Kernel.Types.Id.Id Domain.Types.SuspectFlagRequest.SuspectFlagRequest] -> m ()
+updateManyAdminApprovalById :: KvDbFlow m r => Domain.Types.SuspectFlagRequest.AdminApproval -> Text -> [Kernel.Types.Id.Id Domain.Types.SuspectFlagRequest.SuspectFlagRequest] -> m ()
 updateManyAdminApprovalById adminApproval approvedBy ids = traverse_ (updateAdminApprovalById' adminApproval approvedBy) ids
 
-updateAdminApprovalById' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.SuspectFlagRequest.AdminApproval -> Text -> Kernel.Types.Id.Id Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> m ()
+updateAdminApprovalById' :: KvDbFlow m r => Domain.Types.SuspectFlagRequest.AdminApproval -> Text -> Kernel.Types.Id.Id Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> m ()
 updateAdminApprovalById' adminApproval approvedBy (Kernel.Types.Id.Id id) = do
   now <- getCurrentTime
   updateWithKV
@@ -118,7 +118,7 @@ updateAdminApprovalById' adminApproval approvedBy (Kernel.Types.Id.Id id) = do
     [ Se.Is Beam.id $ Se.Eq id
     ]
 
-findAllPendingRequestByRequestId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Kernel.Types.Id.Id Domain.Types.SuspectFlagRequest.SuspectFlagRequest] -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
+findAllPendingRequestByRequestId :: KvDbFlow m r => [Kernel.Types.Id.Id Domain.Types.SuspectFlagRequest.SuspectFlagRequest] -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
 findAllPendingRequestByRequestId ids merchantId = do
   findAllWithKV
     [ Se.And
@@ -128,7 +128,7 @@ findAllPendingRequestByRequestId ids merchantId = do
         ]
     ]
 
-findByFlaggedCategoryAndPartnerNameAndFlaggedStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> FlaggedStatus -> Int -> Int -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
+findByFlaggedCategoryAndPartnerNameAndFlaggedStatus :: KvDbFlow m r => Text -> Text -> FlaggedStatus -> Int -> Int -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
 findByFlaggedCategoryAndPartnerNameAndFlaggedStatus flaggedCategory partnerName flaggedStatus limit offset startDate endDate = do
   findAllWithOptionsKV
     [ Se.And
@@ -143,7 +143,7 @@ findByFlaggedCategoryAndPartnerNameAndFlaggedStatus flaggedCategory partnerName 
     (Just limit)
     (Just offset)
 
-findByFlaggedCategoryAndPartnerName :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> Int -> Int -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
+findByFlaggedCategoryAndPartnerName :: KvDbFlow m r => Text -> Text -> Int -> Int -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
 findByFlaggedCategoryAndPartnerName flaggedCategory partnerName limit offset startDate endDate = do
   findAllWithOptionsKV
     [ Se.And
@@ -157,7 +157,7 @@ findByFlaggedCategoryAndPartnerName flaggedCategory partnerName limit offset sta
     (Just limit)
     (Just offset)
 
-findByFlaggedCategoryAndFlaggedStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> FlaggedStatus -> Int -> Int -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
+findByFlaggedCategoryAndFlaggedStatus :: KvDbFlow m r => Text -> FlaggedStatus -> Int -> Int -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
 findByFlaggedCategoryAndFlaggedStatus flaggedCategory flaggedStatus limit offset startDate endDate = do
   findAllWithOptionsKV
     [ Se.And
@@ -171,7 +171,7 @@ findByFlaggedCategoryAndFlaggedStatus flaggedCategory flaggedStatus limit offset
     (Just limit)
     (Just offset)
 
-findByFlaggedCategory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> Int -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
+findByFlaggedCategory :: KvDbFlow m r => Text -> Int -> Int -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
 findByFlaggedCategory flaggedCategory limit offset startDate endDate = do
   findAllWithOptionsKV
     [ Se.And
@@ -184,7 +184,7 @@ findByFlaggedCategory flaggedCategory limit offset startDate endDate = do
     (Just limit)
     (Just offset)
 
-findByPartnerNameAndFlaggedStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> FlaggedStatus -> Int -> Int -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
+findByPartnerNameAndFlaggedStatus :: KvDbFlow m r => Text -> FlaggedStatus -> Int -> Int -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
 findByPartnerNameAndFlaggedStatus partnerName flaggedStatus limit offset startDate endDate = do
   findAllWithOptionsKV
     [ Se.And
@@ -198,7 +198,7 @@ findByPartnerNameAndFlaggedStatus partnerName flaggedStatus limit offset startDa
     (Just limit)
     (Just offset)
 
-findByPartnerName :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> Int -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
+findByPartnerName :: KvDbFlow m r => Text -> Int -> Int -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
 findByPartnerName partnerName limit offset startDate endDate = do
   findAllWithOptionsKV
     [ Se.And
@@ -211,7 +211,7 @@ findByPartnerName partnerName limit offset startDate endDate = do
     (Just limit)
     (Just offset)
 
-findByFlaggedStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FlaggedStatus -> Int -> Int -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
+findByFlaggedStatus :: KvDbFlow m r => FlaggedStatus -> Int -> Int -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
 findByFlaggedStatus flaggedStatus limit offset startDate endDate = do
   findAllWithOptionsKV
     [ Se.And
@@ -224,7 +224,7 @@ findByFlaggedStatus flaggedStatus limit offset startDate endDate = do
     (Just limit)
     (Just offset)
 
-findByMerchantIdAndAdminApproval :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Int -> Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Domain.Types.SuspectFlagRequest.AdminApproval -> Maybe Text -> Maybe Text -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
+findByMerchantIdAndAdminApproval :: KvDbFlow m r => Int -> Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Domain.Types.SuspectFlagRequest.AdminApproval -> Maybe Text -> Maybe Text -> UTCTime -> UTCTime -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
 findByMerchantIdAndAdminApproval limit offset merchantId adminApproval mbDl mbVoterId from to = do
   case (mbDl, mbVoterId) of
     (Nothing, Nothing) -> do

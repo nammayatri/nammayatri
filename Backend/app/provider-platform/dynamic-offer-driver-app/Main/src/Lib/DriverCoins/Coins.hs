@@ -54,7 +54,7 @@ import qualified Storage.Queries.Translations as MTQuery
 import qualified Tools.Notifications as Notify
 import Utils.Common.Cac.KeyNameConstants
 
-type EventFlow m r = (MonadFlow m, KvDbFlow m r, MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters))
+type EventFlow m r = (KvDbFlow m r, MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters))
 
 getCoinsByDriverId :: KvDbFlow m r => Id DP.Person -> Seconds -> m Int
 getCoinsByDriverId driverId timeDiffFromUtc = Hedis.withLockRedisAndReturnValue driverId.getId 60 $ do

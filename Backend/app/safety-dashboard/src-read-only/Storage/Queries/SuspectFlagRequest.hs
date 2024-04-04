@@ -12,19 +12,19 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SuspectFlagRequest as Beam
 import Storage.Queries.SuspectFlagRequestExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> m ())
+create :: KvDbFlow m r => (Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest] -> m ())
 createMany = traverse_ create
 
 findAllByDlAndAdminApprovalAndMerchantId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.SuspectFlagRequest.AdminApproval -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest]))
 findAllByDlAndAdminApprovalAndMerchantId dl adminApproval merchantId = do
   findAllWithKV
@@ -36,22 +36,20 @@ findAllByDlAndAdminApprovalAndMerchantId dl adminApproval merchantId = do
     ]
 
 findAllByMerchantIdAndDl ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest]))
 findAllByMerchantIdAndDl merchantId dl = do findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId), Se.Is Beam.dl $ Se.Eq dl]]
 
 findAllByMerchantIdAndVoterId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest]))
 findAllByMerchantIdAndVoterId merchantId voterId = do findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId), Se.Is Beam.voterId $ Se.Eq voterId]]
 
-findByDlOrVoterId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
+findByDlOrVoterId :: KvDbFlow m r => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
 findByDlOrVoterId dl voterId = do findOneWithKV [Se.Or [Se.Is Beam.dl $ Se.Eq dl, Se.Is Beam.voterId $ Se.Eq voterId]]
 
 findByMerchantIdAndAdminApprovalAndDl ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Domain.Types.SuspectFlagRequest.AdminApproval -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
 findByMerchantIdAndAdminApprovalAndDl merchantId adminApproval dl = do
   findOneWithKV
@@ -63,7 +61,7 @@ findByMerchantIdAndAdminApprovalAndDl merchantId adminApproval dl = do
     ]
 
 findByMerchantIdAndAdminApprovalAndVoterId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Domain.Types.SuspectFlagRequest.AdminApproval -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
 findByMerchantIdAndAdminApprovalAndVoterId merchantId adminApproval voterId = do
   findOneWithKV
@@ -75,26 +73,22 @@ findByMerchantIdAndAdminApprovalAndVoterId merchantId adminApproval voterId = do
     ]
 
 findByMerchantIdAndDl ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
 findByMerchantIdAndDl merchantId dl = do findOneWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId), Se.Is Beam.dl $ Se.Eq dl]]
 
-findBydl :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
+findBydl :: KvDbFlow m r => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
 findBydl dl = do findOneWithKV [Se.Is Beam.dl $ Se.Eq dl]
 
-updateAdminApprovalById ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.SuspectFlagRequest.AdminApproval -> Kernel.Types.Id.Id Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> m ())
+updateAdminApprovalById :: KvDbFlow m r => (Domain.Types.SuspectFlagRequest.AdminApproval -> Kernel.Types.Id.Id Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> m ())
 updateAdminApprovalById adminApproval (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.adminApproval adminApproval, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> m (Maybe Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> m (Maybe Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> m ())
 updateByPrimaryKey (Domain.Types.SuspectFlagRequest.SuspectFlagRequest {..}) = do
   _now <- getCurrentTime
   updateWithKV

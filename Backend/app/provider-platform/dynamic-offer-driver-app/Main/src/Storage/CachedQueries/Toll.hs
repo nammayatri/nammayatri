@@ -18,13 +18,12 @@ module Storage.CachedQueries.Toll where
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Toll
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (CacheFlow, KvDbFlow)
 import qualified Storage.Queries.Toll as Queries
 
-findAllTollsByMerchantOperatingCity :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> m [Toll]
+findAllTollsByMerchantOperatingCity :: KvDbFlow m r => Id MerchantOperatingCity -> m [Toll]
 findAllTollsByMerchantOperatingCity merchantOpCityId =
   (Hedis.safeGet $ makeTollsKeyByMerchantOperatingCityId merchantOpCityId) >>= \case
     Just a -> pure a

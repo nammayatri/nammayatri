@@ -31,8 +31,7 @@ import Tools.Error
 
 buildOnSearchReqV2 ::
   ( HasFlowEnv m r '["_version" ::: Text],
-    EsqDBFlow m r,
-    CacheFlow m r
+    KvDbFlow m r
   ) =>
   Spec.OnSearchReq ->
   m (Maybe DOnSearch.DOnSearchReq)
@@ -56,7 +55,7 @@ buildOnSearchReqV2 req = do
       logTagError "on_search req" $ "on_search error: " <> show err
       pure Nothing
 
-logOnSearchEventV2 :: (EsqDBFlow m r, CacheFlow m r) => Spec.OnSearchReq -> m ()
+logOnSearchEventV2 :: (KvDbFlow m r) => Spec.OnSearchReq -> m ()
 logOnSearchEventV2 req = do
   let context = req.onSearchReqContext
   createdAt <- getCurrentTime

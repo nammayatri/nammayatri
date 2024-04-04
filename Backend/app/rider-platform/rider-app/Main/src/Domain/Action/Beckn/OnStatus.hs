@@ -218,8 +218,7 @@ onStatus req = do
 validateRequest ::
   ( MonadFlow m,
     HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     HasBAPMetrics m r,
     EncFlow m r,
     HasHttpClientOptions r c,

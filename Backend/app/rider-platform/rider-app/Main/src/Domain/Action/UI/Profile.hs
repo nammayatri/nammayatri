@@ -176,7 +176,7 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getPersonDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> m ProfileRes
+getPersonDetails :: (KvDbFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> m ProfileRes
 getPersonDetails (personId, _) mbToss = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   tag <- case person.hasDisability of
@@ -227,7 +227,7 @@ validRideCount hasTakenValidRide vehicleCategory =
     Just info -> info.rideCount == 1
     Nothing -> False
 
-updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion]) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
+updatePerson :: (KvDbFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion]) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
 updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
   mPerson <- join <$> QPerson.findByEmailAndMerchantId merchantId `mapM` req.email
   whenJust mPerson (\_ -> throwError PersonEmailExists)
@@ -253,7 +253,7 @@ updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientCon
       deploymentVersion.getDeploymentVersion
   updateDisability req.hasDisability req.disability personId
 
-updateDisability :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Bool -> Maybe Disability -> Id Person.Person -> m APISuccess.APISuccess
+updateDisability :: (KvDbFlow m r, EncFlow m r) => Maybe Bool -> Maybe Disability -> Id Person.Person -> m APISuccess.APISuccess
 updateDisability hasDisability mbDisability personId = do
   case (hasDisability, mbDisability) of
     (Nothing, _) -> logDebug "No Disability"
@@ -286,7 +286,7 @@ updateDisability hasDisability mbDisability personId = do
               }
   pure APISuccess.Success
 
-validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id Person.Person -> Text -> m (Maybe Text)
+validateRefferalCode :: (KvDbFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id Person.Person -> Text -> m (Maybe Text)
 validateRefferalCode personId refCode = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
   when (person.hasTakenValidRide) do
@@ -382,14 +382,14 @@ sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList = do
   where
     notificationMessage person = SLP.getName person <> " has added you as the emergency contact."
 
-getDefaultEmergencyNumbers :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m GetProfileDefaultEmergencyNumbersResp
+getDefaultEmergencyNumbers :: (KvDbFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m GetProfileDefaultEmergencyNumbersResp
 getDefaultEmergencyNumbers (personId, _) = do
   personENList <- runInReplica $ QPersonDEN.findAllByPersonId personId
   decPersonENList <- decrypt `mapM` personENList
   emergencyContactsEntity <- mapM makeAPIEntityAndCheckOnRide decPersonENList
   return $ GetProfileDefaultEmergencyNumbersResp emergencyContactsEntity
   where
-    makeAPIEntityAndCheckOnRide :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => DPDEN.DecryptedPersonDefaultEmergencyNumber -> m DPDEN.PersonDefaultEmergencyNumberAPIEntity
+    makeAPIEntityAndCheckOnRide :: (KvDbFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => DPDEN.DecryptedPersonDefaultEmergencyNumber -> m DPDEN.PersonDefaultEmergencyNumberAPIEntity
     makeAPIEntityAndCheckOnRide personEN = do
       onRide <- case (personEN.contactPersonId, personEN.priority == 0) of
         (Just id, True) -> do
@@ -413,7 +413,7 @@ data UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
 
 type UpdateEmergencySettingsResp = APISuccess.APISuccess
 
-updateEmergencySettings :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> UpdateEmergencySettingsReq -> m UpdateEmergencySettingsResp
+updateEmergencySettings :: (KvDbFlow m r, EncFlow m r) => Id Person.Person -> UpdateEmergencySettingsReq -> m UpdateEmergencySettingsResp
 updateEmergencySettings personId req = do
   personENList <- QPersonDEN.findAllByPersonId personId
   let safetySetupCompleted = guard (req.hasCompletedSafetySetup == Just True) >> Just True
@@ -448,7 +448,7 @@ data EmergencySettingsRes = EmergencySettingsRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getEmergencySettings :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> m EmergencySettingsRes
+getEmergencySettings :: (KvDbFlow m r, EncFlow m r) => Id Person.Person -> m EmergencySettingsRes
 getEmergencySettings personId = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   personENList <- runInReplica $ QPersonDEN.findAllByPersonId personId

@@ -100,6 +100,7 @@ instance
     HasField "esqDBEnv" r EsqDBEnv,
     HasField "enablePrometheusMetricLogging" r Bool,
     HasField "enableRedisLatencyLogging" r Bool,
+    (HasField "dbFunctions" r DbFunctions),
     CF.HasCacConfig r,
     HasARTFlow r,
     HasCoreMetrics r,

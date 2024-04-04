@@ -23,10 +23,9 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonStats as DPS
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (EsqDBFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, fork, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fork, fromMaybeM, getCurrentTime)
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -35,7 +34,7 @@ import qualified Storage.Queries.PersonStats as QP
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
-backfillPersonStats :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m ()
+backfillPersonStats :: (KvDbFlow m r, EsqDBReplicaFlow m r, CoreMetrics m) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m ()
 backfillPersonStats personId merchantOpCityid = do
   cancelledBookingIds <- runInReplica $ QBooking.findAllCancelledBookingIdsByRider personId
   userCancelledRides <- runInReplica $ QBCR.countCancelledBookingsByBookingIds cancelledBookingIds DBCR.ByUser
@@ -110,7 +109,7 @@ convertTimeZone timeInUTC minuteDiffFromUTC = utcToLocalTime (minutesToTimeZone 
 getName :: DP.Person -> Text
 getName person = (fromMaybe "" person.firstName) <> " " <> (fromMaybe "" person.lastName)
 
-checkSafetyCenterDisabled :: (EsqDBFlow m r, CacheFlow m r) => DP.Person -> m Bool
+checkSafetyCenterDisabled :: (KvDbFlow m r) => DP.Person -> m Bool
 checkSafetyCenterDisabled person = do
   let isPermanentBlock = person.falseSafetyAlarmCount >= 6
   case person.safetyCenterDisabledOnDate of

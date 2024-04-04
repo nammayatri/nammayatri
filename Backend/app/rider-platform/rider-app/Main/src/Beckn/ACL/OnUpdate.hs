@@ -36,8 +36,7 @@ import Tools.Error (GenericError (InvalidRequest))
 
 buildOnUpdateReqV2 ::
   ( HasFlowEnv m r '["_version" ::: Text],
-    EsqDBFlow m r,
-    CacheFlow m r
+    KvDbFlow m r
   ) =>
   Spec.OnUpdateReq ->
   m (Maybe DOnUpdate.OnUpdateReq)

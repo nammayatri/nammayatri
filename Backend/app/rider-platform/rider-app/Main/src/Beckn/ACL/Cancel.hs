@@ -30,7 +30,7 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 import Tools.Error
 
 buildCancelReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], KvDbFlow m r) =>
   DCancel.CancelRes ->
   Maybe Bool ->
   m Spec.CancelReq
@@ -63,7 +63,7 @@ mkCancelMessageV2 res reallocate =
     }
 
 buildCancelSearchReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], KvDbFlow m r) =>
   DCancel.CancelSearch ->
   m Spec.CancelReq
 buildCancelSearchReqV2 res = do

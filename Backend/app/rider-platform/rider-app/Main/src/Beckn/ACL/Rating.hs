@@ -65,7 +65,7 @@ buildRatingReq DFeedback.FeedbackRes {..} = do
   pure $ BecknReq context message
 
 buildRatingReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], KvDbFlow m r) =>
   DFeedback.FeedbackRes ->
   m Spec.RatingReq
 buildRatingReqV2 res@DFeedback.FeedbackRes {..} = do
