@@ -458,6 +458,7 @@
       "ny_ic_tick_selected_blue" : true,
       "ny_ic_tick_white" : true,
       "ny_ic_ticket_grey" : true,
+      "ny_ic_ticket_grey_small" : true,
       "ny_ic_tip_icon" : true,
       "ny_ic_track_google_map" : true,
       "ny_ic_track_in_app" : true,
