@@ -22,7 +22,7 @@ LocationMapping:
     merchantId : Maybe (Id Merchant)
     merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
 
-  constriants:
+  constraints:
     id: PrimaryKey
     entityId: SecondaryKey
 
