@@ -22,6 +22,7 @@ import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as L
 import qualified EulerHS.Runtime as R
 import qualified Kafka.Consumer as Consumer
+import Kernel.Beam.ART.ARTUtils as ART
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
 import qualified Kernel.Beam.Types as KBT
@@ -50,7 +51,9 @@ startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
   R.withFlowRuntime (Just loggerRuntime) $ \flowRt' -> do
     managers <- managersFromManagersSettings appCfg.httpClientOptions.timeoutMs mempty -- default manager is created
     let flowRt = flowRt' {L._httpClientManagers = managers}
+    artFilePath <- ART.getFilePath ("ART/data.log" :: FilePath)
     flowRt'' <- runFlowR flowRt appEnv $ do
+      L.setOption KBT.FilePathForART artFilePath
       fork
         "Fetching Kv configs"
         ( forever $ do

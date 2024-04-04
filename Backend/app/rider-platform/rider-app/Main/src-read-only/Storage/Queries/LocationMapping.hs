@@ -10,21 +10,21 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.LocationMapping as Beam
 import Storage.Queries.LocationMappingExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LocationMapping.LocationMapping -> m ())
+create :: KvDbFlow m r => (Domain.Types.LocationMapping.LocationMapping -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.LocationMapping.LocationMapping] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.LocationMapping.LocationMapping] -> m ())
 createMany = traverse_ create
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.LocationMapping.LocationMapping -> m (Maybe Domain.Types.LocationMapping.LocationMapping))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.LocationMapping.LocationMapping -> m (Maybe Domain.Types.LocationMapping.LocationMapping))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LocationMapping.LocationMapping -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.LocationMapping.LocationMapping -> m ())
 updateByPrimaryKey (Domain.Types.LocationMapping.LocationMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV

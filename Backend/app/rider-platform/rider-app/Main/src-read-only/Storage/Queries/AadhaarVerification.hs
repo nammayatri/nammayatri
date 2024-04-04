@@ -13,27 +13,27 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.AadhaarVerification as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.AadhaarVerification.AadhaarVerification -> m ())
+create :: KvDbFlow m r => (Domain.Types.AadhaarVerification.AadhaarVerification -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.AadhaarVerification.AadhaarVerification] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.AadhaarVerification.AadhaarVerification] -> m ())
 createMany = traverse_ create
 
-deleteByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+deleteByPersonId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByPersonId (Kernel.Types.Id.Id personId) = do deleteWithKV [Se.Is Beam.personId $ Se.Eq personId]
 
-findByAadhaarNumberHash :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash -> m (Maybe Domain.Types.AadhaarVerification.AadhaarVerification))
+findByAadhaarNumberHash :: KvDbFlow m r => (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash -> m (Maybe Domain.Types.AadhaarVerification.AadhaarVerification))
 findByAadhaarNumberHash aadhaarNumberHash = do findOneWithKV [Se.Is Beam.aadhaarNumberHash $ Se.Eq aadhaarNumberHash]
 
-findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.AadhaarVerification.AadhaarVerification))
+findByPersonId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.AadhaarVerification.AadhaarVerification))
 findByPersonId (Kernel.Types.Id.Id personId) = do findOneWithKV [Se.Is Beam.personId $ Se.Eq personId]
 
 findByPhoneNumberAndUpdate ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash -> Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 findByPhoneNumberAndUpdate personName personGender personDob aadhaarNumberHash isVerified (Kernel.Types.Id.Id personId) = do
   _now <- getCurrentTime
@@ -47,15 +47,15 @@ findByPhoneNumberAndUpdate personName personGender personDob aadhaarNumberHash i
     ]
     [Se.Is Beam.personId $ Se.Eq personId]
 
-updatePersonImagePath :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePersonImagePath :: KvDbFlow m r => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePersonImagePath personImagePath (Kernel.Types.Id.Id personId) = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.personImagePath personImagePath, Se.Set Beam.updatedAt _now] [Se.Is Beam.personId $ Se.Eq personId]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.AadhaarVerification.AadhaarVerification))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.AadhaarVerification.AadhaarVerification))
 findByPrimaryKey (Kernel.Types.Id.Id personId) = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq personId]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.AadhaarVerification.AadhaarVerification -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.AadhaarVerification.AadhaarVerification -> m ())
 updateByPrimaryKey (Domain.Types.AadhaarVerification.AadhaarVerification {..}) = do
   _now <- getCurrentTime
   updateWithKV

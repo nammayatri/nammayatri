@@ -32,7 +32,7 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as VNP
 
 buildInitReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], EncFlow m r, KvDbFlow m r) =>
   SConfirm.DConfirmRes ->
   m Spec.InitReq
 buildInitReqV2 res = do

@@ -12,18 +12,18 @@ import qualified Kernel.External.Notification.Interface.Types
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.NotificationSoundsConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig -> m ())
+create :: KvDbFlow m r => (Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig] -> m ())
 createMany = traverse_ create
 
 findByNotificationType ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.External.Notification.Interface.Types.Category -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig))
 findByNotificationType notificationType (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findOneWithKV
@@ -34,7 +34,7 @@ findByNotificationType notificationType (Kernel.Types.Id.Id merchantOperatingCit
     ]
 
 findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Notification.Interface.Types.Category -> m (Maybe Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig))
 findByPrimaryKey (Kernel.Types.Id.Id merchantOperatingCityId) notificationType = do
   findOneWithKV
@@ -44,7 +44,7 @@ findByPrimaryKey (Kernel.Types.Id.Id merchantOperatingCityId) notificationType =
         ]
     ]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig -> m ())
 updateByPrimaryKey (Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV

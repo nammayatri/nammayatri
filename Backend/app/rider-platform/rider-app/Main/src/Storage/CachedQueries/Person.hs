@@ -28,13 +28,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Person as Queries
 
-findCityInfoById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Person -> m (Maybe PersonCityInformation)
+findCityInfoById :: KvDbFlow m r => Id Person -> m (Maybe PersonCityInformation)
 findCityInfoById personId = do
   Hedis.safeGet (makeIdKey personId) >>= \case
     Just a -> pure a
     Nothing -> flip whenJust cachePersonCityInfo /=<< Queries.findCityInfoById personId
 
-updateCityInfoById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Person -> City -> Id DMOC.MerchantOperatingCity -> m ()
+updateCityInfoById :: KvDbFlow m r => Id Person -> City -> Id DMOC.MerchantOperatingCity -> m ()
 updateCityInfoById personId city merchantOperatingCityId = do
   Queries.updateCityInfoById personId city merchantOperatingCityId
   clearCache personId

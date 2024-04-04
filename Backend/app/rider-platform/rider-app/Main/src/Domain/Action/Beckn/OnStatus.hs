@@ -128,7 +128,7 @@ data DUpdatedRide = DUpdatedRide
     rideOldStatus :: DRide.RideStatus
   }
 
-buildRideEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DB.Booking -> (DRide.Ride -> DRide.Ride) -> DCommon.BookingDetails -> m RideEntity
+buildRideEntity :: KvDbFlow m r => DB.Booking -> (DRide.Ride -> DRide.Ride) -> DCommon.BookingDetails -> m RideEntity
 buildRideEntity booking updRide newRideInfo = do
   mbExistingRide <- B.runInReplica $ QRide.findByBPPRideId newRideInfo.bppRideId
   case mbExistingRide of
@@ -140,7 +140,7 @@ buildRideEntity booking updRide newRideInfo = do
       unless (existingRide.bookingId == booking.id) $ throwError (InvalidRequest "Invalid rideId")
       pure $ UpdatedRide $ DUpdatedRide {ride = updRide existingRide, rideOldStatus = existingRide.status}
 
-rideBookingTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DB.BookingStatus -> DRide.RideStatus -> DB.Booking -> RideEntity -> m ()
+rideBookingTransaction :: KvDbFlow m r => DB.BookingStatus -> DRide.RideStatus -> DB.Booking -> RideEntity -> m ()
 rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity = do
   unless (booking.status == bookingNewStatus) $ do
     QB.updateStatus booking.id bookingNewStatus
@@ -162,8 +162,7 @@ isStatusChanged bookingOldStatus bookingNewStatus rideEntity = do
 onStatus ::
   ( MonadFlow m,
     HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     HasBAPMetrics m r,
     EncFlow m r,
     HasHttpClientOptions r c,

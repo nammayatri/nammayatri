@@ -227,7 +227,7 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
     maxLimit = 20
     defaultLimit = 10
 
-buildRideListItem :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => QRide.RideItem -> m Common.RideListItem
+buildRideListItem :: (EncFlow m r, KvDbFlow m r) => QRide.RideItem -> m Common.RideListItem
 buildRideListItem QRide.RideItem {..} = do
   customerPhoneNo <- mapM decrypt person.mobileNumber
   pure
@@ -311,7 +311,7 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
           endOtp = ride.endOtp
         }
 
-rideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id Common.Ride -> m Common.RideInfoRes
+rideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, KvDbFlow m r) => Id DM.Merchant -> Id Common.Ride -> m Common.RideInfoRes
 rideInfo merchantId reqRideId = do
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
@@ -407,7 +407,7 @@ castCancellationSource = \case
   DBCReason.ByApplication -> Common.ByApplication
 
 bookingCancel ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   BookingCancelledReq ->
   m ()
 bookingCancel BookingCancelledReq {..} = do

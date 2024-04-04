@@ -11,23 +11,23 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BppDetails as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BppDetails.BppDetails -> m ())
+create :: KvDbFlow m r => (Domain.Types.BppDetails.BppDetails -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BppDetails.BppDetails] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.BppDetails.BppDetails] -> m ())
 createMany = traverse_ create
 
-findBySubscriberIdAndDomain :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.BppDetails.BppDetails))
+findBySubscriberIdAndDomain :: KvDbFlow m r => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.BppDetails.BppDetails))
 findBySubscriberIdAndDomain subscriberId domain = do findOneWithKV [Se.And [Se.Is Beam.subscriberId $ Se.Eq subscriberId, Se.Is Beam.domain $ Se.Eq domain]]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BppDetails.BppDetails -> m (Maybe Domain.Types.BppDetails.BppDetails))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.BppDetails.BppDetails -> m (Maybe Domain.Types.BppDetails.BppDetails))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BppDetails.BppDetails -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.BppDetails.BppDetails -> m ())
 updateByPrimaryKey (Domain.Types.BppDetails.BppDetails {..}) = do
   _now <- getCurrentTime
   updateWithKV

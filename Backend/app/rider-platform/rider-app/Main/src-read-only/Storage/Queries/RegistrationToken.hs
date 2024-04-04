@@ -11,30 +11,30 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RegistrationToken as Beam
 import Storage.Queries.RegistrationTokenExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RegistrationToken.RegistrationToken -> m ())
+create :: KvDbFlow m r => (Domain.Types.RegistrationToken.RegistrationToken -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RegistrationToken.RegistrationToken] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.RegistrationToken.RegistrationToken] -> m ())
 createMany = traverse_ create
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken -> m (Maybe Domain.Types.RegistrationToken.RegistrationToken))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken -> m (Maybe Domain.Types.RegistrationToken.RegistrationToken))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-setVerified :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken -> m ())
+setVerified :: KvDbFlow m r => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken -> m ())
 setVerified verified (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.verified verified] [Se.Is Beam.id $ Se.Eq id]
 
-updateAttempts :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken -> m ())
+updateAttempts :: KvDbFlow m r => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken -> m ())
 updateAttempts attempts (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.attempts attempts, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken -> m (Maybe Domain.Types.RegistrationToken.RegistrationToken))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken -> m (Maybe Domain.Types.RegistrationToken.RegistrationToken))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RegistrationToken.RegistrationToken -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.RegistrationToken.RegistrationToken -> m ())
 updateByPrimaryKey (Domain.Types.RegistrationToken.RegistrationToken {..}) = do
   _now <- getCurrentTime
   updateWithKV

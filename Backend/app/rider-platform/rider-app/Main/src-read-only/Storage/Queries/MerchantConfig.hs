@@ -12,18 +12,18 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantConfig.MerchantConfig -> m ())
+create :: KvDbFlow m r => (Domain.Types.MerchantConfig.MerchantConfig -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantConfig.MerchantConfig] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.MerchantConfig.MerchantConfig] -> m ())
 createMany = traverse_ create
 
 findAllByMerchantOperatingCityId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m [Domain.Types.MerchantConfig.MerchantConfig])
 findAllByMerchantOperatingCityId (Kernel.Types.Id.Id merchantOperatingCityId) enabled = do
   findAllWithKV
@@ -33,10 +33,10 @@ findAllByMerchantOperatingCityId (Kernel.Types.Id.Id merchantOperatingCityId) en
         ]
     ]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantConfig.MerchantConfig -> m (Maybe Domain.Types.MerchantConfig.MerchantConfig))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.MerchantConfig.MerchantConfig -> m (Maybe Domain.Types.MerchantConfig.MerchantConfig))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantConfig.MerchantConfig -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.MerchantConfig.MerchantConfig -> m ())
 updateByPrimaryKey (Domain.Types.MerchantConfig.MerchantConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV

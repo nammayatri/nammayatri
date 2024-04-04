@@ -190,7 +190,7 @@ auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
     CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     EncFlow m r
   ) =>
   AuthReq ->
@@ -260,9 +260,8 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
 
 signatureAuth ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
-    CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     EncFlow m r
   ) =>
   AuthReq ->
@@ -303,7 +302,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevic
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked
     else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked
 
-buildPerson :: (HasFlowEnv m r '["version" ::: DeploymentVersion], EncFlow m r, DB.EsqDBReplicaFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => AuthReq -> Text -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> DMerchant.Merchant -> Context.City -> Id DMOC.MerchantOperatingCity -> m SP.Person
+buildPerson :: (HasFlowEnv m r '["version" ::: DeploymentVersion], EncFlow m r, DB.EsqDBReplicaFlow m r, KvDbFlow m r, Redis.HedisFlow m r) => AuthReq -> Text -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> DMerchant.Merchant -> Context.City -> Id DMOC.MerchantOperatingCity -> m SP.Person
 buildPerson req mobileNumber notificationToken clientBundleVersion clientSdkVersion clientConfigVersion clientDevice merchant currentCity merchantOperatingCityId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
@@ -414,7 +413,7 @@ makeSession SmsSessionConfig {..} entityId merchantId fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
-verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
+verifyFlow :: (KvDbFlow m r, EncFlow m r, MonadFlow m) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
 verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   let isNewPerson = person.isNew
   RegistrationToken.deleteByPersonIdExceptNew person.id regToken.id
@@ -435,9 +434,8 @@ verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   return personAPIEntity
 
 verify ::
-  ( CacheFlow m r,
-    HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
-    EsqDBFlow m r,
+  ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
+    KvDbFlow m r,
     DB.EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r
@@ -476,8 +474,7 @@ verify tokenId req = do
         throwError TokenExpired
 
 callWhatsappOptApi ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r
   ) =>
   Text ->
@@ -491,12 +488,12 @@ callWhatsappOptApi mobileNo personId merchantId hasOptedIn = do
   void $ whatsAppOptAPI merchantId merchantOperatingCityId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
   void $ Person.updateWhatsappNotificationEnrollStatus (Just status) personId
 
-getRegistrationTokenE :: (CacheFlow m r, EsqDBFlow m r) => Id SR.RegistrationToken -> m SR.RegistrationToken
+getRegistrationTokenE :: KvDbFlow m r => Id SR.RegistrationToken -> m SR.RegistrationToken
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
 createPerson ::
-  (HasFlowEnv m r '["version" ::: DeploymentVersion], EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, Redis.HedisFlow m r, CacheFlow m r) => AuthReq -> Text -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> DMerchant.Merchant -> m SP.Person
+  (HasFlowEnv m r '["version" ::: DeploymentVersion], EncFlow m r, KvDbFlow m r, DB.EsqDBReplicaFlow m r, Redis.HedisFlow m r) => AuthReq -> Text -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> DMerchant.Merchant -> m SP.Person
 createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice merchant = do
   let currentCity = merchant.defaultCity
   merchantOperatingCityId <-
@@ -540,15 +537,14 @@ createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion 
             updatedAt = now
           }
 
-checkPersonExists :: (CacheFlow m r, EsqDBFlow m r) => Text -> m SP.Person
+checkPersonExists :: KvDbFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
   Person.findById (Id entityId) >>= fromMaybeM (PersonDoesNotExist entityId)
 
 resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
-    EsqDBFlow m r,
-    EncFlow m r,
-    CacheFlow m r
+    KvDbFlow m r,
+    EncFlow m r
   ) =>
   Id SR.RegistrationToken ->
   m ResendAuthRes
@@ -584,7 +580,7 @@ resend tokenId = do
   void $ RegistrationToken.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing person.blocked
 
-cleanCachedTokens :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
+cleanCachedTokens :: (KvDbFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
   regTokens <- RegistrationToken.findAllByPersonId personId
   for_ regTokens $ \regToken -> do
@@ -592,8 +588,7 @@ cleanCachedTokens personId = do
     void $ Redis.del key
 
 logout ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     Redis.HedisFlow m r
   ) =>
   Id SP.Person ->
@@ -618,7 +613,7 @@ getPersonOTPChannel personId = do
     Nothing -> do
       pure SMS -- default otpChannel is SMS (for resend)
 
-updatePersonIdForEmergencyContacts :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBFlow m r) => Id SP.Person -> Text -> Id DMerchant.Merchant -> m ()
+updatePersonIdForEmergencyContacts :: (KvDbFlow m r, EncFlow m r) => Id SP.Person -> Text -> Id DMerchant.Merchant -> m ()
 updatePersonIdForEmergencyContacts personId mobileNumber merchantId = do
   dbHash <- getDbHash mobileNumber
   QPDEN.updateEmergencyContactPersonId dbHash personId merchantId

@@ -11,23 +11,23 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.AppInstalls as Beam
 import Storage.Queries.AppInstallsExtra as ReExport
 import Storage.Queries.Transformers.AppInstalls
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.AppInstalls.AppInstalls -> m ())
+create :: KvDbFlow m r => (Domain.Types.AppInstalls.AppInstalls -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.AppInstalls.AppInstalls] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.AppInstalls.AppInstalls] -> m ())
 createMany = traverse_ create
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.AppInstalls.AppInstalls -> m (Maybe Domain.Types.AppInstalls.AppInstalls))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.AppInstalls.AppInstalls -> m (Maybe Domain.Types.AppInstalls.AppInstalls))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.AppInstalls.AppInstalls -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.AppInstalls.AppInstalls -> m ())
 updateByPrimaryKey (Domain.Types.AppInstalls.AppInstalls {..}) = do
   _now <- getCurrentTime
   updateWithKV

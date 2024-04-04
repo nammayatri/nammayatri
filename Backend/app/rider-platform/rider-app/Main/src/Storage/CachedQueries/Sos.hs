@@ -28,7 +28,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 
-findByRideId :: (CacheFlow m r, EsqDBFlow m r) => Id Ride -> m (Maybe DSos.Sos)
+findByRideId :: KvDbFlow m r => Id Ride -> m (Maybe DSos.Sos)
 findByRideId rideId = do
   Hedis.safeGet $ makeIdKey rideId
 
