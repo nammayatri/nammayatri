@@ -186,15 +186,25 @@ let cacConfig =
         { host = "http://localhost:8080"
         , interval = 10
         , tenants = [ "dev", "test" ]
+        , retryConnection = False
         }
-      : { host : Text, interval : Natural, tenants : List Text }
+      : { host : Text
+        , interval : Natural
+        , tenants : List Text
+        , retryConnection : Bool
+        }
 
 let superPositionConfig =
         { host = "http://localhost:8080"
         , interval = 10
         , tenants = [ "dev", "test" ]
+        , retryConnection = False
         }
-      : { host : Text, interval : Natural, tenants : List Text }
+      : { host : Text
+        , interval : Natural
+        , tenants : List Text
+        , retryConnection : Bool
+        }
 
 let kafkaClickhouseCfg =
       { username = sec.clickHouseUsername

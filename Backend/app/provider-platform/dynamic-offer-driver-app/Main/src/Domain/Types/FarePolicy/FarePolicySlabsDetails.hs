@@ -63,7 +63,7 @@ newtype FPSlabsDetailsAPIEntity = FPSlabsDetailsAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-getFPSlabDetailsSlab :: String -> String -> Maybe FPSlabsDetails
+getFPSlabDetailsSlab :: MonadFlow m => String -> String -> m (Maybe FPSlabsDetails)
 getFPSlabDetailsSlab config key' = do
   let k =
         config
@@ -78,10 +78,10 @@ getFPSlabDetailsSlab config key' = do
                         . DAK.toText
                     )
               )
-      fpsdsl = jsonToFPSlabsDetailsSlab (DAKM.fromList k) key'
+  fpsdsl <- jsonToFPSlabsDetailsSlab (DAKM.fromList k) key'
   case NE.nonEmpty fpsdsl of
-    Just fpsdsl' -> Just (FPSlabsDetails fpsdsl')
-    Nothing -> Nothing
+    Just fpsdsl' -> pure $ Just (FPSlabsDetails fpsdsl')
+    Nothing -> pure Nothing
 
 makeFPSlabsDetailsAPIEntity :: FPSlabsDetails -> FPSlabsDetailsAPIEntity
 makeFPSlabsDetailsAPIEntity FPSlabsDetails {..} =

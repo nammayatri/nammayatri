@@ -77,7 +77,7 @@ jsonToDriverExtraFeeBounds config key' =
       res = res'' ^? _JSON :: Maybe [DriverExtraFeeBounds]
    in nonEmpty $ fromMaybe [] res
 
-farePolicyMiddleWare :: DAKM.KeyMap Value -> String -> String -> DAKM.KeyMap Value
+farePolicyMiddleWare :: MonadFlow m => DAKM.KeyMap Value -> String -> String -> m (DAKM.KeyMap Value)
 farePolicyMiddleWare configMap config key' = do
   let nightShiftStart = DAKM.lookup "nightShiftStart" configMap >>= fromJSONHelper
       nightShiftEnd = DAKM.lookup "nightShiftEnd" configMap >>= fromJSONHelper
@@ -87,12 +87,18 @@ farePolicyMiddleWare configMap config key' = do
       nightShiftBounds = DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd
       allowedTripDistanceBounds = DPM.AllowedTripDistanceBounds <$> maxAllowedTripDistance <*> minAllowedTripDistance
       configMap' = KP.foldr DAKM.delete configMap ["nightShiftStart", "nightShiftEnd", "maxAllowedTripDistance", "minAllowedTripDistance"]
-      configMap'' = case DAKM.lookup "farePolicyType" configMap' of
-        Just (String "Progressive") -> toJSON $ ProgressiveDetails <$> jsonToFPProgressiveDetails config key'
-        Just (String "Slabs") -> toJSON $ SlabsDetails <$> getFPSlabDetailsSlab config key'
-        Just (String "Rental") -> toJSON $ RentalDetails <$> jsonToFPRentalDetails config key'
-        _ -> toJSON (Nothing :: Maybe FarePolicyDetails)
-  KP.foldr (\(k, v) acc -> DAKM.insert k v acc) configMap' [("nightShiftBounds", DA.toJSON nightShiftBounds), ("allowedTripDistanceBounds", DA.toJSON allowedTripDistanceBounds), ("driverExtraFeeBounds", DA.toJSON dEFB), ("farePolicyDetails", configMap'')]
+  configMap'' <- case DAKM.lookup "farePolicyType" configMap' of
+    Just (String "Progressive") -> do
+      pfp <- jsonToFPProgressiveDetails config key'
+      pure $ toJSON (ProgressiveDetails <$> pfp)
+    Just (String "Slabs") -> do
+      sfp <- getFPSlabDetailsSlab config key'
+      pure $ toJSON (SlabsDetails <$> sfp)
+    Just (String "Rental") -> do
+      rfp <- jsonToFPRentalDetails config key'
+      pure $ toJSON (RentalDetails <$> rfp)
+    _ -> pure (toJSON (Nothing :: Maybe FarePolicyDetails))
+  pure $ KP.foldr (\(k, v) acc -> DAKM.insert k v acc) configMap' [("nightShiftBounds", DA.toJSON nightShiftBounds), ("allowedTripDistanceBounds", DA.toJSON allowedTripDistanceBounds), ("driverExtraFeeBounds", DA.toJSON dEFB), ("farePolicyDetails", configMap'')]
 
 jsonToFarePolicy :: MonadFlow m => String -> String -> m (Maybe FarePolicy)
 jsonToFarePolicy config key' = do
@@ -109,8 +115,8 @@ jsonToFarePolicy config key' = do
                         . DAK.toText
                     )
               )
-      res'' = farePolicyMiddleWare (DAKM.fromList res') config key'
-      res = Object res'' ^? _JSON :: (Maybe FarePolicy)
+  res'' <- farePolicyMiddleWare (DAKM.fromList res') config key'
+  let res = Object res'' ^? _JSON :: (Maybe FarePolicy)
   when (isNothing res) do
     logDebug $ "FarePolicy from CAC Not Parsable: " <> show res' <> " after middle parsing" <> show res'' <> " for key: " <> Text.pack key'
   pure res

@@ -71,14 +71,16 @@ import Tools.Streaming.Kafka
 data CacConfig = CacConfig
   { host :: String,
     interval :: Natural,
-    tenants :: [String]
+    tenants :: [String],
+    retryConnection :: Bool
   }
   deriving (Generic, FromDhall)
 
 data SuperPositionConfig = SuperPositionConfig
   { host :: String,
     interval :: Natural,
-    tenants :: [String]
+    tenants :: [String],
+    retryConnection :: Bool
   }
   deriving (Generic, FromDhall)
 

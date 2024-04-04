@@ -34,6 +34,7 @@ import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiv
 import Kernel.Prelude as KP
 import Kernel.Types.Cac
 import Kernel.Types.Common
+import Kernel.Utils.Logging
 
 data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
   { baseFare :: Money,
@@ -69,7 +70,7 @@ data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-jsonToFPProgressiveDetailsPerExtraKmRateSection :: String -> String -> [FPProgressiveDetailsPerExtraKmRateSection]
+jsonToFPProgressiveDetailsPerExtraKmRateSection :: MonadFlow m => String -> String -> m [FPProgressiveDetailsPerExtraKmRateSection]
 jsonToFPProgressiveDetailsPerExtraKmRateSection config key' = do
   let res' =
         config
@@ -88,22 +89,26 @@ jsonToFPProgressiveDetailsPerExtraKmRateSection config key' = do
               )
       res'' = fromMaybe (DA.Array (DV.fromList [])) (KM.lookup (DAK.fromText (Text.pack key')) (KM.fromList res'))
       res = res'' ^? _JSON :: (Maybe [FPProgressiveDetailsPerExtraKmRateSection])
-  fromMaybe [] res
+  when (isNothing res) do
+    logDebug $ "farePolicyProgressiveDetailsPerExtraKmRateSection from CAC Not Parsable: " <> show res' <> " after middle parsing" <> show res'' <> " for key: " <> Text.pack key'
+  pure $ fromMaybe [] res
 
-parsingMiddleware :: KM.KeyMap Value -> String -> String -> KM.KeyMap Value
-parsingMiddleware config configS key' =
-  let perExtraKmRateSections = jsonToFPProgressiveDetailsPerExtraKmRateSection configS key'
-      waitingCharge = KM.lookup "waitingCharge" config >>= fromJSONHelper
+parsingMiddleware :: MonadFlow m => KM.KeyMap Value -> String -> String -> m (KM.KeyMap Value)
+parsingMiddleware config configS key' = do
+  perExtraKmRateSections <- jsonToFPProgressiveDetailsPerExtraKmRateSection configS key'
+  let waitingCharge = KM.lookup "waitingCharge" config >>= fromJSONHelper
       freeWaitingTime = KM.lookup "freeWatingTime" config >>= fromJSONHelper
       waitingChargeInfo = WaitingChargeInfo <$> waitingCharge <*> freeWaitingTime
-   in KP.foldr (\(k, v) acc -> KM.insert k v acc) config [("perExtraKmRateSections", toJSON perExtraKmRateSections), ("waitingChargeInfo", DA.toJSON waitingChargeInfo)]
+  pure $ KP.foldr (\(k, v) acc -> KM.insert k v acc) config [("perExtraKmRateSections", toJSON perExtraKmRateSections), ("waitingChargeInfo", DA.toJSON waitingChargeInfo)]
 
-jsonToFPProgressiveDetails :: String -> String -> Maybe FPProgressiveDetails
-jsonToFPProgressiveDetails config key' =
-  let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicyProgressiveDetails:") (itraversed . indices (Text.isPrefixOf "farePolicyProgressiveDetails:" . DAK.toText)))
-      res'' = parsingMiddleware (KM.fromList res') config key'
-      res = DA.Object res'' ^? _JSON :: (Maybe FPProgressiveDetails)
-   in res
+jsonToFPProgressiveDetails :: MonadFlow m => String -> String -> m (Maybe FPProgressiveDetails)
+jsonToFPProgressiveDetails config key' = do
+  let res' = config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicyProgressiveDetails:") (itraversed . indices (Text.isPrefixOf "farePolicyProgressiveDetails:" . DAK.toText))
+  res'' <- parsingMiddleware (KM.fromList res') config key'
+  let res = DA.Object res'' ^? _JSON :: (Maybe FPProgressiveDetails)
+  when (isNothing res) do
+    logDebug $ "FarePolicyProgressiveDetails from CAC Not Parsable: " <> show res' <> " after middle parsing" <> show res'' <> " for key: " <> Text.pack key'
+  pure res
 
 makeFPProgressiveDetailsAPIEntity :: FPProgressiveDetails -> FPProgressiveDetailsAPIEntity
 makeFPProgressiveDetailsAPIEntity FPProgressiveDetails {..} =
