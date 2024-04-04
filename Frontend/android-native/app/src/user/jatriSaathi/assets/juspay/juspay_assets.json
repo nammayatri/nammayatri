@@ -465,6 +465,7 @@
       "ny_ic_ticket" : true,
       "ny_ic_ticket_black" : true,
       "ny_ic_ticket_grey" : true,
+      "ny_ic_ticket_grey_small" : true,
       "ny_ic_timing" : true,
       "ny_ic_tip_icon" : true,
       "ny_ic_top_car" : true,
