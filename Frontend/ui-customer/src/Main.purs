@@ -26,7 +26,7 @@ import Effect.Aff (killFiber, launchAff, launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import Effect.Ref (new)
-import Engineering.Helpers.Commons (flowRunner, getWindowVariable, liftFlow)
+import Engineering.Helpers.Commons (flowRunner, getWindowVariable, liftFlow, markPerformance)
 import Flow as Flow
 import Helpers.Version
 import Foreign (MultipleErrors, unsafeToForeign)
@@ -47,6 +47,7 @@ import Storage (setValueToLocalStore, KeyStore(..))
 
 main :: Event -> Boolean -> Effect Unit
 main event callInitUI = do
+  void $ markPerformance "MAIN_FLOW"
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do

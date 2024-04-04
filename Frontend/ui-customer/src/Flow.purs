@@ -52,7 +52,7 @@ import Effect.Aff (Milliseconds(..), makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
-import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, getExpiryTime, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner, resetIdMap)
+import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, getExpiryTime, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner, resetIdMap, markPerformance)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (loaderText, toggleLoader, saveObject, reboot, showSplash, fetchLanguage, handleUpdatedTerms, getReferralCode)
@@ -197,6 +197,7 @@ import Services.FlowCache as FlowCache
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
+  liftFlowBT $ markPerformance "BASE_APP_FLOW"
   baseAppStorage -- TODO:: Restructure the files and names
   baseAppLogs
   liftFlowBT $ runEffectFn1 resetIdMap ""
@@ -205,7 +206,7 @@ baseAppFlow gPayload callInitUI = do
   when callInitUI $ lift $ lift $ initUI -- TODO:: Can we move this to Main
   when showSplashScreen $ toggleSplash true
   tokenValidity <- validateToken signatureAuthData
-  lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
+  lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)  
   if tokenValidity 
     then handleDeepLinks (Just gPayload) false
     else validateAuthData $ signatureAuthData
@@ -226,6 +227,7 @@ baseAppFlow gPayload callInitUI = do
 
 handleDeepLinks :: Maybe GlobalPayload -> Boolean -> FlowBT String Unit
 handleDeepLinks mBGlobalPayload skipDefaultCase = do
+  liftFlowBT $ markPerformance "HANDLE_DEEP_LINKS"
   case mBGlobalPayload of 
     Just globalPayload ->
       case globalPayload ^. _payload ^._view_param of
@@ -281,21 +283,27 @@ toggleSplash =
       liftFlowBT $ terminateUI $ Just "SplashScreen"
 
 currentFlowStatus :: FlowBT String Unit
-currentFlowStatus = do
+currentFlowStatus = do  
+  liftFlowBT $ markPerformance "CURRENT_FLOW_STATUS"
   void $ lift $ lift $ toggleLoader false
+  liftFlowBT $ markPerformance "VERIFY_PROFILE_CALL_API"
   verifyProfile "LazyCheck"
+  liftFlowBT $ markPerformance "FLOW_STATUS_CALL_API"
   flowStatus <- Remote.flowStatusBT "LazyCheck"
+  liftFlowBT $ markPerformance "RIDE_LIST_CALL_API"
   case flowStatus ^. _currentStatus of
     WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
     RIDE_ASSIGNED _                         -> checkRideStatus true
     _                                       -> checkRideStatus false
+  liftFlowBT $ markPerformance "HIDE_LOADER_FLOW"
   hideLoaderFlow
-  void $ pure $ hideKeyboardOnNavigation true -- TODO:: Why is this added here @ashkriti?
+  void $ pure $ hideKeyboardOnNavigation true -- TODO:: Why is this added here @ashkriti?  
   homeScreenFlow
   where
     verifyProfile :: String -> FlowBT String Unit
     verifyProfile dummy = do
+      liftFlowBT $ markPerformance "VERIFY_PROFILE"
       response <- Remote.getProfileBT ""
       updateVersion (response ^. _clientVersion) (response ^. _bundleVersion)
       updateFirebaseToken (response ^. _maskedDeviceToken) getUpdateToken
@@ -551,6 +559,7 @@ updateDisabilityList screenType = do
 
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
+  liftFlowBT $ markPerformance "HOME_SCREEN_FLOW"
   logField_ <- lift $ lift $ getLogFields
   (GlobalState currentState) <- getState
   void $ checkAndUpdateSavedLocations currentState.homeScreen

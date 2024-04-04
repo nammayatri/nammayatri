@@ -98,7 +98,7 @@ withAPIResult url f flow = do
   if (isInvalidUrl url) then pure $ Left customError
   else do
     let start = getTime unit
-    resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
+    resp <- Events.measureDurationFlow ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow    
     let end = getTime unit
     _ <- pure $ printLog "withAPIResult url" url
     case resp of
@@ -122,7 +122,7 @@ withAPIResultBT url f errorHandler flow = do
   if (isInvalidUrl url) then errorHandler customError
   else do
     let start = getTime unit
-    resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
+    resp <- Events.measureDurationFlowBT ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow    
     let end = getTime unit
     _ <- pure $ printLog "withAPIResultBT url" url
     case resp of

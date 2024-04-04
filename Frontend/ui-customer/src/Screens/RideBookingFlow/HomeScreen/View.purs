@@ -65,7 +65,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
@@ -132,6 +132,7 @@ import LocalStorage.Cache (getValueFromCache)
 import Components.PopupWithCheckbox.View as PopupWithCheckbox
 import Services.FlowCache as FlowCache
 import Engineering.Helpers.BackTrack
+import Engineering.Helpers.Events as Events
 import Types.App
 import Mobility.Prelude
 
@@ -304,7 +305,13 @@ view push state =
     , width MATCH_PARENT
     , onBackPressed push (const BackPressed)
     , clickable true
-    , afterRender push (const AfterRender)
+    , afterRender 
+        (\action -> do
+          void $ markPerformance "HOME_SCREEN_RENDER"
+          void $ Events.endMeasuringDuration "onCreateToHomeScreenRenderDuration"
+          void $ Events.endMeasuringDuration "initAppToHomeScreenRenderDuration"          
+          push action
+        ) (const AfterRender)
     , accessibility DISABLE
     ]
     [ linearLayout
