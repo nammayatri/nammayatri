@@ -26,7 +26,7 @@ import qualified Lib.DriverCoins.Types as DCT (DriverCoinsEventType (..), Driver
 import qualified Sequelize as Se
 import qualified Storage.Beam.Coins.CoinsConfig as BeamDC
 
-fetchCoins :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsFunctionType -> Id DM.Merchant -> m (Maybe CoinsConfig)
+fetchCoins :: KvDbFlow m r => DCT.DriverCoinsFunctionType -> Id DM.Merchant -> m (Maybe CoinsConfig)
 fetchCoins eventFunction (Id merchantId) =
   findOneWithKV
     [ Se.And
@@ -35,7 +35,7 @@ fetchCoins eventFunction (Id merchantId) =
         ]
     ]
 
-fetchFunctionsOnEventbasis :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m [CoinsConfig]
+fetchFunctionsOnEventbasis :: KvDbFlow m r => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m [CoinsConfig]
 fetchFunctionsOnEventbasis eventType (Id merchantId) (Id merchantOptCityId) = do
   let dbEventName =
         case eventType of
@@ -56,7 +56,7 @@ fetchFunctionsOnEventbasis eventType (Id merchantId) (Id merchantOptCityId) = do
         ]
     ]
 
-getCoinInfo :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m [CoinsConfig]
+getCoinInfo :: KvDbFlow m r => Id DM.Merchant -> m [CoinsConfig]
 getCoinInfo (Id merchantId) = findAllWithKV [Se.Is BeamDC.merchantId $ Se.Eq merchantId]
 
 instance FromTType' BeamDC.CoinsConfig CoinsConfig where

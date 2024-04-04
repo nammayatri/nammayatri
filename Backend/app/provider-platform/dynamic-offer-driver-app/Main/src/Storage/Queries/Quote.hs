@@ -29,10 +29,10 @@ import Storage.Cac.FarePolicy as BeamFPolicy
 import Storage.Queries.FareParameters as BeamQFP
 import qualified Storage.Queries.FareParameters as SQFP
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Quote -> m ()
+create :: KvDbFlow m r => Quote -> m ()
 create quote = SQFP.create quote.fareParams >> createWithKV quote
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Quote -> m (Maybe Quote)
+findById :: KvDbFlow m r => Id Quote -> m (Maybe Quote)
 findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
 
 {-

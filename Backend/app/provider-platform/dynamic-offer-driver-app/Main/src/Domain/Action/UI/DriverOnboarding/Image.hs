@@ -189,7 +189,7 @@ validateImageFile isDashboard (personId, merchantId, merchantOpCityId) ImageVali
   validateImage isDashboard (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcNumber Nothing
 
 mkImage ::
-  (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  (KvDbFlow m r, EncFlow m r) =>
   Id Person.Person ->
   Id DM.Merchant ->
   Text ->

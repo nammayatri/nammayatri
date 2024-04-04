@@ -25,10 +25,10 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Coins.CoinHistory as BeamDC
 
-updateCoinEvent :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => CoinHistory -> m ()
+updateCoinEvent :: KvDbFlow m r => CoinHistory -> m ()
 updateCoinEvent = createWithKV
 
-getCoinEventSummary :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> UTCTime -> NominalDiffTime -> m [CoinHistory]
+getCoinEventSummary :: KvDbFlow m r => Id SP.Person -> UTCTime -> NominalDiffTime -> m [CoinHistory]
 getCoinEventSummary (Id driverId) time timeDiffFromUtc = do
   let todayStart = UTCTime (utctDay time) 0
       tomorrowStart = addUTCTime (24 * 60 * 60) todayStart
@@ -46,7 +46,7 @@ getCoinEventSummary (Id driverId) time timeDiffFromUtc = do
     Nothing
     Nothing
 
-getTotalCoins :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> NominalDiffTime -> m [CoinHistory]
+getTotalCoins :: KvDbFlow m r => Id SP.Person -> NominalDiffTime -> m [CoinHistory]
 getTotalCoins (Id driverId) timeDiffFromUtc = do
   istTime <- addUTCTime timeDiffFromUtc <$> getCurrentTime
   findAllWithKV
@@ -59,7 +59,7 @@ getTotalCoins (Id driverId) timeDiffFromUtc = do
         ]
     ]
 
-getExpiringCoinsInXDay :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> NominalDiffTime -> NominalDiffTime -> m [CoinHistory]
+getExpiringCoinsInXDay :: KvDbFlow m r => Id SP.Person -> NominalDiffTime -> NominalDiffTime -> m [CoinHistory]
 getExpiringCoinsInXDay (Id driverId) configTime timeDiffFromUtc = do
   istTime <- addUTCTime timeDiffFromUtc <$> getCurrentTime
   let futureTime = addUTCTime configTime istTime
@@ -72,7 +72,7 @@ getExpiringCoinsInXDay (Id driverId) configTime timeDiffFromUtc = do
         ]
     ]
 
-getCoinsEarnedLastDay :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> UTCTime -> NominalDiffTime -> m [CoinHistory]
+getCoinsEarnedLastDay :: KvDbFlow m r => Id SP.Person -> UTCTime -> NominalDiffTime -> m [CoinHistory]
 getCoinsEarnedLastDay (Id driverId) now timeDiffFromUtc = do
   let todayStart = UTCTime (utctDay now) 0
       yesterdayStart = UTCTime (addDays (-1) (utctDay now)) 0
@@ -86,7 +86,7 @@ getCoinsEarnedLastDay (Id driverId) now timeDiffFromUtc = do
         ]
     ]
 
-getDriverCoinInfo :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> NominalDiffTime -> m [CoinHistory]
+getDriverCoinInfo :: KvDbFlow m r => Id SP.Person -> NominalDiffTime -> m [CoinHistory]
 getDriverCoinInfo (Id driverId) timeDiffFromUtc = do
   istTime <- addUTCTime timeDiffFromUtc <$> getCurrentTime
   findAllWithOptionsKV
@@ -100,7 +100,7 @@ getDriverCoinInfo (Id driverId) timeDiffFromUtc = do
     Nothing
     Nothing
 
-updateStatusOfCoins :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> CoinStatus -> m ()
+updateStatusOfCoins :: KvDbFlow m r => Text -> Int -> CoinStatus -> m ()
 updateStatusOfCoins id coinsRemainingValue newStatus = do
   now <- getCurrentTime
   updateWithKV
@@ -110,7 +110,7 @@ updateStatusOfCoins id coinsRemainingValue newStatus = do
     ]
     [Se.Is BeamDC.id $ Se.Eq id]
 
-totalCoinEarnHistory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> Maybe Integer -> Maybe Integer -> m [CoinHistory]
+totalCoinEarnHistory :: KvDbFlow m r => Id SP.Person -> Maybe Integer -> Maybe Integer -> m [CoinHistory]
 totalCoinEarnHistory (Id driverId) mbLimit mbOffset = do
   let limitVal = maybe 10 fromInteger mbLimit
       offsetVal = maybe 0 fromInteger mbOffset

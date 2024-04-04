@@ -59,7 +59,7 @@ import Tools.Error
 
 -- Identical for on_update and on_status
 mkFulfillment ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (KvDbFlow m r, EncFlow m r) =>
   Maybe SP.Person ->
   DRide.Ride ->
   DRB.Booking ->

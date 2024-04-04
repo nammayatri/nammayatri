@@ -28,15 +28,15 @@ import Storage.Queries.OrphanInstances.DriverInformation
 import Storage.Queries.PersonExtra (findAllPersonWithDriverInfos)
 
 -- Extra code goes here --
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
+findById :: KvDbFlow m r => Id Person.Driver -> m (Maybe DriverInformation)
 findById (Id driverInformationId) = findOneWithKV [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
 
-getEnabledAt :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe UTCTime)
+getEnabledAt :: KvDbFlow m r => Id Person.Driver -> m (Maybe UTCTime)
 getEnabledAt driverId = do
   dInfo <- findById driverId
   return (dInfo >>= (.enabledAt))
 
-findAllDriverIdExceptProvided :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Driver] -> m [Id Driver]
+findAllDriverIdExceptProvided :: KvDbFlow m r => Merchant -> DMOC.MerchantOperatingCity -> [Id Driver] -> m [Id Driver]
 findAllDriverIdExceptProvided merchant opCity driverIdsToBeExcluded = do
   dbConf <- getMasterBeamConfig
   result <- L.runDB dbConf $
@@ -59,7 +59,7 @@ findAllDriverIdExceptProvided merchant opCity driverIdsToBeExcluded = do
       pure $ DriverInfo.driverId <$> driverInfos
     Left _ -> pure []
 
-findAllByEnabledAtInWindow :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe UTCTime -> Maybe UTCTime -> m [DriverInformation]
+findAllByEnabledAtInWindow :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> Maybe UTCTime -> Maybe UTCTime -> m [DriverInformation]
 findAllByEnabledAtInWindow merchantOpCityId from to = do
   findAllWithKV
     [ Se.And
@@ -69,7 +69,7 @@ findAllByEnabledAtInWindow merchantOpCityId from to = do
         ]
     ]
 
-findAllByAutoPayStatusAndMerchantIdInDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Maybe DriverAutoPayStatus -> [Id Person] -> m [DriverInformation]
+findAllByAutoPayStatusAndMerchantIdInDriverIds :: KvDbFlow m r => Id Merchant -> Maybe DriverAutoPayStatus -> [Id Person] -> m [DriverInformation]
 findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId autoPayStatus driverIds = do
   findAllWithKV
     [ Se.And
@@ -79,7 +79,7 @@ findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId autoPayStatus driverId
         ]
     ]
 
-fetchAllByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> [Id Driver] -> m [DriverInformation]
+fetchAllByIds :: KvDbFlow m r => Id Merchant -> [Id Driver] -> m [DriverInformation]
 fetchAllByIds merchantId driversIds = do
   dInfos <- findAllWithKV [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
   persons <- findAllPersonWithDriverInfos dInfos merchantId
@@ -90,7 +90,7 @@ fetchAllByIds merchantId driversIds = do
         Just _person -> dInfo' : acc
         Nothing -> acc
 
-fetchAllDriversWithPaymentPending :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [DriverInformation]
+fetchAllDriversWithPaymentPending :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> m [DriverInformation]
 fetchAllDriversWithPaymentPending merchantOpCityId = do
   findAllWithDb
     [ Se.And
@@ -99,7 +99,7 @@ fetchAllDriversWithPaymentPending merchantOpCityId = do
         ]
     ]
 
-fetchAllBlockedDriversWithSubscribedFalse :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [DriverInformation]
+fetchAllBlockedDriversWithSubscribedFalse :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> m [DriverInformation]
 fetchAllBlockedDriversWithSubscribedFalse merchantOpCityId = do
   findAllWithDb
     [ Se.And
@@ -108,10 +108,10 @@ fetchAllBlockedDriversWithSubscribedFalse merchantOpCityId = do
         ]
     ]
 
-fetchAllAvailableByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person.Driver] -> m [DriverInformation]
+fetchAllAvailableByIds :: KvDbFlow m r => [Id Person.Driver] -> m [DriverInformation]
 fetchAllAvailableByIds driversIds = findAllWithKV [Se.And [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds), Se.Is BeamDI.active $ Se.Eq True, Se.Is BeamDI.onRide $ Se.Eq False]]
 
-updateEnabledVerifiedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Bool -> Maybe Bool -> m ()
+updateEnabledVerifiedState :: KvDbFlow m r => Id Driver -> Bool -> Maybe Bool -> m ()
 updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
   now <- getCurrentTime
   enabledAt <- getEnabledAt (Id driverId)
@@ -125,7 +125,7 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateDynamicBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Bool -> m ()
+updateDynamicBlockedState :: KvDbFlow m r => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Bool -> m ()
 updateDynamicBlockedState driverId blockedReason blockedExpiryTime dashboardUserName isBlocked = do
   now <- getCurrentTime
   driverInfo <- findById driverId
@@ -144,7 +144,7 @@ updateDynamicBlockedState driverId blockedReason blockedExpiryTime dashboardUser
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
 
-updateBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Text -> m ()
+updateBlockedState :: KvDbFlow m r => Id Person.Driver -> Bool -> Maybe Text -> m ()
 updateBlockedState driverId isBlocked blockStateModifier = do
   now <- getCurrentTime
   driverInfo <- findById driverId
@@ -160,10 +160,10 @@ updateBlockedState driverId isBlocked blockStateModifier = do
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
 
-findByDriverIdActiveRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
+findByDriverIdActiveRide :: KvDbFlow m r => Id Person.Driver -> m (Maybe DriverInformation)
 findByDriverIdActiveRide (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDI.driverId $ Se.Eq driverId, Se.Is BeamDI.onRide $ Se.Eq True]]
 
-updateNotOnRideMultiple :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person.Driver] -> m ()
+updateNotOnRideMultiple :: KvDbFlow m r => [Id Person.Driver] -> m ()
 updateNotOnRideMultiple driverIds = do
   now <- getCurrentTime
   updateWithKV
@@ -172,11 +172,11 @@ updateNotOnRideMultiple driverIds = do
     ]
     [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]
 
-deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m ()
+deleteById :: KvDbFlow m r => Id Person.Driver -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
 findAllWithLimitOffsetByMerchantId ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Maybe Text ->
   Maybe DbHash ->
   Maybe Integer ->
@@ -212,7 +212,7 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
     Left _ -> pure []
 
 getDrivers ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   [DriverInformation] ->
   m [Person]
 getDrivers driverInfos = findAllWithKV [Se.Is BeamP.id $ Se.In personKeys]
@@ -220,7 +220,7 @@ getDrivers driverInfos = findAllWithKV [Se.Is BeamP.id $ Se.In personKeys]
     personKeys = getId <$> fetchDriverIDsFromInfo driverInfos
 
 getDriverInfos ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   [DriverLocation] ->
   m [DriverInformation]
 getDriverInfos driverLocations = findAllWithKV [Se.And [Se.Is BeamDI.driverId $ Se.In personsKeys, Se.Is BeamDI.active $ Se.Eq True]]
@@ -233,7 +233,7 @@ fetchDriverIDsFromLocations = map DriverLocation.driverId
 fetchDriverIDsFromInfo :: [DriverInformation] -> [Id Person]
 fetchDriverIDsFromInfo = map DriverInfo.driverId
 
-countDrivers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m (Int, Int)
+countDrivers :: KvDbFlow m r => Id Merchant -> m (Int, Int)
 countDrivers merchantID =
   getResults <$> do
     dbConf <- getMasterBeamConfig
@@ -254,7 +254,7 @@ countDrivers merchantID =
     func (active, inactive) (activity, counter) =
       if activity then (active + counter, inactive) else (active, inactive + counter)
 
-updatPayerVpa :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Id Person.Driver -> m ()
+updatPayerVpa :: KvDbFlow m r => Maybe Text -> Id Person.Driver -> m ()
 updatPayerVpa payerVpa (Id driverId) = do
   now <- getCurrentTime
   updateOneWithKV

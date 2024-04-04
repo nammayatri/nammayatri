@@ -31,10 +31,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.MerchantServiceUsageConfig as Queries
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
+create :: KvDbFlow m r => MerchantServiceUsageConfig -> m ()
 create = Queries.create
 
-findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
+findByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantOpCityId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceUsageConfigD 'Unsafe) @MerchantServiceUsageConfig a
@@ -54,5 +54,5 @@ clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache merchantId = do
   Hedis.withCrossAppRedis $ Hedis.del (makeMerchantOpCityIdKey merchantId)
 
-updateMerchantServiceUsageConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
+updateMerchantServiceUsageConfig :: KvDbFlow m r => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig

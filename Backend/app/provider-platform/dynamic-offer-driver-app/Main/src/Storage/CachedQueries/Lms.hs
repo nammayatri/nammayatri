@@ -35,13 +35,13 @@ import qualified Storage.Queries.QuestionModuleMapping as SQQMM
 
 --- get all lms Modules
 
-getAllModules :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Id DMOC.MerchantOperatingCity -> m [LmsModule.LmsModule]
+getAllModules :: KvDbFlow m r => Maybe Int -> Maybe Int -> Id DMOC.MerchantOperatingCity -> m [LmsModule.LmsModule]
 getAllModules mbLimit mbOffset merchantOperatingCityId =
   Hedis.safeGet (makeAllModuleKeyByMerchantOpCityId merchantOperatingCityId) >>= \case
     Just a -> return a
     Nothing -> cacheAllModulesByMerchantOpCityId merchantOperatingCityId /=<< SQLM.getAllModules mbLimit mbOffset merchantOperatingCityId
 
-cacheAllModulesByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> [LmsModule.LmsModule] -> m ()
+cacheAllModulesByMerchantOpCityId :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> [LmsModule.LmsModule] -> m ()
 cacheAllModulesByMerchantOpCityId merchantOperatingCityId modules = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeAllModuleKeyByMerchantOpCityId merchantOperatingCityId) modules expTime
@@ -51,13 +51,13 @@ makeAllModuleKeyByMerchantOpCityId merchantOperatingCityId = "CachedQueries:AllM
 
 --- get all lms module translations
 
-getAllModuleTranslations :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id LmsModule.LmsModule -> m [DTLMT.LmsModuleTranslation]
+getAllModuleTranslations :: KvDbFlow m r => Id LmsModule.LmsModule -> m [DTLMT.LmsModuleTranslation]
 getAllModuleTranslations moduleId =
   Hedis.safeGet (makeAllTranslationsForAModuleKey moduleId) >>= \case
     Just a -> return a
     Nothing -> cacheAllTranslationsForAModule moduleId /=<< SQLMT.getAllTranslationsByModuleId moduleId
 
-cacheAllTranslationsForAModule :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id LmsModule.LmsModule -> [DTLMT.LmsModuleTranslation] -> m ()
+cacheAllTranslationsForAModule :: KvDbFlow m r => Id LmsModule.LmsModule -> [DTLMT.LmsModuleTranslation] -> m ()
 cacheAllTranslationsForAModule moduleId translations = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeAllTranslationsForAModuleKey moduleId) translations expTime
@@ -67,13 +67,13 @@ makeAllTranslationsForAModuleKey moduleId = "CachedQueries:AllTranslations:modul
 
 --- get all videos
 
-getAllVideos :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id LmsModule.LmsModule -> [DTLMVI.VideoStatus] -> m [DTLMVI.LmsModuleVideoInformation]
+getAllVideos :: KvDbFlow m r => Id LmsModule.LmsModule -> [DTLMVI.VideoStatus] -> m [DTLMVI.LmsModuleVideoInformation]
 getAllVideos moduleId videoStatus =
   Hedis.safeGet (makeAllVideosKeyByModuleId moduleId) >>= \case
     Just a -> return a
     Nothing -> cacheAllVideosByModuleId moduleId /=<< SQLMVI.getAllVideos moduleId videoStatus
 
-cacheAllVideosByModuleId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id LmsModule.LmsModule -> [DTLMVI.LmsModuleVideoInformation] -> m ()
+cacheAllVideosByModuleId :: KvDbFlow m r => Id LmsModule.LmsModule -> [DTLMVI.LmsModuleVideoInformation] -> m ()
 cacheAllVideosByModuleId moduleId videos = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeAllVideosKeyByModuleId moduleId) videos expTime
@@ -83,13 +83,13 @@ makeAllVideosKeyByModuleId moduleId = "CachedQueries:AllVideos:ModuleId-" <> mod
 
 --- get all video translations
 
-getAllTranslationsForVideoId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DTLMVI.LmsModuleVideoInformation -> m [DTLVT.LmsVideoTranslation]
+getAllTranslationsForVideoId :: KvDbFlow m r => Id DTLMVI.LmsModuleVideoInformation -> m [DTLVT.LmsVideoTranslation]
 getAllTranslationsForVideoId videoId =
   Hedis.safeGet (makeAllTranslationsForAVideoKey videoId) >>= \case
     Just a -> return a
     Nothing -> cacheAllTranslationsForAVideo videoId /=<< SQLVT.getAllTranslationsForVideoId videoId
 
-cacheAllTranslationsForAVideo :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DTLMVI.LmsModuleVideoInformation -> [DTLVT.LmsVideoTranslation] -> m ()
+cacheAllTranslationsForAVideo :: KvDbFlow m r => Id DTLMVI.LmsModuleVideoInformation -> [DTLVT.LmsVideoTranslation] -> m ()
 cacheAllTranslationsForAVideo videoId translations = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeAllTranslationsForAVideoKey videoId) translations expTime
@@ -99,13 +99,13 @@ makeAllTranslationsForAVideoKey videoId = "CachedQueries:AllTranslations:videoId
 
 --- get all quiz Ids
 
-getAllQuestions :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id LmsModule.LmsModule -> m [DTQMM.QuestionModuleMapping]
+getAllQuestions :: KvDbFlow m r => Id LmsModule.LmsModule -> m [DTQMM.QuestionModuleMapping]
 getAllQuestions moduleId =
   Hedis.safeGet (makeAllQuestionsByModuleIdKey moduleId) >>= \case
     Just a -> return a
     Nothing -> cacheAllQuestionsByModuleId moduleId /=<< SQQMM.findAllWithModuleId moduleId
 
-cacheAllQuestionsByModuleId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id LmsModule.LmsModule -> [DTQMM.QuestionModuleMapping] -> m ()
+cacheAllQuestionsByModuleId :: KvDbFlow m r => Id LmsModule.LmsModule -> [DTQMM.QuestionModuleMapping] -> m ()
 cacheAllQuestionsByModuleId moduleId questions = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeAllQuestionsByModuleIdKey moduleId) questions expTime
@@ -115,13 +115,13 @@ makeAllQuestionsByModuleIdKey moduleId = "CachedQueries:AllQuestions:ModuleId-" 
 
 --- get all question translations
 
-getAllTranslationsForQuestionId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DTQMM.QuestionModuleMapping -> m [DTQI.QuestionInformation]
+getAllTranslationsForQuestionId :: KvDbFlow m r => Id DTQMM.QuestionModuleMapping -> m [DTQI.QuestionInformation]
 getAllTranslationsForQuestionId questionId =
   Hedis.safeGet (makeAllTranslationsForAQuestionKey questionId) >>= \case
     Just a -> return a
     Nothing -> cacheAllTranslationsForAQuestion questionId /=<< SQQI.getAllTranslationsByQuestionId questionId
 
-cacheAllTranslationsForAQuestion :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DTQMM.QuestionModuleMapping -> [DTQI.QuestionInformation] -> m ()
+cacheAllTranslationsForAQuestion :: KvDbFlow m r => Id DTQMM.QuestionModuleMapping -> [DTQI.QuestionInformation] -> m ()
 cacheAllTranslationsForAQuestion questionId translations = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeAllTranslationsForAQuestionKey questionId) translations expTime

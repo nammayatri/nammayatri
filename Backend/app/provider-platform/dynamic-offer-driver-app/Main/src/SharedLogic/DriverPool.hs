@@ -74,7 +74,6 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude (NominalDiffTime, head)
 import qualified Kernel.Randomizer as Rnd
-import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Redis
@@ -116,15 +115,14 @@ mkOldRatioKey driverId ratioType = "driver-offer:DriverPool:" <> ratioType <> ":
 mkAvailableTimeKey :: Text -> Text
 mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-Time:DriverId-" <> driverId
 
-windowFromIntelligentPoolConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
+windowFromIntelligentPoolConfig :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
 windowFromIntelligentPoolConfig merchantOpCityId windowKey = maybe defaultWindow windowKey <$> CDIP.findByMerchantOpCityId merchantOpCityId Nothing
   where
     defaultWindow = SWC.SlidingWindowOptions 7 SWC.Days
 
 withAcceptanceRatioWindowOption ::
   ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
+    KvDbFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   (SWC.SlidingWindowOptions -> m a) ->
@@ -133,8 +131,7 @@ withAcceptanceRatioWindowOption merchantOpCityId fn = windowFromIntelligentPoolC
 
 withCancellationAndRideFrequencyRatioWindowOption ::
   ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
+    KvDbFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   (SWC.SlidingWindowOptions -> m a) ->
@@ -143,8 +140,7 @@ withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId fn = windowFr
 
 withAvailabilityTimeWindowOption ::
   ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
+    KvDbFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   (SWC.SlidingWindowOptions -> m a) ->
@@ -153,8 +149,7 @@ withAvailabilityTimeWindowOption merchantOpCityId fn = windowFromIntelligentPool
 
 withMinQuotesToQualifyIntelligentPoolWindowOption ::
   ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
+    KvDbFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   (SWC.SlidingWindowOptions -> m a) ->
@@ -163,8 +158,7 @@ withMinQuotesToQualifyIntelligentPoolWindowOption merchantOpCityId fn = windowFr
 
 decrementTotalQuotesCount ::
   ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
+    KvDbFlow m r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -178,8 +172,7 @@ decrementTotalQuotesCount merchantId merchantOpCityId driverId sreqId = do
 
 incrementTotalQuotesCount ::
   ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
+    KvDbFlow m r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -202,8 +195,7 @@ mkParallelSearchRequestKey mId dId = "driver-offer:DriverPool:Search-Req-Validit
 
 addSearchRequestInfoToCache ::
   ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
+    KvDbFlow m r
   ) =>
   Id SearchRequest ->
   Id DM.Merchant ->
@@ -245,8 +237,7 @@ removeSearchReqIdFromMap merchantId driverId = Redis.withCrossAppRedis . Redis.h
 
 incrementQuoteAcceptedCount ::
   ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
+    KvDbFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
@@ -255,8 +246,7 @@ incrementQuoteAcceptedCount merchantOpCityId driverId = Redis.withCrossAppRedis 
 
 getTotalQuotesSent ::
   ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
+    KvDbFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
@@ -265,8 +255,7 @@ getTotalQuotesSent merchantOpCityId driverId =
   sum . catMaybes <$> (Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantOpCityId $ SWC.getCurrentWindowValues (mkTotalQuotesKey driverId.getId))
 
 getLatestAcceptanceRatio ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
+  ( KvDbFlow m r,
     Redis.HedisFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
@@ -276,8 +265,7 @@ getLatestAcceptanceRatio merchantOpCityId driverId = Redis.withCrossAppRedis . w
 
 incrementTotalRidesCount ::
   ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
+    KvDbFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
@@ -286,8 +274,7 @@ incrementTotalRidesCount merchantOpCityId driverId = Redis.withCrossAppRedis . w
 
 getTotalRidesCount ::
   ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
+    KvDbFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
@@ -296,8 +283,7 @@ getTotalRidesCount merchantOpCityId driverId = sum . catMaybes <$> (Redis.withCr
 
 incrementCancellationCount ::
   ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
+    KvDbFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
@@ -305,8 +291,7 @@ incrementCancellationCount ::
 incrementCancellationCount merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.incrementWindowCount (mkRideCancelledKey driverId.getId)
 
 getLatestCancellationRatio' ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
+  ( KvDbFlow m r,
     Redis.HedisFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
@@ -315,8 +300,7 @@ getLatestCancellationRatio' ::
 getLatestCancellationRatio' merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.getLatestRatio driverId.getId mkRideCancelledKey mkTotalRidesKey (mkOldRatioKey "CancellationRatio")
 
 getLatestCancellationRatio ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
+  ( KvDbFlow m r,
     Redis.HedisFlow m r
   ) =>
   CancellationScoreRelatedConfig ->
@@ -331,8 +315,7 @@ getLatestCancellationRatio cancellationScoreRelatedConfig merchantOpCityId drive
 
 getCurrentWindowAvailability ::
   ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
+    KvDbFlow m r,
     FromJSON a
   ) =>
   Id DMOC.MerchantOperatingCity ->
@@ -345,8 +328,7 @@ mkQuotesCountKey driverId = "driver-offer:DriverPool:Total-quotes-sent:DriverId-
 
 getQuotesCount ::
   ( FromJSON a,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     Num a
   ) =>
   Id DMOC.MerchantOperatingCity ->
@@ -355,9 +337,7 @@ getQuotesCount ::
 getQuotesCount merchantOpCityId driverId = sum . catMaybes <$> (Redis.withCrossAppRedis . withMinQuotesToQualifyIntelligentPoolWindowOption merchantOpCityId $ SWC.getCurrentWindowValues (mkQuotesCountKey driverId.getId))
 
 isThresholdRidesCompleted ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DP.Driver ->
   Id DMOC.MerchantOperatingCity ->
   CancellationScoreRelatedConfig ->
@@ -368,9 +348,7 @@ isThresholdRidesCompleted driverId merchantOpCityId cancellationScoreRelatedConf
   pure $ totalRides >= minRidesForCancellationScore
 
 getPopupDelay ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   Double ->
@@ -393,9 +371,7 @@ mkDriverLocationUpdatesKey :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> T
 mkDriverLocationUpdatesKey mocId dId = "driver-offer:DriverPool:mocId-" <> mocId.getId <> ":dId:" <> dId.getId
 
 updateDriverSpeedInRedis ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   LatLong ->
@@ -417,9 +393,7 @@ updateDriverSpeedInRedis merchantOpCityId driverId points timeStamp = Redis.with
   Redis.set driverLocationUpdatesKey locationUpdatesList
 
 getDriverAverageSpeed ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   m Double
@@ -486,8 +460,7 @@ cacheBlockListedDrivers key driverId = do
 
 calculateGoHomeDriverPool ::
   ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     CoreMetrics m,
     MonadIO m,
     HasCoordinates a,
@@ -531,8 +504,7 @@ convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult onRide DriverP
 
 filterOutGoHomeDriversAccordingToHomeLocation ::
   ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     CoreMetrics m,
     MonadIO m,
     HasCoordinates a,
@@ -652,8 +624,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
 
 calculateDriverPool ::
   ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
     MonadFlow m,
@@ -712,8 +683,7 @@ calculateDriverPool cityServiceTiers poolStage driverPoolCfg serviceTiers pickup
 
 calculateDriverPoolWithActualDist ::
   ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasCoordinates a,
@@ -768,8 +738,7 @@ calculateDriverPoolWithActualDist poolCalculationStage poolType driverPoolCfg se
 
 calculateDriverPoolCurrentlyOnRide ::
   ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r,
     MonadFlow m,
     HasCoordinates a,
@@ -826,8 +795,7 @@ calculateDriverPoolCurrentlyOnRide cityServiceTiers poolStage driverPoolCfg serv
 
 calculateDriverCurrentlyOnRideWithActualDist ::
   ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HasCoordinates a,
     LT.HasLocationService m r,
@@ -897,8 +865,7 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage poolType drive
         }
 
 computeActualDistanceOneToOne ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasCoordinates a
   ) =>
@@ -912,8 +879,7 @@ computeActualDistanceOneToOne merchantId merchantOpCityId pickup driverPoolResul
   pure ele
 
 computeActualDistance ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasCoordinates a
   ) =>

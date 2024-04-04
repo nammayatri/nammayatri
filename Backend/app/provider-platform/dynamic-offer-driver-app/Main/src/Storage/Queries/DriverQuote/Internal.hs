@@ -24,7 +24,7 @@ import Storage.Queries.OrphanInstances.DriverQuote ()
 import Storage.Queries.OrphanInstances.Person ()
 
 getDriverQuote ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) =>
+  (KvDbFlow m r, Log m) =>
   [Text] ->
   m [DriverQuote.DriverQuote]
 getDriverQuote personKeys =

@@ -19,16 +19,15 @@ import Domain.Types.KioskLocation
 import Domain.Types.Merchant
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.KioskLocation as BeamK
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KioskLocation -> m ()
+create :: KvDbFlow m r => KioskLocation -> m ()
 create = createWithKV
 
-fetchAllKioskLocationsByMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [KioskLocation]
+fetchAllKioskLocationsByMerchant :: KvDbFlow m r => Id Merchant -> m [KioskLocation]
 fetchAllKioskLocationsByMerchant _ = findAllWithKV [Se.Is BeamK.merchantId $ Se.Not $ Se.Eq ""]
 
 instance FromTType' BeamK.KioskLocation KioskLocation where

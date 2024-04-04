@@ -21,17 +21,16 @@ import Domain.Types.FareProduct
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, MonadFlow)
+import Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Storage.Queries.FareProduct as Queries
 
-create :: (MonadFlow m, Esq.EsqDBFlow m r, CacheFlow m r) => FareProduct -> m ()
+create :: KvDbFlow m r => FareProduct -> m ()
 create = Queries.create
 
-findAllUnboundedFareProductForVariants :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> DTC.TripCategory -> SL.Area -> m [FareProduct]
+findAllUnboundedFareProductForVariants :: KvDbFlow m r => Id MerchantOperatingCity -> DTC.TripCategory -> SL.Area -> m [FareProduct]
 findAllUnboundedFareProductForVariants merchantOpCityId tripCategory area =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId tripCategory area) >>= \case
     Just a -> pure a
@@ -47,7 +46,7 @@ makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId tripC
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-findAllBoundedFareProductForVariants :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> DTC.TripCategory -> SL.Area -> m [FareProduct]
+findAllBoundedFareProductForVariants :: KvDbFlow m r => Id MerchantOperatingCity -> DTC.TripCategory -> SL.Area -> m [FareProduct]
 findAllBoundedFareProductForVariants merchantOpCityId tripCategory area =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeBoundedFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId tripCategory area) >>= \case
     Just a -> pure a
@@ -63,7 +62,7 @@ makeBoundedFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId tripCat
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-findAllFareProductByMerchantOpCityId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> m [FareProduct]
+findAllFareProductByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m [FareProduct]
 findAllFareProductByMerchantOpCityId merchantOpCityId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeFareProductByMerchantOpCityIdKey merchantOpCityId) >>= \case
     Just a -> pure a
@@ -79,7 +78,7 @@ makeFareProductByMerchantOpCityIdKey merchantOpCityId = "driver-offer:CachedQuer
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-findUnboundedByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m (Maybe FareProduct)
+findUnboundedByMerchantVariantArea :: KvDbFlow m r => Id MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m (Maybe FareProduct)
 findUnboundedByMerchantVariantArea merchantOpCityId tripCategory serviceTier area =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory serviceTier area) >>= \case
     Just a -> pure a
@@ -95,7 +94,7 @@ makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory s
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-findAllBoundedByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m [FareProduct]
+findAllBoundedByMerchantVariantArea :: KvDbFlow m r => Id MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m [FareProduct]
 findAllBoundedByMerchantVariantArea merchantOpCityId tripCategory serviceTier area =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory serviceTier area) >>= \case
     Just a -> pure a

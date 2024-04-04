@@ -30,7 +30,7 @@ import qualified Storage.Queries.FareParameters.FareParametersRentalDetails as B
 import Storage.Queries.FareParameters.FareParametersSlabDetails as QFPSD
 import qualified Storage.Queries.FareParameters.FareParametersSlabDetails as BeamFPSD
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFP.FareParameters -> m ()
+create :: KvDbFlow m r => DFP.FareParameters -> m ()
 create fareParameters = do
   createWithKV fareParameters
   case fareParameters.fareParametersDetails of
@@ -38,13 +38,13 @@ create fareParameters = do
     SlabDetails fpsdt -> QFPSD.create (fareParameters.id, fpsdt)
     RentalDetails fprdt -> QFPRD.create (fareParameters.id, fprdt)
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FareParameters -> m (Maybe FareParameters)
+findById :: KvDbFlow m r => Id FareParameters -> m (Maybe FareParameters)
 findById (Id fareParametersId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq fareParametersId]
 
-findAllIn :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m [FareParameters]
+findAllIn :: KvDbFlow m r => [Id FareParameters] -> m [FareParameters]
 findAllIn fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds]
 
-updateFareParameters :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FareParameters -> m ()
+updateFareParameters :: KvDbFlow m r => FareParameters -> m ()
 updateFareParameters FareParameters {..} = do
   now <- getCurrentTime
   updateOneWithKV
@@ -70,15 +70,15 @@ updateFareParameters FareParameters {..} = do
     ]
     [Se.Is BeamFP.id (Se.Eq id.getId)]
 
-findAllLateNightRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m Int
+findAllLateNightRides :: KvDbFlow m r => [Id FareParameters] -> m Int
 findAllLateNightRides fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds, Se.Is BeamFP.nightShiftCharge $ Se.Not $ Se.Eq Nothing] <&> length
 
-findDriverSelectedFareEarnings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m HighPrecMoney
+findDriverSelectedFareEarnings :: KvDbFlow m r => [Id FareParameters] -> m HighPrecMoney
 findDriverSelectedFareEarnings fareParamIds = do
   dsEarnings <- findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParamIds] <&> (driverSelectedFare <$>)
   pure $ sum (catMaybes dsEarnings)
 
-findCustomerExtraFees :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m HighPrecMoney
+findCustomerExtraFees :: KvDbFlow m r => [Id FareParameters] -> m HighPrecMoney
 findCustomerExtraFees fareParamIds = do
   csFees <- findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParamIds] <&> (customerExtraFee <$>)
   pure $ sum (catMaybes csFees)

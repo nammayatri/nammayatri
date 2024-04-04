@@ -25,13 +25,13 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as BeamDEFB
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFP.FullDriverExtraFeeBounds -> m ()
+create :: KvDbFlow m r => DFP.FullDriverExtraFeeBounds -> m ()
 create = createWithKV
 
-findByFarePolicyIdAndStartDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> Meters -> m (Maybe DFP.FullDriverExtraFeeBounds)
+findByFarePolicyIdAndStartDistance :: KvDbFlow m r => Id DFP.FarePolicy -> Meters -> m (Maybe DFP.FullDriverExtraFeeBounds)
 findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = findAllWithKV [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]] <&> listToMaybe
 
-update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> Meters -> HighPrecMoney -> HighPrecMoney -> m ()
+update :: KvDbFlow m r => Id DFP.FarePolicy -> Meters -> HighPrecMoney -> HighPrecMoney -> m ()
 update (Id farePolicyId) startDistance minFee maxFee =
   updateWithKV
     [ Se.Set BeamDEFB.minFee $ roundToIntegral minFee,
@@ -41,10 +41,10 @@ update (Id farePolicyId) startDistance minFee maxFee =
     ]
     [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]]
 
-findAll' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> m [DFP.FullDriverExtraFeeBounds]
+findAll' :: KvDbFlow m r => Id DFP.FarePolicy -> m [DFP.FullDriverExtraFeeBounds]
 findAll' farePolicyId = findAllWithOptionsKV [Se.Is BeamDEFB.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamDEFB.startDistance) Nothing Nothing
 
-deleteAll' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> m ()
+deleteAll' :: KvDbFlow m r => Id DFP.FarePolicy -> m ()
 deleteAll' farePolicyId = deleteWithKV [Se.Is BeamDEFB.farePolicyId $ Se.Eq (getId farePolicyId)]
 
 instance FromTType' BeamDEFB.DriverExtraFeeBounds DFP.FullDriverExtraFeeBounds where

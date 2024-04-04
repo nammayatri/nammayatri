@@ -12,7 +12,6 @@ import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.External.Call.Types (CallService)
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -24,17 +23,20 @@ import Storage.Queries.OrphanInstances.CallStatus
 
 -- Extra code goes here --
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => CallStatus -> m ()
+create :: KvDbFlow m r => CallStatus -> m ()
 create cs = do
   callS <- findByCallSid (cs.callId)
   case callS of
     Nothing -> createWithKV cs
     Just _ -> pure ()
 
-findByCallSid :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe CallStatus)
+findById :: KvDbFlow m r => Id CallStatus -> m (Maybe CallStatus)
+findById (Id callStatusId) = findOneWithKV [Se.Is BeamCT.id $ Se.Eq callStatusId]
+
+findByCallSid :: KvDbFlow m r => Text -> m (Maybe CallStatus)
 findByCallSid callSid = findOneWithKV [Se.Is BeamCT.callId $ Se.Eq callSid]
 
-countCallsByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> m Int
+countCallsByEntityId :: KvDbFlow m r => Id Ride -> m Int
 countCallsByEntityId entityID = do
   dbConf <- getMasterBeamConfig
   resp <-

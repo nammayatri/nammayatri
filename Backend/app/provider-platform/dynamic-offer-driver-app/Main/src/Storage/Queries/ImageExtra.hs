@@ -17,7 +17,7 @@ import Kernel.Types.Cac
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import Kernel.Utils.Error.Throwing
 import qualified Sequelize as Se
 import qualified Storage.Beam.Image as BeamI
@@ -28,7 +28,7 @@ import Tools.Error
 import Utils.Common.Cac.KeyNameConstants
 
 -- Extra code goes here --
-findRecentByPersonIdAndImageType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> m [Image]
+findRecentByPersonIdAndImageType :: KvDbFlow m r => Id Person -> DocumentType -> m [Image]
 findRecentByPersonIdAndImageType personId imgtype = do
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- QTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)

@@ -13,16 +13,15 @@ module Storage.Queries.FareParameters.FareParametersRentalDetails where
 import qualified Domain.Types.FareParameters as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import qualified Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.FareParameters.FareParametersRentalDetails as BeamFPRD
 
-create :: (MonadFlow m, EsqDBFlow m r) => Domain.FullFareParametersRentalDetails -> m ()
+create :: KvDbFlow m r => Domain.FullFareParametersRentalDetails -> m ()
 create = createWithKV
 
-findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FareParameters -> m (Maybe Domain.FullFareParametersRentalDetails)
+findById' :: KvDbFlow m r => KTI.Id Domain.FareParameters -> m (Maybe Domain.FullFareParametersRentalDetails)
 findById' (KTI.Id fareParametersId') = findOneWithKV [Se.Is fareParametersId $ Se.Eq fareParametersId']
 
 instance FromTType' BeamFPRD.FareParametersRentalDetails Domain.FullFareParametersRentalDetails where

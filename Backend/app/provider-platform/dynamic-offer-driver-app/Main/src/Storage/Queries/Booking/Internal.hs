@@ -25,7 +25,7 @@ import Storage.Queries.Booking ()
 import Storage.Queries.OrphanInstances.Person ()
 
 getBookingInfo ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   [DriverQuote] ->
   m [Booking.Booking]
 getBookingInfo driverQuote =

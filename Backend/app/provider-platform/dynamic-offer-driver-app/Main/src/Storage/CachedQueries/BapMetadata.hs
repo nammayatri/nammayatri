@@ -20,7 +20,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.BapMetadata as Queries
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BapMetadata -> m (Maybe BapMetadata)
+findById :: KvDbFlow m r => Id BapMetadata -> m (Maybe BapMetadata)
 findById bapMetadataId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeBapMetadataByIdKey bapMetadataId) >>= \case
     Just a -> pure a

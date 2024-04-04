@@ -292,7 +292,7 @@ setValidRideCountByDriverIdKey driverId expirationPeriod count = do
   void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral count)
   Hedis.withCrossAppRedis $ Hedis.expire (mkValidRideCountByDriverIdKey driverId) expirationPeriod
 
-safeIncrBy :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Integer -> Id DP.Person -> Seconds -> m ()
+safeIncrBy :: KvDbFlow m r => Text -> Integer -> Id DP.Person -> Seconds -> m ()
 safeIncrBy key value driverId timeDiffFromUtc = do
   _ <- getCoinsByDriverId driverId timeDiffFromUtc
   void $ Hedis.withCrossAppRedis $ Hedis.incrby key value

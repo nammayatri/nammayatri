@@ -13,7 +13,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Common (Centesimal)
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM)
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -28,7 +28,7 @@ getEndOdometerReadingFileId endOdometerReading = getId <$> (endOdometerReading >
 getStartOdometerReadingFileId :: (Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading -> Kernel.Prelude.Maybe Kernel.Prelude.Text)
 getStartOdometerReadingFileId startOdometerReading = getId <$> (startOdometerReading >>= (.fileId))
 
-getToLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m (Maybe Location)
+getToLocation :: KvDbFlow m r => Text -> Text -> Maybe Text -> Maybe Text -> m (Maybe Location)
 getToLocation id bookingId merchantId merchantOperatingCityId = do
   mappings <- QLM.findByEntityId id
   mbToLocationMapping <-
@@ -42,7 +42,7 @@ getToLocation id bookingId merchantId merchantOperatingCityId = do
       else QLM.getLatestEndByEntityId id
   maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
 
-getFromLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m Location
+getFromLocation :: KvDbFlow m r => Text -> Text -> Maybe Text -> Maybe Text -> m Location
 getFromLocation id bookingId merchantId merchantOperatingCityId = do
   mappings <- QLM.findByEntityId id
   fromLocationMapping <-
@@ -56,7 +56,7 @@ getFromLocation id bookingId merchantId merchantOperatingCityId = do
       else QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
   QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
 
-getMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Maybe Text -> Maybe Text -> m (Id MerchantOperatingCity)
+getMerchantOperatingCityId :: KvDbFlow m r => Text -> Maybe Text -> Maybe Text -> m (Id MerchantOperatingCity)
 getMerchantOperatingCityId bookingId merchantId merchantOperatingCityId = do
   merchant <- case merchantId of
     Nothing -> do

@@ -24,9 +24,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as D
 import Data.List.NonEmpty
 import Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions
-  ( FromTType' (fromTType'),
-    ToTType' (toTType'),
-    createWithKV,
+  ( createWithKV,
     findOneWithKV,
     updateOneWithKV,
   )
@@ -43,10 +41,10 @@ import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as Quer
 import qualified Storage.Queries.FarePolicy.FarePolicyRentalDetails as QueriesFPRD
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QueriesFPSDS
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
+findById :: KvDbFlow m r => Id FarePolicy -> m (Maybe FarePolicy)
 findById (Id farePolicyId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq farePolicyId]
 
-update' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FarePolicy -> m ()
+update' :: KvDbFlow m r => FarePolicy -> m ()
 update' farePolicy = do
   now <- getCurrentTime
   updateOneWithKV
@@ -82,7 +80,7 @@ update' farePolicy = do
     SlabsDetails (FPSlabsDetails _slabs) -> pure ()
     RentalDetails _ -> pure ()
 
-update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FarePolicy -> m ()
+update :: KvDbFlow m r => FarePolicy -> m ()
 update farePolicy = do
   now <- getCurrentTime
   void $
@@ -131,7 +129,7 @@ update farePolicy = do
         ]
         [Se.Is BeamFPRD.farePolicyId (Se.Eq $ getId farePolicy.id)]
   where
-    create'' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
+    create'' :: KvDbFlow m r => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
     create'' id' slab = createWithKV (id', slab)
 
 instance ToTType' BeamFP.FarePolicy FarePolicy where

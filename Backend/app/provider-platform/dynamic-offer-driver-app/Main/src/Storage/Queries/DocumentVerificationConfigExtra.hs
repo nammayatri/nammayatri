@@ -10,14 +10,14 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import Sequelize as Se
 import qualified Storage.Beam.DocumentVerificationConfig as BeamODC
 import Storage.Queries.OrphanInstances.DocumentVerificationConfig
 import Storage.Queries.Transformers.DocumentVerificationConfig
 
 -- Extra code goes here --
-update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DocumentVerificationConfig -> m ()
+update :: KvDbFlow m r => DocumentVerificationConfig -> m ()
 update config = do
   now <- getCurrentTime
   updateWithKV
@@ -31,7 +31,7 @@ update config = do
     ]
     [Se.Is BeamODC.merchantOperatingCityId $ Se.Eq $ getId config.merchantOperatingCityId, Se.Is BeamODC.documentType $ Se.Eq config.documentType]
 
-updateSupportedVehicleClassesJSON :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> SupportedVehicleClasses -> m ()
+updateSupportedVehicleClassesJSON :: KvDbFlow m r => Id MerchantOperatingCity -> SupportedVehicleClasses -> m ()
 updateSupportedVehicleClassesJSON merchantOperatingCityId supportedVehicleClasses = do
   now <- getCurrentTime
   updateWithKV

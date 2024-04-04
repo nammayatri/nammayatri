@@ -34,22 +34,22 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.DocumentVerificationConfig as Queries
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DocumentVerificationConfig -> m ()
+create :: KvDbFlow m r => DocumentVerificationConfig -> m ()
 create = Queries.create
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [DTO.DocumentVerificationConfig]
+findAllByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m [DTO.DocumentVerificationConfig]
 findAllByMerchantOpCityId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return a
     Nothing -> cacheDocumentVerificationConfigs id /=<< Queries.findAllByMerchantOpCityId Nothing Nothing id
 
-findByMerchantOpCityIdAndDocumentTypeAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> Category -> m (Maybe DTO.DocumentVerificationConfig)
+findByMerchantOpCityIdAndDocumentTypeAndCategory :: KvDbFlow m r => Id MerchantOperatingCity -> DocumentType -> Category -> m (Maybe DTO.DocumentVerificationConfig)
 findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType category = find (\config -> config.vehicleCategory == category && config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId
 
-findByMerchantOpCityIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> m [DTO.DocumentVerificationConfig]
+findByMerchantOpCityIdAndDocumentType :: KvDbFlow m r => Id MerchantOperatingCity -> DocumentType -> m [DTO.DocumentVerificationConfig]
 findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType = filter (\config -> config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId
 
-findByMerchantOpCityIdAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Category -> m [DTO.DocumentVerificationConfig]
+findByMerchantOpCityIdAndCategory :: KvDbFlow m r => Id MerchantOperatingCity -> Category -> m [DTO.DocumentVerificationConfig]
 findByMerchantOpCityIdAndCategory merchantOpCityId category = filter (\config -> config.vehicleCategory == category) <$> findAllByMerchantOpCityId merchantOpCityId
 
 cacheDocumentVerificationConfigs :: (CacheFlow m r) => Id MerchantOperatingCity -> [DTO.DocumentVerificationConfig] -> m ()
@@ -65,8 +65,8 @@ makeMerchantOpCityIdKey merchantOpCityId = "driver-offer:CachedQueries:DocumentV
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantOpCityIdKey
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DocumentVerificationConfig -> m ()
+update :: KvDbFlow m r => DocumentVerificationConfig -> m ()
 update = Queries.update
 
-updateSupportedVehicleClassesJSON :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> SupportedVehicleClasses -> m ()
+updateSupportedVehicleClassesJSON :: KvDbFlow m r => Id MerchantOperatingCity -> SupportedVehicleClasses -> m ()
 updateSupportedVehicleClassesJSON = Queries.updateSupportedVehicleClassesJSON

@@ -23,22 +23,21 @@ where
 import Domain.Types.Maps.PlaceNameCache
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Maps.PlaceNameCache as BeamPNC
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => PlaceNameCache -> m ()
+create :: KvDbFlow m r => PlaceNameCache -> m ()
 create = createWithKV
 
-deleteById :: (MonadFlow m, EsqDBFlow m r) => Id PlaceNameCache -> m ()
+deleteById :: KvDbFlow m r => Id PlaceNameCache -> m ()
 deleteById (Id placeNameCacheId) = deleteWithKV [Se.Is BeamPNC.id (Se.Eq placeNameCacheId)]
 
-findPlaceByPlaceId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [PlaceNameCache]
+findPlaceByPlaceId :: KvDbFlow m r => Text -> m [PlaceNameCache]
 findPlaceByPlaceId placeId = findAllWithKV [Se.Is BeamPNC.placeId $ Se.Eq (Just placeId)]
 
-findPlaceByGeoHash :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [PlaceNameCache]
+findPlaceByGeoHash :: KvDbFlow m r => Text -> m [PlaceNameCache]
 findPlaceByGeoHash geoHash = findAllWithKV [Se.Is BeamPNC.geoHash $ Se.Eq (Just geoHash)]
 
 instance FromTType' BeamPNC.PlaceNameCache PlaceNameCache where

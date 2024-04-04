@@ -33,13 +33,13 @@ import qualified Storage.Beam.DriverPlan as BeamDF
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverPlan -> m ()
+create :: KvDbFlow m r => DriverPlan -> m ()
 create = createWithKV
 
-findByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe DriverPlan)
+findByDriverId :: KvDbFlow m r => Id Person -> m (Maybe DriverPlan)
 findByDriverId (Id driverId) = findOneWithKV [Se.Is BeamDF.driverId $ Se.Eq driverId]
 
-findByDriverIdWithServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> DPlan.ServiceNames -> m (Maybe DriverPlan)
+findByDriverIdWithServiceName :: KvDbFlow m r => Id Person -> DPlan.ServiceNames -> m (Maybe DriverPlan)
 findByDriverIdWithServiceName (Id driverId) serviceName = do
   findOneWithKV
     [ Se.And
@@ -49,7 +49,7 @@ findByDriverIdWithServiceName (Id driverId) serviceName = do
     ]
 
 findAllByDriverIdsPaymentModeAndServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   [Id Person] ->
   DPlan.PaymentMode ->
   DPlan.ServiceNames ->
@@ -67,7 +67,7 @@ findAllByDriverIdsPaymentModeAndServiceName driverIds paymentMode serviceName au
     ]
 
 findByMandateIdAndServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id Mandate ->
   DPlan.ServiceNames ->
   m (Maybe DriverPlan)
@@ -80,7 +80,7 @@ findByMandateIdAndServiceName (Id mandateId) serviceName = do
     ]
 
 findAllDriversEligibleForService ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   DPlan.ServiceNames ->
   Id Merchant ->
   Id MOC.MerchantOperatingCity ->
@@ -96,7 +96,7 @@ findAllDriversEligibleForService serviceName merchantId merchantOperatingCity = 
     ]
 
 findAllDriversToSendManualPaymentLinkWithLimit ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   DPlan.ServiceNames ->
   Id Merchant ->
   Id MOC.MerchantOperatingCity ->
@@ -116,7 +116,7 @@ findAllDriversToSendManualPaymentLinkWithLimit serviceName merchantId opCityId e
     Nothing
 
 updateLastPaymentLinkSentAtDateByDriverIdAndServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id Person ->
   DPlan.ServiceNames ->
   UTCTime ->
@@ -133,7 +133,7 @@ updateLastPaymentLinkSentAtDateByDriverIdAndServiceName (Id driverId) serviceNam
         ]
     ]
 
-updateEnableServiceUsageChargeByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Bool -> DPlan.ServiceNames -> m ()
+updateEnableServiceUsageChargeByDriverIdAndServiceName :: KvDbFlow m r => Id Person -> Bool -> DPlan.ServiceNames -> m ()
 updateEnableServiceUsageChargeByDriverIdAndServiceName (Id driverId) value serviceName = do
   now <- getCurrentTime
   updateOneWithKV
@@ -144,7 +144,7 @@ updateEnableServiceUsageChargeByDriverIdAndServiceName (Id driverId) value servi
         ]
     ]
 
-updatePlanIdByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id DPlan.Plan -> DPlan.ServiceNames -> m ()
+updatePlanIdByDriverIdAndServiceName :: KvDbFlow m r => Id Person -> Id DPlan.Plan -> DPlan.ServiceNames -> m ()
 updatePlanIdByDriverIdAndServiceName (Id driverId) (Id planId) serviceName = do
   now <- getCurrentTime
   updateOneWithKV
@@ -155,7 +155,7 @@ updatePlanIdByDriverIdAndServiceName (Id driverId) (Id planId) serviceName = do
         ]
     ]
 
-updateMandateIdByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id Mandate -> DPlan.ServiceNames -> m ()
+updateMandateIdByDriverIdAndServiceName :: KvDbFlow m r => Id Person -> Id Mandate -> DPlan.ServiceNames -> m ()
 updateMandateIdByDriverIdAndServiceName driverId (Id mandateId) serviceName = do
   now <- getCurrentTime
   updateOneWithKV
@@ -166,7 +166,7 @@ updateMandateIdByDriverIdAndServiceName driverId (Id mandateId) serviceName = do
         ]
     ]
 
-updatePaymentModeByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> DPlan.PaymentMode -> DPlan.ServiceNames -> m ()
+updatePaymentModeByDriverIdAndServiceName :: KvDbFlow m r => Id Person -> DPlan.PaymentMode -> DPlan.ServiceNames -> m ()
 updatePaymentModeByDriverIdAndServiceName driverId paymentMode serviceName = do
   now <- getCurrentTime
   updateOneWithKV
@@ -179,7 +179,7 @@ updatePaymentModeByDriverIdAndServiceName driverId paymentMode serviceName = do
         ]
     ]
 
-updateMandateSetupDateByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> DPlan.ServiceNames -> m ()
+updateMandateSetupDateByDriverIdAndServiceName :: KvDbFlow m r => Id Person -> DPlan.ServiceNames -> m ()
 updateMandateSetupDateByDriverIdAndServiceName driverId serviceName = do
   now <- getCurrentTime
   updateOneWithKV
@@ -192,7 +192,7 @@ updateMandateSetupDateByDriverIdAndServiceName driverId serviceName = do
         ]
     ]
 
-updateAutoPayStatusAndPayerVpaByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> DPlan.ServiceNames -> Maybe DriverAutoPayStatus -> Maybe Text -> m ()
+updateAutoPayStatusAndPayerVpaByDriverIdAndServiceName :: KvDbFlow m r => Id Person -> DPlan.ServiceNames -> Maybe DriverAutoPayStatus -> Maybe Text -> m ()
 updateAutoPayStatusAndPayerVpaByDriverIdAndServiceName driverId serviceName mbAutoPayStatus mbPayerVpa = do
   now <- getCurrentTime
   updateOneWithKV
@@ -208,7 +208,7 @@ updateAutoPayStatusAndPayerVpaByDriverIdAndServiceName driverId serviceName mbAu
     ]
 
 updatesubscriptionServiceRelatedDataInDriverPlan ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id Person ->
   Domain.SubscriptionServiceRelatedData ->
   DPlan.ServiceNames ->
@@ -230,7 +230,7 @@ updatesubscriptionServiceRelatedDataInDriverPlan driverId subscriptionServiceRel
         ]
     ]
 
-updateCoinToCashByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> m ()
+updateCoinToCashByDriverId :: KvDbFlow m r => Id Person -> HighPrecMoney -> m ()
 updateCoinToCashByDriverId driverId amountToAdd = do
   now <- getCurrentTime
   mbDriverPlan <- findByDriverId driverId
@@ -243,7 +243,7 @@ updateCoinToCashByDriverId driverId amountToAdd = do
         [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
     Nothing -> pure ()
 
-updateTotalCoinToCashByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> m ()
+updateTotalCoinToCashByDriverId :: KvDbFlow m r => Id Person -> HighPrecMoney -> m ()
 updateTotalCoinToCashByDriverId driverId totalcoinToAdd = do
   now <- getCurrentTime
   mbDriverPlan <- findByDriverId driverId
@@ -256,7 +256,7 @@ updateTotalCoinToCashByDriverId driverId totalcoinToAdd = do
         [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
     Nothing -> pure ()
 
-updateCoinFieldsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> m ()
+updateCoinFieldsByDriverId :: KvDbFlow m r => Id Person -> HighPrecMoney -> m ()
 updateCoinFieldsByDriverId driverId amount = do
   now <- getCurrentTime
   mbDriverPlan <- findByDriverId driverId
@@ -271,7 +271,7 @@ updateCoinFieldsByDriverId driverId amount = do
     Nothing -> pure ()
 
 updateMerchantIdAndOpCityByDriverAndServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id Person ->
   Id Merchant ->
   Id MOC.MerchantOperatingCity ->

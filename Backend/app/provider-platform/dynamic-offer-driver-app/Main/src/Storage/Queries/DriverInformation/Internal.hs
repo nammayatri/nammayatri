@@ -25,13 +25,13 @@ import Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Queries.OrphanInstances.DriverInformation ()
 
 getDriverInfos ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   [Text] ->
   m [DriverInfo.DriverInformation]
 getDriverInfos personKeys = do
   findAllWithKV [Se.Is BeamDI.driverId $ Se.In personKeys]
 
-getDriverInfosWithCond :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DP.Person] -> Bool -> Bool -> Bool -> Bool -> m [DriverInfo.DriverInformation]
+getDriverInfosWithCond :: KvDbFlow m r => [Id DP.Person] -> Bool -> Bool -> Bool -> Bool -> m [DriverInfo.DriverInformation]
 getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide isRental isInterCity =
   findAllWithKV
     [ Se.And

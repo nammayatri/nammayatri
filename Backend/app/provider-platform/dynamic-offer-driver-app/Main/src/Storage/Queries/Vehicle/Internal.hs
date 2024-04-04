@@ -25,7 +25,7 @@ import Storage.Beam.Vehicle as BeamV
 import Storage.Queries.Vehicle ()
 
 getVehicles ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) =>
+  (KvDbFlow m r, Log m) =>
   [DriverInfo.DriverInformation] ->
   m [DV.Vehicle]
 getVehicles driverInfo = findAllWithKV [Se.Is BeamV.driverId $ Se.In personKeys]

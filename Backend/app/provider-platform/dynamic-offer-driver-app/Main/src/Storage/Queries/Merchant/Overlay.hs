@@ -26,22 +26,21 @@ import Domain.Types.Merchant.Overlay
 import Kernel.Beam.Functions
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.Overlay as BeamMPN
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Overlay -> m ()
+create :: KvDbFlow m r => Overlay -> m ()
 create = createWithKV
 
-createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Overlay] -> m ()
+createMany :: KvDbFlow m r => [Overlay] -> m ()
 createMany = traverse_ create
 
-findAllByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m [Overlay]
+findAllByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m [Overlay]
 findAllByMerchantOpCityId (Id merchantOperatingCityId) = findAllWithKV [Se.Is BeamMPN.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
-deleteByOverlayKeyMerchantOpCityIdUdf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Text -> Maybe Text -> m ()
+deleteByOverlayKeyMerchantOpCityIdUdf :: KvDbFlow m r => Id MerchantOperatingCity -> Text -> Maybe Text -> m ()
 deleteByOverlayKeyMerchantOpCityIdUdf merchantOperatingCityId overlayKey udf1 =
   deleteWithKV
     [ Se.And
@@ -51,7 +50,7 @@ deleteByOverlayKeyMerchantOpCityIdUdf merchantOperatingCityId overlayKey udf1 =
         ]
     ]
 
-findAllByLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Language -> m [Overlay]
+findAllByLanguage :: KvDbFlow m r => Id MerchantOperatingCity -> Language -> m [Overlay]
 findAllByLanguage merchantOperatingCityId language =
   findAllWithKV
     [ Se.And
@@ -60,7 +59,7 @@ findAllByLanguage merchantOperatingCityId language =
         ]
     ]
 
-findAllByOverlayKeyUdf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Text -> Maybe Text -> m [Overlay]
+findAllByOverlayKeyUdf :: KvDbFlow m r => Id MerchantOperatingCity -> Text -> Maybe Text -> m [Overlay]
 findAllByOverlayKeyUdf merchantOperatingCityId overlayKey udf1 =
   findAllWithKV
     [ Se.And
@@ -70,7 +69,7 @@ findAllByOverlayKeyUdf merchantOperatingCityId overlayKey udf1 =
         ]
     ]
 
-findByMerchantOpCityIdPNKeyLangaugeUdf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
+findByMerchantOpCityIdPNKeyLangaugeUdf :: KvDbFlow m r => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
 findByMerchantOpCityIdPNKeyLangaugeUdf id pnKey language udf1 =
   findOneWithKV
     [ Se.And

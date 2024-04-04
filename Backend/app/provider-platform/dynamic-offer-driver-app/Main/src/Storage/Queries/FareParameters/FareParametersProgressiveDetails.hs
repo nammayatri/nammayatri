@@ -18,16 +18,15 @@ module Storage.Queries.FareParameters.FareParametersProgressiveDetails where
 import qualified Domain.Types.FareParameters as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import qualified Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.FareParameters.FareParametersProgressiveDetails as BeamFPPD
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.FullFareParametersProgressiveDetails -> m ()
+create :: KvDbFlow m r => Domain.FullFareParametersProgressiveDetails -> m ()
 create = createWithKV
 
-findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FareParameters -> m (Maybe Domain.FullFareParametersProgressiveDetails)
+findById' :: KvDbFlow m r => KTI.Id Domain.FareParameters -> m (Maybe Domain.FullFareParametersProgressiveDetails)
 findById' (KTI.Id fareParametersId') = findOneWithKV [Se.Is fareParametersId $ Se.Eq fareParametersId']
 
 findDeadKmFareEarnings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [KTI.Id Domain.FareParameters] -> m HighPrecMoney
