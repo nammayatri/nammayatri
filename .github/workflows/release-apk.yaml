@@ -167,4 +167,5 @@ jobs:
           git add versions.txt
           git commit -m "[BOT] updating version code and name post successful release"
           git pull origin main --rebase
+          git diff --staged
           git push https://${{ secrets.NAMMA_BOT_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
