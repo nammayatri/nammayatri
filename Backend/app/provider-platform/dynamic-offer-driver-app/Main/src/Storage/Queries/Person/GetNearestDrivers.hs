@@ -37,7 +37,7 @@ data NearestDriversResult = NearestDriversResult
   deriving (Generic, Show, HasCoordinates)
 
 getNearestDrivers ::
-  (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, EsqDBFlow m r, CacheFlow m r) =>
+  (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, KvDbFlow m r) =>
   [DVST.VehicleServiceTier] ->
   Maybe ServiceTierType ->
   LatLong ->

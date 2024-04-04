@@ -17,6 +17,7 @@ module Lib.Scheduler.App
   )
 where
 
+import Kernel.Beam.Functions
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (mask, throwIO)
 import Kernel.Randomizer
@@ -39,6 +40,7 @@ import Lib.Scheduler.Handler (SchedulerHandle, handler)
 import Lib.Scheduler.Metrics
 import Lib.Scheduler.Types (JobProcessor)
 import Servant (Context (EmptyContext))
+import System.Environment (lookupEnv)
 import System.Exit
 import UnliftIO
 
@@ -58,6 +60,10 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
   coreMetrics <- Metrics.registerCoreMetricsContainer
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   let kafkaProducerForART = Just kafkaProducerTools
+      requestId = Nothing
+  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  isArtReplayerEnabled <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "IS_ART_REPLAYER_ENABLED"
+  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDBFunction
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalClusterEnv <-
@@ -71,8 +77,6 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
   metrics <- setupSchedulerMetrics
   isShuttingDown <- mkShutdown
   consumerId <- G.generateGUIDTextIO
-  let requestId = Nothing
-      shouldLogRequestId = False
   let cacheConfig = CacheConfig {configsExpTime = 0}
   let schedulerEnv = SchedulerEnv {cacheConfig, ..}
   when (tasksPerIteration <= 0) $ do

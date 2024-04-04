@@ -77,7 +77,7 @@ deleteDriver merchantShortId reqDriverId = do
   logTagInfo "deleteDriver : " (show reqDriverId)
   return Success
 
-validateDriver :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r) => DM.Merchant -> DP.Person -> m Bool
+validateDriver :: (KvDbFlow m r, EncFlow m r) => DM.Merchant -> DP.Person -> m Bool
 validateDriver merchant driver = do
   let personId = driver.id
   ride <- QRide.findOneByDriverId personId

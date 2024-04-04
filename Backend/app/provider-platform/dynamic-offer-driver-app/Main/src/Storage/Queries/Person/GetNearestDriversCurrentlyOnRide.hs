@@ -47,7 +47,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   deriving (Generic, Show, HasCoordinates)
 
 getNearestDriversCurrentlyOnRide ::
-  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, KvDbFlow m r) =>
   [DVST.VehicleServiceTier] ->
   Maybe ServiceTierType ->
   LatLong ->

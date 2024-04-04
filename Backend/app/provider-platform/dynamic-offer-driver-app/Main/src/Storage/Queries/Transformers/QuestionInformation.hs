@@ -14,7 +14,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import Kernel.Utils.Error.Throwing (throwError)
 import qualified Sequelize as Se
 import qualified Storage.Beam.QuestionInformation as Beam
@@ -23,7 +23,7 @@ import Tools.Error
 convertOptionsToTable :: [Domain.Types.QuestionInformation.OptionEntity] -> Data.Aeson.Value
 convertOptionsToTable = Data.Aeson.toJSON
 
-getOptionsFromTable :: (MonadFlow m, EsqDBFlow m r) => Data.Aeson.Value -> m [Domain.Types.QuestionInformation.OptionEntity]
+getOptionsFromTable :: KvDbFlow m r => Data.Aeson.Value -> m [Domain.Types.QuestionInformation.OptionEntity]
 getOptionsFromTable options = valueToMaybe options >>= fromMaybeM NotAbleToDecodeTheOptionsInLms
 
 valueToMaybe :: (MonadFlow m, FromJSON Domain.Types.QuestionInformation.OptionEntity) => Data.Aeson.Value -> m (Maybe [Domain.Types.QuestionInformation.OptionEntity])

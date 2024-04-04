@@ -323,8 +323,7 @@ skipDriverPoolCheck (DTC.OneWay DTC.OneWayOnDemandDynamicOffer) = False
 skipDriverPoolCheck _ = True
 
 buildSearchRequest ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
@@ -370,8 +369,7 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
       }
 
 buildQuote ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
@@ -430,7 +428,7 @@ buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDurat
       }
 
 buildEstimate ::
-  (EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
+  (KvDbFlow m r, EsqDBReplicaFlow m r) =>
   Id DSR.SearchRequest ->
   UTCTime ->
   Bool ->

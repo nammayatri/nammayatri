@@ -23,25 +23,25 @@ import Kernel.Utils.Common
 import Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
 
-findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id DFP.FarePolicy -> m (Maybe BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
+findById' :: KvDbFlow m r => KTI.Id DFP.FarePolicy -> m (Maybe BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
 findById' farePolicyId' = findOneWithKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId')]
 
 findAll' ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id DFP.FarePolicy ->
   m [BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection]
 findAll' farePolicyId = findAllWithOptionsKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPPDP.startDistance) Nothing Nothing
 
-findByIdAndStartDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id DFP.FarePolicy -> Meters -> m (Maybe BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
+findByIdAndStartDistance :: KvDbFlow m r => KTI.Id DFP.FarePolicy -> Meters -> m (Maybe BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
 findByIdAndStartDistance farePolicyId' startDistance = findOneWithKV [Se.And [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId'), Se.Is BeamFPPDP.startDistance $ Se.Eq startDistance]]
 
-updatePerExtraKmRate :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id DFP.FarePolicy -> Meters -> HighPrecMoney -> m ()
+updatePerExtraKmRate :: KvDbFlow m r => KTI.Id DFP.FarePolicy -> Meters -> HighPrecMoney -> m ()
 updatePerExtraKmRate farePolicyId' startDistance perExtraKmRate =
   updateWithKV
     [Se.Set BeamFPPDP.perExtraKmRate perExtraKmRate]
     [Se.And [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId'), Se.Is BeamFPPDP.startDistance $ Se.Eq startDistance]]
 
-deleteAll' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> m ()
+deleteAll' :: KvDbFlow m r => Id DFP.FarePolicy -> m ()
 deleteAll' (Id farePolicyId) = deleteWithKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq farePolicyId]
 
 instance FromTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection where

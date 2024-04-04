@@ -22,7 +22,7 @@ import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (KvDbFlow)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -30,7 +30,7 @@ import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Ride as QRide
 import Tools.Event
 
-startRideTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EventStreamFlow m r, LT.HasLocationService m r) => Id SP.Person -> SRide.Ride -> Id SRB.Booking -> LatLong -> Id Dmerch.Merchant -> Maybe SRide.OdometerReading -> m ()
+startRideTransaction :: (MonadFlow m, KvDbFlow m r, EventStreamFlow m r, LT.HasLocationService m r) => Id SP.Person -> SRide.Ride -> Id SRB.Booking -> LatLong -> Id Dmerch.Merchant -> Maybe SRide.OdometerReading -> m ()
 startRideTransaction driverId ride bookingId firstPoint merchantId odometer = do
   triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
   void $ LF.rideStart ride.id firstPoint.lat firstPoint.lon merchantId driverId
