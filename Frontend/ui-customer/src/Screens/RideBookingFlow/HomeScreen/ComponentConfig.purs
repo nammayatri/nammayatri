@@ -1150,7 +1150,7 @@ driverInfoCardViewState state = { props:
                                   , zoneType : state.props.zoneType.priorityTag
                                   , merchantCity : state.props.city
                                   , showBanner : state.props.currentStage == RideStarted
-                                  , isChatWithEMEnabled : state.props.isChatWithEMEnabled
+                                  , isChatWithEMEnabled : state.props.isChatWithEMEnabled || state.data.fareProductType == FPT.RENTAL
                                   , rideDurationTimer : state.props.rideDurationTimer
                                   , rideDurationTimerId : state.props.rideDurationTimerId
                                   , endOTPShown : state.props.showEndOTP

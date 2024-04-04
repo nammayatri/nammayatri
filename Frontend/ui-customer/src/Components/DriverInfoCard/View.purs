@@ -690,7 +690,7 @@ driverInfoView push state =
                   [ gravity CENTER
                   , background Color.transparentGrey
                   , height $ V 4
-                  , width $ V 34
+                  , width MATCH_PARENT
                   , accessibility ENABLE
                   , accessibilityHint $ "Bottom Sheet : Scrollable element : " <> if state.data.bottomSheetState == EXPANDED then "Scroll down to collapse details" else  "Scroll up to expand for more ride actions"
                   , margin $ MarginTop 8
@@ -895,33 +895,36 @@ contactView push state =
             , onClick push $ const $ OnNavigate WALK state.data.sourceLat state.data.sourceLng
             ] <> FontStyle.body6 TypoGraphy
          ]
+      , textView [weight 1.0, visibility $ boolToVisibility $ state.props.zoneType /= SPECIAL_PICKUP]
       , chatButtonView push state
     ]
 
 chatButtonView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 chatButtonView push state = 
   linearLayout
-    [ width MATCH_PARENT
-    , gravity RIGHT
-    , height WRAP_CONTENT
-    ][linearLayout
-      [ height $ V 40
-      , width $ V 64
+  [ width WRAP_CONTENT
+  , layoutGravity "right"
+  , height WRAP_CONTENT
+  ]
+  [ linearLayout
+    [ height $ V 40
+    , width $ V 64
       , gravity CENTER
-      , cornerRadius if os == "IOS" then 20.0 else 32.0
-      , background state.data.config.driverInfoConfig.callBackground
-      , stroke state.data.config.driverInfoConfig.callButtonStroke
-      , onClick push $ const $ MessageDriver
-      , accessibilityHint "Chat and Call : Button"
-      , accessibility ENABLE
-      , rippleColor Color.rippleShade
-      ][ imageView
-          [ imageWithFallback  $ if state.data.config.feature.enableChat then if state.props.unReadMessages then fetchImage FF_ASSET "ic_chat_badge_green" else fetchImage FF_ASSET "ic_call_msg" else fetchImage FF_COMMON_ASSET "ny_ic_call"
-          , height $ V state.data.config.driverInfoConfig.callHeight
-          , width $ V state.data.config.driverInfoConfig.callWidth
-          ]
+    , cornerRadius if os == "IOS" then 20.0 else 32.0
+    , background state.data.config.driverInfoConfig.callBackground
+    , stroke state.data.config.driverInfoConfig.callButtonStroke
+    , onClick push $ const $ MessageDriver
+    , accessibilityHint "Chat and Call : Button"
+    , accessibility ENABLE
+    , rippleColor Color.rippleShade
+    ]
+    [ imageView
+      [ imageWithFallback  $ if state.data.config.feature.enableChat then if state.props.unReadMessages then fetchImage FF_ASSET "ic_chat_badge_green" else fetchImage FF_ASSET "ic_call_msg" else fetchImage FF_COMMON_ASSET "ny_ic_call"
+      , height $ V state.data.config.driverInfoConfig.callHeight
+      , width $ V state.data.config.driverInfoConfig.callWidth
       ]
     ]
+  ]
 
 
 ---------------------------------- ratingView ---------------------------------------

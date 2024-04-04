@@ -1099,7 +1099,6 @@ homeScreenFlow = do
                                         else pure unit
                                         modifyScreenState $ HomeScreenStateType (\homeScreen -> newState{data{suggestionsData{suggestionsMap = getSuggestionsMapFromLocal FunctionCall }}})
                                         lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
-                                      removeChatService ""
                                       homeScreenFlow
             "TRIP_FINISHED" -> do -- TRIP FINISHED
               if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
