@@ -147,13 +147,13 @@ jobs:
         env:
           PLAY_CONSOLE_SECRET: ${{ secrets.PLAY_CONSOLE_SECRET }}
 
-      - name: Distribute app to Production 🚀
-        run: |
-          echo "Hello, world! $FASTLANE_CMD"
-          echo "fastlane_cm: ${{ matrix.variant.name }}"
-          bash releaseApp.sh "$FASTLANE_CMD"
-        env: 
-          FASTLANE_CMD: ${{ matrix.variant.fastlane_cm }}
+      # - name: Distribute app to Production 🚀
+      #   run: |
+      #     echo "Hello, world! $FASTLANE_CMD"
+      #     echo "fastlane_cm: ${{ matrix.variant.name }}"
+      #     bash releaseApp.sh "$FASTLANE_CMD"
+      #   env: 
+      #     FASTLANE_CMD: ${{ matrix.variant.fastlane_cm }}
       
       - name: Increment Version for the app
         run: |
