@@ -351,6 +351,29 @@ updateSafetyCenterBlockingCounter personId counter mbDate = do
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
+findPersonByCustomerReferralCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe Person)
+findPersonByCustomerReferralCode customerReferralCode = findOneWithKV [Se.Is BeamP.customerReferralCode $ Se.Eq (Just customerReferralCode)]
+
+updateReferredByCustomer :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Text -> m ()
+updateReferredByCustomer personId referredByPersonId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.referredByCustomer (Just referredByPersonId),
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
+updateCustomerReferralCode :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Text -> m ()
+updateCustomerReferralCode personId refferalCode = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.customerReferralCode (Just refferalCode),
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
 instance FromTType' BeamP.Person Person where
   fromTType' BeamP.PersonT {..} = do
     bundleVersion' <- mapM readVersion (strip <$> bundleVersion)
@@ -439,5 +462,7 @@ instance ToTType' BeamP.Person Person where
         BeamP.useFakeOtp = useFakeOtp,
         BeamP.followsRide = followsRide,
         BeamP.falseSafetyAlarmCount = Just falseSafetyAlarmCount,
-        BeamP.safetyCenterDisabledOnDate = safetyCenterDisabledOnDate
+        BeamP.safetyCenterDisabledOnDate = safetyCenterDisabledOnDate,
+        BeamP.referredByCustomer = referredByCustomer,
+        BeamP.customerReferralCode = customerReferralCode
       }

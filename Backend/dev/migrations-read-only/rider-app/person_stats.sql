@@ -13,3 +13,8 @@ ALTER TABLE atlas_app.person_stats ADD COLUMN weekend_peak_rides integer NOT NUL
 ALTER TABLE atlas_app.person_stats ADD COLUMN weekend_rides integer NOT NULL;
 ALTER TABLE atlas_app.person_stats ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.person_stats ADD PRIMARY KEY ( person_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person_stats ADD COLUMN referral_count integer NOT NULL default 0;
