@@ -1,23 +1,26 @@
 name: Release (Production)
 
-# on:
-#   workflow_dispatch:
-#     inputs:
-#       versionCode:
-#         required: true
-#         description: "New version code for the build"
-#       versionName:
-#         required: true
-#         description: "New version name for the build"
-
 on:
-  push:
-    branches:
-      - main
+  pull_request:
+    paths:
+      - 'Frontend/**'
+  workflow_dispatch:
+    inputs:
+      versionCode:
+        required: true
+        description: "New version code for the build"
+      versionName:
+        required: true
+        description: "New version name for the build"
+
+# on:
+#   push:
+#     branches:
+#       - main
 
 jobs:
   deploy:
-    if: "contains(github.event.head_commit.message, '[RELEASE-APK]')"
+    # if: "contains(github.event.head_commit.message, '[RELEASE-APK]')"
     # if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
     strategy:
@@ -113,39 +116,39 @@ jobs:
           bundle install --jobs 4 --retry 3
 
       - name: Configure Keystore
+          # echo "$ANDROID_KEYSTORE_FILE" > keystore.jks.b64
+          # base64 -d -i keystore.jks.b64 > app/keystore.jks
         run: |
-          echo "$ANDROID_KEYSTORE_FILE" > keystore.jks.b64
-          base64 -d -i keystore.jks.b64 > app/keystore.jks
           echo "storeFile=keystore.jks" >> keystore.properties
-          echo "keyAlias=$KEYSTORE_KEY_ALIAS" >> keystore.properties
-          echo "storePassword=$KEYSTORE_STORE_PASSWORD" >> keystore.properties
-          echo "keyPassword=$KEYSTORE_KEY_PASSWORD" >> keystore.properties
+          # echo "keyAlias=$KEYSTORE_KEY_ALIAS" >> keystore.properties
+          # echo "storePassword=$KEYSTORE_STORE_PASSWORD" >> keystore.properties
+          # echo "keyPassword=$KEYSTORE_KEY_PASSWORD" >> keystore.properties
         env:
           ANDROID_KEYSTORE_FILE: ${{ secrets[matrix.variant.keystore] }}
           KEYSTORE_KEY_ALIAS: ${{ secrets[matrix.variant.key_alias] }}
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
 
-      - name: Create Google Services Config file
-        run : |
-          echo "$GOOGLE_SERVICES_SECRET" > google-services.json.b64
-          base64 -d -i google-services.json.b64 > app/google-services.json
-        env:
-          GOOGLE_SERVICES_SECRET: ${{ secrets.GOOGLE_SERVICES_SECRET }}
+      # - name: Create Google Services Config file
+      #   run : |
+      #     echo "$GOOGLE_SERVICES_SECRET" > google-services.json.b64
+      #     base64 -d -i google-services.json.b64 > app/google-services.json
+      #   env:
+      #     GOOGLE_SERVICES_SECRET: ${{ secrets.GOOGLE_SERVICES_SECRET }}
 
-      - name: Create Local Properties
-        run : |
-          echo "$LOCAL_PROPERTIES" > local.properties.b64
-          base64 -d -i local.properties.b64 > local.properties
-        env:
-          LOCAL_PROPERTIES: ${{ secrets[matrix.variant.local_properties] }}
+      # - name: Create Local Properties
+      #   run : |
+      #     echo "$LOCAL_PROPERTIES" > local.properties.b64
+      #     base64 -d -i local.properties.b64 > local.properties
+      #   env:
+      #     LOCAL_PROPERTIES: ${{ secrets[matrix.variant.local_properties] }}
 
-      - name: Create Google Play Config file
-        run : |
-          echo "$PLAY_CONSOLE_SECRET" > play_config.json.b64
-          base64 -d -i play_config.json.b64 > play_config.json
-        env:
-          PLAY_CONSOLE_SECRET: ${{ secrets.PLAY_CONSOLE_SECRET }}
+      # - name: Create Google Play Config file
+      #   run : |
+      #     echo "$PLAY_CONSOLE_SECRET" > play_config.json.b64
+      #     base64 -d -i play_config.json.b64 > play_config.json
+      #   env:
+      #     PLAY_CONSOLE_SECRET: ${{ secrets.PLAY_CONSOLE_SECRET }}
 
       # - name: Distribute app to Production 🚀
       #   run: |
@@ -160,13 +163,22 @@ jobs:
           git stash
           python updateLocalVersion.py customer
       
-      - name: Commit changes
-        continue-on-error: true
-        run: |
-          git config --local user.email ${{ secrets.NAMMA_BOT_EMAIL }}
-          git config --local user.name "namma-bot"
-          git add versions.txt
-          git commit -m "[BOT] updating version code and name post successful release"
-          git pull origin main --rebase
-          git diff --staged
-          git push https://${{ secrets.NAMMA_BOT_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+      - name: Create Pull Request
+        id: create_pr
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: post-release-apk-to-prod
+          title: "[BOT]updating version code and name post successful release"
+          body: "Automated pull request to update versionCode and versionName post release."
+          delete-branch: true
+          commit-message: "[BOT] updating version code and name post successful release"
+          add-paths: |
+            *ions.txt
+      
+      - name: Merge Pull Request
+        if: success() && steps.create_pr.outputs.pull-request-number != ''
+        uses: pascalgn/automerge-action@v0.16.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
