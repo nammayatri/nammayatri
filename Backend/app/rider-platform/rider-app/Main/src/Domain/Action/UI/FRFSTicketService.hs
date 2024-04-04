@@ -74,22 +74,23 @@ import qualified Tools.Payment as Payment
 
 getFrfsStations :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Station.FRFSVehicleType -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSStationAPI]
 getFrfsStations (_personId, mId) mbCity vehicleType_ = do
-  case mbCity of
-    Nothing -> return []
-    Just city -> do
-      merchantOpCity <- CQMOC.findByMerchantIdAndCity mId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> "-city-" <> show city)
-      stations <- B.runInReplica $ QS.getTicketPlacesByMerchantOperatingCityIdAndVehicleType merchantOpCity.id vehicleType_
-      return $
-        map
-          ( \Station.Station {..} ->
-              FRFSTicketService.FRFSStationAPI
-                { color = Nothing,
-                  stationType = Nothing,
-                  sequenceNum = Nothing,
-                  ..
-                }
-          )
-          stations
+  stations <-
+    case mbCity of
+      Nothing -> B.runInReplica $ QS.getTicketPlacesByMerchantOperatingCityIdAndVehicleType (Id "407c445a-2200-c45f-8d67-6f6dbfa28e73") vehicleType_
+      Just city -> do
+        merchantOpCity <- CQMOC.findByMerchantIdAndCity mId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> "-city-" <> show city)
+        B.runInReplica $ QS.getTicketPlacesByMerchantOperatingCityIdAndVehicleType merchantOpCity.id vehicleType_
+  return $
+    map
+      ( \Station.Station {..} ->
+          FRFSTicketService.FRFSStationAPI
+            { color = Nothing,
+              stationType = Nothing,
+              sequenceNum = Nothing,
+              ..
+            }
+      )
+      stations
 
 postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Station.FRFSVehicleType -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
 postFrfsSearch (mbPersonId, merchantId) vehicleType_ FRFSSearchAPIReq {..} = do
