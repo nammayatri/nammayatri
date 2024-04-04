@@ -4,7 +4,9 @@
 
 module Storage.Queries.VehiclePermit where
 
+import qualified Domain.Types.Person
 import qualified Domain.Types.VehiclePermit
+import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -20,6 +22,11 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VehiclePermit.VehiclePermit] -> m ())
 createMany = traverse_ create
 
+findByRcIdAndDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehiclePermit.VehiclePermit])
+findByRcIdAndDriverId (Kernel.Types.Id.Id rcId) (Kernel.Types.Id.Id driverId) = do findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.driverId $ Se.Eq driverId]]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehiclePermit.VehiclePermit -> m (Maybe Domain.Types.VehiclePermit.VehiclePermit))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
@@ -28,10 +35,11 @@ updateByPrimaryKey (Domain.Types.VehiclePermit.VehiclePermit {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
+      Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.issueDate issueDate,
       Se.Set Beam.nameOfPermitHolder nameOfPermitHolder,
       Se.Set Beam.permitExpiry permitExpiry,
-      Se.Set Beam.permitNumberEncrypted ((permitNumber & unEncrypted . encrypted)),
+      Se.Set Beam.permitNumberEncrypted (permitNumber & unEncrypted . encrypted),
       Se.Set Beam.permitNumberHash (permitNumber & hash),
       Se.Set Beam.purposeOfJourney purposeOfJourney,
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
@@ -50,6 +58,7 @@ instance FromTType' Beam.VehiclePermit Domain.Types.VehiclePermit.VehiclePermit 
       Just
         Domain.Types.VehiclePermit.VehiclePermit
           { documentImageId = Kernel.Types.Id.Id documentImageId,
+            driverId = Kernel.Types.Id.Id driverId,
             id = Kernel.Types.Id.Id id,
             issueDate = issueDate,
             nameOfPermitHolder = nameOfPermitHolder,
@@ -69,12 +78,13 @@ instance ToTType' Beam.VehiclePermit Domain.Types.VehiclePermit.VehiclePermit wh
   toTType' (Domain.Types.VehiclePermit.VehiclePermit {..}) = do
     Beam.VehiclePermitT
       { Beam.documentImageId = Kernel.Types.Id.getId documentImageId,
+        Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.issueDate = issueDate,
         Beam.nameOfPermitHolder = nameOfPermitHolder,
         Beam.permitExpiry = permitExpiry,
-        Beam.permitNumberEncrypted = ((permitNumber & unEncrypted . encrypted)),
-        Beam.permitNumberHash = (permitNumber & hash),
+        Beam.permitNumberEncrypted = permitNumber & unEncrypted . encrypted,
+        Beam.permitNumberHash = permitNumber & hash,
         Beam.purposeOfJourney = purposeOfJourney,
         Beam.rcId = Kernel.Types.Id.getId rcId,
         Beam.regionCovered = regionCovered,

@@ -8,6 +8,7 @@ import qualified Domain.Types.IdfyVerification
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -18,6 +19,7 @@ data VehicleFitnessCertificateE e = VehicleFitnessCertificate
   { applicationNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     categoryOfVehicle :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     documentImageId :: Kernel.Types.Id.Id Domain.Types.Image.Image,
+    driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     fitnessExpiry :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate,
     inspectingAuthority :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -46,6 +48,7 @@ instance EncryptedItem VehicleFitnessCertificate where
         { applicationNumber = applicationNumber_,
           categoryOfVehicle = categoryOfVehicle entity,
           documentImageId = documentImageId entity,
+          driverId = driverId entity,
           fitnessExpiry = fitnessExpiry entity,
           id = id entity,
           inspectingAuthority = inspectingAuthority entity,
@@ -66,6 +69,7 @@ instance EncryptedItem VehicleFitnessCertificate where
           { applicationNumber = applicationNumber_,
             categoryOfVehicle = categoryOfVehicle entity,
             documentImageId = documentImageId entity,
+            driverId = driverId entity,
             fitnessExpiry = fitnessExpiry entity,
             id = id entity,
             inspectingAuthority = inspectingAuthority entity,

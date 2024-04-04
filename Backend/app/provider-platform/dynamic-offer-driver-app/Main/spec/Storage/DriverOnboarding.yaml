@@ -208,6 +208,7 @@ VehicleRegistrationCertificate:
     airConditioned: Maybe Bool
     luggageCapacity: Maybe Int
     vehicleRating: Maybe Double
+    userPassedVehicleCategory: Maybe Category
   constraints:
     id: PrimaryKey
     certificateNumberHash: SecondaryKey
@@ -371,6 +372,7 @@ VehiclePermit:
   fields:
     id: Id VehiclePermit
     rcId: Id VehicleRegistrationCertificate
+    driverId: Id Person
     documentImageId: Id Image
     permitNumber: EncryptedHashedField e Text
     permitExpiry: UTCTime
@@ -379,12 +381,18 @@ VehiclePermit:
     issueDate: Maybe UTCTime
     purposeOfJourney: Maybe Text
     verificationStatus: VerificationStatus
+  queries:
+    findByRcIdAndDriverId:
+      kvFunction: findAllWithKV
+      where:
+        and: [rcId, driverId]
 
 VehicleInsurance:
   tableName: vehicle_insurance
   fields:
     id: Id VehicleInsurance
     rcId: Id VehicleRegistrationCertificate
+    driverId: Id Person
     documentImageId: Id Image
     policyNumber: EncryptedHashedField e Text
     policyExpiry: UTCTime
@@ -393,12 +401,18 @@ VehicleInsurance:
     issueDate: Maybe UTCTime
     limitsOfLiability: Maybe Text
     verificationStatus: VerificationStatus
+  queries:
+    findByRcIdAndDriverId:
+      kvFunction: findAllWithKV
+      where:
+        and: [rcId, driverId]
 
 VehicleFitnessCertificate:
   tableName: vehicle_fitness_certificate
   fields:
     id: Id VehicleFitnessCertificate
     rcId: Id VehicleRegistrationCertificate
+    driverId: Id Person
     documentImageId: Id Image
     applicationNumber: EncryptedHashedField e Text
     fitnessExpiry: UTCTime
@@ -408,12 +422,23 @@ VehicleFitnessCertificate:
     nextInspectionDate: Maybe UTCTime
     categoryOfVehicle: Maybe Text
     verificationStatus: VerificationStatus
+  queries:
+    findByRcIdAndDriverId:
+      kvFunction: findAllWithKV
+      where:
+        and: [rcId, driverId]
 
 VehiclePUC:
   tableName: vehicle_puc
   fields:
     id: Id VehiclePUC
     rcId: Id VehicleRegistrationCertificate
+    driverId: Id Person
     documentImageId: Id Image
     pucExpiry: UTCTime
     verificationStatus: VerificationStatus
+  queries:
+    findByRcIdAndDriverId:
+      kvFunction: findAllWithKV
+      where:
+        and: [rcId, driverId]

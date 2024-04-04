@@ -30,6 +30,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     pucExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     reviewRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     reviewedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    userPassedVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Category),
     vehicleCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleClass :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleColor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

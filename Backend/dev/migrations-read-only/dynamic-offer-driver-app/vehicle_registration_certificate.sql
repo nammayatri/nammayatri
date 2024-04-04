@@ -43,3 +43,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN f
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN vehicle_rating double precision ;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN luggage_capacity integer ;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN air_conditioned boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN user_passed_vehicle_category text ;

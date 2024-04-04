@@ -65,9 +65,11 @@ insert into atlas_driver_offer_bpp.document_verification_config (check_expiry, c
 insert into atlas_driver_offer_bpp.document_verification_config (check_expiry, check_extraction, dependency_document_type, description, disable_warning, document_type, is_disabled, is_hidden, is_mandatory, max_retry_count, merchant_id, merchant_operating_city_id, rc_number_prefix_list, supported_vehicle_classes_json, title, vehicle_category, vehicle_class_check_type, created_at, updated_at)
 (select check_expiry, false as check_extraction, '{}' as dependency_document_type, null as description, '' as disable_warning, 'ProfilePhoto' as document_type, false as is_disabled, false as is_hidden, false as is_mandatory, max_retry_count, merchant_id, merchant_operating_city_id, rc_number_prefix_list, supported_vehicle_classes_json, 'Profile Photo' as title, 'AUTO_CATEGORY' as vehicle_category, vehicle_class_check_type, now() as created_at, now() as updated_at from atlas_driver_offer_bpp.onboarding_document_configs where document_type = 'RC');
 
-update atlas_driver_offer_bpp.document_verification_config set is_mandatory = true where document_type in ('VehiclePermit', 'VehiclePUC', 'VehicleInsurance', 'VehicleFitnessCertificate') and vehicle_category = 'CAR';
 
-update atlas_driver_offer_bpp.document_verification_config set is_mandatory = true where document_type in ('PanCard', 'AadhaarCard', 'ProfilePhoto') and vehicle_category = 'CAR';
+-- ONLY RUN THESE AFTER UI RELEASE
+-- update atlas_driver_offer_bpp.document_verification_config set is_mandatory = true where document_type in ('VehiclePermit', 'VehiclePUC', 'VehicleInsurance', 'VehicleFitnessCertificate') and vehicle_category = 'CAR';
+
+-- update atlas_driver_offer_bpp.document_verification_config set is_mandatory = true where document_type in ('PanCard', 'AadhaarCard', 'ProfilePhoto') and vehicle_category = 'CAR';
 
 -- RUN IT AFTER THE RELEASE
 DROP TABLE atlas_driver_offer_bpp.onboarding_document_configs;

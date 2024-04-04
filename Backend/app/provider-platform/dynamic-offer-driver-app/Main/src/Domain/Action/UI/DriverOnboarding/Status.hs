@@ -40,7 +40,6 @@ import Domain.Types.Plan as Plan
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
 import Environment
-import qualified EulerHS.Prelude as EP
 import Kernel.External.Encryption
 import Kernel.External.Types
 import Kernel.Prelude
@@ -60,6 +59,10 @@ import qualified Storage.Queries.Image as IQuery
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as Vehicle
+import qualified Storage.Queries.VehicleFitnessCertificate as VFCQuery
+import qualified Storage.Queries.VehicleInsurance as VIQuery
+import qualified Storage.Queries.VehiclePUC as VPUCQuery
+import qualified Storage.Queries.VehiclePermit as VPQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 
 -- PENDING means "pending verification"
@@ -84,7 +87,8 @@ data StatusRes = StatusRes
 
 data VehicleDocumentItem = VehicleDocumentItem
   { registrationNo :: Text,
-    vehicleCategory :: DVeh.Category,
+    userSelectedVehicleCategory :: DVeh.Category,
+    verifiedVehicleCategory :: Maybe DVeh.Category,
     documents :: [DocumentStatusItem]
   }
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -127,6 +131,7 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
   vehicleDocuments <-
     vehicles `forM` \vehicleRC -> do
       registrationNo <- decrypt vehicleRC.certificateNumber
+      let verifiedVehicleCategory' = getCategory <$> vehicleRC.vehicleVariant
       documents <-
         vehicleDocumentTypes `forM` \docType -> do
           mbStatus <- getProcessedVehicleDocuments docType personId vehicleRC
@@ -138,17 +143,16 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
               (status, mbReason) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit
               message <- documentStatusMessage status mbReason docType merchantOperatingCity.language
               return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
-      return $ VehicleDocumentItem {registrationNo, vehicleCategory = getCategory (fromMaybe DVeh.AUTO_RICKSHAW vehicleRC.vehicleVariant), documents}
+      return $ VehicleDocumentItem {registrationNo, userSelectedVehicleCategory = fromMaybe (fromMaybe DVeh.CAR verifiedVehicleCategory') vehicleRC.userPassedVehicleCategory, verifiedVehicleCategory = verifiedVehicleCategory', documents}
 
   -- check if driver is enabled if not then if all mandatory docs are verified then enable the driver
   forM_ vehicleDocuments $ \vehicleDoc -> do
+    allVehicleDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus) (documents vehicleDoc)
+    allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus) driverDocuments
+    when (allVehicleDocsVerified && allDriverDocsVerified) $ enableDriver merchantOpCityId personId mDL
     mbVehicle <- Vehicle.findById personId -- check everytime
-    EP.whenNothing_ mbVehicle $ do
-      allVehicleDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType vehicleDoc.vehicleCategory doc.verificationStatus) (documents vehicleDoc)
-      allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType vehicleDoc.vehicleCategory doc.verificationStatus) driverDocuments
-      when (allVehicleDocsVerified && allDriverDocsVerified) $ do
-        enableDriver merchantOpCityId personId mDL
-        activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo
+    when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified) $
+      activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo
 
   return $
     StatusRes
@@ -217,10 +221,18 @@ getProcessedVehicleDocuments docType driverId vehicleRC =
     DVC.SubscriptionPlan -> do
       mbPlan <- snd <$> DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION driverId -- fix later on basis of vehicle category
       return $ Just $ boolToStatus (isJust mbPlan)
-    DVC.VehiclePermit -> return Nothing
-    DVC.VehicleFitnessCertificate -> return Nothing
-    DVC.VehicleInsurance -> return Nothing
-    DVC.VehiclePUC -> return Nothing
+    DVC.VehiclePermit -> do
+      mbDoc <- listToMaybe <$> VPQuery.findByRcIdAndDriverId vehicleRC.id driverId
+      return $ mapStatus <$> (mbDoc <&> (.verificationStatus))
+    DVC.VehicleFitnessCertificate -> do
+      mbDoc <- listToMaybe <$> VFCQuery.findByRcIdAndDriverId vehicleRC.id driverId
+      return $ mapStatus <$> (mbDoc <&> (.verificationStatus))
+    DVC.VehicleInsurance -> do
+      mbDoc <- listToMaybe <$> VIQuery.findByRcIdAndDriverId vehicleRC.id driverId
+      return $ mapStatus <$> (mbDoc <&> (.verificationStatus))
+    DVC.VehiclePUC -> do
+      mbDoc <- listToMaybe <$> VPUCQuery.findByRcIdAndDriverId vehicleRC.id driverId
+      return $ mapStatus <$> (mbDoc <&> (.verificationStatus))
     _ -> return Nothing
   where
     boolToStatus :: Bool -> ResponseStatus
