@@ -177,8 +177,15 @@ jobs:
             *ions.txt
       
       - name: Merge Pull Request
-        if: success() && steps.create_pr.outputs.pull-request-number != ''
-        uses: pascalgn/automerge-action@v0.16.0
+        uses: peter-evans/enable-pull-request-automerge@v3
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          merge-method: rebase
           pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
+
+      # - name: Merge Pull Request
+      #   if: success() && steps.create_pr.outputs.pull-request-number != ''
+      #   uses: pascalgn/automerge-action@v0.16.0
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
