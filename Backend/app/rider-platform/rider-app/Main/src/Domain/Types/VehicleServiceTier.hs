@@ -16,13 +16,14 @@
 
 module Domain.Types.VehicleServiceTier where
 
+import qualified Domain.Types.BecknConfig as BecknConfig
 import qualified Domain.Types.VehicleVariant as VehicleVariant
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Utils.GenericPretty
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
-data VehicleServiceTierType = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | ECO | COMFY | PREMIUM
+data VehicleServiceTierType = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | ECO | COMFY | PREMIUM | BIKE
   deriving
     ( Show,
       Eq,
@@ -52,6 +53,7 @@ castServiceTierToVariant TAXI_PLUS = VehicleVariant.TAXI_PLUS
 castServiceTierToVariant ECO = VehicleVariant.HATCHBACK
 castServiceTierToVariant COMFY = VehicleVariant.SEDAN
 castServiceTierToVariant PREMIUM = VehicleVariant.SEDAN
+castServiceTierToVariant BIKE = VehicleVariant.BIKE
 
 castVariantToServiceTier :: VehicleVariant.VehicleVariant -> VehicleServiceTierType
 castVariantToServiceTier VehicleVariant.SEDAN = SEDAN
@@ -60,3 +62,16 @@ castVariantToServiceTier VehicleVariant.HATCHBACK = HATCHBACK
 castVariantToServiceTier VehicleVariant.AUTO_RICKSHAW = AUTO_RICKSHAW
 castVariantToServiceTier VehicleVariant.TAXI = TAXI
 castVariantToServiceTier VehicleVariant.TAXI_PLUS = TAXI_PLUS
+castVariantToServiceTier VehicleVariant.BIKE = BIKE
+
+castServiceTierToCategory :: VehicleServiceTierType -> BecknConfig.VehicleCategory
+castServiceTierToCategory SEDAN = BecknConfig.CAB
+castServiceTierToCategory SUV = BecknConfig.CAB
+castServiceTierToCategory HATCHBACK = BecknConfig.CAB
+castServiceTierToCategory AUTO_RICKSHAW = BecknConfig.AUTO_RICKSHAW
+castServiceTierToCategory TAXI = BecknConfig.CAB
+castServiceTierToCategory TAXI_PLUS = BecknConfig.CAB
+castServiceTierToCategory ECO = BecknConfig.CAB
+castServiceTierToCategory COMFY = BecknConfig.CAB
+castServiceTierToCategory PREMIUM = BecknConfig.CAB
+castServiceTierToCategory BIKE = BecknConfig.MOTORCYCLE

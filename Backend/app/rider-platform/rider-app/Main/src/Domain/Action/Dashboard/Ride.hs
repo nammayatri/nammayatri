@@ -191,6 +191,7 @@ castVehicleVariant = \case
   VehVar.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
   VehVar.TAXI -> Common.TAXI
   VehVar.TAXI_PLUS -> Common.TAXI_PLUS
+  VehVar.BIKE -> Common.BIKE
 
 ---------------------------------------------------------------------
 

@@ -54,7 +54,7 @@ import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id, state, view, (%~), (^?))
 import qualified EulerHS.Prelude as Prelude
 import GHC.Float (double2Int)
-import Kernel.External.Maps as Maps
+import qualified Kernel.External.Maps as Maps
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common hiding (mkPrice)
@@ -92,7 +92,7 @@ firstStop = find (\stop -> Spec.stopType stop == Just (show Enums.START))
 lastStop :: [Spec.Stop] -> Maybe Spec.Stop
 lastStop = find (\stop -> Spec.stopType stop == Just (show Enums.END))
 
-mkStops :: LatLong -> Maybe LatLong -> Maybe [Spec.Stop]
+mkStops :: Maps.LatLong -> Maybe Maps.LatLong -> Maybe [Spec.Stop]
 mkStops origin mbDestination = do
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
       destinationGps destination = Gps.Gps {lat = destination.lat, lon = destination.lon}
@@ -144,7 +144,7 @@ parseLatLong a =
     [latStr, longStr] ->
       let lat = fromMaybe 0.0 $ readMaybe $ T.unpack latStr
           lon = fromMaybe 0.0 $ readMaybe $ T.unpack longStr
-       in return $ LatLong lat lon
+       in return $ Maps.LatLong lat lon
     _ -> throwError . InvalidRequest $ "Unable to parse LatLong"
 
 getTransactionId :: MonadFlow m => Spec.Context -> m Text
@@ -206,6 +206,7 @@ castVariant Variant.SUV = (show Enums.CAB, "SUV")
 castVariant Variant.AUTO_RICKSHAW = (show Enums.AUTO_RICKSHAW, "AUTO_RICKSHAW")
 castVariant Variant.TAXI = (show Enums.CAB, "TAXI")
 castVariant Variant.TAXI_PLUS = (show Enums.CAB, "TAXI_PLUS")
+castVariant Variant.BIKE = (show Enums.BIKE, "BIKE")
 
 mkFulfillmentType :: DCT.TripCategory -> Text
 mkFulfillmentType = \case
@@ -703,6 +704,7 @@ mapServiceTierToCategory serviceTier =
     DVST.ECO -> CAB
     DVST.PREMIUM -> CAB
     DVST.AUTO_RICKSHAW -> AUTO_RICKSHAW
+    DVST.BIKE -> MOTORCYCLE
 
 mapRideStatus :: Maybe DRide.RideStatus -> Enums.FulfillmentState
 mapRideStatus rideStatus =

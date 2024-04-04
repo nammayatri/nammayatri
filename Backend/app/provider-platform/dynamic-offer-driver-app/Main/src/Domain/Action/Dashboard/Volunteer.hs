@@ -69,6 +69,7 @@ bookingInfo merchantShortId opCity otpCode = do
     convertVehicleVariant DVST.ECO = Common.HATCHBACK
     convertVehicleVariant DVST.COMFY = Common.SEDAN
     convertVehicleVariant DVST.PREMIUM = Common.SEDAN
+    convertVehicleVariant DVST.BIKE = Common.BIKE
 
     buildBookingLocation Domain.Location {..} =
       Common.Location
