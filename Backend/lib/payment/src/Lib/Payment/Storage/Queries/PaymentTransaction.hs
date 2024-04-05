@@ -48,6 +48,7 @@ updateMultiple transaction = do
       Se.Set BeamPT.mandateId transaction.mandateId,
       Se.Set BeamPT.mandateFrequency transaction.mandateFrequency,
       Se.Set BeamPT.mandateMaxAmount transaction.mandateMaxAmount,
+      Se.Set BeamPT.txnId transaction.txnId,
       Se.Set BeamPT.updatedAt now
     ]
     [Se.Is BeamPT.id $ Se.Eq $ getId transaction.id]

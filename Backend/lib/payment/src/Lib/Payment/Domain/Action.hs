@@ -31,7 +31,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq hiding (Value)
+import Kernel.Storage.Esqueleto as Esq hiding (Value, isNothing)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
@@ -323,15 +323,17 @@ updateOrderTransaction order resp respDump = do
   mbTransaction <- do
     case resp.transactionUUID of
       -- Just transactionUUID -> runInReplica $ QTransaction.findByTxnUUID transactionUUID
-      Just transactionUUID -> QTransaction.findByTxnUUID transactionUUID
-      -- Nothing -> runInReplica $ QTransaction.findNewTransactionByOrderId order.id
+      Just transactionUUID -> do
+        mbTxn <- QTransaction.findByTxnUUID transactionUUID
+        when (isNothing mbTxn) $ do
+          transaction <- buildPaymentTransaction order resp respDump
+          QTransaction.create transaction
+        return mbTxn
       Nothing -> QTransaction.findNewTransactionByOrderId order.id
   let updOrder = order{status = resp.transactionStatus, isRetargeted = fromMaybe order.isRetargeted resp.isRetargeted, isRetried = fromMaybe order.isRetried resp.isRetried, retargetLink = resp.retargetLink}
   case mbTransaction of
-    Nothing -> do
-      transaction <- buildPaymentTransaction order resp respDump
-      QTransaction.create transaction
-      when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatusAndError updOrder errorMessage errorCode
+    Nothing -> when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatusAndError updOrder errorMessage errorCode
+    -- Nothing -> runInReplica $ QTransaction.findNewTransactionByOrderId order.id
     Just transaction -> do
       let updTransaction =
             transaction{statusId = resp.transactionStatusId,
@@ -349,7 +351,8 @@ updateOrderTransaction order resp respDump = do
                         mandateId = resp.mandateId,
                         mandateFrequency = resp.mandateFrequency,
                         mandateMaxAmount = resp.mandateMaxAmount,
-                        juspayResponse = respDump
+                        juspayResponse = respDump,
+                        txnId = resp.txnId
                        }
 
       -- Avoid updating status if already in CHARGED state to handle race conditions
