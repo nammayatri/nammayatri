@@ -4,11 +4,14 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-unused-imports #-}
 
 module IGM.Types
-  ( AckMessage (..),
+  ( Ack (..),
+    AckMessage (..),
     AckResponse (..),
     Complainant (..),
     ComplainantAction (..),
     ComplainantPerson (..),
+    Descriptor (..),
+    Error (..),
     Fulfillment (..),
     GRO (..),
     GROContact (..),
@@ -40,6 +43,8 @@ module IGM.Types
     ResolutionProviderRespondentInfo (..),
     ResolutionSupport (..),
     RespondentAction (..),
+    Tag (..),
+    TagGroup (..),
   )
 where
 
@@ -57,6 +62,33 @@ import Data.Time
 import Data.UUID (UUID)
 import GHC.Generics (Generic)
 import Prelude
+
+-- | Describes the acknowledgement sent in response to an API call. If the implementation uses HTTP/S, then Ack must be returned in the same session. Every API call to a BPP must be responded to with an Ack whether the BPP intends to respond with a callback or not. This has one property called &#x60;status&#x60; that indicates the status of the Acknowledgement.
+data Ack = Ack
+  { -- | The status of the acknowledgement. If the request passes the validation criteria of the BPP, then this is set to ACK. If a BPP responds with status = `ACK` to a request, it is required to respond with a callback. If the request fails the validation criteria, then this is set to NACK. Additionally, if a BPP does not intend to respond with a callback even after the request meets the validation criteria, it should set this value to `NACK`.
+    ackStatus :: Maybe Text,
+    -- | A list of tags containing any additional information sent along with the Acknowledgement.
+    ackTags :: Maybe [TagGroup]
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Ack where
+  parseJSON = genericParseJSON optionsAck
+
+instance ToJSON Ack where
+  toJSON = genericToJSON optionsAck
+
+optionsAck :: Options
+optionsAck =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("ackStatus", "status"),
+        ("ackTags", "tags")
+      ]
 
 -- |
 data AckMessage = AckMessage
@@ -191,6 +223,66 @@ optionsComplainantPerson =
   where
     table =
       [ ("complainantPersonName", "name")
+      ]
+
+-- | Physical description of something.
+data Descriptor = Descriptor
+  { -- |
+    descriptorCode :: Maybe Text,
+    -- |
+    descriptorName :: Maybe Text,
+    -- |
+    descriptorShortDesc :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Descriptor where
+  parseJSON = genericParseJSON optionsDescriptor
+
+instance ToJSON Descriptor where
+  toJSON = genericToJSON optionsDescriptor
+
+optionsDescriptor :: Options
+optionsDescriptor =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("descriptorCode", "code"),
+        ("descriptorName", "name"),
+        ("descriptorShortDesc", "short_desc")
+      ]
+
+-- | Describes an error object that is returned by a BAP, BPP or BG as a response or callback to an action by another network participant. This object is sent when any request received by a network participant is unacceptable. This object can be sent either during Ack or with the callback.
+data Error = Error
+  { -- | Standard error code. For full list of error codes, refer to docs/protocol-drafts/BECKN-005-ERROR-CODES-DRAFT-01.md of this repo\"
+    errorCode :: Maybe Text,
+    -- | Human readable message describing the error. Used mainly for logging. Not recommended to be shown to the user.
+    errorMessage :: Maybe Text,
+    -- | Path to json schema generating the error. Used only during json schema validation errors
+    errorPaths :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Error where
+  parseJSON = genericParseJSON optionsError
+
+instance ToJSON Error where
+  toJSON = genericToJSON optionsError
+
+optionsError :: Options
+optionsError =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("errorCode", "code"),
+        ("errorMessage", "message"),
+        ("errorPaths", "paths")
       ]
 
 -- |
@@ -1117,4 +1209,64 @@ optionsRespondentAction =
         ("respondentActionShortDesc", "short_desc"),
         ("respondentActionUpdatedAt", "updated_at"),
         ("respondentActionUpdatedBy", "updated_by")
+      ]
+
+-- | Describes a tag. This is used to contain extended metadata. This object can be added as a property to any schema to describe extended attributes. For BAPs, tags can be sent during search to optimize and filter search results. BPPs can use tags to index their catalog to allow better search functionality. Tags are sent by the BPP as part of the catalog response in the &#x60;on_search&#x60; callback. Tags are also meant for display purposes. Upon receiving a tag, BAPs are meant to render them as name-value pairs. This is particularly useful when rendering tabular information about a product or service.
+data Tag = Tag
+  { -- |
+    tagDescriptor :: Maybe Descriptor,
+    -- | This value indicates if the tag is intended for display purposes. If set to `true`, then this tag must be displayed. If it is set to `false`, it should not be displayed. This value can override the group display value.
+    tagDisplay :: Maybe Bool,
+    -- | The value of the tag. This set by the BPP and rendered as-is by the BAP.
+    tagValue :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Tag where
+  parseJSON = genericParseJSON optionsTag
+
+instance ToJSON Tag where
+  toJSON = genericToJSON optionsTag
+
+optionsTag :: Options
+optionsTag =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("tagDescriptor", "descriptor"),
+        ("tagDisplay", "display"),
+        ("tagValue", "value")
+      ]
+
+-- | A collection of tag objects with group level attributes. For detailed documentation on the Tags and Tag Groups schema go to https://github.com/beckn/protocol-specifications/discussions/316
+data TagGroup = TagGroup
+  { -- |
+    tagGroupDescriptor :: Maybe Descriptor,
+    -- | Indicates the display properties of the tag group. If display is set to false, then the group will not be displayed. If it is set to true, it should be displayed. However, group-level display properties can be overriden by individual tag-level display property. As this schema is purely for catalog display purposes, it is not recommended to send this value during search.
+    tagGroupDisplay :: Maybe Bool,
+    -- | An array of Tag objects listed under this group. This property can be set by BAPs during search to narrow the `search` and achieve more relevant results. When received during `on_search`, BAPs must render this list under the heading described by the `name` property of this schema.
+    tagGroupList :: Maybe [Tag]
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON TagGroup where
+  parseJSON = genericParseJSON optionsTagGroup
+
+instance ToJSON TagGroup where
+  toJSON = genericToJSON optionsTagGroup
+
+optionsTagGroup :: Options
+optionsTagGroup =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("tagGroupDescriptor", "descriptor"),
+        ("tagGroupDisplay", "display"),
+        ("tagGroupList", "list")
       ]
