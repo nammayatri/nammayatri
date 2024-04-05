@@ -77,7 +77,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     }
 
     // CallBacks Strings
-    private static String storeContactsCallBack = null;
     public enum MapMode {
         NORMAL, SPECIAL_ZONE, HOTSPOT
     }
@@ -88,39 +87,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         app = AppType.CONSUMER;
     }
 
-
-    //region Store and Trigger CallBack
-    @JavascriptInterface
-    public void contactPermission() {
-        if (ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
-            if (bridgeComponents.getActivity() != null) {
-                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.READ_CONTACTS}, REQUEST_CONTACTS);
-            }
-        } else {
-            ExecutorManager.runOnBackgroundThread(() -> {
-                try {
-                    contactsStoreCall(getPhoneContacts());
-                } catch (Exception e) {
-                    Log.e(UTILS, "Exception in Contact Permission" + e);
-                }
-            });
-        }
-    }
-
-    public void contactsStoreCall(String contacts) {
-        if (storeContactsCallBack != null) {
-            String removedDoubleQuotes = contacts.replace("\\\"", "\\\\\"");
-            String removedSingleQuote = removedDoubleQuotes.replace("'", "");
-            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                    storeContactsCallBack, removedSingleQuote);
-            bridgeComponents.getJsCallback().addJsToWebView(javascript);
-        }
-    }
-
-    @JavascriptInterface
-    public void storeCallBackContacts(String callback) {
-        storeContactsCallBack = callback;
-    }
     // endregion
 
     //region Maps
@@ -460,37 +426,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     }
 
     //region Others
-    public String getPhoneContacts() throws JSONException {
-        ContentResolver contentResolver = bridgeComponents.getContext().getContentResolver();
-        Uri uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
-        JSONArray contacts = new JSONArray();
-        String[] projection =
-                {
-                        ContactsContract.CommonDataKinds.Phone.NUMBER,
-                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
-                };
-        String selection = ContactsContract.Contacts.IN_VISIBLE_GROUP + " = '"
-                + ("1") + "'";
-        String sortOrder = ContactsContract.Contacts.DISPLAY_NAME
-                + " COLLATE LOCALIZED ASC";
-        try (Cursor cursor = contentResolver.query(uri, projection, selection, null, sortOrder)) {
-            if (cursor.getCount() > 0) {
-                while (cursor.moveToNext()) {
-                    String contactNameStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
-                    String contactStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER));
-                    JSONObject tempPoints = new JSONObject();
-                    tempPoints.put("name", contactNameStr);
-                    tempPoints.put("number", contactStr);
-                    contacts.put(tempPoints);
-                }
-            }
-        }
-        JSONObject flagObject = new JSONObject();
-        flagObject.put("name", "beckn_contacts_flag");
-        flagObject.put("number", "true");
-        contacts.put(flagObject);
-        return contacts.toString();
-    }
 
     @JavascriptInterface
     public void generatePDF(String str, String format) throws JSONException {
@@ -696,21 +631,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 } else {
                     JuspayLogger.d(OTHERS, "Storage Permission is denied.");
                     toast("Permission Denied");
-                }
-                break;
-            case REQUEST_CONTACTS:
-                boolean flag = ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
-                String contacts;
-                try {
-                    if (flag) {
-                        contacts = getPhoneContacts();
-                    } else {
-                        JSONArray flagArray = new JSONArray();
-                        contacts = flagArray.toString();
-                    }
-                    contactsStoreCall(contacts);
-                } catch (JSONException e) {
-                    e.printStackTrace();
                 }
                 break;
             default:
