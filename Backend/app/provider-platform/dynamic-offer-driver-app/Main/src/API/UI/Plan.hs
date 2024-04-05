@@ -83,7 +83,8 @@ currentPlan = withFlowHandlerAPI . DPlan.currentPlan DPlan.YATRI_SUBSCRIPTION
 planSubscribe :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DPlan.PlanSubscribeRes
 planSubscribe planId (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ do
   driverInfo <- DI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  if driverInfo.autoPayStatus == Just DI.SUSPENDED
+  autoPayStatus <- fst <$> DPlan.getSubcriptionStatusWithPlan DPlan.YATRI_SUBSCRIPTION personId
+  if autoPayStatus == Just DI.SUSPENDED
     then do
       void $ DPlan.planResume DPlan.YATRI_SUBSCRIPTION (personId, merchantId, merchantOpCityId)
       Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION Nothing
