@@ -11,6 +11,7 @@ package in.juspay.mobility.app;
 import static android.graphics.Color.rgb;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -51,11 +52,13 @@ import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -558,5 +561,31 @@ public class RideRequestUtils {
             holder.rideTypeTag.setVisibility(View.GONE);
             return false;
         }
+    }
+
+    public static String getUptoDecStr(float val, int digit) {
+        DecimalFormat df = new DecimalFormat("###.##", new DecimalFormatSymbols(new Locale("en", "us")));
+        df.setMaximumFractionDigits(digit);
+        return df.format(val);
+    }
+
+    public static void updateTierAndAC(SheetAdapter.SheetViewHolder holder, SheetModel model) {
+        boolean showTier = model.getVehicleServiceTier() != null;
+        int acRide = model.isAirConditioned();
+        boolean showAC = acRide == 1 || acRide == 0;
+        holder.vcTierAndACView.setVisibility((showTier || showAC) ? View.VISIBLE : View.GONE);
+        holder.vehicleServiceTier.setText(model.getVehicleServiceTier() != null ? model.getVehicleServiceTier() : "");
+        holder.vehicleServiceTier.setVisibility(showTier ? View.VISIBLE : View.GONE);
+        holder.airConditioned.setText(acRide == 1?"AC":"Non-AC");
+        holder.acNonAcView.setVisibility( showAC ? View.VISIBLE : View.GONE);
+    }
+
+    @SuppressLint("SetTextI18n")
+    public static void updateRateView(SheetAdapter.SheetViewHolder holder, SheetModel model) {
+        double baseFare = model.getBaseFare() + model.getOfferedPrice();
+        float dist = model.getDistanceToBeCovFloat()/1000;
+        String rate = RideRequestUtils.getUptoDecStr((float) (baseFare/dist), 1);
+        String currency = model.getCurrency();;
+        holder.rateText.setText("Rate: " + currency + rate +"/km");
     }
 }

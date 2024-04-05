@@ -66,11 +66,11 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     }
 
     public static class SheetViewHolder extends RecyclerView.ViewHolder{
-        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip;
+        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, airConditioned;
         Button reqButton, rejectButton;
-        View buttonDecreasePrice, buttonIncreasePrice, progressBar;
+        View buttonDecreasePrice, buttonIncreasePrice, progressBar, vcTierAndACView;
         ImageView assetZonePickup, assetZoneDrop, rideTypeImage;
-        LinearLayout tagsBlock, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag, specialLocTag;
+        LinearLayout tagsBlock, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag, specialLocTag, acNonAcView;
 
         public SheetViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -109,6 +109,11 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             testRequestTag = itemView.findViewById(R.id.testRequestTag);
             specialLocTag = itemView.findViewById(R.id.spZoneTag);
             specialLocExtraTip = itemView.findViewById(R.id.spZoneExtraTip);
+            rateText = itemView.findViewById(R.id.rateText);
+            vehicleServiceTier = itemView.findViewById(R.id.vehicleServiceTier);
+            acNonAcView = itemView.findViewById(R.id.acNonAcView);
+            airConditioned = itemView.findViewById(R.id.airConditioned);
+            vcTierAndACView = itemView.findViewById(R.id.vcTierAndACView);
         }
     }
 

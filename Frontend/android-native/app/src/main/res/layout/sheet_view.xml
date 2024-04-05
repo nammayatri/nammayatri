@@ -312,7 +312,7 @@
                                     android:gravity="right">
 
                                 <com.google.android.material.card.MaterialCardView
-                                    android:id="@+id/specialLocationTag"
+                                    android:id="@+id/vcTierAndACView"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_gravity="center"
@@ -323,6 +323,58 @@
                                     app:cardElevation="0dp"
                                     app:contentPadding="10dp"
                                     android:layout_marginVertical="10dp">
+
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal">
+
+                                        <LinearLayout
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:id="@+id/acNonAcView"
+                                            android:orientation="horizontal">
+
+                                            <TextView
+                                                android:id="@+id/airConditioned"
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:textSize="16dp"
+                                                android:layout_marginStart="5dp"
+                                                android:gravity="center"
+                                                android:textColor="@color/blue800"
+                                                android:textFontWeight="600"
+                                                android:fontFamily="@font/plus_jakartasans_semibold"
+                                                android:text="AC"/>
+
+                                            <com.google.android.material.card.MaterialCardView
+                                                android:id="@+id/zoneDot"
+                                                android:layout_width="4dp"
+                                                android:layout_height="4dp"
+                                                android:layout_gravity="center"
+                                                app:cardBackgroundColor="@color/blue800"
+                                                android:theme="@style/Theme.MaterialComponents.Light"
+                                                app:cardCornerRadius="10dp"
+                                                app:cardElevation="0dp"
+                                                android:layout_marginLeft="5dp"/>
+
+
+                                        </LinearLayout>
+
+                                        <TextView
+                                            android:id="@+id/vehicleServiceTier"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:textSize="16dp"
+                                            android:layout_marginStart="5dp"
+                                            android:textColor="@color/blue800"
+                                            android:gravity="center"
+                                            android:singleLine="false"
+                                            android:textFontWeight="600"
+                                            android:fontFamily="@font/plus_jakartasans_semibold"
+                                            android:text="Comfy"/>
+                                    </LinearLayout>
 
                                 </com.google.android.material.card.MaterialCardView>
 
@@ -710,16 +762,52 @@
                                 </LinearLayout>
                             </androidx.cardview.widget.CardView>
 
-                            <TextView
-                                android:layout_width="wrap_content"
+                            <LinearLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
+                                android:gravity="center"
                                 android:layout_marginTop="12dp"
-                                android:fontFamily="@font/plus_jakartasans_regular"
-                                android:text="@string/includes_pickup_charges_10"
-                                android:textColor="#6D7280"
-                                android:textFontWeight="400"
-                                android:id="@+id/textIncludesCharges"
-                                android:textSize="12dp" />
+                                android:orientation="horizontal">
+
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:id="@+id/rateView"
+                                    android:orientation="horizontal">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:fontFamily="@font/plus_jakartasans_medium"
+                                        android:text=""
+                                        android:textColor="@color/Black700"
+                                        android:textFontWeight="400"
+                                        android:id="@+id/rateText"
+                                        android:textSize="12dp" />
+
+                                    <com.google.android.material.card.MaterialCardView
+                                        android:layout_width="4dp"
+                                        android:layout_height="4dp"
+                                        android:layout_gravity="center"
+                                        app:cardBackgroundColor="@color/Black700"
+                                        android:theme="@style/Theme.MaterialComponents.Light"
+                                        app:cardCornerRadius="10dp"
+                                        app:cardElevation="0dp"
+                                        android:layout_marginHorizontal="5dp"/>
+
+                                </LinearLayout>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/plus_jakartasans_regular"
+                                    android:text="@string/includes_pickup_charges_10"
+                                    android:textColor="#6D7280"
+                                    android:textFontWeight="400"
+                                    android:id="@+id/textIncludesCharges"
+                                    android:textSize="12dp" />
+
+                            </LinearLayout>
 
                         </LinearLayout>
                     </LinearLayout>

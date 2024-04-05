@@ -8,13 +8,18 @@
  */
 package in.juspay.mobility.app;
 
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
+
 public class SheetModel {
-    private final String pickUpDistance, distanceToBeCovered, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant;
+    private final String pickUpDistance, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant, vehicleServiceTier;
     private String requestId;
     private int startTime, specialZoneExtraTip;
     private double updatedAmount;
     private double offeredPrice;
     private int customerExtraFee;
+    private final int airConditioned;
     private final int baseFare;
     private final int reqExpiryTime;
     private final int driverMinExtraFee;
@@ -24,12 +29,12 @@ public class SheetModel {
     private final int negotiationUnit;
 
     private final Boolean disabilityTag;
-    private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha;
+    private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha, distanceToBeCovered;
     private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated, specialZonePickup, downgradeEnabled;
     private double srcLat, srcLng, destLat, destLng;
 
     public SheetModel(String pickUpDistance,
-                      String distanceToBeCovered,
+                      float distanceToBeCovered,
                       String durationToPickup,
                       String sourceAddress,
                       String destinationAddress,
@@ -59,7 +64,10 @@ public class SheetModel {
                       double destLng,
                       boolean specialZonePickup,
                       int specialZoneExtraTip,
-                      boolean downgradeEnabled){
+                      boolean downgradeEnabled,
+                      int airConditioned,
+                      String vehicleServiceTier
+    ){
 
         this.srcLat = srcLat;
         this.srcLng = srcLng;
@@ -99,6 +107,16 @@ public class SheetModel {
         this.specialZonePickup = specialZonePickup;
         this.specialZoneExtraTip = specialZoneExtraTip;
         this.downgradeEnabled = downgradeEnabled;
+        this.airConditioned = airConditioned;
+        this.vehicleServiceTier = vehicleServiceTier;
+    }
+
+    public String getVehicleServiceTier() {
+        return vehicleServiceTier;
+    }
+
+    public int isAirConditioned() {
+        return airConditioned;
     }
 
     public boolean getSpecialZonePickup(){
@@ -149,6 +167,12 @@ public class SheetModel {
     }
 
     public String getDistanceToBeCovered() {
+        DecimalFormat df = new DecimalFormat("###.##", new DecimalFormatSymbols(new Locale("en", "us")));
+        df.setMaximumFractionDigits(2);
+        return df.format(distanceToBeCovered / 1000);
+    }
+
+    public float getDistanceToBeCovFloat() {
         return distanceToBeCovered;
     }
 
