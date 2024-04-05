@@ -265,7 +265,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             } else {
                 Handler handler = new Handler();
                 Runnable runnable = () -> {
-                    String pincode = getPincodeFromRR(model.getSrcLat(), model.getSrcLng());
+                    String pincode = getPincodeFromRR(model.getDestLat(), model.getDestLng());
                     if(holder != null && holder.sourcePinCode != null) {
                         if (pincode != null) {
                             holder.destinationPinCode.setText(pincode);
