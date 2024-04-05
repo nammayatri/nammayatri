@@ -1,10 +1,15 @@
-INSERT INTO atlas_app.merchant_operating_city (id, merchant_id, merchant_short_id, city)
-SELECT
-    atlas_app.uuid_generate_v4() AS id,
-    id AS merchant_id,
-    short_id AS merchant_short_id,
-    city
-FROM atlas_app.merchant;
+-- INSERT INTO atlas_app.merchant_operating_city (id, merchant_id, merchant_short_id, city)
+-- SELECT
+--     atlas_app.uuid_generate_v4() AS id,
+--     id AS merchant_id,
+--     short_id AS merchant_short_id,
+--     city
+-- FROM atlas_app.merchant;
+
+-- for local testing only
+INSERT INTO atlas_app.merchant_operating_city (id, merchant_id, merchant_short_id, city) VALUES
+('namma-yatri-0-0000-0000-00000000city', 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', 'NAMMA_YATRI', 'Kochi'),
+('yatri-00-0000-0000-0000-00000000city', 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51', 'YATRI', 'Kochi');
 
 ----------------------------------------------------- Service Usage Config / Message / PaymentMethod / Exophone / Config Table Migrations -----------------------------------------------
 -- Add the new column
