@@ -165,19 +165,22 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
             logError $ "Error while decrypting document number: " <> (verificationReq.documentNumber & unEncrypted . encrypted) <> " with err: " <> show err
             return []
           Right registrationNo -> do
-            documents <-
-              vehicleDocumentTypes `forM` \docType -> do
-                (status, mbReason) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit
-                message <- documentStatusMessage status mbReason docType language
-                return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
-            return $
-              [ VehicleDocumentItem
-                  { registrationNo,
-                    userSelectedVehicleCategory = fromMaybe DVeh.CAR verificationReq.vehicleCategory,
-                    verifiedVehicleCategory = Nothing,
-                    documents
-                  }
-              ]
+            if isJust $ find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments
+              then return []
+              else do
+                documents <-
+                  vehicleDocumentTypes `forM` \docType -> do
+                    (status, mbReason) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit
+                    message <- documentStatusMessage status mbReason docType language
+                    return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
+                return $
+                  [ VehicleDocumentItem
+                      { registrationNo,
+                        userSelectedVehicleCategory = fromMaybe DVeh.CAR verificationReq.vehicleCategory,
+                        verifiedVehicleCategory = Nothing,
+                        documents
+                      }
+                  ]
       Nothing -> return []
 
   let vehicleDocuments = processedVehicleDocuments <> inprogressVehicleDocuments
