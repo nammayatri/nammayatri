@@ -61,6 +61,7 @@ import Mobility.Prelude (boolToVisibility)
 import Components.Banner as Banner
 import ConfigProvider (getAppConfig)
 import Constants
+import MerchantConfig.Types (MetroConfig)
 
 screen :: ST.MetroTicketBookingScreenState -> Screen Action ST.MetroTicketBookingScreenState ScreenOutput
 screen initialState =
@@ -127,6 +128,8 @@ view push state =
   let
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
     cityMetroConfig = getMetroConfigFromCity city
+    config = getAppConfig appConfig
+    metroConfig = getMetroConfigFromAppConfig config (show city)
   in
     PrestoAnim.animationSet [Anim.fadeIn true]  $ frameLayout
     [ height MATCH_PARENT
@@ -146,13 +149,13 @@ view push state =
           , width MATCH_PARENT
           , background Color.greySmoke
           ][]
-        , infoSelectioView state push cityMetroConfig
+        , infoSelectioView state push city cityMetroConfig metroConfig
         ]
         , updateButtonView state push
     ] <> if state.props.showMetroBookingTimeError then [InfoCard.view (push <<< InfoCardAC) (metroTimeErrorPopupConfig state cityMetroConfig)] else [linearLayout [visibility GONE] []]
 
-infoSelectioView :: forall w . ST.MetroTicketBookingScreenState -> (Action -> Effect Unit) -> CityMetroConfig -> PrestoDOM (Effect Unit) w
-infoSelectioView state push cityMetroConfig =
+infoSelectioView :: forall w . ST.MetroTicketBookingScreenState -> (Action -> Effect Unit) -> City -> CityMetroConfig -> MetroConfig -> PrestoDOM (Effect Unit) w
+infoSelectioView state push city cityMetroConfig metroConfig =
     scrollView
       [ height MATCH_PARENT
       , width MATCH_PARENT    
@@ -179,8 +182,8 @@ infoSelectioView state push cityMetroConfig =
                       , margin $ MarginBottom 9 
                       ] <> FontStyle.subHeading1 TypoGraphy
                     , locationSelectionView push state
-                    , incrementDecrementView push state
-                    , roundTripCheckBox push state
+                    , incrementDecrementView push state metroConfig
+                    , roundTripCheckBox push state metroConfig
                     , linearLayout
                         [ height WRAP_CONTENT
                         , width MATCH_PARENT
@@ -211,8 +214,8 @@ bannerView push cityMetroConfig =
   ][ Banner.view (push <<< const NoAction) (metroBannerConfig cityMetroConfig)
   ]
 
-roundTripCheckBox :: (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> forall w . PrestoDOM (Effect Unit) w
-roundTripCheckBox push state = 
+roundTripCheckBox :: (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> MetroConfig -> forall w . PrestoDOM (Effect Unit) w
+roundTripCheckBox push state metroConfig = 
   let
     isRoundTripSelected = ST.ROUND_TRIP == state.data.ticketType
     ticketType = if isRoundTripSelected then ST.ONE_WAY else ST.ROUND_TRIP
@@ -227,7 +230,7 @@ roundTripCheckBox push state =
       [ height WRAP_CONTENT
       , width WRAP_CONTENT 
       , onClick (\action -> push action
-            ) (const $ ChangeTicketTab ticketType)
+            ) (const $ ChangeTicketTab ticketType metroConfig)
     ][imageView
       [ height $ V 16
       , width $ V 16
@@ -241,8 +244,8 @@ roundTripCheckBox push state =
        ] <> FontStyle.body2 TypoGraphy
      ]
     ]
-selectionTab :: forall w . String  -> ST.TicketType -> (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
-selectionTab _text ticketType push state = 
+selectionTab :: forall w . String  -> ST.TicketType -> (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> MetroConfig -> PrestoDOM (Effect Unit) w
+selectionTab _text ticketType push state metoConfig = 
   let ticketEnabled = ticketType == state.data.ticketType
   in
   textView
@@ -261,7 +264,7 @@ selectionTab _text ticketType push state =
                 _ <- push action
                 pure unit
               else pure unit
-            ) (const $ ChangeTicketTab ticketType)
+            ) (const $ ChangeTicketTab ticketType metoConfig)
   ]
 
 termsAndConditionsView :: forall w . (Action -> Effect Unit) -> CityMetroConfig -> Boolean -> PrestoDOM (Effect Unit) w
@@ -346,9 +349,9 @@ headerView state push =
           ]
       ]
 
-incrementDecrementView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
-incrementDecrementView push state =
-  let ticketLimit = if state.data.ticketType == ST.ROUND_TRIP then 6 else 6
+incrementDecrementView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> MetroConfig -> PrestoDOM (Effect Unit) w
+incrementDecrementView push state metroConfig =
+  let ticketLimit = if state.data.ticketType == ST.ROUND_TRIP then metroConfig.ticketLimit.roundTrip else metroConfig.ticketLimit.oneWay
       limitReached = (state.data.ticketType == ST.ROUND_TRIP && state.data.ticketCount >= ticketLimit) || (state.data.ticketType == ST.ONE_WAY && state.data.ticketCount >= ticketLimit)
   in 
     linearLayout

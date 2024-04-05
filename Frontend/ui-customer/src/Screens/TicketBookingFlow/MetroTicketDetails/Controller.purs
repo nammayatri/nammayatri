@@ -183,9 +183,16 @@ eval (CancelBookingPopUpAC (PopUpModal.OptionWithHtmlClick)) state =
       }
     }
 
-eval (ShowMetroBookingCancelledView (MetroBookingHardCancelStatusResp resp)) state =
+eval (ShowMetroBookingCancelledView (MetroBookingHardCancelStatusResp resp)) state = 
   continue
     state {
+      data {
+        ticketsInfo = map 
+          (\ticket -> { status : "CANCELLED"
+                      , qrString : ticket.qrString
+                      , ticketNumber : ticket.ticketNumber
+                      , validUntil : ticket.validUntil}) state.data.ticketsInfo
+      },
       props {
         stage = MetroBookingCancelledStage,
         cancellationCharges = resp.cancellationCharges,

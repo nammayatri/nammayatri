@@ -494,7 +494,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
         , textView $ [
             width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ (show $ state.data.noOfTickets) <> " " <> (getString $ if state.data.noOfTickets > 0 then TICKETS else TICKET)
+          , text $ (show $ state.data.noOfTickets) <> " " <> (getString $ if state.data.noOfTickets > 1 then TICKETS else TICKET)
           , color Color.black800
           ] <> FontStyle.tags TypoGraphy
         , linearLayout [
@@ -522,7 +522,7 @@ qrCodeView push state =
     qrString = case currentTicket of 
                 Just ticket -> ticket.qrString
                 Nothing -> ""
-    ticketStr = " " <> (getString $ if state.data.noOfTickets > 0 then TICKETS else TICKET)
+    ticketStr = " " <> (getString $ if state.data.noOfTickets > 1 then TICKETS else TICKET)
     headerText = (show $ state.props.currentTicketIndex + 1) 
                   <> if state.data.noOfTickets > 1 then  "/" <> (show $ length state.data.ticketsInfo) else "" 
                   <> ticketStr

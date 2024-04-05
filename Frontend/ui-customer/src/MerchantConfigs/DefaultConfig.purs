@@ -271,6 +271,10 @@ config =
     , metroStationTtl : 10080 -- in Minutes
     , bookingStartTime : "04:30:00"
     , bookingEndTime : "22:30:00"
+    , ticketLimit : {
+        roundTrip : 6
+      , oneWay : 6
+    }
     },
     {
       cityName : "kochi"
@@ -278,6 +282,10 @@ config =
     , metroStationTtl : 10080
     , bookingStartTime : "00:00:00"
     , bookingEndTime : "23:59:59"
+    , ticketLimit : {
+        roundTrip : 1
+      , oneWay : 6
+    }
     }
   ]
   , purpleRideConfig : {

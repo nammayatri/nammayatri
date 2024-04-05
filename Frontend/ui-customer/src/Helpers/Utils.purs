@@ -932,6 +932,10 @@ getMetroConfigFromAppConfig config city = do
       , metroStationTtl : 10080
       , bookingStartTime : "04:30:00"
       , bookingEndTime : "22:30:00"
+      , ticketLimit : {
+          oneWay : 6
+        , roundTrip : 6
+      }
      }
     Just cfg -> cfg
 

@@ -285,6 +285,10 @@ type MetroConfig = {
 , metroStationTtl :: Int
 , bookingStartTime :: String
 , bookingEndTime :: String
+, ticketLimit :: {
+    roundTrip :: Int
+  , oneWay :: Int
+}
 }
 
 type LocateOnMapConfigs = {
