@@ -1078,4 +1078,5 @@ getFR stringKey =
         I_NEED_HELP_WITH_MY_RECENT_RIDE -> "J'ai besoin d'aide avec mon trajet récent"
         CONTINUE_WITH_SAFETY_SETTINGS -> "Continuer avec les paramètres de sécurité"
         TAP_WHERE_TO_TO_BOOK_RIDE -> "Appuyez sur 'Où aller ?' pour réserver votre trajet !"
-        NAMMA_SERVICES -> "Nos Services"
+        NAMMA_SERVICES -> "Services pour les voyageurs"
+        LAST_CHOSEN_VARIANT_NOT_AVAILABLE -> "Le dernier type de trajet choisi n'est pas disponible. Veuillez choisir une autre option de trajet."

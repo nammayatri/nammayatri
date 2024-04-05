@@ -1090,4 +1090,5 @@ getTE stringKey =
     I_NEED_HELP_WITH_MY_RECENT_RIDE -> "నా ఇటీవల రైడ్ తో సహాయం కావాలి"
     CONTINUE_WITH_SAFETY_SETTINGS -> "భద్రతా సెట్టింగులతో కొనసాగండి"
     TAP_WHERE_TO_TO_BOOK_RIDE -> "మీ రైడ్ బుక్ చేయడానికి 'ఎక్కడకు?' ని టాప్ చేయండి!"
-    NAMMA_SERVICES -> "నమ్మ సేవలు"
+    NAMMA_SERVICES -> "యాత్రి సేవలు"
+    LAST_CHOSEN_VARIANT_NOT_AVAILABLE -> "చివరిగా ఎంచుకున్న రైడ్ రకం లేదు. దయచేసి వేరుగా రైడ్ ఐచ్ఛికంగా ఎంచుకోండి"

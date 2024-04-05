@@ -19,7 +19,7 @@ import Data.Tuple.Nested ((/\))
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
 import Data.Maybe
 import Prelude
-import Data.Array(singleton,catMaybes, any, sortWith, reverse, take, filter, (:), length, (!!), fromFoldable, toUnfoldable, snoc, cons, concat, null)
+import Data.Array(singleton,catMaybes, any, sortWith, reverse, take, filter, (:), length, (!!), fromFoldable, toUnfoldable, snoc, cons, concat, null, head)
 import Data.Ord (comparing)
 import Screens.Types (LocationListItemState(..),SourceGeoHash, DestinationGeoHash,SuggestionsMap(..), Suggestions(..), Trip(..), LocationItemType(..), HomeScreenState(..), Address, LocationType(..))
 import Helpers.Utils(getDistanceBwCordinates, getDifferenceBetweenDates, parseSourceHashArray, toStringJSON, fetchImage, FetchImageFrom(..))
@@ -45,6 +45,8 @@ import Accessor (_contents, _lat, _lon, _toLocation, _otpCode)
 import Data.String as DS
 import Data.Array as DA
 import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
+import Accessor (_vehicleVariant)
 
 foreign import setSuggestionsMapInJson :: Json -> Json
 foreign import getSuggestedDestinationsJsonFromLocal :: String -> Json
@@ -73,7 +75,7 @@ addOrUpdateSuggestedDestination sourceGeohash destination suggestionsMap config 
                     prefixImageUrl = fetchImage FF_ASSET "ny_ic_recent_search",
                     locationItemType = Just SUGGESTED_DESTINATIONS
                   }),
-            tripSuggestions : []
+            variantBasedTripSuggestions : []
           } 
           suggestionsMap 
           config.geohashLimitForMap
@@ -124,7 +126,7 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config =
     else insertSuggestionInMap 
           sourceGeohash 
           { destinationSuggestions:[],
-            tripSuggestions : 
+            variantBasedTripSuggestions : 
               (singleton 
                 trip { 
                   recencyDate = Just $ getCurrentUTC "",
@@ -136,7 +138,7 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config =
           config.geohashLimitForMap
     where
       updateSuggestions :: Suggestions -> Maybe Suggestions
-      updateSuggestions suggestion = Just $ suggestion {tripSuggestions = updateTrips suggestion.tripSuggestions} 
+      updateSuggestions suggestion = Just $ suggestion {variantBasedTripSuggestions = updateTrips suggestion.variantBasedTripSuggestions} 
 
       updateTrips ::  Array Trip -> Array Trip
       updateTrips trips = updateTrip trips
@@ -215,7 +217,7 @@ getTripsFromCurrLatLng :: Number -> Number -> SuggestedDestinationAndTripsConfig
 getTripsFromCurrLatLng srcLat srcLng suggestionsConfig suggestionsMap = 
   let encodedSourceHash = runFn3 encodeGeohash srcLat srcLng suggestionsConfig.geohashPrecision
       geohashNeighbors = cons encodedSourceHash $ geohashNeighbours encodedSourceHash
-      tripArrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).tripSuggestions) geohashNeighbors)
+      tripArrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).variantBasedTripSuggestions) geohashNeighbors)
       sortedTripList = take 30 (reverse (sortWith (\trip -> fromMaybe 0.0 trip.locationScore) tripArrWithNeighbors))
   in sortedTripList
 
@@ -243,7 +245,7 @@ getSuggestionsMapFromLocal lazycheck =
 dummySuggestionsObject :: Suggestions
 dummySuggestionsObject = {
   destinationSuggestions : [],
-  tripSuggestions : []
+  variantBasedTripSuggestions : []
 }
 
 getGeoHash :: Number -> Number -> Int -> String
@@ -278,7 +280,8 @@ rideListToTripsTransformer listRes =
              destinationAddress : destinationAddressTransformed,
              isSpecialZone : (null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode)),
              locationScore : Nothing,
-             frequencyCount : Nothing
+             frequencyCount : Nothing,
+             vehicleVariant : (fromMaybe dummyRideAPIEntity (head ride.rideList))^._vehicleVariant
          }
 
 updateMapWithPastTrips :: Array Trip -> HomeScreenState -> SuggestionsMap

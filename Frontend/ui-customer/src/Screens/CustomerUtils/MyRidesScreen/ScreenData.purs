@@ -106,6 +106,6 @@ dummyIndividualCard = {
   , zoneType : NOZONE
   , vehicleVariant : Nothing
   , isSrcServiceable : true
-  , optionsVisibility : true
+  , optionsVisibility : false
   , merchantExoPhone : ""
 }

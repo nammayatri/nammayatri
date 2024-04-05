@@ -313,7 +313,8 @@ config =
           spread: 24.0,
           opacity : 0.14
         }
-      }
+      },
+      showAdditionalServicesNew : true
     }
   , appData : defaultAppData
   , navigationAppConfig : defaultNavigationAppConfig

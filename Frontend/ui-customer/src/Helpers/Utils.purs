@@ -955,3 +955,12 @@ getMetroConfigFromCity city =
         , errorPopupTitle
         , showCancelButton
         }
+        
+getImageBasedOnCity :: String -> String
+getImageBasedOnCity image =
+  let cityStr = getValueToLocalStore CUSTOMER_LOCATION
+      city = getCityFromString cityStr
+  in
+  if city == AnyCity 
+    then fetchImage FF_ASSET image
+    else fetchImage FF_ASSET $ image <> "_" <> DS.toLower cityStr

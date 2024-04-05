@@ -73,7 +73,7 @@ import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getCityConfig)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getCityConfig, getVehicleVariantImage, getImageBasedOnCity)
 import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -200,9 +200,11 @@ screen initialState =
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
               SettingPrice -> do
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                when 
-                  (initialState.props.isRepeatRide && initialState.data.config.estimateAndQuoteConfig.enableOnlyAuto) 
-                    $ startTimer initialState.data.config.suggestedTripsAndLocationConfig.repeatRideTime "repeatRide" "1" push RepeatRideCountDown
+                let isRepeatRideEstimate = checkRecentRideVariant initialState
+                if (initialState.props.isRepeatRide && isRepeatRideEstimate) 
+                    then startTimer initialState.data.config.suggestedTripsAndLocationConfig.repeatRideTime "repeatRide" "1" push RepeatRideCountDown
+                else if (initialState.props.isRepeatRide && not isRepeatRideEstimate) then void $ pure $ toast $ getString LAST_CHOSEN_VARIANT_NOT_AVAILABLE
+                else pure unit
               PickUpFarFromCurrentLocation -> 
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               RideAccepted -> do
@@ -1120,18 +1122,18 @@ emptySuggestionsBanner state push =
     , gravity CENTER_HORIZONTAL
     , orientation VERTICAL
     , visibility $ boolToVisibility $ (not (suggestionViewVisibility state)) && not (state.props.showShimmer && null state.data.tripSuggestions) && state.data.config.homeScreen.bannerViewVisibility
-    ][  textView $
+    ][  imageView 
+        [ height $ V 190
+        , width $ V 220 
+        , imageWithFallback $ getImageBasedOnCity "ny_ic_home_illustration"
+        ]
+      , textView $
         [ text $ getVarString WELCOME_TEXT $ Arr.singleton appName
         , gravity CENTER
         , width MATCH_PARENT 
         , margin $ MarginBottom 12
         , color Color.black900
         ] <> (FontStyle.subHeading1 LanguageStyle)
-      , imageView 
-        [ height $ V 236
-        , width $ V 260 
-        , imageWithFallback $ fetchImage FF_ASSET $ getHomeScreenIllustration state
-        ]
       , textView $
         [ text $ getString TAP_WHERE_TO_TO_BOOK_RIDE
         , height WRAP_CONTENT
@@ -1140,14 +1142,6 @@ emptySuggestionsBanner state push =
         , color Color.black700
         ] <> (FontStyle.body1 LanguageStyle)
      ]
-    where 
-      getHomeScreenIllustration :: HomeScreenState -> String
-      getHomeScreenIllustration state = let 
-        cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
-        in (if state.data.config.autoVariantEnabled && cityConfig.enableCabs then "ny_ic_home_illustration_cab_auto"
-          else if state.data.config.autoVariantEnabled then "ny_ic_home_illustration_auto"
-          else if cityConfig.enableCabs then "ny_ic_home_illustration_cab"
-          else "ny_ic_home_illustration_auto")
 
 savedLocationsView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 savedLocationsView state push =
@@ -1381,10 +1375,10 @@ rideRequestFlowView push state =
     ]
     where
       getViewBasedOnStage :: (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-      getViewBasedOnStage push state = 
+      getViewBasedOnStage push state = do
         if state.props.currentStage == SettingPrice then
-          if isCityInList state.props.city [Bangalore] && state.props.isRepeatRide then
-            estimatedFareView push state
+          if state.props.isRepeatRide && checkRecentRideVariant state
+            then estimatedFareView push state
           else
             ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
         else if state.props.currentStage == ConfirmingLocation then
@@ -1398,6 +1392,8 @@ rideRequestFlowView push state =
 isStageInList :: Stage -> Array Stage -> Boolean
 isStageInList stage = any (_ == stage)
 
+checkRecentRideVariant :: HomeScreenState -> Boolean
+checkRecentRideVariant state = any (\item -> item.vehicleVariant == state.props.repeatRideVariant) state.data.specialZoneQuoteList
 
 -------------- rideRatingCardView -------------
 rideRatingCardView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -3172,6 +3168,7 @@ homeScreenViewV2 push state =
                           , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
                           , suggestionsView push state
                           , emptySuggestionsBanner state push
+                          , footerView push state
                           ])
                   ]
               ]
@@ -3747,15 +3744,15 @@ repeatRideCard push state index trip =
     , onClick push $ const (RepeatRide index trip)
     , rippleColor Color.rippleShade
     ][ linearLayout
-        [ height $ V 26
-        , width $ V 26
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
         , gravity CENTER
         , padding (Padding 3 3 3 3)
         , margin $ MarginRight 4
         ][ imageView
-            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_repeat_trip"
-            , height $ V 20
-            , width $ V 20
+            [ imageWithFallback $ fetchImage FF_ASSET $ getVehicleVariantImage trip.vehicleVariant
+            , height $ V 50
+            , width $ V 30
             ]
         ]
       , linearLayout
@@ -3965,10 +3962,17 @@ additionalServicesView push state =
     , padding $ PaddingHorizontal 16 16
     , visibility $ boolToVisibility $ not state.props.showShimmer
     , margin $ MarginTop 20
-    ][  textView $
-          [ text $ getString NAMMA_SERVICES
-          , color Color.black900
-          ] <> FontStyle.subHeading1 TypoGraphy
+    ][  linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER_VERTICAL
+        ]
+        [ textView $
+            [ text $ getString NAMMA_SERVICES
+            , color Color.black900
+            ] <> FontStyle.subHeading1 TypoGraphy
+          , newView push state
+        ]
       , linearLayout
           [ height WRAP_CONTENT
           , margin $ MarginTop 16
@@ -4085,3 +4089,15 @@ getConfirmLocationCategory state =
     HOTSPOT (isJust state.props.hotSpot.selectedSpot)
   else 
     state.props.confirmLocationCategory
+
+newView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+newView push state = 
+  textView $
+    [ text $ "✨ " <> getString NEW
+    , color Color.white900
+    , cornerRadius 16.0
+    , background Color.blue900
+    , padding $ Padding 6 4 6 4
+    , margin $ MarginLeft 8
+    , visibility $ boolToVisibility $ state.data.config.homeScreen.showAdditionalServicesNew
+    ] <> FontStyle.tags TypoGraphy

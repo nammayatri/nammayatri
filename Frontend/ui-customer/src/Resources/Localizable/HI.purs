@@ -1075,4 +1075,5 @@ getHI stringKey =
         I_NEED_HELP_WITH_MY_RECENT_RIDE -> "मुझे मेरी हाल की सवारी में मदद चाहिए"
         CONTINUE_WITH_SAFETY_SETTINGS -> "सुरक्षा सेटिंग्स के साथ जारी रखें"
         TAP_WHERE_TO_TO_BOOK_RIDE -> "राइड बुक करने के लिए 'कहाँ जाना है?' टैप करें!"
-        NAMMA_SERVICES -> "हमारी सेवाएं"
+        NAMMA_SERVICES -> "यात्री सेवाएँ"
+        LAST_CHOSEN_VARIANT_NOT_AVAILABLE -> "अंतिम चयनित यात्रा प्रकार उपलब्ध नहीं है। कृपया कोई वैकल्पिक यात्रा विकल्प चुनें।"

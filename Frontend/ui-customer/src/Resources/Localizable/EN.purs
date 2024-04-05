@@ -1075,4 +1075,5 @@ getEN stringKey =
         I_NEED_HELP_WITH_MY_RECENT_RIDE -> "I need help with my recent ride"
         CONTINUE_WITH_SAFETY_SETTINGS -> "Continue with Safety Settings"
         TAP_WHERE_TO_TO_BOOK_RIDE -> "Tap 'Where to?' to book your ride!"
-        NAMMA_SERVICES -> "Namma Services"
+        NAMMA_SERVICES -> "Yatri Services"
+        LAST_CHOSEN_VARIANT_NOT_AVAILABLE -> "Last chosen ride type not available. Please choose an alternate ride option."
