@@ -183,8 +183,12 @@ getPersonDetails (personId, _) mbToss = do
     if (isNothing person.customerReferralCode)
       then do
         newCustomerReferralCode <- DR.generateCustomerReferralCode
-        void $ QPerson.updateCustomerReferralCode personId newCustomerReferralCode
-        pure $ Just newCustomerReferralCode
+        checkIfReferralCodeExists <- QPerson.findPersonByCustomerReferralCode newCustomerReferralCode
+        if (isNothing checkIfReferralCodeExists)
+          then do
+            void $ QPerson.updateCustomerReferralCode personId newCustomerReferralCode
+            pure $ Just newCustomerReferralCode
+          else pure Nothing
       else pure person.customerReferralCode
   return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode
   where

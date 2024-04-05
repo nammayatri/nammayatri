@@ -452,7 +452,9 @@ verify tokenId req = do
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
   when (isNothing person.referralCode) $ do
     newCustomerReferralCode <- generateCustomerReferralCode
-    void $ Person.updateCustomerReferralCode person.id newCustomerReferralCode
+    checkIfReferralCodeExists <- Person.findPersonByCustomerReferralCode newCustomerReferralCode
+    when (isNothing checkIfReferralCodeExists) $
+      void $ Person.updateCustomerReferralCode person.id newCustomerReferralCode
   return $ AuthVerifyRes token personAPIEntity
   where
     checkForExpiry authExpiry updatedAt =
