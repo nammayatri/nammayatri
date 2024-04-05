@@ -11,13 +11,18 @@ CREATE TABLE atlas_driver_offer_bpp.merchant_operating_city (
     city character varying(255) NOT NULL
 );
 
-INSERT INTO atlas_driver_offer_bpp.merchant_operating_city (id, merchant_id, merchant_short_id, city)
-SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4() AS id,
-    id AS merchant_id,
-    short_id AS merchant_short_id,
-    city
-FROM atlas_driver_offer_bpp.merchant;
+-- INSERT INTO atlas_driver_offer_bpp.merchant_operating_city (id, merchant_id, merchant_short_id, city)
+-- SELECT
+--     atlas_driver_offer_bpp.uuid_generate_v4() AS id,
+--     id AS merchant_id,
+--     short_id AS merchant_short_id,
+--     city
+-- FROM atlas_driver_offer_bpp.merchant;
+
+-- for local testing only
+INSERT INTO atlas_driver_offer_bpp.merchant_operating_city (id, merchant_id, merchant_short_id, city) VALUES
+('favorit0-0000-0000-0000-00000000city', 'favorit0-0000-0000-0000-00000favorit', 'NAMMA_YATRI_PARTNER', 'Kochi'),
+('nearest-drivers-testing-org00000city', 'nearest-drivers-testing-organization', 'OTHER_MERCHANT_2', 'Kochi');
 
 -- ADDING MERCHANT_OPERATING_CITY_ID TO EXISTING TABLES
 ALTER TABLE atlas_driver_offer_bpp.booking
@@ -31,6 +36,9 @@ ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offe
 
 ALTER TABLE atlas_driver_offer_bpp.registration_token
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
+
+-- for local testing only
+UPDATE atlas_driver_offer_bpp.registration_token SET merchant_operating_city_id = 'favorit0-0000-0000-0000-00000000city';
 
 ALTER TABLE atlas_driver_offer_bpp.search_request
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
