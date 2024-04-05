@@ -1049,4 +1049,5 @@ getFR stringKey =
         GO_TO_SELECTED_SPOT_FOR_PICKUP -> "Aller au lieu sélectionné pour le ramassage"
         SELECT_POPULAR_SPOT_FOR_HASSLE_FREE_PICKUP -> "Sélectionnez un endroit populaire pour un ramassage sans tracas"
         TAP_WHERE_TO_TO_BOOK_RIDE -> "Appuyez sur 'Où aller ?' pour réserver votre trajet !"
-        NAMMA_SERVICES -> "Nos Services"
+        NAMMA_SERVICES -> "Services pour les voyageurs"
+        LAST_CHOSEN_VARIANT_NOT_AVAILABLE -> "Le dernier type de trajet choisi n'est pas disponible. Veuillez choisir une autre option de trajet."

@@ -11,7 +11,7 @@
     "prod:android": "npm-run-all compile:purs \"bundle:android\"",
     "prod:ios": "npm-run-all compile:purs bundle:ios",
     "compileAndCreateJsa": "sh compileAndCreateJsa.sh",
-    "dev": "spago build --watch",
+    "dev": "spago build -w --purs-args '--purs=fastpurs'",
     "webpack-dev": "webpack-dev-server --env sandbox --mode development --config webpack.config.js --host",
     "start": "npm-run-all -p dev webpack-dev",
     "clean": "sh cleanSpago.sh"

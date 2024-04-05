@@ -25,16 +25,17 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (os)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), (<>), (<<<), (==), const, not)
+import Prelude (Unit, ($), (<>), (<<<), (==), const, not, show)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..),alpha, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, stroke, text, textSize, textView, visibility, weight, width, accessibilityHint, accessibility, rippleColor)
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (IndividualRideCardState, Stage(..), ZoneType(..))
 import Styles.Colors as Color
+import Data.Maybe (Maybe(..), isJust)
 
 view :: forall w .  (Action  -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -126,7 +127,13 @@ rideDetails push state =
   , padding $ PaddingHorizontal 16 16
   , PrestoList.onClickHolder push OnClick
   , margin (MarginBottom 20)
-  ][  textView
+  ][  imageView 
+      [ PrestoList.imageUrlHolder "variantImage"
+      , height $ V 32
+      , width $ V 32
+      , margin $ MarginRight 8
+      ]
+    , textView
       ([ PrestoList.textHolder "date"
       , color Color.black800
       , lineHeight "20"

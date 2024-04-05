@@ -15,7 +15,7 @@
 
 module Screens.MyRidesScreen.Controller where
 
-import Accessor (_amount, _computedPrice, _contents, _description, _driverName, _estimatedDistance, _id, _list, _rideRating, _toLocation, _vehicleNumber, _otpCode)
+import Accessor (_amount, _computedPrice, _contents, _description, _driverName, _estimatedDistance, _id, _list, _rideRating, _toLocation, _vehicleNumber, _otpCode, _vehicleVariant)
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.IndividualRideCard.Controller as IndividualRideCardController
@@ -26,7 +26,7 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool)
-import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, fetchImage, FetchImageFrom(..), isParentView, emitTerminateApp, getCityFromString)
+import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, fetchImage, FetchImageFrom(..), isParentView, emitTerminateApp, getCityFromString, getVehicleVariantImage, getAssetLink)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (firebaseLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
@@ -47,6 +47,7 @@ import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 import ConfigProvider
+import PrestoDOM.List as PrestoList
 import JBridge (toast)
 
 instance showAction :: Show Action where
@@ -188,7 +189,14 @@ eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController Prima
 eval _ state = continue state
 
 myRideListTransformerProp :: Array RideBookingRes  -> Array ItemState
-myRideListTransformerProp listRes =  filter (\item -> (any (_ == item.status) [(toPropValue "COMPLETED"), (toPropValue "CANCELLED"), (toPropValue "REALLOCATED")])) (map (\(RideBookingRes ride) -> {
+myRideListTransformerProp listRes =  filter (\item -> (any (_ == item.status) [(toPropValue "COMPLETED"), (toPropValue "CANCELLED"), (toPropValue "REALLOCATED")])) (map (\(RideBookingRes ride) -> 
+  let imageInfo = case fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleVariant)of
+                    Just variant -> split (Pattern ",") (getVehicleVariantImage $ show variant)
+                    Nothing -> ["",""]
+      imageName = fromMaybe "" $ imageInfo !!0
+      imageUrl = fromMaybe "" $ imageInfo !!1
+  in
+  { 
     date : toPropValue (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
     time : toPropValue (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
     source : toPropValue (decodeAddress (Booking ride.fromLocation)),
@@ -208,8 +216,9 @@ myRideListTransformerProp listRes =  filter (\item -> (any (_ == item.status) [(
     status : toPropValue (if ride.status == "REALLOCATED" then "CANCELLED" else ride.status),
     rideEndTimeUTC : toPropValue (fromMaybe ride.createdAt ride.rideEndTime),
     alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5",
-    zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone"
-}) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
+    zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone",
+    variantImage : toPropValue $ PrestoList.renderImageSource $ PrestoList.ImageUrl imageUrl imageName
+  }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
 
 myRideListTransformer :: MyRidesScreenState -> Array RideBookingRes -> Array IndividualRideCardState
@@ -267,7 +276,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , zoneType : specialTags.priorityTag
   , vehicleVariant : fetchVehicleVariant rideDetails.vehicleVariant
   , isSrcServiceable: state.data.isSrcServiceable
-  , optionsVisibility : true
+  , optionsVisibility : false
   , merchantExoPhone : ride.merchantExoPhone
 }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 

@@ -1060,4 +1060,5 @@ getTE stringKey =
     THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "ఇది మీకు తక్కువ సమయంలో పికప్ అనుభవాన్ని అందిస్తుంది."
     IS_AT_PICKUP_LOCATION -> "పికప్ లొకేషన్‌లో ఉంది"
     TAP_WHERE_TO_TO_BOOK_RIDE -> "మీ రైడ్ బుక్ చేయడానికి 'ఎక్కడకు?' ని టాప్ చేయండి!"
-    NAMMA_SERVICES -> "నమ్మ సేవలు"
+    NAMMA_SERVICES -> "యాత్రి సేవలు"
+    LAST_CHOSEN_VARIANT_NOT_AVAILABLE -> "చివరిగా ఎంచుకున్న రైడ్ రకం లేదు. దయచేసి వేరుగా రైడ్ ఐచ్ఛికంగా ఎంచుకోండి"

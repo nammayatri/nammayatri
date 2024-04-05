@@ -100,6 +100,7 @@ import Data.Argonaut.Core as AC
 import Data.Argonaut.Decode.Parser as ADP
 import Common.DefaultConfig as CC
 import Common.Types.Config as CCT
+import Helpers.Images as HI
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -910,3 +911,28 @@ findSpecialPickupZone stringGeoJson gates lat lon =
                 Nothing -> Nothing
         Nothing -> Nothing
     _, _ -> Nothing
+
+cityImageMap ::  HI.CityBasedImage -> Maybe String
+cityImageMap image = let 
+    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+      in
+    case city of
+      Bangalore -> HI.getBangaloreImage image
+      Kolkata -> HI.getKolkataImage image
+      Paris -> HI.getParisImage image
+      Kochi -> HI.getCochinImage image
+      Delhi -> HI.getDelhiImage image
+      Hyderabad -> HI.getHyderabadImage image
+      Mumbai -> HI.getMumbaiImage image
+      Chennai -> HI.getChennaiImage image
+      Coimbatore -> HI.getCoimbatoreImage image
+      Pondicherry -> HI.getPondicherryImage image
+      Goa -> HI.getGoaImage image
+      Pune -> HI.getPuneImage image
+      Mysore -> HI.getMysoreImage image
+      Tumakuru -> HI.getTumakuruImage image
+      AnyCity -> Nothing
+
+getImageBasedOnCity :: HI.CityBasedImage -> String
+getImageBasedOnCity image =
+  fetchImage FF_ASSET $ fromMaybe (HI.getDefaultImage image) (cityImageMap image)

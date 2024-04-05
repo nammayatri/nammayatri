@@ -224,7 +224,7 @@ config =
     enableRepeatTripBackfilling : false,
     forceLogReferrerUrl : true,
     enableSelfServe : true,
-    enableAdditionalServices : false,
+    enableAdditionalServices : true,
     enableSafetyFlow : true, 
     shareWithEmergencyContacts: true,
     enableAutoReferral : true,

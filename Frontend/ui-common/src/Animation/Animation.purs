@@ -125,6 +125,16 @@ scaleYAnim config =
     , PrestoAnim.interpolator interpolator
     ] config.ifAnim
 
+inverseScaleYAnim :: AnimConfig -> PrestoAnim.Animation
+inverseScaleYAnim config =
+   PrestoAnim.Animation
+    [ PrestoAnim.duration 200
+    , PrestoAnim.fromScaleY config.toScaleY
+    , PrestoAnim.toScaleY config.fromScaleY
+    , PrestoAnim.repeatCount (PrestoAnim.Repeat 0)
+    , PrestoAnim.interpolator interpolator
+    ] config.ifAnim
+
 scaleAnim :: AnimConfig -> PrestoAnim.Animation
 scaleAnim config =
    PrestoAnim.Animation

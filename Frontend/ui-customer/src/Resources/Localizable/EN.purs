@@ -1045,4 +1045,5 @@ getEN stringKey =
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "This provides you an instant pickup experience."
         IS_AT_PICKUP_LOCATION -> "is at pickup location"
         TAP_WHERE_TO_TO_BOOK_RIDE -> "Tap 'Where to?' to book your ride!"
-        NAMMA_SERVICES -> "Namma Services"
+        NAMMA_SERVICES -> "Yatri Services"
+        LAST_CHOSEN_VARIANT_NOT_AVAILABLE -> "Last chosen ride type not available. Please choose an alternate ride option."

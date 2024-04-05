@@ -969,7 +969,8 @@ homeScreenFlow = do
                                                         locationScore: Just 1.0,
                                                         recencyDate : Nothing,
                                                         frequencyCount : Just 1,
-                                                        isSpecialZone : state.props.isSpecialZone
+                                                        isSpecialZone : state.props.isSpecialZone,
+                                                        vehicleVariant : state.data.driverInfoCardState.vehicleVariant
                                                         }
                                             currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
                                             currentMap = getSuggestionsMapFromLocal FunctionCall
@@ -1514,7 +1515,7 @@ homeScreenFlow = do
           (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
           geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
           pickUpPoints = mapSpecialZoneGates srcSpecialLocation.gatesInfo
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = cityName, locateOnMapProps{ sourceLocationName = Just srcSpecialLocation.locationName, sourceGeoJson = Just geoJson, sourceGates = Just pickUpPoints }}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = cityName, locateOnMapProps{ sourceLocationName = Just srcSpecialLocation.locationName, sourceGeoJson = Just geoJson, sourceGates = Just pickUpPoints}, repeatRideVariant = state.vehicleVariant}})
       setValueToLocalStore CUSTOMER_LOCATION $ show cityName
       when (state.isSpecialZone) $ do
         modifyScreenState $ HomeScreenStateType 
@@ -2559,11 +2560,11 @@ fetchAndModifyLocationLists savedLocationResp = do
             geohashNeighbors = Arr.cons currentGeoHash $ geohashNeighbours currentGeoHash
             currentGeoHashDestinations = fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations currentGeoHash suggestionsMap suggestionsConfig.geohashLimitForMap)
             arrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).destinationSuggestions) geohashNeighbors)
-            tripArrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).tripSuggestions) geohashNeighbors)
+            tripArrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).variantBasedTripSuggestions) geohashNeighbors)
             sortedDestinationsList = Arr.take 30 (Arr.reverse (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) arrWithNeighbors))
             suggestedDestinationsArr = differenceOfLocationLists sortedDestinationsList savedLocationWithHomeOrWorkTag
 
-            allValuesFromMap = concat $ map (\item -> item.tripSuggestions)(getMapValuesArray suggestionsMap)
+            allValuesFromMap = concat $ map (\item -> item.variantBasedTripSuggestions)(getMapValuesArray suggestionsMap)
             sortedValues = Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) allValuesFromMap
             reversedValues = Arr.reverse sortedValues
             topValues = Arr.take 30 reversedValues

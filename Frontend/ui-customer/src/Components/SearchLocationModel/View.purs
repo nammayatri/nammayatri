@@ -17,7 +17,7 @@ module Components.SearchLocationModel.View where
 
 import Common.Types.App
 
-import Animation (translateYAnimFromTop)
+import Animation (translateYAnimFromTop, fadeIn)
 import Animation.Config (translateFullYAnimWithDurationConfig, translateYAnimHomeConfig, Direction(..))
 import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem as LocationListItem
@@ -51,6 +51,8 @@ import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Mobility.Prelude (boolToVisibility)
+import Helpers.Utils as HU
+import Helpers.Images as HI
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -63,9 +65,11 @@ view push state =
                     _           -> Color.transparent --"#FFFFFF"
       , margin $ MarginBottom (if state.isSearchLocation == LocateOnMap then bottomSpacing else 0)
       , onBackPressed push (const $ GoBack)
-      ][ PrestoAnim.animationSet
-          [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]
-          $ linearLayout
+      ][ 
+        PrestoAnim.animationSet
+          [ fadeIn true ]
+          $ 
+          linearLayout
           [ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
@@ -524,23 +528,23 @@ findPlacesIllustration push state =
       , margin $ Margin 7 ((screenHeight unit)/7) 16 0
       ]
       [ imageView
-          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_empty_suggestions"
+          [ imageWithFallback $ HU.getImageBasedOnCity HI.EMPTY_SUGGESTIONS
           , height $ V 99
           , width $ V 133
           , margin $ MarginBottom 12
           ]
-      , linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , gravity CENTER
-          , margin $ MarginBottom 5
-          ]
-          [ textView $
-              [ text $ (getVarString WELCOME_TEXT [appName]) <> "!"
-              , color Color.black700
-              , gravity CENTER
-              ] <> FontStyle.body4 LanguageStyle
-          ]
+      -- , linearLayout
+      --     [ width MATCH_PARENT
+      --     , height WRAP_CONTENT
+      --     , gravity CENTER
+      --     , margin $ MarginBottom 5
+      --     ]
+      --     [ textView $
+      --         [ text $ (getVarString WELCOME_TEXT [appName]) <> "!"
+      --         , color Color.black700
+      --         , gravity CENTER
+      --         ] <> FontStyle.body4 LanguageStyle
+      --     ]
       , linearLayout
           [ width $ V (screenWidth unit - 40)
           , height WRAP_CONTENT

@@ -15,14 +15,14 @@
 
 module Screens.RideSelectionScreen.Transformer where
 
-import Accessor (_computedPrice, _contents, _driverName, _estimatedDistance, _id, _otpCode, _rideRating, _toLocation, _vehicleNumber)
+import Accessor (_computedPrice, _contents, _driverName, _estimatedDistance, _id, _otpCode, _rideRating, _toLocation, _vehicleNumber, _vehicleVariant)
 import Common.Types.App (LazyCheck(..))
 import Data.Array (filter, null, (!!))
 import Data.Lens ((^.))
 import Data.Maybe (fromMaybe, isJust)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (convertUTCtoISC)
-import Helpers.Utils (FetchImageFrom(..), fetchImage, isHaveFare, withinTimeRange, getCityFromString)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, isHaveFare, withinTimeRange, getCityFromString, getVehicleVariantImage)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (map, show, ($), (&&), (+), (-), (/=), (<>), (==), (||))
@@ -62,7 +62,8 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     status : toPropValue ride.status,
     rideEndTimeUTC : toPropValue $ fromMaybe ride.createdAt ride.rideEndTime,
     alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5",
-    zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone"
+    zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone",
+    variantImage : toPropValue $ getVehicleVariantImage $ rideApiEntity^._vehicleVariant
   })
   
    listRes)

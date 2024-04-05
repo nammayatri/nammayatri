@@ -1047,4 +1047,5 @@ getBN stringKey =
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "এটি আপনাকে তাৎক্ষণিক পিকআপ অভিজ্ঞতা প্রদান করে।"
         IS_AT_PICKUP_LOCATION -> "পিকআপ স্থানে রয়েছে"
         TAP_WHERE_TO_TO_BOOK_RIDE -> "আপনার রাইড বুক করতে 'কোথায় যাবেন?' ট্যাপ করুন!"
-        NAMMA_SERVICES -> "আমাদের সেবাগুলি"
+        NAMMA_SERVICES -> "যাত্রী সেবাসমূহ"
+        LAST_CHOSEN_VARIANT_NOT_AVAILABLE -> "সর্বশেষ নির্বাচিত যাত্রা প্রকার উপলব্ধ নেই। দয়া করে একটি বিকল্প যাত্রা বিকল্প চয়ন করুন।"
