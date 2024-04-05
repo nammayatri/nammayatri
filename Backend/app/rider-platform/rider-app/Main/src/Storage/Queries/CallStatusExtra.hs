@@ -15,8 +15,8 @@ import Storage.Queries.OrphanInstances.CallStatus
 
 -- Extra code goes here --
 
-createCallStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => CallStatus -> m ()
-createCallStatus cs = do
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => CallStatus -> m ()
+create cs = do
   callS <- findByCallSid (cs.callId)
   case callS of
     Nothing -> createWithKV cs
