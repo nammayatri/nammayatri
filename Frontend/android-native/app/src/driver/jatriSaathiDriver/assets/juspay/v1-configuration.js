@@ -37,7 +37,17 @@ window.getMerchantConfig = function () {
       "START_TAKING_RIDES_AND_REFER",
       "REFERRED_DRIVERS_INFO",
       "REFERRED_CUSTOMERS_INFO",
-      "SHARE_NAMMA_YATRI"
+      "SHARE_NAMMA_YATRI",
+      "YATRI_COINS_FAQS_QUES1_ANS1",
+      "YATRI_COINS_FAQS_QUES1_ANS2",
+      "YATRI_COINS_FAQS_QUES1_ANS3",
+      "YATRI_COINS_FAQS_QUES5_ANS1",
+      "YATRI_COINS_FAQS_QUES3_ANS1",
+      "YATRI_COINS_FAQS_QUES3_ANS2",
+      "YATRI_COINS_FAQS_QUES4_ANS1",
+      "YATRI_COINS_USAGE_POPUP",
+      "EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS",
+      "NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS"
     ],
     "leaderBoard": {
       "isMaskedName": false
@@ -103,7 +113,17 @@ window.getMerchantConfig = function () {
       "START_TAKING_RIDES_AND_REFER" : "Start taking rides and referring drivers to sign up on Yatri Sathi Driver App",
       "REFERRED_DRIVERS_INFO" : "Referred Drivers who have registered on Yatri Sathi",
       "REFERRED_CUSTOMERS_INFO" : "Referred Customers who have registered on Yatri Sathi",
-      "SHARE_NAMMA_YATRI" : "Share Yatri Sathi"
+      "SHARE_NAMMA_YATRI" : "Share Yatri Sathi",
+      "YATRI_COINS_FAQS_QUES1_ANS1" : "Yatri Coins are the rewards you earn on day-to-day activities on Yatri Sathi like rides, good ratings etc.",
+      "YATRI_COINS_FAQS_QUES1_ANS2" : "The earned coins can be used to avail discounts in payments to Yatri Sathi.",
+      "YATRI_COINS_FAQS_QUES1_ANS3" : "Each Yatri Coin can be converted to a discount of 0.1 and can be used for discounts on payments to Yatri Sathi. More avenues to avail discounts will be added in the future",
+      "YATRI_COINS_FAQS_QUES5_ANS1" : "You must complete your first ride with Yatri Sathi to start earning Yatri Coins.",
+      "YATRI_COINS_FAQS_QUES3_ANS1" : "Coins are earned through day-to-day activities on the app like rides, good ratings etc. You don’t need to do anything different.",
+      "YATRI_COINS_FAQS_QUES3_ANS2" : "You can earn more coins by exhibiting good behavior like low cancellations, getting good ratings from customers, etc. You lose coins by exhibiting bad behaviour like high unjustified cancellations, poor (1 or 2 star ratings) etc.",
+      "YATRI_COINS_FAQS_QUES4_ANS1" : "You can use the earned coins to pay your subscription dues free-of-cost within the validity period",
+      "YATRI_COINS_USAGE_POPUP" : "Yatri Coins will be converted into discounts that you can avail against your ride charges.",
+      "EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS" : "Coins kamane ke liye app par active rahein",
+      "NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS" : "Ab app par har kriya ke liye coins kamayein aur in coins ko bhugtan me use karein."
     },
     "hindiStrings": {
       "NEED_IT_TO_ENABLE_LOCATION": "Yatri Sathi partner ड्राइवर के लोकेशन की निगरानी के लिए अपना स्थान साझा करने के लिए लोकेशन डेटा एकत्र करता है, तब भी जब ऐप बंद हो या उपयोग में न हो।",
@@ -132,7 +152,17 @@ window.getMerchantConfig = function () {
       "START_TAKING_RIDES_AND_REFER" : "यात्री साथी ड्राइवर ऐप पर साइन अप करने के लिए सवारी लेना और ड्राइवरों को रेफर करना शुरू करें",
       "REFERRED_DRIVERS_INFO" : "यात्री साथी पर पंजीकृत हुए सुझाए गए ड्राइवर्स",
       "REFERRED_CUSTOMERS_INFO" : "यात्री साथी पर पंजीकृत हुए सुझाए गए ग्राहक",
-      "SHARE_NAMMA_YATRI" : "यात्री साथी को साझा करें"
+      "SHARE_NAMMA_YATRI" : "यात्री साथी को साझा करें",
+      "YATRI_COINS_FAQS_QUES1_ANS1" : "यात्री साथी पर दैनिक गतिविधियों जैसे कि सवारियों, अच्छी रेटिंग आदि पर आपकी प्राप्तियों को यात्री सिक्के कहा जाता है।",
+      "YATRI_COINS_FAQS_QUES1_ANS2" : "प्राप्त किए गए सिक्के को यात्री साथी के भुगतानों में छूट प्राप्त करने के लिए इस्तेमाल किया जा सकता है।",
+      "YATRI_COINS_FAQS_QUES1_ANS3" : "प्रत्येक यात्री सिक्का 0.1 की छूट में परिवर्तित किया जा सकता है और यात्री साथी के भुगतानों में छूट प्राप्त करने के लिए उपयोग किया जा सकता है। भविष्य में छूट पाने के और भी रास्ते जोड़े जाएंगे।",
+      "YATRI_COINS_FAQS_QUES5_ANS1" : "यात्री कोइन्स अर्जित करना शुरू करने के लिए आपको यात्री साथी के साथ अपनी पहली यात्रा पूरी करनी होगी।",
+      "YATRI_COINS_FAQS_QUES3_ANS1" : "सिक्के एप्लिकेशन पर दैनिक गतिविधियों जैसे कि राइड्स, अच्छी रेटिंग इत्यादि के माध्यम से कमाए जाते हैं। आपको कुछ अलग नहीं करना पड़ता।",
+      "YATRI_COINS_FAQS_QUES3_ANS2" : "आप अच्छे व्यवहार का प्रदर्शन करके अधिक सिक्के कमा सकते हैं, जैसे कि कम रद्दीकरण, ग्राहकों से अच्छी रेटिंग प्राप्त करना, आदि। आप बुरे व्यवहार का प्रदर्शन करके सिक्के खो सकते हैं, जैसे कि अधिक अनावश्यक रद्दीकरण, कम रेटिंग (1 या 2 स्टार) इत्यादि।",
+      "YATRI_COINS_FAQS_QUES4_ANS1" : "आप प्राप्त किए गए सिक्कों का उपयोग करके अपने सदस्यता के देयता का भुगतान मुफ्त में कर सकते हैं, जो योग्यता की अवधि के भीतर हो।",
+      "YATRI_COINS_USAGE_POPUP" : "यात्री सिक्के छूटों में परिवर्तित किए जाएंगे जिन्हें आप अपने राइड शुल्क के खिलाफ लाभ उठा सकते हैं।",
+      "EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS" : "सिक्के कमाने के लिए एप्लिकेशन पर सक्रिय रहें।",
+      "NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS" : "अब आप पर हर क्रिया के लीयते कॉइन कमाएं और इन साइंस को भुगतान में उसे करे।"
     },
     "bengaliStrings": {
       "NEED_IT_TO_ENABLE_LOCATION": "জাটি সাথি ড্রাইভার ড্রাইভারের বর্তমান অবস্থান নিরীক্ষণের জন্য আপনার অবস্থানটি ভাগ করে নিতে সক্ষম করতে অবস্থানের ডেটা সংগ্রহ করে, এমনকি অ্যাপটি বন্ধ থাকলেও বা ব্যবহার না করা হয়।",
@@ -161,7 +191,17 @@ window.getMerchantConfig = function () {
       "START_TAKING_RIDES_AND_REFER" : "যাত্রী সাথী ড্রাইভার অ্যাপে সাইন আপ করতে রাইড করা এবং ড্রাইভারদের রেফার করা শুরু করুন",
       "REFERRED_DRIVERS_INFO" : "যাত্রী সাথীতে নিবেশন করেছেন যাদেরকে সূচনা দেওয়া হয়েছে",
       "REFERRED_CUSTOMERS_INFO" : "যাত্রী সাথীতে নিবেশন করেছেন যাদেরকে সূচনা দেওয়া হয়েছে",
-      "SHARE_NAMMA_YATRI" : "যাত্রী সহযোগী ভাগ করুন"
+      "SHARE_NAMMA_YATRI" : "যাত্রী সহযোগী ভাগ করুন",
+      "YATRI_COINS_FAQS_QUES1_ANS1" : "যাত্রী সাথীতে দিনব্যাপী কার্যকলাপে রাইড, রেফারেন্স, ভালো রেটিং ইত্যাদি কিছু করে আপনি যাত্রী কয়েন অর্জন করেন।",
+      "YATRI_COINS_FAQS_QUES1_ANS2" : "অর্জিত কয়েনগুলি যাত্রী সাথীতে অর্থ প্রদানে ছাড় পেতে ব্যবহার করা যেতে পারে।",
+      "YATRI_COINS_FAQS_QUES1_ANS3" : "প্রতিটি যাত্রী কয়েনকে রূপান্তরিত করা যাবে টাকা ছাড়ে। 0.10 এবং সাবস্ক্রিপশন প্ল্যানে ডিসকাউন্ট পাওয়ার জন্য ব্যবহার করা যেতে পারে। ডিসকাউন্ট পাওয়ার আরও সুযোগ ভবিষ্যতে যোগ করা হবে",
+      "YATRI_COINS_FAQS_QUES3_ANS1" : "রাইড, ভালো রেটিং ইত্যাদির মতো অ্যাপে প্রতিদিনের কার্যকলাপের মাধ্যমে কয়েন উপার্জন করা যেতে পারে। আপনাকে আলাদা কিছু করতে হবে না।",
+      "YATRI_COINS_FAQS_QUES3_ANS2" : "আপনি ভাল আচরণ বজায় রেখে অতিরিক্ত কয়েন উপার্জন করতে পারেন, যেমন রাইড বাতিলকরণ কমিয়ে আনা এবং গ্রাহকদের কাছ থেকে ধারাবাহিকভাবে উচ্চ রেটিং পাওয়া। আপনি খারাপ আচরণ দেখানোর জন্য কয়েন হারাবেন যেমন ঘন ঘন অন্যায্য বাতিলকরণ বা খারাপ রেটিং পাওয়া (1 বা 2 স্টার রেটিং)",
+      "YATRI_COINS_FAQS_QUES4_ANS1" : "আপনি বৈধ সময়ের মধ্যে বিনামূল্যে আপনার সাবস্ক্রিপশন ফি প্রদান করতে আপনার উপার্জন করা কয়েন ব্যবহার করতে পারেন।",
+      "YATRI_COINS_FAQS_QUES5_ANS1" : "আপনার প্রথম ইউসাথী রাইড সম্পন্ন করতে হবে যাত্রী কয়েন উপার্জন করার জন্য।",
+      "YATRI_COINS_USAGE_POPUP" : "আপনি অ্যাপে প্রতিটি কার্যের জন্য কয়েন অর্জন করতে পারেন এবং এই কয়েন গুলি অর্থ পরিশোধে ব্যবহার করতে পারেন।",
+      "EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS" : "যাত্রী কয়েনগুলি ডিসকাউন্টে পরিণত হবে যা আপনি আপনার যাত্রার খরচের জন্য ব্যবহার করতে পারেন।",
+      "NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS" : "কয়েন আয় করতে অ্যাপ্লিকেশনে সক্রিয় থাকুন।"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
@@ -231,6 +271,7 @@ window.getMerchantConfig = function () {
       , "enableImageUpload" : true
       , "enableGender" : false
       , "enableOtpRide" : true
+      , "enableYatriCoins" : true
     }
     , "appData" : {
       "link" : "https://play.google.com/store/apps/details?id=in.juspay.jatrisaathidriver"
@@ -273,6 +314,24 @@ window.getMerchantConfig = function () {
   , "waitTimeConfig" : {
     "enableWaitTime" : false
   }
+  , "coinsConfig" : {
+    "minCoinSliderValue" : 200,
+    "stepFunctionForCoinConversion" : 200,
+    "numOfRideThresholdForCoins" : "8+",
+    "eightPlusRidesCoins" : "+40",
+    "rideCompletedCoins" : "+4",
+    "fiveStarRatingCoins" : "+20",
+    "oneOrTwoStarRatingCoins" : "-40",
+    "rideCancellationCoins" : "-40",
+    "whatAreYatriCoinFAQ" : "",
+    "howToEarnYatriCoinFAQ" : "",
+    "howToRedeemYatriCoinFAQ" : "",
+    "rideCompletedCoinEvent" : true,
+    "eightRideCoinEvent" : true,
+    "bookingCancelCoinEvent" : true,
+    "fiveStarCoinEvent" : true,
+    "oneTwoStarCoinEvent" : true,
+  }
   , "cityConfig" : [
     {
       "cityName" : "Kolkata",
@@ -286,8 +345,9 @@ window.getMerchantConfig = function () {
       "showDriverReferral" : true,
       "showCustomerReferral" : true,
       "uploadRCandDL" : true, 
-      "enableYatriCoins" : false,
+      "enableYatriCoins" : true,
       "vehicleNSImg" : "",
+      "showEarningSection" : true,
       "registration" : {
           "supportWAN" : "",
           "callSupport" : false,

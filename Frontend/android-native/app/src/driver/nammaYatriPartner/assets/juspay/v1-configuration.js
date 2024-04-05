@@ -566,6 +566,19 @@ window.getMerchantConfig = function () {
       "waitingCharges" : 1.50
       }
   ]
+  , "coinsConfig" : {
+    "minCoinSliderValue" : 250,
+    "stepFunctionForCoinConversion" : 250,
+    "eightPlusRidesCoins" : "+25",
+    "purpleRideCoins" : "+5",
+    "customerReferralCoins" : "+200",
+    "whatAreYatriCoinFAQ" : "https://www.youtube.com/shorts/vt_Z4wu4otY",
+    "howToEarnYatriCoinFAQ" : "https://www.youtube.com/shorts/teQyPdP1fRc",
+    "howToRedeemYatriCoinFAQ" : "https://www.youtube.com/shorts/dU3XxAisGjo",
+    "eightRideCoinEvent" : true,
+    "prupleRideCoinEvent" : true,
+    "driverToCustomerRefCoinEvent" : true
+  }
   , "dashboard" : {
         "enable" : true,
         "url" : "https://nammayatri.in/open?source=in-app"

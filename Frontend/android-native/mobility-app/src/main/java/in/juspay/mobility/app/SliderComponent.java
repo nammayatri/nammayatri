@@ -45,7 +45,7 @@ public class SliderComponent {
         }
     }
 
-    public void addSlider(String id, String callback, float conversionRate, int minLimit, int maxLimit, int defaultValue, String toolTipId, BridgeComponents bridgeComponents){
+    public void addSlider(String id, String callback, int stepFunctionForCoinConversion, float conversionRate, int minLimit, int maxLimit, int defaultValue, String toolTipId, BridgeComponents bridgeComponents){
         Activity activity = bridgeComponents.getActivity();
         Context context = bridgeComponents.getContext();
         if (activity != null) {
@@ -108,24 +108,23 @@ public class SliderComponent {
             tooltipLayout.addView(prefTextView);
             tooltipLayout.addView(imageView);
             tooltipLayout.addView(suffTextView);
-
-            float minVal = (minLimit * conversionRate);
+            int nearestMultiple = Math.round(seekBar.getProgress() / stepFunctionForCoinConversion) * stepFunctionForCoinConversion;
+            float minVal = (nearestMultiple * conversionRate);
             String minValueToShow = Math.ceil(minVal) == Math.floor(minVal) ? String.valueOf((int)minVal) : String.valueOf(minVal);
-            prefTextView.setText(String.valueOf(minLimit));
+            prefTextView.setText(String.valueOf(nearestMultiple));
             suffTextView.setText(" = ₹" + minValueToShow);
             int seekBarPosition = seekBar.getThumb().getBounds().centerX();
             int thumbWidth = thumbDrawable.getIntrinsicWidth();
-            int thumbHalfWidth = thumbWidth ;
-            final int[] tooltipX = {seekBarPosition - thumbHalfWidth + dpToPx(context, 12)};
+            final int[] tooltipX = {seekBarPosition - thumbWidth + dpToPx(context, 12)};
             int tooltipY = seekBar.getHeight() - tooltipLayout.getHeight();
             toolTipView.addView(tooltipLayout);
-            updateTooltipPosition(tooltipLayout, tooltipX[0], tooltipY, (int) (toolTipView.getX()+toolTipView.getWidth()) > tooltipX[0] + tooltipLayout.getWidth());
+            updateTooltipPosition(tooltipLayout, tooltipX[0], tooltipY, true);
             layout.addView(seekBar);
             seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 @Override
                 public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                     int thumbPosition = seekBar.getThumb().getBounds().centerX();
-                    tooltipX[0] = thumbPosition - thumbHalfWidth + dpToPx(context, 12);
+                    tooltipX[0] = thumbPosition - thumbWidth + dpToPx(context, 12);
                     updateTooltipPosition(tooltipLayout, tooltipX[0], tooltipY, (int) (toolTipView.getX()+toolTipView.getWidth()) > tooltipX[0] + tooltipLayout.getWidth());
                     float newVal = (progress * conversionRate);
                     String valueToShow = Math.ceil(newVal) == Math.floor(newVal) ? String.valueOf((int) newVal) : String.format("%.2f", newVal);
@@ -136,21 +135,32 @@ public class SliderComponent {
                 @Override
                 public void onStartTrackingTouch(SeekBar seekBar) {
                     int thumbPosition = seekBar.getThumb().getBounds().centerX();
-                    tooltipX[0] = thumbPosition - thumbHalfWidth + dpToPx(context, 12);
+                    tooltipX[0] = thumbPosition - thumbWidth + dpToPx(context, 12);
                     updateTooltipPosition(tooltipLayout, tooltipX[0], tooltipY, (int) (toolTipView.getX()+toolTipView.getWidth()) > tooltipX[0] + tooltipLayout.getWidth());
                 }
 
                 @Override
                 public void onStopTrackingTouch(SeekBar seekBar) {
                     int thumbPosition = seekBar.getThumb().getBounds().centerX();
-                    tooltipX[0] =thumbPosition - thumbHalfWidth + dpToPx(context, 12);
+                    tooltipX[0] =thumbPosition - thumbWidth + dpToPx(context, 12);
                     updateTooltipPosition(tooltipLayout, tooltipX[0], tooltipY, (int) (toolTipView.getX()+toolTipView.getWidth()) > tooltipX[0] + tooltipLayout.getWidth());
-                    int nearestMultipleOf250 = Math.round(seekBar.getProgress() / 250f) * 250;
-                    seekBar.setProgress(nearestMultipleOf250);
+                    int nearestMultiple = Math.round(seekBar.getProgress() / stepFunctionForCoinConversion) * stepFunctionForCoinConversion;
+                    seekBar.setProgress(nearestMultiple);
                     String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                            callback, nearestMultipleOf250);
+                            callback, nearestMultiple);
                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                 }
+            });
+
+            seekBar.post(() -> {
+                int seekBarPosition1 = seekBar.getThumb().getBounds().centerX();
+                int thumbWidth1 = thumbDrawable.getIntrinsicWidth();
+                int tooltipX1 = seekBarPosition1 - thumbWidth1 / 2 + dpToPx(context, 12);
+                int tooltipY1 = seekBar.getHeight() - tooltipLayout.getHeight();
+                updateTooltipPosition(tooltipLayout, tooltipX1, tooltipY1 + 5, true);
+
+                int nearestMultiple1 = Math.round(seekBar.getProgress() / stepFunctionForCoinConversion) * stepFunctionForCoinConversion;
+                seekBar.setProgress(nearestMultiple1);
             });
 
         }

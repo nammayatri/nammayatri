@@ -174,6 +174,7 @@ decodeSpecialLocationList dummy =
 
 type SliderConfig = { 
   id :: String,
+  stepFunctionForCoinConversion :: Int,
   sliderConversionRate :: Number,
   sliderMinValue :: Int,
   sliderMaxValue :: Int,

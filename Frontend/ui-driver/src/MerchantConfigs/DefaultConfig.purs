@@ -530,6 +530,7 @@ config =
   , coinsConfig : {
       minCoinSliderValue : 250,
       maxCoinSliderValue : 2500,
+      stepFunctionForCoinConversion : 250,
       numOfRideThresholdForCoins : "8+",
       leaderBoardThresholdForCoins : "+500",
       customerReferralCoins : "+200",
@@ -539,9 +540,16 @@ config =
       fiveStarRatingCoins : "+1",
       oneOrTwoStarRatingCoins : "-1",
       rideCancellationCoins : "-5",
-      whatAreYatriCoinFAQ : "https://www.youtube.com/shorts/vt_Z4wu4otY",
-      howToEarnYatriCoinFAQ : "https://www.youtube.com/shorts/teQyPdP1fRc",
-      howToRedeemYatriCoinFAQ : "https://www.youtube.com/shorts/dU3XxAisGjo"
+      whatAreYatriCoinFAQ : "",
+      howToEarnYatriCoinFAQ : "",
+      howToRedeemYatriCoinFAQ : "",
+      rideCompletedCoinEvent : false,
+      eightRideCoinEvent : false,
+      prupleRideCoinEvent : false,
+      bookingCancelCoinEvent : false,
+      fiveStarCoinEvent : false,
+      oneTwoStarCoinEvent : false,
+      driverToCustomerRefCoinEvent : false
   }
   , inAppKeyboardModalConfig : {
       enableDeviceKeyboard : true

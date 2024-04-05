@@ -220,6 +220,7 @@ type NegotiationUnit = {
 type CoinsConfig = {
   minCoinSliderValue :: Int,
   maxCoinSliderValue :: Int,
+  stepFunctionForCoinConversion :: Int,
   numOfRideThresholdForCoins :: String,
   leaderBoardThresholdForCoins :: String,
   customerReferralCoins :: String,
@@ -231,7 +232,14 @@ type CoinsConfig = {
   rideCancellationCoins :: String,
   whatAreYatriCoinFAQ :: String,
   howToEarnYatriCoinFAQ :: String,
-  howToRedeemYatriCoinFAQ :: String
+  howToRedeemYatriCoinFAQ :: String,
+  rideCompletedCoinEvent :: Boolean,
+  eightRideCoinEvent :: Boolean,
+  prupleRideCoinEvent :: Boolean,
+  bookingCancelCoinEvent :: Boolean,
+  fiveStarCoinEvent :: Boolean,
+  oneTwoStarCoinEvent :: Boolean,
+  driverToCustomerRefCoinEvent :: Boolean
 }
 
 type InAppKeyboardModalConfig = {
