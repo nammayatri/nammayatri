@@ -76,6 +76,7 @@ type AppConfigCustomer a =
   , tipDisplayDuration :: Int
   , tipsEnabled :: Boolean
   , tipEnabledCities :: Array String
+  , safety :: Safety
   | a
   }
 
@@ -391,4 +392,8 @@ type DriverLocationPollingConfig = {
 
 type Banners = {
   homeScreenSafety :: Boolean
+}
+
+type Safety = {
+  pastRideInterval :: Int
 }

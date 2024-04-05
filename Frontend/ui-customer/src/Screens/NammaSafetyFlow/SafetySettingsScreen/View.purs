@@ -9,9 +9,9 @@
 module Screens.NammaSafetyFlow.SafetySettingsScreen.View where
 
 import Animation (fadeIn, screenAnimation)
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/=), (<<<), (<>), (==))
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (<$>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, alignParentBottom, background, color, cornerRadius, gravity, height, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textFromHtml, textView, visibility, weight, width)
-import Screens.NammaSafetyFlow.ComponentConfig (goToDrillButtonConfig, shareTripPopupConfig, startNSOnboardingButtonConfig)
+import Screens.NammaSafetyFlow.ComponentConfig (goToDrillButtonConfig, shareTripPopupConfig, startNSOnboardingButtonConfig, pastRideSOSConfirmationPopConfig)
 import Screens.NammaSafetyFlow.Components.HelperViews as HV
 import Common.Types.App (LazyCheck(..))
 import Components.PopupWithCheckbox.View as PopupWithCheckbox
@@ -31,7 +31,7 @@ import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
-import Presto.Core.Types.Language.Flow (doAff)
+import Presto.Core.Types.Language.Flow (fork, await, doAff, Flow)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
@@ -41,7 +41,14 @@ import Services.API (RideShareOptions(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import Types.App (defaultGlobalState)
+import Types.App (defaultGlobalState, GlobalState(..))
+import Engineering.Helpers.Commons (liftFlow)
+import Data.Maybe (Maybe(..), maybe)
+import Data.Either (Either(..))
+import Helpers.Pooling (delay)
+import Data.Time.Duration (Milliseconds(..))
+import Components.PopUpModal as PopUpModal
+import JBridge as JB
 
 screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -50,13 +57,7 @@ screen initialState =
   , name: "SafetySettingsScreen"
   , globalEvents:
       [ ( \push -> do
-            void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
-              $ do
-                  response <- Remote.getEmergencySettingsBT ""
-                  lift $ lift $ doAff do liftEffect $ push $ UpdateEmergencySettings response
-                  lift $ lift $ doAff do liftEffect $ push $ DisableShimmer
-                  lift $ lift $ EHU.toggleLoader false
-                  pure unit
+            void $ launchAff $ EHC.flowRunner defaultGlobalState $ checkAndStatus push initialState
             pure $ pure unit
         )
       ]
@@ -68,6 +69,37 @@ screen initialState =
           _ = spy "SafetySettingsScreen state " state
         eval action state
   }
+
+checkAndStatus :: forall st. (Action -> Effect Unit) -> NammaSafetyScreenState -> Flow GlobalState Unit
+checkAndStatus push state = do
+  mbRideListResp <- getLastRide state.props.checkPastRide
+  eiResponse <- Remote.getEmergencySettings ""
+  case eiResponse of
+    Right response -> do
+      case mbRideListResp of
+        Nothing -> pure unit
+        Just control -> do
+          eiResp <- await control
+          liftFlow $ handleLastRide eiResp
+      liftFlow $ push $ UpdateEmergencySettings response
+      liftFlow $ push $ DisableShimmer
+    Left err -> do
+      let errMessage = if err.code == 400 
+                        then err.response.errorMessage 
+                        else getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+      void $ pure $ JB.toast errMessage
+  EHU.toggleLoader false
+  where
+  getLastRide checkPastRide =
+    if checkPastRide then do
+      listControl <- fork $ Remote.rideBookingListWithStatus "1" "0" "COMPLETED"
+      pure $ Just $ listControl
+    else
+      pure $ Nothing
+
+  handleLastRide eiResp = case eiResp of
+    Right resp -> push $ CheckRideListResp resp
+    Left err -> pure unit
 
 view :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -90,6 +122,7 @@ view push state =
             , HV.shimmerView state
             ]
         , if state.props.showRideShareOptionsPopup then PopupWithCheckbox.view (push <<< ShareTripOptionPopup) $ shareTripPopupConfig state else HV.emptyTextView
+        , if state.props.showPastRidePopUp then PopUpModal.view (push <<< PopUpModalAC) $ pastRideSOSConfirmationPopConfig state else HV.emptyTextView
         ]
   where
   padding' =

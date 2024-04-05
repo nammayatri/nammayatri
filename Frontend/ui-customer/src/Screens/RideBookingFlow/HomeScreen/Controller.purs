@@ -372,61 +372,6 @@ instance loggableAction :: Loggable Action where
   --     SaveFavouriteCardController.TagSelected act -> trackAppActionClick appId (getScreen HOME_SCREEN) "save_fav_card" "tag_selected"
   --     SaveFavouriteCardController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "save_fav_card" "no_action"
   --   UpdateCurrentLocation lat lng -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "update_current_location"
-  --   EmergencyHelpModalAC act -> case act of
-  --     EmergencyHelpController.GenericHeaderAC act -> case act of
-  --       GenericHeaderController.PrefixImgOnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "generic_header_back_icon"
-  --       GenericHeaderController.SuffixImgOnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "generic_header_action" "forward_icon"
-  --     EmergencyHelpController.CallPolicePopup -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "call_police_popup"
-  --     EmergencyHelpController.ContactSupportPopup -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "contact_support_popup"
-  --     EmergencyHelpController.CallSuccessfulPopup -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "call_successful_popup"
-  --     EmergencyHelpController.CallContactPopUp contact -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "call_contact_popup"
-  --     EmergencyHelpController.StoreContacts -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "store_contacts"
-  --     EmergencyHelpController.AddedEmergencyContacts -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "add_emergency_contacts"
-  --     EmergencyHelpController.CallPolice act -> case act of
-  --       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "call_police_cancel"
-  --       PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "call_police_accept"
-  --       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "no_action"
-  --       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "image"
-  --       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "primary_edit_text"
-  --       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "countdown_updated"
-  --       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "tip_clicked"
-  --       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "popup_dismissed"
-  --       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "options_with_html_click"
-  --       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "secondary_text_click"
-  --     EmergencyHelpController.CallEmergencyContact act -> case act of
-  --       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "call_contact_cancel"
-  --       PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "call_contact_accept"
-  --       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "no_action"
-  --       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "image"
-  --       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "primary_edit_text"
-  --       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "countdown_updated"
-  --       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "tip_clicked"
-  --       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "popup_dismissed"
-  --       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "options_with_html_click"
-  --       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "secondary_text_click"
-  --     EmergencyHelpController.CallSuccessful act -> case act of
-  --       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "call_feedback_cancel"
-  --       PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "call_feedback_accept"
-  --       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "no_action"
-  --       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "image"
-  --       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "primary_edit_text"
-  --       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "countdown_updated"
-  --       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "tip_clicked"
-  --       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "popup_dismissed"
-  --       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "options_with_html_click"
-  --       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "secondary_text_click"
-  --     EmergencyHelpController.ContactSupport act -> case act of
-  --       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "contact_support_cancel"
-  --       PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "contact_support_accept"
-  --       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "no_action"
-  --       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "image"
-  --       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "primary_edit_text"
-  --       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "countdown_updated"
-  --       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "tip_clicked"
-  --       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "popup_dismissed"
-  --       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "options_with_html_click"
-  --       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "secondary_text_click"
-  --     EmergencyHelpController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "no_action"
   --   PopUpModalShareAppAction act -> case act of
   --     PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_share_app" "cancel"
   --     PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_share_app" "accept"
@@ -828,7 +773,6 @@ data Action = NoAction
             | RateCardAction RateCard.Action
             | ShowRateCard
             | UpdateETA Int Int
-            | EmergencyHelpModalAC EmergencyHelpController.Action
             | WaitingTimeAction String String Int
             | DriverArrivedAction String
             | PredictionClickedAction LocationListItemController.Action
@@ -1133,33 +1077,30 @@ eval (UpdateCurrentStage stage) state = do
     continue state
 
 eval OnResumeCallback state =
-  if(state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) && state.props.emergencyHelpModelState.waitingDialerCallback then 
-    continue state {props {emergencyHelpModelState {showCallSuccessfulPopUp = true}}}
-  else 
-    case getValueToLocalNativeStore LOCAL_STAGE of
-      "FindingQuotes" -> do
-        let secondsLeft = findingQuotesSearchExpired false
-        case (methodArgumentCount "startLottieProcess") == 1 of
-          true  -> do
-            let findingQuotesProgress = 1.0 - (toNumber secondsLeft)/(toNumber (getSearchExpiryTime "LazyCheck"))
-            if secondsLeft > 0 then
-              void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
-            else pure unit
-          false -> pure unit
-        case flowWithoutOffers WithoutOffers of
-          true | secondsLeft <= 0 -> do
-              _ <- pure $ updateLocalStage QuoteList
-              continueWithCmd state [do
-                let response = SelectListRes { selectedQuotes: Nothing, bookingId : Nothing }
-                pure $ GetQuotesList response
-              ]
-          _ -> continue state
-      "QuoteList" -> do
-        let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime "LazyCheck"))
-        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
-        continue state
-      "RideAccepted" | state.data.currentSearchResultType == QUOTES -> exit $ Retry state
-      _ -> continue state
+  case getValueToLocalNativeStore LOCAL_STAGE of
+    "FindingQuotes" -> do
+      let secondsLeft = findingQuotesSearchExpired false
+      case (methodArgumentCount "startLottieProcess") == 1 of
+        true  -> do
+          let findingQuotesProgress = 1.0 - (toNumber secondsLeft)/(toNumber (getSearchExpiryTime "LazyCheck"))
+          if secondsLeft > 0 then
+            void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
+          else pure unit
+        false -> pure unit
+      case flowWithoutOffers WithoutOffers of
+        true | secondsLeft <= 0 -> do
+            _ <- pure $ updateLocalStage QuoteList
+            continueWithCmd state [do
+              let response = SelectListRes { selectedQuotes: Nothing, bookingId : Nothing }
+              pure $ GetQuotesList response
+            ]
+        _ -> continue state
+    "QuoteList" -> do
+      let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime "LazyCheck"))
+      void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
+      continue state
+    "RideAccepted" | state.data.currentSearchResultType == QUOTES -> exit $ Retry state
+    _ -> continue state
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
@@ -1317,7 +1258,7 @@ eval (SendQuickMessage chatSuggestion) state = do
 
 eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = do
   if state.data.config.feature.enableChat then do
-    if not state.props.chatcallbackInitiated || state.props.emergencyHelpModal || state.data.waitTimeInfo then continue state else do
+    if not state.props.chatcallbackInitiated || state.data.waitTimeInfo then continue state else do
       _ <- pure $ performHapticFeedback unit
       _ <- pure $ updateLocalStage ChatWithDriver
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
@@ -1506,15 +1447,11 @@ eval BackPressed state = do
                           else if state.props.isSaveFavourite then continueWithCmd state [pure $ SaveFavouriteCardAction SaveFavouriteCardController.OnClose]
                           else if state.props.showShareAppPopUp then continue state{props{showShareAppPopUp=false}}
                           else if state.props.showMultipleRideInfo then continue state{props{showMultipleRideInfo=false}}
-                          else if state.props.emergencyHelpModelState.showContactSupportPopUp then continue state {props {emergencyHelpModelState{showContactSupportPopUp = false}}}
-                          else if state.props.emergencyHelpModelState.showCallPolicePopUp then continue state {props{emergencyHelpModelState{showCallPolicePopUp = false}}}
-                          else if state.props.emergencyHelpModelState.showCallSuccessfulPopUp then continue state {props{emergencyHelpModelState{showCallSuccessfulPopUp = false}}}
                           else if state.props.showLiveDashboard then do
                             continueWithCmd state [do
                               _ <- pure $ goBackPrevWebPage (getNewIDWithTag "webview")
                               pure NoAction
                             ]
-                          else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
                           else if state.data.ratingViewState.openReportIssue then continue state {data {ratingViewState {openReportIssue = false}}}
                           else if state.props.showEducationalCarousel then do 
@@ -1745,6 +1682,8 @@ eval WhereToClick state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
   exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }, rideSearchProps{sessionId = generateSessionId unit}}, data{source= if state.data.source == "" then getString CURRENT_LOCATION else state.data.source}}
   
+eval (RideCompletedAC RideCompletedCard.GoToSOS) state = exit $ GoToNammaSafety state true false 
+
 eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = 
   case state.data.ratingViewState.issueFacedView of
     true -> do
@@ -1902,40 +1841,6 @@ eval ShareRide state = do
             void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
             pure NoAction
          ]
-
-eval (EmergencyHelpModalAC (EmergencyHelpController.GenericHeaderAC  GenericHeaderController.PrefixImgOnClick)) state = continue state{props{emergencyHelpModal = false}}
-
-eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolicePopup)) state = continue state{props{emergencyHelpModelState{showCallPolicePopUp = true}}}
-
-eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupportPopup)) state = continue state{props{emergencyHelpModelState{showContactSupportPopUp = true}}}
-
-eval (EmergencyHelpModalAC (EmergencyHelpController.CallContactPopUp item)) state= continue state{props{emergencyHelpModelState{showCallContactPopUp = true, currentlySelectedContact = item}}}
-
-eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton1Click)) state = continue state{props{emergencyHelpModelState{showCallContactPopUp = false}}}
-
-eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton2Click)) state = do
-    void <- pure $ showDialer state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo false -- TODO: FIX_DIALER
-    let newState = state{props{emergencyHelpModelState{showCallContactPopUp = false, waitingDialerCallback = true}}}
-    updateAndExit newState $ CallContact newState
-
-eval (EmergencyHelpModalAC (EmergencyHelpController.CallSuccessful PopUpModal.OnButton1Click)) state = do
-    let newState = state{props{emergencyHelpModelState{waitingDialerCallback = false, showCallSuccessfulPopUp = false, sosStatus = "NotResolved"}}}
-    updateAndExit newState $ UpdateSosStatus newState
-eval (EmergencyHelpModalAC (EmergencyHelpController.CallSuccessful PopUpModal.OnButton2Click)) state = do
-    let newState = state{props{emergencyHelpModelState{waitingDialerCallback = false, showCallSuccessfulPopUp = false, sosStatus = "Resolved"}}}
-    updateAndExit newState $ UpdateSosStatus newState
-
-eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolice PopUpModal.OnButton1Click)) state = continue state{props{emergencyHelpModelState{showCallPolicePopUp = false}}}
-eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolice PopUpModal.OnButton2Click)) state = do
-    void $ pure $  showDialer "112" false -- TODO: FIX_DIALER
-    let newState = state{props{emergencyHelpModelState{showCallPolicePopUp = false, waitingDialerCallback = true}}}
-    updateAndExit newState $ CallPolice newState
-
-eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport PopUpModal.OnButton1Click)) state = continue state{props{emergencyHelpModelState{showContactSupportPopUp = false}}}
-eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport PopUpModal.OnButton2Click)) state = do
-    void $ pure $  showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
-    let newState = state{props{emergencyHelpModelState{showContactSupportPopUp = false, waitingDialerCallback = true}}}
-    updateAndExit newState $ CallSupport newState
 
 eval (CancelRidePopUpAction (CancelRidePopUp.Button1 PrimaryButtonController.OnClick)) state = do
       _ <- pure $ performHapticFeedback unit

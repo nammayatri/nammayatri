@@ -10,19 +10,19 @@ module Screens.NammaSafetyFlow.ActivateSafetyScreen.View where
 
 import Animation (screenAnimation)
 import Mobility.Prelude (boolToInvisibility, boolToVisibility)
-import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, when, ($), (&&), (/=), (<<<), (<>), (==), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, singleLine, stroke, text, textFromHtml, textView, visibility, weight, width)
-import Screens.NammaSafetyFlow.ComponentConfig (dismissSoSButtonConfig, startTestDrillButtonConfig)
+import Prelude
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Accessiblity(..), Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, singleLine, stroke, text, textFromHtml, textView, visibility, weight, width, accessibilityHint, accessibility)
+import Screens.NammaSafetyFlow.ComponentConfig
 import Screens.NammaSafetyFlow.Components.HelperViews (emptyTextView, layoutWithWeight, safetyPartnerView, separatorView, shimmerView)
-import Screens.Types (NammaSafetyScreenState)
+import Screens.Types (NammaSafetyScreenState, IndividualRideCardState)
 import Timers (startTimer)
 import Common.Types.App (LazyCheck(..))
 import Components.PrimaryButton as PrimaryButton
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (elem, mapWithIndex, null)
-import Data.Maybe (Maybe(..))
+import Data.Array (elem, mapWithIndex, null, length)
+import Data.Maybe (Maybe(..), maybe)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
@@ -40,31 +40,46 @@ import Services.API (GetSosDetailsRes(..), SosFlow(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Components.SourceToDestination as SourceToDestination
+import Data.Either (Either (..))
+import PrestoDOM.Animation as PrestoAnim
+import JBridge as JB
 
 screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
 screen initialState =
   { initialState
   , view: view
   , name: "ActivateSafetyScreen"
-  , globalEvents:
-      [ ( \push -> do
-            void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+  , globalEvents:[ ( \push -> do
+            void $ launchAff $ EHC.flowRunner defaultGlobalState
               $ do
-                  response <- Remote.getEmergencySettingsBT ""
-                  lift $ lift $ doAff do liftEffect $ push $ UpdateEmergencySettings response
-                  when (initialState.data.sosType /= Just Police)
-                    $ do
-                        if elem initialState.data.sosId [ "", "mock-sos" ] then do
-                          (GetSosDetailsRes sosDetails) <- Remote.getSosDetails initialState.data.rideId
-                          case sosDetails.sos of
-                            Just sos -> do
-                              lift $ lift $ doAff do liftEffect $ push $ UpdateSosId sos
-                              pure unit
-                            Nothing -> pure unit
-                        else
-                          lift $ lift $ doAff do liftEffect $ push $ GoToActiveSos
-                  lift $ lift $ doAff do liftEffect $ push $ DisableShimmer
-                  pure unit
+                  eiResponse <- Remote.getEmergencySettings ""
+                  case eiResponse of
+                    Right response -> do
+                      EHC.liftFlow $ push $ UpdateEmergencySettings response
+                      when (initialState.data.sosType /= Just Police)
+                        $ do
+                            if elem initialState.data.sosId ["", "mock-sos"] then do
+                              eiSosResponse <- Remote.getSosDetails getRideId
+                              case eiSosResponse of
+                                Right (GetSosDetailsRes sosDetails) -> 
+                                  case sosDetails.sos of
+                                    Just sos -> do
+                                      EHC.liftFlow $ push $ UpdateSosId sos
+                                      pure unit
+                                    Nothing -> pure unit
+                                Left err -> do
+                                  let errMessage = if err.code == 400 
+                                                     then err.response.errorMessage 
+                                                     else getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+                                  void $ pure $ JB.toast errMessage
+                            else
+                              EHC.liftFlow $ push $ GoToActiveSos
+                      EHC.liftFlow $ push $ DisableShimmer
+                      pure unit
+                    Left err -> pure unit
             pure $ pure unit
         )
       ]
@@ -76,6 +91,10 @@ screen initialState =
           _ = spy "ActivateSafetyScreen state " state
         eval action state
   }
+  where
+    getRideId = case initialState.data.lastRideDetails of
+                  Nothing -> initialState.data.rideId
+                  Just ride -> ride.rideId
 
 view :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -100,15 +119,17 @@ view push state =
             , padding padding'
             , visibility $ boolToVisibility $ not state.props.showShimmer
             ]
-            [ case state.props.showTestDrill, state.props.confirmTestDrill || state.props.triggeringSos of
-                true, _ -> Header.testSafetyHeaderView (push <<< SafetyHeaderAction)
-                _, true -> emptyTextView
-                false, false -> Header.view (push <<< SafetyHeaderAction) headerConfig
-            , case state.props.confirmTestDrill, state.props.triggeringSos, (state.props.showCallPolice || state.props.isSafetyCenterDisabled) of
-                true, _, _ -> confirmSafetyDrillView state push
-                _, _, true -> dialPoliceView state push
-                false, true, _ -> triggeringSosView state push
-                false, false, _ -> activateSafetyView state push
+            [ case state.props.showTestDrill, state.props.confirmTestDrill || state.props.triggeringSos, state.props.reportPastRide && not state.props.confirmTestDrill of
+                _, _, true -> Header.view (push <<< SafetyHeaderAction) $ postRideHeaderConfig state
+                true, _,_ -> Header.testSafetyHeaderView (push <<< SafetyHeaderAction)
+                _, true, _ -> emptyTextView
+                false, false,_ -> Header.view (push <<< SafetyHeaderAction) headerConfig
+            , case state.props.confirmTestDrill, state.props.triggeringSos, (state.props.showCallPolice || state.props.isSafetyCenterDisabled), state.props.reportPastRide of
+                true, _, _, _ -> confirmSafetyDrillView state push
+                _, _, true, _ -> dialPoliceView state push
+                _, _, _, true -> postRideSosView push state
+                false, true, _, false-> triggeringSosView state push
+                false, false, _, false -> activateSafetyView state push
             ]
         , shimmerView state
         ]
@@ -234,6 +255,7 @@ type ImageTextViewConfig
     , useFullWidth :: Boolean
     , image :: Maybe String
     , visibility :: Boolean
+    , textStyle :: FontStyle.Style
     }
 
 imageWithTextView :: ImageTextViewConfig -> forall w. PrestoDOM (Effect Unit) w
@@ -266,7 +288,7 @@ imageWithTextView config =
           , height WRAP_CONTENT
           , singleLine false
           ]
-        <> FontStyle.tags TypoGraphy
+        <> (FontStyle.getFontStyle config.textStyle LanguageStyle)
     ]
 
 emergencyContactsView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
@@ -308,7 +330,7 @@ emergencyContactsView state push =
             <> FontStyle.body1 TypoGraphy
         ]
     , textView
-        $ [ text $ getString EMERGENCY_CONTACTS_CAN_TAKE_ACTION
+        $ [ text $ getString $ EMERGENCY_CONTACTS_CAN_TAKE_ACTION "EMERGENCY_CONTACTS_CAN_TAKE_ACTION"
           , color Color.white900
           , visibility $ boolToVisibility $ state.props.showTestDrill && not (null state.data.emergencyContactsList)
           , gravity CENTER
@@ -374,10 +396,11 @@ emergencyContactsView state push =
     , usePadding: false
     , image: Nothing
     , visibility: true
+    , textStyle: FontStyle.Tags
     }
 
   configDescTwo =
-    { text': getString EMERGENCY_CONTACTS_CAN_TAKE_ACTION
+    { text': getString $ EMERGENCY_CONTACTS_CAN_TAKE_ACTION "EMERGENCY_CONTACTS_CAN_TAKE_ACTION"
     , isActive: true
     , textColor: Color.white900
     , useMargin: true
@@ -385,6 +408,7 @@ emergencyContactsView state push =
     , usePadding: false
     , image: Nothing
     , visibility: state.data.shareToEmergencyContacts && (not $ null state.data.emergencyContactsList)
+    , textStyle: FontStyle.Tags
     }
 
   configDescThree =
@@ -396,6 +420,7 @@ emergencyContactsView state push =
     , usePadding: false
     , image: Just "ny_ic_info_white"
     , visibility: true
+    , textStyle: FontStyle.Tags
     }
 
 otherActionsView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
@@ -499,6 +524,7 @@ otherActionsView state push =
     , useFullWidth: false
     , image: Just "ny_ic_police"
     , visibility: true
+    , textStyle: FontStyle.Tags
     }
 
   configActionTwo =
@@ -510,6 +536,7 @@ otherActionsView state push =
     , useFullWidth: false
     , image: Just "ny_ic_issue_box"
     , visibility: true
+    , textStyle: FontStyle.Tags
     }
 
   configActionTwo' =
@@ -521,6 +548,7 @@ otherActionsView state push =
     , useFullWidth: false
     , image: Just "ny_ic_support_unfilled"
     , visibility: true
+    , textStyle: FontStyle.Tags
     }
 
   configActionThree =
@@ -532,10 +560,11 @@ otherActionsView state push =
     , useFullWidth: false
     , image: Just "ny_ic_police"
     , visibility: not state.props.showTestDrill
+    , textStyle: FontStyle.Tags
     }
 
-disclaimerView :: forall w. NammaSafetyScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-disclaimerView state push =
+disclaimerView :: forall w. (Action -> Effect Unit) -> Visibility -> PrestoDOM (Effect Unit) w
+disclaimerView push vis =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -544,7 +573,7 @@ disclaimerView state push =
     , margin $ Margin 16 16 16 0
     , padding $ Padding 16 16 16 16
     , cornerRadius 12.0
-    , visibility $ boolToVisibility $ state.props.triggeringSos && not state.props.showTestDrill
+    , visibility vis
     ]
     [ textView
         $ [ text $ getString DISCLAIMER <> ":"
@@ -658,10 +687,199 @@ triggeringSosView state push =
     , orientation VERTICAL
     ]
     [ sosButtonView state push false
-    , disclaimerView state push
+    , disclaimerView push (boolToVisibility $ state.props.triggeringSos && not state.props.showTestDrill)
     , warningView (getString SOS_WILL_BE_DISABLED) (not state.props.showTestDrill) true
     , dismissSoSButtonView state push
     ]
+
+postRideSosView :: forall w . (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+postRideSosView push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , background Color.black900
+  , orientation VERTICAL
+  , padding $ PaddingBottom 20
+  ][ recentRideView push state
+  , actionListView push state
+  , linearLayout[width MATCH_PARENT, weight 1.0][]
+  , disclaimerView push VISIBLE
+  ]
+
+postRideHeaderConfig :: NammaSafetyScreenState -> Header.Config
+postRideHeaderConfig state =
+  (Header.config Language)
+    { learnMoreTitle = getString LEARN_ABOUT_NAMMA_SAFETY
+    , showLearnMore = true
+    , useLightColor = true
+    , title = getString SAFETY_CENTER
+    , showCrossImage = not state.props.showCallPolice
+    }
+
+
+recentRideView :: forall w . (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+recentRideView push state = maybe (linearLayout[][]) (\ride -> 
+  linearLayout
+    [ margin (Margin 16 16 16 16)
+    , background Color.blackOpacity12
+    , cornerRadius 8.0
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , stroke $ "1," <> Color.black700
+    , height WRAP_CONTENT
+    ][
+      linearLayout
+      [ height $ if EHC.os == "IOS" then V 134 else WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation HORIZONTAL
+      ][  imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_map_with_corners"
+          , cornerRadii $ Corners 8.0 true false false false
+          , height MATCH_PARENT
+          , width $ V 130
+          ]
+        , layoutWithWeight
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width $ V $ (EHC.screenWidth unit) - 162
+          , orientation VERTICAL
+          , margin (MarginLeft 12)
+          ][  dateAndTimeView ride
+            , SourceToDestination.view (push <<< SourceToDestinationAC) (sourceToDestinationConfig ride)
+            , driverRatingView ride
+            ]
+          ]
+      ]) state.data.lastRideDetails
+
+
+dateAndTimeView :: forall w .IndividualRideCardState -> PrestoDOM (Effect Unit) w
+dateAndTimeView ride =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , orientation HORIZONTAL
+  , margin $ Margin 0 12 0 0
+  , gravity CENTER_VERTICAL
+  ][  textView $
+      [ text ride.date
+      , color Color.white900
+      ] <> FontStyle.body16 LanguageStyle
+    , linearLayout
+      [ height MATCH_PARENT
+      , width WRAP_CONTENT
+      , gravity CENTER
+      , orientation VERTICAL
+      ][  linearLayout
+          [ background Color.white900
+          , cornerRadius 2.5
+          , margin $ Margin 5 3 5 0
+          , height $ V 5
+          , width $ V 5
+          ][]
+       ]
+    , textView $
+      [ text ride.time
+      , color Color.white900
+      ] <> FontStyle.body16 LanguageStyle
+    ]
+
+driverRatingView :: forall w . IndividualRideCardState -> PrestoDOM (Effect Unit) w
+driverRatingView ride =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , gravity CENTER_VERTICAL
+  , orientation HORIZONTAL
+  , margin (Margin 0 13 0 10)
+  ][  textView $
+      [ text (getString YOU_RATED)
+      , color Color.white900
+      , accessibilityHint $ "You Rated : " <> (show ride.rating) <> " stars"
+      , accessibility ENABLE
+      ] <> FontStyle.captions LanguageStyle
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , padding (Padding 0 0 0 0)
+      , margin (MarginLeft 4)
+      , gravity LEFT
+      ](map (\ item ->
+                        linearLayout
+                        [ height WRAP_CONTENT
+                        , width WRAP_CONTENT
+                        , margin if (item /= 5) then MarginRight 3 else MarginTop 0
+                        ][imageView
+                            [ height $ V 14
+                            , width $ V 14
+                            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if item <= ride.rating then "ny_ic_star_active" else "ny_ic_star_inactive"
+                            ]
+                          ]) [1 ,2 ,3 ,4 ,5])
+    ]
+
+
+actionListView :: forall w . (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+actionListView push state =
+  let list = getPostRieSafetyAction FunctionCall
+      len = length list
+  in
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , padding $  PaddingHorizontal 16 16
+  ] (mapWithIndex (\idx item -> actionsListViewItem push item.action item.textConfig (idx /= (len -1))) list)
+
+actionsListViewItem :: forall w. (Action -> Effect Unit) -> Maybe Action -> ImageTextViewConfig -> Boolean -> PrestoDOM (Effect Unit) w
+actionsListViewItem push mbAction textConfig showDivider =
+  linearLayout[
+    height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  ]$[linearLayout
+    ([ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , margin $ MarginTop 20
+    ] <> maybe [] (\action -> [ onClick push $ const action]) mbAction)
+      [ imageWithTextView textConfig
+      , layoutWithWeight
+      , imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_white"
+          , height $ V 20
+          , width $ V 20
+          ]
+      ]] <> if showDivider then [separatorView Color.black700 $ MarginTop 16 ] else []
+  
+getPostRieSafetyAction :: LazyCheck -> Array {action :: Maybe Action, textConfig :: ImageTextViewConfig}
+getPostRieSafetyAction state = [
+  {action : Just AlertSafetyTeam
+  , textConfig :  defaultTextConfig { text' = getString $  ALERT_SAFETY_TEAM "ALERT_SAFETY_TEAM"
+    , image = Just "ny_ic_notify_safety_bell"
+    } 
+  },
+   {action : Just ShowPoliceView
+  , textConfig : defaultTextConfig { text' = getString CALL_POLICE
+    , image = Just "ny_ic_police"
+    }
+  },
+   {action : Just ShowSafetyIssueView
+  , textConfig : defaultTextConfig { text' = getString REPORT_SAFETY_ISSUE
+    , image = Just "ny_ic_issue_box"
+    }
+  }
+]
+defaultTextConfig :: ImageTextViewConfig
+defaultTextConfig =  { 
+    text': ""
+    , isActive: true
+    , textColor: Color.white900
+    , useMargin: false
+    , usePadding: false
+    , useFullWidth: false
+    , image: Nothing
+    , visibility: true
+    , textStyle: FontStyle.Tags
+    }
 
 confirmSafetyDrillView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 confirmSafetyDrillView state push =
@@ -676,7 +894,6 @@ confirmSafetyDrillView state push =
         , width WRAP_CONTENT
         , padding $ Padding 0 16 16 16
         , onClick push $ const BackPressed
-        , visibility $ boolToVisibility $ EHC.os == "IOS"
         ]
         [ imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
@@ -684,29 +901,52 @@ confirmSafetyDrillView state push =
             , width $ V 24
             ]
         ]
-    , layoutWithWeight
-    , imageView
-        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_start_test_drill"
-        , width MATCH_PARENT
-        , height $ V 300
+    , relativeLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , padding $ Padding 0 16 16 0
+        , onClick push $ const BackPressed
         ]
-    , layoutWithWeight
-    , textView
-        $ [ text $ getString ARE_YOU_READY_TO_START_DRILL
-          , color Color.white900
-          , gravity CENTER
+        [ imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_start_test_drill"
           , width MATCH_PARENT
+          , height $ V 200
           ]
-        <> FontStyle.h1 TypoGraphy
-    , textView
-        $ [ text $ getString TEST_DRILL_DESC
-          , color Color.white900
-          , gravity CENTER
-          , margin $ MarginTop 16
-          ]
-        <> FontStyle.body5 TypoGraphy
+        ]
+    , textView $
+      [ text $ getString PREPARE_EMERGENCY_CONTACTS
+      , color Color.white900
+      , margin $ MarginTop 16
+      ] <> FontStyle.h2 TypoGraphy
+    , imageWithTextView configActionOne
+    , imageWithTextView configActionTwo
+    , layoutWithWeight
     , PrimaryButton.view (push <<< StartTestDrill) $ startTestDrillButtonConfig state
     ]
+  where
+    configActionOne =
+      { text': getString EMERGENCY_CONTACTS_WILL_BE_NOTIFIED
+      , isActive: true
+      , textColor: Color.white900
+      , useMargin: true
+      , usePadding: false
+      , useFullWidth: false
+      , image: Nothing
+      , visibility: true
+      , textStyle: FontStyle.Body1
+      }
+
+    configActionTwo =
+      { text': getString INFORM_EMERGENCY_CONTACTS_ABOUT_TEST
+      , isActive: true
+      , textColor: Color.white900
+      , useMargin: true
+      , usePadding: false
+      , useFullWidth: false
+      , image: Nothing
+      , visibility: true
+      , textStyle: FontStyle.Body1
+      }
 
 warningView :: forall w. String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
 warningView text' visibility' useMargin =
@@ -809,7 +1049,7 @@ dialPoliceView state push =
                           ]
                         <> FontStyle.subHeading1 TypoGraphy
                     , textView
-                        $ [ text state.data.vehicleDetails
+                        $ [ text $ getVehicleDetails state
                           , color Color.white900
                           , margin $ MarginTop 4
                           ]
@@ -874,3 +1114,9 @@ callPoliceView state push =
           ]
         <> FontStyle.subHeading2 TypoGraphy
     ]
+
+getVehicleDetails :: NammaSafetyScreenState -> String
+getVehicleDetails state = 
+  case state.data.lastRideDetails of
+    Nothing -> state.data.vehicleDetails
+    Just rideDetails -> rideDetails.vehicleNumber

@@ -715,7 +715,6 @@ type HomeScreenStateProps =
   , isEstimateChanged :: Boolean
   , showRateCard :: Boolean
   , showRateCardIcon :: Boolean
-  , emergencyHelpModal :: Boolean
   , sendMessageActive :: Boolean
   , chatcallbackInitiated :: Boolean
   , estimatedDistance :: Maybe Int
@@ -2004,7 +2003,8 @@ type NammaSafetyScreenData =  {
   vehicleDetails :: String,
   videoList :: Array RC.SafetyVideoConfig,
   sosType :: Maybe SosFlow,
-  config :: AppConfig
+  config :: AppConfig,
+  lastRideDetails :: Maybe IndividualRideCardState
  }
 
 type NammaSafetyScreenProps =  {
@@ -2027,7 +2027,10 @@ type NammaSafetyScreenProps =  {
   showRideShareOptionsPopup :: Boolean,
   showVideoView :: Boolean,
   isSafetyCenterDisabled :: Boolean,
-  fromBannerLink :: Boolean
+  fromBannerLink :: Boolean,
+  showPastRidePopUp :: Boolean,
+  checkPastRide :: Boolean,
+  reportPastRide :: Boolean
 }
 data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
 
