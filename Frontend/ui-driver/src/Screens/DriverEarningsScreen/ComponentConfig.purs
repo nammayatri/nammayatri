@@ -29,7 +29,7 @@ import Font.Style (Style(..))
 import Helpers.Utils as HU
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import Prelude ((<>), (==), (*), show, not, (&&))
+import Prelude ((<>), (==), (*), show, not, (&&), ($))
 import Data.Int (toNumber)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), background)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -172,7 +172,7 @@ getPopupConfig state = case state.props.popupType of
   ST.NO_COINS_POPUP ->
     { optionButtonOrientation: "HORIZONTAL"
     , primaryText: getString NO_COINS_AVAILABLE
-    , secondaryText: getString EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS
+    , secondaryText: getString $ EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS "EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS"
     , option1: getString OKAY
     , option2: getString GO_BACK
     , secondaryTextVisibility: false
@@ -243,7 +243,7 @@ coinsInfoCardConfig _ =
       , color = Color.black800
       }
     , primaryText
-      { text = getString YATRI_COINS_USAGE_POPUP
+      { text = getString $ YATRI_COINS_USAGE_POPUP "YATRI_COINS_USAGE_POPUP"
       , padding = Padding 16 16 0 0
       , color = Color.black700
       }
@@ -284,7 +284,7 @@ errorModalConfig state =
       , color = Color.black900
       }
     , errorDescriptionConfig
-      { text = getString if state.props.subView == ST.EARNINGS_VIEW then YOU_HAVE_NOT_COMPLETED_A_RIDE_YET else EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS
+      { text = if state.props.subView == ST.EARNINGS_VIEW then getString YOU_HAVE_NOT_COMPLETED_A_RIDE_YET else getString $ EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS "EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS"
       , color = Color.black700
       }
     , buttonConfig

@@ -961,7 +961,7 @@ tableItemView item index state =
                   , text $ "*" <> getString CUSTOMER_SHOULD_COMPLETE_A_VALID_RIDE
                   , color Color.black700
                   , padding $ Padding 16 0 16 8
-                  , visibility $ boolToVisibility (index == 1)
+                  , visibility $ boolToVisibility (item.key == getString CUSTOMER_REFERRAL)
                   ] <> FontStyle.body1 TypoGraphy
                 )
             ]
@@ -1469,7 +1469,7 @@ convertView push state =
 
     setVisibility = if state.data.coinBalance < state.data.config.coinsConfig.minCoinSliderValue || not state.data.hasActivePlan then VISIBLE else GONE
 
-    coinBalanceNearest250 = ((state.data.coinBalance + state.data.config.coinsConfig.minCoinSliderValue - 1) / state.data.config.coinsConfig.minCoinSliderValue) * state.data.config.coinsConfig.minCoinSliderValue
+    coinBalanceNearestCeil = ((state.data.coinBalance + state.data.config.coinsConfig.stepFunctionForCoinConversion - 1) / state.data.config.coinsConfig.stepFunctionForCoinConversion) * state.data.config.coinsConfig.stepFunctionForCoinConversion
   in
     linearLayout
       [ height WRAP_CONTENT
@@ -1514,7 +1514,7 @@ convertView push state =
           ]
           [ Anim.screenAnimationFadeInOut
               $ linearLayout
-                  [ height $ V 32
+                  [ height WRAP_CONTENT
                   , width MATCH_PARENT
                   , id $ getNewIDWithTag "SliderToolTipView"
                   ]
@@ -1542,7 +1542,7 @@ convertView push state =
                           , id $ getNewIDWithTag "ConvertCoinsSliderView"
                           , onAnimationEnd
                               ( \action ->
-                                  void $ pure $ renderSlider push SliderCallback { id: (getNewIDWithTag "ConvertCoinsSliderView"), sliderConversionRate: state.data.coinConversionRate, sliderMinValue: state.data.config.coinsConfig.minCoinSliderValue, sliderMaxValue: coinBalanceNearest250, sliderDefaultValue: state.data.config.coinsConfig.minCoinSliderValue, toolTipId: getNewIDWithTag "SliderToolTipView" }
+                                  void $ pure $ renderSlider push SliderCallback { id: (getNewIDWithTag "ConvertCoinsSliderView"),stepFunctionForCoinConversion: state.data.config.coinsConfig.stepFunctionForCoinConversion, sliderConversionRate: state.data.coinConversionRate, sliderMinValue: state.data.config.coinsConfig.minCoinSliderValue, sliderMaxValue: coinBalanceNearestCeil, sliderDefaultValue: state.data.coinBalance, toolTipId: getNewIDWithTag "SliderToolTipView" }
                               )
                               (const AfterRender)
                           ]
@@ -1551,7 +1551,7 @@ convertView push state =
                       $ [ text 
                             $ case state.data.coinBalance < state.data.config.coinsConfig.minCoinSliderValue of
                                 true -> getString MAX
-                                false -> show coinBalanceNearest250
+                                false -> show coinBalanceNearestCeil
                         , color Color.black700
                         ]
                       <> FontStyle.body3 TypoGraphy
@@ -1924,7 +1924,7 @@ noRideHistoryView push state =
 
 getNotItemsViewText :: ST.DriverEarningsScreenState -> Array String
 getNotItemsViewText state = case state.props.subView of
-  ST.YATRI_COINS_VIEW -> [ getString NO_COINS_EARNED, getString EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS ]
+  ST.YATRI_COINS_VIEW -> [ getString NO_COINS_EARNED, getString $ EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS "EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS"]
   ST.EARNINGS_VIEW -> [ getString NO_RIDES, getString YOU_DID_NOT_TAKE_ANY_RIDES_ON_PREFIX <> " " <> convertUTCtoISC state.props.date "DD MMM, YYYY" <> " " <> getString YOU_DID_NOT_TAKE_ANY_RIDES_ON_SUFFIX ]
   _ -> [ getString NO_COINS_USED, getString USE_THEM_BEFORE_THEY_EXPIRE ]
 

@@ -225,7 +225,7 @@ eval (CoinTransactionResponseAction (CoinTransactionRes resp)) state = do
         , coinsEarnedPreviousDay = resp.coinsEarnedPreviousDay
         , coinsEarnedToday = resp.todayCoinSummary
         , coinHistoryItems = events
-        , coinsToUse = state.data.config.coinsConfig.minCoinSliderValue
+        , coinsToUse = (state.data.coinBalance / state.data.config.coinsConfig.stepFunctionForCoinConversion) * state.data.config.coinsConfig.stepFunctionForCoinConversion
         }
       , props { showShimmer = false, showCoinsEarnedAnim = coinDifference}
       }
@@ -615,64 +615,73 @@ updateToState state = do
 
 dummyQuestions :: DriverEarningsScreenState -> LazyCheck -> Array ST.FaqQuestions
 dummyQuestions state lazy =
-  [ { question: getString YATRI_COINS_FAQS_QUES1
-    , videoLink: Just state.data.config.coinsConfig.whatAreYatriCoinFAQ
+  [ { question: getString $ YATRI_COINS_FAQS_QUES1 "YATRI_COINS_FAQS_QUES1"
+    , videoLink: videoLinkValue state.data.config.coinsConfig.whatAreYatriCoinFAQ
     , answer:
-        [ getString YATRI_COINS_FAQS_QUES1_ANS1
-        , getString YATRI_COINS_FAQS_QUES1_ANS2
-        , getString YATRI_COINS_FAQS_QUES1_ANS3
+        [ getString $ YATRI_COINS_FAQS_QUES1_ANS1 "YATRI_COINS_FAQS_QUES1_ANS1"
+        , getString $ YATRI_COINS_FAQS_QUES1_ANS2 "YATRI_COINS_FAQS_QUES1_ANS2"
+        , getString $ YATRI_COINS_FAQS_QUES1_ANS3 "YATRI_COINS_FAQS_QUES1_ANS3"
         ]
     , showTable: false
     }
-  , { question: getString YATRI_COINS_FAQS_QUES2
+  , { question: getString $ YATRI_COINS_FAQS_QUES2 "YATRI_COINS_FAQS_QUES2"
     , videoLink: Nothing
     , answer:
-        [ getString YATRI_COINS_FAQS_QUES2_ANS1
-        , getString YATRI_COINS_FAQS_QUES2_ANS2
+        [ getString $ YATRI_COINS_FAQS_QUES2_ANS1 "YATRI_COINS_FAQS_QUES2_ANS1"
+        , getString $ YATRI_COINS_FAQS_QUES2_ANS2 "YATRI_COINS_FAQS_QUES2_ANS2"
         ]
     , showTable: false
     }
-  , { question: getString YATRI_COINS_FAQS_QUES3
-    , videoLink: Just state.data.config.coinsConfig.howToEarnYatriCoinFAQ
+  , { question: getString $ YATRI_COINS_FAQS_QUES3 "YATRI_COINS_FAQS_QUES3"
+    , videoLink: videoLinkValue state.data.config.coinsConfig.howToEarnYatriCoinFAQ
     , answer:
-        [ getString YATRI_COINS_FAQS_QUES3_ANS1
-        , getString YATRI_COINS_FAQS_QUES3_ANS2
+        [ getString $ YATRI_COINS_FAQS_QUES3_ANS1 "YATRI_COINS_FAQS_QUES3_ANS1"
+        , getString $ YATRI_COINS_FAQS_QUES3_ANS2 "YATRI_COINS_FAQS_QUES3_ANS2"
         ]
     , showTable: false
     }
-  , { question: getString YATRI_COINS_FAQS_QUES4
-    , videoLink: Just state.data.config.coinsConfig.howToRedeemYatriCoinFAQ
+  , { question: getString $ YATRI_COINS_FAQS_QUES4 "YATRI_COINS_FAQS_QUES4"
+    , videoLink: videoLinkValue state.data.config.coinsConfig.howToRedeemYatriCoinFAQ
     , answer:
-        [ getString YATRI_COINS_FAQS_QUES4_ANS1
-        , getString YATRI_COINS_FAQS_QUES4_ANS2
-        , getString YATRI_COINS_FAQS_QUES4_ANS3
+        [ getString $ YATRI_COINS_FAQS_QUES4_ANS1 "YATRI_COINS_FAQS_QUES4_ANS1"
+        , getString $ YATRI_COINS_FAQS_QUES4_ANS2 "YATRI_COINS_FAQS_QUES4_ANS2"
+        , getString $ YATRI_COINS_FAQS_QUES4_ANS3 "YATRI_COINS_FAQS_QUES4_ANS3"
         ]
     , showTable: false
     }
-  , { question: getString YATRI_COINS_FAQS_QUES5
+  , { question: getString $ YATRI_COINS_FAQS_QUES5 "YATRI_COINS_FAQS_QUES5"
     , videoLink: Nothing
     , answer:
-        [ getString YATRI_COINS_FAQS_QUES5_ANS1
-        , getString YATRI_COINS_FAQS_QUES5_ANS2
+        [ getString $ YATRI_COINS_FAQS_QUES5_ANS1 "YATRI_COINS_FAQS_QUES5_ANS1"
+        , getString $ YATRI_COINS_FAQS_QUES5_ANS2 "YATRI_COINS_FAQS_QUES5_ANS2"
         ]
     , showTable: false
     }
-  , { question: getString YATRI_COINS_FAQS_QUES6
+  , { question: getString $ YATRI_COINS_FAQS_QUES6 "YATRI_COINS_FAQS_QUES6"
     , videoLink: Nothing
     , answer:
-        [ getString YATRI_COINS_FAQS_QUES6_ANS1
+        [ getString $ YATRI_COINS_FAQS_QUES6_ANS1 "YATRI_COINS_FAQS_QUES6_ANS1"
         ]
     , showTable: true
     }
   ]
 
+videoLinkValue :: String -> Maybe String
+videoLinkValue value = if value == "" then Nothing else Just value
+
 tableData :: DriverEarningsScreenState -> Array ST.TableItem
-tableData state =
-  [ { key: getString TASK_COMPLETED, value: getString YATRI_COINS_STR }
-  , { key: getString CUSTOMER_REFERRAL, value: state.data.config.coinsConfig.customerReferralCoins }
-  , { key: getString RIDES_IN_A_DAY_PREFIX <> state.data.config.coinsConfig.numOfRideThresholdForCoins <> getString RIDES_IN_A_DAY_SUFFIX, value: state.data.config.coinsConfig.eightPlusRidesCoins }
-  , { key: getString PURPLE_RIDE, value: state.data.config.coinsConfig.purpleRideCoins }
-  ]
+tableData state = 
+  let
+   coinConfig = state.data.config.coinsConfig
+  in 
+    ([ { key: getString TASK_COMPLETED, value: getString YATRI_COINS_STR }
+    ]) <> (if (coinConfig.driverToCustomerRefCoinEvent) then [{ key: getString CUSTOMER_REFERRAL, value: coinConfig.customerReferralCoins }] else [])
+    <> (if (coinConfig.prupleRideCoinEvent) then [{ key: getString PURPLE_RIDE, value: coinConfig.purpleRideCoins }] else [])
+    <> (if (coinConfig.rideCompletedCoinEvent) then [{ key: getString RIDE_COMPLETED, value: coinConfig.rideCompletedCoins }] else [])
+    <> (if (coinConfig.eightRideCoinEvent) then [{ key: getString RIDES_IN_A_DAY_PREFIX <> coinConfig.numOfRideThresholdForCoins <> getString RIDES_IN_A_DAY_SUFFIX, value: coinConfig.eightPlusRidesCoins }] else [])
+    <> (if (coinConfig.bookingCancelCoinEvent) then [{ key: getString RIDE_CANCELLATION, value: coinConfig.rideCancellationCoins }] else [])
+    <> (if (coinConfig.fiveStarCoinEvent) then [{ key: getString GOOD_RATING_BY_CUSTOMER, value: coinConfig.fiveStarRatingCoins }] else [])
+    <> (if (coinConfig.oneTwoStarCoinEvent) then [{ key: getString BAD_RATING_BY_CUSTOMER, value: coinConfig.oneOrTwoStarRatingCoins }] else [])
 
 dummyRideHistoryItem :: RidesInfo
 dummyRideHistoryItem = RidesInfo {

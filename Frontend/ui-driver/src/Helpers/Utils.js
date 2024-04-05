@@ -514,11 +514,17 @@ export const getPopupType = function (just, nothing) {
 export const renderSlider = function (cb) {
   return function (action) {
     return function (config) {
-      const { id, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId } = config;
+      const { id, stepFunctionForCoinConversion, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId } = config;
       const callback = callbackMapper.map(function (val) {
         cb(action(parseInt(val)))();
       });
-      window.JBridge.renderSlider(id, callback, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId);
+      try {
+        window.JBridge.renderSlider(id, callback, stepFunctionForCoinConversion, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId);
+      } catch (error) {
+        // backward compatibility
+        console.error("Calling renderSlider without stepFunctionForCoinConversion : ", error);  
+        window.JBridge.renderSlider(id, callback, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId);
+      }
     }
   }
 }

@@ -1852,7 +1852,7 @@ introducingCoinsPopup state = PopUpModal.config {
     , height = V 250
     },
   secondaryText {
-    text = getString NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS
+    text = getString $ NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS "NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS"
     , margin = Margin 16 4 16 0
     , color = Color.black700
     , textStyle = SubHeading2
