@@ -122,7 +122,7 @@ view push state =
             , HV.shimmerView state
             ]
         , if state.props.showRideShareOptionsPopup then PopupWithCheckbox.view (push <<< ShareTripOptionPopup) $ shareTripPopupConfig state else HV.emptyTextView
-        , if state.props.showPastRidePopUp then PopUpModal.view (push <<< PopUpModalAC) $ pastRideSOSConfirmationPopConfig state else HV.emptyTextView
+        , if state.props.showPastRidePopUp && not state.props.isSafetyCenterDisabled then PopUpModal.view (push <<< PopUpModalAC) $ pastRideSOSConfirmationPopConfig state else HV.emptyTextView
         ]
   where
   padding' =

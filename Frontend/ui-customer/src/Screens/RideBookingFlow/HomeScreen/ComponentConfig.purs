@@ -1703,7 +1703,7 @@ rideCompletedCardConfig state =
         },
         primaryButtonConfig = skipButtonConfig state,
         enableContactSupport = state.data.config.feature.enableSupport,
-        showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide,
+        showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled,
         safetyTitle = getString SAFETY_CENTER,
         needHelpText = getString NEED_HELP
       }
