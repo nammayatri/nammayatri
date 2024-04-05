@@ -405,10 +405,12 @@ rentalBannerConfig state =
       , imageHeight = V 45
       , imageWidth = V 66
       , imagePadding = PaddingVertical 0 0
-      , title = getString $ YOU_HAVE_UPCOMING_RENTAL_BOOKING (maybe "" (\rentalsInfo ->
-                                                            let timeUTC = rentalsInfo.rideScheduledAtUTC
-                                                            in EHC.convertUTCtoISC timeUTC "D" <> " " <> EHC.convertUTCtoISC timeUTC "MMMM" <> " " <> EHC.convertUTCtoISC timeUTC "YYYY" <> " , " <> EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"    
-                                                  ) state.data.rentalsInfo)
+      , title = (maybe "" (\rentalsInfo ->
+                              if rentalsInfo.multipleScheduled then getString UPCOMING_BOOKINGS
+                              else do
+                                let timeUTC = rentalsInfo.rideScheduledAtUTC
+                                getString $ YOU_HAVE_UPCOMING_RENTAL_BOOKING $ EHC.convertUTCtoISC timeUTC "D" <> " " <> EHC.convertUTCtoISC timeUTC "MMMM" <> " " <> EHC.convertUTCtoISC timeUTC "YYYY" <> " , " <> EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"
+                          ) state.data.rentalsInfo)
       , titleColor = Color.blue800
       , actionTextVisibility = false
       , cornerRadius = 8.0

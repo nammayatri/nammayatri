@@ -21,6 +21,7 @@ initData =
     , cancellationReasons : []
     , config : getAppConfig appConfig
     , fareProductType : FPT.RENTAL
+    , fromScreen : ""
     }
   , props : {
       isCancelRide : false

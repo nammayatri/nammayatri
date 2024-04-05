@@ -632,8 +632,8 @@ homeScreenFlow = do
                                                               , data {locationList = globalState.globalProps.cachedSearches, fromScreen = (Screen.getScreen Screen.HOME_SCREEN), srcLoc = Just updatedState }})
       searchLocationFlow
     CHECK_FLOW_STATUS -> currentFlowStatus
-    GO_TO_MY_RIDES -> do
-      modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen{data{offsetValue = 0}, props {fromNavBar = true}})
+    GO_TO_MY_RIDES fromBanner -> do
+      modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen{data{offsetValue = 0}, props {fromNavBar = true, fromBanner = fromBanner}})
       myRidesScreenFlow
     GO_TO_HELP -> do
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_help"
@@ -2150,6 +2150,27 @@ myRidesScreenFlow = do
       let trip = getTripFromRideHistory state
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ rideHistoryTrip = Just trip, settingSideBar{opened = SettingSideBarController.CLOSED}}})
       homeScreenFlow
+    GO_TO_RIDE_SCHEDULED_SCREEN state -> do
+      let selectedCard = state.data.selectedItem
+      config <- getAppConfigFlowBT appConfig
+      modifyScreenState $ RideScheduledScreenStateType (\rideScheduledScreen -> 
+        rideScheduledScreen { data{ 
+            bookingId = selectedCard.bookingId
+          , startTime = selectedCard.rideStartTime
+          , finalPrice = show selectedCard.estimatedFare
+          , baseDuration = show $ selectedCard.estimatedDuration / 3600
+          , baseDistance = show $ selectedCard.estimatedDistance / 1000
+          , config = config
+          , fareProductType = selectedCard.rideType
+          , source = SearchLocationScreenData.dummyLocationInfo { lat = Just (selectedCard.sourceLocation ^._lat) , lon = Just (selectedCard.sourceLocation ^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking selectedCard.sourceLocation, address = decodeAddress (Booking selectedCard.sourceLocation)}
+          , destination = if selectedCard.destination == "" then Nothing else Just $ SearchLocationScreenData.dummyLocationInfo { lat = Just (selectedCard.destinationLocation ^._lat) , lon = Just (selectedCard.destinationLocation ^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking selectedCard.destinationLocation, address = decodeAddress (Booking selectedCard.destinationLocation)}
+          , fromScreen = Screen.getScreen Screen.MY_RIDES_SCREEN
+          }
+      })
+      rideScheduledFlow
+    MY_RIDES_GO_TO_HOME_SCREEN _ -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
+      homeScreenFlow
 
 selectLanguageScreenFlow :: FlowBT String Unit
 selectLanguageScreenFlow = do
@@ -3524,11 +3545,10 @@ rideScheduledFlow = do
         Left _ -> do 
           void $ pure $ toast "Failed To Cancel Ride"
           rideScheduledFlow
-    RideScheduledScreenOutput.GoToHomeScreen state -> do 
-      -- when (state.data.bookingId == "") do 
+    RideScheduledScreenOutput.GoToHomeScreen state -> do
       updateLocalStage HomeScreen
+      modifyScreenState $ RideScheduledScreenStateType (\_ -> RideScheduledScreenData.initData)
       modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData)
-      -- updateRideScheduledTime ""
       homeScreenFlow
     RideScheduledScreenOutput.GoToSearchLocationScreen updatedState -> do
       modifyScreenState $ RideScheduledScreenStateType (\_ -> updatedState)
@@ -3537,6 +3557,7 @@ rideScheduledFlow = do
             (\_ -> SearchLocationScreenData.initData{data{fromScreen = (Screen.getScreen Screen.RIDE_SCHEDULED_SCREEN), srcLoc = Just updatedState.data.source , destLoc = updatedState.data.destination}
                                                      , props {focussedTextField = Just SearchLocDrop, actionType = ST.AddingStopAction}})
       searchLocationFlow
+    RideScheduledScreenOutput.GoToMyRidesScreen state -> myRidesScreenFlow
     _ -> pure unit
   
   where 
@@ -3777,7 +3798,9 @@ searchLocationFlow = do
         let req = Remote.makeStopReq  (fromMaybe 0.0 (destLoc.lat)) (fromMaybe 0.0 (destLoc.lon)) stopLocation
         response <- lift $ lift $ Remote.addOrEditStop bookingId req isEdit
         case response of 
-          Right _ -> pure unit
+          Right _ -> do
+            modifyScreenState $ RideScheduledScreenStateType (\rideScheduledScreen -> rideScheduledScreen{data{destination = state.data.destLoc}})
+            pure unit
           Left err -> do 
             void $ pure $ toast $ "Error While " <> (if isEdit then "Editing" else "Adding") <> " Stop"
             pure unit
@@ -4547,15 +4570,16 @@ fetchSrcAndDestLoc state = do
 
 updateRideScheduledTime :: String -> FlowBT String Unit
 updateRideScheduledTime _ = do 
-  rideBookingListResponse <- lift $ lift $ Remote.rideBookingListWithStatus "1" "0" "CONFIRMED"
+  rideBookingListResponse <- lift $ lift $ Remote.rideBookingListWithStatus "2" "0" "CONFIRMED"
   case rideBookingListResponse of 
     Right (RideBookingListRes listResp) -> do 
+      let multipleScheduled = length listResp.list > 1
       case (head listResp.list) of 
         Just (RideBookingRes resp )-> do 
           let fareProductType = getFareProductType $ resp.bookingDetails ^._fareProductType
           if (any (_ == fareProductType) [ FPT.RENTAL , FPT.INTER_CITY]) then do 
             let rideScheduledTime = fromMaybe "" resp.rideScheduledTime
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rentalsInfo = if rideScheduledTime == "" then Nothing else Just { rideScheduledAtUTC : rideScheduledTime, bookingId : resp.id}}})
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rentalsInfo = if rideScheduledTime == "" then Nothing else Just { rideScheduledAtUTC : rideScheduledTime, bookingId : resp.id, multipleScheduled : multipleScheduled}}})
             pure unit 
             else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rentalsInfo = Nothing}})
           pure unit

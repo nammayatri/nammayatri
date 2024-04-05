@@ -1156,3 +1156,5 @@ getTE stringKey =
     TAP_WHERE_TO_TO_BOOK_RIDE -> "మీ రైడ్ బుక్ చేయడానికి 'ఎక్కడకు?' ని టాప్ చేయండి!"
     YATRI_SERVICES -> "యాత్రి సేవలు"
     YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "మీకు " <> bookingTime <>  "కి రాబోయే అద్దె బుకింగ్ ఉంది"
+    SCHEDULED -> "షెడ్యూల్ చేయబడింది"
+    UPCOMING_BOOKINGS -> "మీకు అనుకూలంగా బుకింగ్‌లు ఉన్నాయి"

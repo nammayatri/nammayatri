@@ -1141,3 +1141,5 @@ getHI stringKey =
         TAP_WHERE_TO_TO_BOOK_RIDE -> "राइड बुक करने के लिए 'कहाँ जाना है?' टैप करें!"
         YATRI_SERVICES -> "यात्री सेवाएं"
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "आपके पास " <> bookingTime <> " को आगामी किराये की बुकिंग हैं।"
+        SCHEDULED -> "शेड्यूल किया गया"
+        UPCOMING_BOOKINGS -> "आपके पास आने वाली बुकिंगें हैं"

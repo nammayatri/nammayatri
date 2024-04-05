@@ -25,7 +25,7 @@ import Resources.Constants (cancelReasons)
 import Data.Array ((!!), head)
 import Log (trackAppActionClick, trackAppEndScreen)
 import Prelude
-import PrestoDOM (class Loggable, Eval, continue, exit)
+import PrestoDOM (class Loggable, Eval, continue, exit, continueWithCmd)
 import Screens (getScreen, ScreenName(..))
 import Helpers.Utils (performHapticFeedback)
 import Screens.Types (RideScheduledScreenState, City(..))
@@ -40,6 +40,7 @@ import Screens.HomeScreen.Transformer (getFareProductType)
 import Screens.Types (FareProductType(..)) as FPT
 import Language.Strings (getString)
 import Language.Types as STR
+import Debug (spy)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -69,10 +70,13 @@ data Action
 data ScreenOutput = GoToHomeScreen RideScheduledScreenState
                   | GoToSearchLocationScreen RideScheduledScreenState
                   | CancelRentalRide RideScheduledScreenState
+                  | GoToMyRidesScreen RideScheduledScreenState
 
 eval :: Action -> RideScheduledScreenState -> Eval Action ScreenOutput RideScheduledScreenState
 
-eval GoBack state = exit $ GoToHomeScreen state
+eval GoBack state = do
+  if state.data.fromScreen == getScreen MY_RIDES_SCREEN then exit $ GoToMyRidesScreen state
+    else exit $ GoToHomeScreen state
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = exit $ GoToHomeScreen state
 
@@ -80,7 +84,7 @@ eval AddFirstStop state = exit $ GoToSearchLocationScreen state
 
 eval (SourceToDestinationAC (SourceToDestinationActionController.DestinationClicked)) state = exit $ GoToSearchLocationScreen state
 
-eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = exit $ GoToHomeScreen state
+eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [pure GoBack]
 
 eval CancelRide state = continue state{ props{isCancelRide = true}, data{cancellationReasons = cancelReasons ""}}
 
@@ -107,26 +111,26 @@ eval (CancelRidePopUpAction (CancelRidePopUp.ClearOptions)) state = do
   continue state { props { cancelDescription = "", cancelReasonCode = "", cancelRideActiveIndex = Nothing } }
 
 eval (GetBookingList resp) state =
-    let (RideBookingListRes listResp) = resp
-        (RideBookingRes resp) = fromMaybe HomeScreenData.dummyRideBooking $ head listResp.list
-        (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
-        (RideBookingDetails contents) = bookingDetails.contents
-        fareProductType = getFareProductType (bookingDetails.fareProductType)
-    in continue state 
-      { data
-        { source = SearchLocationScreenData.dummyLocationInfo { lat = Just (resp.fromLocation ^._lat) , lon = Just (resp.fromLocation ^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking resp.fromLocation, address = decodeAddress (Booking resp.fromLocation)}
-        , destination = maybe (Nothing) (\toLocation -> Just $ SearchLocationScreenData.dummyLocationInfo {lat = Just (toLocation^._lat), lon = Just (toLocation^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking toLocation, address = decodeAddress (Booking toLocation)}) $ if fareProductType == FPT.INTER_CITY then contents.toLocation else contents.stopLocation
-        , startTime = fromMaybe "" resp.rideScheduledTime
-        , finalPrice = show resp.estimatedTotalFare
-        , baseDuration = show $ (fromMaybe 7200 resp.estimatedDuration)/3600
-        , baseDistance = show $ (fromMaybe 20000 resp.estimatedDistance)/1000
-        , bookingId = resp.id
-        , fareProductType = fareProductType
-        }
-      , props
-        { driverAllocationTime = "15" -- TODO-codex : Need to get the driver allocation time from the API 
-        }
+  let (RideBookingListRes listResp) = resp
+      (RideBookingRes resp) = fromMaybe HomeScreenData.dummyRideBooking $ head listResp.list
+      (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+      (RideBookingDetails contents) = bookingDetails.contents
+      fareProductType = getFareProductType (bookingDetails.fareProductType)
+  in continue state 
+    { data
+      { source = SearchLocationScreenData.dummyLocationInfo { lat = Just (resp.fromLocation ^._lat) , lon = Just (resp.fromLocation ^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking resp.fromLocation, address = decodeAddress (Booking resp.fromLocation)}
+      , destination = maybe (Nothing) (\toLocation -> Just $ SearchLocationScreenData.dummyLocationInfo {lat = Just (toLocation^._lat), lon = Just (toLocation^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking toLocation, address = decodeAddress (Booking toLocation)}) $ if fareProductType == FPT.INTER_CITY then contents.toLocation else contents.stopLocation
+      , startTime = fromMaybe "" resp.rideScheduledTime
+      , finalPrice = show resp.estimatedTotalFare
+      , baseDuration = show $ (fromMaybe 7200 resp.estimatedDuration)/3600
+      , baseDistance = show $ (fromMaybe 20000 resp.estimatedDistance)/1000
+      , bookingId = resp.id
+      , fareProductType = fareProductType
       }
+    , props
+      { driverAllocationTime = "15" -- TODO-codex : Need to get the driver allocation time from the API 
+      }
+    }
 
 eval CheckFlowStatusAction state = continue state
 

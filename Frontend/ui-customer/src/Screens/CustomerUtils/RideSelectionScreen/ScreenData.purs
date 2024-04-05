@@ -111,6 +111,7 @@ dummyIndividualCard = {
     driverImage : "",
     isCancelled :  "",
     isSuccessfull :  "",
+    isScheduled : "",
     rating : 0,
     driverName : "",
     rideStartTime : "",
@@ -148,4 +149,7 @@ dummyIndividualCard = {
   , showRepeatRide : ""
   , rideType : ONE_WAY
   , estimatedDistance : 0
+  , estimatedDuration : 0
+  , estimatedFare : 0
+  , showDestination : ""
 }

@@ -1142,3 +1142,5 @@ getFR stringKey =
         TAP_WHERE_TO_TO_BOOK_RIDE -> "Appuyez sur 'Où aller ?' pour réserver votre trajet !"
         YATRI_SERVICES -> "Services de voyageurs"
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "Vous avez une réservation de location à venir le " <> bookingTime
+        SCHEDULED -> "Planifié"
+        UPCOMING_BOOKINGS -> "Vous avez des réservations à venir"

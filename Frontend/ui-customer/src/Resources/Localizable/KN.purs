@@ -1142,3 +1142,5 @@ getKN stringKey =
         TAP_WHERE_TO_TO_BOOK_RIDE -> "ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ಬುಕ್ ಮಾಡಲು 'ಎಲ್ಲಿಗೆ?' ಗೆ ಟ್ಯಾಪ್ ಮಾಡಿ!"
         YATRI_SERVICES -> "ಯಾತ್ರಿ ಸೇವೆಗಳು"
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "ನೀವು ಮುಂಬರುವ ಬಾಡಿಗೆ ಬುಕಿಂಗ್ ಅನ್ನು " <> bookingTime <> " ರಂದು ಹೊಂದಿದ್ದೀರಿ"
+        SCHEDULED -> "ಷೆಡ್ಯೂಲ್ ಮಾಡಲಾಗಿದೆ"
+        UPCOMING_BOOKINGS -> "ನಿಮಗೆ ಮುಂದಿನ ಬುಕಿಂಗ್‌ಗಳಿವೆ"

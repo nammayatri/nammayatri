@@ -23,7 +23,7 @@ import Data.Maybe (Maybe(..))
 import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow)
 import ModifyScreenState (modifyScreenState)
-import Prelude (bind, ($), (<$>), discard, pure, (<<<))
+import Prelude (bind, ($), (<$>), discard, pure, (<<<), (&&), not)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import PrestoDOM.Core (getPushFn)
 import PrestoDOM.List as PrestoList
@@ -43,9 +43,10 @@ myRidesScreen = do
   act <- lift $ lift $ runScreen $ MyRidesScreen.screen state.myRidesScreen{shimmerLoader = AnimatedIn , data{logField = logField_}} listItemm
   case act of 
     GoBack updatedState -> do
-      if  (updatedState.props.fromNavBar) then do
-        modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{data{settingSideBar{opened = SettingSideBarController.OPEN}}})
-        App.BackT $ App.BackPoint <$> (pure $ GO_TO_NAV_BAR)
+      if (updatedState.props.fromBanner) then App.BackT $ App.BackPoint <$> (pure $ MY_RIDES_GO_TO_HOME_SCREEN updatedState)
+        else if (updatedState.props.fromNavBar && not updatedState.props.fromBanner) then do
+          modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{data{settingSideBar{opened = SettingSideBarController.OPEN}}})
+          App.BackT $ App.BackPoint <$> (pure $ GO_TO_NAV_BAR)
         else App.BackT $ App.BackPoint <$> (pure $ GO_TO_HELP_SCREEN)
     MyRidesScreen updatedState -> App.BackT $ App.BackPoint <$> (pure $ REFRESH updatedState)
     GoToTripDetails updatedState -> do
@@ -54,3 +55,4 @@ myRidesScreen = do
     LoaderOutput updatedState -> App.BackT $ App.BackPoint <$> (pure $ LOADER_OUTPUT updatedState)
     BookRide -> App.BackT $ App.BackPoint <$> (pure $ BOOK_RIDE )
     RepeatRide updatedState-> App.BackT $ App.NoBack <$> (pure $ REPEAT_RIDE_FLOW updatedState)
+    GoToRideScheduledScreen updatedState -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_SCHEDULED_SCREEN updatedState)

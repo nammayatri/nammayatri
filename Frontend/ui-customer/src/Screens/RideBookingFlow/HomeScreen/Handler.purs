@@ -42,9 +42,9 @@ homeScreen = do
     UpdatePickupName updatedState lat lng -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> pure (UPDATE_PICKUP_NAME updatedState lat lng)
-    PastRides updatedState-> do
+    PastRides updatedState fromBanner-> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure GO_TO_MY_RIDES)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_RIDES fromBanner)
     GoToHelp updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure GO_TO_HELP)

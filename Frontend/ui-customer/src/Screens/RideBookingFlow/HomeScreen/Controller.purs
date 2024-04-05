@@ -722,7 +722,7 @@ data ScreenOutput = LogoutUser
                   | ConfirmRide HomeScreenState
                   | GoToAbout HomeScreenState
                   | GoToNammaSafety HomeScreenState Boolean Boolean
-                  | PastRides HomeScreenState
+                  | PastRides HomeScreenState Boolean
                   | GoToMyProfile HomeScreenState Boolean
                   | ChangeLanguage HomeScreenState
                   | Retry HomeScreenState
@@ -1707,7 +1707,8 @@ eval (RatingCardAC (RatingCard.BackPressed)) state = do
 
 eval (SettingSideBarActionController (SettingSideBarController.PastRides)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_myrides_click"
-  exit $ PastRides state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+      updatedState = state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+  exit $ PastRides updatedState false
 
 eval (SettingSideBarActionController (SettingSideBarController.OnHelp)) state = exit $ GoToHelp state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
@@ -2882,7 +2883,7 @@ eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
       continue state { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}}
     _ -> continue state
   
-eval (RentalBannerAction Banner.OnClick) state = exit $ GoToScheduledRides
+eval (RentalBannerAction Banner.OnClick) state = maybe (exit GoToScheduledRides) (\rentalsInfo -> if rentalsInfo.multipleScheduled then exit (PastRides state true) else exit GoToScheduledRides) state.data.rentalsInfo
 
 eval (BottomNavBarAction id) state = do 
   let newState = state {props {focussedBottomIcon = id}}
@@ -3300,10 +3301,6 @@ normalRideFlow  (RideBookingRes response) state = do
         , data
           { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE)
           , fareProductType = getFareProductType $ response.bookingDetails^._fareProductType
-          , rentalsInfo = (if rideScheduledAt == "" then Nothing else (Just{
-              rideScheduledAtUTC : rideScheduledAt
-            , bookingId : response.id
-            }))
           }}
   exit $ RideConfirmed newState { props { isInApp = true } }
 

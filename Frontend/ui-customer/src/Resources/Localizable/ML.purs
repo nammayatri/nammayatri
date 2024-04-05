@@ -1143,3 +1143,5 @@ getML stringKey =
         TAP_WHERE_TO_TO_BOOK_RIDE -> "നിങ്ങളുടെ റൈഡ് ബുക്ക് ചെയ്യാൻ 'എവിടെയാണ്?' ടാപ്പ് ചെയ്യുക!"
         YATRI_SERVICES -> "യാത്രി സേവനങ്ങൾ"
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "നിങ്ങൾക്ക് " <> bookingTime <> "-ന് വരാനിരിക്കുന്ന വാടക ബുക്കിംഗ് ഉണ്ട്"
+        SCHEDULED -> "ഷെഡ്യൂൽ ചെയ്തിട്ടുണ്ട്"
+        UPCOMING_BOOKINGS -> "നിങ്ങൾക്ക് അടിയന്തരാവക ബുക്കിങ്ങുകൾ ഉണ്ട്"

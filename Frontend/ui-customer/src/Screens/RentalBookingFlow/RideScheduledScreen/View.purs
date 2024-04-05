@@ -2,6 +2,7 @@ module Screens.RentalBookingFlow.RideScheduledScreen.View where
 
 import Prelude
 
+import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader.View as GenericHeader
 import Components.PrimaryButton as PrimaryButton
@@ -80,6 +81,7 @@ rideScheduledScreen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 view push state =
+  Anim.screenAnimation $
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT

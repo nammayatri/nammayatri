@@ -1141,3 +1141,5 @@ getBN stringKey =
         TAP_WHERE_TO_TO_BOOK_RIDE -> "আপনার রাইড বুক করতে 'কোথায় যাবেন?' ট্যাপ করুন!"
         YATRI_SERVICES -> "যাত্রী সেবা"
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "আপনার আসন্ন ভাড়া বুকিং " <> bookingTime <> "-এ আছে"
+        UPCOMING_BOOKINGS -> "আপনার আসন্ন বুকিং রয়েছে"
+        SCHEDULED -> "শিডিউল করা হয়েছে"

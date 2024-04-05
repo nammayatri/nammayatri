@@ -1158,3 +1158,5 @@ getTA stringKey =
     TAP_WHERE_TO_TO_BOOK_RIDE -> "உங்கள் சயம் பதிகை செய்ய 'எங்கே?' அழுத்தவும்!"
     YATRI_SERVICES -> "யாத்ரீ சேவைகள்"
     YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> bookingTime <> " அன்று உங்களுக்கு வாடகை முன்பதிவு உள்ளது"
+    SCHEDULED -> "அட்டவணைச் செய்யப்பட்டது"
+    UPCOMING_BOOKINGS -> "வராத புகைப்படங்கள் உங்களுக்கு உள்ளன"

@@ -174,7 +174,7 @@ data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT TripDetailsScreenState | GO_TO_INVOI
 
 data CONTACT_US_SCREEN_OUTPUT = GO_TO_HOME_FROM_CONTACT ContactUsScreenState
 
-data MY_RIDES_SCREEN_OUTPUT = REFRESH MyRidesScreenState | TRIP_DETAILS MyRidesScreenState | LOADER_OUTPUT MyRidesScreenState | BOOK_RIDE | GO_TO_HELP_SCREEN | GO_TO_NAV_BAR | REPEAT_RIDE_FLOW MyRidesScreenState
+data MY_RIDES_SCREEN_OUTPUT = REFRESH MyRidesScreenState | TRIP_DETAILS MyRidesScreenState | LOADER_OUTPUT MyRidesScreenState | BOOK_RIDE | GO_TO_HELP_SCREEN | GO_TO_NAV_BAR | REPEAT_RIDE_FLOW MyRidesScreenState | GO_TO_RIDE_SCHEDULED_SCREEN MyRidesScreenState | MY_RIDES_GO_TO_HOME_SCREEN MyRidesScreenState
 
 
 
@@ -194,7 +194,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_HELP
                         | GO_TO_NAMMASAFETY HomeScreenState Boolean Boolean
                         | GO_TO_ABOUT
-                        | GO_TO_MY_RIDES
+                        | GO_TO_MY_RIDES Boolean
                         | CHANGE_LANGUAGE
                         | GO_TO_EMERGENCY_CONTACTS
                         | GO_TO_MY_TICKETS

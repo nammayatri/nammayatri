@@ -176,6 +176,20 @@ rideDetails push state =
               , gravity CENTER_VERTICAL
               , color Color.red
               ] <> FontStyle.tags LanguageStyle)]
+            , linearLayout[
+              height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , padding (Padding 8 4 8 6)
+              , PrestoList.visibilityHolder "isScheduled"
+              , cornerRadius 3.0
+              , background Color.blue600
+            ][textView (
+              [ text $ getString SCHEDULED
+              , PrestoList.visibilityHolder "isScheduled"
+              , height WRAP_CONTENT
+              , gravity CENTER_VERTICAL
+              , color Color.blue900
+              ] <> FontStyle.tags LanguageStyle)]
             ]
         ]
     ]
@@ -217,7 +231,7 @@ sourceAndDestination push state =
     , linearLayout 
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , PrestoList.visibilityHolder "showRepeatRide" 
+      , PrestoList.visibilityHolder "showDestination" 
       ]
       [SeparatorView.view separatorConfig]
     , linearLayout
@@ -225,7 +239,7 @@ sourceAndDestination push state =
       , height WRAP_CONTENT
       , width MATCH_PARENT
       , background if os == "IOS" then Color.transparent else Color.white900
-      , PrestoList.visibilityHolder "showRepeatRide" 
+      , PrestoList.visibilityHolder "showDestination" 
       ][  imageView
           [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_loc_red"
           , height $ V 16

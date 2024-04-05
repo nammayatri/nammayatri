@@ -407,7 +407,8 @@ type MyRideScreenProps = {
   receivedResponse :: Boolean,
   apiFailure :: Boolean,
   fromNavBar :: Boolean,
-  optionsVisibility :: Boolean
+  optionsVisibility :: Boolean,
+  fromBanner :: Boolean
 }
 -- ################################################ IndividualRideCardState ##################################################
 
@@ -455,6 +456,10 @@ type IndividualRideCardState =
   , showRepeatRide :: String
   , rideType :: FareProductType
   , estimatedDistance :: Int
+  , isScheduled :: String
+  , estimatedDuration :: Int
+  , estimatedFare :: Int
+  , showDestination :: String
   }
 
 
@@ -476,6 +481,7 @@ type ItemState =
     driverImage :: PropValue,
     isCancelled :: PropValue,
     isSuccessfull :: PropValue,
+    isScheduled :: PropValue,
     rating :: PropValue,
     driverName :: PropValue,
     rideStartTime :: PropValue,
@@ -486,7 +492,8 @@ type ItemState =
     rideEndTimeUTC :: PropValue,
     alpha :: PropValue,
     zoneVisibility :: PropValue,
-    showRepeatRide :: PropValue
+    showRepeatRide :: PropValue,
+    showDestination :: PropValue
   }
 
 -- ################################################ PermissionScreenState ##################################################
@@ -631,6 +638,7 @@ type HomeScreenStateData =
 type RentalsInfo = 
   { rideScheduledAtUTC :: String 
   , bookingId :: String
+  , multipleScheduled :: Boolean
   }
   
 type Followers = {
@@ -1773,6 +1781,7 @@ type RideScheduledScreenData = {
   , cancellationReasons :: Array OptionButtonList
   , config :: AppConfig
   , fareProductType :: FareProductType
+  , fromScreen :: String
 }
 
 type RideScheduledScreenProps = {

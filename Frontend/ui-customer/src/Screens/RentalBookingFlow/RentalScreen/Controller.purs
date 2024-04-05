@@ -235,3 +235,20 @@ incrementDecrementDistance isIncrement state =
       toUpdate = if isIncrement then (initialDistance < state.props.maxDistance) else (initialDistance > state.props.minDistance)
       updatedDistance = if toUpdate then initialDistance + (if isIncrement then 5 else (negate 5)) else initialDistance
   in state { data { rentalBookingData { baseDistance = updatedDistance }}}
+
+dummyFareQuoteDetails = {
+  baseFare : 0 ,
+  includedKmPerHr : 0 ,
+  perExtraKmRate : 0 ,
+  perExtraMinRate : 0 ,
+  perHourCharge : 0 ,
+  plannedPerKmRate : 0,
+  nightShiftCharge : 0
+}
+
+dummyRentalQuote = {
+  quoteDetails : ChooseVehicleController.config ,
+  index : 0 ,
+  activeIndex : 0 ,
+  fareDetails : dummyFareQuoteDetails
+}

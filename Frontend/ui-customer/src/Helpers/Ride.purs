@@ -56,6 +56,7 @@ checkRideStatus rideAssigned = do
       if not (null listResp.list) then do
         (GlobalState state') <- getState
         let state = state'.homeScreen
+            multipleScheduled = length listResp.list > 1
             (RideBookingRes resp) = (fromMaybe HSD.dummyRideBooking (head listResp.list))
             status = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._status
             bookingStatus = resp.status
@@ -77,6 +78,7 @@ checkRideStatus rideAssigned = do
                     , rentalsInfo = (if rideScheduledAt == "" then Nothing else (Just{
                         rideScheduledAtUTC : rideScheduledAt
                       , bookingId : resp.id
+                      , multipleScheduled : multipleScheduled
                       }))},
                   props
                     { currentStage = rideStatus
@@ -96,6 +98,7 @@ checkRideStatus rideAssigned = do
           modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{rentalsInfo = (if rideScheduledAt == "" then Nothing else (Just{
                         rideScheduledAtUTC : rideScheduledAt
                       , bookingId : resp.id
+                      , multipleScheduled : multipleScheduled
                       }))}})
           updateLocalStage HomeScreen
         else do
