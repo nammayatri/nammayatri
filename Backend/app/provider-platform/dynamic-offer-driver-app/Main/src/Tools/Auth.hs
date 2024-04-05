@@ -100,15 +100,19 @@ verifyPerson token = do
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   result <- Redis.safeGet key
   case result of
-    Just (personId, merchantId, merchantOperatingCityId) -> return (personId, merchantId, merchantOperatingCityId)
+    Just (personId, merchantId, merchantOperatingCityId) -> return (personId, merchantIdFallback merchantId, merchantOperatingCityId)
     Nothing -> do
       sr <- verifyToken token
       let expiryTime = min sr.tokenExpiry authTokenCacheExpiry
       let personId = Id sr.entityId
-      let merchantId = Id sr.merchantId
+      let merchantId = merchantIdFallback (Id sr.merchantId)
       let merchantOperatingCityId = Id sr.merchantOperatingCityId
       Redis.setExp key (personId, merchantId, merchantOperatingCityId) expiryTime
       return (personId, merchantId, merchantOperatingCityId)
+
+merchantIdFallback :: Id Merchant.Merchant -> Id Merchant.Merchant
+merchantIdFallback "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" = "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" --  "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID  , "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
+merchantIdFallback v = v
 
 authTokenCacheKey :: RegToken -> Text
 authTokenCacheKey regToken =
