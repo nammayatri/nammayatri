@@ -313,6 +313,7 @@ initData = {
     , showSpecialZoneInfoPopup : false
     , hotSpot : { selectedSpot : Nothing, centroidPoint : Nothing }
     , isBannerDataComputed : false
+    , repeatRideVariant : ""
   }
 }
 
@@ -559,5 +560,6 @@ dummyTrip = {
     frequencyCount: Nothing,  
     recencyDate: Nothing,  
     locationScore: Nothing,  
-    isSpecialZone: true
+    isSpecialZone: true,
+    vehicleVariant: ""
 }

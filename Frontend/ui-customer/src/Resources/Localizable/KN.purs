@@ -1076,4 +1076,5 @@ getKN stringKey =
         I_NEED_HELP_WITH_MY_RECENT_RIDE -> "ನನ್ನ ಇತ್ತೀಚಿನ ಸವಾರಿಯಲ್ಲಿ ನನಗೆ ಸಹಾಯ ಬೇಕಾಗಿದೆ"
         CONTINUE_WITH_SAFETY_SETTINGS -> "ಸುರಕ್ಷಾ ಸೆಟ್ಟಿಂಗ್ಗಳೊಡನೆ ಮುಂದುವರಿಯಿರಿ"
         TAP_WHERE_TO_TO_BOOK_RIDE -> "ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ಬುಕ್ ಮಾಡಲು 'ಎಲ್ಲಿಗೆ?' ಗೆ ಟ್ಯಾಪ್ ಮಾಡಿ!"
-        NAMMA_SERVICES -> "ನಮ್ಮ ಸೇವೆಗಳು"
+        NAMMA_SERVICES -> "ಯಾತ್ರಿ ಸೇವೆಗಳು"
+        LAST_CHOSEN_VARIANT_NOT_AVAILABLE -> "ಕೊನೆಯ ಆಯ್ಕೆ ಮಾಡಿದ ರೈಡ್ ಪ್ರಕಾರ ಲಭ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ವೈಕಲ್ಪಿಕ ರೈಡ್ ಆಯ್ಕೆ ಮಾಡಿ"

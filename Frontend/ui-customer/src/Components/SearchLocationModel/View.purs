@@ -17,7 +17,7 @@ module Components.SearchLocationModel.View where
 
 import Common.Types.App
 
-import Animation (translateYAnimFromTop)
+import Animation (translateYAnimFromTop, fadeIn)
 import Animation.Config (translateFullYAnimWithDurationConfig, translateYAnimHomeConfig, Direction(..))
 import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem as LocationListItem
@@ -51,6 +51,7 @@ import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Mobility.Prelude (boolToVisibility)
+import Helpers.Utils as HU
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -64,8 +65,9 @@ view push state =
       , margin $ MarginBottom (if state.isSearchLocation == LocateOnMap then bottomSpacing else 0)
       , onBackPressed push (const $ GoBack)
       ][ PrestoAnim.animationSet
-          [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]
-          $ linearLayout
+          [ fadeIn true ]
+          $ 
+          linearLayout
           [ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
@@ -524,7 +526,7 @@ findPlacesIllustration push state =
       , margin $ Margin 7 ((screenHeight unit)/7) 16 0
       ]
       [ imageView
-          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_empty_suggestions"
+          [ imageWithFallback $ HU.getImageBasedOnCity "ny_ic_empty_search"
           , height $ V 99
           , width $ V 133
           , margin $ MarginBottom 12
@@ -534,6 +536,7 @@ findPlacesIllustration push state =
           , height WRAP_CONTENT
           , gravity CENTER
           , margin $ MarginBottom 5
+          , visibility GONE -- Not required now.
           ]
           [ textView $
               [ text $ (getVarString WELCOME_TEXT [appName]) <> "!"

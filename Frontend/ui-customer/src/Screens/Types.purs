@@ -481,7 +481,8 @@ type ItemState =
     status :: PropValue,
     rideEndTimeUTC :: PropValue,
     alpha :: PropValue,
-    zoneVisibility :: PropValue
+    zoneVisibility :: PropValue,
+    variantImage :: PropValue
   }
 
 -- ################################################ PermissionScreenState ##################################################
@@ -793,6 +794,7 @@ type HomeScreenStateProps =
   , showSpecialZoneInfoPopup :: Boolean
   , hotSpot :: HotSpotProps
   , isBannerDataComputed :: Boolean
+  , repeatRideVariant :: String
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -1369,7 +1371,7 @@ type DestinationGeoHash = String
 
 type Suggestions = {
     destinationSuggestions :: Array LocationListItemState
-  , tripSuggestions :: Array Trip
+  , variantBasedTripSuggestions :: Array Trip 
 }
 
 type Trip = {
@@ -1385,6 +1387,7 @@ type Trip = {
   , recencyDate :: Maybe String
   , locationScore :: Maybe Number
   , isSpecialZone :: Boolean
+  , vehicleVariant :: String
 }
 type SuggestionsData =  {
     suggestionsMap :: SuggestionsMap

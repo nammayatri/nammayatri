@@ -314,7 +314,8 @@ type HomeScreen = {
   bannerViewVisibility :: Boolean,
   whereToButton :: WhereToButton,
   pickupLocationTextColor :: String,
-  isServiceablePopupFullScreen :: Boolean
+  isServiceablePopupFullScreen :: Boolean,
+  showAdditionalServicesNew :: Boolean
 }
 
 type HomeScreenHeader = {
