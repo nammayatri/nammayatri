@@ -213,6 +213,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     holder.currency.setText(String.valueOf(model.getCurrency()));
                     updateExtraChargesString(holder, model);
                     updateIncreaseDecreaseButtons(holder, model);
+                    RideRequestUtils.updateRateView(holder, model);
                     return;
                 case "time":
                     updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), (model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer)));
@@ -296,6 +297,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
+            RideRequestUtils.updateRateView(holder, model);
+            RideRequestUtils.updateTierAndAC(holder, model);
             String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
             LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
             holder.reqButton.setOnClickListener(view -> {
@@ -493,14 +496,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void updateExtraChargesString(SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
-            String pickupChargesText = model.getCustomerTip() > 0 ?
-                    formattedPickupChargesText + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
-                    formattedPickupChargesText;
             if (model.getSpecialZoneExtraTip() > 0) {
-                String pickUpChargesWithZone = pickupChargesText + " " + getString(R.string.and) + " " + sharedPref.getString("CURRENCY", "₹") + " " + model.getSpecialZoneExtraTip() + " " + getString(R.string.zone_pickup_extra);
+                String pickUpChargesWithZone = formattedPickupChargesText + " " + getString(R.string.and) + " " + sharedPref.getString("CURRENCY", "₹") + " " + model.getSpecialZoneExtraTip() + " " + getString(R.string.zone_pickup_extra);
                 holder.textIncludesCharges.setText(pickUpChargesWithZone);
             } else {
-                holder.textIncludesCharges.setText(pickupChargesText);
+                holder.textIncludesCharges.setText(formattedPickupChargesText);
             }
         });
     }
@@ -662,13 +662,15 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     double destLat = rideRequestBundle.getDouble("destLat");
                     double destLng = rideRequestBundle.getDouble("destLng");
                     boolean downgradeEnabled = rideRequestBundle.getBoolean("downgradeEnabled", false);
+                    int airConditioned = rideRequestBundle.getInt("airConditioned", -1);
+                    String vehicleServiceTier = rideRequestBundle.getString("vehicleServiceTier", null);
                    
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
 
                     }
                     SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
-                            (df.format(distanceTobeCovered / 1000)),
+                            distanceTobeCovered,
                             RideRequestUtils.calculateDp(durationToPickup, df),
                             addressPickUp,
                             addressDrop,
@@ -698,7 +700,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             destLng,
                             specialZonePickup,
                             specialZoneExtraTip,
-                            downgradeEnabled);
+                            downgradeEnabled,
+                            airConditioned,
+                            vehicleServiceTier
+                    );
 
                     if (floatyView == null) {
                         startTimer();

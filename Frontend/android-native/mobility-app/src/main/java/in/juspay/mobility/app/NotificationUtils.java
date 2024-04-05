@@ -198,6 +198,8 @@ public class NotificationUtils {
                     sheetData.putInt("specialZoneExtraTip", entity_payload.optInt("specialZoneExtraTip", 0)); 
                     sheetData.putBoolean("specialZonePickup", isSpecialPickupZone); 
                     sheetData.putBoolean("downgradeEnabled", entity_payload.optBoolean("downgradeEnabled", true));
+                    sheetData.putInt("airConditioned", entity_payload.has("airConditioned") && !entity_payload.isNull("airConditioned") ? (entity_payload.getBoolean("airConditioned") ? 1 : 0) : -1);
+                    sheetData.putString("vehicleServiceTier", entity_payload.optString("vehicleServiceTier", null));
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
                     System.out.println(entity_payload);
