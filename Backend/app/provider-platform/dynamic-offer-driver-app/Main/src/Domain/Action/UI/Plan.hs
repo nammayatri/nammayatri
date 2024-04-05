@@ -262,7 +262,7 @@ createDriverPlanGeneric serviceName (driverId, merchantId, merchantOpCityId) pla
             enableServiceUsageCharge = True,
             subscriptionServiceRelatedData = subscriptionServiceRelatedData,
             payerVpa = Nothing,
-            lastPaymentLinkSentAtIstDate = Nothing,
+            lastPaymentLinkSentAtIstDate = Just now,
             ..
           }
   QDPlan.create dPlan
@@ -408,7 +408,7 @@ mkDriverPlan plan (driverId, merchantId, merchantOpCityId) = do
         autoPayStatus = Just DI.PENDING,
         merchantOpCityId = merchantOpCityId,
         subscriptionServiceRelatedData = NoData,
-        lastPaymentLinkSentAtIstDate = Nothing,
+        lastPaymentLinkSentAtIstDate = Just now,
         ..
       }
 
