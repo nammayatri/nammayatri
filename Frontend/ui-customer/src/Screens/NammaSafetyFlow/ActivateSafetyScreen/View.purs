@@ -124,12 +124,11 @@ view push state =
                 true, _,_ -> Header.testSafetyHeaderView (push <<< SafetyHeaderAction)
                 _, true, _ -> emptyTextView
                 false, false,_ -> Header.view (push <<< SafetyHeaderAction) headerConfig
-            , case state.props.confirmTestDrill, state.props.triggeringSos, (state.props.showCallPolice || state.props.isSafetyCenterDisabled), state.props.reportPastRide of
-                true, _, _, _ -> confirmSafetyDrillView state push
-                _, _, true, _ -> dialPoliceView state push
-                _, _, _, true -> postRideSosView push state
-                false, true, _, false-> triggeringSosView state push
-                false, false, _, false -> activateSafetyView state push
+            , if state.props.confirmTestDrill then confirmSafetyDrillView state push 
+              else if state.props.triggeringSos then triggeringSosView state push
+              else if showCallPolice then dialPoliceView state push
+              else if state.props.reportPastRide then postRideSosView push state
+              else activateSafetyView state push
             ]
         , shimmerView state
         ]
@@ -145,6 +144,7 @@ view push state =
       , headerVisiblity = boolToInvisibility $ not state.props.confirmTestDrill
       , showCrossImage = not state.props.showCallPolice
       }
+  showCallPolice = state.props.showCallPolice || (state.props.isSafetyCenterDisabled && not state.props.showTestDrill)
 
 ------------------------------------- dashboardView -----------------------------------
 activateSafetyView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w

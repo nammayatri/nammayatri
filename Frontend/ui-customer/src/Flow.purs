@@ -1576,6 +1576,7 @@ homeScreenFlow = do
                     , confirmTestDrill = showtestDrill
                     , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
                     , checkPastRide = state.props.currentStage == HomeScreen
+                    , showCallPolice = if triggerSos then state.props.isSafetyCenterDisabled else false
                     }
                   , data
                     { rideId = state.data.driverInfoCardState.rideId
@@ -3815,9 +3816,10 @@ activateSafetyScreenFlow = do
                     Nothing -> state.data.rideId
                     Just ride -> ride.rideId
           flowType = if isPoliceFlow then "Police" else "SafetyFlow"
+      (GlobalState gState) <- getState
       if state.props.showTestDrill
         then do
-          void $ lift $ lift $ Remote.createMockSos (not $ DS.null state.data.rideId) false
+          void $ lift $ lift $ Remote.createMockSos (gState.homeScreen.props.currentStage == RideStarted) false
           void $ pure $ cleverTapCustomEvent "ny_user_test_drill"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{sosBannerType = Nothing}})
           pure unit

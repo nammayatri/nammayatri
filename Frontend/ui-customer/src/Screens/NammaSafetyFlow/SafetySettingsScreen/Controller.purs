@@ -194,6 +194,8 @@ eval (PopUpModalAC PopUpModal.OnButton1Click) state = do
 
 eval (PopUpModalAC PopUpModal.OnButton2Click) state = continue state{props{showPastRidePopUp = false, checkPastRide = false}}
 
+eval (PopUpModalAC PopUpModal.DismissPopup) state = continue state{props{showPastRidePopUp = false}}
+
 eval (CheckRideListResp (RideBookingListRes listResp)) state = do
   let mbResp = DA.head listResp.list
   case mbResp of

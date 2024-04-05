@@ -263,6 +263,7 @@ pastRideSOSConfirmationPopConfig state = PopUpModal.config
         , coverImageConfig
           { visibility = GONE
           }
+        , backgroundClickable = false
         }
 
 

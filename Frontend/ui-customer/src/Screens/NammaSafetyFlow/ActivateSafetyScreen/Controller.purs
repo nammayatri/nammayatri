@@ -135,7 +135,9 @@ eval (CancelSosTrigger PrimaryButtonController.OnClick) state = do
 
 eval BackPressed state =
   if state.props.showCallPolice then
-    continue state { props { showCallPolice = false } }
+    if state.props.isSafetyCenterDisabled 
+      then exit $ GoBack state
+      else continue state { props { showCallPolice = false } }
   else 
     exit $ GoBack state
 
