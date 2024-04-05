@@ -32,6 +32,7 @@ import JBridge (toast, toggleBtnLoader)
 import Components.RequestInfoCard as InfoCard
 import Language.Strings
 import Language.Types
+import MerchantConfig.Types (MetroConfig)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -45,7 +46,7 @@ data Action = BackPressed
             | GenericHeaderAC GenericHeader.Action
             | UpdateButtonAction PrimaryButton.Action
             | MyMetroTicketAction
-            | ChangeTicketTab ST.TicketType
+            | ChangeTicketTab ST.TicketType MetroConfig 
             | IncrementTicket
             | DecrementTicket
             | MetroRouteMapAction
@@ -84,14 +85,17 @@ eval DecrementTicket state = do
 
 eval MetroRouteMapAction state = exit $ GoToMetroRouteMap
 
-eval (ChangeTicketTab ticketType) state = do 
+eval (ChangeTicketTab ticketType cityMetroConfig) state = do 
   if state.props.currentStage == ST.ConfirmMetroQuote then do
     let ticketTypeUpdatedState = state {data {ticketType = ticketType}}
         quoteData = getquoteData ticketTypeUpdatedState state.data.quoteResp 
         updatedState = ticketTypeUpdatedState { data {ticketPrice = quoteData.price, quoteId = quoteData.quoteId }}
     updateAndExit updatedState $ Refresh updatedState
   else do
-    continue state { data {ticketType = ticketType, ticketCount = state.data.ticketCount}, props {currentStage  = ST.MetroTicketSelection}}
+    let updatedTicketCount = case ticketType of
+          ST.ONE_WAY -> if state.data.ticketCount > cityMetroConfig.ticketLimit.oneWay then cityMetroConfig.ticketLimit.oneWay else state.data.ticketCount
+          ST.ROUND_TRIP -> if state.data.ticketCount > cityMetroConfig.ticketLimit.roundTrip then cityMetroConfig.ticketLimit.roundTrip else state.data.ticketCount
+    continue state { data {ticketType = ticketType, ticketCount = updatedTicketCount}, props {currentStage  = ST.MetroTicketSelection}}
 
 eval (SelectLocation loc ) state = updateAndExit state{props{currentStage  = ST.MetroTicketSelection}} $ SelectSrcDest loc state{props{currentStage  = ST.MetroTicketSelection}}
 
