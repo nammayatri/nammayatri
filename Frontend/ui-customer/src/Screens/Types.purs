@@ -823,9 +823,16 @@ type HomeScreenStateProps =
   , zoneOtpExpired :: Boolean
   , stageBeforeChatScreen :: Stage
   , specialZoneType :: String
+  , scheduledRidePollingDelay :: Number
+  , startScheduledRidePolling :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
+
+type BookingTime = {
+  scheduledFor :: String,
+  bookingId :: String
+}
 
 derive instance genericBottomNavBarIcon :: Generic BottomNavBarIcon _
 instance showBottomNavBarIcon :: Show BottomNavBarIcon where show = genericShow

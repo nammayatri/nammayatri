@@ -159,6 +159,18 @@ screen initialState =
               push HandleCallback
             else do
               pure unit
+            if(initialState.props.scheduledRidePollingDelay > 1800.0) then do
+              
+              _ <- launchAff $ flowRunner defaultGlobalState $ do
+                    void $ delay $ Milliseconds (initialState.props.scheduledRidePollingDelay * 1000.0)
+                    doAff do liftEffect $ push $ StartScheduledRidePolling
+              pure unit
+            else do
+              pure unit
+            if (initialState.props.startScheduledRidePolling) then do
+              pure unit
+            else do
+              pure unit
             when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ flowRunner defaultGlobalState $ computeListItem push
             case initialState.props.currentStage of
               SearchLocationModel -> case initialState.props.isSearchLocation of

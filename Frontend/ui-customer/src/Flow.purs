@@ -64,7 +64,7 @@ import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding)
 import JBridge as JB
-import Helpers.Utils (compareDate, convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, zoneLabelIcon, transformGeoJsonFeature, getCityFromString, getMetroConfigFromAppConfig)
+import Helpers.Utils (compareDate, convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, zoneLabelIcon, transformGeoJsonFeature, getCityFromString, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
 import Log (printLog)
@@ -174,7 +174,7 @@ import Screens.NammaSafetyFlow.SafetyEducationScreen.Controller as SafetyEducati
 import Screens.NammaSafetyFlow.Components.SafetyUtils
 import RemoteConfig as RC
 import Engineering.Helpers.RippleCircles (clearMap)
-import Data.Array (groupBy, fromFoldable, singleton)
+import Data.Array (groupBy, fromFoldable, singleton, sort)
 import Data.Foldable (maximumBy)
 import Data.Ord (comparing)
 import Types.App
@@ -597,7 +597,7 @@ updateDisabilityList screenType = do
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
-  (GlobalState currentState) <- getState
+  (GlobalState currentState) <- getState 
   void $ checkAndUpdateSavedLocations currentState.homeScreen
   void $ pure $ cleverTapSetLocation unit
   -- TODO: REQUIRED ONCE WE NEED TO STORE RECENT CURRENTLOCATIONS
@@ -609,7 +609,10 @@ homeScreenFlow = do
   void $ pure $ firebaseUserID (getValueToLocalStore CUSTOMER_ID)
   void $ lift $ lift $ toggleLoader false
   let _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" true
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }})
+  let bookingTimeList = decodeBookingTimeList FunctionCall
+      currTime = (getCurrentUTC "")
+  let diffInSeconds = (INT.toNumber $ fromMaybe 0 $ head $ filter(\item -> item >= 0) $ sort $ map (\date -> EHC.compareUTCDate date.scheduledFor currTime) bookingTimeList) - 1800.0
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{scheduledRidePollingDelay = diffInSeconds, hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }})
   liftFlowBT $ handleUpdatedTerms $ getString STR.TERMS_AND_CONDITIONS_UPDATED
   flow <- UI.homeScreen
   void $ lift $ lift $ fork $ Remote.pushSDKEvents
@@ -989,7 +992,9 @@ homeScreenFlow = do
           let diffInSeconds = EHC.compareUTCDate (if DS.null state.data.startTimeUTC then (getCurrentUTC "") else state.data.startTimeUTC) (getCurrentUTC "" )
               isNow = diffInSeconds < 60 * 30
           if isNow then enterRentalRideSearchFlow bookingId
-          else rideScheduledFlow
+          else do
+            let currentBookingTime = setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ (decodeBookingTimeList FunctionCall )<> [{bookingId : bookingId, scheduledFor : state.data.startTimeUTC}]
+            rideScheduledFlow
 
         handleConfirmingRide :: String -> Stage -> FlowBT String Unit
         handleConfirmingRide bookingId currentStage = do
@@ -3521,7 +3526,9 @@ rideScheduledFlow = do
     RideScheduledScreenOutput.CancelRentalRide state -> do 
       resp <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest state.props.cancelDescription state.props.cancelReasonCode) (state.data.bookingId)
       case resp of 
-        Right resp -> homeScreenFlow
+        Right resp -> do 
+          setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ filter(\item -> item.bookingId /= state.data.bookingId) $ decodeBookingTimeList FunctionCall
+          homeScreenFlow
         Left _ -> do 
           void $ pure $ toast "Failed To Cancel Ride"
           rideScheduledFlow
@@ -4461,7 +4468,9 @@ rentalScreenFlow = do
                 })
             setValueToLocalStore CONFIRM_QUOTES_POLLING "false"
             enterRentalRideSearchFlow resp.bookingId
-            else rideScheduledFlow
+            else do 
+              let currentBookingTime = setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ (decodeBookingTimeList FunctionCall)<>[{bookingId : resp.bookingId, scheduledFor : updatedState.data.startTimeUTC}]
+              rideScheduledFlow
         Left err -> do
           void $ pure $ toast "A Ride is already scheduled. Please Choose another time."
           pure unit
