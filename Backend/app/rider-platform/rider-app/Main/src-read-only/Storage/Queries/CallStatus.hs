@@ -19,9 +19,6 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.CallStatus as Beam
 import Storage.Queries.CallStatusExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CallStatus.CallStatus -> m ())
-create = createWithKV
-
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.CallStatus.CallStatus] -> m ())
 createMany = traverse_ create
 
