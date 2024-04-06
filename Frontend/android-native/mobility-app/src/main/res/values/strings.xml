@@ -71,4 +71,12 @@
     <string gender="female" name="com_facebook_loginview_logged_in_using_facebook_f1gender" translatable="false">Connected with Facebook</string>
     <string name="upload_image">Upload Image</string>
     <string name="no_enabled_browser" translatable="false">No enabled browser found in your device, please enable or install a browser</string>
+    <string name="customer_edited">Customer edited a stop!</string>
+    <string name="customer_added">Customer added a stop!</string>
+    <string name="navigate_to_location">Navigate to location</string>
+    <string name="close">Close</string>
+    <string name="today">Today</string>
+    <string name="now"> Now</string>
+    <string name="rental"> Rental</string>
+    <string name="intercity"> Intercity</string>
 </resources>

@@ -267,7 +267,6 @@ squidInkBlue = "#303440"
 
 rippleShade :: Color
 rippleShade = "#D5D5D8"
-
 green200 :: Color
 green200 = "#2053BB6F"
 
@@ -338,3 +337,7 @@ azureWhite = "#D6EBF5"
 
 mountainFig :: Color 
 mountainFig = "#373B49"
+
+
+blueGreen :: Color
+blueGreen = "#42B8BA"

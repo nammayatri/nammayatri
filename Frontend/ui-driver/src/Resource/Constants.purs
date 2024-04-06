@@ -17,14 +17,15 @@ module Resource.Constants where
 
 import Common.Types.App as Common
 import Data.Array as DA
-import Data.Maybe (fromMaybe, Maybe(..))
+import Data.Lens ((^.))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split, toLower)
 import Data.String (trim)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude ((==), (&&), (<>), ($))
 import Screens.Types as ST
-import Services.API (LocationInfo(..))
+import Services.API (LocationInfo(..), StopLocation(..), StopLocationAddress(..), TripCategory(..))
 
 type Language =
     {
@@ -66,6 +67,7 @@ decodeAddress ( LocationInfo address) fullAddress =
                     (trim (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
                     else
                     (trim (fromMaybe "" address.street)) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country)
+
 
 tripDatesCount :: Int
 tripDatesCount = 15
@@ -157,3 +159,60 @@ decodeVehicleType value = case value of
   "AutoCategory" -> Just ST.AutoCategory
   "CarCategory" -> Just ST.CarCategory
   _ -> Nothing
+rideTypeConstructor :: Maybe TripCategory -> ST.TripType
+rideTypeConstructor ( tripCategory) = 
+        case tripCategory of
+            Nothing -> ST.OneWay
+            Just (TripCategory tripCategory') ->
+                case toLower tripCategory'.tag of
+                        "oneway" -> ST.OneWay 
+                        "roundtrip" -> ST.RoundTrip
+                        "rental" -> ST.Rental
+                        "intercity" -> ST.Intercity
+                        "rideshare" -> ST.RideShare
+                        _ -> ST.OneWay
+
+constructLocationInfo :: Maybe Number -> Maybe Number -> Maybe LocationInfo
+constructLocationInfo (latitude) (longitude) = 
+    case latitude,longitude of
+        Just latitude',Just longitude' -> 
+                Just $ LocationInfo {
+                        area :  Just "",
+                        state :  Just "",
+                        country :  Just "",
+                        building :  Just "",
+                        door : Just "",
+                        street :  Just "",
+                        lat : latitude',
+                        city :  Just "",
+                        areaCode :  Just "",
+                        lon : longitude'
+                }
+        _,_ -> Nothing
+
+getLocationInfoFromStopLocation :: StopLocationAddress -> Number -> Number -> LocationInfo
+getLocationInfoFromStopLocation (StopLocationAddress {door, building, street, area, city, state, country, areaCode}) lat lon = 
+     LocationInfo 
+        {
+                area :  area,
+                state :  state,
+                country :  country,
+                building :  building,
+                door : door,
+                street :  street,
+                lat : lat,
+                city :  city,
+                areaCode :  areaCode,
+                lon : lon
+        }
+
+getHomeStageFromString :: String -> ST.HomeScreenStage
+getHomeStageFromString localStage = 
+  case localStage of
+        "HomeScreen" -> ST.HomeScreen
+        "RideRequested" -> ST.RideRequested
+        "RideAccepted" -> ST.RideAccepted
+        "RideStarted" -> ST.RideStarted
+        "RideCompleted" -> ST.RideCompleted
+        "ChatWithCustomer" -> ST.ChatWithCustomer
+        _ -> ST.HomeScreen

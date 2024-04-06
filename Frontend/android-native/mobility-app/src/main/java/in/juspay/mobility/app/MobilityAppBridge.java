@@ -115,6 +115,7 @@ public class MobilityAppBridge extends HyperBridge {
     public static String storeDetectPhoneNumbersCallBack = null;
     private static String storeCustomerCallBack = null;
     private static String storeDriverCallBack = null;
+    private String storeAddRideStopCallBack = null;
 
 
     // Permission request Code
@@ -165,6 +166,11 @@ public class MobilityAppBridge extends HyperBridge {
             @Override
             public void driverCallBack(String notificationType, String notificationData) {
                 callDriverNotificationCallBack(notificationType,notificationData);
+            }
+
+            @Override
+            public void addStopCallBack(String newStopLocation){
+                callDriverAddRideStopCallBack(newStopLocation);
             }
 
             @Override
@@ -257,9 +263,21 @@ public class MobilityAppBridge extends HyperBridge {
     public void callDriverNotificationCallBack(String notificationType, String notificationData) {
         if (storeDriverCallBack != null) {
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
-                    storeDriverCallBack, notificationType, notificationData.replace("'",""));
+                    storeDriverCallBack, notificationType, notificationData.replace("'", ""));
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
+    }
+    @JavascriptInterface
+    public void storeCallBackForAddRideStop(String callback) {
+        storeAddRideStopCallBack = callback;
+    }
+
+    public void callDriverAddRideStopCallBack(String newStopLocation) {
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                    storeAddRideStopCallBack, newStopLocation);
+            Log.d(CALLBACK, javascript);
+            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+
     }
     // endregion
 

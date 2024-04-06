@@ -13,7 +13,7 @@ import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 
 public class SheetModel {
-    private final String pickUpDistance, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant, vehicleServiceTier;
+    private final String pickUpDistance, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant, vehicleServiceTier,rideProductType, rideDuration, rideDistance, rideStartTime, rideStartDate;
     private String requestId;
     private int startTime, specialZoneExtraTip;
     private double updatedAmount;
@@ -66,8 +66,12 @@ public class SheetModel {
                       int specialZoneExtraTip,
                       boolean downgradeEnabled,
                       int airConditioned,
-                      String vehicleServiceTier
-    ){
+                      String vehicleServiceTier,
+                      String rideProductType,
+                      String rideDuration,
+                      String rideDistance,
+                      String rideStartTime,
+                      String rideStartDate){
 
         this.srcLat = srcLat;
         this.srcLng = srcLng;
@@ -109,6 +113,11 @@ public class SheetModel {
         this.downgradeEnabled = downgradeEnabled;
         this.airConditioned = airConditioned;
         this.vehicleServiceTier = vehicleServiceTier;
+        this.rideProductType = rideProductType;
+        this.rideDuration = rideDuration;
+        this.rideDistance = rideDistance;
+        this.rideStartTime = rideStartTime;
+        this.rideStartDate = rideStartDate;
     }
 
     public String getVehicleServiceTier() {
@@ -117,6 +126,26 @@ public class SheetModel {
 
     public int isAirConditioned() {
         return airConditioned;
+    }
+
+    public String getRideProductType() {
+        return rideProductType;
+    }
+
+    public String getRideDuration() {
+        return rideDuration;
+    }
+
+    public String getRideDistance() {
+        return rideDistance;
+    }
+
+    public String getRideStartDate() {
+        return rideStartDate;
+    }
+
+    public String getRideStartTime() {
+        return rideStartTime;
     }
 
     public boolean getSpecialZonePickup(){

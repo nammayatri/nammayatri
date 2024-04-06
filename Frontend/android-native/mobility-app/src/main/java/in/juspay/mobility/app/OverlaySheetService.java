@@ -10,6 +10,8 @@
 package in.juspay.mobility.app;
 
 import static in.juspay.mobility.app.NotificationUtils.NO_VARIANT;
+import static in.juspay.mobility.app.NotificationUtils.RENTAL;
+import static in.juspay.mobility.app.NotificationUtils.INTERCITY;
 
 import android.annotation.SuppressLint;
 import android.app.Service;
@@ -104,12 +106,16 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private Boolean isRideAcceptedOrRejected = false;
     private TextView indicatorText1, indicatorText2, indicatorText3, vehicleText1, vehicleText2, vehicleText3;
     private TextView indicatorTip1, indicatorTip2, indicatorTip3;
+    private TextView indicatorRental1, indicatorRental2, indicatorRental3;
+    private TextView indicatorIntercity1, indicatorIntercity2, indicatorIntercity3;
     private ShimmerFrameLayout shimmerTip1, shimmerTip2, shimmerTip3;
     private LinearProgressIndicator progressIndicator1, progressIndicator2, progressIndicator3;
     private ArrayList<TextView> indicatorTextList, vehicleVariantList;
     private ArrayList<LinearProgressIndicator> progressIndicatorsList;
     private ArrayList<LinearLayout> indicatorList;
     private ArrayList<TextView> tipsList;
+    private ArrayList<TextView> rentalList;
+    private ArrayList<TextView> intercityList;
     private ArrayList<ShimmerFrameLayout> shimmerTipList;
     private String key = "";
     private String DUMMY_FROM_LOCATION = "dummyFromLocation";
@@ -142,7 +148,74 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             String pickupChargesText = formattedPickupChargesText;
             String searchRequestId = model.getSearchRequestId();
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showVariant || showSpecialLocationTag) {
+            if(model.getRideProductType().equals(RENTAL)){
+                holder.tagsBlock.setVisibility(View.VISIBLE);
+                holder.vcTierAndACView.setVisibility(View.GONE);
+                holder.reqButton.setTextColor(getColor(R.color.white));
+                holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.turquoise)));
+                if (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider")) {
+                    if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
+                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
+                        holder.rideTypeTag.setVisibility(View.VISIBLE);
+                    } else {
+                        holder.rideTypeTag.setVisibility(View.VISIBLE);
+                       holder.rideTypeTag.setBackgroundResource(R.drawable.ic_orange_tag);
+                        holder.rideTypeImage.setVisibility(View.GONE);
+                    }
+                    holder.rideTypeText.setText(variant);
+                }
+                holder.rentalRideTypeTag.setVisibility(View.VISIBLE);
+                holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
+                holder.rideStartTime.setText(model.getRideStartTime());
+                holder.rideStartDate.setVisibility(View.VISIBLE);
+                if(model.getRideStartDate() != "")
+                {
+                    holder.rideStartDate.setText(model.getRideStartDate());
+                }
+                holder.rentalDurationDistanceTag.setVisibility(View.VISIBLE);
+                holder.rideDuration.setText(model.getRideDuration());
+                holder.rideDistance.setText(model.getRideDistance());
+                holder.destinationArea.setVisibility(View.GONE);
+                holder.destinationAddress.setVisibility(View.GONE);
+                holder.distanceToBeCovered.setVisibility(View.GONE);
+                holder.destinationPinCode.setVisibility(View.GONE);
+                holder.locationDashedLine.setVisibility(View.GONE);
+                holder.locationDestinationPinTag.setVisibility(View.GONE);
+                holder.gotoTag.setVisibility(View.GONE);
+                holder.customerTipTag.setVisibility(View.GONE);
+                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
+            }
+            else if (model.getRideProductType().equals(INTERCITY)) {
+                holder.tagsBlock.setVisibility(View.VISIBLE);
+                holder.vcTierAndACView.setVisibility(View.GONE);
+                holder.reqButton.setTextColor(getColor(R.color.white));
+                holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.blue800)));
+                holder.intercityRideTypeTag.setVisibility(View.VISIBLE);
+                holder.gotoTag.setVisibility(View.GONE);
+                holder.customerTipTag.setVisibility(View.GONE);
+                if (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider")) {
+                    if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
+                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
+                        holder.rideTypeTag.setVisibility(View.VISIBLE);
+                    } else {
+                        holder.rideTypeTag.setVisibility(View.VISIBLE);
+                       holder.rideTypeTag.setBackgroundResource(R.drawable.ic_orange_tag);
+                        holder.rideTypeImage.setVisibility(View.GONE);
+                    }
+                    holder.rideTypeText.setText(variant);
+                }
+                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
+                holder.gotoTag.setVisibility(View.GONE);
+                holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
+                holder.rideStartTime.setText(model.getRideStartTime());
+                holder.rideStartDate.setVisibility(View.VISIBLE);
+                if(model.getRideStartDate() != "")
+                {
+                    holder.rideStartDate.setText(model.getRideStartDate());
+                }
+                
+            }
+            else if (model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showVariant || showSpecialLocationTag) {
                 pickupChargesText = model.getCustomerTip() > 0 ?
                         formattedPickupChargesText + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
                         formattedPickupChargesText;
@@ -659,6 +732,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     boolean downgradeEnabled = rideRequestBundle.getBoolean("downgradeEnabled", false);
                     int airConditioned = rideRequestBundle.getInt("airConditioned", -1);
                     String vehicleServiceTier = rideRequestBundle.getString("vehicleServiceTier", null);
+                    String rideProductType = rideRequestBundle.getString("rideProductType");
+                    String rideDuration = String.format("%02d:%02d hr", rideRequestBundle.getInt("rideDuration") / 3600 ,( rideRequestBundle.getInt("rideDuration") % 3600 ) / 60);
+                    String rideDistance = String.format("%d km", rideRequestBundle.getInt("rideDistance") / 1000);
+                    String rideStartTime = rideRequestBundle.getString("rideStartTime");
+                    String rideStartDate= rideRequestBundle.getString("rideStartDate");
                    
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
@@ -697,8 +775,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             specialZoneExtraTip,
                             downgradeEnabled,
                             airConditioned,
-                            vehicleServiceTier
-                    );
+                            vehicleServiceTier,
+                            rideProductType,
+                            rideDuration,
+                            rideDistance,
+                            rideStartTime,
+                            rideStartDate);
 
                     if (floatyView == null) {
                         startTimer();
@@ -776,6 +858,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
         progressDialog = inflater.inflate(R.layout.loading_screen_overlay, null);
         apiLoader = inflater.inflate(R.layout.api_loader, null);
+        String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", "null");
+        LottieAnimationView apiLoaderlottieAnimationView = apiLoader.findViewById(R.id.lottie_view_waiting);
+        if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+            apiLoaderlottieAnimationView.setAnimation(R.raw.ic_cab_vehicle_processing);
+        }
         View dismissLoader = progressDialog.findViewById(R.id.loaderOverlay);
         dismissLoader.setOnClickListener(view -> {
             Handler handler = new Handler(Looper.getMainLooper());
@@ -1120,10 +1207,18 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             indicatorTip1 = floatyView.findViewById(R.id.tip_view_0);
             indicatorTip2 = floatyView.findViewById(R.id.tip_view_1);
             indicatorTip3 = floatyView.findViewById(R.id.tip_view_2);
+            indicatorRental1 = floatyView.findViewById(R.id.rental_view_0);
+            indicatorRental2 = floatyView.findViewById(R.id.rental_view_1);
+            indicatorRental3 = floatyView.findViewById(R.id.rental_view_2);
+            indicatorIntercity1 = floatyView.findViewById(R.id.intercity_view_0);
+            indicatorIntercity2 = floatyView.findViewById(R.id.intercity_view_1);
+            indicatorIntercity3 = floatyView.findViewById(R.id.intercity_view_2);
             shimmerTip1 = floatyView.findViewById(R.id.shimmer_view_container_0);
             shimmerTip2 = floatyView.findViewById(R.id.shimmer_view_container_1);
             shimmerTip3 = floatyView.findViewById(R.id.shimmer_view_container_2);
             tipsList = new ArrayList<>(Arrays.asList(indicatorTip1, indicatorTip2, indicatorTip3));
+            rentalList = new ArrayList<>(Arrays.asList(indicatorRental1, indicatorRental2, indicatorRental3));
+            intercityList = new ArrayList<>(Arrays.asList(indicatorIntercity1, indicatorIntercity2, indicatorIntercity3));
             shimmerTipList = new ArrayList<>(Arrays.asList(shimmerTip1, shimmerTip2, shimmerTip3));
             for (int i = 0; i < 3; i++) {
                 if (i < sheetArrayList.size()) {
@@ -1137,11 +1232,37 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         indicatorList.get(i).setBackgroundColor(getColor(isSpecialZone ?  R.color.green100 : R.color.yellow200));
                     }
                     updateTopBar(i);
+
+                    if (sheetArrayList.get(i).getRideProductType().equals(RENTAL)) {
+                        rentalList.get(i).setVisibility(View.VISIBLE);
+                    }
+                    else {
+                        rentalList.get(i).setVisibility(View.INVISIBLE);
+                    }
+
+                    if(viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getRideProductType().equals(RENTAL))
+                    {
+                        indicatorList.get(i).setBackgroundColor(getColor(R.color.turquoise10));
+                    }
+
+                    if (sheetArrayList.get(i).getRideProductType().equals(INTERCITY)) {
+                        intercityList.get(i).setVisibility(View.VISIBLE);
+                    }
+                    else {
+                        intercityList.get(i).setVisibility(View.INVISIBLE);
+                    }
+
+                    if(viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getRideProductType().equals(INTERCITY))
+                    {
+                        indicatorList.get(i).setBackgroundColor(getColor(R.color.blue600));
+                    }
                 } else {
                     indicatorTextList.get(i).setText("--");
                     vehicleVariantList.get(i).setVisibility(View.GONE);
                     progressIndicatorsList.get(i).setVisibility(View.GONE);
                     tipsList.get(i).setVisibility(View.INVISIBLE);
+                    intercityList.get(i).setVisibility(View.INVISIBLE);
+                    rentalList.get(i).setVisibility(View.INVISIBLE);
                 }
             }
         });
