@@ -396,6 +396,7 @@ type DriverProfileScreenState = {
 }
 
 type DriverProfileScreenData = {
+  vehicleDetails :: Array DriverVehicleDetails,
   driverName :: String,
   driverVehicleType :: String,
   driverRating :: Maybe Number,
@@ -447,6 +448,15 @@ type RcDetails = {
     vehicleColor      :: Maybe String
     }
 
+type DriverVehicleDetails = {
+    registrationNo :: String,
+    userSelectedVehicleCategory :: VehicleCategory,
+    verifiedVehicleCategory :: Maybe VehicleCategory,
+    isVerified :: Boolean,
+    vehicleModel :: Maybe String,
+    isActive :: Boolean
+}
+
 type AnalyticsData = {
     totalEarnings :: String
   , bonusEarned :: String
@@ -480,6 +490,7 @@ type VehicleP = {
 }
 
 type DriverProfileScreenProps = {
+  manageVehicleVisibility :: Boolean,
   logoutModalView :: Boolean,
   showLiveDashboard :: Boolean,
   screenType :: DriverProfileScreenType,
@@ -1792,6 +1803,18 @@ data ReferralType = SuccessScreen | ComingSoonScreen | ReferralFlow | QRScreen |
 derive instance genericReferralType :: Generic ReferralType _
 instance eqReferralType :: Eq ReferralType where eq = genericEq
 
+type DocumentDetailsScreenState = {
+  data :: DocumentDetailsScreenData,
+  props :: DocumentDetailsScreenProps
+}
+
+type DocumentDetailsScreenData = {
+
+}
+
+type DocumentDetailsScreenProps = {
+
+}
 
 type BookingOptionsScreenState = {
   data :: BookingOptionsScreenData,
@@ -2277,7 +2300,7 @@ instance standardEncodeHomeScreenPopUpTypes :: StandardEncode HomeScreenPopUpTyp
 instance decodeHomeScreenPopUpTypes :: Decode HomeScreenPopUpTypes where decode = defaultDecode
 instance encodeHomeScreenPopUpTypes  :: Encode HomeScreenPopUpTypes where encode = defaultEncode
 
-data MenuOptions = DRIVER_PRESONAL_DETAILS |DRIVER_BANK_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BOOKING_OPTIONS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD | GO_TO_LOCATIONS
+data MenuOptions = DRIVER_PRESONAL_DETAILS |DRIVER_BANK_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BOOKING_OPTIONS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD | GO_TO_LOCATIONS | DOCUMENTS
 derive instance genericMenuoptions :: Generic MenuOptions _
 instance eqMenuoptions :: Eq MenuOptions where eq = genericEq
 

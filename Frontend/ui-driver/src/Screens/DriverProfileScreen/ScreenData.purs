@@ -33,6 +33,7 @@ initData =
   in 
   {
   data:  {
+    vehicleDetails : [],
     driverName : "",
     driverVehicleType : "",
     driverRating : Just 2.0,
@@ -93,6 +94,7 @@ initData =
     },
 
   props: {
+    manageVehicleVisibility : false,
     logoutModalView: false,
     showLiveDashboard : false,
     screenType : DRIVER_DETAILS,

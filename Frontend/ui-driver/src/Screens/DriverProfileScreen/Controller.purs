@@ -43,9 +43,10 @@ import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackA
 import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (/=), (<>), void, (>=), (>), (-), (+), (<=), (||), (&&))
 import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
+import Resource.Constants (transformVehicleType)
 import Screens (ScreenName(..), getScreen)
 import Screens.DriverProfileScreen.Transformer (getAnalyticsData)
-import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..), UpdateType(..), EditRc(..), VehicleDetails(..), EditRc(..), MenuOptions(..), MenuOptions(LIVE_STATS_DASHBOARD), Listtype(..))
+import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..), UpdateType(..), EditRc(..), VehicleDetails(..), EditRc(..), MenuOptions(..), MenuOptions(LIVE_STATS_DASHBOARD), Listtype(..), DriverVehicleDetails(..))
 import Screens.Types as ST
 import Services.API (GetDriverInfoResp(..), Vehicle(..), DriverProfileSummaryRes(..))
 import Services.API as SA
@@ -186,6 +187,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoToNotifications
                     | GoToAboutUsScreen
                     | OnBoardingFlow
+                    | DocumentsFlow
                     | GoToHomeScreen DriverProfileScreenState
                     | GoToReferralScreen
                     | GoToLogout
@@ -209,6 +211,7 @@ data Action = BackPressed
             | HideLiveDashboard String
             | ChangeScreen DriverProfileScreenType
             | GenericHeaderAC GenericHeaderController.Action
+            | ManageVehicleHeaderAC GenericHeaderController.Action
             | PrimaryEditTextAC PrimaryEditTextController.Action
             | UpdateValue UpdateType
             | DriverGenericHeaderAC GenericHeaderController.Action
@@ -226,11 +229,11 @@ data Action = BackPressed
             | LanguageSelection CheckList.Action
             | UpdateButtonClicked PrimaryButton.Action
             | ActivateRc
-            | DeactivateRc EditRc
+            | DeactivateRc EditRc String
             | CloseEditRc
             | ShowEditRcx
             | ChangeRcDetails Int
-            | GetRcsDataResponse SA.GetAllRcDataResp
+            | RegStatusResponse SA.DriverRegistrationStatusResp
             | UpdateRC String Boolean
             | ActivateOrDeactivateRcPopUpModalAction PopUpModal.Action
             | PaymentInfoPopUpModalAction PopUpModal.Action
@@ -250,6 +253,7 @@ data Action = BackPressed
             | LeftKeyAction
             | DownloadQR PrimaryButtonController.Action
             | ShareQR PrimaryButtonController.Action
+            | ManageVehicleButtonAC PrimaryButtonController.Action
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -270,6 +274,7 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
                                 else if state.props.deleteRcView then continue $ state { props{ deleteRcView = false}}
                                 else if state.props.activateOrDeactivateRcView then continue $ state { props{ activateOrDeactivateRcView = false}}
                                 else if state.props.activateRcView then continue $ state { props{ activateRcView = false}}
+                                else if state.props.manageVehicleVisibility then continue $ state { props {manageVehicleVisibility = false}}
                                 else if state.props.showLiveDashboard then do
                                 continueWithCmd state [do
                                   _ <- pure $ goBackPrevWebPage (getNewIDWithTag "webview")
@@ -319,6 +324,7 @@ eval (OptionClick optionIndex) state = do
       _ <- pure $ launchAppSettings unit
       continue state
     LIVE_STATS_DASHBOARD -> continue state {props {showLiveDashboard = true}}
+    DOCUMENTS -> exit DocumentsFlow --TODO
 
 eval (UpiQrRendered id) state = do
   continueWithCmd state [ do
@@ -366,18 +372,52 @@ eval (GetDriverInfoResponse (SA.GetDriverInfoResp driverProfileResp)) state = do
                                       },
                     props { enableGoto = driverProfileResp.isGoHomeEnabled && state.data.config.gotoConfig.enableGoto, canSwitchToRental = driverProfileResp.canSwitchToRental}}
 
-eval (GetRcsDataResponse  (SA.GetAllRcDataResp rcDataArray)) state = do
-  let rctransformedData = makeRcsTransformData rcDataArray
-  if (length rctransformedData == 1)
-    then do
-      let activeRcVal = rctransformedData
-      continue state{data{rcDataArray = rctransformedData, inactiveRCArray = drop 1 rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (activeRcVal!!0)}}
-    else do
-      let activeRcVal = filter _.rcStatus rctransformedData
-      if (length activeRcVal == 0)
-        then continue state {data{rcDataArray = rctransformedData, inactiveRCArray = drop 1 rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (rctransformedData!!0) }}
-        else
-          continue state{data{rcDataArray = rctransformedData, inactiveRCArray = filter (not _.rcStatus) $ rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (activeRcVal!!0)}}
+eval (RegStatusResponse  (SA.DriverRegistrationStatusResp regStatusResp)) state =
+  let driverVehicleData = mkDriverVehicleDetails
+  in continue state {data{ vehicleDetails = driverVehicleData}}
+  where 
+    mkDriverVehicleDetails :: Array DriverVehicleDetails
+    mkDriverVehicleDetails = 
+      let vehicleData = regStatusResp.vehicleDocuments
+      in map (\(SA.VehicleDocumentItem vehicle) -> 
+        { registrationNo : vehicle.registrationNo,
+          userSelectedVehicleCategory : fromMaybe ST.AutoCategory $ transformVehicleType $ Just vehicle.userSelectedVehicleCategory,
+          verifiedVehicleCategory : transformVehicleType vehicle.verifiedVehicleCategory,
+          isVerified : vehicle.isVerified,
+          vehicleModel : vehicle.vehicleModel,
+          isActive : vehicle.isActive
+        }
+      ) vehicleData
+
+-- type DriverVehicleDetails = {
+--     registrationNo :: String,
+--     userSelectedVehicleCategory :: VehicleCategory,
+--     verifiedVehicleCategory :: Maybe VehicleCategory,
+--     isVerified :: Boolean,
+--     vehicleModel :: Maybe String
+-- }
+
+-- newtype VehicleDocumentItem = VehicleDocumentItem
+--   { registrationNo :: String,
+--     userSelectedVehicleCategory :: String,
+--     verifiedVehicleCategory :: Maybe String,
+--     documents :: Array DocumentStatusItem,
+--     isVerified :: Boolean,
+--     vehicleModel :: Maybe String
+--   }
+--   let rctransformedData = makeRcsTransformData rcDataArray
+--   if (length rctransformedData == 1)
+--     then do
+--       let activeRcVal = rctransformedData
+--       continue state{data{rcDataArray = rctransformedData, inactiveRCArray = drop 1 rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (activeRcVal!!0)}}
+--     else do
+--       let activeRcVal = filter _.rcStatus rctransformedData
+--       if (length activeRcVal == 0)
+--         then continue state {data{rcDataArray = rctransformedData, inactiveRCArray = drop 1 rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (rctransformedData!!0) }}
+--         else
+--           continue state{data{rcDataArray = rctransformedData, inactiveRCArray = filter (not _.rcStatus) $ rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (activeRcVal!!0)}}
+
+
 
 eval (DriverSummary response) state = do
   let (DriverProfileSummaryRes resp) = response
@@ -402,6 +442,8 @@ eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = do
   if state.props.updateLanguages then continue state{props{updateLanguages = false}}
   else if (isJust state.props.detailsUpdationType ) then continue state {props{detailsUpdationType = Nothing}}
   else continue state{ props { openSettings = false }}
+
+eval (ManageVehicleHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continue state{props{manageVehicleVisibility = false}}
 
 eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = if state.data.fromHomeScreen then exit $ GoBack state else continue state {props{showGenderView=false, alternateNumberView=false},data{driverEditAlternateMobile = Nothing}}
 
@@ -498,16 +540,16 @@ eval CallCustomerSupport state = do
   void $ pure $ showDialer (getSupportNumber "") false
   continue state
 
-eval (DeactivateRc rcType) state = do
-  if rcType == DEACTIVATING_RC then continue state{props{activateOrDeactivateRcView = true}}
-  else if rcType == ACTIVATING_RC then continue state{props{activateOrDeactivateRcView = true}}
+eval (DeactivateRc rcType regNumber) state = do
+  if rcType == DEACTIVATING_RC then continue state{props{activateOrDeactivateRcView = true}, data{rcNumber = regNumber}}
+  else if rcType == ACTIVATING_RC then continue state{props{activateOrDeactivateRcView = true}, data{rcNumber = regNumber}}
   else
     if (length state.data.rcDataArray == 1)
       then do
         pure $ toast $ (getString STR.SINGLE_RC_CANNOT_BE_DELETED)
         continue state
       else
-        continue state{props{deleteRcView = true}}
+        continue state{props{deleteRcView = true}, data{rcNumber = regNumber}}
 
 eval (UpdateRC rcNo rcStatus) state  = do
   continue state{props{activateRcView = true}, data{rcNumber = rcNo, isRCActive = rcStatus}}
@@ -530,15 +572,17 @@ eval (DeleteRcPopUpModalAction (PopUpModal.OnButton1Click)) state =  exit $ Dele
 
 eval (DeleteRcPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state {props{deleteRcView=false}}
 
-eval (CallDriverPopUpModalAction (PopUpModal.OnButton1Click)) state =  do
-   exit $ CallingDriver state
+eval (DeleteRcPopUpModalAction (PopUpModal.DismissPopup)) state = continue state {props{deleteRcView=false}}
+
+eval (CallDriverPopUpModalAction (PopUpModal.OnButton1Click)) state = exit $ CallingDriver state
 
 eval (CallDriverPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state { props {callDriver = false}}
 
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continue state{ props { screenType = VEHICLE_DETAILS }}
 
-eval (AddRcButtonAC PrimaryButtonController.OnClick) state = do
-  exit $ AddingRC state
+eval (AddRcButtonAC PrimaryButtonController.OnClick) state = exit $ AddingRC state
+
+eval (ManageVehicleButtonAC PrimaryButtonController.OnClick) state = continue state {props {manageVehicleVisibility = true}}
 
 eval SkipActiveRc state = continue state { props {alreadyActive = false}}
 
@@ -555,7 +599,7 @@ eval (UpdateValueAC (PrimaryButton.OnClick)) state = do
     else continue state
 
 eval (DirectActivateRc rcType) state = continueWithCmd state{data{rcNumber = state.data.activeRCData.rcDetails.certificateNumber, isRCActive = state.data.activeRCData.rcStatus}} [
-    pure $ DeactivateRc rcType
+    pure $ DeactivateRc rcType ""
   ]
 
 eval _ state = continue state
@@ -575,6 +619,7 @@ getTitle menuOption =
     LIVE_STATS_DASHBOARD -> getString STR.LIVE_DASHBOARD
     DRIVER_BOOKING_OPTIONS -> getString STR.BOOKING_OPTIONS
     GO_TO_LOCATIONS -> getString STR.GOTO_LOCATIONS
+    DOCUMENTS -> "Documents"--getString STR.DOCUMENTS
 
 getDowngradeOptionsSelected :: SA.GetDriverInfoResp -> Array VehicleP
 getDowngradeOptionsSelected (SA.GetDriverInfoResp driverInfoResponse) =
@@ -620,19 +665,20 @@ getSelectedLanguages state =
   in  foldl (\acc item -> acc <> [item.value]) [] languages
 
 
-makeRcsTransformData :: Array SA.GetAllRcDataRecords -> Array VehicleDetails
-makeRcsTransformData (listRes) = map (\ (SA.GetAllRcDataRecords rc)-> {
-  rcStatus : rc.rcActive,
-  rcDetails : {certificateNumber : (rc.rcDetails) ^. _certificateNumber,
-  vehicleColor : (rc.rcDetails) ^. _vehicleColor,
-  vehicleModel : (rc.rcDetails) ^. _vehicleModel}
-  }
-  ) listRes
+-- makeRcsTransformData :: Array SA.GetAllRcDataRecords -> Array VehicleDetails
+-- makeRcsTransformData (listRes) = map (\ (SA.GetAllRcDataRecords rc)-> {
+--   rcStatus : rc.rcActive,
+--   rcDetails : {certificateNumber : (rc.rcDetails) ^. _certificateNumber,
+--   vehicleColor : (rc.rcDetails) ^. _vehicleColor,
+--   vehicleModel : (rc.rcDetails) ^. _vehicleModel}
+--   }
+--   ) listRes
 
 optionList :: DriverProfileScreenState -> Array Listtype
 optionList state =
     [
       {menuOptions: GO_TO_LOCATIONS , icon: fetchImage FF_ASSET "ny_ic_loc_grey"},
+      -- {menuOptions: DOCUMENTS , icon: fetchImage FF_ASSET "ic_document"},
       {menuOptions: DRIVER_BOOKING_OPTIONS , icon: fetchImage FF_ASSET "ic_booking_options"},
       {menuOptions: APP_INFO_SETTINGS , icon: fetchImage FF_ASSET "ny_ic_app_info"},
       {menuOptions: MULTI_LANGUAGE , icon: fetchImage FF_ASSET "ny_ic_language"},

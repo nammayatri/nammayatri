@@ -216,3 +216,9 @@ getHomeStageFromString localStage =
         "RideCompleted" -> ST.RideCompleted
         "ChatWithCustomer" -> ST.ChatWithCustomer
         _ -> ST.HomeScreen
+
+verifiedVehicleOnly :: Boolean
+verifiedVehicleOnly = true
+
+pendingVehicleOnly :: Boolean
+pendingVehicleOnly = false

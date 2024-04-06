@@ -1083,7 +1083,10 @@ newtype VehicleDocumentItem = VehicleDocumentItem
   { registrationNo :: String,
     userSelectedVehicleCategory :: String,
     verifiedVehicleCategory :: Maybe String,
-    documents :: Array DocumentStatusItem
+    documents :: Array DocumentStatusItem,
+    isVerified :: Boolean,
+    vehicleModel :: Maybe String,
+    isActive :: Boolean
   }
 
 newtype DocumentStatusItem = DocumentStatusItem

@@ -72,6 +72,7 @@ import Screens.Benefits.LmsQuizScreen.ScreenData as LmsQuizScreenData
 import Common.Types.App (CategoryListType)
 import Services.API
 import Screens.DocumentCaptureScreen.ScreenData as DocumentCaptureScreenData
+import Screens.DocumentDetailsScreen.ScreenData as DocumentDetailsScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -123,6 +124,7 @@ newtype GlobalState = GlobalState {
   , benefitsScreen :: BenefitsScreenState
   , lmsVideoScreen :: LmsVideoScreenState
   , lmsQuizScreen :: LmsQuizScreenState
+  , documentDetailsScreen :: DocumentDetailsScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -174,6 +176,7 @@ defaultGlobalState = GlobalState {
 , benefitsScreen : BenefitsScreenData.initData
 , lmsVideoScreen : LmsVideoScreenData.initData
 , lmsQuizScreen : LmsQuizScreenData.initData
+, documentDetailsScreen : DocumentDetailsScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -235,8 +238,11 @@ data ScreenType =
   | LmsVideoScreenStateType (LmsVideoScreenState -> LmsVideoScreenState)
   | LmsQuizScreenStateType (LmsQuizScreenState -> LmsQuizScreenState)
   | DocumentCaptureScreenStateType (DocumentCaptureScreenState -> DocumentCaptureScreenState)
+  | DocumentDetailsScreenStateType (DocumentDetailsScreenState -> DocumentDetailsScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
+
+data DOCUMENT_DETAILS_SCREEN_OUTPUT = GO_TO_HOME_FROM_DOCUMENT_DETAILS DocumentDetailsScreenState
 
 data MY_RIDES_SCREEN_OUTPUT = HOME_SCREEN 
                             | PROFILE_SCREEN
@@ -282,6 +288,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | GO_TO_DRIVER_HISTORY_SCREEN
                                     | GO_TO_EDIT_BANK_DETAIL_SCREEN
                                     | ON_BOARDING_FLOW
+                                    | DOCUMENTS_FLOW
                                     | NOTIFICATIONS_SCREEN
                                     | GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN
                                     | GO_TO_BOOKING_OPTIONS_SCREEN DriverProfileScreenState

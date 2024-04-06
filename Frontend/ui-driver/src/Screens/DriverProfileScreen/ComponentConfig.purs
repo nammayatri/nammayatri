@@ -86,6 +86,32 @@ genericHeaderConfig state = let
     }
   in genericHeaderConfig'
 
+genericHeaderConfigManageVehicle :: ST.DriverProfileScreenState -> GenericHeader.Config
+genericHeaderConfigManageVehicle state = let
+  config = GenericHeader.config
+  genericHeaderConfig' = config
+    {
+      height = WRAP_CONTENT
+    , prefixImageConfig {
+       visibility = VISIBLE
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+      , height = (V 25)
+      , width = (V 25)
+      , margin = (Margin 8 8 8 8)
+      , layoutMargin = Margin 8 8 8 8
+      , enableRipple = true
+      }
+    , padding = (PaddingVertical 5 5)
+    , textConfig {
+        text = "Manage Vehicles"
+      , color = Color.darkCharcoal
+      }
+    , suffixImageConfig {
+        visibility = GONE
+      }
+    }
+  in genericHeaderConfig'
+
 primaryEditTextConfig :: ST.DriverProfileScreenState -> PrimaryEditText.Config
 primaryEditTextConfig state = let
   config = PrimaryEditText.config
@@ -333,11 +359,11 @@ activateAndDeactivateRcPopUpConfig push state =
     config' = PopUpModal.config
     popUpConfig' =
       config'
-        { primaryText { text = if state.data.isRCActive then (getString DEACTIVATE_RC) else (getString ACTIVATE_RC)}
+        { primaryText { text = if state.data.isRCActive then (getString DEACTIVATE_RC) <> state.data.rcNumber <> "?" else (getString ACTIVATE_RC) <> state.data.rcNumber <> "?"}
         , buttonLayoutMargin = (MarginHorizontal 16 16)
         , dismissPopup = true
         , optionButtonOrientation = "VERTICAL"
-        , secondaryText { text = if state.data.isRCActive then (getString CONFIRMATION_FOR_DEACTIVATING_RC) <> state.data.rcNumber <> "?" else (getString CONFIRMATION_FOR_ACTIVATING_RC) <>state.data.rcNumber<> "? "<>(getString THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC), color = Color.black700}
+        , secondaryText { text = if state.data.isRCActive then (getString CONFIRMATION_FOR_DEACTIVATING_RC) else (getString CONFIRMATION_FOR_ACTIVATING_RC) <>(getString THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC), color = Color.black700}
         , option1 {
           text = if state.data.isRCActive then (getString YES_DEACTIVATE) else (getString YES_ACTIVATE)
         , width = MATCH_PARENT
@@ -426,9 +452,9 @@ addRCButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-      { text = (getString ADD_NEW_RC)
+      { text = "Add Vehicle"
       , color = Color.blue900}
-      , margin = (Margin 16 15 16 24)
+      , margin = (Margin 16 15 16 0)
       , cornerRadius = 10.0
       , background = Color.blue600
       , height = (V 60)
@@ -436,6 +462,20 @@ addRCButtonConfig state = let
       }
   in primaryButtonConfig'
 
+addRCButtonConfigs :: ST.DriverProfileScreenState -> PrimaryButton.Config
+addRCButtonConfigs state = let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+      { text = "Manage Vehicles"
+      , color = Color.black700}
+      , margin = (Margin 16 12 16 18)
+      , cornerRadius = 10.0
+      , background = Color.blue600
+      , height = (V 60)
+      , id = "AddRCPrimaryButton" 
+      }
+  in primaryButtonConfig'
 
 deleteRcPopUpConfig :: ST.DriverProfileScreenState -> PopUpModal.Config
 deleteRcPopUpConfig state =
@@ -443,11 +483,11 @@ deleteRcPopUpConfig state =
     config' = PopUpModal.config
     popUpConfig' =
       config'
-        { primaryText { text = (getString DELETE_RC)}
+        { primaryText { text = (getString DELETE_RC) <>"- " <> state.data.rcNumber <> "?"}
         , buttonLayoutMargin = (MarginHorizontal 16 16)
         , dismissPopup = true
         , optionButtonOrientation = "VERTICAL"
-        , secondaryText { text = (getString CONFIRMATION_FOR_DELETING_RC) <>"- " <> state.data.rcNumber <> "?" , color = Color.black700}
+        , secondaryText { text = (getString CONFIRMATION_FOR_DELETING_RC)  , color = Color.black700}
         , option1 {
           text = (getString YES_DELETE)
         , width = MATCH_PARENT
