@@ -245,44 +245,39 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.sourcePinCode.setText(model.getSourcePinCode().trim());
                 holder.sourcePinCode.setVisibility(View.VISIBLE);
             } else if (remoteConfigs.hasKey("enable_pincode") && remoteConfigs.getBoolean("enable_pincode")) {
-                Handler handler = new Handler();
-                Runnable runnable = () -> {
+                new Thread(() -> {
                     String pincode = getPincodeFromRR(model.getSrcLat(), model.getSrcLng());
                     mainLooper.post(() -> {
-                            if (holder != null && holder.sourcePinCode != null) {
-                                if (pincode != null) {
-                                    holder.sourcePinCode.setText(pincode);
-                                    holder.sourcePinCode.setVisibility(View.VISIBLE);
-                                } else {
-                                    holder.sourceAddress.setMaxLines(2);
-                                    holder.sourcePinCode.setVisibility(View.GONE);
-                                }
+                        if (holder != null && holder.sourcePinCode != null) {
+                            if (pincode != null) {
+                                holder.sourcePinCode.setText(pincode);
+                                holder.sourcePinCode.setVisibility(View.VISIBLE);
+                            } else {
+                                holder.sourceAddress.setMaxLines(2);
+                                holder.sourcePinCode.setVisibility(View.GONE);
                             }
-                        // }
+                        }
                     });
-                };
-                handler.postDelayed(runnable, 300);
+                }).start();
             }
             if (model.getDestinationPinCode() != null && model.getDestinationPinCode().trim().length() > 0) {
                 holder.destinationPinCode.setText(model.getDestinationPinCode());
                 holder.destinationPinCode.setVisibility(View.VISIBLE);
             } else if (remoteConfigs.hasKey("enable_pincode") && remoteConfigs.getBoolean("enable_pincode")) {
-                Handler handler = new Handler();
-                Runnable runnable = () -> {
+                new Thread(() -> {
                     String pincode = getPincodeFromRR(model.getDestLat(), model.getDestLng());
                     mainLooper.post(() -> {
-                            if (holder != null && holder.sourcePinCode != null) {
-                                if (pincode != null) {
-                                    holder.destinationPinCode.setText(pincode);
-                                    holder.destinationPinCode.setVisibility(View.VISIBLE);
-                                } else {
-                                    holder.destinationAddress.setMaxLines(2);
-                                    holder.destinationPinCode.setVisibility(View.GONE);
-                                }
+                        if (holder != null && holder.sourcePinCode != null) {
+                            if (pincode != null) {
+                                holder.destinationPinCode.setText(pincode);
+                                holder.destinationPinCode.setVisibility(View.VISIBLE);
+                            } else {
+                                holder.destinationAddress.setMaxLines(2);
+                                holder.destinationPinCode.setVisibility(View.GONE);
                             }
+                        }
                     });
-                };
-                handler.postDelayed(runnable, 300);
+                }).start();
             }
             if (model.getspecialLocationTag() != null) {
                 RideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), OverlaySheetService.this);
