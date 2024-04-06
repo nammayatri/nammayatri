@@ -111,7 +111,7 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
             MessageBuilder.buildSendBookingOTPMessage merchantOperatingCityId $
               MessageBuilder.BuildSendBookingOTPMessageReq
                 { otp = show otp,
-                  amount = show booking.estimatedTotalFare
+                  amount = show (booking.estimatedTotalFare.amountInt)
                 }
           Sms.sendSMS booking.merchantId merchantOperatingCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
         else do
