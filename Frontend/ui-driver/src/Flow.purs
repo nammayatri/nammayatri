@@ -418,40 +418,41 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription = d
           void $ pure $ setValueToLocalStore DRIVER_LOCATION <$> (capitalize <$> getCityFromCode <$> getDriverInfoResp.operatingCity)
           updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
           liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
-          if getDriverInfoResp.enabled then do
-            deleteValueFromLocalStore ENTERED_RC
-            if getValueToLocalStore IS_DRIVER_ENABLED == "false" then do
-              void $ pure $ firebaseLogEvent "ny_driver_enabled"
-              void $ pure $ metaLogEvent "ny_driver_enabled"
-            else
-              pure unit
-            setValueToLocalStore IS_DRIVER_ENABLED "true"
-            if updateShowSubscription 
-              then updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) config
+          if getDriverInfoResp.enabled 
+            then do
+              deleteValueFromLocalStore ENTERED_RC
+              if getValueToLocalStore IS_DRIVER_ENABLED == "false" 
+                then do
+                  void $ pure $ firebaseLogEvent "ny_driver_enabled"
+                  void $ pure $ metaLogEvent "ny_driver_enabled"
               else pure unit
-            (GlobalState allState) <- getState -- TODO:: Temp fix - need to work on improving caching more using SQLite
-            modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp)}
-            updateDriverDataToStates
-            void $ liftFlowBT $ runEffectFn1 consumeBP unit
-            if (isJust getDriverInfoResp.autoPayStatus) then 
-              setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
-            else pure unit
-            permissionsGiven <- checkAllPermissions true config.permissions.locationPermission            
-            if permissionsGiven
-              then do
-                liftFlowBT $ markPerformance "GET_DRIVER_INFO_FLOW_END"
-                handleDeepLinksFlow event activeRideResp (Just getDriverInfoResp.onRide)
-              else do
-                modifyScreenState $ PermissionsScreenStateType (\permissionScreen -> permissionScreen{props{isDriverEnabled = true}})
-                permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide)
+              setValueToLocalStore IS_DRIVER_ENABLED "true"
+              if updateShowSubscription 
+                then updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) config
+                else pure unit
+              (GlobalState allState) <- getState -- TODO:: Temp fix - need to work on improving caching more using SQLite
+              modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp)}
+              updateDriverDataToStates
+              void $ liftFlowBT $ runEffectFn1 consumeBP unit
+              if (isJust getDriverInfoResp.autoPayStatus) 
+                then setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
+                else pure unit
+              permissionsGiven <- checkAllPermissions true config.permissions.locationPermission            
+              if permissionsGiven
+                then do
+                  liftFlowBT $ markPerformance "GET_DRIVER_INFO_FLOW_END"
+                  handleDeepLinksFlow event activeRideResp (Just getDriverInfoResp.onRide)
+                else do
+                  modifyScreenState $ PermissionsScreenStateType (\permissionScreen -> permissionScreen{props{isDriverEnabled = true}})
+                  permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide)
             else do
               -- modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
               setValueToLocalStore IS_DRIVER_ENABLED "false"
-              if getDriverInfoResp.verified then do
-                setValueToLocalStore IS_DRIVER_VERIFIED "true"
-              else do
-                setValueToLocalStore IS_DRIVER_VERIFIED "false"
-                modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen{data{phoneNumber = fromMaybe "" getDriverInfoResp.mobileNumber}} )
+              if getDriverInfoResp.verified 
+                then setValueToLocalStore IS_DRIVER_VERIFIED "true"
+                else do
+                  setValueToLocalStore IS_DRIVER_VERIFIED "false"
+                  modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen{data{phoneNumber = fromMaybe "" getDriverInfoResp.mobileNumber}} )
           onBoardingFlow
         Left errorPayload -> do
           if ((decodeErrorCode errorPayload.response.errorMessage) == "VEHICLE_NOT_FOUND" || (decodeErrorCode errorPayload.response.errorMessage) == "DRIVER_INFORMATON_NOT_FOUND")
@@ -618,14 +619,16 @@ onBoardingFlow = do
   (DriverRegistrationStatusResp driverRegistrationResp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
   if isNothing allState.globalProps.onBoardingDocs then updateOnboardingDocs registrationState.props.manageVehicle else pure unit
   (GlobalState updatedGs) <- getState
-  if DA.all (_ == ST.COMPLETED) [ registrationState.data.vehicleDetailsStatus, registrationState.data.drivingLicenseStatus, registrationState.data.permissionsStatus ] && config.feature.enableAutoReferral && (cityConfig.showDriverReferral || config.enableDriverReferral) then do
-    let referralCode = getReferralCode (getValueToLocalStore REFERRER_URL)
-    if getValueToLocalStore REFERRAL_CODE_ADDED /= "true" && isJust referralCode then do
-      case referralCode of
-        Just code -> activateReferralCode registrationState code
-        Nothing   -> pure unit
+  if DA.all (_ == ST.COMPLETED) [ registrationState.data.vehicleDetailsStatus, registrationState.data.drivingLicenseStatus, registrationState.data.permissionsStatus ] && config.feature.enableAutoReferral && (cityConfig.showDriverReferral || config.enableDriverReferral) 
+    then do
+      let referralCode = getReferralCode (getValueToLocalStore REFERRER_URL)
+      if getValueToLocalStore REFERRAL_CODE_ADDED /= "true" && isJust referralCode 
+        then do
+          case referralCode of
+            Just code -> activateReferralCode registrationState code
+            Nothing   -> pure unit
+        else pure unit
     else pure unit
-  else pure unit
   let limitReachedFor = if driverRegistrationResp.rcVerificationStatus == "LIMIT_EXCEED" then Just "RC"
                         else if driverRegistrationResp.dlVerificationStatus == "LIMIT_EXCEED" then Just "DL" 
                         else Nothing
@@ -1171,6 +1174,7 @@ driverProfileFlow = do
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = ""}})
       selectLanguageFlow
     ON_BOARDING_FLOW -> onBoardingFlow
+    DOCUMENTS_FLOW -> documentDetailsScreen
     GO_TO_LOGOUT -> logoutFlow
       
     HELP_AND_SUPPORT_SCREEN -> do
@@ -1364,6 +1368,11 @@ driverProfileFlow = do
       let (GlobalState defaultEpassState') = defaultGlobalState
       modifyScreenState $ DriverSavedLocationScreenStateType (\_ ->  defaultEpassState'.driverSavedLocationScreen)
       goToLocationFlow  
+
+documentDetailsScreen :: FlowBT String Unit
+documentDetailsScreen = do
+  action <- UI.documentDetailsScreen
+  documentDetailsScreen 
 
 driverDetailsFlow :: FlowBT String Unit
 driverDetailsFlow = do

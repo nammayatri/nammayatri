@@ -73,6 +73,7 @@ driverProfileScreen = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
       App.BackT $ App.BackPoint <$> pure SELECT_LANGUAGE_SCREEN
     OnBoardingFlow -> App.BackT $ App.BackPoint <$> pure ON_BOARDING_FLOW
+    DocumentsFlow -> App.BackT $ App.BackPoint <$> pure DOCUMENTS_FLOW
     GoToNotifications -> App.BackT $ App.BackPoint <$> pure NOTIFICATIONS_SCREEN
     GoToBookingOptions state -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)

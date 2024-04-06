@@ -2,13 +2,13 @@ module Screens.DriverProfileScreen.Transformer where
 
 import Prelude
 
-import Data.Array (length)
+import Data.Array (length, filter)
 import Data.Int (toNumber)
 import Data.Maybe (fromMaybe, Maybe(..))
 import Helpers.Utils (getPeriod, parseFloat)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Screens.Types (AnalyticsData, ChipRailData, VehicleP)
+import Screens.Types (AnalyticsData, ChipRailData, VehicleP, DriverVehicleDetails(..))
 import Services.API (DriverMissedOpp(..), DriverProfileSummaryRes(..), DriverSummary(..))
 import Components.ChooseVehicle (Config) as ChooseVehicle
 
@@ -42,3 +42,6 @@ transformSelectedVehicle vehicleDetail =
   { vehicleName : vehicleDetail.vehicleVariant,
     isSelected : vehicleDetail.isSelected
   }
+
+fetchVehicles :: Boolean -> Array DriverVehicleDetails  -> Array DriverVehicleDetails
+fetchVehicles verified = filter (\vehicle -> vehicle.isVerified == verified)

@@ -60,3 +60,4 @@ import Screens.Benefits.BenefitsScreen.Handler (benefitsScreen) as UI
 import Screens.Benefits.LmsVideoScreen.Handler (lmsVideoScreen) as UI
 import Screens.Benefits.LmsQuizScreen.Handler (lmsQuizScreen) as UI
 import Screens.DocumentCaptureScreen.Handler (documentCaptureScreen) as UI
+import Screens.DocumentDetailsScreen.Handler (documentDetailsScreen) as UI
