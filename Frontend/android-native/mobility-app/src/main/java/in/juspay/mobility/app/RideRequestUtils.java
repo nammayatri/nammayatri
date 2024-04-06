@@ -620,9 +620,9 @@ public class RideRequestUtils {
     public static void updateIntercityView(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
         Handler mainLooper = new Handler(Looper.getMainLooper());
         mainLooper.post(() -> {
-            if(!model.getRideProductType().equals(NotificationUtils.INTERCITY)){
-                    return;
-                }
+            if (!model.getRideProductType().equals(NotificationUtils.INTERCITY)) {
+                return;
+            }
             holder.tagsBlock.setVisibility(View.VISIBLE);
             holder.reqButton.setTextColor(context.getColor(R.color.white));
             holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(context.getColor(R.color.blue800)));
@@ -631,9 +631,40 @@ public class RideRequestUtils {
             holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
             holder.rideStartTime.setText(model.getRideStartTime());
             holder.rideStartDate.setVisibility(View.VISIBLE);
-            holder.rideStartDate.setText(model.getRideStartDate()); 
+            holder.rideStartDate.setText(model.getRideStartDate());
             holder.buttonIncreasePrice.setVisibility(View.GONE);
             holder.buttonDecreasePrice.setVisibility(View.GONE);
-        }); 
+        });
+    }
+
+    public static void updateExtraChargesString(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
+        boolean showPickupCharges = false;
+        boolean hideZeroPickupCharges = true;
+        int pickUpCharges = model.getDriverPickUpCharges();
+        String city = getCityWithFallback(context);
+        String allCitiesConfig = remoteConfigs.getString("views_config");
+        try {
+            JSONObject allCitiesConfigOb = new JSONObject(allCitiesConfig);
+            if (allCitiesConfigOb.has(city)){
+                JSONObject currentCityConfig = allCitiesConfigOb.getJSONObject(city);
+                if (currentCityConfig.has("show_pickup_charges")){
+                    showPickupCharges = currentCityConfig.getBoolean("show_pickup_charges");
+                }
+                if (currentCityConfig.has("hide_zero_pickup_charges")){
+                    hideZeroPickupCharges = currentCityConfig.getBoolean("hide_zero_pickup_charges");
+                }
+            }
+        }catch (JSONException e){
+            firebaseLogEventWithParams("exception_in_update_extra_charges", "exception", String.valueOf(e), context);
+        }
+        if ((pickUpCharges > 0 && !hideZeroPickupCharges) && showPickupCharges) {
+            String formattedPickupChargesText = context.getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(pickUpCharges));
+            holder.textIncludesCharges.setText(formattedPickupChargesText);
+            holder.textIncludesCharges.setVisibility(View.VISIBLE);
+            holder.rateViewDot.setVisibility(View.VISIBLE);
+        } else {
+            holder.textIncludesCharges.setVisibility(View.GONE);
+            holder.rateViewDot.setVisibility(View.GONE);
+        }
     }
 }
