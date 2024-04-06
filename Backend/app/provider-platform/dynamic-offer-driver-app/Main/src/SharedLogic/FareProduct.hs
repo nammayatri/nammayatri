@@ -40,7 +40,6 @@ getPickupSpecialLocation ::
   m (DSpecialLocation.SpecialLocation, Int)
 getPickupSpecialLocation merchantId pickupSpecialLocation = do
   pickupSpecialLocationPriority <- B.runInReplica $ QSpecialLocationPriority.findByMerchantIdAndCategory merchantId.getId pickupSpecialLocation.category
-  -- pickupSpecialLocationPriority <- QSpecialLocationPriority.findByMerchantIdAndCategory merchantId.getId pickupSpecialLocation.category
   return (pickupSpecialLocation, maybe 999 (.pickupPriority) pickupSpecialLocationPriority)
 
 getDropSpecialLocation ::
@@ -50,7 +49,6 @@ getDropSpecialLocation ::
   m (DSpecialLocation.SpecialLocation, Int)
 getDropSpecialLocation merchantId dropSpecialLocation = do
   dropSpecialLocationPriority <- B.runInReplica $ QSpecialLocationPriority.findByMerchantIdAndCategory merchantId.getId dropSpecialLocation.category
-  -- dropSpecialLocationPriority <- QSpecialLocationPriority.findByMerchantIdAndCategory merchantId.getId dropSpecialLocation.category
   return (dropSpecialLocation, maybe 999 (.dropPriority) dropSpecialLocationPriority)
 
 getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> Maybe LatLong -> DTC.TripCategory -> m FareProducts

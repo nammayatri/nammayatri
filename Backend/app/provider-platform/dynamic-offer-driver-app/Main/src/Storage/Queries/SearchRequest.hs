@@ -136,6 +136,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.autoAssignEnabled = autoAssignEnabled,
         BeamSR.specialLocationTag = specialLocationTag,
         BeamSR.customerCancellationDues = customerCancellationDues,
+        BeamSR.tollCharges = tollCharges,
         BeamSR.isReallocationEnabled = isReallocationEnabled,
         BeamSR.messageId = messageId,
         BeamSR.startTime = Just startTime,

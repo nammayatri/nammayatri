@@ -104,7 +104,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
                   itemLocationIds = Nothing,
                   itemPaymentIds = Nothing,
                   itemPrice = Nothing,
-                  itemTags = Utils.mkRateCardTag Nothing . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
+                  itemTags = Utils.mkRateCardTag Nothing Nothing . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
                 },
           orderBilling = Nothing,
           orderCancellation = Nothing,

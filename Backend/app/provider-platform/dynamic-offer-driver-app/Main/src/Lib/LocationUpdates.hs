@@ -38,6 +38,7 @@ import Kernel.Utils.Common
 import "location-updates" Lib.LocationUpdates as Reexport
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.Ride
+import qualified SharedLogic.TollsDetector as TollsDetector
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as MTC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QPerson
@@ -219,10 +220,12 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
     mkRideInterpolationHandler
       isEndRide
       (\driverId dist googleSnapCalls osrmSnapCalls -> void (QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls))
+      (\driverId tollCharges -> void (QRide.updateTollCharges driverId tollCharges))
       ( \driverId batchWaypoints -> do
           ride <- QRide.getActiveByDriverId driverId
           updateDeviation transportConfig enableNightSafety ride batchWaypoints
       )
+      (TollsDetector.getTollChargesOnRoute merchantOpCityId)
       ( \driverId estimatedDistance -> do
           ride <- QRide.getActiveByDriverId driverId
           getTravelledDistance ride estimatedDistance

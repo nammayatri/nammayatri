@@ -15,7 +15,7 @@
 module Domain.Action.UI.Ride.EndRide.Internal
   ( endRideTransaction,
     putDiffMetric,
-    getDistanceBetweenPoints,
+    getRouteAndDistanceBetweenPoints,
     makeDailyDriverLeaderBoardKey,
     safeMod,
     makeWeeklyDriverLeaderBoardKey,
@@ -285,7 +285,7 @@ putDiffMetric merchantId money mtrs = do
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   Metrics.putFareAndDistanceDeviations org.name money mtrs
 
-getDistanceBetweenPoints ::
+getRouteAndDistanceBetweenPoints ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r
@@ -296,8 +296,8 @@ getDistanceBetweenPoints ::
   LatLong ->
   [LatLong] ->
   Meters ->
-  m Meters
-getDistanceBetweenPoints merchantId merchantOpCityId origin destination interpolatedPoints estimatedDistance = do
+  m ([LatLong], Meters)
+getRouteAndDistanceBetweenPoints merchantId merchantOpCityId origin destination interpolatedPoints estimatedDistance = do
   -- somehow interpolated points pushed to redis in reversed order, so we need to reverse it back
   let pickedWaypoints = origin :| (pickWaypoints interpolatedPoints <> [destination])
   logTagInfo "endRide" $ "pickedWaypoints: " <> show pickedWaypoints
@@ -308,10 +308,12 @@ getDistanceBetweenPoints merchantId merchantOpCityId origin destination interpol
           mode = Just Maps.CAR,
           calcPoints = True
         }
-  let mbShortestRouteDistance = (.distance) =<< getRouteInfoWithShortestDuration routeResponse
+  let mbShortestRoute = getRouteInfoWithShortestDuration routeResponse
+      routePoints = maybe [] (.points) mbShortestRoute
+      distance = maybe estimatedDistance (\route -> fromMaybe estimatedDistance route.distance) mbShortestRoute
   -- Next error is impossible, because we never receive empty list from directions api
   --mbShortestRouteDistance & fromMaybeM (InvalidRequest "Couldn't calculate route distance")
-  return $ fromMaybe estimatedDistance mbShortestRouteDistance
+  return (routePoints, distance)
 
 -- TODO reuse code from rider-app
 getRouteInfoWithShortestDuration :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo

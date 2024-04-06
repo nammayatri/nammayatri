@@ -43,3 +43,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN ui_distance_calculation_with_
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN ui_distance_calculation_without_accuracy integer ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN toll_charges double precision ;

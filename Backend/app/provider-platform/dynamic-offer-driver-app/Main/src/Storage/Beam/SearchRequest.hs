@@ -48,6 +48,7 @@ data SearchRequestT f = SearchRequestT
     autoAssignEnabled :: B.C f (Maybe Bool),
     specialLocationTag :: B.C f (Maybe Text),
     customerCancellationDues :: B.C f (Maybe HighPrecMoney),
+    tollCharges :: B.C f (Maybe HighPrecMoney),
     isReallocationEnabled :: B.C f (Maybe Bool),
     isScheduled :: B.C f (Maybe Bool),
     startTime :: B.C f (Maybe UTCTime),

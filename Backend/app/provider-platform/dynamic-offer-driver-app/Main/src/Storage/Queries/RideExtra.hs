@@ -292,6 +292,15 @@ updateDistance driverId distance googleSnapCalls osrmSnapsCalls = do
     ]
     [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
 
+updateTollCharges :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> m ()
+updateTollCharges driverId tollCharges = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamR.tollCharges (Just tollCharges),
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
+
 updateAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Ride -> m ()
 updateAll rideId ride = do
   now <- getCurrentTime

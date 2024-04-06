@@ -124,7 +124,7 @@ data ServiceHandle m = ServiceHandle
     clearInterpolatedPoints :: Id DP.Person -> m (),
     findConfig :: Maybe Text -> Maybe Text -> m (Maybe DTConf.TransporterConfig),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
-    getDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> Meters -> m Meters,
+    getRouteAndDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> Meters -> m ([LatLong], Meters),
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DMOC.MerchantOperatingCity -> m (Maybe DMPM.MerchantPaymentMethod),
     sendDashboardSms :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m (),
     uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m ()
@@ -149,7 +149,7 @@ buildEndRideHandle merchantId merchantOpCityId = do
         clearInterpolatedPoints = LocUpd.clearInterpolatedPoints defaultRideInterpolationHandler,
         findConfig = QTConf.findByMerchantOpCityId merchantOpCityId,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
-        getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId merchantOpCityId,
+        getRouteAndDistanceBetweenPoints = RideEndInt.getRouteAndDistanceBetweenPoints merchantId merchantOpCityId,
         findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantOpCityId,
         sendDashboardSms = Sms.sendDashboardSms,
         uiDistanceCalculation = QRide.updateUiDistanceCalculation
@@ -409,7 +409,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
           nightShiftCharge = booking.fareParams.nightShiftCharge,
           customerCancellationDues = booking.fareParams.customerCancellationDues,
           nightShiftOverlapChecking = DTC.isRentalTrip booking.tripCategory,
-          timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc
+          timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
+          tollCharges = ride.tollCharges
         }
   let finalFare = Fare.fareSum fareParams
       distanceDiff = recalcDistance - oldDistance
@@ -482,18 +483,19 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
   if not pickupDropOutsideOfThreshold
     then recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig -- TODO: Fix with rentals
     else do
-      approxTraveledDistance <- getDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints estimatedDistance
+      (_routePoints, approxTraveledDistance) <- getRouteAndDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints estimatedDistance
       logTagInfo "endRide" $ "approxTraveledDistance when pickup and drop are not outside threshold: " <> show approxTraveledDistance
       distanceDiff <- getDistanceDiff booking approxTraveledDistance
       if distanceDiff < 0
-        then recalculateFareForDistance handle booking ride approxTraveledDistance thresholdConfig
+        then do
+          recalculateFareForDistance handle booking ride approxTraveledDistance thresholdConfig -- TODO :: Recompute Toll Charges Here ?
         else
           if distanceDiff < thresholdConfig.actualRideDistanceDiffThreshold
             then do
               recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig
             else do
               if distanceDiff < thresholdConfig.upwardsRecomputeBuffer
-                then recalculateFareForDistance handle booking ride approxTraveledDistance thresholdConfig
+                then recalculateFareForDistance handle booking ride approxTraveledDistance thresholdConfig -- TODO :: Recompute Toll Charges Here ?
                 else do
                   logTagInfo "Inaccurate Location Updates and Pickup/Drop Deviated." ("DistanceDiff: " <> show distanceDiff)
                   recalculateFareForDistance handle booking ride (estimatedDistance + highPrecMetersToMeters thresholdConfig.upwardsRecomputeBuffer) thresholdConfig

@@ -839,7 +839,7 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice booking,
-          itemTags = mkRateCardTag estimatedDistance mbFarePolicy
+          itemTags = mkRateCardTag estimatedDistance Nothing mbFarePolicy
         }
     ]
 
@@ -971,9 +971,9 @@ mkGeneralInfoTagGroup pricing
               tagValue = show . double2Int . realToFrac <$> distanceToNearestDriver
             }
 
-mkRateCardTag :: Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]
-mkRateCardTag estimatedDistance farePolicy = do
-  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance) farePolicy
+mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]
+mkRateCardTag estimatedDistance tollCharges farePolicy = do
+  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance tollCharges) farePolicy
       farePolicyBreakupsTags = buildRateCardTags <$> farePolicyBreakups
   Just
     [ Spec.TagGroup

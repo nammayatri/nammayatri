@@ -949,6 +949,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
               customerExtraFee = searchTry.customerExtraFee,
               nightShiftCharge = Nothing,
               customerCancellationDues = searchReq.customerCancellationDues,
+              tollCharges = searchReq.tollCharges,
               estimatedRideDuration = Nothing,
               nightShiftOverlapChecking = DTC.isRentalTrip searchTry.tripCategory,
               estimatedDistance = Nothing,

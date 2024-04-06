@@ -1,0 +1,41 @@
+imports:
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  Price: Kernel.Types.Common
+  LineSegment: Kernel.Utils.ComputeIntersection
+
+Toll:
+  tableName: toll
+  derives: "Generic,Show,Read,FromJSON,ToJSON"
+  fields:
+    id : Id Toll
+    name: Text
+    tollStartGates : "[LineSegment]"
+    tollEndGates : "[LineSegment]"
+    price: Price
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  beamFields:
+    price:
+      currency: Maybe Currency
+      price: HighPrecMoney
+
+  fromTType:
+    price: Kernel.Types.Common.mkPrice currency price|E
+
+  toTType:
+    price: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
+
+  queries:
+    findAllTollsByMerchantOperatingCity:
+      kvFunction: findAllWithKV
+      where:
+        eq: [merchantOperatingCityId]

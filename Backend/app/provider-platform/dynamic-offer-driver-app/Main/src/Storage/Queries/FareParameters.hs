@@ -111,6 +111,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 nightShiftCharge = nightShiftCharge,
                 fareParametersDetails,
                 customerCancellationDues = customerCancellationDues,
+                tollCharges = tollCharges,
                 updatedAt = fromMaybe now updatedAt
               }
       Nothing -> return Nothing
@@ -130,5 +131,6 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.nightShiftCharge = nightShiftCharge,
         BeamFP.fareParametersType = getFareParametersType $ FareParameters {..},
         BeamFP.customerCancellationDues = customerCancellationDues,
+        BeamFP.tollCharges = tollCharges,
         BeamFP.updatedAt = Just updatedAt
       }
