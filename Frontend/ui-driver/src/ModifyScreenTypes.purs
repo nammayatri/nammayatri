@@ -28,6 +28,7 @@ import Types.App (FlowBT, GlobalState(..), ScreenType(..), ScreenStage(..))
 modifyScreenState :: ScreenType -> FlowBT String Unit
 modifyScreenState st =
   case st of
+    DocumentCaptureScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state{ documentCaptureScreen = a state.documentCaptureScreen}) 
     SplashScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { splashScreen = a state.splashScreen})
     ChooseLanguageScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { chooseLanguageScreen = a state.chooseLanguageScreen})
     DriverProfileScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { driverProfileScreen = a state.driverProfileScreen})

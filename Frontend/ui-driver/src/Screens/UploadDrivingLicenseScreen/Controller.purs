@@ -46,6 +46,7 @@ import Screens.Types (UploadDrivingLicenseState)
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Effect.Uncurried (runEffectFn4)
+import Components.OptionsMenu as OptionsMenu
 
 
 instance showAction :: Show Action where
@@ -131,6 +132,7 @@ instance loggableAction :: Loggable Action where
       AppOnboardingNavBar.Logout -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "onboarding_nav_bar_logout"
       AppOnboardingNavBar.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "app_onboarding_nav_bar_prefix_img_on_click"
     SkipButton -> trackAppActionClick appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "skip_button_click"
+    _ -> pure unit
 
 data ScreenOutput = GoBack UploadDrivingLicenseState
                     | ValidateDetails UploadDrivingLicenseState 
@@ -138,6 +140,8 @@ data ScreenOutput = GoBack UploadDrivingLicenseState
                     | AddVehicleDetailsScreen
                     | LogoutAccount
                     | GoToRegisteration
+                    | ChangeVehicle UploadDrivingLicenseState
+                    | SelectLang UploadDrivingLicenseState
       
 data Action = BackPressed Boolean
             | NoAction
@@ -166,6 +170,8 @@ data Action = BackPressed Boolean
             | RedirectScreen
             | AppOnboardingNavBarAC AppOnboardingNavBar.Action
             | SkipButton
+            | OptionsMenuAction OptionsMenu.Action
+            | ChangeVehicleAC PopUpModal.Action
 
 eval :: Action -> UploadDrivingLicenseState -> Eval Action ScreenOutput UploadDrivingLicenseState
 eval AfterRender state = 
@@ -189,6 +195,8 @@ eval (BackPressed flag) state = do
   else if state.props.fileCameraPopupModal then continue state{props{fileCameraPopupModal = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} 
   else if state.props.openHowToUploadManual then continue state{props{openHowToUploadManual = false}} 
   else if state.props.logoutPopupModal then continue state{props{logoutPopupModal = false}} 
+  else if state.props.confirmChangeVehicle then continue state{props{confirmChangeVehicle = false}} 
+  else if state.props.menuOptions then continue state{props{menuOptions = false}} 
   else exit $ GoBack state
     
 eval (OnboardingHeaderAction (OnboardingHeaderController.TriggerRegModal)) state = continue state{props{openRegistrationModal = true}}
@@ -292,8 +300,8 @@ eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutA
 eval (PopUpModalLogoutAction (PopUpModal.DismissPopup)) state = continue state {props {logoutPopupModal= false}}
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = do
-    _ <- pure $ hideKeyboardOnNavigation true
-    continue $ (state {props{logoutPopupModal = true}})
+  _ <- pure $ hideKeyboardOnNavigation true
+  continue state {props{menuOptions = not state.props.menuOptions}}
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.PrefixImgOnClick) ) state = continueWithCmd state{props{openLicenseManual = false}} [ do pure $ BackPressed false]
 
@@ -322,6 +330,26 @@ eval (PopUpModalActions (PopUpModal.OnButton1Click)) state = do
        continueWithCmd (state {props{clickedButtonType = "front", validateProfilePicturePopUp = false,imageCaptureLayoutView = true, fileCameraPopupModal = false, fileCameraOption = true}}) [ pure UploadImage]
     
 eval RedirectScreen state = exit GoToRegisteration
+
+eval (OptionsMenuAction OptionsMenu.BackgroundClick) state = continue state{props{menuOptions = false}}
+
+eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
+  let newState = state{props{menuOptions = false}}
+  case item of
+    "logout" -> continue newState {props { logoutPopupModal = true }}
+    "contact_support" -> do 
+                          void $ pure $ showDialer (getSupportNumber "") false 
+                          continue newState
+    "change_vehicle" -> continue newState {props {confirmChangeVehicle = true}}
+    "change_language" -> exit $ SelectLang newState
+    _ -> continue newState
+
+eval (ChangeVehicleAC (PopUpModal.OnButton2Click)) state = continue state {props {confirmChangeVehicle= false}}
+
+eval (ChangeVehicleAC (PopUpModal.OnButton1Click)) state = exit $ ChangeVehicle state
+
+eval (ChangeVehicleAC (PopUpModal.DismissPopup)) state = continue state {props {confirmChangeVehicle= false}}
+
 
 eval _ state = continue state
 

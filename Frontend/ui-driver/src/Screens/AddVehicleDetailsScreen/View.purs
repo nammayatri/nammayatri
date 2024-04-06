@@ -61,6 +61,9 @@ import Data.String.Common as DSC
 import Effect.Uncurried (runEffectFn1)
 import ConfigProvider
 import Mobility.Prelude
+import Components.OptionsMenu as OptionsMenu
+import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
+import Data.Array as DA
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -94,7 +97,7 @@ view push state =
   frameLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  ]([  linearLayout
+  ] $ [  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -173,11 +176,21 @@ view push state =
         [ width MATCH_PARENT
         , height MATCH_PARENT] 
         [ReferralMobileNumber.view (push <<< ReferralMobileNumberAction) (referalNumberConfig state)] else linearLayout [][]
-    ] <> if state.props.logoutModalView then [logoutPopupModal push state] else []
+    ] <> if DA.any (_ == true) [state.props.logoutModalView, state.props.confirmChangeVehicle] then [ popupModal push state ] else []
       <> if state.props.imageCaptureLayoutView then [imageCaptureLayout push state] else []
       <> if state.props.validateProfilePicturePopUp then [validateProfilePicturePopUp push state] else []
       <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else [] 
-      <> if state.props.multipleRCstatus /= NOT_STARTED then [addRCFromProfileStatusView state push] else [])
+      <> if state.props.multipleRCstatus /= NOT_STARTED then [addRCFromProfileStatusView state push] else []
+      <> if state.props.menuOptions then [menuOptionModal push state] else []
+
+menuOptionModal :: forall w. (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
+menuOptionModal push state = 
+  linearLayout 
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , padding $ PaddingTop 55
+    , background Color.blackLessTrans
+    ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
 headerView :: forall w. AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerView state push = AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
@@ -761,13 +774,18 @@ rightWrongItemView isRight text' =
     ] <> FontStyle.body1 TypoGraphy
   ]
 
-logoutPopupModal :: forall w . (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
-logoutPopupModal push state =
-       linearLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        , background Color.blackLessTrans
-        ][ PopUpModal.view (push <<<PopUpModalLogoutAction) (logoutPopUp Language) ] 
+popupModal :: forall w . (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
+popupModal push state =
+    linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , background Color.blackLessTrans
+    ][ PopUpModal.view (push <<< action) popupConfig ] 
+    where 
+      action = if state.props.logoutModalView then PopUpModalLogoutAction 
+                else ChangeVehicleAC
+      popupConfig = if state.props.logoutModalView then (logoutPopUp Language)
+                    else changeVehicleConfig FunctionCall
 
 skipButton :: forall w . (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
 skipButton push state =

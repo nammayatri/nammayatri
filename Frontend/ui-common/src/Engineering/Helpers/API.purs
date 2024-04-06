@@ -33,12 +33,12 @@ callApi :: forall a b st.
   RestEndpoint a b =>
   a ->
   Array Header ->
-  Flow st (APIResult b)
+  Flow st (Either ErrorResponse b)
 callApi payload headers' = do
   logRequest
   result <- callAPI (Headers headers') payload
   case result of
-    Right resp -> pure $ Right $ spy "Response :: " resp
+    Right resp -> pure $ Right $ spy "Response :: " resp.response
     Left err -> do
       pure $ Left err
   where
@@ -74,7 +74,7 @@ callGzipApi :: forall a b st.
   RestEndpoint a b =>
   a ->
   Array Header ->
-  Flow st (APIResult b)
+  Flow st (Either ErrorResponse b)
 callGzipApi payload headers = do
   let gzipHeader = [Header "Accept-Encoding" "gzip"]
   callApi payload (headers <> gzipHeader)

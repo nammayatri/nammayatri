@@ -25,33 +25,28 @@ import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatu
 import ConfigProvider
 import Foreign.Object (empty)
 import Screens.Types as ST
+import Prelude (class Eq, class Show)
+import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
+import Data.Generic.Rep (class Generic)
+import Data.Show.Generic (genericShow)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Data.Array as DA
+import Common.Types.App as Common
 
 initData :: RegistrationScreenState
 initData = {
       data: {
         activeIndex : 1,
-        registerationSteps : [
-          {
-            stageName : "Driving License",
-            stage : DRIVING_LICENSE_OPTION
-          },
-          {
-            stageName : "Vehicle Registration",
-            stage : VEHICLE_DETAILS_OPTION
-          },
-          {
-            stageName : "Grant Permission",
-            stage : GRANT_PERMISSION
-          },
-          {
-            stageName : "Namma Yatri Plan",
-            stage : SUBSCRIPTION_PLAN
-          }
-        ],
+        registerationStepsCabs : [],
+        registerationStepsAuto : [],
         drivingLicenseStatus : NOT_STARTED,
         vehicleDetailsStatus : NOT_STARTED,
         permissionsStatus : NOT_STARTED,
         subscriptionStatus : NOT_STARTED,
+        vehicleTypeMismatch : false,
+        documentStatusList : [],
+        variantList : [],
         phoneNumber : "",
         lastUpdateTime : "",
         cityConfig : dummyCityConfig,
@@ -61,8 +56,8 @@ initData = {
         logField : empty,
         enteredDL : "",
         enteredRC : "",
-        dlVerficationMessage : "",
-        rcVerficationMessage : ""
+        vehicleCategory : Nothing,
+        linkedRc : Nothing
       },
       props: {
         limitReachedFor : Nothing,
@@ -72,7 +67,13 @@ initData = {
         enterReferralCodeModal : false,
         referralCodeSubmitted : false,
         contactSupportView : true,
-        contactSupportModal : ST.HIDE
+        contactSupportModal : ST.HIDE,
+        selectedVehicleIndex : Nothing,
+        optionalDocsExpanded : true,
+        confirmChangeVehicle : false,
+        refreshAnimation : false,
+        driverEnabled : false,
+        menuOptions : false
       }
   }
 

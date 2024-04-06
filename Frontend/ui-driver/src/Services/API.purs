@@ -977,7 +977,7 @@ newtype DriverRCReq = DriverRCReq {
   operatingCity :: String,
   imageId :: String,
   dateOfRegistration :: Maybe String,
-  multipleRC :: Boolean
+  vehicleCategory :: Maybe String
 }
 
 newtype DriverRCResp = DriverRCResp ApiSuccessResult
@@ -1009,7 +1009,8 @@ newtype DriverDLReq = DriverDLReq {
   operatingCity :: String,
   imageId1 :: String,
   imageId2 :: Maybe String,
-  dateOfIssue :: Maybe String
+  dateOfIssue :: Maybe String,
+  vehicleCategory :: Maybe String
 }
 
 newtype DriverDLResp = DriverDLResp ApiSuccessResult
@@ -1036,7 +1037,9 @@ instance encodeDriverDLResp  :: Encode DriverDLResp where encode = defaultEncode
 -- validateImage API request, response types
 newtype ValidateImageReq = ValidateImageReq {
   image :: String,
-  imageType :: String
+  imageType :: String,
+  rcNumber :: Maybe String,
+  vehicleCategory :: Maybe String
 }
 
 newtype ValidateImageRes = ValidateImageRes {
@@ -1070,14 +1073,40 @@ newtype DriverRegistrationStatusResp = DriverRegistrationStatusResp
     { dlVerificationStatus :: String
     , rcVerificationStatus :: String
     , aadhaarVerificationStatus :: String
-    , dlVerficationMessage :: String
-    , rcVerficationMessage :: String
+    , driverDocuments :: Array DocumentStatusItem
+    , vehicleDocuments :: Array VehicleDocumentItem
+    , enabled :: Maybe Boolean
     }
+
+newtype VehicleDocumentItem = VehicleDocumentItem
+  { registrationNo :: String,
+    userSelectedVehicleCategory :: String,
+    verifiedVehicleCategory :: Maybe String,
+    documents :: Array DocumentStatusItem
+  }
+
+newtype DocumentStatusItem = DocumentStatusItem
+  { documentType :: String,
+    verificationStatus :: String,
+    verificationMessage :: Maybe String
+  }
 
 instance makeDriverRegistrationStatusReq :: RestEndpoint DriverRegistrationStatusReq DriverRegistrationStatusResp where
     makeRequest reqBody headers = defaultMakeRequest GET (EP.driverRegistrationStatus "") headers reqBody Nothing
     decodeResponse = decodeJSON
     encodeRequest req = defaultEncode req
+
+derive instance genericVehicleDocumentItem :: Generic VehicleDocumentItem _
+instance standardEncodeVehicleDocumentItem :: StandardEncode VehicleDocumentItem where standardEncode (VehicleDocumentItem res) = standardEncode res
+instance showVehicleDocumentItem :: Show VehicleDocumentItem where show = genericShow
+instance decodeVehicleDocumentItem :: Decode VehicleDocumentItem where decode = defaultDecode
+instance encodeVehicleDocumentItem  :: Encode VehicleDocumentItem where encode = defaultEncode
+
+derive instance genericDocumentStatusItem :: Generic DocumentStatusItem _
+instance standardEncodeDocumentStatusItem :: StandardEncode DocumentStatusItem where standardEncode (DocumentStatusItem res) = standardEncode res
+instance showDocumentStatusItem :: Show DocumentStatusItem where show = genericShow
+instance decodeDocumentStatusItem :: Decode DocumentStatusItem where decode = defaultDecode
+instance encodeDocumentStatusItem  :: Encode DocumentStatusItem where encode = defaultEncode
 
 derive instance genericDriverRegistrationStatusReq :: Generic DriverRegistrationStatusReq _
 instance showDriverRegistrationStatusReq :: Show DriverRegistrationStatusReq where show = genericShow
@@ -3678,10 +3707,51 @@ instance showUploadOdometerImageReq :: Show UploadOdometerImageReq where show = 
 instance decodeUploadOdometerImageReq :: Decode UploadOdometerImageReq where decode = defaultDecode   
 instance encodeUploadOdometerImageReq :: Encode UploadOdometerImageReq where encode = defaultEncode
 
-
-
 derive instance genericUploadOdometerImageResp :: Generic UploadOdometerImageResp _     
 instance standardUploadOdometerImageResp :: StandardEncode UploadOdometerImageResp where standardEncode (UploadOdometerImageResp body) = standardEncode body      
 instance showUploadOdometerImageResp :: Show UploadOdometerImageResp where show = genericShow           
 instance decodeUploadOdometerImageResp :: Decode UploadOdometerImageResp where decode = defaultDecode
 instance encodeUploadOdometerImageResp :: Encode UploadOdometerImageResp where encode = defaultEncode     
+
+data OnboardingDocsReq = OnboardingDocsReq
+
+newtype OnboardingDocsRes = OnboardingDocsRes {
+  autos :: Maybe (Array OnboardingDoc),
+  cabs :: Maybe (Array OnboardingDoc),
+  bikes :: Maybe (Array OnboardingDoc)
+}
+
+newtype OnboardingDoc = OnboardingDoc {
+  documentType :: String,
+  title :: String,
+  description :: Maybe String,
+  isMandatory :: Boolean,
+  isDisabled :: Boolean,
+  disableWarning :: Maybe String,
+  isHidden :: Boolean,
+  dependencyDocumentType :: Array String,
+  rcNumberPrefixList :: Array String
+}
+
+instance makeOnboardingDocsReq :: RestEndpoint OnboardingDocsReq OnboardingDocsRes where
+  makeRequest reqBody headers = defaultMakeRequest GET (EP.onBoardingConfigs "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericOnboardingDocsReq :: Generic OnboardingDocsReq _
+instance standardEncodeOnboardingDocsReq :: StandardEncode OnboardingDocsReq where standardEncode (OnboardingDocsReq) = standardEncode {}
+instance showOnboardingDocsReq :: Show OnboardingDocsReq where show = genericShow
+instance decodeOnboardingDocsReq :: Decode OnboardingDocsReq where decode = defaultDecode
+instance encodeOnboardingDocsReq  :: Encode OnboardingDocsReq where encode = defaultEncode
+
+derive instance genericOnboardingDocsRes :: Generic OnboardingDocsRes _
+instance standardEncodeOnboardingDocsRes :: StandardEncode OnboardingDocsRes where standardEncode (OnboardingDocsRes res) = standardEncode res
+instance showOnboardingDocsRes :: Show OnboardingDocsRes where show = genericShow
+instance decodeOnboardingDocsRes :: Decode OnboardingDocsRes where decode = defaultDecode
+instance encodeOnboardingDocsRes  :: Encode OnboardingDocsRes where encode = defaultEncode
+
+derive instance genericOnboardingDoc :: Generic OnboardingDoc _
+instance standardEncodeOnboardingDoc :: StandardEncode OnboardingDoc where standardEncode (OnboardingDoc res) = standardEncode res
+instance showOnboardingDoc :: Show OnboardingDoc where show = genericShow
+instance decodeOnboardingDoc :: Decode OnboardingDoc where decode = defaultDecode
+instance encodeOnboardingDoc  :: Encode OnboardingDoc where encode = defaultEncode

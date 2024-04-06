@@ -49,3 +49,9 @@ addVehicleDetails = do
     ActivateRC updatedState -> do
       modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ RC_ACTIVATION updatedState)
+    SelectLang updatedState -> do
+      modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CHANGE_LANG_FROM_RC_SCREEN)
+    ChangeVehicle updatedState -> do
+      modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CHANGE_VEHICLE_FROM_RC_SCREEN)

@@ -23,7 +23,7 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), isJust)
 import Font.Style as FontStyle
 import Language.Types (STR(..))
 import Resource.Constants as Constant
@@ -35,17 +35,18 @@ import Components.InAppKeyboardModal as InAppKeyboardModal
 import Prelude ((<), not, ($))
 import Data.String as DS
 import Mobility.Prelude
+import Prelude ((==))
+import Components.OptionsMenu as OptionsMenuConfig
+import PrestoDOM.Types.DomAttributes as PTD
 
 primaryButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = (getString COMPLETE_REGISTRATION)}
+      { textConfig { text = getString COMPLETE_REGISTRATION}
       , width = MATCH_PARENT
       , background = Color.black900
-      , margin = (Margin 0 0 0 0)
-      , cornerRadius = 0.0
-      , height = (V 60)
+      , height = V 48
       , id = "RegistrationScreenButton"
       }
   in primaryButtonConfig'
@@ -56,7 +57,95 @@ appOnboardingNavBarConfig state =
   { prefixImageConfig = AppOnboardingNavBar.config.prefixImageConfig{visibility = GONE},
     genericHeaderConfig = genericHeaderConfig state,
     appConfig = state.data.config,
-    headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{text = (getString REGISTRATION)}
+    headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{
+      text = case state.data.vehicleCategory of
+              Just ST.CarCategory -> getString REGISTER_YOUR_CAR
+              Just ST.AutoCategory -> getString REGISTER_YOUR_AUTO
+              Nothing -> getString REGISTRATION
+      },
+    rightButton = AppOnboardingNavBar.config.rightButton{
+      text = getString HELP_FAQ
+      }
+  }
+
+changeVehicleConfig :: Common.LazyCheck -> PopUpModal.Config
+changeVehicleConfig _ = let 
+  config' = PopUpModal.config
+  popUpConfig' = config' {
+    primaryText {text = getString DO_YOU_WANT_TO_CHANGE_VT , margin = MarginBottom 20},
+    secondaryText {visibility = GONE},
+    buttonLayoutMargin = (MarginBottom 40),
+    padding = (Padding 16 16 16 0),
+    backgroundClickable = true,
+    dismissPopup = true,
+    option1 {
+      text = getString YES_CHANGE_VEHICLE ,
+      color = Color.black700,
+      textStyle = FontStyle.SubHeading1,
+      strokeColor = Color.white900,
+      width = MATCH_PARENT,
+      height = WRAP_CONTENT,
+      background = Color.blue600,
+      margin = (MarginBottom 12),
+      padding = (PaddingVertical 16 16),
+      enableRipple = true
+      },
+    option2 {
+      text = (getString CANCEL),
+      color = Color.black700,
+      textStyle = FontStyle.SubHeading1,
+      height = WRAP_CONTENT,
+      strokeColor = Color.white900,
+      width = MATCH_PARENT,
+      padding = PaddingVertical 16 16,
+      margin = (MarginBottom 0),
+      background = Color.blue600,
+      enableRipple = true
+      },
+    optionButtonOrientation = "VERTICAL"
+  }
+  in popUpConfig'
+
+
+vehicleMismatchConfig :: ST.RegistrationScreenState -> PopUpModal.Config
+vehicleMismatchConfig state = PopUpModal.config {
+    gravity = CENTER,
+    backgroundClickable = false,
+    optionButtonOrientation = "VERTICAL",
+    buttonLayoutMargin = Margin 16 0 16 20,
+    margin = MarginHorizontal 25 25, 
+    primaryText {
+      text = getString VEHICLE_TYPE_MISMATCH
+    , textStyle = FontStyle.Heading2
+    , margin = Margin 16 0 16 10},
+    secondaryText{
+      text = getString UPLOADED_DOC_DOESNT_MATCH
+    , textStyle = FontStyle.Body5
+    , margin = Margin 16 0 16 15 },
+    option1 {
+      text = getString CHANGE_VEHICLE_TYPE
+    , color = Color.yellow900
+    , background = Color.black900
+    , strokeColor = Color.transparent
+    , textStyle = FontStyle.SubHeading1
+    , width = MATCH_PARENT
+    },
+    option2 {
+    text = getString UPLOAD_DIFFERENT_RC,
+    margin = MarginHorizontal 16 16,
+    color = Color.black650,
+    background = Color.white900,
+    strokeColor = Color.white900,
+    width = MATCH_PARENT
+  },
+    cornerRadius = PTD.Corners 15.0 true true true true,
+    coverImageConfig {
+      imageUrl = HU.fetchImage HU.FF_ASSET if state.data.vehicleCategory == Just ST.CarCategory then "ny_ic_car_warning" else "ny_ic_auto_warning"
+    , visibility = VISIBLE
+    , margin = Margin 16 20 16 24
+    , width = V 296
+    , height = V 190
+    }
   }
 
 logoutPopUp :: Common.LazyCheck -> PopUpModal.Config
@@ -149,3 +238,37 @@ enterReferralStateConfig state = InAppKeyboardModal.config{
       },
       modalType = ST.OTP
     }
+
+continueButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
+continueButtonConfig state = 
+  let isEnabled = isJust state.props.selectedVehicleIndex
+  in
+  PrimaryButton.config
+  { textConfig{ text = getString CONTINUE}
+  , width = MATCH_PARENT
+  , margin = Margin 16 16 16 16
+  , height = V 48
+  , alpha = if isEnabled then 1.0 else 0.5
+  , isClickable = if isEnabled then true else false
+  , id = "RegistrationContinueButton"
+  }
+
+optionsMenuConfig :: ST.RegistrationScreenState -> OptionsMenuConfig.Config
+optionsMenuConfig state = OptionsMenuConfig.config {
+  menuItems = [
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : true},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : isJust state.data.vehicleCategory},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  true}
+  ],
+  backgroundColor = Color.blackLessTrans,
+  menuBackgroundColor = Color.white900,
+  gravity = RIGHT,
+  menuExpanded = true,
+  width = WRAP_CONTENT,
+  marginRight = 16,
+  itemHeight = V 50,
+  itemPadding = Padding 16 16 16 16,
+  cornerRadius = 4.0,
+  enableAnim = true
+}

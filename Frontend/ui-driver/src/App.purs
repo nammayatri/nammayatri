@@ -68,11 +68,14 @@ import Data.Maybe (Maybe(..))
 import MerchantConfig.Types (AppConfig(..))
 import Screens.DriverReferralScreen.ScreenData as DriverReferralScreenData
 import Common.Types.App (CategoryListType)
+import Services.API
+import Screens.DocumentCaptureScreen.ScreenData as DocumentCaptureScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
 newtype GlobalState = GlobalState {
     splashScreen :: SplashScreenState
+  , documentCaptureScreen :: DocumentCaptureScreenState
   , chooseLanguageScreen :: ChooseLanguageScreenState
   , driverProfileScreen :: DriverProfileScreenState
   , applicationStatusScreen :: ApplicationStatusScreenState
@@ -120,7 +123,8 @@ newtype GlobalState = GlobalState {
 
 defaultGlobalState :: GlobalState
 defaultGlobalState = GlobalState {
-  splashScreen : {data : { message : "WeDontTalkAnymore"}}
+  documentCaptureScreen : DocumentCaptureScreenData.initData
+, splashScreen : {data : { message : "WeDontTalkAnymore"}}
 , chooseLanguageScreen : ChooseLanguageScreenData.initData
 , driverProfileScreen : DriverProfileScreenData.initData
 , applicationStatusScreen : ApplicationStatusScreenData.initData
@@ -173,7 +177,8 @@ defaultGlobalProps = {
   driverRideStats : Nothing,
   callScreen : ScreenNames.HOME_SCREEN,
   gotoPopupType : NO_POPUP_VIEW,
-  addTimestamp : true
+  addTimestamp : true,
+  onBoardingDocs : Nothing
 }
 
 data ScreenType =
@@ -220,7 +225,7 @@ data ScreenType =
   | DriverEarningsScreenStateType (DriverEarningsScreenState -> DriverEarningsScreenState)
   | DriverReferralScreenStateType (DriverReferralScreenState -> DriverReferralScreenState)
   | RegistrationScreenStateType (RegistrationScreenState -> RegistrationScreenState)
-  
+  | DocumentCaptureScreenStateType (DocumentCaptureScreenState -> DocumentCaptureScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -295,7 +300,7 @@ data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
 
 data VEHICLE_DETAILS_SCREEN_OUTPUT = UPDATE_VEHICLE_INFO VehicleDetailsScreenState
 data ABOUT_US_SCREEN_OUTPUT = GO_TO_DRIVER_HOME_SCREEN
-data SELECT_LANGUAGE_SCREEN_OUTPUT = CHANGE_LANGUAGE
+data SELECT_LANGUAGE_SCREEN_OUTPUT = CHANGE_LANGUAGE SelectLanguageScreenState | LANGUAGE_CONFIRMED SelectLanguageScreenState
 data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN
                                     | REPORT_ISSUE_CHAT_SCREEN CategoryListType
                                     | RIDE_SELECTION_SCREEN CategoryListType
@@ -314,14 +319,31 @@ data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
                                 | GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN
                                 | REFRESH_REGISTERATION_SCREEN
                                 | REFERRAL_CODE_SUBMIT RegistrationScreenState
+                                | DOCUMENT_CAPTURE_FLOW RegistrationScreenState RegisterationStep
+                                | SELECT_LANG_FROM_REGISTRATION
 
-data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = VALIDATE_DL_DETAILS UploadDrivingLicenseState | VALIDATE_DATA_API UploadDrivingLicenseState | GOTO_VEHICLE_DETAILS_SCREEN | LOGOUT_ACCOUNT | GOTO_ONBOARDING_FLOW
+data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = VALIDATE_DL_DETAILS UploadDrivingLicenseState 
+                                          | VALIDATE_DATA_API UploadDrivingLicenseState 
+                                          | GOTO_VEHICLE_DETAILS_SCREEN 
+                                          | LOGOUT_ACCOUNT 
+                                          | GOTO_ONBOARDING_FLOW
+                                          | CHANGE_VEHICLE_FROM_DL_SCREEN
+                                          | CHANGE_LANG_FROM_DL_SCREEN
 
 data UPLOAD_ADHAAR_CARD_SCREENOUTPUT = GO_TO_ADD_BANK_DETAILS
 
 data BANK_DETAILS_SCREENOUTPUT = GO_TO_ADD_VEHICLE_DETAILS
 
-data ADD_VEHICLE_DETAILS_SCREENOUTPUT = VALIDATE_DETAILS AddVehicleDetailsScreenState | VALIDATE_RC_DATA_API_CALL AddVehicleDetailsScreenState | REFER_API_CALL AddVehicleDetailsScreenState | APPLICATION_STATUS_SCREEN | LOGOUT_USER | ONBOARDING_FLOW | DRIVER_PROFILE_SCREEN | RC_ACTIVATION AddVehicleDetailsScreenState
+data ADD_VEHICLE_DETAILS_SCREENOUTPUT = VALIDATE_DETAILS AddVehicleDetailsScreenState 
+                                        | VALIDATE_RC_DATA_API_CALL AddVehicleDetailsScreenState 
+                                        | REFER_API_CALL AddVehicleDetailsScreenState 
+                                        | APPLICATION_STATUS_SCREEN 
+                                        | LOGOUT_USER 
+                                        | ONBOARDING_FLOW 
+                                        | DRIVER_PROFILE_SCREEN 
+                                        | RC_ACTIVATION AddVehicleDetailsScreenState
+                                        | CHANGE_VEHICLE_FROM_RC_SCREEN
+                                        | CHANGE_LANG_FROM_RC_SCREEN
 
 data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_EARINING | OPEN_HELP_AND_SUPPORT | GO_TO_HOME_SCREEN
 
@@ -451,3 +473,8 @@ data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen
 data CHOOSE_LANG_SCREEN_OUTPUT = LOGIN_FLOW
 data DRIVER_REFERRAL_SCREEN_OUTPUT = DRIVER_REFERRAL_SCREEN_NAV NAVIGATION_ACTIONS
                                    | DRIVER_CONTEST_SCREEN
+                                   
+data DOCUMENT_CAPTURE_SCREEN_OUTPUT = UPLOAD_DOC_API DocumentCaptureScreenState String 
+                                      | LOGOUT_FROM_DOC_CAPTURE 
+                                      | CHANGE_LANG_FROM_DOCUMENT_CAPTURE
+                                      | CHANGE_VEHICLE_FROM_DOCUMENT_CAPTURE

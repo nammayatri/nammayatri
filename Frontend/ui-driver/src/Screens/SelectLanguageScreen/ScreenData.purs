@@ -28,6 +28,9 @@ initData = {
     },
     props: {
       btnActive :false,
-      selectedLanguage: ""
+      selectedLanguage: "",
+      onlyGetTheSelectedLanguage : false,
+      selectLanguageForScreen : "",
+      fromOnboarding : false
     }
 }
