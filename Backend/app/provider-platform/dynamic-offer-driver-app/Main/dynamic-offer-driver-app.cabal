@@ -339,6 +339,7 @@ library
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
+      SharedLogic.TollsDetector
       Storage.Beam.BecknRequest
       Storage.Beam.BlackListOrg
       Storage.Beam.Booking
@@ -449,6 +450,7 @@ library
       Storage.CachedQueries.ReelsData
       Storage.CachedQueries.RegistryMapFallback
       Storage.CachedQueries.SubscriptionConfig
+      Storage.CachedQueries.Toll
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleServiceTier
       Storage.CachedQueries.WhiteListOrg
@@ -615,6 +617,7 @@ library
       Domain.Types.ReelsData
       Domain.Types.Ride
       Domain.Types.SubscriptionConfig
+      Domain.Types.Toll
       Domain.Types.Translations
       Domain.Types.ValueAddNP
       Domain.Types.Vehicle
@@ -659,6 +662,7 @@ library
       Storage.Beam.ReelsData
       Storage.Beam.Ride
       Storage.Beam.SubscriptionConfig
+      Storage.Beam.Toll
       Storage.Beam.Translations
       Storage.Beam.ValueAddNP
       Storage.Beam.Vehicle
@@ -718,6 +722,7 @@ library
       Storage.Queries.ReelsData
       Storage.Queries.Ride
       Storage.Queries.SubscriptionConfig
+      Storage.Queries.Toll
       Storage.Queries.Translations
       Storage.Queries.ValueAddNP
       Storage.Queries.Vehicle

@@ -130,6 +130,7 @@ data QuoteBreakupTitle
     BASE_FARE
   | DISTANCE_FARE
   | CANCELLATION_CHARGES
+  | TOLL_CHARGES
   | -- Custom Titles not in ONDC Spec
     SERVICE_CHARGE
   | DEAD_KILOMETER_FARE

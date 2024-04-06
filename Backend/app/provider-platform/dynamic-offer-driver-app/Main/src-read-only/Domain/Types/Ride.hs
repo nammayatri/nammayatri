@@ -51,6 +51,7 @@ data Ride = Ride
     startOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
     status :: Domain.Types.Ride.RideStatus,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
+    tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     trackingUrl :: Kernel.Types.Common.BaseUrl,
     traveledDistance :: Kernel.Types.Common.HighPrecMeters,
     tripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
@@ -68,6 +69,6 @@ data OdometerReading = OdometerReading {fileId :: Kernel.Prelude.Maybe (Kernel.T
 
 data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
 
-$(mkHttpInstancesForEnum ''RideStatus)
+$(mkHttpInstancesForEnum (''RideStatus))

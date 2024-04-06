@@ -170,6 +170,7 @@ buildRide driverId booking ghrId otp enableFrequentLocationUpdates clientId = do
         numberOfSnapToRoadCalls = Nothing,
         numberOfOsrmSnapToRoadCalls = Nothing,
         numberOfDeviation = Nothing,
+        tollCharges = booking.fareParams.tollCharges,
         uiDistanceCalculationWithAccuracy = Nothing,
         uiDistanceCalculationWithoutAccuracy = Nothing,
         isFreeRide = Just ((getId driverId) `elem` transporterConfig.specialDrivers),

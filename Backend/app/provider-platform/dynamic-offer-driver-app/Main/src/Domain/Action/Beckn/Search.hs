@@ -63,6 +63,7 @@ import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
 import SharedLogic.Ride
+import SharedLogic.TollsDetector
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -145,7 +146,7 @@ handler ValidatedDSearchReq {..} sReq = do
   sessiontoken <- generateGUIDText
   fromLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
 
-  (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration) <-
+  (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration, mbTollCharges) <-
     case sReq.dropLocation of
       Just dropLoc -> do
         (estimatedDistance, estimatedDuration) <- getDistanceAndDuration merchant.id merchantOpCityId sReq.pickupLocation dropLoc sReq.routeDistance sReq.routeDuration
@@ -161,11 +162,11 @@ handler ValidatedDSearchReq {..} sReq = do
                       Redis.setExp (multipleRouteKey transactionId) multipleRoutesInfo 3600
                     Nothing -> logInfo "No multiple routes found"
               )
-
-        return (Just setRouteInfo, Just toLocation, Just estimatedDistance, Just estimatedDuration)
-      _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration) -- estimate distance and durations by user
+        mbTollCharges <- join <$> mapM (getTollChargesOnRoute merchantOpCityId) sReq.routePoints
+        return (Just setRouteInfo, Just toLocation, Just estimatedDistance, Just estimatedDuration, mbTollCharges)
+      _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration, Nothing) -- estimate distance and durations by user
   allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.pickupLocation sReq.dropLocation (Just sReq.transactionId) (Just "transactionId")) `mapM` possibleTripOption.tripCategories)
-  let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) allFarePoliciesProduct.farePolicies
+  let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbTollCharges allFarePoliciesProduct.farePolicies
 
   (driverPool, selectedFarePolicies) <-
     if transporterConfig.considerDriversForSearch
@@ -176,13 +177,13 @@ handler ValidatedDSearchReq {..} sReq = do
   (mbSpecialZoneGateId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
   logDebug $ "Pickingup Gate info result : " <> show (mbSpecialZoneGateId, mbDefaultDriverExtra)
   let specialLocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
-  searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag allFarePoliciesProduct.area
+  searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag allFarePoliciesProduct.area mbTollCharges
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
   void $ QSR.createDSReq searchReq
 
-  let buildEstimateHelper = buildEstimate searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled mbDistance specialLocationTag
-  let buildQuoteHelper = buildQuote searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled mbDistance mbDuration specialLocationTag
+  let buildEstimateHelper = buildEstimate searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled mbDistance specialLocationTag mbTollCharges
+  let buildQuoteHelper = buildQuote searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled mbDistance mbDuration specialLocationTag mbTollCharges
   (estimates, quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
   QEst.createMany estimates
   for_ quotes QQuote.create
@@ -230,10 +231,12 @@ handler ValidatedDSearchReq {..} sReq = do
             ..
           }
 
-    selectFarePolicy distance duration =
+    selectFarePolicy distance duration mbTollCharges =
       filter isValid
       where
-        isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy
+        isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && autosAllowedOnTollRoute farePolicy
+
+        autosAllowedOnTollRoute farePolicy = (farePolicy.vehicleServiceTier == DVST.AUTO_RICKSHAW) && isJust mbTollCharges && transporterConfig.allowAutosOnTollRoute
 
         checkDistanceBounds farePolicy = maybe True checkBounds farePolicy.allowedTripDistanceBounds
 
@@ -338,8 +341,9 @@ buildSearchRequest ::
   Maybe Seconds ->
   Maybe Text ->
   DFareProduct.Area ->
+  Maybe HighPrecMoney ->
   m DSR.SearchRequest
-buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area = do
+buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area tollCharges = do
   uuid <- generateGUID
   now <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -377,10 +381,11 @@ buildQuote ::
   Maybe Meters ->
   Maybe Seconds ->
   Maybe Text ->
+  Maybe HighPrecMoney ->
   Bool ->
   DFP.FullFarePolicy ->
   m DQuote.Quote
-buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDuration specialLocationTag nightShiftOverlapChecking fullFarePolicy = do
+buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDuration specialLocationTag tollCharges nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance
   fareParams <-
     calculateFareParameters
@@ -398,7 +403,8 @@ buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDurat
           nightShiftOverlapChecking = nightShiftOverlapChecking,
           estimatedDistance = searchRequest.estimatedDistance,
           estimatedRideDuration = searchRequest.estimatedDuration,
-          timeDiffFromUtc = Nothing
+          timeDiffFromUtc = Nothing,
+          tollCharges
         }
   quoteId <- Id <$> generateGUID
   void $ cacheFarePolicyByQuoteId quoteId.getId fullFarePolicy
@@ -429,10 +435,11 @@ buildEstimate ::
   Bool ->
   Maybe Meters ->
   Maybe Text ->
+  Maybe HighPrecMoney ->
   Bool ->
   DFP.FullFarePolicy ->
   m DEst.Estimate
-buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag nightShiftOverlapChecking fullFarePolicy = do
+buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag tollCharges nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
   fareParams <-
     calculateFareParameters
@@ -450,7 +457,8 @@ buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag ni
           nightShiftOverlapChecking = nightShiftOverlapChecking,
           estimatedDistance = Nothing,
           estimatedRideDuration = Nothing,
-          timeDiffFromUtc = Nothing
+          timeDiffFromUtc = Nothing,
+          tollCharges
         }
   let baseFare = fareSum fareParams
   logDebug $ "baseFare: " <> show baseFare

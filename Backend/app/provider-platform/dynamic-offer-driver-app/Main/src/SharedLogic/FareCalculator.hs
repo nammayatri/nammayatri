@@ -73,7 +73,10 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbFixedGovtRateItem = mkBreakupItem mbFixedGovtRateCaption . mkPrice <$> fareParams.govtCharges
 
       customerCancellationDuesCaption = show Enums.CANCELLATION_CHARGES
-      customerCancellationDues = mkBreakupItem customerCancellationDuesCaption (mkPrice $ maybe 0 round fareParams.customerCancellationDues)
+      mbCustomerCancellationDues = mkBreakupItem customerCancellationDuesCaption . (mkPrice . round) <$> fareParams.customerCancellationDues
+
+      tollChargesCaption = show Enums.TOLL_CHARGES
+      mbTollChargesItem = mkBreakupItem tollChargesCaption . (mkPrice . round) <$> fareParams.tollCharges
 
       detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
   catMaybes
@@ -85,7 +88,8 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbSelectedFareItem,
       mkCustomerExtraFareItem,
       mkExtraTimeFareCaption,
-      Just customerCancellationDues
+      mbTollChargesItem,
+      mbCustomerCancellationDues
     ]
     <> detailsBreakups
   where
@@ -128,7 +132,6 @@ fareSum fareParams = do
   pureFareSum fareParams
     + fromMaybe 0 fareParams.driverSelectedFare
     + fromMaybe 0 fareParams.customerExtraFee
-    + maybe 0 round fareParams.customerCancellationDues
 
 -- Pure fare without customerExtraFee and driverSelectedFare
 pureFareSum :: FareParameters -> Money
@@ -140,6 +143,8 @@ pureFareSum fareParams = do
     + fromMaybe 0 fareParams.govtCharges
     + fromMaybe 0 fareParams.nightShiftCharge
     + fromMaybe 0 fareParams.rideExtraTimeFare
+    + maybe 0 round fareParams.customerCancellationDues
+    + maybe 0 round fareParams.tollCharges
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
     + platformFee
@@ -158,7 +163,8 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     estimatedRideDuration :: Maybe Seconds,
     nightShiftOverlapChecking :: Bool,
     estimatedDistance :: Maybe Meters,
-    timeDiffFromUtc :: Maybe Seconds
+    timeDiffFromUtc :: Maybe Seconds,
+    tollCharges :: Maybe HighPrecMoney
   }
 
 calculateFareParameters ::
@@ -210,6 +216,7 @@ calculateFareParameters params = do
                   fareParametersDetails
               DFP.RentalDetails _ -> fareParametersDetails,
             customerCancellationDues = params.customerCancellationDues,
+            tollCharges = params.tollCharges,
             updatedAt = now,
             ..
           }

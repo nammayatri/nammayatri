@@ -105,7 +105,7 @@ initiateDriverSearchBatch ::
   m ()
 initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCategory serviceTier estOrQuoteId customerExtraFee messageId isRepeatSearch = do
   farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory serviceTier searchReq.area estOrQuoteId (Just searchReq.transactionId) (Just "transactionId")
-  searchTry <- createNewSearchTry farePolicy searchReq.customerCancellationDues
+  searchTry <- createNewSearchTry farePolicy
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory searchReq.estimatedDistance (Just searchReq.transactionId) (Just "transactionId")
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just searchReq.transactionId) (Just "transactionId")
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
@@ -136,7 +136,7 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
             driverPickUpCharges = driverPickUpCharges
           }
 
-    createNewSearchTry farePolicy customerCancellationDues = do
+    createNewSearchTry farePolicy = do
       mbLastSearchTry <- QST.findLastByRequestId searchReq.id
       fareParams <-
         calculateFareParameters
@@ -150,7 +150,8 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
               driverSelectedFare = Nothing,
               customerExtraFee = customerExtraFee,
               nightShiftCharge = Nothing,
-              customerCancellationDues = customerCancellationDues,
+              customerCancellationDues = searchReq.customerCancellationDues,
+              tollCharges = searchReq.tollCharges,
               nightShiftOverlapChecking = DTC.isRentalTrip farePolicy.tripCategory,
               estimatedDistance = searchReq.estimatedDistance,
               estimatedRideDuration = searchReq.estimatedDuration,

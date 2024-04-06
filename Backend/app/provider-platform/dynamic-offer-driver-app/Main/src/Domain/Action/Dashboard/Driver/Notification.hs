@@ -110,6 +110,7 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAdd
           bapLogo = Nothing,
           customerExtraFee = Nothing,
           specialLocationTag = Nothing,
+          tollCharges = Nothing,
           disabilityTag = Nothing,
           goHomeRequestId = Nothing,
           isTranslated = False,

@@ -90,5 +90,5 @@ mkPayment merchant bppConfig = do
 
 mkItemTags :: CUtils.Pricing -> Maybe [Spec.TagGroup]
 mkItemTags pricing = do
-  let rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance pricing.farePolicy
+  let rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance (pricing.fareParams >>= (.tollCharges)) pricing.farePolicy
   rateCardTag <> (List.singleton <$> CUtils.mkGeneralInfoTagGroup pricing)

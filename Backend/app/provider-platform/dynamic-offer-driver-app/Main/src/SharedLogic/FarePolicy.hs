@@ -111,11 +111,14 @@ getAllFarePoliciesProduct merchantId merchantOpCityId fromlocaton mbToLocation t
         specialLocationTag = allFareProducts.specialLocationTag
       }
 
-mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> FarePolicyD.FarePolicy -> [breakupItem]
-mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
+mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> FarePolicyD.FarePolicy -> [breakupItem]
+mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy = do
   let distance = fromMaybe 0 mbDistance -- TODO: Fix Later
       driverExtraFeeBounds = FarePolicyD.findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
       nightShiftBounds = farePolicy.nightShiftBounds
+
+      tollChargesCaption = show Tags.TOLL_CHARGES
+      tollChargesItem = mkBreakupItem tollChargesCaption . (mkValue . show . (.getHighPrecMoney)) <$> mbTollCharges
 
       serviceChargeCaption = show Tags.SERVICE_CHARGE
       serviceChargeItem = mkBreakupItem serviceChargeCaption . (mkValue . show . (.getMoney)) <$> farePolicy.serviceCharge
@@ -141,7 +144,8 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
 
       additionalDetailsBreakups = processAdditionalDetails farePolicy.farePolicyDetails
   catMaybes
-    [ serviceChargeItem,
+    [ tollChargesItem,
+      serviceChargeItem,
       governmentChargeItem,
       driverMinExtraFeeItem,
       driverMaxExtraFeeItem,
