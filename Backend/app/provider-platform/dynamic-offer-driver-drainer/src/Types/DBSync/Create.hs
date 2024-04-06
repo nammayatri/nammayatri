@@ -44,7 +44,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.DriverExtraF
 import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as FarePolicyProgressiveDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as FarePolicyProgressiveDetailsPerExtraKmRateSection
 import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as FarePolicySlabDetailsSlab
-import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.RestrictedExtraFare as RestrictedExtraFare
 import qualified "dynamic-offer-driver-app" Storage.Beam.FareProduct as FareProduct
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.Feedback as Feedback
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackBadge as FeedbackBadge
@@ -120,7 +119,6 @@ data DBCreateObject
   | FarePolicyProgressiveDetailsObject FarePolicyProgressiveDetails.FarePolicyProgressiveDetails
   | FarePolicyProgressiveDetailsPerExtraKmRateSectionObject FarePolicyProgressiveDetailsPerExtraKmRateSection.FarePolicyProgressiveDetailsPerExtraKmRateSection
   | FarePolicySlabDetailsSlabObject FarePolicySlabDetailsSlab.FarePolicySlabsDetailsSlab
-  | RestrictedExtraFareObject RestrictedExtraFare.RestrictedExtraFare
   | FareProductObject FareProduct.FareProduct
   | GeometryObject Geometry.Geometry
   | CommentObject Comment.Comment
@@ -207,7 +205,6 @@ modelName (DriverExtraFeeBoundsObject _) = "DriverExtraFeeBounds"
 modelName (FarePolicyProgressiveDetailsObject _) = "FarePolicyProgressiveDetails"
 modelName (FarePolicyProgressiveDetailsPerExtraKmRateSectionObject _) = "FarePolicyProgressiveDetailsPerExtraKmRateSection"
 modelName (FarePolicySlabDetailsSlabObject _) = "FarePolicySlabDetailsSlab"
-modelName (RestrictedExtraFareObject _) = "RestrictedExtraFare"
 modelName (FareProductObject _) = "FareProduct"
 modelName (GeometryObject _) = "Geometry"
 modelName (CommentObject _) = "Comment"

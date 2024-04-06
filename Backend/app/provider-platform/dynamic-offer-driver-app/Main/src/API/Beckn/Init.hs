@@ -81,7 +81,7 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
         Redis.whenWithLockRedis (initProcessingLockKey initFulfillmentId) 60 $ do
           dInitRes <- DInit.handler transporterId dInitReq validatedRes
           internalEndPointHashMap <- asks (.internalEndPointHashMap)
-          let vehicleCategory = Utils.mapVariantToVehicle dInitRes.booking.vehicleVariant
+          let vehicleCategory = Utils.mapServiceTierToCategory dInitRes.booking.vehicleServiceTier
           bppConfig <- QBC.findByMerchantIdDomainAndVehicle dInitRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
           ttl <- bppConfig.onInitTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
           context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country (Just ttl)

@@ -19,7 +19,7 @@ module Storage.Beam.Booking where
 import qualified Database.Beam as B
 import qualified Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
-import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant (..))
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -51,7 +51,7 @@ data BookingT f = BookingT
     estimatedDuration :: B.C f (Maybe Seconds),
     distance :: B.C f (Maybe HighPrecMeters),
     otpCode :: B.C f (Maybe Text),
-    vehicleVariant :: B.C f VehVar.VehicleVariant,
+    vehicleVariant :: B.C f DVST.VehicleServiceTierType,
     tripTermsId :: B.C f (Maybe Text),
     stopLocationId :: B.C f (Maybe Text),
     merchantId :: B.C f Text,
@@ -61,6 +61,7 @@ data BookingT f = BookingT
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     serviceTierName :: B.C f (Maybe Text),
+    serviceTierShortDesc :: B.C f (Maybe Text),
     paymentStatus :: B.C f (Maybe Domain.PaymentStatus)
   }
   deriving (Generic, B.Beamable)

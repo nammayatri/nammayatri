@@ -30,7 +30,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.TripTerms as DTripTerms
-import Domain.Types.VehicleVariant (VehicleVariant)
+import Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.Common
@@ -92,7 +92,7 @@ data Booking = Booking
     discount :: Maybe Price,
     estimatedTotalFare :: Price,
     isScheduled :: Bool,
-    vehicleVariant :: VehicleVariant,
+    vehicleServiceTierType :: DVST.VehicleServiceTierType,
     bookingDetails :: BookingDetails,
     tripTerms :: Maybe DTripTerms.TripTerms,
     merchantId :: Id DMerchant.Merchant,
@@ -101,6 +101,7 @@ data Booking = Booking
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     serviceTierName :: Maybe Text,
+    serviceTierShortDesc :: Maybe Text,
     paymentStatus :: Maybe PaymentStatus
   }
   deriving (Generic, Show)

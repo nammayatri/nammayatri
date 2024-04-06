@@ -33,7 +33,7 @@ import qualified Domain.Types.FareParameters as DFParams
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.Merchant.TransporterConfig (AvgSpeedOfVechilePerKm)
-import Domain.Types.Vehicle
+import Domain.Types.VehicleServiceTier
 import EulerHS.Prelude hiding (id, map)
 import Kernel.Prelude
 import Kernel.Utils.Common hiding (isTimeWithinBounds, mkPrice)
@@ -166,7 +166,7 @@ calculateFareParameters ::
   CalculateFareParametersParams ->
   m FareParameters
 calculateFareParameters params = do
-  logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| params.farePolicy.merchantId ||+ " and vehicle variant " +|| params.farePolicy.vehicleVariant ||+ ""
+  logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| params.farePolicy.merchantId ||+ " and vehicle service tier " +|| params.farePolicy.vehicleServiceTier ||+ ""
   let fp = params.farePolicy
   id <- generateGUID
   now <- getCurrentTime
@@ -186,7 +186,7 @@ calculateFareParameters params = do
           + notPartOfNightShiftCharge
       govtCharges =
         roundToIntegral . (fromIntegral fullRideCostN *) <$> (fp.govtCharges)
-      extraTimeFareInfo = calculateExtraTimeFare (fromMaybe 0 params.actualDistance) fp.perMinuteRideExtraTimeCharge params.actualRideDuration fp.vehicleVariant =<< params.avgSpeedOfVehicle -- todo tp transporter_config
+      extraTimeFareInfo = calculateExtraTimeFare (fromMaybe 0 params.actualDistance) fp.perMinuteRideExtraTimeCharge params.actualRideDuration fp.vehicleServiceTier =<< params.avgSpeedOfVehicle -- todo tp transporter_config
       fullCompleteRideCost =
         {- without platformFee -}
         fullRideCostN
@@ -327,16 +327,19 @@ calculateFareParameters params = do
               cgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.cgst * realToFrac baseFee,
               sgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.sgst * realToFrac baseFee
             }
-    calculateExtraTimeFare :: Meters -> Maybe HighPrecMoney -> Maybe Seconds -> Variant -> AvgSpeedOfVechilePerKm -> Maybe Money
-    calculateExtraTimeFare distance perMinuteRideExtraTimeCharge actualRideDuration vehicleVariant avgSpeedOfVehicle = do
+    calculateExtraTimeFare :: Meters -> Maybe HighPrecMoney -> Maybe Seconds -> ServiceTierType -> AvgSpeedOfVechilePerKm -> Maybe Money
+    calculateExtraTimeFare distance perMinuteRideExtraTimeCharge actualRideDuration serviceTier avgSpeedOfVehicle = do
       let actualRideDurationInMinutes = secondsToMinutes <$> actualRideDuration
-      let avgSpeedOfVehicle' = realToFrac @_ @Double case vehicleVariant of
+      let avgSpeedOfVehicle' = realToFrac @_ @Double case serviceTier of
             SEDAN -> avgSpeedOfVehicle.sedan.getKilometers
             SUV -> avgSpeedOfVehicle.suv.getKilometers
             HATCHBACK -> avgSpeedOfVehicle.hatchback.getKilometers
             AUTO_RICKSHAW -> avgSpeedOfVehicle.autorickshaw.getKilometers
             TAXI -> avgSpeedOfVehicle.taxi.getKilometers
             TAXI_PLUS -> avgSpeedOfVehicle.taxiplus.getKilometers
+            ECO -> avgSpeedOfVehicle.hatchback.getKilometers
+            COMFY -> avgSpeedOfVehicle.sedan.getKilometers
+            PREMIUM -> avgSpeedOfVehicle.sedan.getKilometers
       if avgSpeedOfVehicle' > 0
         then do
           let distanceInKilometer = realToFrac @_ @Double distance.getMeters / 1000

@@ -24,6 +24,7 @@ import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
 import qualified Environment as App
 import Kernel.Prelude
@@ -59,7 +60,8 @@ data FeedbackRes = FeedbackRes
     wasOfferedAssistance :: Maybe Bool,
     city :: Context.City,
     issueId :: Maybe Text,
-    vehicleVariant :: DVeh.VehicleVariant
+    vehicleVariant :: DVeh.VehicleVariant,
+    vehicleServiceTierType :: DVST.VehicleServiceTierType
   }
 
 feedback :: FeedbackReq -> App.Flow FeedbackRes
@@ -93,7 +95,8 @@ feedback request = do
         providerUrl = booking.providerUrl,
         transactionId = booking.transactionId,
         issueId = issueId',
-        vehicleVariant = booking.vehicleVariant,
+        vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType,
+        vehicleServiceTierType = booking.vehicleServiceTierType,
         ..
       }
   where

@@ -117,7 +117,7 @@ handler merchant req validatedQuote = do
     handleStaticOfferFlow isNewRider quote booking riderDetails = do
       updateBookingDetails isNewRider booking riderDetails
       searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
-      initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq booking.tripCategory req.vehicleVariant quote.id.getId Nothing booking.id.getId False
+      initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq booking.tripCategory booking.vehicleServiceTier quote.id.getId Nothing booking.id.getId False
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       return $ mkDConfirmResp Nothing uBooking riderDetails
 

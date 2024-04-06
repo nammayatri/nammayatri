@@ -39,3 +39,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD PRIMARY KEY ( driver_i
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN air_condition_score double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN selected_service_tiers text[] NOT NULL default '{}';

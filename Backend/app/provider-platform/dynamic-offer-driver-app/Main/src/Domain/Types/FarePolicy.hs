@@ -32,7 +32,7 @@ import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyRentalDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
 import Domain.Types.Merchant
-import Domain.Types.Vehicle
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude as KP
 import Kernel.Types.Cac
 import Kernel.Types.Common
@@ -153,7 +153,7 @@ $(mkBeamInstancesForEnum ''FarePolicyType)
 data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
   { id :: Id FarePolicy,
     merchantId :: Id Merchant,
-    vehicleVariant :: Variant,
+    vehicleServiceTier :: DVST.ServiceTierType,
     tripCategory :: DTC.TripCategory,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
     serviceCharge :: Maybe Money,
@@ -184,8 +184,8 @@ type FullFarePolicyProgressiveDetails = (Id FarePolicy, FPProgressiveDetails)
 
 type FullFarePolicyRentalDetails = (Id FarePolicy, FPRentalDetails)
 
-farePolicyToFullFarePolicy :: Id Merchant -> Variant -> DTC.TripCategory -> FarePolicy -> FullFarePolicy
-farePolicyToFullFarePolicy merchantId vehicleVariant tripCategory FarePolicy {..} =
+farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> FarePolicy -> FullFarePolicy
+farePolicyToFullFarePolicy merchantId vehicleServiceTier tripCategory FarePolicy {..} =
   FullFarePolicy {..}
 
 fullFarePolicyToFarePolicy :: FullFarePolicy -> FarePolicy

@@ -45,7 +45,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.specialLocationTag specialLocationTag,
       Se.Set Beam.tripCategory (Kernel.Prelude.Just tripCategory),
       Se.Set Beam.updatedAt (Kernel.Prelude.Just updatedAt),
-      Se.Set Beam.vehicleVariant vehicleVariant
+      Se.Set Beam.vehicleVariant vehicleServiceTier
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -68,7 +68,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             specialLocationTag = specialLocationTag,
             tripCategory = Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer) tripCategory,
             updatedAt = Kernel.Prelude.fromMaybe createdAt updatedAt,
-            vehicleVariant = vehicleVariant
+            vehicleServiceTier = vehicleVariant
           }
 
 instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
@@ -86,5 +86,5 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.specialLocationTag = specialLocationTag,
         Beam.tripCategory = Kernel.Prelude.Just tripCategory,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt,
-        Beam.vehicleVariant = vehicleVariant
+        Beam.vehicleVariant = vehicleServiceTier
       }

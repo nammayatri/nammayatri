@@ -11,6 +11,7 @@ imports:
   VehicleVariant: Domain.Types.VehicleVariant
   Booking: Domain.Types.Booking.Type
   Client: Domain.Types.Client
+  VehicleServiceTierType: Domain.Types.VehicleServiceTier
 
 Ride:
   tableName: ride
@@ -32,6 +33,7 @@ Ride:
       vehicleNumber: Text
       vehicleColor: Text
       vehicleVariant: VehicleVariant
+      vehicleServiceTierType: Maybe VehicleServiceTierType
       vehicleModel: Text
       rideOtp: Text
       endOtp: Maybe Text
@@ -69,6 +71,7 @@ Ride:
     vehicleModel: Text
     vehicleColor: Maybe Text
     vehicleVariant: VehicleVariant|NoRelation
+    vehicleServiceTierType: Maybe VehicleServiceTierType
     otp: Text
     endOtp: Maybe Text
     trackingUrl: Maybe BaseUrl

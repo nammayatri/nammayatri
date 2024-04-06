@@ -19,6 +19,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person as Person
+import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as Veh
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
@@ -104,7 +105,7 @@ onInit req = do
           { bookingId = booking.id,
             paymentUrl = booking.paymentUrl,
             itemId = booking.itemId,
-            vehicleVariant = booking.vehicleVariant,
+            vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType,
             fulfillmentId = booking.fulfillmentId,
             bookingDetails = booking.bookingDetails,
             bppId = booking.providerId,

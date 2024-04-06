@@ -91,6 +91,9 @@ data VehicleDocumentItem = VehicleDocumentItem
   { registrationNo :: Text,
     userSelectedVehicleCategory :: DVeh.Category,
     verifiedVehicleCategory :: Maybe DVeh.Category,
+    isVerified :: Bool,
+    isActive :: Bool,
+    vehicleModel :: Maybe Text,
     documents :: [DocumentStatusItem]
   }
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -133,8 +136,8 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
       associations <- DRAQuery.findAllLinkedByDriverId personId
       if null associations
         then return []
-        else RCQuery.findById `mapM` ((.rcId) <$> associations) >>= (return . catMaybes)
-    processedVehicles `forM` \processedVehicle -> do
+        else (associations `forM` (\assoc -> RCQuery.findById assoc.rcId >>= (\rc -> return $ (assoc.isRcActive,) <$> rc))) >>= (return . catMaybes)
+    processedVehicles `forM` \(isActive, processedVehicle) -> do
       registrationNo <- decrypt processedVehicle.certificateNumber
       documents <-
         vehicleDocumentTypes `forM` \docType -> do
@@ -152,6 +155,9 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
           { registrationNo,
             userSelectedVehicleCategory = fromMaybe (maybe DVeh.CAR getCategory processedVehicle.vehicleVariant) processedVehicle.userPassedVehicleCategory,
             verifiedVehicleCategory = getCategory <$> processedVehicle.vehicleVariant,
+            isVerified = False,
+            isActive,
+            vehicleModel = processedVehicle.vehicleModel,
             documents
           }
 
@@ -178,20 +184,25 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
                       { registrationNo,
                         userSelectedVehicleCategory = fromMaybe DVeh.CAR verificationReq.vehicleCategory,
                         verifiedVehicleCategory = Nothing,
+                        isVerified = False,
+                        isActive = False,
+                        vehicleModel = Nothing,
                         documents
                       }
                   ]
       Nothing -> return []
 
-  let vehicleDocuments = processedVehicleDocuments <> inprogressVehicleDocuments
+  let vehicleDocumentsUnverified = processedVehicleDocuments <> inprogressVehicleDocuments
   -- check if driver is enabled if not then if all mandatory docs are verified then enable the driver
-  forM_ vehicleDocuments $ \vehicleDoc -> do
-    allVehicleDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus) (documents vehicleDoc)
-    allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus) driverDocuments
-    when (allVehicleDocsVerified && allDriverDocsVerified) $ enableDriver merchantOpCityId personId mDL
-    mbVehicle <- Vehicle.findById personId -- check everytime
-    when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC) $
-      activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo
+  vehicleDocuments <-
+    vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
+      allVehicleDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus) vehicleDoc.documents
+      allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus) driverDocuments
+      when (allVehicleDocsVerified && allDriverDocsVerified) $ enableDriver merchantOpCityId personId mDL
+      mbVehicle <- Vehicle.findById personId -- check everytime
+      when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC) $
+        activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo
+      if allVehicleDocsVerified then return $ VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   return $

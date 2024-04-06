@@ -27,6 +27,7 @@ import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 
 castVariant :: Variant.Variant -> Common.VehicleVariant
@@ -86,8 +87,8 @@ makeLocation DLoc.Location {..} =
             }
     }
 
-mkItemId :: Text -> Variant.Variant -> Text
-mkItemId providerId variant = providerId <> "_" <> show variant
+mkItemId :: Text -> DVST.ServiceTierType -> Text
+mkItemId providerId serviceTier = providerId <> "_" <> show serviceTier
 
 type TagGroupCode = Text
 

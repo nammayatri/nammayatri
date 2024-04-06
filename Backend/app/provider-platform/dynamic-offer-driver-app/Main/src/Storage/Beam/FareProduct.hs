@@ -18,7 +18,7 @@ module Storage.Beam.FareProduct where
 import qualified Database.Beam as B
 import Domain.Types.Common
 import qualified Domain.Types.FareProduct as Domain
-import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
@@ -27,7 +27,7 @@ data FareProductT f = FareProductT
     merchantId :: B.C f Text,
     merchantOperatingCityId :: B.C f Text,
     farePolicyId :: B.C f Text,
-    vehicleVariant :: B.C f Variant.Variant,
+    vehicleVariant :: B.C f DVST.ServiceTierType,
     area :: B.C f Domain.Area,
     tripCategory :: B.C f TripCategory,
     timeBounds :: B.C f Domain.TimeBound

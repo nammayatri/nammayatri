@@ -25,7 +25,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.RiderDetails as DRD
-import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
@@ -66,7 +66,7 @@ data Booking = Booking
     riderId :: Maybe (Id DRD.RiderDetails),
     fromLocation :: DLoc.Location,
     toLocation :: Maybe DLoc.Location,
-    vehicleVariant :: DVeh.Variant,
+    vehicleServiceTier :: DVST.ServiceTierType,
     estimatedDistance :: Maybe Meters,
     maxEstimatedDistance :: Maybe HighPrecMeters,
     estimatedFare :: Money,

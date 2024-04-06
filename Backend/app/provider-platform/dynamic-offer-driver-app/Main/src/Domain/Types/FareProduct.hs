@@ -22,7 +22,7 @@ import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
@@ -103,7 +103,7 @@ data FareProduct = FareProduct
     merchantId :: Id Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     farePolicyId :: Id FarePolicyD.FarePolicy,
-    vehicleVariant :: Variant.Variant,
+    vehicleServiceTier :: DVST.ServiceTierType,
     area :: Area,
     tripCategory :: DTC.TripCategory,
     timeBounds :: TimeBound

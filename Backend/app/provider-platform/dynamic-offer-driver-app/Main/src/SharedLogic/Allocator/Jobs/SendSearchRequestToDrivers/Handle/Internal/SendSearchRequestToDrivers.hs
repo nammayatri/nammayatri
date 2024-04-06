@@ -98,7 +98,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPickUp
             then fromMaybe searchReq $ M.lookup language languageDictionary
             else searchReq
     isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
-    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds searchTry.vehicleVariant needTranslation isValueAddNP driverPickUpCharges
+    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds (castServiceTierToVariant searchTry.vehicleServiceTier) needTranslation isValueAddNP driverPickUpCharges
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
     notificationData <- Notify.buildSendSearchRequestNotificationData sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData Notify.EmptyDynamicParam
     Notify.sendSearchRequestToDriverNotification searchReq.providerId searchReq.merchantOperatingCityId notificationData
@@ -133,6 +133,8 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPickUp
                 searchRequestValidTill = if dpwRes.pickupZone then addUTCTime (fromIntegral dpwRes.keepHiddenForSeconds) defaultValidTill else defaultValidTill,
                 driverId = cast dpRes.driverId,
                 vehicleVariant = dpRes.variant,
+                vehicleServiceTier = Just searchTry.vehicleServiceTier,
+                airConditioned = (> 0.0) <$> dpRes.airConditioned,
                 actualDistanceToPickup = dpwRes.actualDistanceToPickup,
                 straightLineDistanceToPickup = dpRes.distanceToPickup,
                 durationToPickup = dpwRes.actualDurationToPickup,

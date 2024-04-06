@@ -29,6 +29,7 @@ import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalDetails as DRental
 import qualified Domain.Types.SearchRequest as DSReq
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
@@ -170,7 +171,7 @@ confirm DConfirmReq {..} = do
         itemId = booking.itemId,
         fromLoc = fromLocation,
         toLoc = mbToLocation,
-        vehicleVariant = quote.vehicleVariant,
+        vehicleVariant = DVST.castServiceTierToVariant quote.vehicleServiceTierType,
         quoteDetails = details,
         searchRequestId = searchRequest.id,
         maxEstimatedDistance = searchRequest.maxDistance,
@@ -234,7 +235,6 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         estimatedTotalFare = quote.estimatedTotalFare,
         estimatedDistance = searchRequest.distance,
         estimatedDuration = searchRequest.estimatedRideDuration,
-        vehicleVariant = quote.vehicleVariant,
         bookingDetails,
         tripTerms = quote.tripTerms,
         merchantId = searchRequest.merchantId,
@@ -244,6 +244,8 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         createdAt = now,
         updatedAt = now,
         serviceTierName = quote.serviceTierName,
+        vehicleServiceTierType = quote.vehicleServiceTierType,
+        serviceTierShortDesc = quote.serviceTierShortDesc,
         paymentStatus = Nothing
       }
   where

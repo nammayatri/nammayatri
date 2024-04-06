@@ -24,8 +24,19 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.VehicleServiceTier.VehicleServiceTier])
-findAllByMerchantOpCityId limit offset (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId] (Se.Desc Beam.createdAt) limit offset
+  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.VehicleServiceTier.VehicleServiceTier])
+findAllByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
+
+findByServiceTierTypeAndCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.VehicleServiceTier.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier))
+findByServiceTierTypeAndCityId serviceTierType (Kernel.Types.Id.Id merchantOperatingCityId) = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.serviceTierType $ Se.Eq serviceTierType,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
+        ]
+    ]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -38,6 +49,7 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
   updateWithKV
     [ Se.Set Beam.airConditioned airConditioned,
       Se.Set Beam.allowedVehicleVariant allowedVehicleVariant,
+      Se.Set Beam.defaultForVehicleVariant defaultForVehicleVariant,
       Se.Set Beam.driverRating driverRating,
       Se.Set Beam.longDescription longDescription,
       Se.Set Beam.luggageCapacity luggageCapacity,
@@ -60,6 +72,7 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
         Domain.Types.VehicleServiceTier.VehicleServiceTier
           { airConditioned = airConditioned,
             allowedVehicleVariant = allowedVehicleVariant,
+            defaultForVehicleVariant = defaultForVehicleVariant,
             driverRating = driverRating,
             id = Kernel.Types.Id.Id id,
             longDescription = longDescription,
@@ -80,6 +93,7 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
     Beam.VehicleServiceTierT
       { Beam.airConditioned = airConditioned,
         Beam.allowedVehicleVariant = allowedVehicleVariant,
+        Beam.defaultForVehicleVariant = defaultForVehicleVariant,
         Beam.driverRating = driverRating,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.longDescription = longDescription,

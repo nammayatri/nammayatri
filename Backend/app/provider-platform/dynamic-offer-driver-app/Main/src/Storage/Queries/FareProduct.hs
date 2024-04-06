@@ -24,7 +24,7 @@ import Domain.Types.Common
 import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import Domain.Types.Vehicle (Variant (..))
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -72,15 +72,15 @@ findAllBoundedByMerchantOpCityIdVariantArea ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   TripCategory ->
-  Variant ->
+  DVST.ServiceTierType ->
   Domain.Area ->
   m [Domain.FareProduct]
-findAllBoundedByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory vehicleVariant area =
+findAllBoundedByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory serviceTier area =
   findAllWithKV
     [ Se.And
         [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,
           Se.Is BeamFP.area $ Se.Eq area,
-          Se.Is BeamFP.vehicleVariant $ Se.Eq vehicleVariant,
+          Se.Is BeamFP.vehicleVariant $ Se.Eq serviceTier,
           Se.Is BeamFP.tripCategory $ Se.Eq tripCategory,
           Se.Is BeamFP.timeBounds $ Se.Not $ Se.Eq Domain.Unbounded
         ]
@@ -90,15 +90,15 @@ findUnboundedByMerchantOpCityIdVariantArea ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   TripCategory ->
-  Variant ->
+  DVST.ServiceTierType ->
   Domain.Area ->
   m (Maybe Domain.FareProduct)
-findUnboundedByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory vehicleVariant area =
+findUnboundedByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory serviceTier area =
   findOneWithKV
     [ Se.And
         [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,
           Se.Is BeamFP.area $ Se.Eq area,
-          Se.Is BeamFP.vehicleVariant $ Se.Eq vehicleVariant,
+          Se.Is BeamFP.vehicleVariant $ Se.Eq serviceTier,
           Se.Is BeamFP.tripCategory $ Se.Eq tripCategory,
           Se.Is BeamFP.timeBounds $ Se.Eq Domain.Unbounded
         ]
@@ -113,6 +113,7 @@ instance ToTType' BeamFP.FareProduct FareProduct where
       { BeamFP.id = getId id,
         merchantId = getId merchantId,
         merchantOperatingCityId = getId merchantOperatingCityId,
+        vehicleVariant = vehicleServiceTier,
         farePolicyId = getId farePolicyId,
         ..
       }
@@ -125,6 +126,7 @@ instance FromTType' BeamFP.FareProduct FareProduct where
           { id = Id id,
             merchantId = Id merchantId,
             merchantOperatingCityId = Id merchantOperatingCityId,
+            vehicleServiceTier = vehicleVariant,
             farePolicyId = Id farePolicyId,
             ..
           }

@@ -71,6 +71,7 @@ import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified EulerHS.Types as ET
 import Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
@@ -91,6 +92,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.ValueAddNP as CValueAddNP
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.IdfyVerification as QIV
 import qualified Storage.Queries.Person as QPerson
@@ -121,7 +123,7 @@ callOnSelectV2 transporter searchRequest searchTry content = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
 
   msgId <- getMsgIdByTxnId searchRequest.transactionId
-  let vehicleCategory = Utils.mapVariantToVehicle searchTry.vehicleVariant
+  let vehicleCategory = Utils.mapServiceTierToCategory searchTry.vehicleServiceTier
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
   ttl <- bppConfig.onSelectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttl)
@@ -275,7 +277,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
-  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   mbTransporterConfig <- CQTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
     CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
@@ -367,7 +369,7 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
   merchant <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
@@ -404,7 +406,7 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   let bookingDetails = ACL.BookingDetails {..}
       rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
@@ -450,17 +452,19 @@ sendDriverOffer ::
 sendDriverOffer transporter searchReq searchTry driverQuote = do
   logDebug $ "on_select ttl request driver:-" <> show driverQuote.validTill
   isValueAddNP <- CValueAddNP.isValueAddNP searchReq.bapId
-  bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapVariantToVehicle driverQuote.vehicleVariant) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show transporter.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show (Utils.mapVariantToVehicle driverQuote.vehicleVariant))
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show transporter.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier))
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback driverQuote.id.getId
-  callOnSelectV2 transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy)
+  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
+  callOnSelectV2 transporter searchReq searchTry =<< (buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy)
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>
       DM.Merchant ->
+      DVST.VehicleServiceTier ->
       DSR.SearchRequest ->
       DDQ.DriverQuote ->
       m ACL.DOnSelectReq
-    buildOnSelectReq org searchRequest quotes = do
+    buildOnSelectReq org vehicleServiceTierItem searchRequest quotes = do
       now <- getCurrentTime
       logDebug $ "on_select: searchRequest " <> show searchRequest
       logDebug $ "on_select: quotes " <> show quotes
@@ -476,6 +480,7 @@ sendDriverOffer transporter searchReq searchTry driverQuote = do
       pure $
         ACL.DOnSelectReq
           { transporterInfo,
+            vehicleServiceTierItem,
             driverQuote,
             now,
             searchRequest
@@ -499,7 +504,7 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   merchant <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
@@ -536,7 +541,7 @@ sendStopArrivalUpdateToBAP booking ride driver vehicle = do
   let paymentUrl = Nothing
   when isValueAddNP $ do
     merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
     let bookingDetails = ACL.BookingDetails {..}
         stopArrivedBuildReq = ACL.StopArrivedBuildReq ACL.DStopArrivedBuildReq {..}
     stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking stopArrivedBuildReq
@@ -562,7 +567,7 @@ sendNewMessageToBAP booking ride message = do
     merchant <-
       CQM.findById booking.providerId
         >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
     driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
@@ -597,7 +602,7 @@ sendSafetyAlertToBAP booking ride reason driver vehicle = do
     merchant <-
       CQM.findById booking.providerId
         >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
       CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
         >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
@@ -637,7 +642,7 @@ sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource dri
         >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
     let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
     let paymentUrl = Nothing
-    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
     let bookingDetails = ACL.BookingDetails {..}
         estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq ACL.DEstimateRepetitionReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)

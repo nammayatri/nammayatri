@@ -15,7 +15,6 @@
 module SharedLogic.DriverPool.Types
   ( PoolCalculationStage (..),
     CalculateGoHomeDriverPoolReq (..),
-    GoHomeDriverPoolResult (..),
     DriverPoolResult (..),
     DriverPoolResultCurrentlyOnRide (..),
     DriverPoolWithActualDistResult (..),
@@ -23,6 +22,8 @@ module SharedLogic.DriverPool.Types
     PoolType (..),
     PoolRadiusStep,
     PoolBatchNum,
+    castServiceTierToVariant,
+    castVariantToServiceTier,
   )
 where
 
@@ -34,6 +35,7 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Vehicle as Vehicle
+import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -53,25 +55,12 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
   { poolStage :: PoolCalculationStage,
     driverPoolCfg :: DriverPoolConfig,
     goHomeCfg :: GoHomeConfig,
-    variant :: Maybe Vehicle.Variant,
+    serviceTier :: Maybe DVST.ServiceTierType,
     fromLocation :: a,
     toLocation :: a,
     merchantId :: Id DM.Merchant,
     isRental :: Bool
   }
-
-data GoHomeDriverPoolResult = GoHomeDriverPoolResult
-  { driverId :: Id Driver,
-    language :: Maybe Maps.Language,
-    driverDeviceToken :: Maybe FCM.FCMRecipientToken,
-    distanceToPickup :: Meters,
-    -- durationToPickup :: Seconds,
-    variant :: Vehicle.Variant,
-    lat :: Double,
-    lon :: Double,
-    mode :: Maybe DI.DriverMode
-  }
-  deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
 data DriverPoolResult = DriverPoolResult
   { driverId :: Id Driver,
@@ -80,6 +69,8 @@ data DriverPoolResult = DriverPoolResult
     distanceToPickup :: Meters,
     -- durationToPickup :: Seconds,
     variant :: Vehicle.Variant,
+    serviceTier :: DVST.ServiceTierType,
+    airConditioned :: Maybe Double,
     lat :: Double,
     lon :: Double,
     mode :: Maybe DI.DriverMode
@@ -91,6 +82,8 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     language :: Maybe Maps.Language,
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
     variant :: Vehicle.Variant,
+    serviceTier :: DVST.ServiceTierType,
+    airConditioned :: Maybe Double,
     lat :: Double,
     lon :: Double,
     destinationLat :: Double,
@@ -123,3 +116,22 @@ data DriverPoolWithActualDistResultWithFlags = DriverPoolWithActualDistResultWit
     prevBatchDrivers :: [Id Driver],
     nextScheduleTime :: Maybe Seconds
   }
+
+castServiceTierToVariant :: DVST.ServiceTierType -> Vehicle.Variant
+castServiceTierToVariant = \case
+  DVST.SEDAN -> Vehicle.SEDAN
+  DVST.HATCHBACK -> Vehicle.HATCHBACK
+  DVST.TAXI -> Vehicle.TAXI
+  DVST.SUV -> Vehicle.SUV
+  DVST.TAXI_PLUS -> Vehicle.TAXI_PLUS
+  DVST.AUTO_RICKSHAW -> Vehicle.AUTO_RICKSHAW
+  _ -> Vehicle.SEDAN
+
+castVariantToServiceTier :: Vehicle.Variant -> DVST.ServiceTierType
+castVariantToServiceTier = \case
+  Vehicle.SEDAN -> DVST.SEDAN
+  Vehicle.HATCHBACK -> DVST.HATCHBACK
+  Vehicle.TAXI -> DVST.TAXI
+  Vehicle.SUV -> DVST.SUV
+  Vehicle.TAXI_PLUS -> DVST.TAXI_PLUS
+  Vehicle.AUTO_RICKSHAW -> DVST.AUTO_RICKSHAW

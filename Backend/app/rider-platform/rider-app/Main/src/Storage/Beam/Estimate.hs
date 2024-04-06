@@ -18,7 +18,7 @@ module Storage.Beam.Estimate where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Estimate as Domain
-import qualified Domain.Types.VehicleVariant as VehVar
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.External.Maps hiding (status)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
@@ -45,7 +45,7 @@ data EstimateT f = EstimateT
     providerName :: B.C f Text,
     providerMobileNumber :: B.C f Text,
     providerCompletedRidesCount :: B.C f Int,
-    vehicleVariant :: B.C f VehVar.VehicleVariant,
+    vehicleVariant :: B.C f DVST.VehicleServiceTierType,
     driversLocation :: B.C f [LatLong],
     tripTermsId :: B.C f (Maybe Text),
     nightShiftCharge :: B.C f (Maybe Money),
@@ -57,10 +57,11 @@ data EstimateT f = EstimateT
     waitingChargePerMin :: B.C f (Maybe Money),
     waitingChargePerMinAmount :: B.C f (Maybe HighPrecMoney),
     specialLocationTag :: B.C f (Maybe Text),
+    serviceTierName :: B.C f (Maybe Text),
+    serviceTierShortDesc :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    validTill :: B.C f UTCTime,
-    serviceTierName :: B.C f (Maybe Text)
+    validTill :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

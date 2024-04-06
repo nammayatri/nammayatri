@@ -19,7 +19,7 @@ module Storage.Beam.SearchTry where
 import qualified Database.Beam as B
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.SearchTry as Domain
-import qualified Domain.Types.Vehicle as Variant (Variant)
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -36,7 +36,7 @@ data SearchTryT f = SearchTryT
     baseFare :: B.C f Money,
     customerExtraFee :: B.C f (Maybe Money),
     status :: B.C f Domain.SearchTryStatus,
-    vehicleVariant :: B.C f Variant.Variant,
+    vehicleVariant :: B.C f DVST.ServiceTierType,
     searchRepeatCounter :: B.C f Int,
     tripCategory :: B.C f (Maybe DTC.TripCategory),
     searchRepeatType :: B.C f Domain.SearchRepeatType,

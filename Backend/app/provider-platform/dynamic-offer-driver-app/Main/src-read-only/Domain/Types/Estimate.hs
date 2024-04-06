@@ -8,7 +8,7 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.SearchRequest
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleServiceTier
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -27,6 +27,6 @@ data Estimate = Estimate
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tripCategory :: Domain.Types.Common.TripCategory,
     updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleVariant :: Domain.Types.Vehicle.Variant
+    vehicleServiceTier :: Domain.Types.VehicleServiceTier.ServiceTierType
   }
   deriving (Generic, Show)

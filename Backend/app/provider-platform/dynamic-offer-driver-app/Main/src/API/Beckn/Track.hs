@@ -73,7 +73,7 @@ track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBe
     let becknOnTrackMessage = ACL.mkOnTrackMessageV2 dTrackRes
     logTagInfo "track APIV2 Flow" $ "Sending OnTrack APIV2" <> show becknOnTrackMessage
     booking <- QRB.findById dTrackReq.bookingId >>= fromMaybeM (BookingNotFound dTrackReq.bookingId.getId)
-    let vehicleCategory = Utils.mapVariantToVehicle booking.vehicleVariant
+    let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporterId (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
     ttl <- bppConfig.onTrackTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
     onTrackContext <- ContextV2.buildContextV2 Context.ON_TRACK Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttl)

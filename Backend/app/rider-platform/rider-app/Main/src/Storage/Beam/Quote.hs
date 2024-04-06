@@ -18,7 +18,7 @@ module Storage.Beam.Quote where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.FarePolicy.FareProductType as Domain
-import qualified Domain.Types.VehicleVariant as VehVar
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -35,7 +35,9 @@ data QuoteT f = QuoteT
     providerUrl :: B.C f Text,
     itemId :: B.C f Text,
     distanceToNearestDriver :: B.C f (Maybe HighPrecMeters),
-    vehicleVariant :: B.C f VehVar.VehicleVariant,
+    vehicleVariant :: B.C f DVST.VehicleServiceTierType,
+    serviceTierName :: B.C f (Maybe Text),
+    serviceTierShortDesc :: B.C f (Maybe Text),
     tripTermsId :: B.C f (Maybe Text),
     rentalDetailsId :: B.C f (Maybe Text),
     driverOfferId :: B.C f (Maybe Text),
@@ -44,8 +46,7 @@ data QuoteT f = QuoteT
     specialZoneQuoteId :: B.C f (Maybe Text),
     specialLocationTag :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
-    validTill :: B.C f UTCTime,
-    serviceTierName :: B.C f (Maybe Text)
+    validTill :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

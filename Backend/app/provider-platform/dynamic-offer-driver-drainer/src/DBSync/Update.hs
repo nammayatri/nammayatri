@@ -138,7 +138,6 @@ runUpdateCommands (cmd, val) dbStreamKey = do
     UpdateDBCommand id _ tag _ _ (FarePolicyProgressiveDetailsOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("FarePolicyProgressiveDetails" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (FarePolicyProgressiveDetailsPerExtraKmRateSectionOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("FarePolicyProgressiveDetailsPerExtraKmRateSection" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (FarePolicySlabDetailsSlabOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("FarePolicySlabDetailsSlab" :: Text) =<< dbConf
-    UpdateDBCommand id _ tag _ _ (RestrictedExtraFareOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("RestrictedExtraFare" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (FareProductOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("FareProduct" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (GeometryOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("Geometry" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (CommentOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("Comment" :: Text) =<< dbConf

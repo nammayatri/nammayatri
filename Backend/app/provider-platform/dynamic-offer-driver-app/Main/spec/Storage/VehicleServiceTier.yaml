@@ -2,13 +2,15 @@ imports:
   Variant: Domain.Types.Vehicle
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
   Merchant: Domain.Types.Merchant
+  Centesimal: Kernel.Types.Common
 
 VehicleServiceTier:
   tableName: vehicle_service_tier
 
   types:
     ServiceTierType:
-      enum: "COMFY,ECO,PREMIUM,SUV"
+      enum: "COMFY,ECO,PREMIUM,SUV,AUTO_RICKSHAW,HATCHBACK,SEDAN,TAXI,TAXI_PLUS"
+      derive: "EulerHS.Prelude.Hashable,Enum,Bounded"
 
   fields:
     id: Id VehicleServiceTier
@@ -16,16 +18,23 @@ VehicleServiceTier:
     name: Text
     shortDescription: Maybe Text
     longDescription: Maybe Text
-    seatingCapacity: Int
+    seatingCapacity: Maybe Int
     airConditioned: Maybe Double
     luggageCapacity: Maybe Int
-    driverRating: Maybe Double
+    driverRating: Maybe Centesimal
     vehicleRating: Maybe Double
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
     allowedVehicleVariant: '[Variant]'
-
+    defaultForVehicleVariant: '[Variant]'
+  sqlType:
+    allowedVehicleVariant: text[]
+    defaultForVehicleVariant: text[]
   queries:
     findAllByMerchantOpCityId:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithKV
       where: merchantOperatingCityId
+    findByServiceTierTypeAndCityId:
+      kvFunction: findOneWithKV
+      where:
+        and: [serviceTierType, merchantOperatingCityId]

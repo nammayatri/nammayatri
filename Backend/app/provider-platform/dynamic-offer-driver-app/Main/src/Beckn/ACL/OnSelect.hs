@@ -33,6 +33,7 @@ import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Types.Id (ShortId)
 import Kernel.Utils.Common
@@ -40,6 +41,7 @@ import SharedLogic.FareCalculator (mkFareParamsBreakups)
 
 data DOnSelectReq = DOnSelectReq
   { transporterInfo :: TransporterInfo,
+    vehicleServiceTierItem :: DVST.VehicleServiceTier,
     searchRequest :: SearchRequest,
     driverQuote :: DQuote.DriverQuote,
     now :: UTCTime
@@ -68,7 +70,7 @@ mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy req@DOnSelectRe
     Just
       Spec.Order
         { orderFulfillments = Just fulfillments,
-          orderItems = Just $ map (\fulf -> mkItemV2 fulf driverQuote transporterInfo isValueAddNP mbFarePolicy) fulfillments,
+          orderItems = Just $ map (\fulf -> mkItemV2 fulf vehicleServiceTierItem driverQuote transporterInfo isValueAddNP mbFarePolicy) fulfillments,
           orderQuote = Just $ mkQuoteV2 driverQuote req.now,
           orderPayments = Just [paymentV2],
           orderProvider = mkProvider bppConfig,
@@ -163,26 +165,26 @@ mkDriverRatingTag quote
           }
       ]
 
-mkItemV2 :: Spec.Fulfillment -> DQuote.DriverQuote -> TransporterInfo -> Bool -> Maybe FarePolicyD.FullFarePolicy -> Spec.Item
-mkItemV2 fulfillment quote provider isValueAddNP mbFarePolicy = do
+mkItemV2 :: Spec.Fulfillment -> DVST.VehicleServiceTier -> DQuote.DriverQuote -> TransporterInfo -> Bool -> Maybe FarePolicyD.FullFarePolicy -> Spec.Item
+mkItemV2 fulfillment vehicleServiceTierItem quote provider isValueAddNP mbFarePolicy = do
   let fulfillmentId = fulfillment.fulfillmentId & fromMaybe (error $ "It should never happen as we have created fulfillment:-" <> show fulfillment)
   Spec.Item
-    { itemId = Just $ Common.mkItemId provider.merchantShortId.getShortId quote.vehicleVariant,
+    { itemId = Just $ Common.mkItemId provider.merchantShortId.getShortId quote.vehicleServiceTier,
       itemFulfillmentIds = Just [fulfillmentId],
       itemPrice = Just $ mkPriceV2 quote,
       itemTags = mkItemTagsV2 quote isValueAddNP mbFarePolicy,
-      itemDescriptor = mkItemDescriptor quote,
+      itemDescriptor = mkItemDescriptor vehicleServiceTierItem,
       itemLocationIds = Nothing,
       itemPaymentIds = Nothing
     }
 
-mkItemDescriptor :: DQuote.DriverQuote -> Maybe Spec.Descriptor
-mkItemDescriptor res =
+mkItemDescriptor :: DVST.VehicleServiceTier -> Maybe Spec.Descriptor
+mkItemDescriptor vehicleServiceTierItem =
   Just
     Spec.Descriptor
-      { descriptorCode = Just "RIDE",
-        descriptorShortDesc = Just $ show res.vehicleVariant,
-        descriptorName = Just $ show res.vehicleVariant
+      { descriptorCode = Just $ show vehicleServiceTierItem.serviceTierType,
+        descriptorShortDesc = vehicleServiceTierItem.shortDescription,
+        descriptorName = Just vehicleServiceTierItem.name
       }
 
 mkPriceV2 :: DQuote.DriverQuote -> Spec.Price

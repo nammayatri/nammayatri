@@ -20,7 +20,7 @@ import qualified Domain.Types.FareParameters as Params
 import qualified Domain.Types.FarePolicy as Policy
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.SearchRequest
-import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -29,7 +29,7 @@ data Quote = Quote
   { id :: Id Quote,
     searchRequestId :: Id SearchRequest,
     providerId :: Id DMerchant.Merchant,
-    vehicleVariant :: Variant.Variant,
+    vehicleServiceTier :: DVST.ServiceTierType,
     estimatedFinishTime :: Maybe UTCTime,
     tripCategory :: DTC.TripCategory,
     validTill :: UTCTime,

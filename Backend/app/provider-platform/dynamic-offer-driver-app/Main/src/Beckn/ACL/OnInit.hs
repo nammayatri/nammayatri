@@ -77,7 +77,7 @@ tfPayments res bppConfig = do
 
 tfVehicle :: DInit.InitRes -> Maybe Spec.Vehicle
 tfVehicle res = do
-  let (category, variant) = Utils.castVariant res.booking.vehicleVariant
+  let (category, variant) = Utils.castVariant res.vehicleVariant
   Just
     Spec.Vehicle
       { vehicleCategory = Just category,

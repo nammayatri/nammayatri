@@ -27,6 +27,7 @@ import qualified Domain.Types.Person as Person
 import Domain.Types.Ride (Ride (..), RideAPIEntity (..))
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.Sos as DSos
+import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id, null)
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -81,7 +82,9 @@ data BookingAPIEntity = BookingAPIEntity
     updatedAt :: UTCTime,
     isValueAddNP :: Bool,
     editPickupAttemptsLeft :: Int,
-    serviceTierName :: Maybe Text
+    vehicleServiceTierType :: DVST.VehicleServiceTierType,
+    serviceTierName :: Maybe Text,
+    serviceTierShortDesc :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -177,7 +180,9 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
       sosStatus = mbSosStatus,
       editPickupAttemptsLeft = fromMaybe 0 (activeRide >>= (.allowedEditLocationAttempts)),
       isValueAddNP,
-      serviceTierName = booking.serviceTierName
+      vehicleServiceTierType = booking.vehicleServiceTierType,
+      serviceTierName = booking.serviceTierName,
+      serviceTierShortDesc = booking.serviceTierShortDesc
     }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds

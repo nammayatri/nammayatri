@@ -24,7 +24,7 @@ import Domain.Types.Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import Domain.Types.SearchTry
-import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.JSON (constructorsWithSnakeCase)
@@ -58,7 +58,7 @@ data Payload
   | Estimates
       { eId :: Id ES.Estimate,
         srId :: Id DSearchRequest.SearchRequest, --searchReqId
-        vehVar :: Variant.Variant, --vehicle variant
+        vehVar :: DVST.ServiceTierType, --vehicle variant
         cAt :: UTCTime
       }
   | Exophone
@@ -160,7 +160,7 @@ triggerEstimateEvent ::
   EstimateEventData ->
   m ()
 triggerEstimateEvent estimateData = do
-  let estimatePayload = Estimates {eId = estimateData.estimate.id, srId = estimateData.estimate.requestId, vehVar = estimateData.estimate.vehicleVariant, cAt = estimateData.estimate.createdAt}
+  let estimatePayload = Estimates {eId = estimateData.estimate.id, srId = estimateData.estimate.requestId, vehVar = estimateData.estimate.vehicleServiceTier, cAt = estimateData.estimate.createdAt}
   estEnvt <- createEvent Nothing (getId estimateData.merchantId) Estimate DYNAMIC_OFFER_DRIVER_APP System (Just estimatePayload) (Just $ getId estimateData.estimate.id) Nothing
   triggerEvent estEnvt
 

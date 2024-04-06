@@ -19,6 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverQuote as Domain
 import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
@@ -37,6 +38,7 @@ data DriverQuoteT f = DriverQuoteT
     driverRating :: B.C f (Maybe Centesimal),
     status :: B.C f Domain.DriverQuoteStatus,
     vehicleVariant :: B.C f Variant.Variant,
+    vehicleServiceTier :: B.C f (Maybe DVST.ServiceTierType),
     distance :: B.C f (Maybe Meters),
     distanceToPickup :: B.C f Meters,
     durationToPickup :: B.C f Seconds,

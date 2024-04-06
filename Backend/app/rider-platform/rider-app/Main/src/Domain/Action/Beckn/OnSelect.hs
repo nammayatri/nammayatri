@@ -25,6 +25,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchRequest
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant
 import Environment
 import Kernel.Beam.Functions
@@ -69,6 +70,8 @@ data QuoteInfo = QuoteInfo
     quoteDetails :: DriverOfferQuoteDetails,
     specialLocationTag :: Maybe Text,
     serviceTierName :: Maybe Text,
+    serviceTierType :: Maybe DVST.VehicleServiceTierType,
+    serviceTierShortDesc :: Maybe Text,
     quoteValidTill :: UTCTime
   }
 
@@ -167,6 +170,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             itemId = estimate.itemId,
             validTill = quoteValidTill,
             estimatedTotalFare = estimatedFare,
+            vehicleServiceTierType = fromMaybe (DVST.castVariantToServiceTier vehicleVariant) serviceTierType,
             ..
           }
   pure quote

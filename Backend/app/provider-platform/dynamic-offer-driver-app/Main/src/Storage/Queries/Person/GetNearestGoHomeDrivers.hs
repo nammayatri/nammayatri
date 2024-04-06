@@ -6,11 +6,12 @@ module Storage.Queries.Person.GetNearestGoHomeDrivers
 where
 
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.Maybe as Mb
+import qualified Data.List as List
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Vehicle as DV
+import Domain.Types.VehicleServiceTier as DVST
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
@@ -26,7 +27,8 @@ import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
 
 data NearestGoHomeDriversReq = NearestGoHomeDriversReq
-  { variant :: Maybe Variant,
+  { cityServiceTiers :: [DVST.VehicleServiceTier],
+    serviceTier :: Maybe ServiceTierType,
     fromLocation :: LatLong,
     nearestRadius :: Meters,
     homeRadius :: Meters,
@@ -42,6 +44,8 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     onRide :: Bool,
     distanceToDriver :: Meters,
     variant :: DV.Variant,
+    serviceTier :: DVST.ServiceTierType,
+    airConditioned :: Maybe Double,
     lat :: Double,
     lon :: Double,
     mode :: Maybe DriverInfo.DriverMode
@@ -61,47 +65,37 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
   logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
   let res = linkArrayList driverLocs driverInfos vehicle drivers
   logDebug $ "GetNearestGoHomeDrivers Result:- " <> show (length res)
-  return (makeNearestGoHomeDriversResult =<< res)
+  return res
   where
-    makeNearestGoHomeDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant, Maybe DriverInfo.DriverMode) -> [NearestGoHomeDriversResult]
-    makeNearestGoHomeDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dist, dlat, dlon, variant', mode) = do
-      case variant of
-        Nothing -> do
-          let autoResult = getResult AUTO_RICKSHAW $ variant' == AUTO_RICKSHAW
-              suvResult = getResult SUV $ variant' == SUV
-              sedanResult = getResult SEDAN $ variant' == SEDAN || (variant' == SUV && canDowngradeToSedan)
-              hatchbackResult = getResult HATCHBACK $ variant' == HATCHBACK || ((variant' == SUV || variant' == SEDAN) && canDowngradeToHatchback)
-              taxiPlusResult = getResult TAXI_PLUS $ variant' == TAXI_PLUS
-              taxiResult = getResult TAXI $ variant' == TAXI || (variant' == TAXI_PLUS && canDowngradeToTaxi)
-          autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
-        Just poolVariant -> getResult poolVariant True
-      where
-        getResult var cond = [NearestGoHomeDriversResult (cast personId) mbDeviceToken mblang onRide (roundToIntegral dist) var dlat dlon mode | cond]
-
     linkArrayList driverLocations driverInformations vehicles persons =
       let personHashMap = HashMap.fromList $ (\p -> (p.id, p)) <$> persons
           driverInfoHashMap = HashMap.fromList $ (\info -> (info.driverId, info)) <$> driverInformations
           vehicleHashMap = HashMap.fromList $ (\v -> (v.driverId, v)) <$> vehicles
-       in mapMaybe (buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap) driverLocations
+       in concat $ mapMaybe (buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap) driverLocations
 
     buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap location = do
       let driverId' = location.driverId
       person <- HashMap.lookup driverId' personHashMap
       vehicle <- HashMap.lookup driverId' vehicleHashMap
       info <- HashMap.lookup driverId' driverInfoHashMap
-      let dist = realToFrac $ distanceBetweenInMeters fromLocation $ LatLong {lat = location.lat, lon = location.lon}
-      if Mb.isNothing variant || Just vehicle.variant == variant
-        || ( case variant of
-               Just SEDAN ->
-                 info.canDowngradeToSedan
-                   && vehicle.variant == SUV
-               Just HATCHBACK ->
-                 info.canDowngradeToHatchback
-                   && (vehicle.variant == SUV || vehicle.variant == SEDAN)
-               Just TAXI ->
-                 info.canDowngradeToTaxi
-                   && vehicle.variant == TAXI_PLUS
-               _ -> False
-           )
-        then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, dist, location.lat, location.lon, vehicle.variant, info.mode)
-        else Nothing
+      let dist = (realToFrac $ distanceBetweenInMeters fromLocation $ LatLong {lat = location.lat, lon = location.lon}) :: Double
+      -- ideally should be there inside the info.selectedServiceTiers but still to make sure we have a default service tier for the driver
+      let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
+      let defaultServiceTierForDriver = (.serviceTierType) <$> (find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers)
+      let selectedDriverServiceTiers =
+            case defaultServiceTierForDriver of
+              Just defaultServiceTierForDriver' ->
+                if defaultServiceTierForDriver' `elem` info.selectedServiceTiers
+                  then info.selectedServiceTiers
+                  else [defaultServiceTierForDriver'] <> info.selectedServiceTiers
+              Nothing -> info.selectedServiceTiers
+      case serviceTier of
+        Just serviceTier' ->
+          if serviceTier' `elem` selectedDriverServiceTiers
+            then List.singleton <$> mkDriverResult person vehicle info dist cityServiceTiersHashMap serviceTier'
+            else Nothing
+        Nothing -> Just (mapMaybe (mkDriverResult person vehicle info dist cityServiceTiersHashMap) selectedDriverServiceTiers)
+      where
+        mkDriverResult person vehicle info dist cityServiceTiersHashMap serviceTier' = do
+          serviceTierInfo <- HashMap.lookup serviceTier' cityServiceTiersHashMap
+          Just $ NearestGoHomeDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier' serviceTierInfo.airConditioned location.lat location.lon info.mode

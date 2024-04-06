@@ -11,19 +11,21 @@ import qualified Domain.Types.VehicleServiceTier
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data VehicleServiceTierT f = VehicleServiceTierT
   { airConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     allowedVehicleVariant :: B.C f [Domain.Types.Vehicle.Variant],
-    driverRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    defaultForVehicleVariant :: B.C f [Domain.Types.Vehicle.Variant],
+    driverRating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     id :: B.C f Kernel.Prelude.Text,
     longDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     luggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
-    seatingCapacity :: B.C f Kernel.Prelude.Int,
+    seatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     serviceTierType :: B.C f Domain.Types.VehicleServiceTier.ServiceTierType,
     shortDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

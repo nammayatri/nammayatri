@@ -23,7 +23,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
-import Domain.Types.VehicleVariant (VehicleVariant)
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -55,7 +55,7 @@ data Estimate = Estimate
     providerName :: Text,
     providerMobileNumber :: Text,
     providerCompletedRidesCount :: Int,
-    vehicleVariant :: VehicleVariant,
+    vehicleServiceTierType :: DVST.VehicleServiceTierType,
     itemId :: Text,
     tripTerms :: Maybe DTripTerms.TripTerms,
     estimateBreakupList :: [EstimateBreakup],
@@ -64,10 +64,11 @@ data Estimate = Estimate
     waitingCharges :: WaitingCharges,
     driversLocation :: [LatLong],
     specialLocationTag :: Maybe Text,
+    serviceTierName :: Maybe Text,
+    serviceTierShortDesc :: Maybe Text,
     updatedAt :: UTCTime,
     createdAt :: UTCTime,
-    validTill :: UTCTime,
-    serviceTierName :: Maybe Text
+    validTill :: UTCTime
   }
   deriving (Generic, Show)
 
@@ -152,7 +153,9 @@ mkWaitingChargesAPIEntity WaitingCharges {waitingChargePerMin} =
 
 data EstimateAPIEntity = EstimateAPIEntity
   { id :: Id Estimate,
-    vehicleVariant :: VehicleVariant,
+    vehicleVariant :: DVST.VehicleServiceTierType,
+    serviceTierName :: Maybe Text,
+    serviceTierShortDesc :: Maybe Text,
     estimatedFare :: Money,
     estimatedTotalFare :: Money,
     discount :: Maybe Money,
@@ -176,8 +179,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     providerDescription :: Maybe Text,
     providerId :: Text,
     isValueAddNP :: Bool,
-    validTill :: UTCTime,
-    serviceTierName :: Maybe Text
+    validTill :: UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -229,6 +231,7 @@ mkEstimateAPIEntity Estimate {..} = do
         nightShiftInfo = mkNightShiftInfoAPIEntity <$> nightShiftInfo,
         waitingCharges = mkWaitingChargesAPIEntity waitingCharges,
         totalFareRange = mkFareRangeAPIEntity totalFareRange,
+        vehicleVariant = vehicleServiceTierType,
         ..
       }
   where

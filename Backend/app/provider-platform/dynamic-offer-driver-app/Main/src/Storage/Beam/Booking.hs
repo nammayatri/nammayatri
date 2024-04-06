@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FareProduct as FareProductD
-import qualified Domain.Types.Vehicle as Veh
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
@@ -47,7 +47,7 @@ data BookingT f = BookingT
     riderId :: B.C f (Maybe Text),
     fromLocationId :: B.C f (Maybe Text),
     toLocationId :: B.C f (Maybe Text),
-    vehicleVariant :: B.C f Veh.Variant,
+    vehicleVariant :: B.C f DVST.ServiceTierType,
     estimatedDistance :: B.C f (Maybe Meters),
     maxEstimatedDistance :: B.C f (Maybe HighPrecMeters),
     estimatedFare :: B.C f HighPrecMoney,

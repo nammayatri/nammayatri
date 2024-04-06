@@ -86,7 +86,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
               { booking = booking,
                 cancellationSource = DBCR.ByUser
               }
-      let vehicleCategory = Utils.mapVariantToVehicle booking.vehicleVariant
+      let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
       bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
       ttl <- bppConfig.onCancelTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
       context <- ContextV2.buildContextV2 Context.ON_CANCEL Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttl)

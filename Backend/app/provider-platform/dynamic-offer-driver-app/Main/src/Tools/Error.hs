@@ -1070,6 +1070,7 @@ data DriverOnboardingError
   | GenerateAadhaarOtpExceedLimit Text
   | RCActivationFailedPaymentDue Text
   | DLInvalid
+  | VehicleServiceTierNotFound Text
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1100,6 +1101,7 @@ instance IsBaseError DriverOnboardingError where
     RCActiveOnOtherAccount -> Just "RC active on another driver account."
     RCActivationFailedPaymentDue id_ -> Just $ "cannot activate RC for person \"" <> id_ <> "\" Due to paymentDue."
     DLInvalid -> Just "Contact Customer Support, class of vehicles is not supported"
+    VehicleServiceTierNotFound serviceTier -> Just $ "Service tier config not found for vehicle service tier \"" <> serviceTier <> "\"."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1129,6 +1131,7 @@ instance IsHTTPError DriverOnboardingError where
     RCActiveOnOtherAccount -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
     RCActivationFailedPaymentDue _ -> "RC_ACTIVATION_FAILED_PAYMENT_DUE"
     DLInvalid -> "DL_INVALID"
+    VehicleServiceTierNotFound _ -> "VEHICLE_SERVICE_TIER_NOT_FOUND"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1156,6 +1159,7 @@ instance IsHTTPError DriverOnboardingError where
     RCActiveOnOtherAccount -> E400
     RCActivationFailedPaymentDue _ -> E400
     DLInvalid -> E400
+    VehicleServiceTierNotFound _ -> E500
 
 instance IsAPIError DriverOnboardingError
 

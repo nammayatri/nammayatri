@@ -2,6 +2,9 @@ imports:
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
   DocumentVerificationConfig: Domain.Types.DocumentVerificationConfig
   DocumentType: Domain.Types.DocumentVerificationConfig
+  ServiceTierType: Domain.Types.VehicleServiceTier
+  APISuccess: Kernel.Types.APISuccess
+  Centesimal: Kernel.Types.Common
 
 module: DriverOnboardingV2
 types:
@@ -22,6 +25,21 @@ types:
     checkExtraction: Bool
     checkExpiry: Bool
     rcNumberPrefixList: '[Text]'
+  DriverVehicleServiceTiers:
+    recordType: NewType
+    tiers: [DriverVehicleServiceTier]
+  DriverVehicleServiceTier:
+    serviceTierType: ServiceTierType
+    name: Text
+    shortDescription: Maybe Text
+    longDescription: Maybe Text
+    seatingCapacity: Maybe Int
+    airConditioned: Maybe Double
+    luggageCapacity: Maybe Int
+    driverRating: Maybe Centesimal
+    vehicleRating: Maybe Double
+    isDefault: Bool
+    isSelected: Bool
 
 apis:
   - GET:
@@ -29,3 +47,15 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: DocumentVerificationConfigList
+  - GET:
+      endpoint: /driver/vehicleServiceTiers
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: DriverVehicleServiceTiers
+  - POST:
+      endpoint: /driver/updateServiceTiers
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DriverVehicleServiceTiers
+      response:
+        type: APISuccess

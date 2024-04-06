@@ -50,7 +50,7 @@ buildOnUpdateReqV2 ::
   OU.OnUpdateBuildReq ->
   m Spec.OnUpdateReq
 buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country booking req = do
-  becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   ttl <- becknConfig.onUpdateTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId

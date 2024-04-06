@@ -38,6 +38,7 @@ import Domain.Types.Booking.Type
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -100,7 +101,7 @@ select (personId, _) estimateId req = withFlowHandlerAPI . withPersonIdLogTag pe
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   autoAssignEnabled <- searchRequest.autoAssignEnabled & fromMaybeM (InternalError "Invalid autoAssignEnabled")
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle searchRequest.merchantId "MOBILITY" (UCommon.mapVariantToVehicle estimate.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle searchRequest.merchantId "MOBILITY" (UCommon.mapVariantToVehicle $ DVST.castServiceTierToVariant estimate.vehicleServiceTierType) >>= fromMaybeM (InternalError "Beckn Config not found")
   selectTtl <- bapConfig.selectTTLSec & fromMaybeM (InternalError "Invalid ttl")
   ttlInInt <-
     if autoAssignEnabled

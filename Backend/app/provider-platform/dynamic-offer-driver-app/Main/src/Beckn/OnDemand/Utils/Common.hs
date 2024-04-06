@@ -49,6 +49,7 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id, state, view, (%~), (^?))
 import qualified EulerHS.Prelude as Prelude
 import GHC.Float (double2Int)
@@ -57,6 +58,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common hiding (mkPrice)
 import Kernel.Utils.Common hiding (mkPrice)
+import SharedLogic.DriverPool.Types
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import Tools.Error
@@ -65,6 +67,9 @@ data Pricing = Pricing
   { pricingId :: Text,
     pricingMaxFare :: Money,
     pricingMinFare :: Money,
+    vehicleServiceTier :: DVST.ServiceTierType,
+    serviceTierName :: Text,
+    serviceTierDescription :: Maybe Text,
     vehicleVariant :: Variant.Variant,
     tripCategory :: DTC.TripCategory,
     fareParams :: Maybe Params.FareParameters,
@@ -685,15 +690,18 @@ buildAddressFromText fullAddress = do
 replaceEmpty :: Maybe Text -> Maybe Text
 replaceEmpty string = if string == Just "" then Nothing else string
 
-mapVariantToVehicle :: Variant.Variant -> VehicleCategory
-mapVariantToVehicle variant =
-  case variant of
-    Variant.SEDAN -> CAB
-    Variant.HATCHBACK -> CAB
-    Variant.TAXI -> CAB
-    Variant.SUV -> CAB
-    Variant.TAXI_PLUS -> CAB
-    Variant.AUTO_RICKSHAW -> AUTO_RICKSHAW
+mapServiceTierToCategory :: DVST.ServiceTierType -> VehicleCategory
+mapServiceTierToCategory serviceTier =
+  case serviceTier of
+    DVST.SEDAN -> CAB
+    DVST.HATCHBACK -> CAB
+    DVST.TAXI -> CAB
+    DVST.SUV -> CAB
+    DVST.TAXI_PLUS -> CAB
+    DVST.COMFY -> CAB
+    DVST.ECO -> CAB
+    DVST.PREMIUM -> CAB
+    DVST.AUTO_RICKSHAW -> AUTO_RICKSHAW
 
 mapRideStatus :: Maybe DRide.RideStatus -> Enums.FulfillmentState
 mapRideStatus rideStatus =
@@ -826,7 +834,7 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
     [ Spec.Item
         { itemDescriptor = tfItemDescriptor booking,
           itemFulfillmentIds = Just [booking.quoteId],
-          itemId = Just $ Common.mkItemId shortId booking.vehicleVariant,
+          itemId = Just $ Common.mkItemId shortId booking.vehicleServiceTier,
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice booking,
@@ -856,23 +864,26 @@ tfItemDescriptor booking =
   Just
     Spec.Descriptor
       { descriptorCode = Just "RIDE",
-        descriptorShortDesc = Just $ show booking.vehicleVariant,
-        descriptorName = Just $ show booking.vehicleVariant
+        descriptorShortDesc = Just $ show booking.vehicleServiceTier,
+        descriptorName = Just $ show booking.vehicleServiceTier
       }
 
-convertEstimateToPricing :: (DEst.Estimate, Maybe NearestDriverInfo) -> Pricing
-convertEstimateToPricing (DEst.Estimate {..}, mbDriverLocations) =
+convertEstimateToPricing :: (DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo) -> Pricing
+convertEstimateToPricing (DEst.Estimate {..}, serviceTier, mbDriverLocations) =
   Pricing
     { pricingId = id.getId,
       pricingMaxFare = maxFare,
       pricingMinFare = minFare,
       fulfillmentType = show Enums.DELIVERY,
+      serviceTierName = serviceTier.name,
+      serviceTierDescription = serviceTier.shortDescription,
+      vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       ..
     }
 
-convertQuoteToPricing :: (DQuote.Quote, Maybe NearestDriverInfo) -> Pricing
-convertQuoteToPricing (DQuote.Quote {..}, mbDriverLocations) =
+convertQuoteToPricing :: (DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo) -> Pricing
+convertQuoteToPricing (DQuote.Quote {..}, serviceTier, mbDriverLocations) =
   Pricing
     { pricingId = id.getId,
       pricingMaxFare = estimatedFare,
@@ -880,6 +891,9 @@ convertQuoteToPricing (DQuote.Quote {..}, mbDriverLocations) =
       estimatedDistance = distance,
       fareParams = Just fareParams,
       fulfillmentType = mapToFulfillmentType tripCategory,
+      serviceTierName = serviceTier.name,
+      serviceTierDescription = serviceTier.shortDescription,
+      vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       ..
     }
@@ -891,17 +905,19 @@ convertQuoteToPricing (DQuote.Quote {..}, mbDriverLocations) =
     mapToFulfillmentType (DTC.InterCity _) = show Enums.INTER_CITY
     mapToFulfillmentType _ = show Enums.RIDE_OTP -- backward compatibility
 
-convertBookingToPricing :: DBooking.Booking -> Pricing
-convertBookingToPricing DBooking.Booking {..} =
+convertBookingToPricing :: DVST.VehicleServiceTier -> DBooking.Booking -> Pricing
+convertBookingToPricing serviceTier DBooking.Booking {..} =
   Pricing
     { pricingId = id.getId,
       pricingMaxFare = estimatedFare,
       pricingMinFare = estimatedFare,
-      vehicleVariant = vehicleVariant,
       tripCategory = tripCategory,
       fareParams = Just fareParams,
       farePolicy = Nothing,
       fulfillmentType = show Enums.DELIVERY,
+      serviceTierName = serviceTier.name,
+      serviceTierDescription = serviceTier.shortDescription,
+      vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = Nothing,
       ..
     }

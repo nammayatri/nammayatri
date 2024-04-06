@@ -15,7 +15,7 @@ import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FareProduct as DFareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import Domain.Types.Vehicle (Variant (..))
+import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
@@ -109,12 +109,12 @@ getAllFareProducts merchantId merchantOpCityId fromLocationLatLong mToLocationLa
           return fareProducts'
 
     getBoundedOrDefaultFareProduct fareProduct = do
-      boundedFareProduct <- getBoundedFareProduct fareProduct.merchantOperatingCityId fareProduct.tripCategory fareProduct.vehicleVariant fareProduct.area
+      boundedFareProduct <- getBoundedFareProduct fareProduct.merchantOperatingCityId fareProduct.tripCategory fareProduct.vehicleServiceTier fareProduct.area
       return $ fromMaybe fareProduct boundedFareProduct
 
-getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> Variant -> DFareProduct.Area -> m (Maybe DFareProduct.FareProduct)
-getBoundedFareProduct merchantOpCityId tripCategory vehVariant area = do
-  fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId tripCategory vehVariant area
+getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> DFareProduct.Area -> m (Maybe DFareProduct.FareProduct)
+getBoundedFareProduct merchantOpCityId tripCategory serviceTier area = do
+  fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId tripCategory serviceTier area
   currentIstTime <- getLocalCurrentTime 19800
   let currTimeOfDay = utcTimeToDiffTime currentIstTime
       currentDay = utctDay currentIstTime

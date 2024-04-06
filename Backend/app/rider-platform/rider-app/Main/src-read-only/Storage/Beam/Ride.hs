@@ -7,6 +7,7 @@ module Storage.Beam.Ride where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Ride
+import qualified Domain.Types.VehicleServiceTier
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -51,6 +52,7 @@ data RideT f = RideT
     vehicleColor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleModel :: B.C f Kernel.Prelude.Text,
     vehicleNumber :: B.C f Kernel.Prelude.Text,
+    vehicleServiceTierType :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleServiceTier.VehicleServiceTierType),
     vehicleVariant :: B.C f Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving (Generic, B.Beamable)

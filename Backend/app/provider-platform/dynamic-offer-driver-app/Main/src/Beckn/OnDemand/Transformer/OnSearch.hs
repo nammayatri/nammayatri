@@ -58,7 +58,7 @@ tfCatalogDescriptor res = do
 tfCatalogProviders :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> BecknV2.OnDemand.Types.Provider
 tfCatalogProviders res bppConfig = do
   let providerId_ = Just bppConfig.subscriberId
-      providerLocations_ = Just $ Beckn.OnDemand.Utils.OnSearch.mkProviderLocations ((map snd res.estimates) <> (map snd res.quotes))
+      providerLocations_ = Just $ Beckn.OnDemand.Utils.OnSearch.mkProviderLocations ((map (\(_, _, c) -> c) res.estimates) <> (map (\(_, _, c) -> c) res.quotes))
       providerPayments_ = Just $ mkPayment res.provider bppConfig
       providerDescriptor_ = tfCatalogDescriptor res
       pricings = (map Beckn.OnDemand.Utils.Common.convertEstimateToPricing res.estimates) <> (map Beckn.OnDemand.Utils.Common.convertQuoteToPricing res.quotes)
@@ -96,8 +96,8 @@ tfProviderItems :: Domain.Action.Beckn.Search.DSearchRes -> Beckn.OnDemand.Utils
 tfProviderItems res pricing = do
   let itemDescriptor_ = tfItemDescriptor pricing
       itemFulfillmentIds_ = Just [pricing.pricingId]
-      itemId_ = Beckn.ACL.Common.mkItemId res.provider.shortId.getShortId pricing.vehicleVariant & Just
-      itemLocationIds_ = Beckn.OnDemand.Utils.OnSearch.mkItemLocationIds ((map snd res.estimates) <> (map snd res.quotes))
+      itemId_ = Beckn.ACL.Common.mkItemId res.provider.shortId.getShortId pricing.vehicleServiceTier & Just
+      itemLocationIds_ = Beckn.OnDemand.Utils.OnSearch.mkItemLocationIds ((map (\(_, _, c) -> c) res.estimates) <> (map (\(_, _, c) -> c) res.quotes))
       itemPaymentIds_ = Nothing
       itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags pricing
       itemPrice_ = tfItemPrice pricing
@@ -122,7 +122,7 @@ tfItemDescriptor :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDeman
 tfItemDescriptor pricing =
   Just
     BecknV2.OnDemand.Types.Descriptor
-      { descriptorCode = Just "RIDE",
-        descriptorShortDesc = Just $ show pricing.vehicleVariant,
-        descriptorName = Just $ show pricing.vehicleVariant
+      { descriptorCode = Just $ show pricing.vehicleServiceTier,
+        descriptorShortDesc = pricing.serviceTierDescription,
+        descriptorName = Just pricing.serviceTierName
       }

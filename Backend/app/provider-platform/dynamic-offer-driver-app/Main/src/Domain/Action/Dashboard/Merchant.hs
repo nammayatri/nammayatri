@@ -68,6 +68,7 @@ import qualified Domain.Types.Merchant.Overlay as DMO
 import qualified Domain.Types.Merchant.TransporterConfig as DTC
 import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import qualified EulerHS.Language as L
 import qualified Kernel.External.Maps as Maps
@@ -83,6 +84,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DriverFee as SDF
+import qualified SharedLogic.DriverPool.Types as DriverPool
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -311,8 +313,8 @@ driverPoolConfigUpdate merchantShortId opCity tripDistance mbVariant mbTripCateg
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let tripCategory = fromMaybe "All" mbTripCategory
-  let variant = castVehicleVariant <$> mbVariant
-  config <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance variant tripCategory >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
+  let serviceTier = DriverPool.castVariantToServiceTier <$> (castVehicleVariant <$> mbVariant)
+  config <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance serviceTier tripCategory >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
   let updConfig =
         config{minRadiusOfSearch = maybe config.minRadiusOfSearch (.value) req.minRadiusOfSearch,
                maxRadiusOfSearch = maybe config.maxRadiusOfSearch (.value) req.maxRadiusOfSearch,
@@ -356,10 +358,10 @@ driverPoolConfigCreate merchantShortId opCity tripDistance mbVariant mbTripCateg
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let tripCategory = fromMaybe "All" mbTripCategory
-  let variant = castVehicleVariant <$> mbVariant
-  mbConfig <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance variant tripCategory
+  let serviceTier = DriverPool.castVariantToServiceTier <$> (castVehicleVariant <$> mbVariant)
+  mbConfig <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance serviceTier tripCategory
   whenJust mbConfig $ \_ -> throwError (DriverPoolConfigAlreadyExists merchantOpCityId.getId tripDistance)
-  newConfig <- buildDriverPoolConfig merchant.id merchantOpCityId tripDistance variant tripCategory req
+  newConfig <- buildDriverPoolConfig merchant.id merchantOpCityId tripDistance serviceTier tripCategory req
   _ <- CQDPC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
   CQDPC.clearCache merchantOpCityId
@@ -371,7 +373,7 @@ buildDriverPoolConfig ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Meters ->
-  Maybe DVeh.Variant ->
+  Maybe DVST.ServiceTierType ->
   Text ->
   Common.DriverPoolConfigCreateReq ->
   m DDPC.DriverPoolConfig
