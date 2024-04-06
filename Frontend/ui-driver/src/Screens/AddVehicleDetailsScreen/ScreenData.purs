@@ -40,6 +40,7 @@ initData = {
       logField : empty,
       driverMobileNumber : "",
       cityConfig : dummyCityConfig,
+      vehicleCategory : Nothing,
       config : getAppConfig appConfig
     },
     props: {
@@ -70,6 +71,8 @@ initData = {
       fileCameraPopupModal : false,
       validating : false,
       successfulValidation : false,
-      multipleRCstatus : NOT_STARTED
+      multipleRCstatus : NOT_STARTED,
+      menuOptions : false,
+      confirmChangeVehicle : false
     }
 }

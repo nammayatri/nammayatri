@@ -51,7 +51,7 @@ view push state =
         , linearLayout
           [weight 1.0
           ][ GenericHeader.view (push <<< GenericHeaderAC) (state.genericHeaderConfig)]
-        , logoutButtonView push
+        , logoutButtonView push state
       ]
     , textView $
       [ height WRAP_CONTENT
@@ -63,8 +63,8 @@ view push state =
     ]
 
 
-logoutButtonView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-logoutButtonView push = 
+logoutButtonView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+logoutButtonView push config = 
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -77,7 +77,7 @@ logoutButtonView push =
   ][  textView $
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , text $ getString LOGOUT
+    , text config.rightButton.text
     , color Color.white900
     , margin $ MarginHorizontal 5 5
     ] <> FontStyle.body3 TypoGraphy

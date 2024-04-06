@@ -31,6 +31,7 @@ initData = {
       btnActive :false,
       selectedLanguage: "",
       onlyGetTheSelectedLanguage : false,
-      selectLanguageForScreen : ""
+      selectLanguageForScreen : "",
+      fromOnboarding : false
     }
 }

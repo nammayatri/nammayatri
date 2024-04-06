@@ -43,6 +43,7 @@ initData = {
       , imageFrontUrl : ""
       , logField : empty
       , mobileNumber : ""
+      , vehicleCategory : Nothing
       , cityConfig : dummyCityConfig
       , config : getAppConfig appConfig
       },
@@ -63,5 +64,7 @@ initData = {
       , fileCameraOption : false
       , validating : false
       , successfulValidation : false
+      , menuOptions : false
+      , confirmChangeVehicle : false
       }
     }

@@ -90,7 +90,7 @@ callDriverToDriver :: String -> String
 callDriverToDriver rcNo = (getBaseUrl "") <> "/driver/register/call/driver?RC=" <> rcNo 
 
 driverRegistrationStatus :: String -> String
-driverRegistrationStatus dummyString = (getBaseUrl "") <> "/driver/register/status?multipleRC=true"
+driverRegistrationStatus dummyString = (getBaseUrl "") <> "/driver/register/status"
 
 validateImage :: String -> String
 validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"
@@ -315,3 +315,6 @@ dummyRideRequest _ =  (getBaseUrl "") <> "/driver/getDummyRideRequest"
 
 specialLocationList :: String -> String
 specialLocationList _ = (getBaseUrl "") <> "/specialLocation/list"
+
+onBoardingConfigs :: String -> String
+onBoardingConfigs _ = (getBaseUrl "") <> "/onboarding/configs"

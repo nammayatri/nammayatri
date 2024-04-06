@@ -24,7 +24,7 @@ import Helpers.Utils (getStatus, contactSupportNumber)
 import JBridge as JB
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, class Eq, bind, discard, pure, show, unit, ($), void, (>), (+), (<>), (>=), (-), not, min, (==), (&&), (/=), when)
+import Prelude (class Show, class Eq, bind, discard, pure, show, unit, ($), void, (>), (+), (<>), (>=), (-), not, min, (==), (&&), (/=), when, (||))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -45,6 +45,7 @@ import Data.Maybe as Mb
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore)
 import Data.Array as DA
 import Screens.RegistrationScreen.ScreenData as SD
+import Components.OptionsMenu as OptionsMenu
 
 instance showAction :: Show Action where
   show _ = ""
@@ -94,12 +95,16 @@ data ScreenOutput = GoBack
                   | GoToHomeScreen
                   | RefreshPage
                   | ReferralCode RegistrationScreenState
+                  | DocCapture RegistrationScreenState RegisterationStep
+                  | SelectLang RegistrationScreenState
 
 data Action = BackPressed 
             | NoAction
             | AfterRender
             | RegistrationAction RegisterationStep
             | PopUpModalLogoutAction PopUpModal.Action
+            | ChangeVehicleAC PopUpModal.Action
+            | VehicleMismatchAC PopUpModal.Action
             | PrimaryButtonAction PrimaryButtonController.Action
             | Refresh
             | ContactSupport
@@ -113,6 +118,8 @@ data Action = BackPressed
             | CallButtonClick
             | ChooseVehicleCategory Int
             | ContinueButtonAction PrimaryButtonController.Action
+            | ExpandOptionalDocs
+            | OptionsMenuAction OptionsMenu.Action
             
 derive instance genericAction :: Generic Action _
 instance eqAction :: Eq Action where
@@ -123,6 +130,10 @@ eval AfterRender state = continue state
 
 eval BackPressed state = do
   if state.props.enterReferralCodeModal then continue state { props = state.props {enterOtpFocusIndex = 0, enterReferralCodeModal = false}, data {referralCode = ""} }
+  else if state.props.menuOptions then continue state { props { menuOptions = false}}
+  else if state.props.logoutModalView then continue state { props { logoutModalView = false}}
+  else if state.data.vehicleTypeMismatch then continue state { data { vehicleTypeMismatch = false}}
+  else if state.props.confirmChangeVehicle then continue state { props { confirmChangeVehicle = false}}
   else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
   else if DA.notElem state.data.vehicleDetailsStatus [COMPLETED, IN_PROGRESS] && Mb.isJust state.data.vehicleCategory then continue state { data {vehicleCategory = Mb.Nothing}}
   else do
@@ -135,12 +146,30 @@ eval (RegistrationAction item ) state =
           VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
           SUBSCRIPTION_PLAN -> exit GoToOnboardSubscription
+          PROFILE_PHOTO -> exit $ DocCapture state item -- Launch hyperverge
+          AADHAAR_CARD -> exit $ DocCapture state item -- Launch hyperverge
+          PAN_CARD  -> exit $ DocCapture state item -- Launch hyperverge
+          VEHICLE_PERMIT  -> exit $ DocCapture state item
+          FITNESS_CERTIFICATE  -> exit $ DocCapture state item
+          VEHICLE_INSURANCE -> exit $ DocCapture state item
+          VEHICLE_PUC -> exit $ DocCapture state item
+          _ -> continue state
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit LogoutAccount
 
 eval (PopUpModalLogoutAction (PopUpModal.DismissPopup)) state = continue state {props {logoutModalView= false}}
+
+eval (ChangeVehicleAC (PopUpModal.OnButton2Click)) state = continue $ (state {props {confirmChangeVehicle= false}})
+
+eval (ChangeVehicleAC (PopUpModal.OnButton1Click)) state = continue state { data { vehicleCategory = Mb.Nothing}, props { menuOptions = false, confirmChangeVehicle= false}}
+
+eval (ChangeVehicleAC (PopUpModal.DismissPopup)) state = continue state {props {confirmChangeVehicle= false}}
+
+eval (VehicleMismatchAC (PopUpModal.OnButton2Click)) state = continue state { data { vehicleTypeMismatch = false}}
+
+eval (VehicleMismatchAC (PopUpModal.OnButton1Click)) state = continue state { data { vehicleCategory = Mb.Nothing, vehicleTypeMismatch = false}}
 
 eval (SupportClick show) state = continue state { props { contactSupportModal = if show then ST.SHOW else if state.props.contactSupportModal == ST.ANIMATING then ST.HIDE else state.props.contactSupportModal}}
 
@@ -164,9 +193,20 @@ eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
     pure unit
   exit GoToHomeScreen
 
-eval Refresh state = exit RefreshPage
+eval Refresh state = updateAndExit state { props { refreshAnimation = true}} RefreshPage
 
-eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue $ (state {props{logoutModalView = true}})
+eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props{menuOptions = not state.props.menuOptions}}
+
+eval (OptionsMenuAction OptionsMenu.BackgroundClick) state = continue state{props{menuOptions = false}}
+
+eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
+  let newState = state{props{menuOptions = false}}
+  case item of
+    "logout" -> continue newState{ props { logoutModalView = true }} 
+    "contact_support" -> continueWithCmd newState [pure $ SupportClick true]
+    "change_vehicle" -> continue newState { props { confirmChangeVehicle = true}}
+    "change_language" -> exit $ SelectLang newState
+    _ -> continue newState
 
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = continue state
 
@@ -212,16 +252,17 @@ eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
   case state.props.selectedVehicleIndex of
     Mb.Nothing -> continue state
     Mb.Just index -> do
-      case SD.variantsData DA.!! index of
-        Mb.Just variantData -> do
-          void $ pure $ setValueToLocalStore VEHICLE_CATEGORY $ show variantData.vehicleType
+      case (state.data.variantList) DA.!! index of
+        Mb.Just vehicleType -> do
+          void $ pure $ setValueToLocalStore VEHICLE_CATEGORY $ show vehicleType
           void $ pure $ setValueToLocalStore SHOW_SUBSCRIPTIONS 
-            $ if DA.elem (show variantData.vehicleType) state.data.cityConfig.variantSubscriptionConfig.variantList 
+            $ if DA.elem (show vehicleType) state.data.cityConfig.variantSubscriptionConfig.variantList 
                 then "true"
               else "false"
-          continue state { data { vehicleCategory = Mb.Just variantData.vehicleType } }
+          continue state { data { vehicleCategory = Mb.Just vehicleType } }
         Mb.Nothing -> continue state
 
+eval ExpandOptionalDocs state = continue state { props { optionalDocsExpanded = not state.props.optionalDocsExpanded}}
 
 eval _ state = continue state
 
@@ -233,15 +274,26 @@ getStatusValue value = case value of
   "NO_DOC_AVAILABLE" -> NOT_STARTED
   "INVALID" -> FAILED
   "LIMIT_EXCEED" -> FAILED
+  "MANUAL_VERIFICATION_REQUIRED" -> COMPLETED
   _ -> NOT_STARTED
-
-decodeVehicleType :: String -> Mb.Maybe ST.VehicleCategory
-decodeVehicleType value = case value of
-  "AutoCategory" -> Mb.Just ST.AutoCategory
-  "CarCategory" -> Mb.Just ST.CarCategory
-  _ -> Mb.Nothing
 
 getCategoryFromVariant :: String -> Mb.Maybe ST.VehicleCategory
 getCategoryFromVariant variant = case variant of
   "AUTO_RICKSHAW" -> Mb.Just ST.AutoCategory
   _ -> Mb.Just ST.CarCategory
+
+getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus
+getStatus step state = 
+  case step of
+    ST.GRANT_PERMISSION -> state.data.permissionsStatus
+    -- ST.SUBSCRIPTION_PLAN -> state.data.subscriptionStatus  //don't check from frontend
+    _ -> do
+          let documentStatusArr = state.data.documentStatusList
+              vehicleDoc = [ ST.VEHICLE_PERMIT, ST.FITNESS_CERTIFICATE, ST.VEHICLE_INSURANCE, ST.VEHICLE_PUC, ST.VEHICLE_DETAILS_OPTION]
+              findStatus = if step `DA.elem` vehicleDoc 
+                          then DA.find (\docStatus -> docStatus.docType == step && filterCondition docStatus) documentStatusArr
+                          else DA.find (\docStatus -> docStatus.docType == step) documentStatusArr
+          case findStatus of
+            Mb.Nothing -> ST.NOT_STARTED
+            Mb.Just docStatus -> docStatus.status
+  where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) || (Mb.isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
