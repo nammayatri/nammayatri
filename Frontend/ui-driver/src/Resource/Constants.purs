@@ -22,7 +22,7 @@ import Data.String (Pattern(..), split, toLower)
 import Data.String (trim)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((==), (&&), (<>))
+import Prelude ((==), (&&), (<>), ($))
 import Screens.Types as ST
 import Services.API (LocationInfo(..))
 
@@ -96,3 +96,64 @@ waitTimeConstructor key = case key of
   "Triggered" -> ST.Triggered
   "PostTriggered" -> ST.PostTriggered
   _ -> ST.NoStatus
+
+transformDocText :: ST.RegisterationStep -> String
+transformDocText stage = 
+  case stage of
+    ST.DRIVING_LICENSE_OPTION -> (getString DRIVING_LICENSE)
+    ST.VEHICLE_DETAILS_OPTION -> getString VEHICLE_REGISTERATON_CERTIFICATE
+    ST.GRANT_PERMISSION -> getString GRANT_PERMISSIONS
+    ST.SUBSCRIPTION_PLAN -> getString $ SUBSCRIPTION_PLAN_STR "SUBSCRIPTION_PLAN_STR"
+    ST.PROFILE_PHOTO -> getString PROFILE_PHOTO_STR
+    ST.AADHAAR_CARD -> getString AADHAAR_CARD_STR
+    ST.PAN_CARD -> getString PAN_CARD_STR
+    ST.VEHICLE_PERMIT -> getString VEHICLE_PERMIT_STR
+    ST.FITNESS_CERTIFICATE -> getString FITNESS_CERTIFICATE_STR
+    ST.VEHICLE_INSURANCE -> getString VEHICLE_INSURANCE_STR
+    ST.VEHICLE_PUC -> getString VEHICLE_PUC_STR
+    ST.NO_OPTION -> ""
+
+transformToRegisterationStep :: String -> ST.RegisterationStep
+transformToRegisterationStep doctype = 
+  case doctype of
+        "DriverLicense" -> ST.DRIVING_LICENSE_OPTION
+        "VehicleRegistrationCertificate" -> ST.VEHICLE_DETAILS_OPTION
+        "Permissions" -> ST.GRANT_PERMISSION
+        "SubscriptionPlan" -> ST.SUBSCRIPTION_PLAN
+        "ProfilePhoto" -> ST.PROFILE_PHOTO
+        "AadhaarCard" -> ST.AADHAAR_CARD
+        "PanCard" -> ST.PAN_CARD
+        "VehiclePermit" -> ST.VEHICLE_PERMIT
+        "VehicleFitnessCertificate" -> ST.FITNESS_CERTIFICATE
+        "VehicleInsurance" -> ST.VEHICLE_INSURANCE
+        "VehiclePUC" -> ST.VEHICLE_PUC
+        _ -> ST.NO_OPTION
+
+transformToDoctype :: ST.RegisterationStep -> String
+transformToDoctype step = 
+  case step of
+    ST.DRIVING_LICENSE_OPTION -> "DriverLicense"
+    ST.VEHICLE_DETAILS_OPTION -> "VehicleRegistrationCertificate"
+    ST.VEHICLE_PERMIT -> "VehiclePermit"
+    ST.FITNESS_CERTIFICATE -> "VehicleFitnessCertificate"
+    ST.VEHICLE_INSURANCE -> "VehicleInsurance"
+    ST.VEHICLE_PUC -> "VehiclePUC"
+    ST.SUBSCRIPTION_PLAN -> "SubscriptionPlan"
+    ST.PROFILE_PHOTO -> "ProfilePhoto"
+    ST.AADHAAR_CARD -> "AadhaarCard"
+    ST.PAN_CARD -> "PanCard"
+    ST.GRANT_PERMISSION -> "Permissions"
+    ST.NO_OPTION -> ""
+
+transformVehicleType :: Maybe String -> Maybe ST.VehicleCategory
+transformVehicleType vehicletype =
+  case vehicletype of
+     Just "CAR" -> Just ST.CarCategory
+     Just "AUTO_CATEGORY" -> Just ST.AutoCategory
+     _ -> Nothing
+
+decodeVehicleType :: String -> Maybe ST.VehicleCategory
+decodeVehicleType value = case value of
+  "AutoCategory" -> Just ST.AutoCategory
+  "CarCategory" -> Just ST.CarCategory
+  _ -> Nothing

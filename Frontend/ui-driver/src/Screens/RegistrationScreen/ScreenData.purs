@@ -31,33 +31,22 @@ import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Data.Array as DA
+import Common.Types.App as Common
 
 initData :: RegistrationScreenState
 initData = {
       data: {
         activeIndex : 1,
-        registerationSteps : [
-          {
-            stageName : "Driving License",
-            stage : DRIVING_LICENSE_OPTION
-          },
-          {
-            stageName : "Vehicle Registration",
-            stage : VEHICLE_DETAILS_OPTION
-          },
-          {
-            stageName : "Grant Permission",
-            stage : GRANT_PERMISSION
-          },
-          {
-            stageName : "Namma Yatri Plan",
-            stage : SUBSCRIPTION_PLAN
-          }
-        ],
+        registerationStepsCabs : [],
+        registerationStepsAuto : [],
         drivingLicenseStatus : NOT_STARTED,
         vehicleDetailsStatus : NOT_STARTED,
         permissionsStatus : NOT_STARTED,
         subscriptionStatus : NOT_STARTED,
+        vehicleTypeMismatch : false,
+        documentStatusList : [],
+        variantList : [],
         phoneNumber : "",
         lastUpdateTime : "",
         cityConfig : dummyCityConfig,
@@ -67,9 +56,8 @@ initData = {
         logField : empty,
         enteredDL : "",
         enteredRC : "",
-        dlVerficationMessage : "",
-        rcVerficationMessage : "",
-        vehicleCategory : Nothing
+        vehicleCategory : Nothing,
+        linkedRc : Nothing
       },
       props: {
         limitReachedFor : Nothing,
@@ -80,7 +68,12 @@ initData = {
         referralCodeSubmitted : false,
         contactSupportView : true,
         contactSupportModal : ST.HIDE,
-        selectedVehicleIndex : Nothing
+        selectedVehicleIndex : Nothing,
+        optionalDocsExpanded : true,
+        confirmChangeVehicle : false,
+        refreshAnimation : false,
+        driverEnabled : false,
+        menuOptions : false
       }
   }
 
@@ -118,15 +111,3 @@ dummyCityConfig = {
                     },
                     waitingCharges : 1.50
                   }
-          
-type VehicleInfo = {
-  vehicleType :: ST.VehicleCategory,
-  vehicleImage :: String,
-  vehicleName :: String
-}
-
-variantsData :: Array VehicleInfo
-variantsData = [
-  { vehicleType : ST.AutoCategory, vehicleImage : "ny_ic_auto_side", vehicleName : getString AUTO_RICKSHAW },
-  { vehicleType : ST.CarCategory, vehicleImage : "ny_ic_sedan_side", vehicleName : getString CAR }
-]

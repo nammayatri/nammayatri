@@ -61,6 +61,9 @@ import Types.App (defaultGlobalState)
 import Screens.RegistrationScreen.ComponentConfig (logoutPopUp) as LP
 import Data.String.Common as DSC
 import ConfigProvider
+import Components.OptionsMenu as OptionsMenu
+import Data.Array as DA
+import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
 
 
 screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
@@ -79,7 +82,7 @@ screen initialState =
               if initialState.props.validateProfilePicturePopUp  then  lift $ lift $ doAff do liftEffect $ push $ AfterRender  else pure unit 
     pure $ pure unit)]
   , eval : \action state -> do
-      let _ = printLog  "UploadDrivingLicenseScreen state -----" state
+      let _ = spy  "UploadDrivingLicenseScreen state -----" state
           _ = spy "UploadDrivingLicenseScreen action -----" action
       eval action state
   }
@@ -94,7 +97,7 @@ view push state =
   frameLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  ]([
+  ] $ [
 linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -176,11 +179,21 @@ linearLayout
       width MATCH_PARENT
     , height MATCH_PARENT
       ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_DL_IMAGE), openGenericMessageModal : state.props.openGenericMessageModal, buttonText : (getString NEXT) }] else linearLayout [][]
-  ] <> if state.props.logoutPopupModal then [logoutPopupModal push state] else []
+  ] <> if DA.any (_ == true) [state.props.logoutPopupModal, state.props.confirmChangeVehicle] then [ popupModal push state ] else []
     <> if state.props.imageCaptureLayoutView then [imageCaptureLayout push state] else []
     <> if state.props.validateProfilePicturePopUp then [validateProfilePictureModal push state] else []
-    <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else [] )
-  
+    <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else []
+    <> if state.props.menuOptions then [menuOptionModal push state] else []
+
+menuOptionModal :: forall w. (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+menuOptionModal push state = 
+  linearLayout 
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , padding $ PaddingTop 55
+    , background Color.blackLessTrans
+    ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
+
 headerView :: forall w. ST.UploadDrivingLicenseState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerView state push = AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
 
@@ -556,14 +569,18 @@ howToUpload push state =
     ]
   ]
 
-logoutPopupModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
-logoutPopupModal push state =
-  linearLayout
-  [ width MATCH_PARENT
-  , height MATCH_PARENT
-  , background Color.blackLessTrans
-  ][ PopUpModal.view (push <<<PopUpModalLogoutAction) (LP.logoutPopUp Language) ]
-
+popupModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+popupModal push state =
+    linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , background Color.blackLessTrans
+    ][ PopUpModal.view (push <<< action) popupConfig ] 
+    where 
+      action = if state.props.logoutPopupModal then PopUpModalLogoutAction 
+                else ChangeVehicleAC
+      popupConfig = if state.props.logoutPopupModal then (LP.logoutPopUp Language)
+                    else changeVehicleConfig FunctionCall
 
 validateProfilePictureModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
 validateProfilePictureModal push state =

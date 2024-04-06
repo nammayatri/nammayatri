@@ -46,7 +46,8 @@ type Config = {
     marginRight :: Int,
     itemHeight :: Length,
     itemPadding :: Padding,
-    cornerRadius :: Number
+    cornerRadius :: Number,
+    enableAnim :: Boolean
 }
 
 config :: Config
@@ -60,5 +61,6 @@ config = {
   marginRight : 16,
   itemHeight : V 50,
   itemPadding : Padding 16 16 16 16,
-  cornerRadius : 4.0
+  cornerRadius : 4.0,
+  enableAnim : false
 }

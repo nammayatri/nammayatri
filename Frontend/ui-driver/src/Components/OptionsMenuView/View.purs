@@ -36,6 +36,8 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types as ST
 import Styles.Colors as Color
+import Common.Animation.Config as AnimConfig
+import PrestoDOM.Animation as PrestoAnim
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -51,7 +53,7 @@ view push config =
       , width MATCH_PARENT
       , gravity config.gravity
       , onClick push $ const BackgroundClick
-    ][
+    ][PrestoAnim.animationSet [Anim.listExpandingAnimation $  AnimConfig.listExpandingAnimationConfig config.enableAnim] $ 
       linearLayout[
         background config.menuBackgroundColor
       , orientation VERTICAL

@@ -45,3 +45,9 @@ uploadDrivingLicense = do
     AddVehicleDetailsScreen -> App.BackT $ App.BackPoint <$> (pure $ GOTO_VEHICLE_DETAILS_SCREEN)
     LogoutAccount -> App.BackT $ App.BackPoint <$> pure LOGOUT_ACCOUNT
     GoToRegisteration -> App.BackT $ App.BackPoint <$> pure GOTO_ONBOARDING_FLOW
+    ChangeVehicle updatedState -> do
+      modifyScreenState $ UploadDrivingLicenseScreenStateType (\_ → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CHANGE_VEHICLE_FROM_DL_SCREEN)
+    SelectLang updatedState -> do
+      modifyScreenState $ UploadDrivingLicenseScreenStateType (\_ → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CHANGE_LANG_FROM_DL_SCREEN)

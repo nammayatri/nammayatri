@@ -51,6 +51,7 @@ import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Effect.Unsafe (unsafePerformEffect)
 import ConfigProvider
 import Effect.Uncurried (runEffectFn4)
+import Components.OptionsMenu as OptionsMenu
 
 instance showAction :: Show Action where
   show _ = ""
@@ -153,6 +154,7 @@ instance loggableAction :: Loggable Action where
       AppOnboardingNavBar.Logout -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "onboarding_nav_bar_logout"
       AppOnboardingNavBar.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "app_onboarding_nav_bar_prefix_img_on_click"
     SkipButton -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "skip_button_click"
+    _ -> pure unit
 
 data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
                     | GoBack AddVehicleDetailsScreenState
@@ -163,6 +165,9 @@ data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
                     | GoToRegisteration 
                     | GoToDriverProfile
                     | ActivateRC AddVehicleDetailsScreenState
+                    | ChangeVehicle AddVehicleDetailsScreenState
+                    | SelectLang AddVehicleDetailsScreenState
+
 
 data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction PrimarySelectItem.Action | NoAction
   | VehicleRegistrationNumber String
@@ -197,6 +202,8 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | CancelButtonMultiRCPopup
   | AppOnboardingNavBarAC AppOnboardingNavBar.Action
   | SkipButton
+  | OptionsMenuAction OptionsMenu.Action
+  | ChangeVehicleAC PopUpModal.Action
 
 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
@@ -223,6 +230,8 @@ eval (BackPressed flag) state = do
     else if(state.props.fileCameraPopupModal) then continue state{props{fileCameraPopupModal = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} 
     else if(state.props.openHowToUploadManual) then continue state{props{openHowToUploadManual = false}} 
     else if(state.props.openRCManual) then continue state{props{openRCManual = false}}
+    else if state.props.confirmChangeVehicle then continue state{props{confirmChangeVehicle = false}}
+    else if state.props.menuOptions then continue state{props{menuOptions = false}} 
     else exit $ GoBack state
 
 eval (OnboardingHeaderAction (OnboardingHeaderController.TriggerRegModal)) state = continue state { props = state.props { openRegistrationModal = true } }
@@ -354,8 +363,8 @@ eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (st
 eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = do
-    _ <- pure $ hideKeyboardOnNavigation true
-    continue $ (state {props{logoutModalView = true}})
+  _ <- pure $ hideKeyboardOnNavigation true
+  continue state {props{menuOptions = not state.props.menuOptions}}
 
 eval (AppOnboardingNavBarAC AppOnboardingNavBar.PrefixImgOnClick) state = continueWithCmd state [ do pure $ BackPressed false]
 
@@ -399,6 +408,25 @@ eval CancelButtonMultiRCPopup state = case state.props.multipleRCstatus of
                                             _ -> pure $ showDialer (getSupportNumber "") false
                                           pure NoAction
                                           ]
+
+eval (OptionsMenuAction OptionsMenu.BackgroundClick) state = continue state{props{menuOptions = false}}
+
+eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
+  let newState = state{props{menuOptions = false}}
+  case item of
+    "logout" -> continue newState {props { logoutModalView = true }}
+    "contact_support" -> do 
+                          void $ pure $ showDialer (getSupportNumber "") false 
+                          continue newState
+    "change_vehicle" -> continue newState {props {confirmChangeVehicle = true}}
+    "change_language" -> exit $ SelectLang newState
+    _ -> continue newState
+
+eval (ChangeVehicleAC (PopUpModal.OnButton2Click)) state = continue state {props {confirmChangeVehicle= false}}
+
+eval (ChangeVehicleAC (PopUpModal.OnButton1Click)) state = exit $ ChangeVehicle state
+
+eval (ChangeVehicleAC (PopUpModal.DismissPopup)) state = continue state {props {confirmChangeVehicle= false}}
 
 eval _ state = continue state
 

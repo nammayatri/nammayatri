@@ -19,7 +19,7 @@ import Prelude
 import Engineering.Error.Utils
 import JBridge (factoryResetApp, stopChatListenerService)
 import Engineering.Helpers.API as API
-import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, Header(..))
+import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, Header(..), ErrorResponse)
 import Foreign.Generic (class Decode)
 import Types.App (FlowBT, GlobalState)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
@@ -28,6 +28,7 @@ import Presto.Core.Types.Language.Flow (loadS, APIResult(..), Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Array (singleton)
 import Data.Maybe (maybe, Maybe(..))
+import Data.Either (Either(..))
 
 data CustomerDefaultErrorHandler = CustomerDefaultErrorHandler
 instance defaultApiErrorHandler :: ApiErrorHandler CustomerDefaultErrorHandler GlobalState where
@@ -77,7 +78,7 @@ callApiWithOptions :: forall a b.
   RestEndpoint a b => 
   a ->
   Array Header ->
-  Flow GlobalState (APIResult b)
+  Flow GlobalState (Either ErrorResponse b)
 callApiWithOptions payload headers = do
   regToken <- loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
@@ -88,7 +89,7 @@ callApi :: forall a b.
   Decode b =>
   RestEndpoint a b => 
   a ->
-  Flow GlobalState (APIResult b)
+  Flow GlobalState (Either ErrorResponse b)
 callApi payload =
   callApiWithOptions payload []
 
@@ -98,7 +99,7 @@ callGzipApiWithOptions :: forall a b.
   RestEndpoint a b =>
   a ->
   Array Header ->
-  Flow GlobalState (APIResult b)
+  Flow GlobalState (Either ErrorResponse b)
 callGzipApiWithOptions payload headers = do
   regToken <- loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
@@ -109,7 +110,7 @@ callGzipApi :: forall a b.
   Decode b =>
   RestEndpoint a b =>
   a ->
-  Flow GlobalState (APIResult b)
+  Flow GlobalState (Either ErrorResponse b)
 callGzipApi payload =
   callGzipApiWithOptions payload []
 

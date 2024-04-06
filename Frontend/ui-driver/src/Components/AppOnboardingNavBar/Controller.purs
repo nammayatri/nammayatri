@@ -7,6 +7,8 @@ import Font.Style (Style(..))
 import Styles.Colors as Color
 import Font.Style as Style
 import ConfigProvider
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 data Action = Logout 
             | PrefixImgOnClick 
@@ -16,7 +18,8 @@ type Config = {
   prefixImageConfig :: ImageConfig,
   genericHeaderConfig :: GenericHeader.Config,
   headerTextConfig :: TextConfig,
-  appConfig :: AppConfig
+  appConfig :: AppConfig,
+  rightButton :: TextConfig
 }
 
 type ImageConfig = {
@@ -42,6 +45,12 @@ config = {
     image : "ny_ic_chevron_left_white"
   },
   genericHeaderConfig : GenericHeader.config,
+  rightButton : {
+    text : getString LOGOUT,
+    margin : Margin 5 5 0 22 ,
+    color : Color.white900,
+    fontStyle : Style.Heading1
+  },
   headerTextConfig : {
     text : "",
     margin : Margin 5 5 0 22 ,
