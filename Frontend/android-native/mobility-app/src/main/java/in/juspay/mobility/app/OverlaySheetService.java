@@ -143,16 +143,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
-            String variant = model.getRequestedVehicleVariant();
-            String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
-            String pickupChargesText = formattedPickupChargesText;
             String searchRequestId = model.getSearchRequestId();
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
 
             if (model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showVariant || showSpecialLocationTag) {
-                pickupChargesText = model.getCustomerTip() > 0 ?
-                        formattedPickupChargesText + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
-                        formattedPickupChargesText;
                 if (showSpecialLocationTag && model.getSpecialZoneExtraTip() > 0) {
                     model.setOfferedPrice(model.getSpecialZoneExtraTip());
                     model.setUpdatedAmount(model.getSpecialZoneExtraTip());
@@ -169,12 +163,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.reqButton.setBackgroundTintList(model.isGotoTag() ?
                         ColorStateList.valueOf(getColor(R.color.Black900)) :
                         ColorStateList.valueOf(getColor(R.color.green900)));
-                updateExtraChargesString(holder, model);
                 holder.rideTypeTag.setVisibility(showVariant ? View.VISIBLE : View.GONE);
             } else {
                 holder.tagsBlock.setVisibility(View.GONE);
             }
-            holder.textIncludesCharges.setText(pickupChargesText);
         });
     }
 
@@ -218,7 +210,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     updateIndicators();
                     holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
                     holder.currency.setText(String.valueOf(model.getCurrency()));
-                    updateExtraChargesString(holder, model);
                     updateIncreaseDecreaseButtons(holder, model);
                     RideRequestUtils.updateRateView(holder, model);
                     return;
@@ -248,55 +239,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             holder.destinationAddress.setText(model.getDestinationAddress());
             holder.textIncPrice.setText(String.valueOf(model.getNegotiationUnit()));
             holder.textDecPrice.setText(String.valueOf(model.getNegotiationUnit()));
-            if (model.getSourcePinCode() != null && model.getSourcePinCode().trim().length() > 0) {
-                holder.sourcePinCode.setText(model.getSourcePinCode().trim());
-                holder.sourcePinCode.setVisibility(View.VISIBLE);
-            } else if (remoteConfigs.hasKey("enable_pincode") && remoteConfigs.getBoolean("enable_pincode")) {
-                new Thread(() -> {
-                    String pincode = getPincodeFromRR(model.getSrcLat(), model.getSrcLng());
-                    mainLooper.post(() -> {
-                        if (holder != null && holder.sourcePinCode != null) {
-                            if (pincode != null) {
-                                holder.sourcePinCode.setText(pincode);
-                                holder.sourcePinCode.setVisibility(View.VISIBLE);
-                            } else {
-                                holder.sourceAddress.setMaxLines(2);
-                                holder.sourcePinCode.setVisibility(View.GONE);
-                            }
-                        }
-                    });
-                }).start();
-            }
-            if (model.getDestinationPinCode() != null && model.getDestinationPinCode().trim().length() > 0) {
-                holder.destinationPinCode.setText(model.getDestinationPinCode());
-                holder.destinationPinCode.setVisibility(View.VISIBLE);
-            } else if (remoteConfigs.hasKey("enable_pincode") && remoteConfigs.getBoolean("enable_pincode")) {
-                new Thread(() -> {
-                    String pincode = getPincodeFromRR(model.getDestLat(), model.getDestLng());
-                    mainLooper.post(() -> {
-                        if (holder != null && holder.sourcePinCode != null) {
-                            if (pincode != null) {
-                                holder.destinationPinCode.setText(pincode);
-                                holder.destinationPinCode.setVisibility(View.VISIBLE);
-                            } else {
-                                holder.destinationAddress.setMaxLines(2);
-                                holder.destinationPinCode.setVisibility(View.GONE);
-                            }
-                        }
-                    });
-                }).start();
-            }
+            handlePinCode(model, holder);
             if (model.getspecialLocationTag() != null) {
                 RideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), OverlaySheetService.this);
             }
             sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String useMLKit = sharedPref.getString("USE_ML_TRANSLATE", "false");
             if (useMLKit.equals("false") && !model.isTranslated()) RideRequestUtils.updateViewFromMlTranslation(holder, model, sharedPref, OverlaySheetService.this);
-
-            if (key.equals("yatrisathiprovider") || key.equals("yatriprovider")) {
-                holder.textIncludesCharges.setVisibility(View.GONE);
-            }
-            
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
@@ -304,168 +253,227 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             RideRequestUtils.updateTierAndAC(holder, model);
             RideRequestUtils.updateRentalView(holder, model, OverlaySheetService.this);
             RideRequestUtils.updateIntercityView(holder, model, OverlaySheetService.this);
-
-            String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
-            LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
-            holder.reqButton.setOnClickListener(view -> {
-                if (model.getSearchRequestId().equals(DUMMY_FROM_LOCATION)) {
-                    respondDummyRequest();
-                    removeCard(position);
-                    return;
-                }
-                holder.reqButton.setClickable(false);
-                if (key != null && key.equals("nammayatriprovider"))
-                    startApiLoader();
-                if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
-                    lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
-                }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
-                    lottieAnimationView.setAnimation(R.raw.waiting_for_customer_lottie_cab);
-                }
-
-                ExecutorService executor = Executors.newSingleThreadExecutor();
-                Handler handler = new Handler(Looper.getMainLooper());
-                executor.execute(() -> {
-                    try {
-                        Boolean isApiSuccess = driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), true, sheetArrayList.indexOf(model));
-                        if (isApiSuccess) {
-                            holder.reqButton.setClickable(false);
-                            updateSharedPreferences();
-                            for (int i = 0; i < callBack.size(); i++) {
-                                callBack.get(i).driverCallBack("RIDE_REQUESTED","");
-                            }
-                            String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_accepted" : "ride_accepted";
-                            firebaseLogEvent(logEvent);
-                            RideRequestUtils.addRideReceivedEvent(null,null, modelForLogs, logEvent, OverlaySheetService.this);
-                            isRideAcceptedOrRejected = true;
-                            handler.post(() -> {
-                                startLoader(model.getSearchRequestId());
-                                executor.shutdown();
-                            });
-                        } else {
-                            handler.post(() -> {
-                                removeCard(position);
-                                if (apiLoader != null && apiLoader.isAttachedToWindow()) {
-                                    windowManager.removeView(apiLoader);
-                                    apiLoader = null;
-                                }
-                                if (sheetArrayList.size() > 0) {
-                                    holder.reqButton.setClickable(true);
-                                } else {
-                                    cleanUp();
-                                    executor.shutdown();
-                                }
-                            });
-                        }
-                    } catch (Exception e) {
-                        firebaseLogEventWithParams("exception_request_button_click", "request_button_click", String.valueOf(e));
-                        cleanUp();
-                    }
-                });
-            });
-
-            holder.rejectButton.setOnClickListener(view -> {
-                ExecutorService executor = Executors.newSingleThreadExecutor();
-                Handler handler = new Handler(Looper.getMainLooper());
-                executor.execute(() -> {
-                    try {
-                        if (model.getSearchRequestId().equals(DUMMY_FROM_LOCATION)){
-                            respondDummyRequest();
-                            removeCard(position);
-                            return;
-                        }
-                        new Thread(() -> driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), false, sheetArrayList.indexOf(model))).start();
-                        isRideAcceptedOrRejected = true;
-                        holder.rejectButton.setClickable(false);
-                        handler.post(() -> {
-                            String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_declined" : "ride_declined";
-                            String event = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_rejected" : "ride_rejected";
-                            Utils.logEvent (logEvent, getApplicationContext());
-                            RideRequestUtils.addRideReceivedEvent(null,null, modelForLogs, event, OverlaySheetService.this);
-                            removeCard(position);
-                            executor.shutdown();
-                            Toast.makeText(getApplicationContext(), getString(R.string.ride_rejected), Toast.LENGTH_SHORT).show();
-                        });
-                    } catch (Exception e) {
-                        firebaseLogEventWithParams("exception_reject_button_click", "reject_button_click", String.valueOf(e));
-                        System.out.println("reject exception: " + e);
-                    }
-                });
-            });
-
-            holder.buttonIncreasePrice.setOnClickListener(view -> {
-                if (model.getOfferedPrice() <= model.getDriverMaxExtraFee() - model.getNegotiationUnit()) {
-                    model.setUpdatedAmount(model.getUpdatedAmount() + model.getNegotiationUnit());
-                    firebaseLogEvent("price_is_increased");
-                    model.setOfferedPrice(model.getOfferedPrice() + model.getNegotiationUnit());
-                    sheetAdapter.notifyItemChanged(position, "inc");
-                    Handler handler = new Handler(Looper.getMainLooper());
-                    if (model.getOfferedPrice() == model.getDriverMaxExtraFee()) {
-                        handler.post(() -> {
-                            model.setButtonIncreasePriceAlpha(0.5f);
-                            model.setButtonIncreasePriceClickable(false);
-                            model.setButtonDecreasePriceAlpha(1.0f);
-                            model.setButtonDecreasePriceClickable(true);
-                        });
-                    } else {
-                        handler.post(() -> {
-                            model.setButtonDecreasePriceAlpha(1.0f);
-                            model.setButtonDecreasePriceClickable(true);
-                        });
-                    }
-                }
-            });
-            holder.buttonDecreasePrice.setOnClickListener(view -> {
-                int specialZoneExtraTip = model.getSpecialZoneExtraTip();
-                if (model.getOfferedPrice() > 0) {
-                    if(specialZoneExtraTip > 0) {
-                        model.setUpdatedAmount(model.getUpdatedAmount() - specialZoneExtraTip);
-                        firebaseLogEvent("price_is_decreased");
-                        model.setOfferedPrice(model.getOfferedPrice() - specialZoneExtraTip);
-                        model.setSpecialZoneExtraTip(0);
-                        holder.specialLocExtraTip.setVisibility(View.GONE);
-                    }
-                    else {
-                        model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
-                        firebaseLogEvent("price_is_decreased");
-                        model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
-                    }
-                    sheetAdapter.notifyItemChanged(position, "inc");
-                    Handler handler = new Handler(Looper.getMainLooper());
-                    if (model.getOfferedPrice() == 0) {
-                        handler.post(() -> {
-                            model.setButtonDecreasePriceAlpha(0.5f);
-                            model.setButtonDecreasePriceClickable(false);
-                            model.setButtonIncreasePriceAlpha(1.0f);
-                            model.setButtonIncreasePriceClickable(true);
-                        });
-                    } else {
-                        handler.post(() -> {
-                            model.setButtonIncreasePriceAlpha(1.0f);
-                            model.setButtonIncreasePriceClickable(true);
-                        });
-                    }
-                }
-            });
-            viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
-                @Override
-                public void onPageSelected(int position) {
-                    super.onPageSelected(position);
-                }
-
-                @Override
-                public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-                    updateIndicators();
-                    super.onPageScrolled(position, positionOffset, positionOffsetPixels);
-                }
-
-                @Override
-                public void onPageScrollStateChanged(int state) {
-                    updateIndicators();
-                    super.onPageScrollStateChanged(state);
-                }
-            });
+            RideRequestUtils.updateExtraChargesString(holder, model, OverlaySheetService.this);
+            requestButtonClickListener(holder, model, position);
+            rejectButtonClickListener(holder, model, position);
+            increaseButtonClickListener(holder, model, position);
+            decreaseButtonClickListener(holder, model, position);
+            pagerCallbackListener();
         }
     });
+
+    private void pagerCallbackListener() {
+        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageSelected(int position) {
+                super.onPageSelected(position);
+            }
+
+            @Override
+            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+                updateIndicators();
+                super.onPageScrolled(position, positionOffset, positionOffsetPixels);
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int state) {
+                updateIndicators();
+                super.onPageScrollStateChanged(state);
+            }
+        });
+    }
+
+    private void decreaseButtonClickListener(SheetAdapter.SheetViewHolder holder, SheetModel model, int position) {
+        holder.buttonDecreasePrice.setOnClickListener(view -> {
+            int specialZoneExtraTip = model.getSpecialZoneExtraTip();
+            if (model.getOfferedPrice() > 0) {
+                if(specialZoneExtraTip > 0) {
+                    model.setUpdatedAmount(model.getUpdatedAmount() - specialZoneExtraTip);
+                    firebaseLogEvent("price_is_decreased");
+                    model.setOfferedPrice(model.getOfferedPrice() - specialZoneExtraTip);
+                    model.setSpecialZoneExtraTip(0);
+                    holder.specialLocExtraTip.setVisibility(View.GONE);
+                }
+                else {
+                    model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
+                    firebaseLogEvent("price_is_decreased");
+                    model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
+                }
+                sheetAdapter.notifyItemChanged(position, "inc");
+                Handler handler = new Handler(Looper.getMainLooper());
+                if (model.getOfferedPrice() == 0) {
+                    handler.post(() -> {
+                        model.setButtonDecreasePriceAlpha(0.5f);
+                        model.setButtonDecreasePriceClickable(false);
+                        model.setButtonIncreasePriceAlpha(1.0f);
+                        model.setButtonIncreasePriceClickable(true);
+                    });
+                } else {
+                    handler.post(() -> {
+                        model.setButtonIncreasePriceAlpha(1.0f);
+                        model.setButtonIncreasePriceClickable(true);
+                    });
+                }
+            }
+        });
+    }
+
+    private void increaseButtonClickListener(SheetAdapter.SheetViewHolder holder, SheetModel model, int position) {
+        holder.buttonIncreasePrice.setOnClickListener(view -> {
+            if (model.getOfferedPrice() <= model.getDriverMaxExtraFee() - model.getNegotiationUnit()) {
+                model.setUpdatedAmount(model.getUpdatedAmount() + model.getNegotiationUnit());
+                firebaseLogEvent("price_is_increased");
+                model.setOfferedPrice(model.getOfferedPrice() + model.getNegotiationUnit());
+                sheetAdapter.notifyItemChanged(position, "inc");
+                Handler handler = new Handler(Looper.getMainLooper());
+                if (model.getOfferedPrice() == model.getDriverMaxExtraFee()) {
+                    handler.post(() -> {
+                        model.setButtonIncreasePriceAlpha(0.5f);
+                        model.setButtonIncreasePriceClickable(false);
+                        model.setButtonDecreasePriceAlpha(1.0f);
+                        model.setButtonDecreasePriceClickable(true);
+                    });
+                } else {
+                    handler.post(() -> {
+                        model.setButtonDecreasePriceAlpha(1.0f);
+                        model.setButtonDecreasePriceClickable(true);
+                    });
+                }
+            }
+        });
+    }
+
+    private void rejectButtonClickListener(SheetAdapter.SheetViewHolder holder, SheetModel model, int position) {
+        holder.rejectButton.setOnClickListener(view -> {
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            Handler handler = new Handler(Looper.getMainLooper());
+            executor.execute(() -> {
+                try {
+                    if (model.getSearchRequestId().equals(DUMMY_FROM_LOCATION)){
+                        respondDummyRequest();
+                        removeCard(position);
+                        return;
+                    }
+                    new Thread(() -> driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), false, sheetArrayList.indexOf(model))).start();
+                    isRideAcceptedOrRejected = true;
+                    holder.rejectButton.setClickable(false);
+                    handler.post(() -> {
+                        String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_declined" : "ride_declined";
+                        String event = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_rejected" : "ride_rejected";
+                        Utils.logEvent (logEvent, getApplicationContext());
+                        RideRequestUtils.addRideReceivedEvent(null,null, modelForLogs, event, OverlaySheetService.this);
+                        removeCard(position);
+                        executor.shutdown();
+                        Toast.makeText(getApplicationContext(), getString(R.string.ride_rejected), Toast.LENGTH_SHORT).show();
+                    });
+                } catch (Exception e) {
+                    firebaseLogEventWithParams("exception_reject_button_click", "reject_button_click", String.valueOf(e));
+                    System.out.println("reject exception: " + e);
+                }
+            });
+        });
+    }
+
+    private void requestButtonClickListener(SheetAdapter.SheetViewHolder holder, SheetModel model, int position) {
+        String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
+        LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
+        holder.reqButton.setOnClickListener(view -> {
+            if (model.getSearchRequestId().equals(DUMMY_FROM_LOCATION)) {
+                respondDummyRequest();
+                removeCard(position);
+                return;
+            }
+            holder.reqButton.setClickable(false);
+            if (key != null && key.equals("nammayatriprovider"))
+                startApiLoader();
+            if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
+                lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
+            }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+                lottieAnimationView.setAnimation(R.raw.waiting_for_customer_lottie_cab);
+            }
+
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            Handler handler = new Handler(Looper.getMainLooper());
+            executor.execute(() -> {
+                try {
+                    Boolean isApiSuccess = driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), true, sheetArrayList.indexOf(model));
+                    if (isApiSuccess) {
+                        holder.reqButton.setClickable(false);
+                        updateSharedPreferences();
+                        for (int i = 0; i < callBack.size(); i++) {
+                            callBack.get(i).driverCallBack("RIDE_REQUESTED","");
+                        }
+                        String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_accepted" : "ride_accepted";
+                        firebaseLogEvent(logEvent);
+                        RideRequestUtils.addRideReceivedEvent(null,null, modelForLogs, logEvent, OverlaySheetService.this);
+                        isRideAcceptedOrRejected = true;
+                        handler.post(() -> {
+                            startLoader(model.getSearchRequestId());
+                            executor.shutdown();
+                        });
+                    } else {
+                        handler.post(() -> {
+                            removeCard(position);
+                            if (apiLoader != null && apiLoader.isAttachedToWindow()) {
+                                windowManager.removeView(apiLoader);
+                                apiLoader = null;
+                            }
+                            if (sheetArrayList.size() > 0) {
+                                holder.reqButton.setClickable(true);
+                            } else {
+                                cleanUp();
+                                executor.shutdown();
+                            }
+                        });
+                    }
+                } catch (Exception e) {
+                    firebaseLogEventWithParams("exception_request_button_click", "request_button_click", String.valueOf(e));
+                    cleanUp();
+                }
+            });
+        });
+    }
+
+    private void handlePinCode(SheetModel model, SheetAdapter.SheetViewHolder holder) {
+        if (model.getSourcePinCode() != null && model.getSourcePinCode().trim().length() > 0) {
+            holder.sourcePinCode.setText(model.getSourcePinCode().trim());
+            holder.sourcePinCode.setVisibility(View.VISIBLE);
+        } else if (remoteConfigs.hasKey("enable_pincode") && remoteConfigs.getBoolean("enable_pincode")) {
+            new Thread(() -> {
+                String pincode = getPincodeFromRR(model.getSrcLat(), model.getSrcLng());
+                mainLooper.post(() -> {
+                    if (holder != null && holder.sourcePinCode != null) {
+                        if (pincode != null) {
+                            holder.sourcePinCode.setText(pincode);
+                            holder.sourcePinCode.setVisibility(View.VISIBLE);
+                        } else {
+                            holder.sourceAddress.setMaxLines(2);
+                            holder.sourcePinCode.setVisibility(View.GONE);
+                        }
+                    }
+                });
+            }).start();
+        }
+        if (model.getDestinationPinCode() != null && model.getDestinationPinCode().trim().length() > 0) {
+            holder.destinationPinCode.setText(model.getDestinationPinCode());
+            holder.destinationPinCode.setVisibility(View.VISIBLE);
+        } else if (remoteConfigs.hasKey("enable_pincode") && remoteConfigs.getBoolean("enable_pincode")) {
+            new Thread(() -> {
+                String pincode = getPincodeFromRR(model.getDestLat(), model.getDestLng());
+                mainLooper.post(() -> {
+                    if (holder != null && holder.sourcePinCode != null) {
+                        if (pincode != null) {
+                            holder.destinationPinCode.setText(pincode);
+                            holder.destinationPinCode.setVisibility(View.VISIBLE);
+                        } else {
+                            holder.destinationAddress.setMaxLines(2);
+                            holder.destinationPinCode.setVisibility(View.GONE);
+                        }
+                    }
+                });
+            }).start();
+        }
+    }
 
     private void respondDummyRequest() {
         Handler handler = new Handler(Looper.getMainLooper());
@@ -497,18 +505,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         } else {
             return null;
         }
-    }
-    
-    private void updateExtraChargesString(SheetAdapter.SheetViewHolder holder, SheetModel model) {
-        mainLooper.post(() -> {
-            String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
-            if (model.getSpecialZoneExtraTip() > 0) {
-                String pickUpChargesWithZone = formattedPickupChargesText + " " + getString(R.string.and) + " " + sharedPref.getString("CURRENCY", "₹") + " " + model.getSpecialZoneExtraTip() + " " + getString(R.string.zone_pickup_extra);
-                holder.textIncludesCharges.setText(pickUpChargesWithZone);
-            } else {
-                holder.textIncludesCharges.setText(formattedPickupChargesText);
-            }
-        });
     }
 
     private void removeCard(int position) {

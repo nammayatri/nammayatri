@@ -248,7 +248,7 @@ public class NotificationUtils {
                     sheetData.putString("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? entity_payload.getString("requestedVehicleVariant") : NO_VARIANT);
                     sheetData.putBoolean("disabilityTag", (entity_payload.has("disabilityTag") && !entity_payload.isNull("disabilityTag")));
                     sheetData.putBoolean("gotoTag", entity_payload.has("goHomeRequestId") && !entity_payload.isNull("goHomeRequestId"));
-                    sheetData.putInt("driverPickUpCharges", entity_payload.has("driverPickUpCharges") ? entity_payload.optInt("driverPickUpCharges", 10): 10);
+                    sheetData.putInt("driverPickUpCharges", entity_payload.has("driverPickUpCharges") ? entity_payload.optInt("driverPickUpCharges", 0): 0);
                     sheetData.putInt("specialZoneExtraTip", entity_payload.optInt("specialZoneExtraTip", 0)); 
                     sheetData.putBoolean("specialZonePickup", isSpecialPickupZone); 
                     sheetData.putBoolean("downgradeEnabled", entity_payload.optBoolean("downgradeEnabled", true));

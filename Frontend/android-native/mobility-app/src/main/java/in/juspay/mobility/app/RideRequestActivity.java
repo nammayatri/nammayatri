@@ -172,17 +172,11 @@ public class RideRequestActivity extends AppCompatActivity {
     private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
-            String variant = model.getRequestedVehicleVariant();
-            String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
-            String pickupChargesText = formattedPickupChargesText;
             String searchRequestId = model.getSearchRequestId();
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
             if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || showVariant) {
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
-                pickupChargesText = model.getCustomerTip() > 0 ?
-                        (formattedPickupChargesText + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip)) :
-                        formattedPickupChargesText;
                 if (showSpecialLocationTag && model.getSpecialZoneExtraTip() > 0) {
                     model.setOfferedPrice(model.getSpecialZoneExtraTip());
                     model.setUpdatedAmount(model.getSpecialZoneExtraTip());
@@ -197,12 +191,10 @@ public class RideRequestActivity extends AppCompatActivity {
                 holder.reqButton.setBackgroundTintList(model.isGotoTag() ?
                         ColorStateList.valueOf(getColor(R.color.Black900)) :
                         ColorStateList.valueOf(getColor(R.color.green900)));
-                updateExtraChargesString(holder, model);
                 holder.rideTypeTag.setVisibility(showVariant ? View.VISIBLE : View.GONE);
             } else {
                 holder.tagsBlock.setVisibility(View.GONE);
             }
-            holder.textIncludesCharges.setText(pickupChargesText);
         });
     }
 
@@ -245,7 +237,6 @@ public class RideRequestActivity extends AppCompatActivity {
                     updateIndicators();
                     holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
                     holder.currency.setText(String.valueOf(model.getCurrency()));
-                    updateExtraChargesString(holder, model);
                     updateIncreaseDecreaseButtons(holder, model);
                     RideRequestUtils.updateRateView(holder, model);
                     return;
@@ -294,10 +285,6 @@ public class RideRequestActivity extends AppCompatActivity {
                 RideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), RideRequestActivity.this);
             }
 
-            if (service.equals("yatrisathiprovider") || service.equals("yatriprovider")) {
-                holder.textIncludesCharges.setVisibility(View.GONE);
-            }
-            
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
@@ -305,7 +292,7 @@ public class RideRequestActivity extends AppCompatActivity {
             RideRequestUtils.updateRateView(holder, model);
             RideRequestUtils.updateRentalView(holder, model, RideRequestActivity.this);
             RideRequestUtils.updateIntercityView(holder, model, RideRequestActivity.this);
-            
+            RideRequestUtils.updateExtraChargesString(holder, model, RideRequestActivity.this);
             String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", "");
             View progressDialog = findViewById(R.id.progress_loader);
             LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
@@ -422,18 +409,6 @@ public class RideRequestActivity extends AppCompatActivity {
         Handler handler = new Handler(Looper.getMainLooper());
         handler.post(() -> {
             Toast.makeText(getApplicationContext(), getString(R.string.test_request_successful), Toast.LENGTH_SHORT).show();
-        });
-    }
-    
-    private void updateExtraChargesString(SheetAdapter.SheetViewHolder holder, SheetModel model) {
-        mainLooper.post(() -> {
-            String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
-            if (model.getSpecialZoneExtraTip() > 0) {
-                String pickUpChargesWithZone = formattedPickupChargesText + " " + getString(R.string.and) + " " + sharedPref.getString("CURRENCY", "₹") + " " + model.getSpecialZoneExtraTip() + " " + getString(R.string.zone_pickup_extra);
-                holder.textIncludesCharges.setText(pickUpChargesWithZone);
-            } else {
-                holder.textIncludesCharges.setText(formattedPickupChargesText);
-            }
         });
     }
 

@@ -450,7 +450,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:layout_gravity="center"
-
+                                        android:visibility="gone"
                                         app:cardBackgroundColor="#1A0066FF"
                                         android:theme="@style/Theme.MaterialComponents.Light"
                                         app:cardCornerRadius="10dp"
@@ -945,33 +945,27 @@
                                 android:layout_marginTop="12dp"
                                 android:orientation="horizontal">
 
-                                <LinearLayout
+
+                                <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:id="@+id/rateView"
-                                    android:orientation="horizontal">
+                                    android:fontFamily="@font/plus_jakartasans_medium"
+                                    android:text="Rate: "
+                                    android:textColor="@color/Black700"
+                                    android:textFontWeight="400"
+                                    android:id="@+id/rateText"
+                                    android:textSize="12dp" />
 
-                                    <TextView
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:fontFamily="@font/plus_jakartasans_regular"
-                                        android:text="Rate: ₹15/km"
-                                        android:textColor="@color/Black700"
-                                        android:textFontWeight="400"
-                                        android:id="@+id/rateText"
-                                        android:textSize="12dp" />
-
-                                    <com.google.android.material.card.MaterialCardView
-                                        android:layout_width="4dp"
-                                        android:layout_height="4dp"
-                                        android:layout_gravity="center"
-                                        app:cardBackgroundColor="@color/Black700"
-                                        android:theme="@style/Theme.MaterialComponents.Light"
-                                        app:cardCornerRadius="10dp"
-                                        app:cardElevation="0dp"
-                                        android:layout_marginHorizontal="5dp"/>
-
-                                </LinearLayout>
+                                <com.google.android.material.card.MaterialCardView
+                                    android:layout_width="4dp"
+                                    android:layout_height="4dp"
+                                    android:layout_gravity="center"
+                                    app:cardBackgroundColor="@color/Black700"
+                                    android:theme="@style/Theme.MaterialComponents.Light"
+                                    app:cardCornerRadius="10dp"
+                                    android:id="@+id/rateViewDot"
+                                    app:cardElevation="0dp"
+                                    android:layout_marginHorizontal="5dp"/>
 
                                 <TextView
                                     android:layout_width="wrap_content"
