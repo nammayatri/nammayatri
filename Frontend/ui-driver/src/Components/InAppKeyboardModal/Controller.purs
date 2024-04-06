@@ -34,6 +34,7 @@ data Action = OnSelection String Int
             | OnClickResendOtp
             | OnClickTextCross
             | NoAction
+            | OnTextViewClick String 
 
 ----------------------------------------------- InAppKeyboardModalState ---------------------------------------------
 type InAppKeyboardModalState = {
@@ -51,12 +52,15 @@ type InAppKeyboardModalState = {
     , showResendOtpButton :: Boolean
     , textBoxConfig :: TextBoxConfig
     , enableDeviceKeyboard :: Boolean
+    , confirmBtnColor :: String
+    , isDismissable :: Boolean
 }
 
 type TextBoxConfig = {
   textBoxesArray :: Array Int
   , width :: Length
   , height :: Length
+  , margin :: Margin
 }
 
 type TextConfig =
@@ -100,6 +104,23 @@ type ButtonConfig =
 type Keys = {
   keys :: Array String
 }
+
+type SingleElementTextBoxConfig = {
+  height :: Length,
+  width :: Length,
+  margin :: Margin,
+  numberOfBoxes :: Int
+  }
+
+
+type InputFieldConfig = 
+  { isAdjustable :: Boolean,
+    textVal :: String ,
+    letterSpacing :: Number,
+    width :: Length,
+    isActive :: Boolean,
+    unitVal :: String
+  }
 
 config :: InAppKeyboardModalState
 config = {
@@ -201,7 +222,10 @@ config = {
   , textBoxConfig : {
       textBoxesArray : [1,2,3,4],
       width : V 48,
-      height : V 56
+      height : V 56,
+      margin : (Margin 0 0 0 0)
   }
+  , isDismissable : true
+  , confirmBtnColor : Color.darkMint
   , enableDeviceKeyboard : false
   }

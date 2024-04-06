@@ -56,4 +56,12 @@
     <string name="zone_pickup_extra">জোন পিকআপ অতিরিক্ত</string>
     <string name="you_are_near_a_special_pickup_zone">আপনি একটি বিশেষ \n পিকআপ জোনে অবস্থিত</string>
     <string name="zone_pickup">জোন পিকআপ</string>
+    <string name="customer_edited"> গ্রাহক একটি স্টপ সম্পাদনা করেছে!</string>
+    <string name="customer_added"> গ্রাহক একটি স্টপ যোগ করেছে!</string>
+    <string name="navigate_to_location"> অবস্থানে নেভিগেট করুন</string>
+    <string name="close"> বন্ধ করুন</string>
+    <string name="today"> আজ </string>
+    <string name="now"> এখন </string>
+    <string name="rental"> রেন্টাল </string>
+    <string name="intercity"> ইন্টারসিটি </string>
 </resources>

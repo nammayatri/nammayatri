@@ -604,6 +604,10 @@
       "shape_profile_drawable" : true,
       "silent_popup_background" : true,
       "up_hand_arrow" : true,
-      "widget_close_gradient" : true
+      "widget_close_gradient" : true,
+      "ny_ic_last_drop_indicator" : true,
+      "ny_ic_drop_indicator" : true,
+      "ic_rental_variant_tag" : true,
+      "ic_intercity_variant_tag" : true
    }
 }

@@ -16,8 +16,8 @@
 
 module Resources.Localizable.TA where
 
-import Prelude ((<>))
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getTA :: STR -> String
 getTA stringKey =

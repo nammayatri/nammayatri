@@ -13,6 +13,7 @@ initData = {
   },
   props: { 
     isBtnActive : false,
-    downgraded : false
+    downgraded : false,
+    canSwitchToRental : false
   }
 }

@@ -295,6 +295,7 @@
       "ny_ic_close_filled_round" : true,
       "ny_ic_close_grey" : true,
       "ny_ic_close_transparent" : true,
+      "ny_ic_unfilled": true,
       "ny_ic_close_white" : true,
       "ny_ic_coimbatore_map" : true,
       "ny_ic_coin_balance" : true,
@@ -655,7 +656,9 @@
       "progress_circle" : true,
       "progress_loader" : true,
       "progressbar_clip" : true,
-      "rectangle_9506" : true,
+      "tip_banner_rectangle" : true,
+      "rental_banner_rectangle" : true,
+      "intercity_banner_rectangle" : true,
       "rotate_drawable" : true,
       "round_circle" : true,
       "round_corner_layout" : true,
@@ -665,6 +668,10 @@
       "silent_popup_background" : true,
       "up_hand_arrow" : true,
       "widget_close_gradient" : true,
-      "zone_curve" : true
+      "zone_curve" : true,
+      "ny_ic_last_drop_indicator" : true,
+      "ny_ic_drop_indicator" : true,
+      "ic_rental_variant_tag" : true,
+      "ic_intercity_variant_tag" : true
    }
 }

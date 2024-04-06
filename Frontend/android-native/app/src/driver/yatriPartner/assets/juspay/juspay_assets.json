@@ -280,6 +280,8 @@
       "ny_ic_close_white" : true,
       "ny_ic_coin_balance" : true,
       "ny_ic_coin_expire" : true,
+      "ny_ic_last_drop_indicator" : true,
+      "ny_ic_drop_indicator" : true,
       "ny_ic_coin_to_cash_fail" : true,
       "ny_ic_coins_info" : true,
       "ny_ic_coming_soon" : true,
@@ -575,7 +577,9 @@
       "progress_circle" : true,
       "progress_loader" : true,
       "progressbar_clip" : true,
-      "rectangle_9506" : true,
+      "tip_banner_rectangle" : true,
+      "rental_banner_rectangle" : true,
+      "intercity_banner_rectangle" : true,
       "rotate_drawable" : true,
       "round_circle" : true,
       "round_corner_layout" : true,
@@ -584,6 +588,8 @@
       "shape_profile_drawable" : true,
       "silent_popup_background" : true,
       "up_hand_arrow" : true,
-      "widget_close_gradient" : true
+      "widget_close_gradient" : true,
+      "ic_rental_variant_tag" : true,
+      "ic_intercity_variant_tag" : true
    }
 }

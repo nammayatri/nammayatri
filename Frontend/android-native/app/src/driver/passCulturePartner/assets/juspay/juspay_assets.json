@@ -444,7 +444,9 @@
       "progress_circle" : true,
       "progress_loader" : true,
       "progressbar_clip" : true,
-      "rectangle_9506" : true,
+      "tip_banner_rectangle" : true,
+      "rental_banner_rectangle" : true,
+      "intercity_banner_rectangle" : true,
       "rotate_drawable" : true,
       "round_circle" : true,
       "round_corner_layout" : true,
@@ -453,6 +455,8 @@
       "shape_profile_drawable" : true,
       "silent_popup_background" : true,
       "up_hand_arrow" : true,
-      "widget_close_gradient" : true
+      "widget_close_gradient" : true,
+      "ic_rental_variant_tag" : true,
+      "ic_intercity_variant_tag" : true
    }
 }
