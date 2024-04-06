@@ -47,6 +47,7 @@ import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
@@ -70,6 +71,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
+import SharedLogic.DriverPool.Types
 import SharedLogic.FareCalculator (fareSum)
 import SharedLogic.Ride
 import Storage.Beam.IssueManagement ()
@@ -78,6 +80,7 @@ import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
 import Storage.CachedQueries.Merchant.TransporterConfig as QMTC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Location as QLoc
@@ -151,6 +154,7 @@ data DriverRideRes = DriverRideRes
     customerExtraFee :: Maybe Money,
     disabilityTag :: Maybe Text,
     requestedVehicleVariant :: DVeh.Variant,
+    vehicleServiceTier :: DVST.ServiceTierType,
     driverGoHomeRequestId :: Maybe (Id DDGR.DriverGoHomeRequest),
     payerVpa :: Maybe Text,
     autoPayStatus :: Maybe DI.DriverAutoPayStatus,
@@ -265,7 +269,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         bapName = bapMetadata <&> (.name),
         bapLogo = bapMetadata <&> (.logoUrl),
         disabilityTag = booking.disabilityTag,
-        requestedVehicleVariant = booking.vehicleVariant,
+        requestedVehicleVariant = castServiceTierToVariant booking.vehicleServiceTier,
+        vehicleServiceTier = booking.vehicleServiceTier,
         driverGoHomeRequestId = goHomeReqId,
         payerVpa = driverInfo >>= (.payerVpa),
         autoPayStatus = driverInfo >>= (.autoPayStatus),
@@ -324,7 +329,8 @@ otpRideCreate driver otpCode booking clientId = do
     QM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
-  when (isNotAllowedVehicleVariant vehicle.variant booking.vehicleVariant) $ throwError $ InvalidRequest "Wrong Vehicle Variant"
+  isVehicleVariantNotAllowed <- isNotAllowedVehicleVariant vehicle.variant booking.vehicleServiceTier
+  when isVehicleVariantNotAllowed $ throwError $ InvalidRequest "Wrong Vehicle Variant"
   when (booking.status `elem` [DRB.COMPLETED, DRB.CANCELLED]) $ throwError (BookingInvalidStatus $ show booking.status)
   driverInfo <- QDI.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
@@ -346,9 +352,9 @@ otpRideCreate driver otpCode booking clientId = do
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc
       | otherwise = throwM exc
 
-    isNotAllowedVehicleVariant driverVehicle bookingVehicle =
-      (bookingVehicle == DVeh.TAXI_PLUS || bookingVehicle == DVeh.SEDAN || bookingVehicle == DVeh.SUV || bookingVehicle == DVeh.HATCHBACK)
-        && driverVehicle == DVeh.TAXI
+    isNotAllowedVehicleVariant driverVehicle bookingServiceTier = do
+      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId bookingServiceTier booking.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show bookingServiceTier))
+      return $ driverVehicle `notElem` vehicleServiceTierItem.allowedVehicleVariant
 
 arrivedAtStop :: Id DRide.Ride -> LatLong -> Flow APISuccess
 arrivedAtStop rideId pt = do

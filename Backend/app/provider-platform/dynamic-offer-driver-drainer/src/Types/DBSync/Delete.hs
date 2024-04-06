@@ -47,7 +47,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.DriverExtraF
 import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as FarePolicyProgressiveDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as FarePolicyProgressiveDetailsPerExtraKmRateSection
 import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as FarePolicySlabDetailsSlab
-import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.RestrictedExtraFare as RestrictedExtraFare
 import qualified "dynamic-offer-driver-app" Storage.Beam.FareProduct as FareProduct
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.Feedback as Feedback
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackBadge as FeedbackBadge
@@ -125,7 +124,6 @@ data DeleteModel
   | FarePolicyProgressiveDetailsDelete
   | FarePolicyProgressiveDetailsPerExtraKmRateSectionDelete
   | FarePolicySlabDetailsSlabDelete
-  | RestrictedExtraFareDelete
   | FareProductDelete
   | GeometryDelete
   | CommentDelete
@@ -209,7 +207,6 @@ getTagDelete DriverExtraFeeBoundsDelete = "DriverExtraFeeBoundsOptions"
 getTagDelete FarePolicyProgressiveDetailsDelete = "FarePolicyProgressiveDetailsOptions"
 getTagDelete FarePolicyProgressiveDetailsPerExtraKmRateSectionDelete = "FarePolicyProgressiveDetailsPerExtraKmRateSectionOptions"
 getTagDelete FarePolicySlabDetailsSlabDelete = "FarePolicySlabDetailsSlabOptions"
-getTagDelete RestrictedExtraFareDelete = "RestrictedExtraFareOptions"
 getTagDelete FareProductDelete = "FareProductOptions"
 getTagDelete GeometryDelete = "GeometryOptions"
 getTagDelete CommentDelete = "CommentOptions"
@@ -289,7 +286,6 @@ parseTagDelete "DriverExtraFeeBoundsOptions" = return DriverExtraFeeBoundsDelete
 parseTagDelete "FarePolicyProgressiveDetailsOptions" = return FarePolicyProgressiveDetailsDelete
 parseTagDelete "FarePolicyProgressiveDetailsPerExtraKmRateSectionOptions" = return FarePolicyProgressiveDetailsPerExtraKmRateSectionDelete
 parseTagDelete "FarePolicySlabDetailsSlabOptions" = return FarePolicySlabDetailsSlabDelete
-parseTagDelete "RestrictedExtraFareOptions" = return RestrictedExtraFareDelete
 parseTagDelete "FareProductOptions" = return FareProductDelete
 parseTagDelete "GeometryOptions" = return GeometryDelete
 parseTagDelete "CommentOptions" = return CommentDelete
@@ -372,7 +368,6 @@ data DBDeleteObject
   | FarePolicyProgressiveDetailsDeleteOptions DeleteModel (Where Postgres FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsT)
   | FarePolicyProgressiveDetailsPerExtraKmRateSectionDeleteOptions DeleteModel (Where Postgres FarePolicyProgressiveDetailsPerExtraKmRateSection.FarePolicyProgressiveDetailsPerExtraKmRateSectionT)
   | FarePolicySlabDetailsSlabDeleteOptions DeleteModel (Where Postgres FarePolicySlabDetailsSlab.FarePolicySlabsDetailsSlabT)
-  | RestrictedExtraFareDeleteOptions DeleteModel (Where Postgres RestrictedExtraFare.RestrictedExtraFareT)
   | FareProductDeleteOptions DeleteModel (Where Postgres FareProduct.FareProductT)
   | GeometryDeleteOptions DeleteModel (Where Postgres Geometry.GeometryT)
   | CommentDeleteOptions DeleteModel (Where Postgres Comment.CommentT)
@@ -528,9 +523,6 @@ instance FromJSON DBDeleteObject where
       FarePolicySlabDetailsSlabDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ FarePolicySlabDetailsSlabDeleteOptions deleteModel whereClause
-      RestrictedExtraFareDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ RestrictedExtraFareDeleteOptions deleteModel whereClause
       FareProductDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ FareProductDeleteOptions deleteModel whereClause

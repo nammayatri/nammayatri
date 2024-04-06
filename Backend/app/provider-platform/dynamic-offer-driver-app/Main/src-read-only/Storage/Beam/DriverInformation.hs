@@ -7,6 +7,7 @@ module Storage.Beam.DriverInformation where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverInformation
+import qualified Domain.Types.VehicleServiceTier
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -40,6 +41,7 @@ data DriverInformationT f = DriverInformationT
     paymentPending :: B.C f Kernel.Prelude.Bool,
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredByDriverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    selectedServiceTiers :: B.C f [Domain.Types.VehicleServiceTier.ServiceTierType],
     subscribed :: B.C f Kernel.Prelude.Bool,
     totalReferred :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     verified :: B.C f Kernel.Prelude.Bool,

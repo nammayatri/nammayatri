@@ -2,7 +2,7 @@ imports:
   FareParameters: Domain.Types.FareParameters
   FarePolicy: Domain.Types.FarePolicy
   TripCategory: Domain.Types.Common
-  Variant: Domain.Types.Vehicle
+  ServiceTierType: Domain.Types.VehicleServiceTier
   SearchRequest: Domain.Types.SearchRequest
   Money: Kernel.Types.Common
 
@@ -17,7 +17,7 @@ Estimate:
     fields:
       id: Id Estimate
       requestId: Id SearchRequest
-      vehicleVariant: Variant
+      vehicleServiceTier: ServiceTierType
       tripCategory: TripCategory
       minFare: Money
       maxFare: Money
@@ -36,6 +36,7 @@ Estimate:
     beamFields:
       farePolicy:
         farePolicyId: Maybe Text
+      vehicleServiceTier: "vehicleVariant"
 
     sqlType:
       farePolicyId: character varying(36)

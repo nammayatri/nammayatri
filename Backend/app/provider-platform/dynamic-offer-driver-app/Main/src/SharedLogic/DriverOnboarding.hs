@@ -27,6 +27,7 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.Vehicle
 import Domain.Types.VehicleRegistrationCertificate
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Ticket.Interface.Types as Ticket
@@ -117,6 +118,28 @@ enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified =
     merchant <- CQM.findById merchantOpCity.merchantId >>= fromMaybeM (MerchantNotFound merchantOpCity.merchantId.getId)
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     triggerOnboardingAlertsAndMessages person merchant merchantOpCity
+
+selectVehicleTierForDriver :: Person -> DI.DriverInformation -> Vehicle -> [DVST.VehicleServiceTier] -> [DVST.VehicleServiceTier]
+selectVehicleTierForDriver person driverInfo vehicle cityVehicleServiceTiers =
+  filter filterVehicleTier cityVehicleServiceTiers
+  where
+    filterVehicleTier vehicleServiceTier = do
+      let seatingCapacityCheck = compareNumber vehicle.capacity vehicleServiceTier.seatingCapacity
+      let luggageCapacityCheck = compareNumber vehicle.luggageCapacity vehicleServiceTier.luggageCapacity
+      let airConditionedCheck =
+            (compareNumber driverInfo.airConditionScore vehicleServiceTier.airConditioned)
+              && (isNothing vehicleServiceTier.airConditioned || vehicle.airConditioned /= Just False)
+      let driverRatingCheck = compareNumber person.rating vehicleServiceTier.driverRating
+      let vehicleRatingCheck = compareNumber vehicle.vehicleRating vehicleServiceTier.vehicleRating
+      let variantCheck = vehicle.variant `elem` vehicleServiceTier.allowedVehicleVariant
+
+      seatingCapacityCheck && luggageCapacityCheck && airConditionedCheck && driverRatingCheck && vehicleRatingCheck && variantCheck
+
+    compareNumber :: Ord a => Maybe a -> Maybe a -> Bool
+    compareNumber mbX mbY =
+      case (mbX, mbY) of
+        (Just x, Just y) -> x >= y
+        _ -> True
 
 makeRCAssociation :: (MonadFlow m) => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person -> Id VehicleRegistrationCertificate -> Maybe UTCTime -> m DriverRCAssociation
 makeRCAssociation merchantId merchantOperatingCityId driverId rcId end = do

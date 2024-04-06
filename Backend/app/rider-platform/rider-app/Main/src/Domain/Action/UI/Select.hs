@@ -41,6 +41,7 @@ import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.Quote (QuoteAPIEntity (..))
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchReq
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Environment
 import Kernel.Beam.Functions
@@ -172,7 +173,7 @@ select2 personId estimateId req@DSelectReq {..} = do
     DSelectRes
       { providerId = estimate.providerId,
         providerUrl = estimate.providerUrl,
-        variant = estimate.vehicleVariant,
+        variant = DVST.castServiceTierToVariant estimate.vehicleServiceTierType, -- TODO: fix later
         ..
       }
   where

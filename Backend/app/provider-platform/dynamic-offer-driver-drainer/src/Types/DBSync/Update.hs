@@ -47,7 +47,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.DriverExtraF
 import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as FarePolicyProgressiveDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as FarePolicyProgressiveDetailsPerExtraKmRateSection
 import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as FarePolicySlabDetailsSlab
-import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.RestrictedExtraFare as RestrictedExtraFare
 import qualified "dynamic-offer-driver-app" Storage.Beam.FareProduct as FareProduct
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.Feedback as Feedback
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackBadge as FeedbackBadge
@@ -126,7 +125,6 @@ data UpdateModel
   | FarePolicyProgressiveDetailsUpdate
   | FarePolicyProgressiveDetailsPerExtraKmRateSectionUpdate
   | FarePolicySlabDetailsSlabUpdate
-  | RestrictedExtraFareUpdate
   | FareProductUpdate
   | GeometryUpdate
   | CommentUpdate
@@ -210,7 +208,6 @@ getTagUpdate DriverExtraFeeBoundsUpdate = "DriverExtraFeeBoundsOptions"
 getTagUpdate FarePolicyProgressiveDetailsUpdate = "FarePolicyProgressiveDetailsOptions"
 getTagUpdate FarePolicyProgressiveDetailsPerExtraKmRateSectionUpdate = "FarePolicyProgressiveDetailsPerExtraKmRateSectionOptions"
 getTagUpdate FarePolicySlabDetailsSlabUpdate = "FarePolicySlabDetailsSlabOptions"
-getTagUpdate RestrictedExtraFareUpdate = "RestrictedExtraFareOptions"
 getTagUpdate FareProductUpdate = "FareProductOptions"
 getTagUpdate GeometryUpdate = "GeometryOptions"
 getTagUpdate CommentUpdate = "CommentOptions"
@@ -293,7 +290,6 @@ parseTagUpdate "DriverExtraFeeBoundsOptions" = return DriverExtraFeeBoundsUpdate
 parseTagUpdate "FarePolicyProgressiveDetailsOptions" = return FarePolicyProgressiveDetailsUpdate
 parseTagUpdate "FarePolicyProgressiveDetailsPerExtraKmRateSectionOptions" = return FarePolicyProgressiveDetailsPerExtraKmRateSectionUpdate
 parseTagUpdate "FarePolicySlabDetailsSlabOptions" = return FarePolicySlabDetailsSlabUpdate
-parseTagUpdate "RestrictedExtraFareOptions" = return RestrictedExtraFareUpdate
 parseTagUpdate "FareProductOptions" = return FareProductUpdate
 parseTagUpdate "GeometryOptions" = return GeometryUpdate
 parseTagUpdate "CommentOptions" = return CommentUpdate
@@ -377,7 +373,6 @@ data DBUpdateObject
   | FarePolicyProgressiveDetailsOptions UpdateModel [Set Postgres FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsT] (Where Postgres FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsT)
   | FarePolicyProgressiveDetailsPerExtraKmRateSectionOptions UpdateModel [Set Postgres FarePolicyProgressiveDetailsPerExtraKmRateSection.FarePolicyProgressiveDetailsPerExtraKmRateSectionT] (Where Postgres FarePolicyProgressiveDetailsPerExtraKmRateSection.FarePolicyProgressiveDetailsPerExtraKmRateSectionT)
   | FarePolicySlabDetailsSlabOptions UpdateModel [Set Postgres FarePolicySlabDetailsSlab.FarePolicySlabsDetailsSlabT] (Where Postgres FarePolicySlabDetailsSlab.FarePolicySlabsDetailsSlabT)
-  | RestrictedExtraFareOptions UpdateModel [Set Postgres RestrictedExtraFare.RestrictedExtraFareT] (Where Postgres RestrictedExtraFare.RestrictedExtraFareT)
   | FareProductOptions UpdateModel [Set Postgres FareProduct.FareProductT] (Where Postgres FareProduct.FareProductT)
   | GeometryOptions UpdateModel [Set Postgres Geometry.GeometryT] (Where Postgres Geometry.GeometryT)
   | CommentOptions UpdateModel [Set Postgres Comment.CommentT] (Where Postgres Comment.CommentT)
@@ -533,9 +528,6 @@ instance FromJSON DBUpdateObject where
       FarePolicySlabDetailsSlabUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ FarePolicySlabDetailsSlabOptions updateModel updVals whereClause
-      RestrictedExtraFareUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ RestrictedExtraFareOptions updateModel updVals whereClause
       FareProductUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ FareProductOptions updateModel updVals whereClause

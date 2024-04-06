@@ -5,11 +5,12 @@ module Storage.Queries.Person.GetNearestDriversCurrentlyOnRide
 where
 
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.Maybe as Mb
+import qualified Data.List as List
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Vehicle as DV
+import Domain.Types.VehicleServiceTier as DVST
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
@@ -34,6 +35,8 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     lat :: Double,
     lon :: Double,
     variant :: DV.Variant,
+    serviceTier :: DVST.ServiceTierType,
+    airConditioned :: Maybe Double,
     destinationLat :: Double,
     destinationLon :: Double,
     distanceToDriver :: Meters,
@@ -44,7 +47,8 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
 
 getNearestDriversCurrentlyOnRide ::
   (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) =>
-  Maybe Variant ->
+  [DVST.VehicleServiceTier] ->
+  Maybe ServiceTierType ->
   LatLong ->
   Meters ->
   Id Merchant ->
@@ -52,7 +56,7 @@ getNearestDriversCurrentlyOnRide ::
   Meters ->
   Bool ->
   m [NearestDriversResultCurrentlyOnRide]
-getNearestDriversCurrentlyOnRide mbVariant fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue isRental = do
+getNearestDriversCurrentlyOnRide cityServiceTiers mbServiceTier fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue isRental = do
   let onRideRadius = radiusMeters - reduceRadiusValue
   driverLocs <- Int.getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry fromLocLatLong onRideRadius
   driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental
@@ -64,7 +68,7 @@ getNearestDriversCurrentlyOnRide mbVariant fromLocLatLong radiusMeters merchantI
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> " Dquotes:- " <> show (length driverQuote) <> " BInfos:- " <> show (length bookingInfo) <> " BLocs:- " <> show (length bookingLocation)
   let res = linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers (fromIntegral onRideRadius :: Double)
   logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)
-  return (makeNearestDriversResult =<< res)
+  return res
   where
     linkArrayListForOnRide driverQuotes bookings bookingLocs driverLocations driverInformations vehicles persons onRideRadius =
       let locationHashMap = HashMap.fromList $ (\loc -> (loc.driverId, loc)) <$> driverLocations
@@ -73,7 +77,7 @@ getNearestDriversCurrentlyOnRide mbVariant fromLocLatLong radiusMeters merchantI
           bookingHashMap = HashMap.fromList $ (\booking -> (Id booking.quoteId, booking)) <$> bookings
           bookingLocsHashMap = HashMap.fromList $ (\loc -> (loc.id, loc)) <$> bookingLocs
           driverInfoHashMap = HashMap.fromList $ (\info -> (info.driverId, info)) <$> driverInformations
-       in mapMaybe (buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locationHashMap driverInfoHashMap personHashMap onRideRadius) vehicles
+       in concat $ mapMaybe (buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locationHashMap driverInfoHashMap personHashMap onRideRadius) vehicles
 
     buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locationHashMap driverInfoHashMap personHashMap onRideRadius vehicle = do
       let driverId' = vehicle.driverId
@@ -89,35 +93,27 @@ getNearestDriversCurrentlyOnRide mbVariant fromLocLatLong radiusMeters merchantI
           distanceFromDriverToDestination = realToFrac $ distanceBetweenInMeters driverLocationPoint destinationPoint
           distanceFromDestinationToPickup = realToFrac $ distanceBetweenInMeters fromLocLatLong destinationPoint
           onRideRadiusValidity = (distanceFromDriverToDestination + distanceFromDestinationToPickup) < onRideRadius
-      if onRideRadiusValidity
-        && ( Mb.isNothing mbVariant || Just vehicle.variant == mbVariant
-               || ( case mbVariant of
-                      Just SEDAN ->
-                        info.canDowngradeToSedan
-                          && vehicle.variant == SUV
-                      Just HATCHBACK ->
-                        info.canDowngradeToHatchback
-                          && (vehicle.variant == SUV || vehicle.variant == SEDAN)
-                      Just TAXI ->
-                        info.canDowngradeToTaxi
-                          && (vehicle.variant == TAXI_PLUS || vehicle.variant == SEDAN || vehicle.variant == HATCHBACK || vehicle.variant == SUV)
-                      _ -> False
-                  )
-           )
-        then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, location.lat, location.lon, vehicle.variant, bookingLocation.lat, bookingLocation.lon, distanceFromDriverToDestination + distanceFromDestinationToPickup, distanceFromDriverToDestination, info.mode)
-        else Nothing
 
-    makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode) -> [NearestDriversResultCurrentlyOnRide]
-    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dlat, dlon, variant, destinationEndLat, destinationEndLon, dist :: Double, distanceFromDriverToDestination :: Double, mode) =
-      case mbVariant of
-        Nothing -> do
-          let autoResult = getResult AUTO_RICKSHAW $ variant == AUTO_RICKSHAW
-              suvResult = getResult SUV $ variant == SUV
-              sedanResult = getResult SEDAN $ variant == SEDAN || (variant == SUV && canDowngradeToSedan)
-              hatchbackResult = getResult HATCHBACK $ variant == HATCHBACK || ((variant == SUV || variant == SEDAN) && canDowngradeToHatchback)
-              taxiPlusResult = getResult TAXI_PLUS $ variant == TAXI_PLUS
-              taxiResult = getResult TAXI $ variant == TAXI || ((variant == TAXI_PLUS || variant == SUV || variant == SEDAN || variant == HATCHBACK) && canDowngradeToTaxi)
-          autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
-        Just poolVariant -> getResult poolVariant True
+      -- ideally should be there inside the info.selectedServiceTiers but still to make sure we have a default service tier for the driver
+      let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
+      let defaultServiceTierForDriver = (.serviceTierType) <$> (find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers)
+      let selectedDriverServiceTiers =
+            case defaultServiceTierForDriver of
+              Just defaultServiceTierForDriver' ->
+                if defaultServiceTierForDriver' `elem` info.selectedServiceTiers
+                  then info.selectedServiceTiers
+                  else [defaultServiceTierForDriver'] <> info.selectedServiceTiers
+              Nothing -> info.selectedServiceTiers
+      if onRideRadiusValidity
+        then do
+          case mbServiceTier of
+            Just serviceTier ->
+              if serviceTier `elem` selectedDriverServiceTiers
+                then List.singleton <$> mkDriverResult person info location bookingLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap serviceTier
+                else Nothing
+            Nothing -> Just (mapMaybe (mkDriverResult person info location bookingLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap) selectedDriverServiceTiers)
+        else Nothing
       where
-        getResult var cond = [NearestDriversResultCurrentlyOnRide (cast personId) mbDeviceToken mblang onRide dlat dlon var destinationEndLat destinationEndLon (roundToIntegral dist) (roundToIntegral distanceFromDriverToDestination) mode | cond]
+        mkDriverResult person info location bookingLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap serviceTier = do
+          serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
+          Just $ NearestDriversResultCurrentlyOnRide (cast person.id) person.deviceToken person.language info.onRide location.lat location.lon vehicle.variant serviceTier serviceTierInfo.airConditioned bookingLocation.lat bookingLocation.lon (roundToIntegral $ distanceFromDriverToDestination + distanceFromDestinationToPickup) (roundToIntegral distanceFromDriverToDestination) info.mode

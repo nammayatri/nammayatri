@@ -19,6 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.DriverInformation as D
 import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -34,6 +35,8 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     straightLineDistanceToPickup :: B.C f Meters,
     durationToPickup :: B.C f Seconds,
     vehicleVariant :: B.C f Variant.Variant,
+    vehicleServiceTier :: B.C f (Maybe DVST.ServiceTierType),
+    airConditioned :: B.C f (Maybe Bool),
     batchNumber :: B.C f Int,
     lat :: B.C f (Maybe Double),
     lon :: B.C f (Maybe Double),

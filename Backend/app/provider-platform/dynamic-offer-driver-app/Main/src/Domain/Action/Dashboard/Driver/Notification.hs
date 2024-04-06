@@ -37,6 +37,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.DriverPool.Types
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Person as QPerson
@@ -103,6 +104,8 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAdd
           rideRequestPopupDelayDuration = Seconds 0,
           keepHiddenForSeconds = Seconds 0,
           requestedVehicleVariant = driverVehicle,
+          airConditioned = Nothing,
+          vehicleServiceTier = Just $ castVariantToServiceTier driverVehicle,
           bapName = Nothing,
           bapLogo = Nothing,
           customerExtraFee = Nothing,

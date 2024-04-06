@@ -24,6 +24,7 @@ import qualified Data.Text as T
 import Data.Time (TimeOfDay (..))
 import Domain.Action.Beckn.OnSearch as OnSearch
 import Domain.Types.Estimate as Estimate
+import Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant as VehicleVariant
 import EulerHS.Prelude hiding (id, view, (^?))
 import Kernel.External.Maps as Maps
@@ -69,6 +70,15 @@ getVehicleVariant provider item = do
     (Just "CAB", Just "TAXI") -> return VehicleVariant.TAXI
     (Just "CAB", Just "TAXI_PLUS") -> return VehicleVariant.TAXI_PLUS
     _ -> throwError (InvalidRequest $ "Unable to parse vehicle category:-" <> show category <> ",vehicle variant:-" <> show variant)
+
+getServiceTierType :: Spec.Item -> Maybe DVST.VehicleServiceTierType
+getServiceTierType item = item.itemDescriptor >>= (.descriptorCode) >>= (readMaybe . T.unpack)
+
+getServiceTierName :: Spec.Item -> Maybe Text
+getServiceTierName item = item.itemDescriptor >>= (.descriptorName)
+
+getServiceTierShortDesc :: Spec.Item -> Maybe Text
+getServiceTierShortDesc item = item.itemDescriptor >>= (.descriptorShortDesc)
 
 getEstimatedFare :: MonadFlow m => Spec.Item -> Currency -> m Price
 getEstimatedFare item currency = do
@@ -240,6 +250,3 @@ makeLatLong provider vehicleVariant location = do
 buildSpecialLocationTag :: MonadFlow m => Spec.Item -> m (Maybe Text)
 buildSpecialLocationTag item =
   return $ Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_TAG item.itemTags
-
-getDescriptorInfo :: Spec.Item -> Maybe Text
-getDescriptorInfo item = item.itemDescriptor >>= (.descriptorName)

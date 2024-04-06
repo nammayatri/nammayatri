@@ -76,7 +76,7 @@ buildOnCancelMessageV2 merchant mbBapCity mbBapCountry cancelStatus (OC.BookingC
   mbRide <- QRide.findOneByBookingId booking.id
   riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   customerPhoneNo <- decrypt riderDetails.mobileNumber
-  let vehicleCategory = BUtils.mapVariantToVehicle booking.vehicleVariant
+  let vehicleCategory = BUtils.mapServiceTierToCategory booking.vehicleServiceTier
   mbVehicle <- maybe (pure Nothing) (runInReplica . QVeh.findById . (.driverId)) mbRide
   mbPerson <- maybe (pure Nothing) (runInReplica . QPerson.findById . (.driverId)) mbRide
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
@@ -220,7 +220,7 @@ tfItems booking merchant mbFarePolicy =
     [ Spec.Item
         { itemDescriptor = Nothing,
           itemFulfillmentIds = Just [booking.quoteId],
-          itemId = Just $ Common.mkItemId merchant.shortId.getShortId booking.vehicleVariant,
+          itemId = Just $ Common.mkItemId merchant.shortId.getShortId booking.vehicleServiceTier,
           itemLocationIds = Nothing,
           itemPaymentIds = Nothing,
           itemPrice = tfItemPrice booking,

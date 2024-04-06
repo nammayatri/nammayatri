@@ -26,6 +26,7 @@ import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle as Veh
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
@@ -78,6 +79,7 @@ data InitRes = InitRes
     bppSubscriberId :: Maybe Text,
     riderPhoneNumber :: Text,
     riderName :: Maybe Text,
+    vehicleVariant :: Veh.Variant,
     paymentId :: Text
   }
 
@@ -114,12 +116,12 @@ handler merchantId req validatedReq = do
 
   let paymentMethodInfo = req.paymentMethodInfo
   let bppSubscriberId = req.bppSubscriberId
-  pure InitRes {..}
+  pure InitRes {vehicleVariant = req.vehicleVariant, ..}
   where
     buildBooking ::
       ( CacheFlow m r,
         EsqDBFlow m r,
-        HasField "vehicleVariant" q Veh.Variant,
+        HasField "vehicleServiceTier" q DVST.ServiceTierType,
         HasField "distance" q (Maybe Meters),
         HasField "estimatedFare" q Money,
         HasField "fareParams" q DFP.FareParameters,
@@ -151,7 +153,7 @@ handler merchantId req validatedReq = do
             bapCity = Just req.bapCity,
             bapCountry = Just req.bapCountry,
             riderId = Nothing,
-            vehicleVariant = driverQuote.vehicleVariant,
+            vehicleServiceTier = driverQuote.vehicleServiceTier,
             estimatedDistance = driverQuote.distance,
             maxEstimatedDistance = req.maxEstimatedDistance,
             createdAt = now,

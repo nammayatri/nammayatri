@@ -18,7 +18,7 @@ module Storage.CachedQueries.FareProduct where
 import qualified Domain.Types.Common as DTC
 import Domain.Types.FareProduct
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
-import Domain.Types.Vehicle (Variant (..))
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
@@ -77,32 +77,32 @@ makeFareProductByMerchantOpCityIdKey merchantOpCityId = "driver-offer:CachedQuer
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-findUnboundedByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> DTC.TripCategory -> Variant -> Area -> m (Maybe FareProduct)
-findUnboundedByMerchantVariantArea merchantOpCityId tripCategory vehicleVariant area =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory vehicleVariant area) >>= \case
+findUnboundedByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Area -> m (Maybe FareProduct)
+findUnboundedByMerchantVariantArea merchantOpCityId tripCategory serviceTier area =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory serviceTier area) >>= \case
     Just a -> pure a
-    Nothing -> flip whenJust (cacheUnboundedFareProductByMerchantVariantArea merchantOpCityId tripCategory vehicleVariant area) /=<< Queries.findUnboundedByMerchantOpCityIdVariantArea merchantOpCityId tripCategory vehicleVariant area
+    Nothing -> flip whenJust (cacheUnboundedFareProductByMerchantVariantArea merchantOpCityId tripCategory serviceTier area) /=<< Queries.findUnboundedByMerchantOpCityIdVariantArea merchantOpCityId tripCategory serviceTier area
 
-cacheUnboundedFareProductByMerchantVariantArea :: (CacheFlow m r) => Id MerchantOperatingCity -> DTC.TripCategory -> Variant -> Area -> FareProduct -> m ()
-cacheUnboundedFareProductByMerchantVariantArea merchantOpCityId tripCategory vehicleVariant area fareProduct = do
+cacheUnboundedFareProductByMerchantVariantArea :: (CacheFlow m r) => Id MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Area -> FareProduct -> m ()
+cacheUnboundedFareProductByMerchantVariantArea merchantOpCityId tripCategory serviceTier area fareProduct = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory vehicleVariant area) fareProduct expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory serviceTier area) fareProduct expTime
 
-makeUnboundedFareProductByMerchantVariantAreaKey :: Id MerchantOperatingCity -> DTC.TripCategory -> Variant -> Area -> Text
-makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory vehicleVariant area = "driver-offer:CachedQueries:Unbounded:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":Variant-" <> show vehicleVariant <> ":Area-" <> show area <> ":TripCategory-" <> show tripCategory
+makeUnboundedFareProductByMerchantVariantAreaKey :: Id MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Area -> Text
+makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory serviceTier area = "driver-offer:CachedQueries:Unbounded:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":ServiceTier-" <> show serviceTier <> ":Area-" <> show area <> ":TripCategory-" <> show tripCategory
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-findAllBoundedByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> DTC.TripCategory -> Variant -> Area -> m [FareProduct]
-findAllBoundedByMerchantVariantArea merchantOpCityId tripCategory vehicleVariant area =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory vehicleVariant area) >>= \case
+findAllBoundedByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Area -> m [FareProduct]
+findAllBoundedByMerchantVariantArea merchantOpCityId tripCategory serviceTier area =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory serviceTier area) >>= \case
     Just a -> pure a
-    Nothing -> cacheBoundedFareProductByMerchantVariantArea merchantOpCityId tripCategory vehicleVariant area /=<< Queries.findAllBoundedByMerchantOpCityIdVariantArea merchantOpCityId tripCategory vehicleVariant area
+    Nothing -> cacheBoundedFareProductByMerchantVariantArea merchantOpCityId tripCategory serviceTier area /=<< Queries.findAllBoundedByMerchantOpCityIdVariantArea merchantOpCityId tripCategory serviceTier area
 
-cacheBoundedFareProductByMerchantVariantArea :: (CacheFlow m r) => Id MerchantOperatingCity -> DTC.TripCategory -> Variant -> Area -> [FareProduct] -> m ()
-cacheBoundedFareProductByMerchantVariantArea merchantOpCityId tripCategory vehicleVariant area fareProducts = do
+cacheBoundedFareProductByMerchantVariantArea :: (CacheFlow m r) => Id MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Area -> [FareProduct] -> m ()
+cacheBoundedFareProductByMerchantVariantArea merchantOpCityId tripCategory serviceTier area fareProducts = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory vehicleVariant area) fareProducts expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory serviceTier area) fareProducts expTime
 
-makeBoundedFareProductByMerchantVariantAreaKey :: Id MerchantOperatingCity -> DTC.TripCategory -> Variant -> Area -> Text
-makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory vehicleVariant area = "driver-offer:CachedQueries:Bounded:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":Variant-" <> show vehicleVariant <> ":Area-" <> show area <> ":TripCategory-" <> show tripCategory
+makeBoundedFareProductByMerchantVariantAreaKey :: Id MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Area -> Text
+makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory serviceTier area = "driver-offer:CachedQueries:Bounded:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":ServiceTier-" <> show serviceTier <> ":Area-" <> show area <> ":TripCategory-" <> show tripCategory

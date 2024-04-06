@@ -115,6 +115,7 @@ import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
 import Domain.Types.Vehicle (VehicleAPIEntity)
 import qualified Domain.Types.Vehicle as SV
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, state)
@@ -622,8 +623,8 @@ buildDriverEntityRes (person, driverInfo) = do
           then SP.roundToOneDecimal <$> person.rating
           else person.rating <&> (\(Centesimal x) -> Centesimal (fromInteger (round x)))
   fareProductConfig <- CQFP.findAllFareProductByMerchantOpCityId person.merchantOperatingCityId
-  let supportedVehicles = nub $ map (.vehicleVariant) fareProductConfig
-  let isVehicleSupported = maybe False (\vehicle -> vehicle.variant `elem` supportedVehicles) vehicleMB
+  let supportedVehicles = nub $ map (.vehicleServiceTier) fareProductConfig
+  let isVehicleSupported = maybe False (\vehicle -> (castVariantToServiceTier vehicle.variant) `elem` supportedVehicles) vehicleMB
   return $
     DriverEntityRes
       { id = person.id,
@@ -705,21 +706,32 @@ updateDriver (personId, _, merchantOpCityId) req = do
                languagesSpoken = req.languagesSpoken <|> person.languagesSpoken
               }
   mVehicle <- QVehicle.findById personId
-  checkIfCanDowngrade mVehicle
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
-  let updDriverInfo =
-        driverInfo{canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan,
-                   canDowngradeToHatchback = fromMaybe driverInfo.canDowngradeToHatchback req.canDowngradeToHatchback,
-                   canDowngradeToTaxi = fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi,
-                   canSwitchToRental = fromMaybe driverInfo.canSwitchToRental req.canSwitchToRental,
-                   availableUpiApps = req.availableUpiApps <|> driverInfo.availableUpiApps
-                  }
+  whenJust mVehicle $ \vehicle -> do
+    -- deprecated logic, moved to driver service tier options
+    checkIfCanDowngrade vehicle
+    let canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan
+    let canDowngradeToHatchback = fromMaybe driverInfo.canDowngradeToHatchback req.canDowngradeToHatchback
+    let canDowngradeToTaxi = fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi
+    let canSwitchToRental = fromMaybe driverInfo.canSwitchToRental req.canSwitchToRental
+    let availableUpiApps = req.availableUpiApps <|> driverInfo.availableUpiApps
+    let selectedServiceTiers =
+          case vehicle.variant of
+            SV.AUTO_RICKSHAW -> [DVST.AUTO_RICKSHAW]
+            SV.TAXI -> [DVST.TAXI]
+            SV.HATCHBACK -> [DVST.HATCHBACK] <> [DVST.TAXI | canDowngradeToTaxi]
+            SV.SEDAN -> [DVST.SEDAN] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi]
+            SV.SUV -> [DVST.SUV] <> [DVST.SEDAN | canDowngradeToSedan] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi]
+            SV.TAXI_PLUS -> [DVST.TAXI_PLUS]
 
+    QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental availableUpiApps person.id
+    QDriverInformation.updateSelectedServiceTiers selectedServiceTiers person.id
+
+  updatedDriverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
   QPerson.updatePersonRec personId updPerson
-  QDriverInformation.updateDriverInformation updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi updDriverInfo.canSwitchToRental updDriverInfo.availableUpiApps person.id
   driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
-  driverEntity <- buildDriverEntityRes (updPerson, updDriverInfo)
+  driverEntity <- buildDriverEntityRes (updPerson, updatedDriverInfo)
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId
   let merchantId = person.merchantId
   org <-
@@ -728,28 +740,24 @@ updateDriver (personId, _, merchantOpCityId) req = do
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo personId merchantOpCityId Nothing
   makeDriverInformationRes merchantOpCityId driverEntity org driverReferralCode driverStats driverGoHomeInfo Nothing Nothing Nothing
   where
-    checkIfCanDowngrade mVehicle = do
-      case mVehicle of
-        Just vehicle -> do
-          when
-            ( (vehicle.variant == SV.AUTO_RICKSHAW || vehicle.variant == SV.TAXI || vehicle.variant == SV.HATCHBACK)
-                && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)
-            )
-            $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
-          when (vehicle.variant == SV.SUV && req.canDowngradeToTaxi == Just True) $
-            throwError $ InvalidRequest $ "Can't downgrade to NON-AC TAXI from " <> (show vehicle.variant)
-          when
-            ( (vehicle.variant == SV.AUTO_RICKSHAW || vehicle.variant == SV.TAXI)
-                && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True || req.canDowngradeToTaxi == Just True)
-            )
-            $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
-          when (vehicle.variant == SV.SEDAN && (req.canDowngradeToSedan == Just True)) $
-            throwError $ InvalidRequest "Driver with sedan can't downgrade to sedan"
-          when (vehicle.variant == SV.TAXI_PLUS && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)) $
-            throwError $ InvalidRequest "Driver with TAXI_PLUS can't downgrade to either sedan or hatchback"
-        Nothing ->
-          when (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True || req.canDowngradeToTaxi == Just True) $
-            throwError $ InvalidRequest "Can't downgrade if not vehicle assigned to driver"
+    -- logic is deprecated, should be handle from driver service tier options now, kept it for backward compatibility
+    checkIfCanDowngrade vehicle = do
+      when
+        ( (vehicle.variant == SV.AUTO_RICKSHAW || vehicle.variant == SV.TAXI || vehicle.variant == SV.HATCHBACK)
+            && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)
+        )
+        $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
+      when (vehicle.variant == SV.SUV && req.canDowngradeToTaxi == Just True) $
+        throwError $ InvalidRequest $ "Can't downgrade to NON-AC TAXI from " <> (show vehicle.variant)
+      when
+        ( (vehicle.variant == SV.AUTO_RICKSHAW || vehicle.variant == SV.TAXI)
+            && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True || req.canDowngradeToTaxi == Just True)
+        )
+        $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
+      when (vehicle.variant == SV.SEDAN && (req.canDowngradeToSedan == Just True)) $
+        throwError $ InvalidRequest "Driver with sedan can't downgrade to sedan"
+      when (vehicle.variant == SV.TAXI_PLUS && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)) $
+        throwError $ InvalidRequest "Driver with TAXI_PLUS can't downgrade to either sedan or hatchback"
 
 updateMetaData ::
   ( CacheFlow m r,
@@ -802,10 +810,10 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) = do
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       bapMetadata <- CQSM.findById (Id searchRequest.bapId)
       isValueAddNP <- CQVAN.isValueAddNP searchRequest.bapId
-      farePolicy <- getFarePolicyByEstOrQuoteId searchRequest.merchantOperatingCityId searchTry.tripCategory searchTry.vehicleVariant searchRequest.area searchTry.estimateId (Just searchRequest.transactionId) (Just "transactionId")
+      farePolicy <- getFarePolicyByEstOrQuoteId searchRequest.merchantOperatingCityId searchTry.tripCategory searchTry.vehicleServiceTier searchRequest.area searchTry.estimateId (Just searchRequest.transactionId) (Just "transactionId")
       popupDelaySeconds <- DP.getPopupDelay merchantOpCityId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       let driverPickUpCharges = extractDriverPickupCharges farePolicy.farePolicyDetails
-      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) searchTry.vehicleVariant False isValueAddNP driverPickUpCharges -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) (castServiceTierToVariant searchTry.vehicleServiceTier) False isValueAddNP driverPickUpCharges -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -864,13 +872,14 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
     buildDriverQuote ::
       (MonadFlow m, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime) =>
       SP.Person ->
+      DST.SearchTry ->
       DSR.SearchRequest ->
       SearchRequestForDriver ->
       Text ->
       DTC.TripCategory ->
       Fare.FareParameters ->
       m DDrQuote.DriverQuote
-    buildDriverQuote driver searchReq sd estimateId tripCategory fareParams = do
+    buildDriverQuote driver searchTry searchReq sd estimateId tripCategory fareParams = do
       guid <- generateGUID
       now <- getCurrentTime
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
@@ -887,6 +896,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
             driverRating = SP.roundToOneDecimal <$> driver.rating,
             status = DDrQuote.Active,
             vehicleVariant = sd.vehicleVariant,
+            vehicleServiceTier = searchTry.vehicleServiceTier,
             distance = searchReq.estimatedDistance,
             distanceToPickup = sd.actualDistanceToPickup,
             durationToPickup = sd.durationToPickup,
@@ -906,8 +916,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
       activeQuotes <- QDrQt.findActiveQuotesByDriverId driverId driverUnlockDelay
       logDebug $ "active quotes for driverId = " <> driverId.getId <> show activeQuotes
       pure $ not $ null activeQuotes
-    getQuoteLimit dist vehicleVariant tripCategory txnId = do
-      driverPoolCfg <- DP.getDriverPoolConfig merchantOpCityId vehicleVariant tripCategory dist (Just txnId) (Just "transactionId")
+    getQuoteLimit dist vehicleServiceTier tripCategory txnId = do
+      driverPoolCfg <- DP.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory dist (Just txnId) (Just "transactionId")
       pure driverPoolCfg.driverQuoteLimit
 
     acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD = do
@@ -916,11 +926,11 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
           throwError (InternalError "SEARCH_TRY_CANCELLED")
         CS.markSearchTryAsAssigned searchTry.id
       logDebug $ "offered fare: " <> show req.offeredFare
-      quoteLimit <- getQuoteLimit searchReq.estimatedDistance searchTry.vehicleVariant searchTry.tripCategory searchReq.transactionId
+      quoteLimit <- getQuoteLimit searchReq.estimatedDistance searchTry.vehicleServiceTier searchTry.tripCategory searchReq.transactionId
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
       when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
 
-      farePolicy <- getFarePolicyByEstOrQuoteId merchantOpCityId searchTry.tripCategory sReqFD.vehicleVariant searchReq.area searchTry.estimateId (Just searchReq.transactionId) (Just "transactionId")
+      farePolicy <- getFarePolicyByEstOrQuoteId merchantOpCityId searchTry.tripCategory searchTry.vehicleServiceTier searchReq.area searchTry.estimateId (Just searchReq.transactionId) (Just "transactionId")
       let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
       whenJust req.offeredFare $ \off ->
         whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
@@ -946,7 +956,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
               ..
             }
       QFP.updateFareParameters fareParams
-      driverQuote <- buildDriverQuote driver searchReq sReqFD searchTry.estimateId searchTry.tripCategory fareParams
+      driverQuote <- buildDriverQuote driver searchTry searchReq sReqFD searchTry.estimateId searchTry.tripCategory fareParams
       void $ cacheFarePolicyByQuoteId driverQuote.id.getId farePolicy
       triggerQuoteEvent QuoteEventData {quote = driverQuote}
       void $ QDrQt.create driverQuote

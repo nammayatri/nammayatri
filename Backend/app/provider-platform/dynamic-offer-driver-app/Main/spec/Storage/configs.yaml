@@ -5,7 +5,7 @@ imports:
   PoolSortingType: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   Seconds: Kernel.Types.Common
   IndianState: Kernel.Types.Beckn.Context
-  Variant: Domain.Types.Vehicle
+  ServiceTierType: Domain.Types.VehicleServiceTier
 
 DriverPoolConfig:
   tableName: driver_pool_config
@@ -35,7 +35,7 @@ DriverPoolConfig:
     scheduleTryTimes: "[Int]"
     createdAt: UTCTime
     updatedAt: UTCTime
-    vehicleVariant: Maybe Variant
+    vehicleVariant: Maybe ServiceTierType
     tripCategory: Text
     thresholdToIgnoreActualDistanceThreshold: Maybe Meters
 

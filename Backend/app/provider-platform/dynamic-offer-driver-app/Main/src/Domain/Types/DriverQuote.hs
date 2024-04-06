@@ -26,6 +26,7 @@ import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchRequestForDriver
 import Domain.Types.SearchTry
 import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -51,6 +52,7 @@ data DriverQuote = DriverQuote
     driverRating :: Maybe Centesimal,
     status :: DriverQuoteStatus,
     vehicleVariant :: Variant.Variant,
+    vehicleServiceTier :: DVST.ServiceTierType,
     distance :: Maybe Meters,
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,

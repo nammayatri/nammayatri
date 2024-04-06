@@ -23,7 +23,6 @@ import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.Vehicle as VehVar
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -31,6 +30,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
+import SharedLogic.DriverPool.Types
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
 import qualified Storage.Queries.FareParameters as SQFP
@@ -43,20 +43,6 @@ findById (Id driverQuoteId) = findOneWithKV [Se.Is BeamDQ.id $ Se.Eq driverQuote
 
 setInactiveBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DST.SearchTry -> m ()
 setInactiveBySTId (Id searchTryId) = updateWithKV [Se.Set BeamDQ.status Domain.Inactive] [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
-
-findActiveQuoteByDriverIdAndVehVarAndEstimateId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DEstimate.Estimate -> Id Person -> VehVar.Variant -> UTCTime -> m (Maybe Domain.DriverQuote)
-findActiveQuoteByDriverIdAndVehVarAndEstimateId (Id estimateId) (Id driverId) vehicleVariant now =
-  findAllWithKVAndConditionalDB
-    [ Se.And
-        [ Se.Is BeamDQ.estimateId $ Se.Eq estimateId,
-          Se.Is BeamDQ.driverId $ Se.Eq driverId,
-          Se.Is BeamDQ.status $ Se.Eq Domain.Active,
-          Se.Is BeamDQ.vehicleVariant $ Se.Eq vehicleVariant,
-          Se.Is BeamDQ.validTill $ Se.GreaterThan $ T.utcToLocalTime T.utc now
-        ]
-    ]
-    Nothing
-    <&> listToMaybe
 
 setInactiveBySRId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DSR.SearchRequest -> m ()
 setInactiveBySRId (Id searchReqId) = updateWithKV [Se.Set BeamDQ.status Domain.Inactive] [Se.Is BeamDQ.requestId $ Se.Eq searchReqId]
@@ -122,6 +108,7 @@ instance FromTType' BeamDQ.DriverQuote DriverQuote where
             driverRating = driverRating,
             status = status,
             vehicleVariant = vehicleVariant,
+            vehicleServiceTier = fromMaybe (castVariantToServiceTier vehicleVariant) vehicleServiceTier,
             distance = distance,
             distanceToPickup = distanceToPickup,
             durationToPickup = durationToPickup,
@@ -150,6 +137,7 @@ instance ToTType' BeamDQ.DriverQuote DriverQuote where
         BeamDQ.driverRating = driverRating,
         BeamDQ.status = status,
         BeamDQ.vehicleVariant = vehicleVariant,
+        BeamDQ.vehicleServiceTier = Just vehicleServiceTier,
         BeamDQ.distance = distance,
         BeamDQ.distanceToPickup = distanceToPickup,
         BeamDQ.durationToPickup = durationToPickup,

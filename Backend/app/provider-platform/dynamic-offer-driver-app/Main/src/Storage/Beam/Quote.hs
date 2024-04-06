@@ -17,7 +17,7 @@ module Storage.Beam.Quote where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Common as DTC
-import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import qualified Kernel.Types.Common as Common
 import Tools.Beam.UtilsTH
@@ -26,7 +26,7 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
   { id :: B.C f Text,
     searchRequestId :: B.C f Text,
     providerId :: B.C f Text,
-    vehicleVariant :: B.C f Variant.Variant,
+    vehicleVariant :: B.C f DVST.ServiceTierType,
     estimatedFinishTime :: B.C f (Maybe UTCTime),
     tripCategory :: B.C f (Maybe DTC.TripCategory),
     distance :: B.C f (Maybe Common.Meters),

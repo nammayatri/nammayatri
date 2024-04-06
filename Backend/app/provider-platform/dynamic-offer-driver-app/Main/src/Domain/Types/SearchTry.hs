@@ -20,7 +20,7 @@ import qualified Domain.Types.Common as DTC
 import Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -37,7 +37,7 @@ data SearchTry = SearchTry
     messageId :: Text,
     startTime :: UTCTime,
     validTill :: UTCTime,
-    vehicleVariant :: Variant.Variant,
+    vehicleServiceTier :: DVST.ServiceTierType,
     baseFare :: Money,
     customerExtraFee :: Maybe Money,
     status :: SearchTryStatus,

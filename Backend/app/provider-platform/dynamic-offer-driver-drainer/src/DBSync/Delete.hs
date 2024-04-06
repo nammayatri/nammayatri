@@ -56,7 +56,6 @@ runDeleteCommands (cmd, val) dbStreamKey = do
     DeleteDBCommand id _ _ _ _ (FarePolicyProgressiveDetailsDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("FarePolicyProgressiveDetails" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (FarePolicyProgressiveDetailsPerExtraKmRateSectionDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("FarePolicyProgressiveDetailsPerExtraKmRateSection" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (FarePolicySlabDetailsSlabDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("FarePolicySlabDetailsSlab" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (RestrictedExtraFareDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("RestrictedExtraFare" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (FareProductDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("FareProduct" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (GeometryDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Geometry" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (CommentDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Comment" :: Text) =<< dbConf

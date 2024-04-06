@@ -29,6 +29,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationAddress as DLoc
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, (%~))
 import Kernel.External.Maps as Maps
@@ -314,8 +315,14 @@ mapVariantToVehicle variant = do
     VehVar.TAXI_PLUS -> CAB
     VehVar.AUTO_RICKSHAW -> AUTO_RICKSHAW
 
+getServiceTierType :: Spec.Item -> Maybe DVST.VehicleServiceTierType
+getServiceTierType item = item.itemDescriptor >>= (.descriptorCode) >>= (readMaybe . T.unpack)
+
 getServiceTierName :: Spec.Item -> Maybe Text
 getServiceTierName item = item.itemDescriptor >>= (.descriptorName)
+
+getServiceTierShortDesc :: Spec.Item -> Maybe Text
+getServiceTierShortDesc item = item.itemDescriptor >>= (.descriptorShortDesc)
 
 mkRideTrackingRedisKey :: Text -> Text
 mkRideTrackingRedisKey rideId = "RideTracking:" <> rideId

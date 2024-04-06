@@ -60,6 +60,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             vehicleColor = vehicleColor,
             vehicleModel = vehicleModel,
             vehicleNumber = vehicleNumber,
+            vehicleServiceTierType = vehicleServiceTierType,
             vehicleVariant = vehicleVariant
           }
 
@@ -102,5 +103,6 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.vehicleColor = vehicleColor,
         Beam.vehicleModel = vehicleModel,
         Beam.vehicleNumber = vehicleNumber,
+        Beam.vehicleServiceTierType = vehicleServiceTierType,
         Beam.vehicleVariant = vehicleVariant
       }

@@ -367,7 +367,7 @@ instance FromTType' BeamB.Booking Booking where
             estimatedFare = mkPrice currency estimatedFare,
             discount = mkPrice currency <$> discount,
             estimatedTotalFare = mkPrice currency estimatedTotalFare,
-            vehicleVariant = vehicleVariant,
+            vehicleServiceTierType = vehicleVariant,
             isScheduled = fromMaybe False isScheduled,
             bookingDetails = bookingDetails,
             tripTerms = tt,
@@ -380,6 +380,7 @@ instance FromTType' BeamB.Booking Booking where
             updatedAt = updatedAt,
             initialPickupLocation = initialPickupLocation,
             serviceTierName = serviceTierName,
+            serviceTierShortDesc = serviceTierShortDesc,
             paymentStatus = paymentStatus
           }
     where
@@ -454,7 +455,7 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.estimatedTotalFare = estimatedTotalFare.amount,
             BeamB.currency = Just estimatedFare.currency,
             BeamB.otpCode = otpCode,
-            BeamB.vehicleVariant = vehicleVariant,
+            BeamB.vehicleVariant = vehicleServiceTierType,
             BeamB.distance = distance,
             BeamB.tripTermsId = getId <$> (tripTerms <&> (.id)),
             BeamB.isScheduled = Just isScheduled,
@@ -467,6 +468,7 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.createdAt = createdAt,
             BeamB.updatedAt = updatedAt,
             BeamB.serviceTierName = serviceTierName,
+            BeamB.serviceTierShortDesc = serviceTierShortDesc,
             BeamB.paymentStatus = paymentStatus
           }
 

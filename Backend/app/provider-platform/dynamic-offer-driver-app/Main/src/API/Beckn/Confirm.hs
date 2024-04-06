@@ -39,6 +39,8 @@ import qualified SharedLogic.FarePolicy as SFP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Tools.Error
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -95,10 +97,11 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
 
     callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country = do
       context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
-      let vehicleCategory = Utils.mapVariantToVehicle dConfirmRes.vehicleVariant
+      let vehicleCategory = Utils.mapServiceTierToCategory dConfirmRes.booking.vehicleServiceTier
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dConfirmRes.booking.quoteId
-      let pricing = Utils.convertBookingToPricing dConfirmRes.booking
+      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId dConfirmRes.booking.vehicleServiceTier dConfirmRes.booking.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show dConfirmRes.booking.vehicleServiceTier))
+      let pricing = Utils.convertBookingToPricing vehicleServiceTierItem dConfirmRes.booking
           onConfirmMessage = ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig mbFarePolicy
       void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage becknConfig
 

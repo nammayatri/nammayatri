@@ -25,7 +25,7 @@ import qualified Domain.Types.RentalDetails as DRentalDetails
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
-import Domain.Types.VehicleVariant (VehicleVariant)
+import Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -42,15 +42,16 @@ data Quote = Quote
     providerId :: Text,
     providerUrl :: BaseUrl,
     itemId :: Text,
-    vehicleVariant :: VehicleVariant,
+    vehicleServiceTierType :: DVST.VehicleServiceTierType,
+    serviceTierName :: Maybe Text,
+    serviceTierShortDesc :: Maybe Text,
     tripTerms :: Maybe DTripTerms.TripTerms,
     quoteDetails :: QuoteDetails,
     merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
-    validTill :: UTCTime,
-    serviceTierName :: Maybe Text
+    validTill :: UTCTime
   }
   deriving (Generic, Show, PrettyShow)
 
@@ -70,7 +71,9 @@ newtype OneWayQuoteDetails = OneWayQuoteDetails
 
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
-    vehicleVariant :: VehicleVariant,
+    vehicleVariant :: DVST.VehicleServiceTierType,
+    serviceTierName :: Maybe Text,
+    serviceTierShortDesc :: Maybe Text,
     estimatedFare :: Money,
     estimatedTotalFare :: Money,
     discount :: Maybe Money,
@@ -85,8 +88,7 @@ data QuoteAPIEntity = QuoteAPIEntity
     agencyCompletedRidesCount :: Maybe Int,
     createdAt :: UTCTime,
     isValueAddNP :: Bool,
-    validTill :: UTCTime,
-    serviceTierName :: Maybe Text
+    validTill :: UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -151,5 +153,6 @@ makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
           estimatedFareWithCurrency = mkPriceAPIEntity estimatedFare,
           estimatedTotalFareWithCurrency = mkPriceAPIEntity estimatedTotalFare,
           discountWithCurrency = mkPriceAPIEntity <$> discount,
+          vehicleVariant = vehicleServiceTierType,
           ..
         }

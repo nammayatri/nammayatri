@@ -100,7 +100,9 @@ instance FromTType' BeamE.Estimate Estimate where
             providerName = providerName,
             providerMobileNumber = providerMobileNumber,
             providerCompletedRidesCount = providerCompletedRidesCount,
-            vehicleVariant = vehicleVariant,
+            vehicleServiceTierType = vehicleVariant,
+            serviceTierName = serviceTierName,
+            serviceTierShortDesc = serviceTierShortDesc,
             tripTerms = trip,
             estimateBreakupList = etB,
             nightShiftInfo =
@@ -118,8 +120,7 @@ instance FromTType' BeamE.Estimate Estimate where
             specialLocationTag = specialLocationTag,
             updatedAt = updatedAt,
             createdAt = createdAt,
-            validTill = validTill,
-            serviceTierName = serviceTierName
+            validTill = validTill
           }
 
 instance ToTType' BeamE.Estimate Estimate where
@@ -145,7 +146,9 @@ instance ToTType' BeamE.Estimate Estimate where
         BeamE.providerName = providerName,
         BeamE.providerMobileNumber = providerMobileNumber,
         BeamE.providerCompletedRidesCount = providerCompletedRidesCount,
-        BeamE.vehicleVariant = vehicleVariant,
+        BeamE.vehicleVariant = vehicleServiceTierType,
+        BeamE.serviceTierName = serviceTierName,
+        BeamE.serviceTierShortDesc = serviceTierShortDesc,
         BeamE.driversLocation = driversLocation,
         BeamE.tripTermsId = getId <$> (tripTerms <&> (.id)),
         BeamE.nightShiftCharge = nightShiftInfo <&> (.nightShiftCharge.amountInt),
@@ -159,6 +162,5 @@ instance ToTType' BeamE.Estimate Estimate where
         BeamE.specialLocationTag = specialLocationTag,
         BeamE.updatedAt = updatedAt,
         BeamE.createdAt = createdAt,
-        BeamE.validTill = validTill,
-        BeamE.serviceTierName = serviceTierName
+        BeamE.validTill = validTill
       }

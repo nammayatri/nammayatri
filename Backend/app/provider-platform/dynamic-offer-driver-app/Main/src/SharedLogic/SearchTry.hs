@@ -25,7 +25,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -97,16 +97,16 @@ initiateDriverSearchBatch ::
   DM.Merchant ->
   DSR.SearchRequest ->
   DTC.TripCategory ->
-  DVeh.Variant ->
+  DVST.ServiceTierType ->
   Text ->
   Maybe Money ->
   Text ->
   Bool ->
   m ()
-initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCategory vehicleVariant estOrQuoteId customerExtraFee messageId isRepeatSearch = do
-  farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory vehicleVariant searchReq.area estOrQuoteId (Just searchReq.transactionId) (Just "transactionId")
+initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCategory serviceTier estOrQuoteId customerExtraFee messageId isRepeatSearch = do
+  farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory serviceTier searchReq.area estOrQuoteId (Just searchReq.transactionId) (Just "transactionId")
   searchTry <- createNewSearchTry farePolicy searchReq.customerCancellationDues
-  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleVariant searchTry.tripCategory searchReq.estimatedDistance (Just searchReq.transactionId) (Just "transactionId")
+  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory searchReq.estimatedDistance (Just searchReq.transactionId) (Just "transactionId")
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just searchReq.transactionId) (Just "transactionId")
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
   let driverPickUpCharges = extractDriverPickupCharges farePolicy.farePolicyDetails
@@ -161,7 +161,7 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
           pureEstimatedFare = pureFareSum fareParams
       searchTry <- case mbLastSearchTry of
         Nothing -> do
-          searchTry <- buildSearchTry merchant.id searchReq estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory customerExtraFee messageId vehicleVariant
+          searchTry <- buildSearchTry merchant.id searchReq estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory customerExtraFee messageId serviceTier
           _ <- QST.create searchTry
           return searchTry
         Just oldSearchTry -> do
@@ -171,7 +171,7 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
                 | otherwise = DST.RETRIED
           unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
             throwError SearchTryEstimatedFareChanged
-          searchTry <- buildSearchTry merchant.id searchReq estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory customerExtraFee messageId vehicleVariant
+          searchTry <- buildSearchTry merchant.id searchReq estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory customerExtraFee messageId serviceTier
           when (oldSearchTry.status == DST.ACTIVE) $ do
             QST.updateStatus oldSearchTry.id DST.CANCELLED
             void $ QDQ.setInactiveBySTId oldSearchTry.id
@@ -200,15 +200,15 @@ buildSearchTry ::
   DTC.TripCategory ->
   Maybe Money ->
   Text ->
-  DVeh.Variant ->
+  DVST.ServiceTierType ->
   m DST.SearchTry
-buildSearchTry merchantId searchReq estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory customerExtraFee messageId vehicleVariant = do
+buildSearchTry merchantId searchReq estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory customerExtraFee messageId serviceTier = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   pure
     DST.SearchTry
       { id = id_,
-        vehicleVariant,
+        vehicleServiceTier = serviceTier,
         requestId = searchReq.id,
         estimateId = estOrQuoteId,
         merchantId = Just merchantId,

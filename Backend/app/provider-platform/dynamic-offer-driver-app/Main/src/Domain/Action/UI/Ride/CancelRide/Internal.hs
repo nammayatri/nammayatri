@@ -98,7 +98,7 @@ cancelRideImpl rideId bookingCReason = do
         if isRepeatSearch
           then do
             DP.addDriverToSearchCancelledList searchReq.id ride.driverId
-            result <- try @_ @SomeException (initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq driverQuote.tripCategory searchTry.vehicleVariant searchTry.estimateId searchTry.customerExtraFee searchTry.messageId isRepeatSearch)
+            result <- try @_ @SomeException (initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq driverQuote.tripCategory searchTry.vehicleServiceTier searchTry.estimateId searchTry.customerExtraFee searchTry.messageId isRepeatSearch)
             case result of
               Right _ -> do
                 if isValueAddNP

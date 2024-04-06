@@ -94,6 +94,8 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
   vehicle <- fulfillment.fulfillmentVehicle & fromMaybeM (InvalidRequest "Missing fulfillmentVehicle")
   let mbVariant = Utils.parseVehicleVariant vehicle.vehicleCategory vehicle.vehicleVariant
   let serviceTierName = Utils.getServiceTierName item
+  let serviceTierShortDesc = Utils.getServiceTierShortDesc item
+  let serviceTierType = Utils.getServiceTierType item
   vehicleVariant <- mbVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicleCategory:-" <> show vehicle.vehicleCategory <> ",vehicleVariant:-" <> show vehicle.vehicleVariant)
   let specialLocationTag = Utils.getTagV2 Tag.GENERAL_INFO Tag.SPECIAL_LOCATION_TAG =<< (Just item.itemTags)
   case parsedData order of

@@ -142,7 +142,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
                             { poolStage = DriverSelection,
                               driverPoolCfg = driverPoolCfg,
                               goHomeCfg = goHomeConfig,
-                              variant = Just searchTry.vehicleVariant,
+                              serviceTier = Just searchTry.vehicleServiceTier,
                               fromLocation = searchReq.fromLocation,
                               toLocation = toLoc, -- last or all ?
                               merchantId = searchReq.providerId,
@@ -289,7 +289,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
                       { poolStage = DriverSelection,
                         driverPoolCfg = driverPoolCfg,
                         goHomeCfg = goHomeConfig,
-                        variant = Just searchTry.vehicleVariant,
+                        serviceTier = Just searchTry.vehicleServiceTier,
                         fromLocation = searchReq.fromLocation,
                         toLocation = toLoc, -- last or all ?
                         merchantId = searchReq.providerId,
@@ -301,19 +301,19 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
             _ -> return []
 
         calcDriverPool poolType radiusStep merchantOpCityId = do
-          let vehicleVariant = searchTry.vehicleVariant
+          let serviceTier = searchTry.vehicleServiceTier
               merchantId = searchReq.providerId
           let pickupLoc = searchReq.fromLocation
           let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-          calculateDriverPoolWithActualDist DriverSelection poolType driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId merchantOpCityId True (Just radiusStep) (isRentalTrip searchTry.tripCategory)
+          calculateDriverPoolWithActualDist DriverSelection poolType driverPoolCfg (Just serviceTier) pickupLatLong merchantId merchantOpCityId True (Just radiusStep) (isRentalTrip searchTry.tripCategory)
         calcDriverCurrentlyOnRidePool poolType radiusStep transporterConfig merchantOpCityId = do
           let merchantId = searchReq.providerId
           if transporterConfig.includeDriverCurrentlyOnRide && (radiusStep - 1) > 0
             then do
-              let vehicleVariant = searchTry.vehicleVariant
+              let serviceTier = searchTry.vehicleServiceTier
               let pickupLoc = searchReq.fromLocation
               let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-              calculateDriverCurrentlyOnRideWithActualDist DriverSelection poolType driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId merchantOpCityId (Just $ radiusStep - 1) (isRentalTrip searchTry.tripCategory)
+              calculateDriverCurrentlyOnRideWithActualDist DriverSelection poolType driverPoolCfg (Just serviceTier) pickupLatLong merchantId merchantOpCityId (Just $ radiusStep - 1) (isRentalTrip searchTry.tripCategory)
             else pure []
         fillBatch merchantOpCityId allNearbyDrivers batch intelligentPoolConfig blockListedDrivers = do
           let batchDriverIds = batch <&> (.driverPoolResult.driverId)

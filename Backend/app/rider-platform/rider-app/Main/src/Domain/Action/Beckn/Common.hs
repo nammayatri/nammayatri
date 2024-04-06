@@ -26,6 +26,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
@@ -244,7 +245,8 @@ rideAssignedReqHandler req = do
             chargeableDistance = Nothing,
             traveledDistance = Nothing,
             driverArrivalTime = Nothing,
-            vehicleVariant = booking.vehicleVariant,
+            vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType, -- fix later
+            vehicleServiceTierType = Just booking.vehicleServiceTierType,
             createdAt = now,
             updatedAt = now,
             rideStartTime = Nothing,

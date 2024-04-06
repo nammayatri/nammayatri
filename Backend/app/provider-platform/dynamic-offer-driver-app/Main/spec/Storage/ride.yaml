@@ -7,7 +7,6 @@ imports:
   MediaFile: IssueManagement.Domain.Types.MediaFile
   Money: Kernel.Types.Common
   BaseUrl: Kernel.Types.Common
-  VehicleVariant: Domain.Types.VehicleVariant
   Booking: Domain.Types.Booking
   Person: Domain.Types.Person
   FareParameters: Domain.Types.FareParameters

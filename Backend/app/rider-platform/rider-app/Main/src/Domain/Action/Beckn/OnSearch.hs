@@ -44,6 +44,7 @@ import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant
 import Environment
 import Kernel.Beam.Functions
@@ -107,7 +108,9 @@ data EstimateInfo = EstimateInfo
     driversLocation :: [LatLong],
     specialLocationTag :: Maybe Text,
     validTill :: UTCTime,
-    serviceTierName :: Maybe Text
+    serviceTierName :: Maybe Text,
+    serviceTierType :: Maybe DVST.VehicleServiceTierType,
+    serviceTierShortDesc :: Maybe Text
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -140,7 +143,9 @@ data QuoteInfo = QuoteInfo
     descriptions :: [Text],
     specialLocationTag :: Maybe Text,
     validTill :: UTCTime,
-    serviceTierName :: Maybe Text
+    serviceTierName :: Maybe Text,
+    serviceTierType :: Maybe DVST.VehicleServiceTierType,
+    serviceTierShortDesc :: Maybe Text
   }
 
 data QuoteDetails
@@ -275,6 +280,8 @@ buildEstimate providerInfo now searchRequest EstimateInfo {..} = do
         providerUrl = providerInfo.url,
         estimatedDistance = searchRequest.distance,
         serviceTierName = serviceTierName,
+        vehicleServiceTierType = fromMaybe (DVST.castVariantToServiceTier vehicleVariant) serviceTierType,
+        serviceTierShortDesc = serviceTierShortDesc,
         estimatedDuration = searchRequest.estimatedRideDuration,
         device = searchRequest.device,
         createdAt = now,
@@ -326,6 +333,7 @@ buildQuote requestId providerInfo now searchRequest QuoteInfo {..} = do
         quoteDetails = quoteDetails',
         merchantId = searchRequest.merchantId,
         merchantOperatingCityId = searchRequest.merchantOperatingCityId,
+        vehicleServiceTierType = fromMaybe (DVST.castVariantToServiceTier vehicleVariant) serviceTierType,
         ..
       }
 

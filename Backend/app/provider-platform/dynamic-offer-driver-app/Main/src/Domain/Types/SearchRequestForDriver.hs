@@ -28,6 +28,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSSL
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -65,6 +66,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     straightLineDistanceToPickup :: Meters,
     durationToPickup :: Seconds,
     vehicleVariant :: Variant.Variant,
+    vehicleServiceTier :: Maybe DVST.ServiceTierType,
+    airConditioned :: Maybe Bool,
     status :: DriverSearchRequestStatus,
     batchNumber :: Int,
     lat :: Maybe Double,
@@ -118,6 +121,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     keepHiddenForSeconds :: Seconds,
     goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
     requestedVehicleVariant :: Variant.Variant,
+    vehicleServiceTier :: Maybe DVST.ServiceTierType,
+    airConditioned :: Maybe Bool,
     isTranslated :: Bool,
     customerCancellationDues :: HighPrecMoney,
     isValueAddNP :: Bool,
@@ -161,6 +166,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       pickupZone = nearbyReq.pickupZone,
       driverPickUpCharges = driverPickUpCharges,
       specialZoneExtraTip = min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation,
+      vehicleServiceTier = nearbyReq.vehicleServiceTier,
+      airConditioned = nearbyReq.airConditioned,
       ..
     }
 

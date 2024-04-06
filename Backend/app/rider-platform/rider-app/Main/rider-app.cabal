@@ -232,6 +232,7 @@ library
       Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
       Domain.Types.UtilsTH
+      Domain.Types.VehicleServiceTier
       Domain.Types.VehicleVariant
       Domain.Types.WhiteListOrg
       Environment

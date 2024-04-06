@@ -129,12 +129,13 @@ instance FromTType' BeamQ.Quote Quote where
             providerId = providerId,
             itemId = itemId,
             providerUrl = pUrl,
-            vehicleVariant = vehicleVariant,
+            vehicleServiceTierType = vehicleVariant,
+            serviceTierName = serviceTierName,
+            serviceTierShortDesc = serviceTierShortDesc,
             tripTerms = trip,
             specialLocationTag = specialLocationTag,
             createdAt = createdAt,
-            validTill = validTill,
-            serviceTierName = serviceTierName
+            validTill = validTill
           }
     where
       getRentalDetails rentalDetailsId' = do
@@ -177,7 +178,9 @@ instance ToTType' BeamQ.Quote Quote where
             BeamQ.itemId = itemId,
             BeamQ.providerUrl = showBaseUrl providerUrl,
             BeamQ.distanceToNearestDriver = distanceToNearestDriver,
-            BeamQ.vehicleVariant = vehicleVariant,
+            BeamQ.vehicleVariant = vehicleServiceTierType,
+            BeamQ.serviceTierName = serviceTierName,
+            BeamQ.serviceTierShortDesc = serviceTierShortDesc,
             BeamQ.tripTermsId = getId <$> (tripTerms <&> (.id)),
             BeamQ.rentalDetailsId = rentalDetailsId,
             BeamQ.driverOfferId = driverOfferId,
@@ -186,6 +189,5 @@ instance ToTType' BeamQ.Quote Quote where
             BeamQ.specialZoneQuoteId = specialZoneQuoteId,
             BeamQ.specialLocationTag = specialLocationTag,
             BeamQ.createdAt = createdAt,
-            BeamQ.validTill = validTill,
-            BeamQ.serviceTierName = serviceTierName
+            BeamQ.validTill = validTill
           }

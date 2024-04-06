@@ -21,7 +21,7 @@ import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Location as Domain
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Vehicle as Domain
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -57,15 +57,18 @@ bookingInfo merchantShortId opCity otpCode = do
           estimatedFare,
           estimatedDuration,
           riderName,
-          vehicleVariant = convertVehicleVariant vehicleVariant
+          vehicleVariant = convertVehicleVariant vehicleServiceTier
         }
 
-    convertVehicleVariant Domain.SEDAN = Common.SEDAN
-    convertVehicleVariant Domain.SUV = Common.SUV
-    convertVehicleVariant Domain.HATCHBACK = Common.HATCHBACK
-    convertVehicleVariant Domain.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
-    convertVehicleVariant Domain.TAXI = Common.TAXI
-    convertVehicleVariant Domain.TAXI_PLUS = Common.TAXI_PLUS
+    convertVehicleVariant DVST.SEDAN = Common.SEDAN
+    convertVehicleVariant DVST.SUV = Common.SUV
+    convertVehicleVariant DVST.HATCHBACK = Common.HATCHBACK
+    convertVehicleVariant DVST.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
+    convertVehicleVariant DVST.TAXI = Common.TAXI
+    convertVehicleVariant DVST.TAXI_PLUS = Common.TAXI_PLUS
+    convertVehicleVariant DVST.ECO = Common.HATCHBACK
+    convertVehicleVariant DVST.COMFY = Common.SEDAN
+    convertVehicleVariant DVST.PREMIUM = Common.SEDAN
 
     buildBookingLocation Domain.Location {..} =
       Common.Location
