@@ -1917,7 +1917,7 @@ tagview name =
   imageView
     [ width (V 16)
     , height (V 16)
-    , imageWithFallback $ fetchImage FF_ASSET name
+    , imageWithFallback name
     , margin $ Margin 4 4 4 3
     ]
 

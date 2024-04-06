@@ -57,6 +57,7 @@ import Timers (clearTimerWithId)
 import Debug
 import Foreign (unsafeToForeign)
 import Resource.Constants as Const
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -547,11 +548,11 @@ getTagImages (RidesInfo ride) =
   let
     tag = getRequiredTag ride.specialLocationTag
     conditionsAndTags = 
-      [ {condition: isJust ride.customerExtraFee, tag: "ny_ic_tip_ride_tag"}
-      , {condition: isJust ride.disabilityTag, tag: "ny_ic_disability_tag"}
-      , {condition: isJust ride.specialLocationTag && isJust tag, tag: "ny_ic_star"}
-      , {condition: isJust ride.driverGoHomeRequestId, tag: "ny_ic_goto_home_tag"}
-      , {condition: checkSpecialPickupZone ride.specialLocationTag, tag: "ny_ic_sp_zone_green"}
+      [ {condition: isJust ride.customerExtraFee, tag: fetchImage FF_ASSET "ny_ic_tip_ride_tag"}
+      , {condition: isJust ride.disabilityTag, tag: fetchImage FF_ASSET "ny_ic_disability_tag"}
+      , {condition: isJust ride.specialLocationTag && isJust tag, tag: fetchImage FF_ASSET "ny_ic_star"}
+      , {condition: isJust ride.driverGoHomeRequestId, tag: fetchImage FF_ASSET "ny_ic_goto_home_tag"}
+      , {condition: checkSpecialPickupZone ride.specialLocationTag, tag: fetchImage COMMON_ASSET "ny_ic_sp_zone_green"}
       ]
   in
     DA.concatMap (\{condition, tag} -> if condition then [tag] else []) conditionsAndTags

@@ -353,25 +353,25 @@ rideLabelConfig _ = [
       backgroundColor : "#2194FF",
       text : "Metro Pickup",
       secondaryText : "",
-      imageUrl : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
+      imageUrl : "ic_metro_white,https://assets.moving.tech/beckn/nammayatri/driver/images/ic_metro_white.png",
       cancelText : "ZONE_CANCEL_TEXT_PICKUP",
-      cancelConfirmImage : "ic_cancelride_metro_pickup,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_pickup.png"
+      cancelConfirmImage : "ic_cancelride_metro_pickup,https://assets.moving.tech/beckn/nammayatri/driver/images/ic_cancelride_metro_pickup.png"
     },
     { label : "SureMetro_Drop",
       backgroundColor : "#2194FF",
       text : "Metro Drop",
       secondaryText : "",
-      imageUrl : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
+      imageUrl : "ic_metro_white,https://assets.moving.tech/beckn/nammayatri/driver/images/ic_metro_white.png",
       cancelText : "ZONE_CANCEL_TEXT_DROP",
-      cancelConfirmImage : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
+      cancelConfirmImage : "ic_cancelride_metro_drop,https://assets.moving.tech/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
     },
     { label : "Accessibility",
       backgroundColor : "#9747FF",
       text : getString ASSISTANCE_REQUIRED,
       secondaryText : getString LEARN_MORE,
-      imageUrl : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
+      imageUrl : "ny_ic_wheelchair,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
       cancelText : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-      cancelConfirmImage : "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
+      cancelConfirmImage : "ic_cancel_prevention,https://assets.moving.tech/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
     },
     { label : "Safety",
       backgroundColor : Color.green900,
@@ -396,7 +396,7 @@ rideLabelConfig _ = [
       secondaryText : getString LEARN_MORE,
       imageUrl : "ny_ic_location_pin_white,",
       cancelText : "ZONE_CANCEL_TEXT_DROP",
-      cancelConfirmImage : "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
+      cancelConfirmImage : "ic_cancel_prevention,https://assets.moving.tech/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
     }
 ]
 
@@ -413,30 +413,30 @@ getMerchantVehicleSize unit =
 
 getAssetLink :: LazyCheck -> String
 getAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/driver/images/"
-  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/images/"
-  YATRI -> "https://assets.juspay.in/beckn/yatri/driver/images/"
-  MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/driver/"
-  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/driver/images"
-  MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/driver/images"
+  NAMMAYATRI -> "https://assets.moving.tech/beckn/nammayatri/driver/images/"
+  YATRISATHI -> "https://assets.moving.tech/beckn/jatrisaathi/driver/images/"
+  YATRI -> "https://assets.moving.tech/beckn/yatri/driver/images/"
+  MOBILITY_PM -> "https://assets.moving.tech/beckn/mobilitypaytm/driver/"
+  PASSCULTURE -> "https://assets.moving.tech/beckn/passculture/driver/images"
+  MOBILITY_RS -> "https://assets.moving.tech/beckn/passculture/driver/images"
 
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/driver/"
-  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/"
-  YATRI -> "https://assets.juspay.in/beckn/yatri/driver/"
-  MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/"
-  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/driver"
-  MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/driver"
+  NAMMAYATRI -> "https://assets.moving.tech/beckn/nammayatri/driver/"
+  YATRISATHI -> "https://assets.moving.tech/beckn/jatrisaathi/driver/"
+  YATRI -> "https://assets.moving.tech/beckn/yatri/driver/"
+  MOBILITY_PM -> "https://assets.moving.tech/beckn/mobilitypaytm/"
+  PASSCULTURE -> "https://assets.moving.tech/beckn/passculture/driver"
+  MOBILITY_RS -> "https://assets.moving.tech/beckn/passculture/driver"
 
 getCommonAssetLink :: LazyCheck -> String
 getCommonAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
-  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
-  YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
-  MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
-  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
-  MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
+  NAMMAYATRI -> "https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/"
+  YATRISATHI -> "https://assets.moving.tech/beckn/jatrisaathi/jatrisaathicommon/images/"
+  YATRI -> "https://assets.moving.tech/beckn/yatri/yatricommon/images/"
+  MOBILITY_PM -> "https://assets.moving.tech/beckn/mobilitypaytm/mobilitypaytmcommon/"
+  PASSCULTURE -> "https://assets.moving.tech/beckn/passculture/passculturecommon/"
+  MOBILITY_RS -> "https://assets.moving.tech/beckn/passculture/passculturecommon/"
 
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName =   
@@ -445,8 +445,10 @@ fetchImage fetchImageFrom imageName =
     case fetchImageFrom of
       FF_ASSET -> imageName <> "," <> (getAssetLink FunctionCall) <> imageName <> ".png"
       FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
+      COMMON_ASSET -> imageName <> "," <> "https://assets.moving.tech/beckn/common/driver/images" <> imageName <> ".png"
+      GLOBAL_COMMON_ASSET -> imageName <> "," <> "https://assets.moving.tech/beckn/common/common/images" <> imageName <> ".png"
 
-data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET
+data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET | COMMON_ASSET | GLOBAL_COMMON_ASSET
 
 derive instance genericFetchImageFrom :: Generic FetchImageFrom _
 instance eqFetchImageFrom :: Eq FetchImageFrom where eq = genericEq

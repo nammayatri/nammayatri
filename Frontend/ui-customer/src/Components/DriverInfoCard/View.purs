@@ -576,7 +576,7 @@ driverInfoView push state =
                   , height (V 15)
                   , margin (MarginRight 6)
                   , accessibility DISABLE
-                  , imageWithFallback $ fetchImage FF_COMMON_ASSET tagConfig.icon
+                  , imageWithFallback $ fetchImage COMMON_ASSET tagConfig.icon
                   ]
                 , textView
                   [ width WRAP_CONTENT
@@ -592,7 +592,7 @@ driverInfoView push state =
                   , height (V 18)
                   , visibility $ boolToVisibility $ isJust tagConfig.infoPopUpConfig
                   , margin (MarginLeft 6)
-                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_info"
+                  , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_white_info"
                   ]
                 ]
               , linearLayout

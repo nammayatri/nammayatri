@@ -376,7 +376,7 @@ paymentPendingView push state = let isAutoPayPending = state.props.lastPaymentTy
           textFromHtml $ getString NEED_HELP
         ] <> FontStyle.tags TypoGraphy
         , imageView [
-          imageWithFallback "ny_ic_phone_filled_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_filled_blue.png"
+          imageWithFallback "ny_ic_phone_filled_blue,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_phone_filled_blue.png"
           , height $ V 12
           , width $ V 12
           , margin $ Margin 2 1 2 0
@@ -446,7 +446,7 @@ plansBottomView push state =
               , visibility GONE
               ] <> FontStyle.body1 TypoGraphy 
             , imageView [
-                imageWithFallback "ny_ic_youtube,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_youtube.png"
+                imageWithFallback "ny_ic_youtube,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_youtube.png"
                 , height $ V 16
                 , width $ V 16
                 , margin $ Margin 0 3 6 0
@@ -962,8 +962,8 @@ duesView push state =
                 , weight 1.0
                 ] <> FontStyle.tags TypoGraphy
             , commonImageView (  if state.props.myPlanProps.multiTypeDues then "ny_ic_chevron_right"
-                                  else if state.props.myPlanProps.isDuesExpanded then "ny_ic_chevron_up,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_up.png"
-                                  else "ny_ic_chevron_down,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_down.png") 12 12 (MarginRight 4) (Padding 0 0 0 0)
+                                  else if state.props.myPlanProps.isDuesExpanded then "ny_ic_chevron_up,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_up.png"
+                                  else "ny_ic_chevron_down,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_down.png") 12 12 (MarginRight 4) (Padding 0 0 0 0)
             ]
           , tripList push state.data.myPlanData.dueItems (state.data.myPlanData.manualDueAmount /= 0.0) state.props.myPlanProps.isDuesExpanded true true
         ] 

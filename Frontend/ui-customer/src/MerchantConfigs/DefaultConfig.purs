@@ -43,7 +43,7 @@ config =
     , noQuotesImageWidth : 137
     , separatorColor : "#00FFFFFF"
     , showSeparator : false
-    , closeIcon : "ny_ic_close_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_close_white.png"
+    , closeIcon : "ny_ic_close_white,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_close_white.png"
     }
   , searchLocationConfig : 
     { searchLocationTheme: "#2C2F3A"
@@ -64,7 +64,7 @@ config =
     , hintColor : "#A7A7A7"
     , showSeparator : false
     , showChargeDesc: false
-    , backArrow : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
+    , backArrow : "ny_ic_chevron_left_white,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
     , enableRateCard: true
     , clearTextImage: "ny_ic_close_grey"
     }
@@ -86,7 +86,7 @@ config =
     , showTrackingButton : true
     , specialZoneQuoteExpirySeconds : 3600
     , footerVisibility : false
-    , footerImageUrl : "ic_namma_yatri_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ic_namma_yatri_logo.png"
+    , footerImageUrl : "ic_namma_yatri_logo,https://assets.moving.tech/beckn/nammayatri/user/images/ic_namma_yatri_logo.png"
     , footerBackgroundColor : "#FFFFFF"
     }
   , ratingConfig : 
@@ -115,23 +115,23 @@ config =
       , titleColor :"#21C179"
       , actionText : "Update now"
       , actionTextColor : "#27AE5F"
-      , imageUrl : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
+      , imageUrl : "ny_ic_banner_gender_feat,https://assets.moving.tech/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
       }
   , popupBackground : "#FFFFFF"
   , profileCompletion : "#FCC32C"
   , showProfileStatus: true
-  , profileArrowImage: "ny_ic_chevron_right_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_right_white.png"
+  , profileArrowImage: "ny_ic_chevron_right_white,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_chevron_right_white.png"
   , cancelRideColor : "#E55454"
-  , infoIconUrl : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png"
+  , infoIconUrl : "ny_ic_info,https://assets.moving.tech/beckn/common/user/ny_ic_information_grey.png"
   , profileEditGravity : "center"
-  , merchantLogo : "ic_launcher,https://assets.juspay.in/nammayatri/images/user/ny_ic_launcher.png"
+  , merchantLogo : "ic_launcher,https://assets.moving.tech/beckn/common/user/ny_ic_launcher.png"
   , logs: [ "JUSPAY" ]
   , showCorporateAddress : true
   , terminateBtnConfig : {
           visibility: false, 
           title : "",
           backgroundColor : "#00FFFFFF",
-          imageUrl : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
+          imageUrl : "ny_ic_chevron_left_double,https://assets.moving.tech/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
       }
   , suggestedTripsAndLocationConfig : {
         geohashLimitForMap : 60,
@@ -175,27 +175,27 @@ config =
       , variantInfo : {
         hatchback : {
           name : "Hatchback",
-          image : "ny_ic_hatchback,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_hatchback-2.png"
+          image : "ny_ic_hatchback,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_hatchback-2.png"
           },
         taxiPlus : {
           name : "AC Taxi",
-          image : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan_ac.png"
+          image : "ny_ic_sedan_ac,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_sedan_ac.png"
         },
         sedan : {
           name : "Sedan",
-          image : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
+          image : "ny_ic_sedan,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_sedan.png"
         },
         taxi : {
           name : "Non-AC Taxi",
-          image : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
+          image : "ny_ic_sedan,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_sedan.png"
         },
         suv : {
           name : "SUV",
-          image : "ny_ic_suv,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_suv.png"
+          image : "ny_ic_suv,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv.png"
         },
         autoRickshaw : {
           name : "Auto Rickshaw",
-          image : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_quote_list.png"
+          image : "ny_ic_auto_quote_list,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_auto_quote_list.png"
         }
 
       }
@@ -204,7 +204,7 @@ config =
       , enableBookingPreference: false
       , textColor: "#6D7280"
       , showInfoIcon : true 
-      , genericLoaderLottie : "https://assets.juspay.in/beckn/nammayatri/user/lottie/ny_ic_generic_loader.json"
+      , genericLoaderLottie : "https://assets.moving.tech/beckn/nammayatri/user/lottie/ny_ic_generic_loader.json"
       }
   , customerTip : {
       auto : true,
