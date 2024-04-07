@@ -19,6 +19,10 @@ Toll:
     createdAt : UTCTime
     updatedAt : UTCTime
 
+  sqlType:
+    tollStartGates: text[]
+    tollEndGates: text[]
+
   constraints:
     id: PrimaryKey
 
