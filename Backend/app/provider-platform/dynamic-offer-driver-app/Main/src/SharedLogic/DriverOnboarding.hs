@@ -15,27 +15,33 @@
 module SharedLogic.DriverOnboarding where
 
 import Control.Applicative ((<|>))
+import qualified Data.List as DL
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
+import qualified Data.Time.Calendar.OrdinalDate as TO
+import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverRCAssociation
 import Domain.Types.IdfyVerification
+import qualified Domain.Types.IdfyVerification as DIV
 import qualified Domain.Types.Image as Domain
 import qualified Domain.Types.Merchant as DTM
 import qualified Domain.Types.Merchant.MerchantMessage as DMM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person
+import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Vehicle
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
-import Kernel.External.Encryption (decrypt)
+import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
+import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -47,6 +53,12 @@ import qualified Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Ticket as TT
 import Tools.Whatsapp as Whatsapp
+
+driverDocumentTypes :: [DVC.DocumentType]
+driverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto]
+
+vehicleDocumentTypes :: [DVC.DocumentType]
+vehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.SubscriptionPlan]
 
 notifyErrorToSupport ::
   Person ->
@@ -191,8 +203,17 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
       ..
     }
 
-makeVehicleFromRC :: UTCTime -> Id Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> Vehicle
-makeVehicleFromRC now driverId merchantId certificateNumber rc merchantOpCityId =
+makeFullVehicleFromRC :: [DVST.VehicleServiceTier] -> DI.DriverInformation -> Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Vehicle
+makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now = do
+  let vehicle = makeVehicleFromRC driver.id merchantId_ certificateNumber rc merchantOpCityId now
+  let availableServiceTiersForDriver = (.serviceTierType) <$> selectVehicleTierForDriver driver driverInfo vehicle vehicleServiceTiers
+  addSelectedServiceTiers availableServiceTiersForDriver vehicle
+  where
+    addSelectedServiceTiers :: [DVST.ServiceTierType] -> Vehicle -> Vehicle
+    addSelectedServiceTiers serviceTiers Vehicle {..} = Vehicle {selectedServiceTiers = serviceTiers, ..}
+
+makeVehicleFromRC :: Id Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Vehicle
+makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now = do
   Vehicle
     { driverId,
       capacity = rc.vehicleCapacity,
@@ -212,12 +233,171 @@ makeVehicleFromRC now driverId merchantId certificateNumber rc merchantOpCityId 
       airConditioned = rc.airConditioned,
       luggageCapacity = rc.luggageCapacity,
       vehicleRating = rc.vehicleRating,
+      selectedServiceTiers = [],
       createdAt = now,
       updatedAt = now
     }
 
 makeVehicleAPIEntity :: Vehicle -> VehicleAPIEntity
 makeVehicleAPIEntity Vehicle {..} = VehicleAPIEntity {..}
+
+data CreateRCInput = CreateRCInput
+  { registrationNumber :: Maybe Text,
+    fitnessUpto :: Maybe UTCTime,
+    fleetOwnerId :: Maybe Text,
+    vehicleCategory :: Maybe Category,
+    documentImageId :: Id Domain.Image,
+    vehicleClass :: Maybe Text,
+    vehicleClassCategory :: Maybe Text,
+    insuranceValidity :: Maybe UTCTime,
+    seatingCapacity :: Maybe Int,
+    permitValidityUpto :: Maybe UTCTime,
+    pucValidityUpto :: Maybe UTCTime,
+    manufacturer :: Maybe Text,
+    manufacturerModel :: Maybe Text,
+    bodyType :: Maybe Text,
+    fuelType :: Maybe Text,
+    color :: Maybe Text
+  }
+
+buildRC :: Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> Flow (Maybe VehicleRegistrationCertificate)
+buildRC merchantId merchantOperatingCityId input = do
+  now <- getCurrentTime
+  id <- generateGUID
+  rCConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId DVC.VehicleRegistrationCertificate (fromMaybe CAR input.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOperatingCityId.getId (show DVC.VehicleRegistrationCertificate))
+  mEncryptedRC <- encrypt `mapM` input.registrationNumber
+  let mbFitnessEpiry = input.fitnessUpto <|> input.permitValidityUpto <|> Just (UTCTime (TO.fromOrdinalDate 1900 1) 0)
+  return $ createRC merchantId merchantOperatingCityId input rCConfigs id now <$> mEncryptedRC <*> mbFitnessEpiry
+
+createRC ::
+  Id DTM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  CreateRCInput ->
+  DVC.DocumentVerificationConfig ->
+  Id VehicleRegistrationCertificate ->
+  UTCTime ->
+  EncryptedHashedField 'AsEncrypted Text ->
+  UTCTime ->
+  VehicleRegistrationCertificate
+createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNumber expiry = do
+  let (verificationStatus, reviewRequired, variant, mbVehicleModel) = validateRCStatus input rcconfigs now expiry
+  VehicleRegistrationCertificate
+    { id,
+      documentImageId = input.documentImageId,
+      certificateNumber,
+      fitnessExpiry = expiry,
+      permitExpiry = input.permitValidityUpto,
+      pucExpiry = input.pucValidityUpto,
+      vehicleClass = input.vehicleClass,
+      vehicleVariant = variant,
+      vehicleManufacturer = input.manufacturer <|> input.manufacturerModel,
+      vehicleCapacity = input.seatingCapacity,
+      vehicleModel = mbVehicleModel,
+      vehicleColor = input.color,
+      manufacturerModel = input.manufacturerModel,
+      vehicleEnergyType = input.fuelType,
+      reviewedAt = Nothing,
+      reviewRequired,
+      insuranceValidity = input.insuranceValidity,
+      verificationStatus,
+      fleetOwnerId = input.fleetOwnerId,
+      merchantId = Just merchantId,
+      merchantOperatingCityId = Just merchantOperatingCityId,
+      userPassedVehicleCategory = input.vehicleCategory,
+      airConditioned = Nothing,
+      luggageCapacity = Nothing,
+      vehicleRating = Nothing,
+      failedRules = [],
+      createdAt = now,
+      updatedAt = now
+    }
+
+validateRCStatus :: CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> (DIV.VerificationStatus, Maybe Bool, Maybe Variant, Maybe Text)
+validateRCStatus input rcconfigs now expiry = do
+  case rcconfigs.supportedVehicleClasses of
+    DVC.RCValidClasses [] -> (DIV.INVALID, Nothing, Nothing, Nothing)
+    DVC.RCValidClasses vehicleClassVariantMap -> do
+      let validCOVsCheck = rcconfigs.vehicleClassCheckType
+      let (isCOVValid, reviewRequired, variant, mbVehicleModel) = maybe (False, Nothing, Nothing, Nothing) (isValidCOVRC input.vehicleClassCategory input.seatingCapacity input.manufacturer input.bodyType input.manufacturerModel vehicleClassVariantMap validCOVsCheck) (input.vehicleClass <|> input.vehicleClassCategory)
+      let validInsurance = True -- (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
+      if ((not rcconfigs.checkExpiry) || now < expiry) && isCOVValid && validInsurance then (DIV.VALID, reviewRequired, variant, mbVehicleModel) else (DIV.INVALID, reviewRequired, variant, mbVehicleModel)
+    _ -> (DIV.INVALID, Nothing, Nothing, Nothing)
+
+isValidCOVRC :: Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> [DVC.VehicleClassVariantMap] -> DVC.VehicleClassCheckType -> Text -> (Bool, Maybe Bool, Maybe Variant, Maybe Text)
+isValidCOVRC mVehicleCategory capacity manufacturer bodyType manufacturerModel vehicleClassVariantMap validCOVsCheck cov = do
+  let sortedVariantMap = sortMaybe vehicleClassVariantMap
+  let vehicleClassVariant = DL.find checkIfMatch sortedVariantMap
+  case vehicleClassVariant of
+    Just obj -> (True, obj.reviewRequired, Just obj.vehicleVariant, obj.vehicleModel)
+    Nothing -> (False, Nothing, Nothing, Nothing)
+  where
+    checkIfMatch obj = do
+      let classMatched = classCheckFunction validCOVsCheck (T.toUpper obj.vehicleClass) (T.toUpper cov)
+      let categoryMatched = maybe False (classCheckFunction validCOVsCheck (T.toUpper obj.vehicleClass) . T.toUpper) mVehicleCategory
+      let capacityMatched = capacityCheckFunction obj.vehicleCapacity capacity
+      let manufacturerMatched = manufacturerCheckFunction obj.manufacturer manufacturer
+      let manufacturerModelMatched = manufacturerModelCheckFunction obj.manufacturerModel manufacturerModel
+      let bodyTypeMatched = bodyTypeCheckFunction obj.bodyType bodyType
+      (classMatched || categoryMatched) && capacityMatched && manufacturerMatched && manufacturerModelMatched && bodyTypeMatched
+
+-- capacityCheckFunction validCapacity rcCapacity
+capacityCheckFunction :: Maybe Int -> Maybe Int -> Bool
+capacityCheckFunction (Just a) (Just b) = a == b
+capacityCheckFunction Nothing (Just _) = True
+capacityCheckFunction Nothing Nothing = True
+capacityCheckFunction _ _ = False
+
+manufacturerCheckFunction :: Maybe Text -> Maybe Text -> Bool
+manufacturerCheckFunction (Just a) (Just b) = T.isInfixOf (T.toUpper a) (T.toUpper b)
+manufacturerCheckFunction Nothing (Just _) = True
+manufacturerCheckFunction Nothing Nothing = True
+manufacturerCheckFunction _ _ = False
+
+manufacturerModelCheckFunction :: Maybe Text -> Maybe Text -> Bool
+manufacturerModelCheckFunction (Just a) (Just b) = T.isInfixOf (T.toUpper a) (T.toUpper b)
+manufacturerModelCheckFunction Nothing (Just _) = True
+manufacturerModelCheckFunction Nothing Nothing = True
+manufacturerModelCheckFunction _ _ = False
+
+bodyTypeCheckFunction :: Maybe Text -> Maybe Text -> Bool
+bodyTypeCheckFunction (Just a) (Just b) = T.isInfixOf (T.toUpper a) (T.toUpper b)
+bodyTypeCheckFunction Nothing (Just _) = True
+bodyTypeCheckFunction Nothing Nothing = True
+bodyTypeCheckFunction _ _ = False
+
+classCheckFunction :: DVC.VehicleClassCheckType -> Text -> Text -> Bool
+classCheckFunction validCOVsCheck =
+  case validCOVsCheck of
+    DVC.Infix -> T.isInfixOf
+    DVC.Prefix -> T.isPrefixOf
+    DVC.Suffix -> T.isSuffixOf
+
+compareMaybe :: Ord a => Maybe a -> Maybe a -> Ordering
+compareMaybe Nothing Nothing = EQ
+compareMaybe Nothing _ = GT
+compareMaybe _ Nothing = LT
+compareMaybe (Just x) (Just y) = compare x y
+
+compareVehicles :: DVC.VehicleClassVariantMap -> DVC.VehicleClassVariantMap -> Ordering
+compareVehicles a b =
+  compareMaybe a.manufacturer b.manufacturer
+    `mappend` compareMaybe a.manufacturerModel b.manufacturerModel
+    `mappend` compareMaybe a.vehicleCapacity b.vehicleCapacity
+
+-- Function to sort list of Maybe values
+sortMaybe :: [DVC.VehicleClassVariantMap] -> [DVC.VehicleClassVariantMap]
+sortMaybe = DL.sortBy compareVehicles
+
+removeSpaceAndDash :: Text -> Text
+removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
+
+convertTextToUTC :: Maybe Text -> Maybe UTCTime
+convertTextToUTC a = do
+  a_ <- a
+  parseTimeM True defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
+
+convertUTCTimetoDate :: UTCTime -> Text
+convertUTCTimetoDate utctime = T.pack (formatTime defaultTimeLocale "%d/%m/%Y" utctime)
 
 getCategory :: Variant -> Category
 getCategory SEDAN = CAR

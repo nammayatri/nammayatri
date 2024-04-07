@@ -67,6 +67,7 @@ import qualified Domain.Types.Person as DP
 import Domain.Types.RiderDetails (RiderDetails)
 import Domain.Types.SearchRequest
 import Domain.Types.SearchTry
+import Domain.Types.ServiceTierType as DVST
 import Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B

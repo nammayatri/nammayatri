@@ -25,3 +25,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle ADD PRIMARY KEY ( driver_id);
 ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN vehicle_rating double precision ;
 ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN luggage_capacity integer ;
 ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN air_conditioned boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN selected_service_tiers text[] NOT NULL default '{}';

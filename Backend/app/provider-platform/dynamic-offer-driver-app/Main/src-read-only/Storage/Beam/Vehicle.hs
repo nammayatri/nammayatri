@@ -6,6 +6,7 @@
 module Storage.Beam.Vehicle where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -25,6 +26,7 @@ data VehicleT f = VehicleT
     model :: B.C f Kernel.Prelude.Text,
     registrationCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.RegistrationCategory),
     registrationNo :: B.C f Kernel.Prelude.Text,
+    selectedServiceTiers :: B.C f [Domain.Types.ServiceTierType.ServiceTierType],
     size :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     variant :: B.C f Domain.Types.Vehicle.Variant,
     vehicleClass :: B.C f Kernel.Prelude.Text,

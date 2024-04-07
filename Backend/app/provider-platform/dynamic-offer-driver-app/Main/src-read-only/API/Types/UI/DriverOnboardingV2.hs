@@ -5,7 +5,7 @@ module API.Types.UI.DriverOnboardingV2 where
 
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.DocumentVerificationConfig
-import qualified Domain.Types.VehicleServiceTier
+import qualified Domain.Types.ServiceTierType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -43,7 +43,7 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     name :: Kernel.Prelude.Text,
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    serviceTierType :: Domain.Types.VehicleServiceTier.ServiceTierType,
+    serviceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
     shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }

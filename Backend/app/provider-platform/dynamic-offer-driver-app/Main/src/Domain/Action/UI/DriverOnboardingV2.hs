@@ -9,6 +9,7 @@ import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person
+import Domain.Types.ServiceTierType
 import qualified Domain.Types.Vehicle as DTV
 import Domain.Types.VehicleServiceTier
 import qualified Environment
@@ -47,9 +48,10 @@ getOnboardingConfigs ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
     ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
   )
-getOnboardingConfigs (mbPersonId, _, merchanOperatingCityId) = do
+getOnboardingConfigs (mbPersonId, _, merchanOperatingCityId) mbOnlyVehicle = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound "No person found")
   let personLangauge = fromMaybe ENGLISH person.language
@@ -57,9 +59,9 @@ getOnboardingConfigs (mbPersonId, _, merchanOperatingCityId) = do
   autoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchanOperatingCityId DTV.AUTO_CATEGORY
   bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchanOperatingCityId DTV.MOTORCYCLE
 
-  cabConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) cabConfigsRaw
-  autoConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) autoConfigsRaw
-  bikeConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) bikeConfigsRaw
+  cabConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments cabConfigsRaw)
+  autoConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments autoConfigsRaw)
+  bikeConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments bikeConfigsRaw)
 
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
@@ -71,6 +73,12 @@ getOnboardingConfigs (mbPersonId, _, merchanOperatingCityId) = do
     toMaybe :: [a] -> Kernel.Prelude.Maybe [a]
     toMaybe [] = Kernel.Prelude.Nothing
     toMaybe xs = Kernel.Prelude.Just xs
+
+    filterVehicleDocuments :: [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig] -> [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig]
+    filterVehicleDocuments docs =
+      if mbOnlyVehicle == Just True
+        then filter (\Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} -> documentType `elem` vehicleDocumentTypes) docs
+        else docs
 
 getDriverVehicleServiceTiers ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -91,7 +99,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchanOperatingCityId) = do
   let tierOptions =
         driverVehicleServiceTierTypes <&> \VehicleServiceTier {..} -> do
           API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier
-            { isSelected = serviceTierType `elem` driverInfo.selectedServiceTiers,
+            { isSelected = serviceTierType `elem` vehicle.selectedServiceTiers,
               isDefault = vehicle.variant `elem` defaultForVehicleVariant,
               ..
             }
@@ -129,6 +137,6 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchanOperatingCityId) API.Types.U
   when (any (\tier -> tier.serviceTierType `elem` (map (.serviceTierType) driverVehicleServiceTierTypes)) tiers) $
     throwError $ InvalidRequest "Drive can't select a service tier that is not available"
 
-  QDI.updateSelectedServiceTiers (catMaybes mbSelectedServiceTiers) personId
+  QVehicle.updateSelectedServiceTiers (catMaybes mbSelectedServiceTiers) personId
 
   return Success

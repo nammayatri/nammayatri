@@ -98,7 +98,6 @@ library
       API.UI.RideSummary
       API.UI.Route
       API.UI.Transporter
-      API.UI.Vehicle
       API.UI.Whatsapp
       App
       App.Server
@@ -204,7 +203,6 @@ library
       Domain.Action.UI.Route
       Domain.Action.UI.SpecialLocation
       Domain.Action.UI.Transporter
-      Domain.Action.UI.Vehicle
       Domain.Action.UI.Whatsapp
       Domain.Types.Beckn.Status
       Domain.Types.BlackListOrg
@@ -281,6 +279,7 @@ library
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
+      Domain.Types.ServiceTierType
       Domain.Types.UtilsTH
       Domain.Types.WhiteListOrg
       Environment

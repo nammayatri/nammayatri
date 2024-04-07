@@ -6,8 +6,8 @@ module Domain.Types.VehicleServiceTier where
 
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Vehicle
-import qualified EulerHS.Prelude
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -25,24 +25,10 @@ data VehicleServiceTier = VehicleServiceTier
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Text,
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    serviceTierType :: Domain.Types.VehicleServiceTier.ServiceTierType,
+    serviceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
     shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data ServiceTierType
-  = COMFY
-  | ECO
-  | PREMIUM
-  | SUV
-  | AUTO_RICKSHAW
-  | HATCHBACK
-  | SEDAN
-  | TAXI
-  | TAXI_PLUS
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierType)

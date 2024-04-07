@@ -30,7 +30,6 @@ IdfyVerification:
     imageExtractionValidation: ImageExtractionValidation
     idfyResponse: Maybe Text
     multipleRC: Maybe Bool
-    dashboardPassedVehicleVariant: Maybe Variant
     retryCount: Maybe Int
     nameOnCard: Maybe Text
   beamInstance: MakeTableInstancesWithTModifier [("multipleRC", "multiple_r_c")]

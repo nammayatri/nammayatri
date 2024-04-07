@@ -118,7 +118,6 @@ registerRC merchantShortId opCity driverId_ Common.RegisterRCReq {..} = do
           ..
         }
     )
-    Nothing
 
 generateAadhaarOtp :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.GenerateAadhaarOtpReq -> Flow Common.GenerateAadhaarOtpRes
 generateAadhaarOtp merchantShortId opCity driverId_ req = do

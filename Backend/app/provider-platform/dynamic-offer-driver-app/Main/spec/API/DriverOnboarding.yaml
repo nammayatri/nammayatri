@@ -2,7 +2,7 @@ imports:
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
   DocumentVerificationConfig: Domain.Types.DocumentVerificationConfig
   DocumentType: Domain.Types.DocumentVerificationConfig
-  ServiceTierType: Domain.Types.VehicleServiceTier
+  ServiceTierType: Domain.Types.ServiceTierType
   APISuccess: Kernel.Types.APISuccess
   Centesimal: Kernel.Types.Common
 
@@ -44,6 +44,8 @@ types:
 apis:
   - GET:
       endpoint: /onboarding/configs
+      query:
+        onlyVehicle: Bool
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: DocumentVerificationConfigList

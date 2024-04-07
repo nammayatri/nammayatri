@@ -8,6 +8,7 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.ServiceTierType
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
@@ -26,6 +27,7 @@ data Vehicle = Vehicle
     model :: Kernel.Prelude.Text,
     registrationCategory :: Kernel.Prelude.Maybe Domain.Types.Vehicle.RegistrationCategory,
     registrationNo :: Kernel.Prelude.Text,
+    selectedServiceTiers :: [Domain.Types.ServiceTierType.ServiceTierType],
     size :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     variant :: Domain.Types.Vehicle.Variant,
     vehicleClass :: Kernel.Prelude.Text,

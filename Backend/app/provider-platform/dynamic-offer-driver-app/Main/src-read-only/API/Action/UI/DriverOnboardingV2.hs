@@ -20,7 +20,13 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "onboarding" :> "configs" :> Get '[JSON] API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList :<|> TokenAuth :> "driver" :> "vehicleServiceTiers"
+  ( TokenAuth :> "onboarding" :> "configs" :> QueryParam "onlyVehicle" Kernel.Prelude.Bool
+      :> Get
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
+      :<|> TokenAuth
+      :> "driver"
+      :> "vehicleServiceTiers"
       :> Get
            '[JSON]
            API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers
@@ -43,9 +49,10 @@ getOnboardingConfigs ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
     ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
   )
-getOnboardingConfigs a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getOnboardingConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getOnboardingConfigs a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getOnboardingConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDriverVehicleServiceTiers ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

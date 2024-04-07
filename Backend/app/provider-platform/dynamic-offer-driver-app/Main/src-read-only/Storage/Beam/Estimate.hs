@@ -7,7 +7,7 @@ module Storage.Beam.Estimate where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Common
-import qualified Domain.Types.VehicleServiceTier
+import qualified Domain.Types.ServiceTierType
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -27,7 +27,7 @@ data EstimateT f = EstimateT
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    vehicleVariant :: B.C f Domain.Types.VehicleServiceTier.ServiceTierType
+    vehicleVariant :: B.C f Domain.Types.ServiceTierType.ServiceTierType
   }
   deriving (Generic, B.Beamable)
 

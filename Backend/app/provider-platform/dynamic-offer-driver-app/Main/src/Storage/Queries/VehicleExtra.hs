@@ -38,6 +38,10 @@ upsert a@Vehicle {..} = do
           Se.Set BeamV.color color,
           Se.Set BeamV.energyType energyType,
           Se.Set BeamV.registrationCategory registrationCategory,
+          Se.Set BeamV.vehicleClass vehicleClass,
+          Se.Set BeamV.luggageCapacity luggageCapacity,
+          Se.Set BeamV.airConditioned airConditioned,
+          Se.Set BeamV.vehicleRating vehicleRating,
           Se.Set BeamV.updatedAt updatedAt
         ]
         [Se.Is BeamV.registrationNo (Se.Eq a.registrationNo)]

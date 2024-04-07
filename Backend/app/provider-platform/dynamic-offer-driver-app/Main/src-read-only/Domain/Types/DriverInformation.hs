@@ -8,7 +8,6 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person
-import qualified Domain.Types.VehicleServiceTier
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -43,7 +42,6 @@ data DriverInformation = DriverInformation
     paymentPending :: Kernel.Prelude.Bool,
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-    selectedServiceTiers :: [Domain.Types.VehicleServiceTier.ServiceTierType],
     subscribed :: Kernel.Prelude.Bool,
     totalReferred :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     verified :: Kernel.Prelude.Bool,

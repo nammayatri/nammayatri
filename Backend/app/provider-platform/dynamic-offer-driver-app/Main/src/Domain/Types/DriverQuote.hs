@@ -25,8 +25,8 @@ import Domain.Types.Person
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchRequestForDriver
 import Domain.Types.SearchTry
+import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.Vehicle as Variant
-import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id

@@ -24,7 +24,7 @@ import Domain.Types.Common
 import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
