@@ -230,7 +230,8 @@ myRideListTransformerProp listRes =
         zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone",
         showRepeatRide : toPropValue if getFareProductType rideApiDetails.fareProductType == FPT.RENTAL || isScheduled then "gone" else "visible",
         showDestination : toPropValue if (decodeAddress $ Booking destination) == "" then "gone" else "visible",
-        variantImage : toPropValue $ PrestoList.renderImageSource $ PrestoList.ImageUrl imageUrl imageName 
+        variantImage : toPropValue $ PrestoList.renderImageSource $ PrestoList.ImageUrl imageUrl imageName,
+        showVariantImage : toPropValue $ (if isScheduled then "gone" else "visible")
       }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
 

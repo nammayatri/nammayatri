@@ -1339,7 +1339,7 @@ eval RemoveNotification state = do
 eval NotificationAnimationEnd state = do
   let isExpanded = state.props.showChatNotification && state.props.chatcallbackInitiated
       areMessagesEmpty =  (length $ getChatMessages FunctionCall) == 0 && (not state.props.isChatWithEMEnabled)
-      showNotification = (areMessagesEmpty || state.props.showChatNotification) && ((state.props.currentStage == RideAccepted) || state.props.isChatWithEMEnabled) && not state.props.isChatNotificationDismissed
+      showNotification = (areMessagesEmpty || state.props.showChatNotification) && ((state.props.currentStage == RideAccepted) || (state.props.currentStage == RideStarted && state.data.fareProductType == FPT.RENTAL) ||state.props.isChatWithEMEnabled) && not state.props.isChatNotificationDismissed
   continue state {props { isNotificationExpanded = isExpanded, showChatNotification = showNotification, removeNotification = not showNotification, enableChatWidget = (isExpanded || areMessagesEmpty) && not state.props.isChatNotificationDismissed}}
 
 eval MessageViewAnimationEnd state = do

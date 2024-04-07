@@ -208,7 +208,7 @@ skipButtonConfig state =
         , background = state.data.config.primaryBackground
         , margin = MarginTop 22
         , id = "SkipButton"
-        , enableLoader = (JB.getBtnLoader "SkipButton")
+        -- , enableLoader = (JB.getBtnLoader "SkipButton") -- TODO
         , visibility = boolToVisibility $ isRentalRide || doneButtonVisibility || state.data.ratingViewState.doneButtonVisibility
         , isClickable = isRentalRide || issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
         , alpha = if isRentalRide || issueFaced || (state.data.ratingViewState.selectedRating >= 1) || getSelectedYesNoButton state >= 0 then 1.0 else 0.4

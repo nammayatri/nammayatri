@@ -251,7 +251,8 @@ shimmerData i = {
   rideEndTimeUTC : toPropValue "",
   alpha : toPropValue "",
   zoneVisibility : toPropValue "gone",
-  variantImage : toPropValue "",
+  variantImage : toPropValue "visible",
+  showVariantImage : toPropValue "",
   showRepeatRide : toPropValue "visible",
   isScheduled : toPropValue "gone",
   showDestination : toPropValue "visible"

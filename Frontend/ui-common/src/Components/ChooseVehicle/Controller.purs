@@ -36,6 +36,7 @@ type Config
     , layoutMargin :: Margin 
     , showStroke :: Boolean
     , showAdditionalDesc :: Boolean
+    , vehicleShortDesc :: String
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -70,4 +71,5 @@ config =
   , isSingleEstimate : false
   , showStroke : true
   , showAdditionalDesc : false
+  , vehicleShortDesc : ""
   }

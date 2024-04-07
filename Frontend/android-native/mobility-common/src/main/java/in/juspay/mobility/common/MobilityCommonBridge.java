@@ -1592,7 +1592,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             markers.put(title, markerObject);
                             if (markerObject != null) {
                                 markerObject.setPosition(latLngObj);
-                                markerObject.setVisible(true);
+                                markerObject.setVisible(!(storeLocateOnMapCallBack != null && title.equals(CURRENT_LOCATION)));
                                 markerObject.setFlat(true);
                                 markerObject.hideInfoWindow();
 
@@ -1635,7 +1635,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             markers.put(title, markerObject);
                             if (markerObject != null) {
                                 markerObject.setPosition(latLngObj);
-                                markerObject.setVisible(true);
+                                markerObject.setVisible(!(storeLocateOnMapCallBack != null && title.equals(CURRENT_LOCATION)));
                                 markerObject.setFlat(true);
                                 markerObject.hideInfoWindow();
 

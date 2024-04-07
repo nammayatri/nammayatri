@@ -132,6 +132,7 @@ rideDetails push state =
       , height $ V 32
       , width $ V 32
       , margin $ MarginRight 8
+      , PrestoList.visibilityHolder "showVariantImage"
       ]
     , textView
       ([ PrestoList.textHolder "date"

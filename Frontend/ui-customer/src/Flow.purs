@@ -1929,7 +1929,8 @@ rideSearchFlow flowType = do
           if finalState.data.source == (getString STR.CURRENT_LOCATION) then void $ pure $ currentPosition "" else pure unit
           if os == "IOS" && finalState.props.currentStage == HomeScreen then 
             pure unit 
-          else 
+          else do 
+            void $ liftFlowBT $ setMapPadding 0 0 0 112
             liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = finalState.props.sourceLat, lon = finalState.props.sourceLong, geoJson = finalState.data.polygonCoordinates, points = finalState.data.nearByPickUpPoints, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" finalState.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon finalState.props.confirmLocationCategory }}
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true, locateOnMapLocation{sourceLat = finalState.props.sourceLat, sourceLng = finalState.props.sourceLong, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress}}})
           void $ pure $ updateLocalStage ConfirmingLocation
@@ -3573,7 +3574,7 @@ rideScheduledFlow = do
     RideScheduledScreenOutput.GoToHomeScreen state -> do
       updateLocalStage HomeScreen
       modifyScreenState $ RideScheduledScreenStateType (\_ -> RideScheduledScreenData.initData)
-      modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData)
+      -- modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData{props{showShimmer = true}})
       homeScreenFlow
     RideScheduledScreenOutput.GoToSearchLocationScreen updatedState -> do
       modifyScreenState $ RideScheduledScreenStateType (\_ -> updatedState)
@@ -4202,7 +4203,7 @@ getServiceability placeLat placeLon currTextField = do
   let city = serviceabilityRes.city
       locServiceable = serviceabilityRes.serviceable
       (SpecialLocation specialLoc) = fromMaybe HomeScreenData.specialLocation (serviceabilityRes.specialLocation)
-      geoJson = fromMaybe "" specialLoc.geoJson
+      geoJson = transformGeoJsonFeature specialLoc.geoJson specialLoc.gatesInfo
       specialLocCategory = specialLoc.category
       pickUpPoints = mapSpecialZoneGates specialLoc.gatesInfo
   pure $ {pickUpPoints , locServiceable, city, geoJson, specialLocCategory}

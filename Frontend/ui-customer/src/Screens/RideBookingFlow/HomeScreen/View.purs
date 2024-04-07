@@ -618,7 +618,7 @@ cancelSearchPopUp push state =
 
 messageWidgetView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 messageWidgetView push state = 
-  let isWidgetVisible = ((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver] || state.props.isChatWithEMEnabled ) && state.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && not state.props.removeNotification
+  let isWidgetVisible = ((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver] || state.props.isChatWithEMEnabled || state.data.fareProductType == FPT.RENTAL) && state.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && not state.props.removeNotification
 
   in 
   linearLayout
@@ -1205,11 +1205,12 @@ savedLocationsView state push =
         , onClick push (const NoAction)
         , onAnimationEnd
              ( \action -> do
-                 _ <- push action
-                 _ <- getCurrentPosition push CurrentLocation
+                 push $ MAPREADY "" "" ""
                  case state.props.currentStage of
                    HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
                    _ -> pure unit
+                 _ <- getCurrentPosition push CurrentLocation
+                 push action
                  pure unit
              )(const MapReadyAction)
         ]
@@ -4104,6 +4105,7 @@ validateAndStartChat contacts push state = do
 
 startChatSerivces ::  (Action -> Effect Unit) -> String -> String -> Boolean -> Effect Unit
 startChatSerivces push rideId chatUser rideStarted = do
+  void $ pure $ spy "Inside startChatServices" "sdfjhgiub"
   void $ clearChatMessages
   void $ storeCallBackMessageUpdated push rideId chatUser UpdateMessages AllChatsLoaded
   void $ storeCallBackOpenChatScreen push OpenChatScreen

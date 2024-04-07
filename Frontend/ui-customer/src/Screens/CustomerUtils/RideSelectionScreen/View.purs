@@ -243,6 +243,7 @@ shimmerData i = {
   alpha : toPropValue "",
   zoneVisibility : toPropValue "gone",
   variantImage : toPropValue "",
+  showVariantImage : toPropValue "visible",
   showRepeatRide : toPropValue "visible",
   showDestination : toPropValue "visible"
 }

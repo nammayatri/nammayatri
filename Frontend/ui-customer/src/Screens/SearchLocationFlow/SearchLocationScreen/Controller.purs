@@ -15,52 +15,54 @@
 
 module Screens.SearchLocationScreen.Controller where
 
+import Accessor
+import Data.Lens
+import Mobility.Prelude
 import Prelude
-import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
 import Screens.Types
-import Components.LocationTagBarV2 as LocationTagBarController
-import Components.LocationListItem as LocationListItemController
+
+import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.FavouriteLocationModel as FavouriteLocModelController
 import Components.GenericHeader as GenericHeaderController
-import Components.SaveFavouriteCard as SaveFavCardController 
-import Components.PrimaryEditText as EditTextController
-import Components.PrimaryButton as PrimaryButtonController
-import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.InputView as InputViewController
+import Components.LocationListItem as LocationListItemController
+import Components.LocationListItem.Controller (dummyAddress)
+import Components.LocationTagBarV2 as LocationTagBarController
 import Components.MenuButton as MenuButtonController
-import Components.SavedLocationCard as SavedLocationCardController
 import Components.PopUpModal.Controller as PopUpModalController
+import Components.PrimaryButton as PrimaryButtonController
+import Components.PrimaryEditText as EditTextController
 import Components.RateCard.Controller as RateCardController
-import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo)
-import PrestoDOM.Types.Core (class Loggable)
-import Log (trackAppActionClick)
-import Screens (getScreen, ScreenName(..))
-import Data.String as STR
+import Components.SaveFavouriteCard as SaveFavCardController
+import Components.SavedLocationCard as SavedLocationCardController
+import Constants.Configs (getPolylineAnimationConfig)
+import Control.Monad.Trans.Class (lift)
 import Data.Array as DA
-import Debug (spy)
-import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker, Location, setMapPadding, getExtendedPath, drawRoute, defaultMarkerConfig)
 import Data.Maybe as MB
 import Data.Number (fromString) as NUM
-import Helpers.Utils (updateLocListWithDistance, setText, getSavedLocationByTag, getCurrentLocationMarker)
 import Data.Ord (comparing)
-import Effect.Unsafe (unsafePerformEffect)
-import Effect.Uncurried (runEffectFn1)
-import Engineering.Helpers.Commons (getNewIDWithTag, isTrue,flowRunner, liftFlow)
-import Mobility.Prelude
-import Components.LocationListItem.Controller ( dummyAddress)
 import Data.String (contains, Pattern(..))
-import Resources.Constants (encodeAddress)
-import Storage (getValueToLocalStore, KeyStore(..))
-import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote)
-import Services.API(QuoteAPIEntity(..), GetQuotesRes(..), OfferRes(..), RentalQuoteAPIDetails(..), QuoteAPIContents(..), Snapped(..), LatLong(..), Route(..))
-import Data.Lens
-import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
+import Data.String as STR
+import Debug (spy)
 import Effect.Aff (launchAff)
-import Services.Backend (walkCoordinates, walkCoordinate, normalRoute)
-import Control.Monad.Trans.Class (lift)
+import Effect.Uncurried (runEffectFn1)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.Commons (getNewIDWithTag, isTrue, flowRunner, liftFlow)
+import Helpers.Utils (updateLocListWithDistance, setText, getSavedLocationByTag, getCurrentLocationMarker)
+import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker, Location, setMapPadding, getExtendedPath, drawRoute, defaultMarkerConfig)
+import Log (trackAppActionClick)
+import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
+import PrestoDOM.Types.Core (class Loggable)
+import Prim.TypeError (Quote)
+import Resources.Constants (encodeAddress)
+import Screens (getScreen, ScreenName(..))
+import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote)
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig)
-import Accessor
-import Constants.Configs (getPolylineAnimationConfig)
+import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo)
+import Services.API (QuoteAPIEntity(..), GetQuotesRes(..), OfferRes(..), RentalQuoteAPIDetails(..), QuoteAPIContents(..), Snapped(..), LatLong(..), Route(..))
+import Services.Backend (walkCoordinates, walkCoordinate, normalRoute)
+import Storage (getValueToLocalStore, KeyStore(..))
+import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -519,7 +521,9 @@ drawRouteOnMap state =
         destAddress = MB.maybe "" (\item -> item.address) state.data.destLoc
         markers = normalRoute ""
         sourceMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = address, position {lat = startLat, lng = startLon}}
-        destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = destAddress, position {lat = endLat, lng = endLon} }
+        destMarkerConfig = defaultMarkerConfig{ pointerIcon = if destAddress == "" then "" else markers.destMarker, primaryText = destAddress, position {lat = endLat, lng = endLon} }
+        _ = spy "INside sourceMarkerConfig" sourceMarkerConfig 
+        _ = spy "inside destMarkerConfig" destMarkerConfig
     void $ launchAff $ flowRunner defaultGlobalState $ do 
       let newRoute = case state.data.route of 
                         MB.Just (Route route) ->

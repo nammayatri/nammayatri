@@ -496,6 +496,7 @@ type ItemState =
     alpha :: PropValue,
     zoneVisibility :: PropValue,
     variantImage :: PropValue,
+    showVariantImage :: PropValue,
     showRepeatRide :: PropValue,
     showDestination :: PropValue
   }

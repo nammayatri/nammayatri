@@ -377,6 +377,7 @@ transformQuote quote index =
     , showInfo = estimatesConfig.showInfoIcon
     , searchResultType = ChooseVehicle.QUOTES
     , pickUpCharges = 0
+    , vehicleShortDesc = fromMaybe "" quoteEntity.serviceTierShortDesc
     }
 
 

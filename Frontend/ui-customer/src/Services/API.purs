@@ -659,6 +659,7 @@ newtype QuoteAPIEntity = QuoteAPIEntity {
   estimatedTotalFare :: Int,
   agencyName :: String,
   quoteDetails :: QuoteAPIDetails,
+  serviceTierShortDesc :: Maybe String,
   vehicleVariant :: String,
   estimatedFare :: Int,
   tripTerms :: Array String,

@@ -69,6 +69,7 @@ myRideListTransformerProp listRes =  filter (\item -> elem item.status $ map toP
     alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5",
     zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone",
     variantImage : toPropValue $ getVehicleVariantImage $ rideApiEntity^._vehicleVariant,
+    showVariantImage : toPropValue $ if ride.status == "CONFIRMED" then "gone" else "visible",
     showRepeatRide : toPropValue if (getFareProductType $ rideApiDetails.fareProductType) == FPT.RENTAL then "gone" else "visible",
     showDestination : toPropValue if (decodeAddress $ Booking destination) == "" then "gone" else "visible"
   })

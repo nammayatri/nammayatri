@@ -139,11 +139,11 @@ capacityView push config =
     , height WRAP_CONTENT
     , padding $ PaddingTop 5
     , orientation VERTICAL
-    ][ vehicleInfoView "ic_user_filled" config.capacity config.vehicleVariant config.showAdditionalDesc]
+    ][ vehicleInfoView "ic_user_filled" config.capacity config.vehicleVariant config.showAdditionalDesc config.vehicleShortDesc]
 
-vehicleInfoView :: forall w. String -> String -> String -> Boolean -> PrestoDOM (Effect Unit) w
-vehicleInfoView imageName description vehicleVariant showAdditionalDesc = let 
-  vehicleDesc = getVariantDescription vehicleVariant
+vehicleInfoView :: forall w. String -> String -> String -> Boolean -> String -> PrestoDOM (Effect Unit) w
+vehicleInfoView imageName description vehicleVariant showAdditionalDesc shortDesc = let 
+  vehicleDesc = if shortDesc == "" then getVariantDescription vehicleVariant else getVariantDescFromShortDesc shortDesc
   in
   linearLayout
     [ width WRAP_CONTENT
@@ -200,3 +200,8 @@ getVariantDescription variant =
     "HATCHBACK" ->{text : "Non-AC , Budget rides " , airConditioned : false}
     _ ->{text : "Non-AC Taxi" , airConditioned : false}
     
+getVariantDescFromShortDesc :: String -> {text :: String, airConditioned :: Boolean}
+getVariantDescFromShortDesc shortDesc = 
+  let shortDesc' = DS.toLower shortDesc
+  in {  text : shortDesc 
+      , airConditioned : (DS.contains (DS.Pattern "ac") shortDesc') && (not $ DS.contains (DS.Pattern "non") shortDesc')}

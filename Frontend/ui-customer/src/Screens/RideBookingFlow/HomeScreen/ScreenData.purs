@@ -129,6 +129,7 @@ initData = {
       , isSingleEstimate : false
       , showStroke: true
       , showAdditionalDesc : false
+      , vehicleShortDesc : ""
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -483,7 +484,8 @@ dummyQuoteAPIEntity = QuoteAPIEntity {
   tripTerms : [],
   id : "",
   agencyCompletedRidesCount : Nothing,
-  quoteDetails : QuoteAPIDetails {fareProductType : "", contents : dummyDriverOfferAPIEntity}
+  quoteDetails : QuoteAPIDetails {fareProductType : "", contents : dummyDriverOfferAPIEntity},
+  serviceTierShortDesc : Nothing
 }
 
 dummyDriverOfferAPIEntity :: QuoteAPIContents

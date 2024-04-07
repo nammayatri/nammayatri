@@ -984,6 +984,11 @@ getVariantDescription variant =
     "HATCHBACK" ->{text : "Non-AC , Budget rides " , airConditioned : false}
     _ ->{text : "Non-AC Taxi" , airConditioned : false}
 
+getVariantDescFromShortDesc :: String -> {text :: String, airConditioned :: Boolean}
+getVariantDescFromShortDesc shortDesc = 
+  let shortDesc' = DS.toLower shortDesc
+  in {  text : shortDesc 
+      , airConditioned : (DS.contains (DS.Pattern "ac") shortDesc') && (not $ DS.contains (DS.Pattern "non") shortDesc')}
 
 getVehicleName :: String -> String
 getVehicleName vaiant = 
