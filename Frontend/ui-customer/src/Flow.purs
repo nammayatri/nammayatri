@@ -2546,6 +2546,7 @@ fetchAndModifyLocationLists savedLocationResp = do
               (getGeoHash trip1.destLat trip1.destLong precision) 
               == 
               (getGeoHash trip2.destLat trip2.destLong precision)
+              && trip1.vehicleVariant == trip2.vehicleVariant
             ) 
             trips
 

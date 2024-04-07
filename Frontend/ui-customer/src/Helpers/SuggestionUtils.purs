@@ -160,7 +160,7 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config =
 
           updatedTrips = map updateExisting trips
           tripExists = any (\tripItem -> (getDistanceBwCordinates tripItem.sourceLat tripItem.sourceLong trip.sourceLat trip.sourceLong) < config.tripDistanceThreshold
-            && (getDistanceBwCordinates tripItem.destLat tripItem.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold) trips
+            && (getDistanceBwCordinates tripItem.destLat tripItem.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold && tripItem.vehicleVariant == trip.vehicleVariant) trips
           sortedTrips = sortTripsByScore updatedTrips
         in
           if tripExists

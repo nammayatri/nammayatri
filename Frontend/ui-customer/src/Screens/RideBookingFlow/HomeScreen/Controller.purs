@@ -3000,7 +3000,10 @@ specialZoneFlow estimatedQuotes state = do
 
 estimatesListFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 estimatesListFlow estimates state = do
-  let estimatesInfo = getEstimatesInfo estimates "" state
+  let newState = if state.props.isRepeatRide && not checkRecentRideVariant state
+                         then state { props {isRepeatRide = false}}
+                         else state
+      estimatesInfo = getEstimatesInfo estimates "" newState
   if ((not (null estimatesInfo.quoteList)) && (isLocalStageOn FindingEstimate)) then do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
         nearByDrivers = getNearByDrivers estimates
@@ -3154,3 +3157,6 @@ getPeekHeight state =
           let androidPixels = runFn1 getPixels FunctionCall
               androidDensity = (runFn1 getDeviceDefaultDensity FunctionCall)/  defaultDensity
           in (screenHeight unit) - ( ceil(((toNumber homescreenHeader)/androidPixels) *androidDensity))
+
+checkRecentRideVariant :: HomeScreenState -> Boolean
+checkRecentRideVariant state = any (\item -> item.vehicleVariant == state.props.repeatRideVariant) state.data.specialZoneQuoteList
