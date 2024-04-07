@@ -358,7 +358,7 @@ config =
       [ { cityCode : "std:080"
         , cityName : "Bangalore"
         , geoCodeConfig :
-            { radius : 50000
+            { radius : 700000
             , strictBounds : true
             }
         , enableRentals : true 
