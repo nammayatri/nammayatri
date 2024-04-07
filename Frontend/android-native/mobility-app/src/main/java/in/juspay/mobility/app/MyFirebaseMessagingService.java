@@ -472,6 +472,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             showOverlayMessage(driverPayloadJsonObject);
         }catch (Exception e){
             e.printStackTrace();
+            NotificationUtils.firebaseLogEventWithParams(this, "exception_in_add_or_edit_stop_fcm", "exception", e.toString());
         }
     }
     private void showOverlayMessage(JSONObject payload) {
