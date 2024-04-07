@@ -118,7 +118,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       nightShiftBounds = farePolicy.nightShiftBounds
 
       tollChargesCaption = show Tags.TOLL_CHARGES
-      tollChargesItem = mkBreakupItem tollChargesCaption . (mkValue . show . (.getHighPrecMoney)) <$> mbTollCharges
+      tollChargesItem = mkBreakupItem tollChargesCaption . (mkValue . show) <$> mbTollCharges
 
       serviceChargeCaption = show Tags.SERVICE_CHARGE
       serviceChargeItem = mkBreakupItem serviceChargeCaption . (mkValue . show . (.getMoney)) <$> farePolicy.serviceCharge

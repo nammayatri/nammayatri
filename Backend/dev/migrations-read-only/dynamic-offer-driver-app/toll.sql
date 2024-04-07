@@ -30,3 +30,9 @@ ALTER TABLE atlas_driver_offer_bpp.toll ADD COLUMN currency text ;
 
 ALTER TABLE atlas_driver_offer_bpp.toll ADD COLUMN price double precision NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.toll DROP COLUMN charge;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN toll_start_gates TYPE text[];
+ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN toll_end_gates TYPE text[];
