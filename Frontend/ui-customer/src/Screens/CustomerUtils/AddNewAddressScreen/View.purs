@@ -139,7 +139,7 @@ view push state =
           , height MATCH_PARENT
           , background Color.transparent
           , accessibility DISABLE_DESCENDANT
-          , padding $ PaddingBottom 110
+          , padding $ PaddingBottom if EHC.os == "IOS" then 70 else 110
           , gravity CENTER
           , orientation VERTICAL
           ][ imageView
@@ -154,7 +154,7 @@ view push state =
           [ width MATCH_PARENT
           , height MATCH_PARENT
           , background Color.transparent
-          , padding (PaddingBottom 46)
+          , padding $ PaddingBottom if EHC.os == "IOS" then 0 else 46
           , gravity CENTER
           , accessibility DISABLE
           , orientation VERTICAL

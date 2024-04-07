@@ -3968,7 +3968,7 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
       canUpdateHotSpots = maybe true (\point -> (getDistanceBwCordinates lat lon point.lat point.lng) * 1000.0 > 150.0) state.props.hotSpot.centroidPoint
 
   if not (DS.null geoJson) && not (null pickUpPoints) then do
-    when (geoJson /= state.data.polygonCoordinates || pickUpPoints /= state.data.nearByPickUpPoints) $ do
+    if (geoJson /= state.data.polygonCoordinates || pickUpPoints /= state.data.nearByPickUpPoints) then do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data  { polygonCoordinates = geoJson
                                                                                 , nearByPickUpPoints = pickUpPoints}
                                                                         , props { city = getCityNameFromCode serviceabilityResp.city
@@ -3978,9 +3978,10 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
       void $ pure $ removeAllPolylines ""
       liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" state.props.locateOnMapProps.sourceLocationName}
       homeScreenFlow
+    else pure unit
   else if not (null serviceabilityResp.hotSpotInfo) && canUpdateHotSpots && state.data.config.mapConfig.locateOnMapConfig.hotSpotConfig.enableHotSpot then do
     let points = filterHotSpots state serviceabilityResp.hotSpotInfo lat lon
-    when (state.data.nearByPickUpPoints /= points && not (null points)) $ do
+    if (state.data.nearByPickUpPoints /= points && not (null points)) then do
       void $ pure $ removeAllPolylines ""
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data {  polygonCoordinates = ""
                                                                                 , nearByPickUpPoints = points}
@@ -3989,4 +3990,5 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
                                                                                 , confirmLocationCategory = zoneType
                                                                                 , hotSpot{ centroidPoint = Just { lat : lat, lng : lon } } }})
       liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, points = points, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
+    else pure unit
   else pure unit
