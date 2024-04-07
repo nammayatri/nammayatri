@@ -110,6 +110,41 @@ public class NotificationUtils {
         callBack.remove(notificationCallback);
     }
     public static int chatNotificationId = 18012023;
+
+    public static String[] parseRideStartDateTime(String rideDateTimeString){
+        String rideStartTime="",rideStartDate="";
+        try {
+            final SimpleDateFormat dateTimeWithMillis = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
+            final SimpleDateFormat dateTimeWithoutMillis = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", new Locale("en", "US"));
+            dateTimeWithMillis.setTimeZone(TimeZone.getTimeZone("UTC"));
+            dateTimeWithoutMillis.setTimeZone(TimeZone.getTimeZone("UTC"));
+            Date rideDateTime;
+            try {
+                rideDateTime = dateTimeWithMillis.parse(rideDateTimeString);
+            } catch (Exception e) {
+                rideDateTime = dateTimeWithoutMillis.parse(rideDateTimeString);
+            }
+            rideDateTime.setTime(rideDateTime.getTime() + (330 * 60 * 1000));
+            final SimpleDateFormat df1 = new SimpleDateFormat("yyyy-MM-dd");
+            final SimpleDateFormat tf1 = new SimpleDateFormat("hh:mm a");
+            df1.setTimeZone(TimeZone.getTimeZone("IST"));
+            tf1.setTimeZone(TimeZone.getTimeZone("IST"));
+            
+            String date = df1.format(rideDateTime);
+            String time = tf1.format(rideDateTime);
+            
+            rideStartTime = time;
+            rideStartDate = date.equals(df1.format(new Date())) ? "Today" : date;
+        }
+        catch(Exception e) {
+            rideStartDate = "Today";
+            rideStartTime = "now";
+            e.printStackTrace();
+            
+        }
+        return new String[]{rideStartDate, rideStartTime};
+    }
+
     public static void showAllocationNotification(Context context, JSONObject data, JSONObject entity_payload, String source) {
         try {
             SharedPreferences sharedPref = context.getSharedPreferences(
@@ -164,37 +199,18 @@ public class NotificationUtils {
                 Bundle sheetData = new Bundle();
                 String expiryTime = "";
                 String searchRequestId = "";
-                String rideStartTime = "";
-                String rideStartDate= "";
-                try {
-                    String rideDateTimeString  = entity_payload.has("startTime") && !entity_payload.isNull("startTime") ? entity_payload.getString("startTime") : "";
-                    final SimpleDateFormat dateTimeWithMillis = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
-                    final SimpleDateFormat dateTimeWithoutMillis = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", new Locale("en", "US"));
-                    dateTimeWithMillis.setTimeZone(TimeZone.getTimeZone("UTC"));
-                    dateTimeWithoutMillis.setTimeZone(TimeZone.getTimeZone("UTC"));
-                    Date rideDateTime;
-                    try {
-                        rideDateTime = dateTimeWithMillis.parse(rideDateTimeString);
-                    } catch (Exception e) {
-                        rideDateTime = dateTimeWithoutMillis.parse(rideDateTimeString);
-                    }
-                    rideDateTime.setTime(rideDateTime.getTime() + (330 * 60 * 1000));
-                    final SimpleDateFormat df1 = new SimpleDateFormat("yyyy-MM-dd");
-                    final SimpleDateFormat tf1 = new SimpleDateFormat("hh:mm a");
-                    df1.setTimeZone(TimeZone.getTimeZone("IST"));
-                    tf1.setTimeZone(TimeZone.getTimeZone("IST"));
-                    
-                    String date = df1.format(rideDateTime);
-                    String time = tf1.format(rideDateTime);
-                    
-                    rideStartTime = time;
-                    rideStartDate = date.equals(df1.format(new Date())) ? "Today" : date;
+                String rideDateTimeString  = entity_payload.has("startTime") && !entity_payload.isNull("startTime") ? entity_payload.getString("startTime") : "";
+                String[] rideDateTimeValues = parseRideStartDateTime(rideDateTimeString);
+                String rideStartDate;
+                String rideStartTime;
+                if(rideDateTimeValues.length > 1){
+                 rideStartDate= rideDateTimeValues[0];
+                 rideStartTime = rideDateTimeValues[1];
                 }
-                catch(Exception e) {
-                    System.out.println("Exception in parsing rental start date and time");
+                else
+                {
                     rideStartDate = "Today";
                     rideStartTime = "now";
-                    e.printStackTrace();
                 }
                 try {
                     JSONObject addressPickUp = new JSONObject(entity_payload.get("fromLocation").toString());

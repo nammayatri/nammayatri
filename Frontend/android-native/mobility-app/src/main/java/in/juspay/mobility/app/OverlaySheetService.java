@@ -148,74 +148,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             String pickupChargesText = formattedPickupChargesText;
             String searchRequestId = model.getSearchRequestId();
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
-            if(model.getRideProductType().equals(RENTAL)){
-                holder.tagsBlock.setVisibility(View.VISIBLE);
-                holder.vcTierAndACView.setVisibility(View.GONE);
-                holder.reqButton.setTextColor(getColor(R.color.white));
-                holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.turquoise)));
-                if (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider")) {
-                    if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
-                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
-                        holder.rideTypeTag.setVisibility(View.VISIBLE);
-                    } else {
-                        holder.rideTypeTag.setVisibility(View.VISIBLE);
-                       holder.rideTypeTag.setBackgroundResource(R.drawable.ic_orange_tag);
-                        holder.rideTypeImage.setVisibility(View.GONE);
-                    }
-                    holder.rideTypeText.setText(variant);
-                }
-                holder.rentalRideTypeTag.setVisibility(View.VISIBLE);
-                holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
-                holder.rideStartTime.setText(model.getRideStartTime());
-                holder.rideStartDate.setVisibility(View.VISIBLE);
-                if(model.getRideStartDate() != "")
-                {
-                    holder.rideStartDate.setText(model.getRideStartDate());
-                }
-                holder.rentalDurationDistanceTag.setVisibility(View.VISIBLE);
-                holder.rideDuration.setText(model.getRideDuration());
-                holder.rideDistance.setText(model.getRideDistance());
-                holder.destinationArea.setVisibility(View.GONE);
-                holder.destinationAddress.setVisibility(View.GONE);
-                holder.distanceToBeCovered.setVisibility(View.GONE);
-                holder.destinationPinCode.setVisibility(View.GONE);
-                holder.locationDashedLine.setVisibility(View.GONE);
-                holder.locationDestinationPinTag.setVisibility(View.GONE);
-                holder.gotoTag.setVisibility(View.GONE);
-                holder.customerTipTag.setVisibility(View.GONE);
-                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
-            }
-            else if (model.getRideProductType().equals(INTERCITY)) {
-                holder.tagsBlock.setVisibility(View.VISIBLE);
-                holder.vcTierAndACView.setVisibility(View.GONE);
-                holder.reqButton.setTextColor(getColor(R.color.white));
-                holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.blue800)));
-                holder.intercityRideTypeTag.setVisibility(View.VISIBLE);
-                holder.gotoTag.setVisibility(View.GONE);
-                holder.customerTipTag.setVisibility(View.GONE);
-                if (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider")) {
-                    if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
-                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
-                        holder.rideTypeTag.setVisibility(View.VISIBLE);
-                    } else {
-                        holder.rideTypeTag.setVisibility(View.VISIBLE);
-                       holder.rideTypeTag.setBackgroundResource(R.drawable.ic_orange_tag);
-                        holder.rideTypeImage.setVisibility(View.GONE);
-                    }
-                    holder.rideTypeText.setText(variant);
-                }
-                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
-                holder.gotoTag.setVisibility(View.GONE);
-                holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
-                holder.rideStartTime.setText(model.getRideStartTime());
-                holder.rideStartDate.setVisibility(View.VISIBLE);
-                if(model.getRideStartDate() != "")
-                {
-                    holder.rideStartDate.setText(model.getRideStartDate());
-                }
-                
-            }
-            else if (model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showVariant || showSpecialLocationTag) {
+
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showVariant || showSpecialLocationTag) {
                 pickupChargesText = model.getCustomerTip() > 0 ?
                         formattedPickupChargesText + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
                         formattedPickupChargesText;
@@ -362,11 +296,15 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             if (key.equals("yatrisathiprovider") || key.equals("yatriprovider")) {
                 holder.textIncludesCharges.setVisibility(View.GONE);
             }
+            
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
             RideRequestUtils.updateRateView(holder, model);
             RideRequestUtils.updateTierAndAC(holder, model);
+            RideRequestUtils.updateRentalView(holder, model, OverlaySheetService.this);
+            RideRequestUtils.updateIntercityView(holder, model, OverlaySheetService.this);
+
             String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
             LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
             holder.reqButton.setOnClickListener(view -> {

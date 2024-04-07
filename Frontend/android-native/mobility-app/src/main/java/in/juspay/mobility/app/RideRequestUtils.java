@@ -19,6 +19,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -587,5 +588,52 @@ public class RideRequestUtils {
         String rate = RideRequestUtils.getUptoDecStr((float) (baseFare/dist), 1);
         String currency = model.getCurrency();;
         holder.rateText.setText("Rate: " + currency + rate +"/km");
+    }
+
+    public static void updateRentalView(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
+        Handler mainLooper = new Handler(Looper.getMainLooper());
+        mainLooper.post(() -> {
+            if(!model.getRideProductType().equals(NotificationUtils.RENTAL)){
+                return;
+            }
+            holder.tagsBlock.setVisibility(View.VISIBLE);
+            holder.reqButton.setTextColor(context.getColor(R.color.white));
+            holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(context.getColor(R.color.turquoise)));
+            holder.rentalRideTypeTag.setVisibility(View.VISIBLE);
+            holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
+            holder.rideStartTime.setText(model.getRideStartTime());
+            holder.rideStartDate.setVisibility(View.VISIBLE);
+            holder.rideStartDate.setText(model.getRideStartDate());
+            holder.rentalDurationDistanceTag.setVisibility(View.VISIBLE);
+            holder.rideDuration.setText(model.getRideDuration());
+            holder.rideDistance.setText(model.getRideDistance());
+            holder.destinationArea.setVisibility(View.GONE);
+            holder.destinationAddress.setVisibility(View.GONE);
+            holder.distanceToBeCovered.setVisibility(View.GONE);
+            holder.destinationPinCode.setVisibility(View.GONE);
+            holder.locationDashedLine.setVisibility(View.GONE);
+            holder.locationDestinationPinTag.setVisibility(View.GONE);
+            holder.gotoTag.setVisibility(View.GONE);
+        });
+    }
+
+    public static void updateIntercityView(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
+        Handler mainLooper = new Handler(Looper.getMainLooper());
+        mainLooper.post(() -> {
+            if(!model.getRideProductType().equals(NotificationUtils.INTERCITY)){
+                    return;
+                }
+            holder.tagsBlock.setVisibility(View.VISIBLE);
+            holder.reqButton.setTextColor(context.getColor(R.color.white));
+            holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(context.getColor(R.color.blue800)));
+            holder.intercityRideTypeTag.setVisibility(View.VISIBLE);
+            holder.gotoTag.setVisibility(View.GONE);
+            holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
+            holder.rideStartTime.setText(model.getRideStartTime());
+            holder.rideStartDate.setVisibility(View.VISIBLE);
+            holder.rideStartDate.setText(model.getRideStartDate()); 
+            holder.buttonIncreasePrice.setVisibility(View.GONE);
+            holder.buttonDecreasePrice.setVisibility(View.GONE);
+        }); 
     }
 }

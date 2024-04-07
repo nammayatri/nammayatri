@@ -177,59 +177,7 @@ public class RideRequestActivity extends AppCompatActivity {
             String pickupChargesText = formattedPickupChargesText;
             String searchRequestId = model.getSearchRequestId();
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
-            if(model.getRideProductType().equals(RENTAL)){
-                holder.tagsBlock.setVisibility(View.VISIBLE);
-                holder.reqButton.setTextColor(getColor(R.color.white));
-                holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.turquoise)));
-                if (!variant.equals(NO_VARIANT) && service.equals("yatrisathiprovider")) {
-                    if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
-                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
-                        holder.rideTypeTag.setVisibility(View.VISIBLE);
-                    } else {
-                        holder.rideTypeTag.setVisibility(View.VISIBLE);
-                       holder.rideTypeTag.setBackgroundResource(R.drawable.ic_orange_tag);
-                        holder.rideTypeImage.setVisibility(View.GONE);
-                    }
-                    holder.rideTypeText.setText(variant);
-                }
-                holder.rentalRideTypeTag.setVisibility(View.VISIBLE);
-                holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
-                holder.rideStartTime.setText(model.getRideStartTime());
-                holder.rideStartDate.setVisibility(View.VISIBLE);
-                if(model.getRideStartDate() != "")
-                {
-                    holder.rideStartDate.setText(model.getRideStartDate());
-                }
-                holder.rentalDurationDistanceTag.setVisibility(View.VISIBLE);
-                holder.rideDuration.setText(model.getRideDuration());
-                holder.rideDistance.setText(model.getRideDistance());
-                holder.destinationArea.setVisibility(View.GONE);
-                holder.destinationAddress.setVisibility(View.GONE);
-                holder.distanceToBeCovered.setVisibility(View.GONE);
-                holder.destinationPinCode.setVisibility(View.GONE);
-                holder.locationDashedLine.setVisibility(View.GONE);
-                holder.locationDestinationPinTag.setVisibility(View.GONE);
-                holder.gotoTag.setVisibility(View.GONE);
-                holder.customerTipTag.setVisibility(View.GONE);
-                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
-            }
-            else if(model.getRideProductType().equals(INTERCITY))
-            {
-                holder.tagsBlock.setVisibility(View.VISIBLE);
-                holder.reqButton.setTextColor(getColor(R.color.white));
-                holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.blue800)));
-                holder.intercityRideTypeTag.setVisibility(View.VISIBLE);
-                holder.gotoTag.setVisibility(View.GONE);
-                holder.customerTipTag.setVisibility(View.GONE);
-                holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
-                holder.rideStartTime.setText(model.getRideStartTime());
-                holder.rideStartDate.setVisibility(View.VISIBLE);
-                if(model.getRideStartDate() != "")
-                {
-                    holder.rideStartDate.setText(model.getRideStartDate());
-                }
-            }
-            else if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || showVariant) {
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || showVariant) {
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
                 pickupChargesText = model.getCustomerTip() > 0 ?
@@ -349,13 +297,15 @@ public class RideRequestActivity extends AppCompatActivity {
             if (service.equals("yatrisathiprovider") || service.equals("yatriprovider")) {
                 holder.textIncludesCharges.setVisibility(View.GONE);
             }
-
+            
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
             RideRequestUtils.updateTierAndAC(holder, model);
             RideRequestUtils.updateRateView(holder, model);
-
+            RideRequestUtils.updateRentalView(holder, model, RideRequestActivity.this);
+            RideRequestUtils.updateIntercityView(holder, model, RideRequestActivity.this);
+            
             String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", "");
             View progressDialog = findViewById(R.id.progress_loader);
             LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);

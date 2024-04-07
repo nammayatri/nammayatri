@@ -286,6 +286,7 @@ public class OverlayMessagingService extends Service {
             mapIntent.setPackage("com.google.android.apps.maps");
             startActivity(mapIntent);
         } catch (Exception e) {
+            RideRequestUtils.firebaseLogEventWithParams("exception_in_open_navigation", "OPEN_NAVIGATION", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
             e.printStackTrace();
         }
     }

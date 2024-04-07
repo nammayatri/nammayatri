@@ -338,8 +338,7 @@
 
                                     <LinearLayout
                                         android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        >
+                                        android:layout_height="wrap_content">
                                         <TextView
                                             android:id="@+id/distancePickUp"
                                             android:layout_width="wrap_content"
@@ -378,15 +377,13 @@
                                 <LinearLayout
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
+                                    android:orientation="vertical"
                                     android:gravity="right">
                                     <LinearLayout
                                         android:id="@+id/rideStartDateTimeTag"
                                         android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:orientation="vertical"
                                         android:visibility="gone"
-                                        android:layout_marginTop="8dp"
-                                        >
+                                        android:layout_height="wrap_content">
 
                                         <TextView
                                             android:id="@+id/rideStartDate"
@@ -407,76 +404,78 @@
                                             android:fontFamily="@font/plus_jakartasans_semibold"
                                             android:lineHeight="28dp"
                                             android:text="12:30 PM"
+                                            android:layout_marginLeft="5dp"
                                             android:textColor="@color/Black800"
                                             android:textFontWeight="600"
                                             android:textSize="18dp" />
                                     </LinearLayout>
-                                <com.google.android.material.card.MaterialCardView
-                                    android:id="@+id/vcTierAndACView"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_gravity="center"
-                                    android:visibility="gone"
-                                    app:cardBackgroundColor="#1A0066FF"
-                                    android:theme="@style/Theme.MaterialComponents.Light"
-                                    app:cardCornerRadius="10dp"
-                                    app:cardElevation="0dp"
-                                    app:contentPadding="10dp"
-                                    android:layout_marginVertical="10dp">
 
-
-                                    <LinearLayout
-                                        android:layout_width="match_parent"
+                                    <com.google.android.material.card.MaterialCardView
+                                        android:id="@+id/vcTierAndACView"
+                                        android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:orientation="horizontal">
-
+                                        app:cardBackgroundColor="#1A0066FF"
+                                        android:theme="@style/Theme.MaterialComponents.Light"
+                                        app:cardCornerRadius="10dp"
+                                        android:layout_marginTop="4dp"
+                                        app:cardElevation="0dp"
+                                        app:contentPaddingTop="4dp"
+                                        app:contentPaddingBottom="6dp"
+                                        app:contentPadding="10dp">
+                                        
                                         <LinearLayout
-                                            android:layout_width="wrap_content"
+                                            android:layout_width="match_parent"
                                             android:layout_height="wrap_content"
-                                            android:id="@+id/acNonAcView"
                                             android:orientation="horizontal">
 
+                                            <LinearLayout
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:id="@+id/acNonAcView"
+                                                android:orientation="horizontal">
+
+                                                <TextView
+                                                    android:id="@+id/airConditioned"
+                                                    android:layout_width="wrap_content"
+                                                    android:layout_height="wrap_content"
+                                                    android:textSize="16dp"
+                                                    android:layout_marginStart="5dp"
+                                                    android:gravity="center"
+                                                    android:textColor="@color/blue800"
+                                                    android:textFontWeight="600"
+                                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                                    android:text="Non - AC"/>
+
+                                                <com.google.android.material.card.MaterialCardView
+                                                    android:id="@+id/zoneDot"
+                                                    android:layout_width="4dp"
+                                                    android:layout_height="4dp"
+                                                    android:layout_gravity="center"
+                                                    app:cardBackgroundColor="@color/blue800"
+                                                    android:theme="@style/Theme.MaterialComponents.Light"
+                                                    app:cardCornerRadius="10dp"
+                                                    android:layout_marginTop="4dp"
+                                                    app:cardElevation="0dp"
+                                                    android:layout_marginLeft="5dp"/>
+
+
+                                            </LinearLayout>
+
                                             <TextView
-                                                android:id="@+id/airConditioned"
+                                                android:id="@+id/vehicleServiceTier"
                                                 android:layout_width="wrap_content"
                                                 android:layout_height="wrap_content"
                                                 android:textSize="16dp"
                                                 android:layout_marginStart="5dp"
-                                                android:gravity="center"
                                                 android:textColor="@color/blue800"
+                                                android:gravity="center"
+                                                android:singleLine="false"
                                                 android:textFontWeight="600"
                                                 android:fontFamily="@font/plus_jakartasans_semibold"
-                                                android:text="AC"/>
-
-                                            <com.google.android.material.card.MaterialCardView
-                                                android:id="@+id/zoneDot"
-                                                android:layout_width="4dp"
-                                                android:layout_height="4dp"
-                                                android:layout_gravity="center"
-                                                app:cardBackgroundColor="@color/blue800"
-                                                android:theme="@style/Theme.MaterialComponents.Light"
-                                                app:cardCornerRadius="10dp"
-                                                app:cardElevation="0dp"
-                                                android:layout_marginLeft="5dp"/>
-
-
+                                                android:text="Comfy"/>
                                         </LinearLayout>
 
-                                        <TextView
-                                            android:id="@+id/vehicleServiceTier"
-                                            android:layout_width="wrap_content"
-                                            android:layout_height="wrap_content"
-                                            android:textSize="16dp"
-                                            android:layout_marginStart="5dp"
-                                            android:textColor="@color/blue800"
-                                            android:gravity="center"
-                                            android:singleLine="false"
-                                            android:textFontWeight="600"
-                                            android:fontFamily="@font/plus_jakartasans_semibold"
-                                            android:text="Comfy"/>
-                                    </LinearLayout>
-
-                                </com.google.android.material.card.MaterialCardView>
+                                    </com.google.android.material.card.MaterialCardView>
 
                                 </LinearLayout>
 
