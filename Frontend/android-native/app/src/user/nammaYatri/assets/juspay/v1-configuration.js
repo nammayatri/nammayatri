@@ -294,5 +294,9 @@ window.getMerchantConfig = function () {
       , "name" : "Namma Yatri"
       , "website" : "https://nammayatri.in/"
     }
+    , "referral" : {
+      "domain" : "https://nammayatri.in"
+    , "customerAppId" : "in.juspay.nammayatri"
+  },
   })
 }

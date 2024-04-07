@@ -1598,7 +1598,10 @@ eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) st
   do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_share_app_menu"
         shareAppConfig = state.data.config.shareAppConfig
-    void $ pure $ shareTextMessage shareAppConfig.title shareAppConfig.description
+        title = shareAppConfig.title
+        mbcustomerReferralCode = fromMaybe "" state.data.customerReferralCode
+        message = shareAppConfig.description  <> (generateReferralLink (getValueToLocalStore CUSTOMER_LOCATION) "share" "referral" "refer" mbcustomerReferralCode)
+    void $ pure $ shareTextMessage title message
     continue state
 
 eval (SettingSideBarActionController (SettingSideBarController.EditProfile)) state = exit $ GoToMyProfile state { data { settingSideBar { opened = SettingSideBarController.OPEN } } } false

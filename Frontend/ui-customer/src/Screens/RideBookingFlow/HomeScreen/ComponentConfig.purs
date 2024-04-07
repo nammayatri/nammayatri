@@ -59,7 +59,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend, getCityFromString)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend, getCityFromString, getCityConfig)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
@@ -87,6 +87,7 @@ import Locale.Utils
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController 
 import LocalStorage.Cache (getValueFromCache)
+import ConfigProvider
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -2141,3 +2142,19 @@ specialZoneInfoPopupConfig infoConfig = let
       }
   }
   in specialZonePopupConfig
+
+
+generateReferralLink :: String -> String -> String -> String -> String -> String
+generateReferralLink source medium term content campaign  =
+  let config = getAppConfig appConfig 
+      cityConfig = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+      path = "/refer"
+      packageId = config.referral.customerAppId
+      domain = config.referral.domain
+  in domain <> path <> "?referrer=" 
+      <> "utm_source%3D" <> source 
+      <> "%26utm_medium%3D" <> medium 
+      <> "%26utm_term%3D" <> term 
+      <> "%26utm_content%3D" <> content 
+      <> "%26utm_campaign%3D" <> campaign 
+      <> "%26anid%3Dadmob&id=" <> packageId
