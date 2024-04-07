@@ -359,7 +359,7 @@ activateAndDeactivateRcPopUpConfig push state =
     config' = PopUpModal.config
     popUpConfig' =
       config'
-        { primaryText { text = if state.data.isRCActive then (getString DEACTIVATE_RC) <> state.data.rcNumber <> "?" else (getString ACTIVATE_RC) <> state.data.rcNumber <> "?"}
+        { primaryText { text = if state.data.isRCActive then (getString DEACTIVATE_RC) <> " - " <> state.data.rcNumber <> "?" else (getString ACTIVATE_RC) <>" - " <> state.data.rcNumber <> "?"}
         , buttonLayoutMargin = (MarginHorizontal 16 16)
         , dismissPopup = true
         , optionButtonOrientation = "VERTICAL"

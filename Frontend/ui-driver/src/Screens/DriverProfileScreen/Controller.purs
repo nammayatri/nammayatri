@@ -199,6 +199,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | UpdateLanguages DriverProfileScreenState (Array String)
                     | SubscriptionScreen
                     | GoToDriverSavedLocationScreen DriverProfileScreenState
+                    | GoToPendingVehicle DriverProfileScreenState String ST.VehicleCategory
 
 data Action = BackPressed
             | NoAction
@@ -228,7 +229,7 @@ data Action = BackPressed
             | CheckBoxClick ST.Gender
             | LanguageSelection CheckList.Action
             | UpdateButtonClicked PrimaryButton.Action
-            | ActivateRc
+            | ActivateRc String Boolean
             | DeactivateRc EditRc String
             | CloseEditRc
             | ShowEditRcx
@@ -254,6 +255,7 @@ data Action = BackPressed
             | DownloadQR PrimaryButtonController.Action
             | ShareQR PrimaryButtonController.Action
             | ManageVehicleButtonAC PrimaryButtonController.Action
+            | PendingVehicle String ST.VehicleCategory
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -531,7 +533,7 @@ eval (UpdateButtonClicked (PrimaryButton.OnClick)) state = do
   pure $ toast $ (getString STR.LANGUAGE_UPDATED)
   exit $ UpdateLanguages state languagesSelected
 
-eval ActivateRc state = continue state{props{activateRcView = true}}
+eval (ActivateRc rcNo rcActive) state = continue state{data{rcNumber = rcNo, isRCActive = rcActive},props{activateOrDeactivateRcView = true}}
 
 eval CallDriver state =
   continue state{props{callDriver = true}}
@@ -541,8 +543,8 @@ eval CallCustomerSupport state = do
   continue state
 
 eval (DeactivateRc rcType regNumber) state = do
-  if rcType == DEACTIVATING_RC then continue state{props{activateOrDeactivateRcView = true}, data{rcNumber = regNumber}}
-  else if rcType == ACTIVATING_RC then continue state{props{activateOrDeactivateRcView = true}, data{rcNumber = regNumber}}
+  if rcType == DEACTIVATING_RC then continue state{props{activateOrDeactivateRcView = true}, data{rcNumber = regNumber, isRCActive = true}}
+  else if rcType == ACTIVATING_RC then continue state{props{activateOrDeactivateRcView = true}, data{rcNumber = regNumber, isRCActive = false}}
   else
     if (length state.data.rcDataArray == 1)
       then do
@@ -551,8 +553,9 @@ eval (DeactivateRc rcType regNumber) state = do
       else
         continue state{props{deleteRcView = true}, data{rcNumber = regNumber}}
 
-eval (UpdateRC rcNo rcStatus) state  = do
-  continue state{props{activateRcView = true}, data{rcNumber = rcNo, isRCActive = rcStatus}}
+eval (UpdateRC rcNo rcStatus) state  = continue state{props{activateRcView = true}, data{rcNumber = rcNo, isRCActive = rcStatus}}
+
+eval (PendingVehicle rcNumber vehicleCategory) state = exit $ GoToPendingVehicle state rcNumber vehicleCategory
 
 eval (OpenRcView idx) state  = do
   let val = if elem idx state.data.openInactiveRCViewOrNotArray then filter(\x -> x/=idx) state.data.openInactiveRCViewOrNotArray else state.data.openInactiveRCViewOrNotArray <> [idx]

@@ -157,7 +157,6 @@ view push state =
     , if state.props.alreadyActive then rcActiveOnAnotherDriverProfilePopUpView push state else dummyTextView
     , if state.props.activateOrDeactivateRcView then activateAndDeactivateRcConfirmationPopUpView push state else dummyTextView
     , if state.props.paymentInfoView then paymentInfoPopUpView push state else dummyTextView
-    , if state.props.activateOrDeactivateRcView then activateAndDeactivateRcConfirmationPopUpView push state else dummyTextView
     , if state.props.deleteRcView then deleteRcPopUpView push state else dummyTextView
     ]
 
@@ -312,10 +311,10 @@ manageVehicleItem state vehicle push =
         , gravity CENTER_VERTICAL
         ]
         [ imageView
-            [ width $ V 32
-            , height $ V 32
+            [ width $ V 36
+            , height $ V 36
             , margin $ Margin 16 0 16 0
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage state
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage vehicle.userSelectedVehicleCategory
             ]
         , linearLayout
             [ width WRAP_CONTENT
@@ -366,7 +365,7 @@ manageVehicleItem state vehicle push =
             , onClick push $ const $ DeactivateRc ST.DELETING_RC vehicle.registrationNo
             , weight 1.0
             , color Color.red900
-            , text "Delete"
+            , text $ getString DELETE
             , gravity CENTER
             , textSize FontSize.a_16
             , fontStyle $ FontStyle.semiBold LanguageStyle
@@ -381,10 +380,10 @@ manageVehicleItem state vehicle push =
         , textView
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
-            , onClick push $ const $ DeactivateRc ST.ACTIVATING_RC vehicle.registrationNo
+            , onClick push $ const $ DeactivateRc ST.DEACTIVATING_RC vehicle.registrationNo
             , weight 1.0
             , color Color.blue900
-            , text "Deactivate"
+            , text $ getString DEACTIVATE
             , gravity CENTER
             , textSize FontSize.a_16
             , fontStyle $ FontStyle.semiBold LanguageStyle
@@ -404,7 +403,7 @@ manageVehicleItem state vehicle push =
             , height WRAP_CONTENT
             , weight 1.0
             , color Color.red900
-            , text "Delete"
+            , text $ getString DELETE
             , gravity CENTER
             , textSize FontSize.a_16
             , fontStyle $ FontStyle.semiBold LanguageStyle
@@ -412,13 +411,15 @@ manageVehicleItem state vehicle push =
         ]
     ]
   where
-  getVehicleImage :: ST.DriverProfileScreenState -> String
-  getVehicleImage state = mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  getVehicleImage :: ST.VehicleCategory -> String
+  getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
 
-  mkAsset :: CityConfig -> String
-  mkAsset cityConfig =
-    if state.data.driverVehicleType == "AUTO_RICKSHAW" then
+  mkAsset :: ST.VehicleCategory -> CityConfig -> String
+  mkAsset category cityConfig =
+    if category == ST.AutoCategory then
       (getAutoImage cityConfig)
+    else if category == ST.CarCategory then
+      "ny_ic_sedan"
     else
       "ny_ic_silhouette"
 
@@ -502,33 +503,33 @@ verifiedVehiclesView state push =
 
 pendingVehiclesVerificationList :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 pendingVehiclesVerificationList state push =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , weight 1.0
-    , visibility if state.props.screenType == ST.DRIVER_DETAILS then GONE else VISIBLE
-    , background Color.white900
-    , orientation VERTICAL
-    , margin $ MarginTop 16
-    , padding $ PaddingVertical 12 18
-    ]
-    [ textView
-        [ text "Vehicles Pending"
-        , textSize FontSize.a_16
-        , color Color.black900
-        , margin $ MarginLeft 16
-        , fontStyle $ FontStyle.semiBold LanguageStyle
-        ],
-      linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        ]
-        ( map (\vehicleItem -> vehicleListItem state push vehicleItem) $ fetchVehicles pendingVehicleOnly state.data.vehicleDetails
-        )
-    --  vehicleListItem state push "#f4F7FF"
-    ]
+  let pendingVehicleList = fetchVehicles pendingVehicleOnly state.data.vehicleDetails
+  in linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , weight 1.0
+      , visibility $ MP.boolToVisibility $ not $ state.props.screenType == ST.DRIVER_DETAILS || null pendingVehicleList
+      , background Color.white900
+      , orientation VERTICAL
+      , margin $ MarginTop 16
+      , padding $ PaddingVertical 12 18
+      ]
+      [ textView
+          [ text $ getString VEHICLES_PENDING
+          , textSize FontSize.a_16
+          , color Color.black900
+          , margin $ MarginLeft 16
+          , fontStyle $ FontStyle.semiBold LanguageStyle
+          ],
+        linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          ]
+          ( map (\vehicleItem -> vehicleListItem state push vehicleItem) pendingVehicleList
+          )
+      ]
 
 ------------------------------------------- HEADER VIEW -------------------------------------------------------------
 headerView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -860,152 +861,6 @@ addRcView state push =
     , PrimaryButton.view (push <<< AddRcButtonAC) (addRCButtonConfig state)
     , PrimaryButton.view (push <<< ManageVehicleButtonAC) (addRCButtonConfigs state)
     ]
-
--- additionalRcsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> { key :: String, idx :: Int, value :: String, action :: Action, model :: Maybe String, color :: Maybe String } -> PrestoDOM (Effect Unit) w
--- additionalRcsView state push config =
---   linearLayout
---     [ height WRAP_CONTENT
---     , width MATCH_PARENT
---     , padding $ Padding 15 7 15 7
---     , background Color.blue600
---     , margin $ Margin 16 15 5 0
---     , orientation VERTICAL
---     , cornerRadius 10.0
---     , onClick push (const (OpenRcView config.idx))
---     ]
---     [ linearLayout
---         [ height WRAP_CONTENT
---         , width MATCH_PARENT
---         , orientation VERTICAL
---         ]
---         [ (addAnimation state)
---             $ linearLayout
---                 [ height WRAP_CONTENT
---                 , width MATCH_PARENT
---                 , orientation HORIZONTAL
---                 , gravity CENTER_VERTICAL
---                 , padding $ PaddingVertical 16 16
---                 ]
---                 ( [ textView
---                       [ text config.key
---                       , textSize FontSize.a_12
---                       , color Color.black700
---                       , fontStyle $ FontStyle.regular LanguageStyle
---                       ]
---                   , linearLayout
---                       [ height WRAP_CONTENT
---                       , weight 1.0
---                       ]
---                       []
---                   , textView
---                       [ text config.value
---                       , textSize FontSize.a_14
---                       , onClick push $ const config.action
---                       , color Color.black900
---                       , fontStyle $ FontStyle.semiBold LanguageStyle
---                       ]
---                   ]
---                     <> [ imageView
---                           [ height $ V 11
---                           , width $ V 11
---                           , margin $ MarginLeft 7
---                           , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if elem config.idx state.data.openInactiveRCViewOrNotArray then "ny_ic_chevron_up" else "ny_ic_chevron_down"
---                           ]
---                       ]
---                 )
---         ]
---     , linearLayout
---         [ height $ V 1
---         , width MATCH_PARENT
---         , background Color.white900
---         , visibility if elem config.idx state.data.openInactiveRCViewOrNotArray then VISIBLE else GONE
---         ]
---         []
---     , linearLayout
---         [ height WRAP_CONTENT
---         , width MATCH_PARENT
---         , visibility if elem config.idx state.data.openInactiveRCViewOrNotArray then VISIBLE else GONE
---         ]
---         [ detailsViewForInactiveRcs state push
---             { backgroundColor: Color.blue600
---             , lineColor: Color.white900
---             , arrayList: getRcDetailsForInactiveRcs config
---             }
---         ]
---     ]
-
--- getRcDetailsForInactiveRcs config =
---   [ --{ key : (getString TYPE) , value :Just  (getString AUTO_RICKSHAW) , action : NoAction , isEditable : false }
---     { key: (getString MODEL_NAME), value: config.model, action: NoAction, isEditable: false, keyInfo: false, isRightInfo: false }
---   , { key: (getString COLOUR), value: config.color, action: NoAction, isEditable: false, keyInfo: false, isRightInfo: false }
---   , { key: "", value: Just (getString EDIT_RC), action: UpdateRC config.value false, isEditable: false, keyInfo: false, isRightInfo: false }
---   ]
-
--- detailsViewForInactiveRcs :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> { backgroundColor :: String, lineColor :: String, arrayList :: Array { key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean, keyInfo :: Boolean, isRightInfo :: Boolean } } -> PrestoDOM (Effect Unit) w
--- detailsViewForInactiveRcs state push config =
---   linearLayout
---     [ height WRAP_CONTENT
---     , width MATCH_PARENT
---     , background config.backgroundColor
---     , orientation VERTICAL
---     , cornerRadius 10.0
---     ]
---     ( mapWithIndex
---         ( \index item ->
---             linearLayout
---               [ height WRAP_CONTENT
---               , width MATCH_PARENT
---               , orientation VERTICAL
---               ]
---               [ (addAnimation state)
---                   $ linearLayout
---                       [ height WRAP_CONTENT
---                       , width MATCH_PARENT
---                       , orientation HORIZONTAL
---                       , gravity CENTER_VERTICAL
---                       , padding $ PaddingVertical 16 16
---                       ]
---                       ( [ textView
---                             [ text item.key
---                             , textSize FontSize.a_12
---                             , color Color.black700
---                             , fontStyle $ FontStyle.regular LanguageStyle
---                             ]
---                         , linearLayout
---                             [ height WRAP_CONTENT
---                             , weight 1.0
---                             ]
---                             []
---                         , textView
---                             [ text $ fromMaybe "N/A" item.value
---                             , textSize FontSize.a_14
---                             , onClick push $ const item.action
---                             , color if (isJust item.value) then (if item.value == Just (getString EDIT_RC) then Color.blue900 else Color.black900) else Color.black900
---                             , fontStyle $ FontStyle.semiBold LanguageStyle
---                             ]
---                         ]
---                           <> if item.isEditable && (isJust item.value) then
---                               [ imageView
---                                   [ height $ V 11
---                                   , width $ V 11
---                                   , margin $ MarginLeft 7
---                                   , imageWithFallback $ fetchImage FF_ASSET "ic_edit_pencil"
---                                   ]
---                               ]
---                             else
---                               []
---                       )
---               , linearLayout
---                   [ height $ V 1
---                   , width MATCH_PARENT
---                   , background config.lineColor
---                   , visibility if index == length (config.arrayList) - 1 then GONE else VISIBLE
---                   ]
---                   []
---               ]
---         )
---         (config.arrayList)
---     )
 
 ------------------------------ CHIP RAIL LAYOUT ---------------------------------------------
 chipRailView :: forall w. ST.ChipRailData -> PrestoDOM (Effect Unit) w
@@ -1550,17 +1405,19 @@ vehicleListItem state push vehicle =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation HORIZONTAL
+    , onClick push if vehicle.isVerified then (const (ActivateRc vehicle.registrationNo (vehicle.isActive && vehicle.isVerified))) else const $ PendingVehicle vehicle.registrationNo vehicle.userSelectedVehicleCategory 
     , gravity CENTER_VERTICAL
-    , visibility if state.props.screenType == ST.DRIVER_DETAILS then GONE else VISIBLE
+    , clickable $ not $ vehicle.isActive && vehicle.isVerified
+    , visibility $ MP.boolToVisibility $ not $ state.props.screenType == ST.DRIVER_DETAILS
     , background if vehicle.isVerified then Color.white900 else Color.blue600
     , cornerRadius 15.0
     , margin $ Margin 16 12 16 0
     ]
     [ imageView
-        [ width $ V 24
-        , height $ V 24
+        [ width $ V 36
+        , height $ V 36
         , margin $ Margin 16 0 16 0
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage state
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage vehicle.userSelectedVehicleCategory
         ]
     , linearLayout
         [ width WRAP_CONTENT
@@ -1611,13 +1468,15 @@ vehicleListItem state push vehicle =
         ]
     ]
   where
-  getVehicleImage :: ST.DriverProfileScreenState -> String
-  getVehicleImage state = mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  getVehicleImage :: ST.VehicleCategory -> String
+  getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
 
-  mkAsset :: CityConfig -> String
-  mkAsset cityConfig =
-    if state.data.driverVehicleType == "AUTO_RICKSHAW" then
+  mkAsset :: ST.VehicleCategory -> CityConfig -> String
+  mkAsset category cityConfig =
+    if category == ST.AutoCategory then
       (getAutoImage cityConfig)
+    else if category == ST.CarCategory then
+      "ny_ic_sedan"
     else
       "ny_ic_silhouette"
 

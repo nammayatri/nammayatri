@@ -94,6 +94,9 @@ driverProfileScreen = do
     GoToDriverSavedLocationScreen state -> do 
       modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
       App.BackT $ App.BackPoint <$> pure SAVED_LOCATIONS_SCREEN
+    GoToPendingVehicle updatedState rcNumber vehicleCategory -> do
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> updatedState)
+      App.BackT $ App.BackPoint <$> pure (VIEW_PENDING_VEHICLE rcNumber vehicleCategory)
     GoBack updatedState -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverDetailsScreen ->
         DriverProfileScreenData.initData { data { driverVehicleType = driverDetailsScreen.data.driverVehicleType
