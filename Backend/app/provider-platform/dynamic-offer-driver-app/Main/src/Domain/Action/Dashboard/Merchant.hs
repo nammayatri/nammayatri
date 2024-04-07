@@ -1085,8 +1085,8 @@ data CSVRow = CSVRow
     vehicleVariant :: Text,
     manufacturer :: Text,
     manufacturerModel :: Text,
-    vehicleModel :: Text,
-    reviewRequired :: Text
+    reviewRequired :: Text,
+    vehicleModel :: Text
   }
 
 instance FromNamedRecord CSVRow where
@@ -1134,7 +1134,7 @@ updateOnboardingVehicleVariantMapping merchantShortId opCity req = do
             _ -> False
       vehicleVariant <- readMaybe (T.unpack row.vehicleVariant) & fromMaybeM (InvalidRequest $ "Invalid vehicle variant: " <> show row.vehicleVariant <> " at row: " <> show idx)
       vehicleClass <- cleanField row.vehicleClass & fromMaybeM (InvalidRequest $ "Vehicle class cannot be empty or without constraint: " <> show row.vehicleClass <> " at row: " <> show idx)
-      vehicleModel <- cleanField row.vehicleModel & fromMaybeM (InvalidRequest $ "Vehicle Model cannot be empty or without constraint: " <> show row.vehicleModel <> " at row: " <> show idx)
+      vehicleModel <- replaceEmpty (T.strip row.vehicleModel) & fromMaybeM (InvalidRequest $ "Vehicle Model cannot be empty or without constraint: " <> show row.vehicleModel <> " at row: " <> show idx)
       return $
         DVC.VehicleClassVariantMap
           { vehicleClass,
