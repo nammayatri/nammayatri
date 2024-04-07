@@ -1257,7 +1257,7 @@ driverProfileFlow = do
       pure $ setText (getNewIDWithTag "ReenterVehicleRegistrationNumber") ""
       deleteValueFromLocalStore ENTERED_RC
       modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState.addVehicleDetailsScreen)
-      modifyScreenState $ RegistrationScreenStateType (\regScreenState -> regScreenState{ props{manageVehicle = true}, data { linkedRc = Nothing}})
+      modifyScreenState $ RegistrationScreenStateType (\regScreenState -> regScreenState{ props{manageVehicle = true, manageVehicleCategory = Nothing}, data { linkedRc = Nothing}})
       onBoardingFlow
     SUBCRIPTION -> updateAvailableAppsAndGoToSubs
     GO_TO_CALL_DRIVER state -> do
@@ -1368,6 +1368,11 @@ driverProfileFlow = do
       let (GlobalState defaultEpassState') = defaultGlobalState
       modifyScreenState $ DriverSavedLocationScreenStateType (\_ ->  defaultEpassState'.driverSavedLocationScreen)
       goToLocationFlow  
+    
+    VIEW_PENDING_VEHICLE rcNumber vehicleCategory -> do
+      setValueToLocalStore ENTERED_RC rcNumber
+      modifyScreenState $ RegistrationScreenStateType (\regScreenState -> regScreenState{ props{manageVehicle = true, manageVehicleCategory = Just vehicleCategory }, data { linkedRc = Nothing}})
+      onBoardingFlow
 
 documentDetailsScreen :: FlowBT String Unit
 documentDetailsScreen = do

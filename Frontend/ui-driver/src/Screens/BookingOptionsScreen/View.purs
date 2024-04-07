@@ -88,7 +88,7 @@ downgradeVehicleView push state =
           , height WRAP_CONTENT
           , color Color.black700
           , margin $ MarginBottom 16
-          , text $ "Choose what type of rides you want to take."
+          , text $ getString RIDE_TYPE_SELECT
           ]
         , linearLayout
           [ width MATCH_PARENT

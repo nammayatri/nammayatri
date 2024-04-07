@@ -305,6 +305,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | SUBCRIPTION 
                                     | SAVED_LOCATIONS_SCREEN
                                     | GO_HOME DriverProfileScreenState
+                                    | VIEW_PENDING_VEHICLE String VehicleCategory
 
 
 data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
