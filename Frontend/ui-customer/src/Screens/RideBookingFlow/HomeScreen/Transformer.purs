@@ -526,7 +526,9 @@ getEstimatesInfo estimates vehicleVariant state =
 
     estimatedPrice = maybe 0 (view _estimatedFare) (head estimatedVariant)
     quoteList = getEstimateList estimates state.data.config.estimateAndQuoteConfig
-    defaultQuote = fromMaybe ChooseVehicle.config (head quoteList)
+    defaultQuote = fromMaybe ChooseVehicle.config $ if state.props.isRepeatRide 
+                    then find (\item -> (item.vehicleVariant) == state.props.repeatRideVariant) quoteList
+                    else (head quoteList)
     estimateId = maybe "" (view _estimateId) (head estimatedVariant)
     estimateFareBreakup = maybe [] identity (head estimatedVariant >>= view _estimateFareBreakup)
     pickUpCharges = fetchPickupCharges estimateFareBreakup 

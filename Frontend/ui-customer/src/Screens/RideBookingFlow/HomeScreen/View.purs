@@ -89,7 +89,7 @@ import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
-import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getPeekHeight)
+import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getPeekHeight, checkRecentRideVariant)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations, getActiveBooking, getDriverInfo, getFormattedContacts)
@@ -203,7 +203,8 @@ screen initialState =
                 let isRepeatRideEstimate = checkRecentRideVariant initialState
                 if (initialState.props.isRepeatRide && isRepeatRideEstimate) 
                     then startTimer initialState.data.config.suggestedTripsAndLocationConfig.repeatRideTime "repeatRide" "1" push RepeatRideCountDown
-                else if (initialState.props.isRepeatRide && not isRepeatRideEstimate) then void $ pure $ toast $ getString LAST_CHOSEN_VARIANT_NOT_AVAILABLE
+                else if (initialState.props.isRepeatRide && not isRepeatRideEstimate) then do 
+                    void $ pure $ toast $ getString LAST_CHOSEN_VARIANT_NOT_AVAILABLE
                 else pure unit
               PickUpFarFromCurrentLocation -> 
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
@@ -1391,9 +1392,6 @@ rideRequestFlowView push state =
 
 isStageInList :: Stage -> Array Stage -> Boolean
 isStageInList stage = any (_ == stage)
-
-checkRecentRideVariant :: HomeScreenState -> Boolean
-checkRecentRideVariant state = any (\item -> item.vehicleVariant == state.props.repeatRideVariant) state.data.specialZoneQuoteList
 
 -------------- rideRatingCardView -------------
 rideRatingCardView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -3751,8 +3749,8 @@ repeatRideCard push state index trip =
         , margin $ MarginRight 4
         ][ imageView
             [ imageWithFallback $ fetchImage FF_ASSET $ getVehicleVariantImage trip.vehicleVariant
-            , height $ V 50
-            , width $ V 30
+            , height $ V 30
+            , width $ V 50
             ]
         ]
       , linearLayout
