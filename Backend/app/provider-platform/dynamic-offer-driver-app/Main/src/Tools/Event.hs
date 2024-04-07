@@ -24,7 +24,7 @@ import Domain.Types.Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import Domain.Types.SearchTry
-import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.JSON (constructorsWithSnakeCase)

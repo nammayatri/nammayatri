@@ -9,6 +9,7 @@ import qualified Data.List as List
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
+import Domain.Types.ServiceTierType as DVST
 import Domain.Types.Vehicle as DV
 import Domain.Types.VehicleServiceTier as DVST
 import Kernel.External.Maps as Maps
@@ -94,16 +95,16 @@ getNearestDriversCurrentlyOnRide cityServiceTiers mbServiceTier fromLocLatLong r
           distanceFromDestinationToPickup = realToFrac $ distanceBetweenInMeters fromLocLatLong destinationPoint
           onRideRadiusValidity = (distanceFromDriverToDestination + distanceFromDestinationToPickup) < onRideRadius
 
-      -- ideally should be there inside the info.selectedServiceTiers but still to make sure we have a default service tier for the driver
+      -- ideally should be there inside the vehicle.selectedServiceTiers but still to make sure we have a default service tier for the driver
       let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
       let defaultServiceTierForDriver = (.serviceTierType) <$> (find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers)
       let selectedDriverServiceTiers =
             case defaultServiceTierForDriver of
               Just defaultServiceTierForDriver' ->
-                if defaultServiceTierForDriver' `elem` info.selectedServiceTiers
-                  then info.selectedServiceTiers
-                  else [defaultServiceTierForDriver'] <> info.selectedServiceTiers
-              Nothing -> info.selectedServiceTiers
+                if defaultServiceTierForDriver' `elem` vehicle.selectedServiceTiers
+                  then vehicle.selectedServiceTiers
+                  else [defaultServiceTierForDriver'] <> vehicle.selectedServiceTiers
+              Nothing -> vehicle.selectedServiceTiers
       if onRideRadiusValidity
         then do
           case mbServiceTier of

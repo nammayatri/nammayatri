@@ -116,9 +116,6 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
   (rcStatus, _, rcVerficationMessage) <- getRCAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit multipleRC merchantOperatingCity.language
   (aadhaarStatus, _) <- getAadhaarStatus personId
 
-  let driverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto]
-  let vehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.SubscriptionPlan]
-
   driverDocuments <-
     driverDocumentTypes `forM` \docType -> do
       mbStatus <- getProcessedDriverDocuments docType personId
@@ -131,7 +128,7 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
           message <- documentStatusMessage status mbReason docType language
           return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
 
-  processedVehicleDocuments <- do
+  processedVehicleDocumentsWithRC <- do
     processedVehicles <- do
       associations <- DRAQuery.findAllLinkedByDriverId personId
       if null associations
@@ -161,6 +158,30 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
             documents
           }
 
+  processedVehicleDocumentsWithoutRC <- do
+    mbVehicle <- Vehicle.findById personId
+    case mbVehicle of
+      Just vehicle -> do
+        if isJust $ find (\doc -> doc.registrationNo == vehicle.registrationNo) processedVehicleDocumentsWithRC
+          then return []
+          else do
+            documents <-
+              vehicleDocumentTypes `forM` \docType -> do
+                return $ DocumentStatusItem {documentType = docType, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing}
+            return $
+              [ VehicleDocumentItem
+                  { registrationNo = vehicle.registrationNo,
+                    userSelectedVehicleCategory = getCategory vehicle.variant,
+                    verifiedVehicleCategory = Just $ getCategory vehicle.variant,
+                    isVerified = True,
+                    isActive = True,
+                    vehicleModel = Just vehicle.model,
+                    documents
+                  }
+              ]
+      Nothing -> return []
+
+  let processedVehicleDocuments = processedVehicleDocumentsWithoutRC <> processedVehicleDocumentsWithRC
   inprogressVehicleDocuments <- do
     inprogressVehicle <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing personId DVC.VehicleRegistrationCertificate
     case inprogressVehicle of

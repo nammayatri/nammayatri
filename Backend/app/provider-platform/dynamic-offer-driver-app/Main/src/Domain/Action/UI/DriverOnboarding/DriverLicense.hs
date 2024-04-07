@@ -26,7 +26,6 @@ import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import Data.Time (nominalDay)
-import qualified Data.Time as DT
 import Domain.Types.DocumentVerificationConfig (DocumentVerificationConfig)
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DriverLicense as Domain
@@ -174,8 +173,7 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
             docType = DTO.DriverLicense,
             status = "pending",
             idfyResponse = Nothing,
-            multipleRC = Nothing, -- added for backward compatibility
-            dashboardPassedVehicleVariant = Nothing,
+            multipleRC = Nothing,
             retryCount = Just 0,
             nameOnCard,
             vehicleCategory = mbVehicleCategory,
@@ -273,29 +271,11 @@ validateDLStatus configs expiry cov now = do
       if ((not configs.checkExpiry) || now < expiry) && isCOVValid then Domain.VALID else Domain.INVALID
     _ -> Domain.INVALID
 
-convertTextToUTC :: Maybe Text -> Maybe UTCTime
-convertTextToUTC a = do
-  a_ <- a
-  DT.parseTimeM True DT.defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
-
 isValidCOVDL :: [Text] -> DTO.VehicleClassCheckType -> Text -> Bool
 isValidCOVDL validCOVs validCOVsCheck cov =
   checkForClass
   where
     checkForClass = foldr' (\x acc -> classCheckFunction validCOVsCheck (T.toUpper x) (T.toUpper cov) || acc) False validCOVs
-
-classCheckFunction :: DTO.VehicleClassCheckType -> Text -> Text -> Bool
-classCheckFunction validCOVsCheck =
-  case validCOVsCheck of
-    DTO.Infix -> T.isInfixOf
-    DTO.Prefix -> T.isPrefixOf
-    DTO.Suffix -> T.isSuffixOf
-
-removeSpaceAndDash :: Text -> Text
-removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
-
-convertUTCTimetoDate :: UTCTime -> Text
-convertUTCTimetoDate utctime = T.pack (DT.formatTime DT.defaultTimeLocale "%d/%m/%Y" utctime)
 
 cacheExtractedDl :: Id Person.Person -> Maybe Text -> Text -> Flow ()
 cacheExtractedDl _ Nothing _ = return ()

@@ -16,8 +16,7 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data IdfyVerificationE e = IdfyVerification
-  { dashboardPassedVehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant,
-    docType :: Domain.Types.DocumentVerificationConfig.DocumentType,
+  { docType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     documentImageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     documentImageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     documentNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
@@ -50,8 +49,7 @@ instance EncryptedItem IdfyVerification where
     documentNumber_ <- encryptItem (documentNumber entity, salt)
     pure
       IdfyVerification
-        { dashboardPassedVehicleVariant = dashboardPassedVehicleVariant entity,
-          docType = docType entity,
+        { docType = docType entity,
           documentImageId1 = documentImageId1 entity,
           documentImageId2 = documentImageId2 entity,
           documentNumber = documentNumber_,
@@ -76,8 +74,7 @@ instance EncryptedItem IdfyVerification where
     documentNumber_ <- fst <$> decryptItem (documentNumber entity)
     pure
       ( IdfyVerification
-          { dashboardPassedVehicleVariant = dashboardPassedVehicleVariant entity,
-            docType = docType entity,
+          { docType = docType entity,
             documentImageId1 = documentImageId1 entity,
             documentImageId2 = documentImageId2 entity,
             documentNumber = documentNumber_,

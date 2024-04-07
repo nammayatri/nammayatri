@@ -44,3 +44,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN air_condition_s
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN selected_service_tiers text[] NOT NULL default '{}';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information DROP COLUMN selected_service_tiers;

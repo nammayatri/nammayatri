@@ -50,7 +50,6 @@ import qualified API.UI.RideRoute as RideRoute
 import qualified API.UI.RideSummary as RideSummary
 import qualified API.UI.Route as Route
 import qualified API.UI.Transporter as Transporter
-import qualified API.UI.Vehicle as Vehicle
 import qualified API.UI.Whatsapp as Whatsapp
 import Environment
 import Kernel.Prelude
@@ -68,7 +67,6 @@ type API =
            :<|> Payment.API
            :<|> Driver.API
            :<|> DriverProfileSummary.API
-           :<|> Vehicle.API
            :<|> Transporter.API
            :<|> Route.API
            :<|> Maps.API
@@ -107,7 +105,6 @@ handler =
     :<|> Payment.handler
     :<|> Driver.handler
     :<|> DriverProfileSummary.handler
-    :<|> Vehicle.handler
     :<|> Transporter.handler
     :<|> Route.handler
     :<|> Maps.handler

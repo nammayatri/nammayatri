@@ -2,7 +2,7 @@ imports:
   FareParameters: Domain.Types.FareParameters
   FarePolicy: Domain.Types.FarePolicy
   TripCategory: Domain.Types.Common
-  ServiceTierType: Domain.Types.VehicleServiceTier
+  ServiceTierType: Domain.Types.ServiceTierType
   SearchRequest: Domain.Types.SearchRequest
   Money: Kernel.Types.Common
 
@@ -17,7 +17,7 @@ Estimate:
     fields:
       id: Id Estimate
       requestId: Id SearchRequest
-      vehicleServiceTier: ServiceTierType
+      vehicleServiceTier: ServiceTierType|NoRelation
       tripCategory: TripCategory
       minFare: Money
       maxFare: Money

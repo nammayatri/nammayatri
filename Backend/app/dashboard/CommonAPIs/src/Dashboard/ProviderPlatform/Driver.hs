@@ -691,14 +691,13 @@ type AddVehicleAPI =
     :> Post '[JSON] APISuccess
 
 data AddVehicleReq = AddVehicleReq
-  { variant :: Variant,
-    registrationNo :: Text,
+  { registrationNo :: Text,
     vehicleClass :: Text,
     capacity :: Maybe Int,
     colour :: Text,
     energyType :: Maybe Text,
     model :: Text,
-    make :: Maybe Text,
+    make :: Text,
     driverName :: Text
   }
   deriving stock (Show, Generic)

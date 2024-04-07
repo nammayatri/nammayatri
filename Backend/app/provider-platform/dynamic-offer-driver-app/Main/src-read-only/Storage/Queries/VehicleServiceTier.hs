@@ -6,6 +6,7 @@ module Storage.Queries.VehicleServiceTier where
 
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.VehicleServiceTier
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -29,7 +30,7 @@ findAllByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do find
 
 findByServiceTierTypeAndCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.VehicleServiceTier.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier))
+  (Domain.Types.ServiceTierType.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier))
 findByServiceTierTypeAndCityId serviceTierType (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findOneWithKV
     [ Se.And

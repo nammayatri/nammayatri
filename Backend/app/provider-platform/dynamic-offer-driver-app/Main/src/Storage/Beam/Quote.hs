@@ -17,7 +17,7 @@ module Storage.Beam.Quote where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Common as DTC
-import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
 import qualified Kernel.Types.Common as Common
 import Tools.Beam.UtilsTH

@@ -5,6 +5,7 @@
 module Storage.Queries.Vehicle (module Storage.Queries.Vehicle, module ReExport) where
 
 import qualified Domain.Types.Person
+import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Vehicle
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -28,6 +29,11 @@ findById (Kernel.Types.Id.Id driverId) = do findOneWithKV [Se.Is Beam.driverId $
 
 findByRegistrationNo :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Vehicle.Vehicle))
 findByRegistrationNo registrationNo = do findOneWithKV [Se.Is Beam.registrationNo $ Se.Eq registrationNo]
+
+updateSelectedServiceTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ServiceTierType.ServiceTierType] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateSelectedServiceTiers selectedServiceTiers (Kernel.Types.Id.Id driverId) = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.selectedServiceTiers selectedServiceTiers, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
 
 updateVehicleModel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateVehicleModel model (Kernel.Types.Id.Id driverId) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.model model, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
@@ -58,6 +64,7 @@ updateByPrimaryKey (Domain.Types.Vehicle.Vehicle {..}) = do
       Se.Set Beam.model model,
       Se.Set Beam.registrationCategory registrationCategory,
       Se.Set Beam.registrationNo registrationNo,
+      Se.Set Beam.selectedServiceTiers selectedServiceTiers,
       Se.Set Beam.size size,
       Se.Set Beam.variant variant,
       Se.Set Beam.vehicleClass vehicleClass,

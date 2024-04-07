@@ -149,6 +149,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Plan as CQP
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarVerification as AV
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import Storage.Queries.DriverFee (findPendingFeesByDriverIdAndServiceName)
@@ -821,17 +822,39 @@ addVehicle merchantShortId opCity reqDriverId req = do
   let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
   QPerson.updatePersonRec personId updDriver
 
-  runVerifyRCFlow personId merchant merchantOpCityId req Nothing
-  checkIfVehicleCreatedInRC <- QVehicle.findById personId
-  unless (isJust checkIfVehicleCreatedInRC) $ do
-    vehicle <- buildVehicle merchantId merchantOpCityId personId req
-    -- Esq.runTransaction $ do
-    QVehicle.create vehicle
-    transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    when (vehicle.variant == DVeh.SUV) $
-      QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
+  -- Create RC for vehicle before verifying it
+  now <- getCurrentTime
+  mbRC <- RCQuery.findLastVehicleRCWrapper req.registrationNo
+  whenJust mbRC $ \rc -> do
+    mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId rc.id now
+    when (isNothing mbAssoc) $ do
+      driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId personId rc.id (convertTextToUTC (Just "2099-12-12"))
+      QRCAssociation.create driverRCAssoc
+    throwError $ InvalidRequest "RC already exists for this vehicle number, please activate."
 
-  logTagInfo "dashboard -> addVehicle : " (show personId)
+  let createRCInput = createRCInputFromVehicle req
+  mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput
+  case mbNewRC of
+    Just newRC -> do
+      when (newRC.verificationStatus == IV.INVALID) $ do throwError (InvalidRequest $ "No valid mapping found for vehicleClass " <> req.vehicleClass <> " manufacturer " <> req.make <> " and model " <> req.model)
+      RCQuery.upsert newRC
+      mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId newRC.id now
+      when (isNothing mbAssoc) $ do
+        driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId personId newRC.id (convertTextToUTC (Just "2099-12-12"))
+        QRCAssociation.create driverRCAssoc
+
+      runVerifyRCFlow personId merchant merchantOpCityId req -- run RC verification details
+      checkIfVehicleCreatedInRC <- QVehicle.findById personId
+      unless (isJust checkIfVehicleCreatedInRC) $ do
+        cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
+        driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+        let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now
+        QVehicle.create vehicle
+        transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+        when (vehicle.variant == DVeh.SUV) $
+          QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
+      logTagInfo "dashboard -> addVehicle : " (show personId)
+    Nothing -> throwError $ InvalidRequest "Registration Number is empty"
   pure Success
 
 ---------------------------------------------------------------------
@@ -850,9 +873,30 @@ addVehicleForFleet merchantShortId opCity reqDriverPhoneNo mbMobileCountryCode f
   vehicle <- RCQuery.findLastVehicleRCWrapper req.registrationNo
   whenJust vehicle $ \veh -> when (isJust veh.fleetOwnerId && veh.fleetOwnerId /= Just fleetOwnerId) $ throwError VehicleBelongsToAnotherFleet
   Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
-  void $ runVerifyRCFlow driver.id merchant merchantOpCityId req (Just True)
+  void $ runVerifyRCFlow driver.id merchant merchantOpCityId req
   logTagInfo "dashboard -> addVehicle : " (show driver.id)
   pure Success
+
+createRCInputFromVehicle :: Common.AddVehicleReq -> CreateRCInput
+createRCInputFromVehicle Common.AddVehicleReq {..} =
+  CreateRCInput
+    { registrationNumber = Just registrationNo,
+      fitnessUpto = Nothing,
+      fleetOwnerId = Nothing,
+      vehicleCategory = Nothing,
+      documentImageId = "",
+      vehicleClass = Just vehicleClass,
+      vehicleClassCategory = Nothing,
+      insuranceValidity = Nothing,
+      seatingCapacity = capacity,
+      permitValidityUpto = Nothing,
+      pucValidityUpto = Nothing,
+      manufacturer = Just make,
+      manufacturerModel = Just model,
+      bodyType = Nothing,
+      fuelType = energyType,
+      color = Just colour
+    }
 
 ---------------------------------------------------------------------
 
@@ -1135,8 +1179,8 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
       _ <- DTPlan.planSubscribe serviceName planId (True, Just WHATSAPP) (cast driverId, mId, mOpCityId) driverInfo' serviceSpecificData
       pure ()
 
-runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Common.AddVehicleReq -> Maybe Bool -> Flow ()
-runVerifyRCFlow personId merchant merchantOpCityId req multipleRC = do
+runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Common.AddVehicleReq -> Flow ()
+runVerifyRCFlow personId merchant merchantOpCityId req = do
   let rcReq =
         DomainRC.DriverRCReq
           { vehicleRegistrationCertNumber = req.registrationNo,
@@ -1144,36 +1188,9 @@ runVerifyRCFlow personId merchant merchantOpCityId req multipleRC = do
             operatingCity = "Bangalore", -- TODO: this needs to be fixed properly
             dateOfRegistration = Nothing,
             vehicleCategory = Nothing,
-            multipleRC = multipleRC
+            multipleRC = Nothing
           }
-  void $ DomainRC.verifyRC True (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq (Just $ castVehicleVariant req.variant)
-
-buildVehicle :: MonadFlow m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DP.Person -> Common.AddVehicleReq -> m DVeh.Vehicle
-buildVehicle merchantId merchantOperatingCityId personId req = do
-  now <- getCurrentTime
-  return $
-    DVeh.Vehicle
-      { driverId = personId,
-        merchantId = merchantId,
-        merchantOperatingCityId = Just merchantOperatingCityId,
-        variant = castVehicleVariant req.variant,
-        model = req.model,
-        color = req.colour,
-        vehicleName = Nothing,
-        registrationNo = req.registrationNo,
-        capacity = req.capacity,
-        category = Nothing,
-        make = req.make,
-        size = Nothing,
-        energyType = req.energyType,
-        registrationCategory = Nothing,
-        vehicleClass = req.vehicleClass,
-        airConditioned = Nothing,
-        luggageCapacity = Nothing,
-        vehicleRating = Nothing,
-        createdAt = now,
-        updatedAt = now
-      }
+  void $ DomainRC.verifyRC True (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq
 
 castVehicleVariant :: Common.Variant -> DVeh.Variant
 castVehicleVariant = \case

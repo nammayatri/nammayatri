@@ -37,3 +37,8 @@ ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD COLUMN vehicle_category text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.idfy_verification DROP COLUMN dashboard_passed_vehicle_variant;

@@ -6,7 +6,6 @@ module Storage.Queries.DriverInformation (module Storage.Queries.DriverInformati
 
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Person
-import qualified Domain.Types.VehicleServiceTier
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -91,11 +90,6 @@ updatePendingPayment paymentPending (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.paymentPending paymentPending, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
 
-updateSelectedServiceTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VehicleServiceTier.ServiceTierType] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateSelectedServiceTiers selectedServiceTiers (Kernel.Types.Id.Id driverId) = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.selectedServiceTiers selectedServiceTiers, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
-
 updateSubscription :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateSubscription subscribed (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
@@ -134,7 +128,6 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.paymentPending paymentPending,
       Se.Set Beam.referralCode referralCode,
       Se.Set Beam.referredByDriverId (Kernel.Types.Id.getId <$> referredByDriverId),
-      Se.Set Beam.selectedServiceTiers selectedServiceTiers,
       Se.Set Beam.subscribed subscribed,
       Se.Set Beam.totalReferred totalReferred,
       Se.Set Beam.verified verified,

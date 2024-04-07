@@ -6,8 +6,8 @@
 module Storage.Beam.VehicleServiceTier where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Vehicle
-import qualified Domain.Types.VehicleServiceTier
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -26,7 +26,7 @@ data VehicleServiceTierT f = VehicleServiceTierT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
     seatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    serviceTierType :: B.C f Domain.Types.VehicleServiceTier.ServiceTierType,
+    serviceTierType :: B.C f Domain.Types.ServiceTierType.ServiceTierType,
     shortDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

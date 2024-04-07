@@ -67,8 +67,8 @@ import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Merchant.Overlay as DMO
 import qualified Domain.Types.Merchant.TransporterConfig as DTC
 import qualified Domain.Types.Plan as Plan
+import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.Vehicle as DVeh
-import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import qualified EulerHS.Language as L
 import qualified Kernel.External.Maps as Maps

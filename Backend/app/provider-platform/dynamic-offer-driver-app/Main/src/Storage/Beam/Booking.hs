@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FareProduct as FareProductD
-import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)

@@ -16,8 +16,7 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data IdfyVerificationT f = IdfyVerificationT
-  { dashboardPassedVehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant),
-    docType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
+  { docType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
     documentImageId1 :: B.C f Kernel.Prelude.Text,
     documentImageId2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     documentNumberEncrypted :: B.C f Kernel.Prelude.Text,

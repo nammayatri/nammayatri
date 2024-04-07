@@ -26,8 +26,8 @@ import qualified Domain.Types.Common as DCT
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.Vehicle as Variant
-import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 
 castVariant :: Variant.Variant -> Common.VehicleVariant

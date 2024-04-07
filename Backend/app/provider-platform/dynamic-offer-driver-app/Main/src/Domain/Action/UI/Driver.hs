@@ -113,9 +113,9 @@ import Domain.Types.Plan as Plan
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Vehicle (VehicleAPIEntity)
 import qualified Domain.Types.Vehicle as SV
-import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, state)
@@ -725,7 +725,7 @@ updateDriver (personId, _, merchantOpCityId) req = do
             SV.TAXI_PLUS -> [DVST.TAXI_PLUS]
 
     QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental availableUpiApps person.id
-    QDriverInformation.updateSelectedServiceTiers selectedServiceTiers person.id
+    QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
 
   updatedDriverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId

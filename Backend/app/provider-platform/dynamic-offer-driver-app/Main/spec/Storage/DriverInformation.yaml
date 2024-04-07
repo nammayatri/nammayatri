@@ -4,7 +4,6 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
   UTCTime: Kernel.Prelude
-  ServiceTierType: Domain.Types.VehicleServiceTier
 
 DriverInformation:
   tableName: driver_information
@@ -64,7 +63,6 @@ DriverInformation:
     blockStateModifier: Maybe Text
     driverDob: Maybe UTCTime
     airConditionScore: Maybe Double
-    selectedServiceTiers: '[ServiceTierType]'
 
   default:
     active: "false"
@@ -81,10 +79,7 @@ DriverInformation:
     canDowngradeToTaxi: "false"
     canSwitchToRental: "false"
     aadhaarVerified: "false"
-    selectedServiceTiers: "'{}'"
 
-  sqlType:
-    selectedServiceTiers: text[]
   constraints:
     driverId: PrimaryKey
 
@@ -144,8 +139,4 @@ DriverInformation:
     incrementReferralCountByPersonId:
       kvFunction: updateOneWithKV
       params: [totalReferred]
-      where: driverId
-    updateSelectedServiceTiers:
-      kvFunction: updateOneWithKV
-      params: [selectedServiceTiers]
       where: driverId

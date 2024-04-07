@@ -42,6 +42,7 @@ import qualified Domain.Types.Merchant.TransporterConfig as DTMT
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RideRoute
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import Kernel.Beam.Functions as B

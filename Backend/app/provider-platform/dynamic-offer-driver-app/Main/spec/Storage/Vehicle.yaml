@@ -3,6 +3,7 @@ imports:
   Merchant: Domain.Types.Merchant
   UTCTime: Kernel.Prelude
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  ServiceTierType: Domain.Types.ServiceTierType
 
 Vehicle:
   tableName: vehicle
@@ -46,6 +47,13 @@ Vehicle:
     airConditioned: Maybe Bool
     luggageCapacity: Maybe Int
     vehicleRating: Maybe Double
+    selectedServiceTiers: '[ServiceTierType]'
+
+  default:
+    selectedServiceTiers: "'{}'"
+
+  sqlType:
+    selectedServiceTiers: text[]
 
   constraints:
     driverId: PrimaryKey
@@ -72,4 +80,8 @@ Vehicle:
     updateVehicleVariant:
       kvFunction: updateWithKV
       params: [variant]
+      where: driverId
+    updateSelectedServiceTiers:
+      kvFunction: updateOneWithKV
+      params: [selectedServiceTiers]
       where: driverId

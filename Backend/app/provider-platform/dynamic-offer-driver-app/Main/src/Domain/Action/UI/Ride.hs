@@ -46,8 +46,8 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
+import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.Vehicle as DVeh
-import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
