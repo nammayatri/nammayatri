@@ -140,7 +140,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverRCReq 
   transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   allLinkedRCs <- DAQuery.findAllLinkedByDriverId personId
-  unless (length allLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
+  unless (length allLinkedRCs < (transporterConfig.rcLimit + (if isDashboard then 1 else 0))) $ throwError (RCLimitReached transporterConfig.rcLimit)
 
   when
     ( isNothing dateOfRegistration && documentVerificationConfig.checkExtraction

@@ -815,9 +815,13 @@ addVehicle merchantShortId opCity reqDriverId req = do
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   mbLinkedVehicle <- QVehicle.findById personId
   whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
+
+  allLinkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
+  unless (length allLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
 
   let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
   QPerson.updatePersonRec personId updDriver
@@ -843,16 +847,13 @@ addVehicle merchantShortId opCity reqDriverId req = do
         driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId personId newRC.id (convertTextToUTC (Just "2099-12-12"))
         QRCAssociation.create driverRCAssoc
 
-      runVerifyRCFlow personId merchant merchantOpCityId req -- run RC verification details
-      checkIfVehicleCreatedInRC <- QVehicle.findById personId
-      unless (isJust checkIfVehicleCreatedInRC) $ do
-        cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-        driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-        let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now
-        QVehicle.create vehicle
-        transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-        when (vehicle.variant == DVeh.SUV) $
-          QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
+      fork "Parallely verifying RC for add Vehicle: " $ runVerifyRCFlow personId merchant merchantOpCityId req -- run RC verification details
+      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
+      driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now
+      QVehicle.create vehicle
+      when (vehicle.variant == DVeh.SUV) $
+        QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
       logTagInfo "dashboard -> addVehicle : " (show personId)
     Nothing -> throwError $ InvalidRequest "Registration Number is empty"
   pure Success
