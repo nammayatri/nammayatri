@@ -222,7 +222,7 @@ screen initialState =
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-                  when (initialState.props.zoneType.priorityTag == SPECIAL_PICKUP && initialState.data.config.feature.enableSpecialPickup) $ do
+                  when (initialState.props.zoneType.priorityTag == SPECIAL_PICKUP && initialState.data.config.feature.enableSpecialPickup && os /= "IOS") $ do
                     let specialPickupZone = findSpecialPickupZone initialState.props.locateOnMapProps.sourceGeoJson initialState.props.locateOnMapProps.sourceGates initialState.data.driverInfoCardState.sourceLat initialState.data.driverInfoCardState.sourceLng
                     case specialPickupZone of
                       Just pickUpZone -> runEffectFn1 locateOnMap locateOnMapConfig { geoJson = pickUpZone.geoJson, points = pickUpZone.gates, locationName = pickUpZone.locationName, navigateToNearestGate = false }
@@ -410,7 +410,7 @@ view push state =
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , background Color.transparent
-                    , padding $ PaddingBottom $ 36 + extraPadding
+                    , padding $ PaddingBottom $ (if os == "IOS" then 26 else 36) + extraPadding
                     , gravity CENTER
                     , accessibility DISABLE
                     , orientation VERTICAL

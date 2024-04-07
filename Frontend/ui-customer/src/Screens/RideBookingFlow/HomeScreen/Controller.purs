@@ -2692,7 +2692,7 @@ eval _ state = continue state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 validateSearchInput state searchString =
-  if STR.length (STR.trim searchString) > 2 && searchString /= state.data.source && (searchString /= state.data.destination || ((getSearchType unit) == "direct_search") && (state.props.isSearchLocation == SearchLocation)) then
+  if STR.length (STR.trim searchString) > 2 && searchString /= state.data.source && searchString /= (getString CURRENT_LOCATION) && (searchString /= state.data.destination || ((getSearchType unit) == "direct_search") && (state.props.isSearchLocation == SearchLocation)) then
     callSearchLocationAPI
   else
     continue state
