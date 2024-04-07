@@ -55,6 +55,7 @@ import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
+import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (foldr, id, length, null)
 import GHC.Float (double2Int)
 import Kernel.External.Maps
@@ -83,6 +84,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Plan as CQP
+import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CancellationCharges as QCC
 import qualified Storage.Queries.DriverFee as QDF
@@ -94,6 +96,7 @@ import qualified Storage.Queries.FareParameters as QFare
 import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
+import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
@@ -358,7 +361,14 @@ createDriverFee ::
   m ()
 createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxShards driverInfo booking serviceName = do
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
+  vehicle <- QV.findById driverId >>= fromMaybeM (VehicleNotFound driverId.getId)
+  subscriptionConfig' <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceNameWithVehicleVariant merchantOpCityId serviceName vehicle.variant
+  subscriptionConfig <- case subscriptionConfig' of
+    Just sc -> return sc
+    Nothing ->
+      (listToMaybe <$> CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName)
+        >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId (show serviceName) " ")
+  freeTrialDaysLeft <- getFreeTrialDaysLeft subscriptionConfig.freeTrialDays driverInfo
   mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft
   let govtCharges = fromMaybe 0 newFareParams.govtCharges
   let (platformFee, cgst, sgst) = case newFareParams.fareParametersDetails of
@@ -368,8 +378,8 @@ createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxS
   let totalDriverFee = fromIntegral govtCharges + platformFee + cgst + sgst
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverIdAndServiceName driverId serviceName
-  driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig (Just booking)
-  let toUpdateOrCreateDriverfee = totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan)
+  driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig vehicle.variant (Just booking)
+  let toUpdateOrCreateDriverfee = (totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan)) && subscriptionConfig.enableSubscription
   when (toUpdateOrCreateDriverfee && isEligibleForCharge transporterConfig freeTrialDaysLeft) $ do
     numRides <- case lastDriverFee of
       Just ldFee ->
@@ -384,7 +394,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxS
         QDF.create driverFee
         return 1
     plan <- getPlan mbDriverPlan serviceName merchantOpCityId
-    fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
+    fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides driverFee.vehicleVariant serviceName
     scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now
   where
     isEligibleForCharge transporterConfig freeTrialDaysLeft =
@@ -465,9 +475,10 @@ mkDriverFee ::
   HighPrecMoney ->
   HighPrecMoney ->
   TransporterConfig ->
+  Vehicle.Variant ->
   Maybe SRB.Booking ->
   m DF.DriverFee
-mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig mbBooking = do
+mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig vehicleVariant mbBooking = do
   id <- generateGUID
   let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
       startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart

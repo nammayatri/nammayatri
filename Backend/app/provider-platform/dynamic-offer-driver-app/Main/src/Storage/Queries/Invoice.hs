@@ -2,12 +2,14 @@
 
 module Storage.Queries.Invoice where
 
+import qualified Data.List as List
 import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Invoice as Domain
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import Domain.Types.Plan (ServiceNames (YATRI_SUBSCRIPTION))
+import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findAllWithOptionsKV', findOneWithKV, updateWithKV)
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -308,14 +310,33 @@ updateMerchantOperatingCityIdByInvoiceId invoiceId merchantOperatingCityId = do
     ]
     [Se.Is BeamI.id (Se.Eq $ getId invoiceId)]
 
+updateVehicleVariant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Invoice -> Vehicle.Variant -> m ()
+updateVehicleVariant invoiceId vehicleVariant = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamI.vehicleVariant (Just vehicleVariant),
+      Se.Set BeamI.updatedAt now
+    ]
+    [Se.Is BeamI.id (Se.Eq $ getId invoiceId)]
+
 instance FromTType' BeamI.Invoice Domain.Invoice where
   fromTType' BeamI.InvoiceT {..} = do
+    dfee' <-
+      if (List.any isNothing [merchantOperatingCityId, show <$> vehicleVariant])
+        then QDF.findById (Id driverFeeId)
+        else return Nothing
     merchantOperatingCityId' <- case merchantOperatingCityId of
       Just opCity -> return $ Id opCity
       Nothing -> do
-        dfee <- QDF.findById (Id driverFeeId) >>= fromMaybeM (DriverFeeNotFound driverFeeId)
+        dfee <- (pure dfee') >>= fromMaybeM (DriverFeeNotFound driverFeeId)
         updateMerchantOperatingCityIdByInvoiceId (Id id) (dfee.merchantOperatingCityId)
         return dfee.merchantOperatingCityId
+    vehicleVariant' <- case vehicleVariant of
+      Just variant -> return variant
+      Nothing -> do
+        dfee <- (pure dfee') >>= fromMaybeM (DriverFeeNotFound driverFeeId)
+        updateVehicleVariant (Id id) dfee.vehicleVariant
+        return dfee.vehicleVariant
     pure $
       Just
         Domain.Invoice
@@ -332,6 +353,7 @@ instance FromTType' BeamI.Invoice Domain.Invoice where
             lastStatusCheckedAt,
             merchantOperatingCityId = merchantOperatingCityId',
             Domain.serviceName = fromMaybe YATRI_SUBSCRIPTION serviceName,
+            vehicleVariant = vehicleVariant',
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -352,6 +374,7 @@ instance ToTType' BeamI.Invoice Domain.Invoice where
         BeamI.lastStatusCheckedAt = lastStatusCheckedAt,
         BeamI.serviceName = Just serviceName,
         BeamI.merchantOperatingCityId = Just merchantOperatingCityId.getId,
+        BeamI.vehicleVariant = Just vehicleVariant,
         BeamI.createdAt = createdAt,
         BeamI.updatedAt = updatedAt
       }

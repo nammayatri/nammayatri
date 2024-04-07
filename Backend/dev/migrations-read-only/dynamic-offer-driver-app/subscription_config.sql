@@ -20,3 +20,22 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN merchant_opera
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD PRIMARY KEY ( service_name, merchant_operating_city_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN vehicle_variant text ;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN free_trial_days integer NOT NULL default 7;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN enable_subscription boolean NOT NULL default true;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config DROP CONSTRAINT subscription_config_pkey;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD PRIMARY KEY ( service_name, vehicle_variant, merchant_operating_city_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ALTER COLUMN vehicle_variant SET DEFAULT 'AUTO_RICKSHAW';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ALTER COLUMN vehicle_variant SET NOT NULL;

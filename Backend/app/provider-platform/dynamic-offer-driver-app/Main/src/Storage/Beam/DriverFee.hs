@@ -18,6 +18,7 @@ module Storage.Beam.DriverFee where
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverFee as Domain
 import Domain.Types.Plan (PaymentMode, ServiceNames)
+import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -58,6 +59,7 @@ data DriverFeeT f = DriverFeeT
     planId :: B.C f (Maybe Text),
     planMode :: B.C f (Maybe PaymentMode),
     serviceName :: B.C f (Maybe ServiceNames),
+    vehicleVariant :: B.C f (Maybe Vehicle.Variant),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

@@ -617,7 +617,12 @@ buildDriverEntityRes (person, driverInfo) = do
     return mediaEntry.url
   aadhaarCardPhotoResp <- try @_ @SomeException (fetchAndCacheAadhaarImage person driverInfo)
   let aadhaarCardPhoto = join (eitherToMaybe aadhaarCardPhotoResp)
-  freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
+  freeTrialDaysLeft <- case vehicleMB of
+    Nothing -> return $ transporterConfig.freeTrialDays
+    Just vehicle -> do
+      subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceNameWithVehicleVariant person.merchantOperatingCityId Plan.YATRI_SUBSCRIPTION vehicle.variant
+      let freeTrialDays' = maybe transporterConfig.freeTrialDays (.freeTrialDays) subscriptionConfig
+      getFreeTrialDaysLeft freeTrialDays' driverInfo
   let rating =
         if transporterConfig.ratingAsDecimal
           then SP.roundToOneDecimal <$> person.rating
@@ -1340,9 +1345,10 @@ clearDriverDues ::
 clearDriverDues (personId, _merchantId, opCityId) serviceName mbDeepLinkData = do
   dueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] serviceName
   invoices <- (runInReplica . QINV.findActiveManualInvoiceByFeeId . (.id)) `mapM` dueDriverFees
+  vehicle <- QV.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
-      >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceNameWithVehicleVariant opCityId serviceName vehicle.variant
+      >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId (show serviceName) (show vehicle.variant))
   let paymentService = subscriptionConfig.paymentServiceName
   let sortedInvoices = mergeSortAndRemoveDuplicate invoices
   case sortedInvoices of

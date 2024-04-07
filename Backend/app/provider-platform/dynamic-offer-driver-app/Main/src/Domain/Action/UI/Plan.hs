@@ -58,6 +58,7 @@ import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
 import Tools.Notifications
 import Tools.Payment as Payment
@@ -355,9 +356,14 @@ planSubscribeGeneric ::
   Flow PlanSubscribeRes
 planSubscribeGeneric serviceName planId (isDashboard, channel) (driverId, merchantId, merchantOpCityId) _ subscriptionServiceRelatedData = do
   (autoPayStatus, driverPlan) <- getSubcriptionStatusWithPlan serviceName driverId
-  subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
-      >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
+  vehicle <- QV.findById driverId >>= fromMaybeM (VehicleNotFound driverId.getId)
+  subscriptionConfig' <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceNameWithVehicleVariant merchantOpCityId serviceName vehicle.variant
+  subscriptionConfig <- case subscriptionConfig' of
+    Just sc -> return sc
+    Nothing ->
+      (listToMaybe <$> CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName)
+        >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId (show serviceName) " ")
+  unless (subscriptionConfig.enableSubscription) $ throwError $ InternalError "Subscription is not enabled for this service."
   let deepLinkExpiry = subscriptionConfig.deepLinkExpiryTimeInMinutes
   let allowDeepLink = subscriptionConfig.sendDeepLink
   let mbDeepLinkData = if isDashboard && allowDeepLink then Just $ SPayment.DeepLinkData {sendDeepLink = Just True, expiryTimeInMinutes = deepLinkExpiry} else Nothing
@@ -496,9 +502,10 @@ createMandateInvoiceAndOrder ::
 createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData = do
   transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let allowAtMerchantLevel = isJust transporterConfig.driverFeeCalculationTime
+  vehicle <- QV.findById driverId >>= fromMaybeM (VehicleNotFound driverId.getId)
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
-      >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceNameWithVehicleVariant merchantOpCityId serviceName vehicle.variant
+      >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId (show serviceName) (show vehicle.variant))
   let allowDueAddition = subscriptionConfig.allowDueAddition
   let paymentServiceName = subscriptionConfig.paymentServiceName
   driverManualDuesFees <- if allowAtMerchantLevel && allowDueAddition then QDF.findAllByStatusAndDriverIdWithServiceName driverId [DF.PAYMENT_OVERDUE] serviceName else return []
@@ -519,7 +526,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
     (Just registerFee, Nothing) -> do
       createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName
     (Nothing, _) -> do
-      driverFee <- mkDriverFee currentDues
+      driverFee <- mkDriverFee currentDues vehicle.variant
       QDF.create driverFee
       createOrderForDriverFee driverManualDuesFees driverFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName
   where
@@ -567,7 +574,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
         then SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName (driverFee : driverManualDuesFees, []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple mbDeepLinkData
         else do
           SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([driverFee], []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple mbDeepLinkData
-    mkDriverFee currentDues = do
+    mkDriverFee currentDues vehicleVariant = do
       let (fee, cgst, sgst) = if currentDues > 0 then (0.0, 0.0, 0.0) else calculatePlatformFeeAttr plan.registrationAmount plan
       id <- generateGUID
       now <- getCurrentTime
@@ -607,6 +614,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
             vehicleNumber = Nothing,
             badDebtRecoveryDate = Nothing,
             merchantOperatingCityId = merchantOpCityId,
+            vehicleVariant = vehicleVariant,
             serviceName
           }
     calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees
@@ -621,8 +629,9 @@ convertPlanToPlanEntity :: Id SP.Person -> UTCTime -> Bool -> Plan -> Flow PlanE
 convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {..} = do
   dueDriverFees <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName driverId serviceName
   pendingRegistrationDfee <- B.runInReplica $ QDF.findAllPendingRegistrationDriverFeeByDriverIdForServiceName driverId serviceName
+  vehicle <- QV.findById driverId >>= fromMaybeM (VehicleNotFound driverId.getId)
   transporterConfig_ <- QTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  offers <- SPayment.offerListCache merchantId merchantOpCityId plan.serviceName =<< makeOfferReq applicationDate plan.paymentMode transporterConfig_
+  offers <- SPayment.offerListCache merchantId merchantOpCityId plan.serviceName vehicle.variant =<< makeOfferReq applicationDate plan.paymentMode transporterConfig_
   let allPendingAndOverDueDriverfee = dueDriverFees <> pendingRegistrationDfee
   invoicesForDfee <- QINV.findByDriverFeeIds (map (.id) allPendingAndOverDueDriverfee)
   now <- getCurrentTime

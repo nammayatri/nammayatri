@@ -15,6 +15,7 @@ import qualified Domain.Types.Notification as NTF
 import Domain.Types.Person as P
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.SubscriptionConfig as DSC
+import qualified Domain.Types.Vehicle as Vehicle
 import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -65,9 +66,8 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
     merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
     setIsNotificationSchedulerRunningKey startTime endTime merchantOpCityId serviceName True
     transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    subscriptionConfig <-
-      CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
-        >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
+    subscriptionConfigsByVehicleVariant <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+    let subscriptionConfigsByVehicleVariantMap = Map.fromList $ subscriptionConfigsByVehicleVariant <&> (\sc -> (sc.vehicleVariant, sc))
     let limit = transporterConfig.driverFeeMandateNotificationBatchSize
     driverFees <- QDF.findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus merchantId merchantOpCityId limit startTime endTime retryCount DF.PAYMENT_PENDING serviceName
     maxShards <- asks (.maxShards)
@@ -112,6 +112,9 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
             driverInfoForPDNotification
         QDF.updateAutopayPaymentStageAndRetryCountByIds (Just NOTIFICATION_ATTEMPTING) retryCount (map (.driverFeeId) driverFeeToBeNotified)
         for_ driverFeeToBeNotified $ \driverToNotify -> do
+          subscriptionConfig <-
+            (pure $ subscriptionConfigsByVehicleVariantMap Map.!? (driverToNotify.vehicleVariant))
+              >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId (show serviceName) (show driverToNotify.vehicleVariant))
           fork ("Notification call for driverFeeId : " <> driverToNotify.driverFeeId.getId) $ do
             sendAsyncNotification driverToNotify merchantId merchantOpCityId subscriptionConfig
         ReSchedule <$> getRescheduledTime transporterConfig
@@ -134,6 +137,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         { driverId = driverFee_.driverId,
           mandateId = mandateId_,
           driverFeeId = driverFee_.id,
+          vehicleVariant = driverFee_.vehicleVariant,
           amount = roundToHalf $ (fromIntegral driverFee_.govtCharges) + driverFee_.platformFee.fee + driverFee_.platformFee.cgst + driverFee_.platformFee.sgst
         }
 
@@ -141,6 +145,7 @@ data DriverInfoForPDNotification = DriverInfoForPDNotification
   { driverId :: Id Driver,
     mandateId :: Id Mandate,
     amount :: HighPrecMoney,
+    vehicleVariant :: Vehicle.Variant,
     driverFeeId :: Id DF.DriverFee
   }
 

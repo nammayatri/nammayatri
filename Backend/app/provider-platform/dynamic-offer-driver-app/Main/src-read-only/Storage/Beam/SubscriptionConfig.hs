@@ -10,6 +10,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantMessage
 import qualified Domain.Types.Merchant.MerchantServiceConfig
 import qualified Domain.Types.Plan
+import qualified Domain.Types.Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -21,6 +22,8 @@ data SubscriptionConfigT f = SubscriptionConfigT
     allowDueAddition :: B.C f Kernel.Prelude.Bool,
     allowManualPaymentLinks :: B.C f Kernel.Prelude.Bool,
     deepLinkExpiryTimeInMinutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    enableSubscription :: B.C f Kernel.Prelude.Bool,
+    freeTrialDays :: B.C f Kernel.Prelude.Int,
     genericBatchSizeForJobs :: B.C f Kernel.Prelude.Int,
     genericJobRescheduleTime :: B.C f Kernel.Types.Common.Seconds,
     isTriggeredAtEndRide :: B.C f Kernel.Prelude.Bool,
@@ -32,6 +35,7 @@ data SubscriptionConfigT f = SubscriptionConfigT
     sendInAppFcmNotifications :: B.C f Kernel.Prelude.Bool,
     serviceName :: B.C f Domain.Types.Plan.ServiceNames,
     useOverlayService :: B.C f Kernel.Prelude.Bool,
+    vehicleVariant :: B.C f Domain.Types.Vehicle.Variant,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
@@ -40,11 +44,13 @@ data SubscriptionConfigT f = SubscriptionConfigT
   deriving (Generic, B.Beamable)
 
 instance B.Table SubscriptionConfigT where
-  data PrimaryKey SubscriptionConfigT f = SubscriptionConfigId (B.C f Domain.Types.Plan.ServiceNames) (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)) deriving (Generic, B.Beamable)
-  primaryKey = SubscriptionConfigId <$> serviceName <*> merchantOperatingCityId
+  data PrimaryKey SubscriptionConfigT f
+    = SubscriptionConfigId (B.C f Domain.Types.Plan.ServiceNames) (B.C f Domain.Types.Vehicle.Variant) (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text))
+    deriving (Generic, B.Beamable)
+  primaryKey = SubscriptionConfigId <$> serviceName <*> vehicleVariant <*> merchantOperatingCityId
 
 type SubscriptionConfig = SubscriptionConfigT Identity
 
-$(enableKVPG ''SubscriptionConfigT ['serviceName, 'merchantOperatingCityId] [])
+$(enableKVPG ''SubscriptionConfigT ['serviceName, 'vehicleVariant, 'merchantOperatingCityId] [])
 
 $(mkTableInstances ''SubscriptionConfigT "subscription_config")

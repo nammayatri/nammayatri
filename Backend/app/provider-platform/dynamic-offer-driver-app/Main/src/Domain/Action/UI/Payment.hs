@@ -37,6 +37,7 @@ import qualified Domain.Types.Notification as DNTF
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
+import qualified Domain.Types.Vehicle as Vehicle
 import Environment
 import Kernel.Beam.Functions as B (runInReplica)
 import Kernel.External.Encryption
@@ -76,6 +77,7 @@ import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Notification as QNTF
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
 import Tools.Notifications
 import qualified Tools.Payment as Payment
@@ -88,9 +90,10 @@ createOrder (driverId, merchantId, opCityId) invoiceId = do
   driverFees <- (B.runInReplica . QDF.findById . (.driverFeeId)) `mapM` invoices
   let mbServiceName = listToMaybe invoices <&> (.serviceName)
   let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
+  let vehicleVariant = fromMaybe Vehicle.AUTO_RICKSHAW $ listToMaybe invoices <&> (.vehicleVariant) --------- temporary need to be handled properly
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
-      >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceNameWithVehicleVariant opCityId serviceName vehicleVariant
+      >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId (show serviceName) (show vehicleVariant))
   let paymentServiceName = subscriptionConfig.paymentServiceName
   (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId, opCityId) paymentServiceName (catMaybes driverFees, []) Nothing INV.MANUAL_INVOICE (getIdAndShortId <$> listToMaybe invoices) Nothing
   return createOrderResp
@@ -144,8 +147,8 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
     else do
       let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
       serviceConfig <-
-        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName
-          >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
+        (listToMaybe <$> CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName)
+          >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId (show serviceName) " ")
       paymentStatus <- DPayment.orderStatusService commonPersonId orderId (orderStatusCall serviceConfig.paymentServiceName)
       driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
       case paymentStatus of
@@ -182,8 +185,8 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
   let merchantId = merchant.id
       serviceName' = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchanOperatingCityId serviceName'
-      >>= fromMaybeM (NoSubscriptionConfigForService merchanOperatingCityId.getId $ show serviceName')
+    (listToMaybe <$> CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchanOperatingCityId serviceName')
+      >>= fromMaybeM (NoSubscriptionConfigForService merchanOperatingCityId.getId (show serviceName') " ")
   merchantServiceConfig <-
     CQMSC.findByMerchantIdAndServiceWithCity merchantId (subscriptionConfig.paymentServiceName) merchanOperatingCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
@@ -237,8 +240,8 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
       let serviceName' = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName'
       driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
       serviceConfig <-
-        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName driver.merchantOperatingCityId serviceName'
-          >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName')
+        (listToMaybe <$> CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName driver.merchantOperatingCityId serviceName')
+          >>= fromMaybeM (NoSubscriptionConfigForService driver.merchantOperatingCityId.getId (show serviceName') " ")
       return (invoices', serviceName', serviceConfig, driver)
 
 processPayment ::
@@ -362,9 +365,10 @@ pdnNotificationStatus (_, merchantId, opCity) notificationId = do
   let driverFeeId = pdnNotification.driverFeeId
   driverFee <- QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound driverFeeId.getId)
   driver <- B.runInReplica $ QP.findById driverFee.driverId >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
+  vehicle <- QV.findById driverFee.driverId >>= fromMaybeM (VehicleNotFound driverFee.driverId.getId)
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCity driverFee.serviceName
-      >>= fromMaybeM (NoSubscriptionConfigForService opCity.getId $ show driverFee.serviceName)
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceNameWithVehicleVariant opCity driverFee.serviceName vehicle.variant
+      >>= fromMaybeM (NoSubscriptionConfigForService opCity.getId (show driverFee.serviceName) (show vehicle.variant))
   resp <- Payment.mandateNotificationStatus merchantId opCity subscriptionConfig.paymentServiceName (mkNotificationRequest pdnNotification.shortId)
   let [responseCode, reponseMessage] = map (\func -> func =<< resp.providerResponse) [(.responseCode), (.responseMessage)]
   processNotification opCity pdnNotification resp.status responseCode reponseMessage driverFee driver False

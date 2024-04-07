@@ -21,6 +21,7 @@ import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Person (Driver)
 import Domain.Types.Plan (PaymentMode, Plan)
 import qualified Domain.Types.Plan as Plan
+import Domain.Types.Vehicle as Vehicle
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
@@ -62,7 +63,8 @@ data DriverFee = DriverFee
     planId :: Maybe (Id Plan),
     planMode :: Maybe PaymentMode,
     serviceName :: Plan.ServiceNames,
-    vehicleNumber :: Maybe Text
+    vehicleNumber :: Maybe Text,
+    vehicleVariant :: Vehicle.Variant
   }
   deriving (Generic, Show, Eq)
 

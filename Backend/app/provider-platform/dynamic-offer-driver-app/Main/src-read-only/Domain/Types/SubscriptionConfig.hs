@@ -10,6 +10,7 @@ import qualified Domain.Types.Merchant.MerchantMessage
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Merchant.MerchantServiceConfig
 import qualified Domain.Types.Plan
+import qualified Domain.Types.Vehicle
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -19,6 +20,8 @@ data SubscriptionConfig = SubscriptionConfig
     allowDueAddition :: Kernel.Prelude.Bool,
     allowManualPaymentLinks :: Kernel.Prelude.Bool,
     deepLinkExpiryTimeInMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    enableSubscription :: Kernel.Prelude.Bool,
+    freeTrialDays :: Kernel.Prelude.Int,
     genericBatchSizeForJobs :: Kernel.Prelude.Int,
     genericJobRescheduleTime :: Data.Time.NominalDiffTime,
     isTriggeredAtEndRide :: Kernel.Prelude.Bool,
@@ -30,6 +33,7 @@ data SubscriptionConfig = SubscriptionConfig
     sendInAppFcmNotifications :: Kernel.Prelude.Bool,
     serviceName :: Domain.Types.Plan.ServiceNames,
     useOverlayService :: Kernel.Prelude.Bool,
+    vehicleVariant :: Domain.Types.Vehicle.Variant,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

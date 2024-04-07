@@ -6,6 +6,7 @@ module Storage.Beam.Invoice where
 import qualified Database.Beam as B
 import qualified Domain.Types.Invoice as Domain
 import Domain.Types.Plan (ServiceNames)
+import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -24,6 +25,7 @@ data InvoiceT f = InvoiceT
     merchantOperatingCityId :: B.C f (Maybe Text),
     bankErrorUpdatedAt :: B.C f (Maybe UTCTime),
     serviceName :: B.C f (Maybe ServiceNames),
+    vehicleVariant :: B.C f (Maybe Vehicle.Variant),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

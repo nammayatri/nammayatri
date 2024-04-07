@@ -5,6 +5,7 @@ import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import Domain.Types.Plan (ServiceNames)
+import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
@@ -25,6 +26,7 @@ data Invoice = Invoice
     lastStatusCheckedAt :: Maybe UTCTime,
     maxMandateAmount :: Maybe HighPrecMoney,
     serviceName :: ServiceNames,
+    vehicleVariant :: Vehicle.Variant,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

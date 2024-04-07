@@ -120,6 +120,7 @@ groupDriverFeeByInvoices driverFees_ = do
           updatedAt = now,
           merchantOperatingCityId = driverFee.merchantOperatingCityId,
           serviceName = driverFee.serviceName,
+          vehicleVariant = driverFee.vehicleVariant,
           createdAt = now
         }
 

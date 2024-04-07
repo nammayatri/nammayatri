@@ -33,7 +33,6 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Notification as QNTF
-import Tools.Error
 import qualified Tools.Payment as TPayment
 
 startMandateExecutionForDriver ::
@@ -151,13 +150,13 @@ asyncExecutionCall ::
   Id DMOC.MerchantOperatingCity ->
   m ()
 asyncExecutionCall ExecutionData {..} merchantId merchantOperatingCityId = do
-  driverFeeForExecution <- QDF.findById driverFee.id
+  driverFeeForExecution <- QDF.findById driverFee.id >>= fromMaybeM (InternalError "Driver fee not found")
   let serviceName = invoice.serviceName
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName
-      >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceNameWithVehicleVariant merchantOperatingCityId serviceName driverFeeForExecution.vehicleVariant
+      >>= fromMaybeM (InternalError "Subscription config not found")
   let paymentService = subscriptionConfig.paymentServiceName
-  if (driverFeeForExecution <&> (.status)) == Just PAYMENT_PENDING && (driverFeeForExecution <&> (.feeType)) == Just DF.RECURRING_EXECUTION_INVOICE
+  if (driverFeeForExecution.status == PAYMENT_PENDING && driverFeeForExecution.feeType == DF.RECURRING_EXECUTION_INVOICE)
     then do
       exec <- try @_ @SomeException (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (TPayment.mandateExecution merchantId merchantOperatingCityId paymentService))
       case exec of

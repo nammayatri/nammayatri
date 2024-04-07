@@ -8,6 +8,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Plan
 import qualified Domain.Types.SubscriptionConfig
+import qualified Domain.Types.Vehicle
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -27,22 +28,35 @@ createMany = traverse_ create
 
 findSubscriptionConfigsByMerchantOpCityIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Domain.Types.Plan.ServiceNames -> m (Maybe Domain.Types.SubscriptionConfig.SubscriptionConfig))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Domain.Types.Plan.ServiceNames -> m [Domain.Types.SubscriptionConfig.SubscriptionConfig])
 findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName = do
-  findOneWithKV
+  findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
           Se.Is Beam.serviceName $ Se.Eq serviceName
         ]
     ]
 
+findSubscriptionConfigsByMerchantOpCityIdAndServiceNameWithVehicleVariant ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Domain.Types.Plan.ServiceNames -> Domain.Types.Vehicle.Variant -> m (Maybe Domain.Types.SubscriptionConfig.SubscriptionConfig))
+findSubscriptionConfigsByMerchantOpCityIdAndServiceNameWithVehicleVariant merchantOperatingCityId serviceName vehicleVariant = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+          Se.Is Beam.serviceName $ Se.Eq serviceName,
+          Se.Is Beam.vehicleVariant $ Se.Eq vehicleVariant
+        ]
+    ]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> m (Maybe Domain.Types.SubscriptionConfig.SubscriptionConfig))
-findByPrimaryKey serviceName merchantOperatingCityId = do
+  (Domain.Types.Plan.ServiceNames -> Domain.Types.Vehicle.Variant -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> m (Maybe Domain.Types.SubscriptionConfig.SubscriptionConfig))
+findByPrimaryKey serviceName vehicleVariant merchantOperatingCityId = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.serviceName $ Se.Eq serviceName,
+          Se.Is Beam.vehicleVariant $ Se.Eq vehicleVariant,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
         ]
     ]
@@ -55,6 +69,8 @@ updateByPrimaryKey (Domain.Types.SubscriptionConfig.SubscriptionConfig {..}) = d
       Se.Set Beam.allowDueAddition allowDueAddition,
       Se.Set Beam.allowManualPaymentLinks allowManualPaymentLinks,
       Se.Set Beam.deepLinkExpiryTimeInMinutes deepLinkExpiryTimeInMinutes,
+      Se.Set Beam.enableSubscription enableSubscription,
+      Se.Set Beam.freeTrialDays freeTrialDays,
       Se.Set Beam.genericBatchSizeForJobs genericBatchSizeForJobs,
       Se.Set Beam.genericJobRescheduleTime (Kernel.Utils.Common.nominalDiffTimeToSeconds genericJobRescheduleTime),
       Se.Set Beam.isTriggeredAtEndRide isTriggeredAtEndRide,
@@ -69,7 +85,12 @@ updateByPrimaryKey (Domain.Types.SubscriptionConfig.SubscriptionConfig {..}) = d
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.serviceName $ Se.Eq serviceName, Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)]]
+    [ Se.And
+        [ Se.Is Beam.serviceName $ Se.Eq serviceName,
+          Se.Is Beam.vehicleVariant $ Se.Eq vehicleVariant,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
+        ]
+    ]
 
 instance FromTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.SubscriptionConfig where
   fromTType' (Beam.SubscriptionConfigT {..}) = do
@@ -80,6 +101,8 @@ instance FromTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subs
             allowDueAddition = allowDueAddition,
             allowManualPaymentLinks = allowManualPaymentLinks,
             deepLinkExpiryTimeInMinutes = deepLinkExpiryTimeInMinutes,
+            enableSubscription = enableSubscription,
+            freeTrialDays = freeTrialDays,
             genericBatchSizeForJobs = genericBatchSizeForJobs,
             genericJobRescheduleTime = Kernel.Utils.Common.secondsToNominalDiffTime genericJobRescheduleTime,
             isTriggeredAtEndRide = isTriggeredAtEndRide,
@@ -91,6 +114,7 @@ instance FromTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subs
             sendInAppFcmNotifications = sendInAppFcmNotifications,
             serviceName = serviceName,
             useOverlayService = useOverlayService,
+            vehicleVariant = vehicleVariant,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -104,6 +128,8 @@ instance ToTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subscr
         Beam.allowDueAddition = allowDueAddition,
         Beam.allowManualPaymentLinks = allowManualPaymentLinks,
         Beam.deepLinkExpiryTimeInMinutes = deepLinkExpiryTimeInMinutes,
+        Beam.enableSubscription = enableSubscription,
+        Beam.freeTrialDays = freeTrialDays,
         Beam.genericBatchSizeForJobs = genericBatchSizeForJobs,
         Beam.genericJobRescheduleTime = Kernel.Utils.Common.nominalDiffTimeToSeconds genericJobRescheduleTime,
         Beam.isTriggeredAtEndRide = isTriggeredAtEndRide,
@@ -115,6 +141,7 @@ instance ToTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subscr
         Beam.sendInAppFcmNotifications = sendInAppFcmNotifications,
         Beam.serviceName = serviceName,
         Beam.useOverlayService = useOverlayService,
+        Beam.vehicleVariant = vehicleVariant,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

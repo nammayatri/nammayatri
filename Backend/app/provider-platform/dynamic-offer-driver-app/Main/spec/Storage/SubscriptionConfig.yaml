@@ -4,7 +4,7 @@ imports:
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
   Merchant: Domain.Types.Merchant
   Id: Kernel.Types.Id
-
+  VehicleVariant: Domain.Types.Vehicle
 
 SubscriptionConfig:
   tableName: subscription_config
@@ -27,6 +27,9 @@ SubscriptionConfig:
     deepLinkExpiryTimeInMinutes : Maybe Int
     isTriggeredAtEndRide : Bool
     allowDriverFeeCalcSchedule : Bool
+    freeTrialDays : Int
+    enableSubscription : Bool
+    vehicleVariant : Domain.Types.Vehicle.Variant
 
   fromTType:
     genericJobRescheduleTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
@@ -42,11 +45,16 @@ SubscriptionConfig:
   constraints:
     serviceName : PrimaryKey
     merchantOperatingCityId : PrimaryKey
+    vehicleVariant : PrimaryKey
 
 
   queries :
-    findSubscriptionConfigsByMerchantOpCityIdAndServiceName:
+    findSubscriptionConfigsByMerchantOpCityIdAndServiceNameWithVehicleVariant:
       kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, serviceName, vehicleVariant]
+    findSubscriptionConfigsByMerchantOpCityIdAndServiceName:
+      kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, serviceName]
 
@@ -58,3 +66,6 @@ SubscriptionConfig:
     paymentServiceName : "'Payment_Juspay'"
     isTriggeredAtEndRide : "true"
     allowDriverFeeCalcSchedule : "false"
+    freeTrialDays : "7"
+    enableSubscription : "true"
+    vehicleVariant : "'AUTO_RICKSHAW'"

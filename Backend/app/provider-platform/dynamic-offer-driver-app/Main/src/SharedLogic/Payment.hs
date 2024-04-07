@@ -23,6 +23,7 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as DP
+import qualified Domain.Types.Vehicle as Vehicle
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
@@ -136,16 +137,24 @@ mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee 
       lastStatusCheckedAt = Nothing,
       serviceName = driverFee.serviceName,
       merchantOperatingCityId = driverFee.merchantOperatingCityId,
+      vehicleVariant = driverFee.vehicleVariant,
       updatedAt = now,
       createdAt = now
     }
 
-offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DP.ServiceNames -> Payment.OfferListReq -> m Payment.OfferListResp
-offerListCache merchantId merchantOpCityId serviceName req = do
+offerListCache ::
+  (MonadFlow m, ServiceFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DP.ServiceNames ->
+  Vehicle.Variant ->
+  Payment.OfferListReq ->
+  m Payment.OfferListResp
+offerListCache merchantId merchantOpCityId serviceName vehicleVariant req = do
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
-      >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceNameWithVehicleVariant merchantOpCityId serviceName vehicleVariant
+      >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId (show serviceName) (show vehicleVariant))
   if transporterConfig.useOfferListCache
     then do
       key <- makeOfferListCacheKey transporterConfig.cacheOfferListByDriverId req

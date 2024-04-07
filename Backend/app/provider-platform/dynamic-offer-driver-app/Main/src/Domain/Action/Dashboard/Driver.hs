@@ -558,6 +558,7 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
             lastStatusCheckedAt = Nothing,
             serviceName = driverFee.serviceName,
             merchantOperatingCityId = driverFee.merchantOperatingCityId,
+            vehicleVariant = driverFee.vehicleVariant,
             updatedAt = now,
             createdAt = now
           }

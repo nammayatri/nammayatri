@@ -65,6 +65,8 @@ import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QMD
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Vehicle as QV
+import Tools.Error
 import qualified Tools.Payment as TPayment
 
 calculateDriverFeeForDrivers ::
@@ -93,8 +95,9 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
   driverFees <- getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOpCityId transporterConfig
+  subscriptionConfigsWithVehicleVaraint <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+  let subscriptionConfigsByVehicleVariant = M.fromList $ map (\sc -> (sc.vehicleVariant, sc)) subscriptionConfigsWithVehicleVaraint
   let threshold = transporterConfig.driverFeeRetryThresholdConfig
   driverFeesToProccess <-
     mapMaybeM
@@ -112,6 +115,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       driverFees
   flip C.catchAll (\e -> C.mask_ $ logError $ "Driver fee scheduler for merchant id " <> merchantId.getId <> " failed. Error: " <> show e) $ do
     for_ driverFeesToProccess $ \driverFee -> do
+      subscriptionConfigs <- (pure $ subscriptionConfigsByVehicleVariant M.!? driverFee.vehicleVariant) >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId (show serviceName) (show driverFee.vehicleVariant))
       mbDriverPlan <- findByDriverIdWithServiceName (cast driverFee.driverId) serviceName
       mbPlan <- getPlan mbDriverPlan serviceName merchantOpCityId
       mbDriverStat <- QDS.findById (cast driverFee.driverId)
@@ -186,6 +190,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
     Nothing -> do
       Hedis.del (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
       maxShards <- asks (.maxShards)
+      subscriptionConfigs <- (pure $ listToMaybe subscriptionConfigsWithVehicleVaraint) >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId (show serviceName) "")
       scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards serviceName subscriptionConfigs jobData
       return Complete
     _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
@@ -287,7 +292,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
       updateCollectedPaymentStatus CLEARED Nothing now driverFee.id
       return (0, 0, Nothing, Nothing)
     else do
-      offers <- SPayment.offerListCache merchantId driver.merchantOperatingCityId plan.serviceName (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal numOfRidesConsideredForCharges transporterConfig) -- handle UDFs
+      offers <- SPayment.offerListCache merchantId driver.merchantOperatingCityId plan.serviceName driverFee.vehicleVariant (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal numOfRidesConsideredForCharges transporterConfig) -- handle UDFs
       (finalOrderAmount, offerId, offerTitle) <-
         if null offers.offerResp
           then pure (feeWithoutDiscount, Nothing, Nothing)
@@ -401,7 +406,8 @@ getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merch
                   mbExistingDFee <- QDF.findFeeByDriverIdAndServiceNameInRange (cast dPlan.driverId) serviceName startTime endTime
                   if isNothing mbExistingDFee
                     then do
-                      driverFee <- mkDriverFee serviceName now mbStartTime mbEndTime merchantId dPlan.driverId Nothing 0 0.0 0.0 0.0 transporterConfig Nothing
+                      vehicle <- QV.findById dPlan.driverId >>= fromMaybeM (VehicleNotFound dPlan.driverId.getId)
+                      driverFee <- mkDriverFee serviceName now mbStartTime mbEndTime merchantId dPlan.driverId Nothing 0 0.0 0.0 0.0 transporterConfig vehicle.variant Nothing
                       QDF.create driverFee
                       return $ Just driverFee
                     else return Nothing
@@ -436,6 +442,7 @@ mkInvoiceAgainstDriverFee driverFee (isCoinCleared, isAutoPay) = do
         lastStatusCheckedAt = Nothing,
         serviceName = driverFee.serviceName,
         merchantOperatingCityId = driverFee.merchantOperatingCityId,
+        vehicleVariant = driverFee.vehicleVariant,
         updatedAt = now,
         createdAt = now
       }
@@ -606,7 +613,9 @@ sendManualPaymentLink Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       endTime = jobData.endTime
       serviceName = jobData.serviceName
   now <- getCurrentTime
-  subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
+  subscriptionConfigs <-
+    (listToMaybe <$> CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName)
+      >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
   let deepLinkExpiry = subscriptionConfigs.deepLinkExpiryTimeInMinutes
   driverPlansToProccess <- findAllDriversToSendManualPaymentLinkWithLimit serviceName merchantId opCityId endTime subscriptionConfigs.genericBatchSizeForJobs
   if null driverPlansToProccess

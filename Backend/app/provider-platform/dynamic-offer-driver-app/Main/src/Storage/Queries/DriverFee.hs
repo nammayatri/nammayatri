@@ -25,6 +25,7 @@ import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person
 import Domain.Types.Plan as DPlan
+import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.CacheFlow (CacheFlow)
@@ -35,6 +36,7 @@ import Kernel.Utils.Common (fork, fromMaybeM, getLocalCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFee -> m ()
@@ -876,6 +878,12 @@ updateFeeWithoutDiscount driverFeeId mbFeeWithoutDiscount = do
     [Se.Set BeamDF.feeWithoutDiscount mbFeeWithoutDiscount]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
+updateVehicleVariant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Vehicle.Variant -> m ()
+updateVehicleVariant driverFeeId vehicleVariant = do
+  updateOneWithKV
+    [Se.Set BeamDF.vehicleVariant (Just vehicleVariant)]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
+
 updateAmountPaidByCoins :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Maybe HighPrecMoney -> m ()
 updateAmountPaidByCoins driverFeeId mbAmountPaidByCoin = do
   updateOneWithKV
@@ -928,6 +936,12 @@ instance FromTType' BeamDF.DriverFee DriverFee where
         updateMerchantOperatingCityId (Id id) opCity
         return opCity
       Just mOpCityId -> return $ Id mOpCityId
+    vehicleVariant' <- case vehicleVariant of
+      Nothing -> do
+        vehicle <- QV.findById (Id driverId) >>= fromMaybeM (VehicleNotFound driverId)
+        updateVehicleVariant (Id id) vehicle.variant
+        return $ vehicle.variant
+      Just vVariant -> return vVariant
     pure $
       Just
         DriverFee
@@ -965,7 +979,8 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             badDebtDeclarationDate,
             serviceName = fromMaybe YATRI_SUBSCRIPTION serviceName,
             merchantOperatingCityId = merchantOperatingCityId',
-            badDebtRecoveryDate
+            badDebtRecoveryDate,
+            vehicleVariant = vehicleVariant'
           }
 
 instance ToTType' BeamDF.DriverFee DriverFee where
@@ -1007,5 +1022,6 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.serviceName = Just serviceName,
         BeamDF.badDebtDeclarationDate = badDebtDeclarationDate,
         BeamDF.merchantOperatingCityId = Just merchantOperatingCityId.getId,
-        BeamDF.badDebtRecoveryDate = badDebtRecoveryDate
+        BeamDF.badDebtRecoveryDate = badDebtRecoveryDate,
+        BeamDF.vehicleVariant = Just vehicleVariant
       }

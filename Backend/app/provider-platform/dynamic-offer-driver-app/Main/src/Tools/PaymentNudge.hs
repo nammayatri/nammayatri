@@ -29,6 +29,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.TransporterConfig as TC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
+import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.Beam.Functions as B
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Payment.Interface as Payment
@@ -87,9 +88,10 @@ sendSwitchPlanNudge ::
   Maybe Plan ->
   Maybe DPlan.DriverPlan ->
   Int ->
+  Vehicle.Variant ->
   ServiceNames ->
   m ()
-sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRides serviceName = do
+sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRides vehicleVariant serviceName = do
   whenJust mbCurrPlan $ \currPlan -> do
     driver <- QDP.findById (cast driverInfo.driverId) >>= fromMaybeM (PersonNotFound driverInfo.driverId.getId)
     if numRides == currPlan.freeRideCount + 1
@@ -117,7 +119,7 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
               _ -> currentTotal
       let mbMandateSetupDate = mbDriverPlan >>= (.mandateSetupDate)
       let mandateSetupDate = maybe now (\date -> if driverInfo.autoPayStatus == Just DI.ACTIVE then date else now) mbMandateSetupDate
-      offersResp <- SPayment.offerListCache transporterConfig.merchantId driver.merchantOperatingCityId plan.serviceName =<< makeOfferReq mandateSetupDate plan.paymentMode plan driver
+      offersResp <- SPayment.offerListCache transporterConfig.merchantId driver.merchantOperatingCityId plan.serviceName vehicleVariant =<< makeOfferReq mandateSetupDate plan.paymentMode plan driver
       if null offersResp.offerResp
         then return (mkOfferedAmountsEntity amount plan.id)
         else do
