@@ -296,3 +296,6 @@ _deepLinkJSON = lens (unwrap >>> _.deepLinkJSON) (\oldRec newVal -> wrap ((unwra
 
 _rideEndTime :: forall a b c. Newtype a { rideEndTime :: b | c } => Lens' a b
 _rideEndTime = lens (unwrap >>> _.rideEndTime) (\oldRec newVal -> wrap ((unwrap oldRec) { rideEndTime = newVal }))
+
+_customerReferralCode :: forall a b c. Newtype a { customerReferralCode :: b | c } => Lens' a b
+_customerReferralCode = lens (unwrap >>> _.customerReferralCode) (\oldRec newVal -> wrap ((unwrap oldRec) { customerReferralCode = newVal }))

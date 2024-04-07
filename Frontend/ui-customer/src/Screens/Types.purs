@@ -612,6 +612,7 @@ type HomeScreenStateData =
   , followers :: Maybe (Array Followers)
   , vehicleVariant :: String
   , hotSpotInfo :: Array HotSpotData
+  , customerReferralCode :: Maybe String
   }
 
 type RentalsInfo = 

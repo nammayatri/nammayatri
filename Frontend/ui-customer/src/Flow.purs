@@ -331,6 +331,7 @@ currentFlowStatus = do
                         { data
                           { disability = Just { tag: tag, id: "", description: "" }
                           , followers = Nothing
+                          , customerReferralCode = response ^. _customerReferralCode
                           , settingSideBar
                             { name = fromMaybe "" (response ^. _firstName)
                             , gender = response ^. _gender

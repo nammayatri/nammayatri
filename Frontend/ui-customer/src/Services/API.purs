@@ -1255,6 +1255,7 @@ newtype GetProfileRes = GetProfileRes
   , hasCompletedMockSafetyDrill :: Maybe Boolean
   , followsRide :: Maybe Boolean
   , isSafetyCenterDisabled :: Maybe Boolean
+  , customerReferralCode :: Maybe String
   }
 
 

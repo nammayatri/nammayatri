@@ -76,9 +76,15 @@ type AppConfigCustomer a =
   , tipDisplayDuration :: Int
   , tipsEnabled :: Boolean
   , tipEnabledCities :: Array String
+  , referral :: ReferalConfig
   , safety :: Safety
   | a
   }
+
+type ReferalConfig = {
+  domain :: String,
+  customerAppId :: String
+}
 
 type GeoCoderConfig = {
   enableLLtoAddress :: Boolean,
