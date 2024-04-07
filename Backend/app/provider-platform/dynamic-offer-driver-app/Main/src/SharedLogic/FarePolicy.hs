@@ -44,7 +44,7 @@ makeFarePolicyByEstOrQuoteIdKey estOrQuoteId = "CachedQueries:FarePolicy:EstOrQu
 
 getFarePolicyByEstOrQuoteIdWithoutFallback :: (CacheFlow m r) => Text -> m (Maybe FarePolicyD.FullFarePolicy)
 getFarePolicyByEstOrQuoteIdWithoutFallback estOrQuoteId = do
-  Redis.get (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId) >>= \case
+  Redis.safeGet (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId) >>= \case
     Nothing -> do
       logWarning $ "Fare Policy Not Found for quote id: " <> estOrQuoteId
       return Nothing
@@ -52,7 +52,7 @@ getFarePolicyByEstOrQuoteIdWithoutFallback estOrQuoteId = do
 
 getFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe FareProductD.Area -> Text -> Maybe Text -> Maybe Text -> m FarePolicyD.FullFarePolicy
 getFarePolicyByEstOrQuoteId merchantOpCityId tripCategory vehicleServiceTier area estOrQuoteId txnId idName = do
-  Redis.get (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId) >>= \case
+  Redis.safeGet (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId) >>= \case
     Nothing -> do
       logWarning "Old Fare Policy Not Found, Hence using new fare policy."
       getFarePolicy merchantOpCityId tripCategory vehicleServiceTier area txnId idName
