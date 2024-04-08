@@ -20,6 +20,7 @@ import Domain.Types.Common
 import Domain.Types.Location (DummyLocationInfo)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (Language)
@@ -174,6 +175,7 @@ data TransporterConfigD u = TransporterConfig
     dummyToLocation :: DummyLocationInfo,
     scheduleRideBufferTime :: NominalDiffTime,
     fakeOtpMobileNumbers :: [Text],
+    variantsToEnableForSubscription :: [Vehicle.Variant],
     considerDriversForSearch :: Bool,
     pastDaysRideCounter :: Int
   }
