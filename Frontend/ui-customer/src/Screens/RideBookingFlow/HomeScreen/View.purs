@@ -3163,7 +3163,7 @@ homeScreenViewV2 push state =
                         else 
                           [])
                           <> (if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else [])
-                          <> contentView state
+                          <> (if isHomeScreenView state then contentView state else [])
                           -- <> if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else []
                           <> [ shimmerView state
                           , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
@@ -3412,15 +3412,18 @@ mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> Pre
 mapView push state idTag = 
   let mapDimensions = getMapDimensions state
       bottomPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize 112 else 0
+      banners = getBannerConfigs state BannerCarousel
+      isVisible = if isHomeScreenView state then null banners
+                      else (not (state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == SearchLocation ))
+    
   in
   PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
   relativeLayout
-    [ height if isHomeScreenView state && (isJust state.data.bannerData.bannerItem) then V 0 else mapDimensions.height
+    [ height if isHomeScreenView state && (not (null banners)) then V 0 else mapDimensions.height
     , width mapDimensions.width 
     -- , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
-    , visibility $ if isHomeScreenView state then 
-                      if isNothing state.data.bannerData.bannerItem && state.props.isBannerDataComputed then VISIBLE else INVISIBLE
-                      else VISIBLE
+    , margin $ if isHomeScreenView state && null banners then MarginTop 16 else MarginTop 0
+    , visibility $ boolToInvisibility isVisible
     , padding $ PaddingBottom $ bottomPadding
     , onAnimationEnd
             ( \action -> do
@@ -3441,7 +3444,7 @@ mapView push state idTag =
             )
             (const MapReadyAction)
     ]$[ linearLayout
-        [ height  $ if isHomeScreenView state && (isJust state.data.bannerData.bannerItem) then V 0 else mapDimensions.height
+        [ height  $ if isHomeScreenView state && (not (null banners)) then V 0 else mapDimensions.height
         , width $ mapDimensions.width 
         , accessibility DISABLE_DESCENDANT
         , id (getNewIDWithTag idTag)
