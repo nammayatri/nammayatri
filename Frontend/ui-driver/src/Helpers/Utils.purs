@@ -552,13 +552,17 @@ getVehicleVariantImage variant =
       commonUrl = getCommonAssetLink FunctionCall
   in case getMerchant FunctionCall of
         YATRISATHI -> case variant of
-                        "TAXI" -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
-                        "SUV"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
-                        _      -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
+                        "TAXI"      -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
+                        "SUV"       -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
+                        "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
+                        "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
+                        _           -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         NAMMAYATRI -> case variant of
                         "SEDAN"     -> "ny_ic_sedan," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ny_ic_sedan.png"
                         "SUV"       -> "ny_ic_sedan," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ny_ic_sedan.png"
                         "HATCHBACK" -> "ny_ic_sedan," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ny_ic_sedan.png"
+                        "RENTALS"   -> "ic_rentals," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ic_rentals.png"
+                        "INTERCITY" -> "ic_intercity," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ic_intercity.png"
                         "AUTO_RICKSHAW" -> 
                           case (getValueFromCache (show DRIVER_LOCATION) getKeyInSharedPrefKeys) of
                             "Hyderabad" -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
@@ -571,6 +575,8 @@ getVehicleVariantImage variant =
                         "HATCHBACK" -> "ny_ic_hatchback_car_side," <> url <> "ny_ic_hatchback_car_side.png"
                         "TAXI"      -> "ic_sedan_non_ac," <> url <> "ic_sedan_non_ac.png"
                         "TAXI_PLUS" -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
+                        "RENTALS"   -> "ic_rentals," <> url <> "ic_rentals.png"
+                        "INTERCITY" -> "ic_intercity," <> url <> "ic_intercity.png"
                         _           -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
 
 getVariantRideType :: String -> String

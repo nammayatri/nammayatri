@@ -571,7 +571,7 @@ window.getMerchantConfig = function () {
         "url" : "https://nammayatri.in/open?source=in-app"
     }
   , "profile" : {
-    "showBookingOption" : false
+    "showBookingOption" : true
   }
   , "waitTimeConfig" : {
     "thresholdDist" : 0.03,

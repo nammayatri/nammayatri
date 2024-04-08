@@ -1589,8 +1589,15 @@ selectLanguageFlow = do
 
 bookingOptionsFlow :: FlowBT String Unit
 bookingOptionsFlow = do
+  (API.DriverVehicleServiceTierResponse resp) <- HelpersAPI.callApiBT $ API.DriverVehicleServiceTierReq
+  let ridePreferences' = transfromRidePreferences resp.tiers
+      defaultRide = find (\item -> item.isDefault) ridePreferences'
+  modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> bookingOptions{ data{ ridePreferences = transfromRidePreferences resp.tiers, defaultRidePreference = fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption defaultRide } })
   action <- UI.bookingOptions
   case action of
+    CHANGE_RIDE_PREFERENCE state service -> do
+      resp <- HelpersAPI.callApiBT $ Remote.mkUpdateDriverVehiclesServiceTier service
+      bookingOptionsFlow
     SELECT_CAB state toggleDowngrade -> do
       void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true
@@ -1615,6 +1622,23 @@ bookingOptionsFlow = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ props{ canSwitchToRental = rentalEnable} })
       bookingOptionsFlow
     GO_TO_PROFILE -> driverProfileFlow
+  where 
+    transfromRidePreferences :: Array API.DriverVehicleServiceTier -> Array ST.RidePreference
+    transfromRidePreferences = 
+      map (\(API.DriverVehicleServiceTier item) -> {
+          airConditioned : item.airConditioned,
+          driverRating : item.driverRating,
+          isDefault : item.isDefault,
+          isSelected : item.isSelected,
+          longDescription : item.longDescription,
+          luggageCapacity : item.luggageCapacity,
+          name : item.name,
+          seatingCapacity : item.seatingCapacity,
+          serviceTierType : item.serviceTierType,
+          shortDescription : item.shortDescription,
+          vehicleRating : item.vehicleRating
+        }
+      )
 
 helpAndSupportFlow :: FlowBT String Unit
 helpAndSupportFlow = do

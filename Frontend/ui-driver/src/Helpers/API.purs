@@ -30,8 +30,8 @@ import Data.Array (singleton)
 import Data.Maybe (maybe, Maybe(..))
 import Data.Either (Either(..))
 
-data CustomerDefaultErrorHandler = CustomerDefaultErrorHandler
-instance defaultApiErrorHandler :: ApiErrorHandler CustomerDefaultErrorHandler GlobalState where
+data DriverDefaultErrorHandler = DriverDefaultErrorHandler
+instance defaultApiErrorHandler :: ApiErrorHandler DriverDefaultErrorHandler GlobalState where
   handleAllErrors = defaultHandleAllErrors
   handleNetworkError = defaultHandleNetworkError
   handleServerError = defaultHandleServerError
@@ -120,7 +120,7 @@ callApiBT :: forall a b.
   a ->
   FlowBT String b
 callApiBT payload = 
-  callApiBTWithOptions payload [] CustomerDefaultErrorHandler
+  callApiBTWithOptions payload [] DriverDefaultErrorHandler
 
 callGzipApiBTWithOptions :: forall a b e.
   ApiErrorHandler e GlobalState =>
@@ -143,4 +143,4 @@ callGzipApiBT :: forall a b.
   a ->
   FlowBT String b
 callGzipApiBT payload =
-  callGzipApiBTWithOptions payload [] CustomerDefaultErrorHandler
+  callGzipApiBTWithOptions payload [] DriverDefaultErrorHandler

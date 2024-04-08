@@ -4424,3 +4424,114 @@ instance standardEncodeOnboardingDoc :: StandardEncode OnboardingDoc where stand
 instance showOnboardingDoc :: Show OnboardingDoc where show = genericShow
 instance decodeOnboardingDoc :: Decode OnboardingDoc where decode = defaultDecode
 instance encodeOnboardingDoc  :: Encode OnboardingDoc where encode = defaultEncode
+
+data ServiceTierType
+  = COMFY
+  | ECO
+  | PREMIUM
+  | SUV_TIER
+  | AUTO_RICKSHAW
+  | HATCHBACK_TIER
+  | SEDAN_TIER
+  | TAXI
+  | TAXI_PLUS
+  | RENTALS
+  | INTERCITY
+
+data DriverVehicleServiceTierReq = DriverVehicleServiceTierReq
+
+data UpdateDriverVehicleServiceTierReq = UpdateDriverVehicleServiceTierReq {
+  tiers :: Array DriverVehicleServiceTier
+}
+
+data UpdateDriverVehicleServiceTierResp = UpdateDriverVehicleServiceTierResp String
+
+newtype DriverVehicleServiceTierResponse = DriverVehicleServiceTierResponse {
+  tiers :: Array DriverVehicleServiceTier
+}
+
+newtype DriverVehicleServiceTier = DriverVehicleServiceTier {
+  airConditioned :: Maybe Number,
+  driverRating :: Maybe Number,
+  isDefault :: Boolean,
+  isSelected :: Boolean,
+  longDescription :: Maybe String,
+  luggageCapacity :: Maybe Int,
+  name :: String,
+  seatingCapacity :: Maybe Int,
+  serviceTierType :: ServiceTierType,
+  shortDescription :: Maybe String,
+  vehicleRating :: Maybe Number
+}
+
+derive instance genericServiceTierType :: Generic ServiceTierType _
+instance showServiceTierType :: Show ServiceTierType where show = genericShow
+instance decodeServiceTierType :: Decode ServiceTierType
+  where decode body = case unsafeFromForeign body of
+                  "COMFY"        -> except $ Right COMFY
+                  "ECO"          -> except $ Right ECO
+                  "PREMIUM"      -> except $ Right PREMIUM
+                  "SUV"          -> except $ Right SUV_TIER
+                  "AUTO_RICKSHAW"-> except $ Right AUTO_RICKSHAW
+                  "HATCHBACK"    -> except $ Right HATCHBACK_TIER
+                  "SEDAN"        -> except $ Right SEDAN_TIER
+                  "TAXI"         -> except $ Right TAXI
+                  "TAXI_PLUS"    -> except $ Right TAXI_PLUS
+                  "RENTALS"      -> except $ Right RENTALS
+                  "INTERCITY"    -> except $ Right INTERCITY
+                  _              -> except $ Right COMFY
+instance encodeServiceTierType :: Encode ServiceTierType where encode = defaultEnumEncode
+instance eqServiceTierType :: Eq ServiceTierType where eq = genericEq
+instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
+  where
+    standardEncode COMFY = standardEncode "COMFY"
+    standardEncode ECO = standardEncode "ECO"
+    standardEncode PREMIUM = standardEncode "PREMIUM"
+    standardEncode SUV_TIER = standardEncode "SUV"
+    standardEncode AUTO_RICKSHAW = standardEncode "AUTO_RICKSHAW"
+    standardEncode HATCHBACK_TIER = standardEncode "HATCHBACK"
+    standardEncode SEDAN_TIER = standardEncode "SEDAN"
+    standardEncode TAXI = standardEncode "TAXI"
+    standardEncode TAXI_PLUS = standardEncode "TAXI_PLUS"
+    standardEncode RENTALS = standardEncode "RENTALS"
+    standardEncode INTERCITY = standardEncode "INTERCITY"
+
+derive instance genericDriverVehicleServiceTierReq :: Generic DriverVehicleServiceTierReq _
+instance standardEncodeDriverVehicleServiceTierReq :: StandardEncode DriverVehicleServiceTierReq where standardEncode (DriverVehicleServiceTierReq) = standardEncode {}
+instance showDriverVehicleServiceTierReq :: Show DriverVehicleServiceTierReq where show = genericShow
+instance decodeDriverVehicleServiceTierReq :: Decode DriverVehicleServiceTierReq where decode = defaultDecode
+instance encodeDriverVehicleServiceTierReq  :: Encode DriverVehicleServiceTierReq where encode = defaultEncode
+
+derive instance genericDriverVehicleServiceTierResponse :: Generic DriverVehicleServiceTierResponse _
+instance standardEncodeDriverVehicleServiceTierResponse :: StandardEncode DriverVehicleServiceTierResponse where standardEncode (DriverVehicleServiceTierResponse res) = standardEncode res
+instance showDriverVehicleServiceTierResponse :: Show DriverVehicleServiceTierResponse where show = genericShow
+instance decodeDriverVehicleServiceTierResponse :: Decode DriverVehicleServiceTierResponse where decode = defaultDecode
+instance encodeDriverVehicleServiceTierResponse  :: Encode DriverVehicleServiceTierResponse where encode = defaultEncode
+
+derive instance genericUpdateDriverVehicleServiceTierReq :: Generic UpdateDriverVehicleServiceTierReq _
+instance standardEncodeUpdateDriverVehicleServiceTierReq :: StandardEncode UpdateDriverVehicleServiceTierReq where standardEncode (UpdateDriverVehicleServiceTierReq res) = standardEncode res
+instance showUpdateDriverVehicleServiceTierReq :: Show UpdateDriverVehicleServiceTierReq where show = genericShow
+instance decodeUpdateDriverVehicleServiceTierReq :: Decode UpdateDriverVehicleServiceTierReq where decode = defaultDecode
+instance encodeUpdateDriverVehicleServiceTierReq  :: Encode UpdateDriverVehicleServiceTierReq where encode = defaultEncode
+
+derive instance genericUpdateDriverVehicleServiceTierResp :: Generic UpdateDriverVehicleServiceTierResp _
+instance standardEncodeUpdateDriverVehicleServiceTierResp :: StandardEncode UpdateDriverVehicleServiceTierResp where standardEncode (UpdateDriverVehicleServiceTierResp res) = standardEncode res
+instance showUpdateDriverVehicleServiceTierResp :: Show UpdateDriverVehicleServiceTierResp where show = genericShow
+instance decodeUpdateDriverVehicleServiceTierResp :: Decode UpdateDriverVehicleServiceTierResp where decode = defaultDecode
+instance encodeUpdateDriverVehicleServiceTierResp  :: Encode UpdateDriverVehicleServiceTierResp where encode = defaultEncode
+
+instance makeUpdateDriverVehicleServiceTierReq :: RestEndpoint UpdateDriverVehicleServiceTierReq UpdateDriverVehicleServiceTierResp where
+ makeRequest reqBody headers = defaultMakeRequest POST (EP.updateDriverVehicleServiceTier "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericDriverVehicleServiceTier :: Generic DriverVehicleServiceTier _
+instance standardEncodeDriverVehicleServiceTier :: StandardEncode DriverVehicleServiceTier where standardEncode (DriverVehicleServiceTier res) = standardEncode res
+instance showDriverVehicleServiceTier :: Show DriverVehicleServiceTier where show = genericShow
+instance decodeDriverVehicleServiceTier :: Decode DriverVehicleServiceTier where decode = defaultDecode
+instance encodeDriverVehicleServiceTier  :: Encode DriverVehicleServiceTier where encode = defaultEncode
+
+instance makeDriverVehicleServiceTierReq :: RestEndpoint DriverVehicleServiceTierReq DriverVehicleServiceTierResponse where
+  makeRequest reqBody headers = defaultMakeRequest GET (EP.driverVehicleServiceTier "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req

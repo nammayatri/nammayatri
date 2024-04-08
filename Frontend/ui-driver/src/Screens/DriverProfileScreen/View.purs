@@ -1138,12 +1138,11 @@ profileOptionsLayout state push =
   where visibilityCondition optionItem = 
           case optionItem.menuOptions of
             GO_TO_LOCATIONS -> state.props.enableGoto
-            DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption && not (null state.data.downgradeOptions)
+            DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption
             LIVE_STATS_DASHBOARD -> state.data.config.dashboard.enable && not DS.null state.data.config.dashboard.url
             _ -> true
         disableCondition optionItem = 
           case optionItem.menuOptions of
-            DRIVER_BOOKING_OPTIONS -> state.data.config.profile.checkRCStatusForBookingOption && (not state.data.activeRCData.rcStatus)
             GO_TO_LOCATIONS -> state.data.goHomeActive || state.props.isRideActive
             _ -> false
         disabledOptionClickable optionItem = optionItem.menuOptions /= DRIVER_BOOKING_OPTIONS

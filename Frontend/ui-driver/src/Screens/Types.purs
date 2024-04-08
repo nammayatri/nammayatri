@@ -1803,7 +1803,23 @@ type BookingOptionsScreenData = {
   vehicleNumber :: String,
   vehicleName :: String,
   vehicleCapacity :: Int,
-  downgradeOptions :: Array ChooseVehicle.Config
+  downgradeOptions :: Array ChooseVehicle.Config,
+  ridePreferences :: Array RidePreference,
+  defaultRidePreference :: RidePreference
+}
+
+type RidePreference = {
+  airConditioned :: Maybe Number,
+  driverRating :: Maybe Number,
+  isDefault :: Boolean,
+  isSelected :: Boolean,
+  longDescription :: Maybe String,
+  luggageCapacity :: Maybe Int,
+  name :: String,
+  seatingCapacity :: Maybe Int,
+  serviceTierType :: API.ServiceTierType,
+  shortDescription :: Maybe String,
+  vehicleRating :: Maybe Number
 }
 
 type BookingOptionsScreenProps = {

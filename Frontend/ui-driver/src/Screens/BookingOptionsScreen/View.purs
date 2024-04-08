@@ -20,6 +20,7 @@ import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Data.Array as DA
 import Mobility.Prelude as MP
+import Services.API as API
 
 screen :: ST.BookingOptionsScreenState -> Screen Action ST.BookingOptionsScreenState ScreenOutput
 screen initialState =
@@ -50,7 +51,6 @@ view push state =
   ] $ [ headerLayout push state
       , defaultVehicleView push state
       , downgradeVehicleView push state
-      , toggleRentalView push state
       , linearLayout
         [ height MATCH_PARENT
         , width $ V 1
@@ -61,148 +61,120 @@ view push state =
 downgradeVehicleView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 downgradeVehicleView push state =
   let canDowngrade = not $ DA.null state.data.downgradeOptions
-      downgradeFrom = case state.data.vehicleType of
-                        "SUV" -> getString AC_SUV
-                        _     -> getString AC_CAB
-      downgradeTo = case state.data.vehicleType of
-                      "SUV" -> getString AC_CAB
-                      _     -> getString TAXI
   in  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , margin (MarginHorizontal 16 16)
+      , padding $ Padding 16 16 16 16
       , stroke $ "1," <> Color.grey900
       , cornerRadius 8.0
       , orientation VERTICAL
-      ][  linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , orientation HORIZONTAL
-          , margin (Margin 16 16 16 16)
-          ][  textView $
+      ][ textView $
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , color $ if canDowngrade then Color.black800 else Color.black600
+              , color Color.black800
+              , margin $ MarginBottom 16
               , text $ getString DOWNGRADE_VEHICLE
+
               ] <> FontStyle.body4 TypoGraphy
-            , linearLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , gravity RIGHT
-              ][ toggleView push state.props.downgraded canDowngrade DowngradeVehicle]
-          ]
         , linearLayout
           [ width MATCH_PARENT
           , height $ V 1
-          , margin (Margin 16 0 16 16)
+          , margin $ MarginBottom 16
           , background Color.grey700
           ][]
-        , linearLayout
-          [ width MATCH_PARENT
+        ,textView $
+          [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , margin (Margin 16 0 16 16)
-          , padding (Padding 16 16 16 16)
-          , orientation HORIZONTAL
-          , background Color.linen
-          , cornerRadius 8.0
-          , visibility if canDowngrade then GONE else VISIBLE
-          ][  imageView
-              [ width $ V 15
-              , height $ V 15
-              , margin (Margin 0 3 8 0)
-              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_orange"
-              ]
-            , textView $
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , text (getString DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES)
-              , color Color.black800
-              ] <> FontStyle.body1 TypoGraphy  
-           ]
-        , textView $
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , margin (Margin 16 0 16 20)
-          , text $ getDowngradeOptionsText state.data.vehicleType
           , color Color.black700
-          , visibility if canDowngrade then VISIBLE else GONE
-          ] <> FontStyle.body1 TypoGraphy 
+          , margin $ MarginBottom 16
+          , text $ "Choose what type of rides you want to take."
+          ]
         , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation VERTICAL
-          , margin (Margin 12 0 12 16)
-          , visibility if canDowngrade then VISIBLE else GONE
+          , margin $ MarginBottom 16
           ][ linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation VERTICAL
-              ] $ [  downgradeVehicleCard state.data.vehicleType true true
-                  ] <>  ( map
-                          ( \item ->
-                            linearLayout
-                              [ height WRAP_CONTENT
-                              , width MATCH_PARENT
-                              ][downgradeVehicleCard item state.props.downgraded false
-                                  ]) $ (getUIDowngradeOptions state.data.vehicleType)
-                            )
+              ] ( map
+                    ( \item ->
+                      linearLayout
+                        [ height WRAP_CONTENT
+                        , width MATCH_PARENT
+                        ][serviceTierItem push item state.props.downgraded false]
+                    ) state.data.ridePreferences
+                )
             ]
       ]
 
-downgradeVehicleCard :: forall w. String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
-downgradeVehicleCard variant enabled opacity =
+serviceTierItem :: forall w. (Action -> Effect Unit)  -> ST.RidePreference -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
+serviceTierItem push service enabled opacity =
   frameLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , weight 1.0
-  , margin (MarginHorizontal 2 2)
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , padding (Padding 12 12 12 12)
-      , margin (Margin 2 5 2 5)
+      , margin $ MarginVertical 5 5
       , orientation HORIZONTAL
       , stroke $ "1," <> Color.grey900
       , cornerRadius 8.0
       , gravity CENTER_VERTICAL
-      ][  imageView
-          [ imageWithFallback $ getVehicleVariantImage variant
+      ][  
+        imageView
+          [ imageWithFallback $ getVehicleVariantImage getVehicleMapping
           , width $ V 35
           , height $ V 35
           ]
         , textView
           [ weight 1.0
           , height WRAP_CONTENT
-          , text $ getVariantRideType variant
-          , margin (MarginHorizontal 7 2)
+          , text service.name
+          , margin (MarginHorizontal 12 2)
           , color Color.black800
           , singleLine true
           ]
-        , imageView
-          [ imageWithFallback $ case enabled of
-                                  true  -> fetchImage FF_ASSET "ny_ic_check_mark"
-                                  false -> fetchImage FF_COMMON_ASSET "ny_ic_cross_red"
-          , width $ V 16
-          , height $ V 16
-          , gravity RIGHT
-          , alpha if opacity then 0.5 else 1.0
-          ]
+          , linearLayout
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , gravity RIGHT
+              ][ toggleView push service.isSelected service.isDefault service]
        ]
    ]
+   where 
+    getVehicleMapping :: String
+    getVehicleMapping = case service.serviceTierType of
+      API.COMFY -> "SEDAN"
+      API.ECO -> "HATCHBACK"
+      API.PREMIUM -> "SUV"
+      API.SUV_TIER -> "SUV"
+      API.AUTO_RICKSHAW -> "AUTO_RICKSHAW"
+      API.HATCHBACK_TIER -> "HATCHBACK"
+      API.SEDAN_TIER -> "SEDAN"
+      API.TAXI -> "TAXI"
+      API.TAXI_PLUS -> "TAXI_PLUS"
+      API.RENTALS -> "RENTALS"
+      API.INTERCITY -> "INTERCITY"
 
-toggleView :: forall w. (Action -> Effect Unit) -> Boolean -> Boolean -> Action -> PrestoDOM (Effect Unit) w
-toggleView push enabled isClickable action =
+toggleView :: forall w. (Action -> Effect Unit) -> Boolean -> Boolean -> ST.RidePreference -> PrestoDOM (Effect Unit) w
+toggleView push enabled default service =
   let backgroundColor = if enabled then Color.blue800 else Color.black600
       align = if enabled then RIGHT else LEFT
   in  linearLayout
       [ width $ V 40
       , height $ V 22
       , cornerRadius 100.0
+      , alpha if default then 0.5 else 1.0
       , background backgroundColor
       , stroke $ "1," <> backgroundColor
       , gravity CENTER_VERTICAL
-      , onClick push (const action)
-      , clickable isClickable
+      , onClick push $ const $ ToggleRidePreference service
+      , clickable $ not default
       ][  linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
@@ -298,7 +270,7 @@ vehicleLogoAndType push state =
             , margin $ MarginLeft 7
             ]
             [ customTV (getVariantRideType state.data.vehicleType) FontSize.a_20 FontStyle.h3 Color.black800
-            , customTV (getVehicleCapacity state.data.vehicleType) FontSize.a_12 FontStyle.body3 Color.black650
+            , customTV (state.data.defaultRidePreference.name <> " · " <> (fromMaybe (getString COMFY) state.data.defaultRidePreference.shortDescription)) FontSize.a_12 FontStyle.body3 Color.black650
             ]
         ]
     ]
@@ -355,42 +327,3 @@ customTV text' textSize' fontStyle' color' =
       , color color'
       ]
     <> fontStyle' TypoGraphy
-
-toggleRentalView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w      
-toggleRentalView push state = 
-  linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , padding $ Padding 16 16 16 16
-      , margin $ Margin 16 16 16 16
-      , stroke $ "1," <> Color.grey900
-      , cornerRadius 8.0
-      , orientation VERTICAL
-      ][  linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , orientation HORIZONTAL
-          ][  textView $
-              [ width WRAP_CONTENT
-              , height WRAP_CONTENT
-              , color $ Color.black800 
-              , text $ getString RENTAL_BOOKINGS
-              ] <> FontStyle.body4 TypoGraphy
-            , linearLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , gravity RIGHT
-              ][ toggleView push state.props.canSwitchToRental true ToggleRental]
-          ],
-          linearLayout
-          [ width MATCH_PARENT
-          , height $ V 1
-          , margin (Margin 0 16 0 16)
-          , background Color.grey700
-          ][],
-           textView $
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , text $ getString RENTAL_BOOKINGS_DESCRIPTION
-          , color Color.black700
-          ] <> FontStyle.body1 TypoGraphy]
