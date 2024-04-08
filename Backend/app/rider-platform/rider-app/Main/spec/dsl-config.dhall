@@ -131,7 +131,7 @@ let defaultImports =
           ]
         , _generationType = GeneratorType.DOMAIN_HANDLER
         }
-      , { _simpleImports = [] : List Text
+      , { _simpleImports = [ "Data.Aeson (eitherDecode)" ] : List Text
         , _qualifiedImports = [ "!Tools.Beam.UtilsTH" ]
         , _generationType = GeneratorType.DOMAIN_TYPE
         }

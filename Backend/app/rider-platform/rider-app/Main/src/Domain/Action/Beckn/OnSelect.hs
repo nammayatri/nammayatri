@@ -101,7 +101,7 @@ onSelect ::
 onSelect OnSelectValidatedReq {..} = do
   now <- getCurrentTime
   quotes <- traverse (buildSelectedQuote estimate providerInfo now searchRequest) quotesInfo
-  logPretty DEBUG "quotes" quotes
+  -- logPretty DEBUG "quotes" quotes
   forM_ quotes $ \quote -> do
     triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
   _ <- QQuote.createMany quotes
@@ -158,6 +158,7 @@ buildSelectedQuote ::
 buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {..} QuoteInfo {..} = do
   uid <- generateGUID
   let tripTerms = Nothing
+  updatedAt <- getCurrentTime
   driverOffer <- buildDriverOffer estimate.id quoteDetails req
   let quote =
         DQuote.Quote

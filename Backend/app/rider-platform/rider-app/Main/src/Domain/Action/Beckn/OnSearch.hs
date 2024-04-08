@@ -315,6 +315,7 @@ buildQuote ::
 buildQuote requestId providerInfo now searchRequest QuoteInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
+  updatedAt <- getCurrentTime
   quoteDetails' <- case quoteDetails of
     OneWayDetails oneWayDetails ->
       pure.DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
@@ -343,11 +344,17 @@ mkOneWayQuoteDetails OneWayQuoteDetails {..} = DQuote.OneWayQuoteDetails {..}
 buildOneWaySpecialZoneQuoteDetails :: MonadFlow m => OneWaySpecialZoneQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
 buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
   id <- generateGUID
+  now <- getCurrentTime
+  let createdAt = Just now
+      updatedAt = Just now
   pure DSpecialZoneQuote.SpecialZoneQuote {..}
 
 buildInterCityQuoteDetails :: MonadFlow m => InterCityQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
 buildInterCityQuoteDetails InterCityQuoteDetails {..} = do
   id <- generateGUID
+  now <- getCurrentTime
+  let createdAt = Just now
+      updatedAt = Just now
   pure DSpecialZoneQuote.SpecialZoneQuote {..}
 
 buildRentalDetails :: MonadFlow m => RentalQuoteDetails -> m DRentalDetails.RentalDetails
@@ -367,6 +374,9 @@ buildTripTerms ::
 buildTripTerms [] = pure Nothing
 buildTripTerms descriptions = do
   id <- generateGUID
+  now <- getCurrentTime
+  let createdAt = Just now
+      updatedAt = Just now
   pure . Just $ DTripTerms.TripTerms {..}
 
 buildEstimateBreakUp ::

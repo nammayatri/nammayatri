@@ -1,0 +1,78 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+module Storage.Queries.OrphanInstances.Quote where
+
+import qualified Domain.Types.Quote
+import Kernel.Beam.Functions
+import Kernel.External.Encryption
+import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
+import Kernel.Types.Error
+import qualified Kernel.Types.Id
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Storage.Beam.Quote as Beam
+import Storage.Queries.Transformers.Quote
+import qualified Storage.Queries.Transformers.Quote
+
+instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
+  fromTType' (Beam.QuoteT {..}) = do
+    merchantOperatingCityId' <- backfillMOCId merchantOperatingCityId merchantId
+    providerUrl' <- Kernel.Prelude.parseBaseUrl providerUrl
+    quoteDetails' <- Storage.Queries.Transformers.Quote.getQuoteDetails fareProductType distanceToNearestDriver rentalDetailsId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue
+    tripTerms' <- getTripTerms tripTermsId
+    pure $
+      Just
+        Domain.Types.Quote.Quote
+          { createdAt = createdAt,
+            discount = Kernel.Types.Common.mkPrice currency <$> discount,
+            estimatedFare = Kernel.Types.Common.mkPrice currency estimatedFare,
+            estimatedTotalFare = Kernel.Types.Common.mkPrice currency estimatedTotalFare,
+            id = Kernel.Types.Id.Id id,
+            itemId = itemId,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = merchantOperatingCityId',
+            providerId = providerId,
+            providerUrl = providerUrl',
+            quoteDetails = quoteDetails',
+            requestId = Kernel.Types.Id.Id requestId,
+            serviceTierName = serviceTierName,
+            serviceTierShortDesc = serviceTierShortDesc,
+            specialLocationTag = specialLocationTag,
+            tripTerms = tripTerms',
+            updatedAt = Kernel.Prelude.fromMaybe createdAt updatedAt,
+            validTill = validTill,
+            vehicleServiceTierType = vehicleServiceTierType
+          }
+
+instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
+  toTType' (Domain.Types.Quote.Quote {..}) = do
+    Beam.QuoteT
+      { Beam.createdAt = createdAt,
+        Beam.currency = (Just ((.currency) estimatedFare)),
+        Beam.discount = (discount <&> (.amount)),
+        Beam.distanceToNearestDriver = (Kernel.Types.Common.distanceToHighPrecMeters <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails))),
+        Beam.distanceToNearestDriverValue = (Kernel.Types.Common.distanceToHighPrecDistance (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails) <&> (.unit)) <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails))),
+        Beam.distanceUnit = ((Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)) <&> (.unit)),
+        Beam.driverOfferId = (Storage.Queries.Transformers.Quote.getDriverOfferId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
+        Beam.fareProductType = (Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
+        Beam.rentalDetailsId = (Storage.Queries.Transformers.Quote.getRentalDetailsId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
+        Beam.specialZoneQuoteId = (Storage.Queries.Transformers.Quote.getSpecialZoneQuoteId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
+        Beam.estimatedFare = ((.amount) estimatedFare),
+        Beam.estimatedTotalFare = ((.amount) estimatedTotalFare),
+        Beam.id = Kernel.Types.Id.getId id,
+        Beam.itemId = itemId,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = (Just $ Kernel.Types.Id.getId merchantOperatingCityId),
+        Beam.providerId = providerId,
+        Beam.providerUrl = Kernel.Prelude.showBaseUrl providerUrl,
+        Beam.requestId = Kernel.Types.Id.getId requestId,
+        Beam.serviceTierName = serviceTierName,
+        Beam.serviceTierShortDesc = serviceTierShortDesc,
+        Beam.specialLocationTag = specialLocationTag,
+        Beam.tripTermsId = (Kernel.Types.Id.getId <$> (tripTerms <&> (.id))),
+        Beam.updatedAt = (Kernel.Prelude.Just) updatedAt,
+        Beam.validTill = validTill,
+        Beam.vehicleServiceTierType = vehicleServiceTierType
+      }

@@ -1,0 +1,36 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Text: Data.Text
+
+TripTerms:
+  tableName: trip_terms
+
+  fields:
+    id : Id TripTerms
+    descriptions : "[Text]"
+    createdAt: Maybe UTCTime
+    updatedAt: Maybe UTCTime
+  derives: "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"
+
+  beamType:
+    descriptions: Text
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById'':
+      kvFunction: findOneWithKV
+      where: id
+
+  fromTType:
+    descriptions: splitDescriptions
+
+  toTType:
+    descriptions: intercalateDescriptions
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+
+
+

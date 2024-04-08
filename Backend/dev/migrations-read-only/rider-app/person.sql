@@ -1,0 +1,64 @@
+CREATE TABLE atlas_app.person ();
+
+ALTER TABLE atlas_app.person ADD COLUMN aadhaar_verified boolean NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN blocked boolean NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN blocked_at timestamp with time zone ;
+ALTER TABLE atlas_app.person ADD COLUMN blocked_by_rule_id character varying(36) ;
+ALTER TABLE atlas_app.person ADD COLUMN bundle_version text ;
+ALTER TABLE atlas_app.person ADD COLUMN client_version text ;
+ALTER TABLE atlas_app.person ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.person ADD COLUMN current_city text NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN customer_referral_code text ;
+ALTER TABLE atlas_app.person ADD COLUMN description text ;
+ALTER TABLE atlas_app.person ADD COLUMN device_token text ;
+ALTER TABLE atlas_app.person ADD COLUMN email_encrypted text ;
+ALTER TABLE atlas_app.person ADD COLUMN email_hash text ;
+ALTER TABLE atlas_app.person ADD COLUMN enabled boolean NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN false_safety_alarm_count integer NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN first_name text ;
+ALTER TABLE atlas_app.person ADD COLUMN follows_ride boolean NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN gender text NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN has_completed_mock_safety_drill boolean ;
+ALTER TABLE atlas_app.person ADD COLUMN has_completed_safety_setup boolean NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN has_disability boolean ;
+ALTER TABLE atlas_app.person ADD COLUMN has_taken_valid_ride boolean NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN identifier text ;
+ALTER TABLE atlas_app.person ADD COLUMN identifier_type text NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN is_new boolean NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN is_valid_rating boolean NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN language text ;
+ALTER TABLE atlas_app.person ADD COLUMN last_name text ;
+ALTER TABLE atlas_app.person ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN middle_name text ;
+ALTER TABLE atlas_app.person ADD COLUMN mobile_country_code text ;
+ALTER TABLE atlas_app.person ADD COLUMN mobile_number_encrypted text ;
+ALTER TABLE atlas_app.person ADD COLUMN mobile_number_hash text ;
+ALTER TABLE atlas_app.person ADD COLUMN night_safety_checks boolean NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN notification_token text ;
+ALTER TABLE atlas_app.person ADD COLUMN password_hash text ;
+ALTER TABLE atlas_app.person ADD COLUMN rating text ;
+ALTER TABLE atlas_app.person ADD COLUMN referral_code text ;
+ALTER TABLE atlas_app.person ADD COLUMN referred_at timestamp with time zone ;
+ALTER TABLE atlas_app.person ADD COLUMN referred_by_customer text ;
+ALTER TABLE atlas_app.person ADD COLUMN registration_lat double precision ;
+ALTER TABLE atlas_app.person ADD COLUMN registration_lon double precision ;
+ALTER TABLE atlas_app.person ADD COLUMN role text NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN safety_center_disabled_on_date timestamp with time zone ;
+ALTER TABLE atlas_app.person ADD COLUMN share_emergency_contacts boolean NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN share_trip_with_emergency_contact_option text ;
+ALTER TABLE atlas_app.person ADD COLUMN total_rating_score integer NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN total_ratings integer NOT NULL;
+ALTER TABLE atlas_app.person ADD COLUMN unencrypted_mobile_number text ;
+ALTER TABLE atlas_app.person ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.person ADD COLUMN use_fake_otp text ;
+ALTER TABLE atlas_app.person ADD COLUMN whatsapp_notification_enroll_status text ;
+ALTER TABLE atlas_app.person ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ALTER COLUMN merchant_operating_city_id DROP NOT NULL;
+ALTER TABLE atlas_app.person ALTER COLUMN false_safety_alarm_count DROP NOT NULL;
+ALTER TABLE atlas_app.person ALTER COLUMN current_city DROP NOT NULL;

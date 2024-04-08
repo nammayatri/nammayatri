@@ -12,17 +12,9 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.SpecialZoneQuote where
+module Domain.Action.UI.SpecialZoneQuote where
 
 import Kernel.Prelude
-import Kernel.Types.Id
-import Kernel.Utils.GenericPretty (PrettyShow)
-
-data SpecialZoneQuote = SpecialZoneQuote
-  { id :: Id SpecialZoneQuote,
-    quoteId :: Text
-  }
-  deriving (Generic, Show, PrettyShow)
 
 newtype SpecialZoneQuoteAPIEntity = SpecialZoneQuoteAPIEntity
   { quoteId :: Text

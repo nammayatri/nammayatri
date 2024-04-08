@@ -1,0 +1,37 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  ShortId: Kernel.Types.Id
+  Subscriber: Kernel.Types.Registry
+  Domain: Kernel.Types.Beckn.Domain
+
+WhiteListOrg:
+  tableName: white_list_org
+  beamInstance: MakeTableInstancesWithTModifier [("subscriberId", "subscriber_id")]
+
+  fields:
+    id : Id WhiteListOrg
+    subscriberId : ShortId Subscriber
+    domain : Domain
+    createdAt: Maybe UTCTime
+    updatedAt: Maybe UTCTime
+  derives: "Generic,'UsageSafety"
+
+  constraints:
+    id: PrimaryKey
+    subscriberId: SecondaryKey
+
+  queries:
+    findBySubscriberIdAndDomain:
+      kvFunction: findOneWithKV
+      where:
+        and: [subscriberId, domain]
+  sqlType:
+    subscriberId: character varying(255)
+    domain: character varying(255)
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+
