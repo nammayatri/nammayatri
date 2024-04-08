@@ -252,7 +252,7 @@ foreign import methodArgumentCount :: String -> Int
 foreign import hideLoader :: Effect Unit
 foreign import emitJOSEvent :: Fn3 String String Foreign Unit
 foreign import getLayoutBounds :: Fn1 String LayoutBound
-foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
+foreign import horizontalScrollToPos :: EffectFn4 String String Int Int Unit
 foreign import withinTimeRange :: String -> String -> String -> Boolean
 foreign import isServiceRunning :: Fn1 String Boolean
 foreign import getChatMessages :: LazyCheck -> Array ChatComponent

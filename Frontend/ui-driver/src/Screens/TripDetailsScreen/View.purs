@@ -68,6 +68,7 @@ view push state =
   , background Color.white900
   , onBackPressed push (const BackPressed)
   , afterRender push (const AfterRender)
+  , padding $ PaddingBottom EHC.safeMarginBottom
   ][linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -76,14 +77,13 @@ view push state =
         , scrollView
           [ height MATCH_PARENT
             , width MATCH_PARENT
-            , orientation VERTICAL
           ][ 
             linearLayout
               [ height MATCH_PARENT
               , width MATCH_PARENT
               , orientation VERTICAL
               ][ 
-                scrollView
+                linearLayout
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
                   , visibility if state.props.issueReported then GONE else VISIBLE
@@ -174,7 +174,7 @@ tagView state config =
       linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , cornerRadius 26.0
+      , cornerRadius 13.0
       , background item.background
       , visibility if item.visibility then VISIBLE else GONE
       , padding $ Padding 12 5 12 5

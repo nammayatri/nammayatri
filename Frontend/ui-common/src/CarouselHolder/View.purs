@@ -41,8 +41,8 @@ type Layout w = PrestoDOM (Effect Unit) w
 carouselView :: forall w a action. Homogeneous a PropValue => (action -> Effect Unit) -> CarouselHolderConfig a action -> Layout w
 carouselView push config =
   let itemsLen = length config.items
-      layoutHeight = if os == "IOS" then V 100 else WRAP_CONTENT
-      indicatorLayoutHeight = if os == "IOS" then V 100 else MATCH_PARENT
+      layoutHeight = if os == "IOS" then V 115 else WRAP_CONTENT
+      indicatorLayoutHeight = if os == "IOS" then V 115 else MATCH_PARENT
   in
   frameLayout
   [ height layoutHeight

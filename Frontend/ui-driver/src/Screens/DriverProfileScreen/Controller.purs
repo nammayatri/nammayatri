@@ -25,7 +25,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryButton as PrimaryButtonController
 import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
-import Data.Array ((!!), union, drop, filter, elem, length, foldl, any, all)
+import Data.Array ((!!), union, drop, filter, elem, length, foldl, any, all, insertAt)
 import Data.Int (fromString)
 import Data.Lens.Getter ((^.))
 import Data.Maybe (fromMaybe, Maybe(..), isJust)
@@ -33,7 +33,7 @@ import Data.String as DS
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (getNewIDWithTag,setText, getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag,setText, getNewIDWithTag, os)
 import Engineering.Helpers.LogEvent (logEvent)
 import Helpers.Utils (getTime, getCurrentUTC, launchAppSettings, generateQR, downloadQR)
 import JBridge (firebaseLogEvent, goBackPrevWebPage,differenceBetweenTwoUTC, toast, showDialer, hideKeyboardOnNavigation, shareImageMessage)
@@ -648,18 +648,17 @@ getSelectedLanguages state =
 --   ) listRes
 
 optionList :: DriverProfileScreenState -> Array Listtype
-optionList state =
-    [
+optionList state = let options = [
       {menuOptions: GO_TO_LOCATIONS , icon: fetchImage FF_ASSET "ny_ic_loc_grey"},
       -- {menuOptions: DOCUMENTS , icon: fetchImage FF_ASSET "ic_document"},
       {menuOptions: DRIVER_BOOKING_OPTIONS , icon: fetchImage FF_ASSET "ic_booking_options"},
-      {menuOptions: APP_INFO_SETTINGS , icon: fetchImage FF_ASSET "ny_ic_app_info"},
       {menuOptions: MULTI_LANGUAGE , icon: fetchImage FF_ASSET "ny_ic_language"},
       {menuOptions: HELP_AND_FAQS , icon: fetchImage FF_ASSET "ny_ic_head_phones"},
       {menuOptions: LIVE_STATS_DASHBOARD , icon: fetchImage FF_ASSET "ic_graph_black"},
       {menuOptions: ABOUT_APP , icon: fetchImage FF_ASSET "ny_ic_about"},
       {menuOptions: DRIVER_LOGOUT , icon: fetchImage FF_ASSET "ny_ic_logout_grey"}
     ]
+    in if os == "IOS" then options else fromMaybe [] (insertAt 2 {menuOptions: APP_INFO_SETTINGS , icon: fetchImage FF_ASSET "ny_ic_app_info"} options)
 
 updateLanguageList :: DriverProfileScreenState -> Array String -> Array CheckBoxOptions
 updateLanguageList state language =

@@ -40,7 +40,8 @@ type AppConfigDriver a =
     coinsConfig :: CoinsConfig,
     inAppKeyboardModalConfig :: InAppKeyboardModalConfig,
     chooseCity :: ChooseCityScreenConfig,
-    safetyRide :: SafetyRideConfig
+    safetyRide :: SafetyRideConfig,
+    welcomeScreen :: WelcomeScreen
     | a
   } 
 
@@ -252,4 +253,8 @@ type ChooseCityScreenConfig = {
 type SafetyRideConfig = {
   startTime :: String
 , endTime :: String
+}
+
+type WelcomeScreen = {
+  background :: String
 }

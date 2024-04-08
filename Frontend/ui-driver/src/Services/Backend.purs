@@ -72,7 +72,7 @@ getHeaders dummy isGzipCompressionEnabled = do
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                     ] <> case regToken of
                         Nothing -> []
-                        Just token -> [Header "token" token]
+                        Just token -> if token == "(null)" then [] else [Header "token" token]
                     <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 
@@ -87,7 +87,7 @@ getHeaders' dummy isGzipCompressionEnabled = do
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                     ] <> case regToken of
                         Nothing -> []
-                        Just token -> [Header "token" token]
+                        Just token -> if token == "(null)" then [] else [Header "token" token]
                     <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 withAPIResult url f flow = do

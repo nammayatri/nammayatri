@@ -138,7 +138,7 @@ config =
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : true,
-              enableYatriCoins : true,
+              enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig,
               variantSubscriptionConfig : {
@@ -572,6 +572,9 @@ config =
   , safetyRide : {
     startTime : "21:00:00"
   , endTime : "06:00:00"
+  }
+  , welcomeScreen : {
+    background :"#FFFAED"
   }
 }
 

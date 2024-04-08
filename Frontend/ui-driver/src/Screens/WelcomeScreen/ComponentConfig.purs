@@ -7,15 +7,18 @@ import Components.PrimaryButton as PrimaryButton
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.Types (WelcomeScreenState)
+import ConfigProvider
 
 carouselData :: WelcomeScreenState -> Common.CarouselModal
 carouselData state =
+  let config = getAppConfig appConfig
+  in
   { gravity: "CENTER"
   , carouselData:
       map
         ( \item ->
-            { imageConfig: { image: item.image, height: item.imageHeight, width: 200, bgColor: "#FFFAED", cornerRadius: 8.0 }
-            , backgroundColor: "#FFFAED"
+            { imageConfig: { image: item.image, height: item.imageHeight, width: 200, bgColor: config.welcomeScreen.background, cornerRadius: 8.0 }
+            , backgroundColor: config.welcomeScreen.background
             , youtubeConfig: dummyYoutubeData
             , gravity: item.gravity
             , contentType: "IMAGE"

@@ -36,6 +36,7 @@ if (window.JBridge.firebaseLogEventWithParams){
         if (shouldLog) {
         window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
         }
+        console.log("fnName ->", fnName);
         const result = window.JBridgeProxy[fnName](...arguments);
         return result;
       };
@@ -143,7 +144,7 @@ function callInitiateResult () {
   }
   console.log("APP_PERF INDEX_BUNDLE_INITIATE_RESULT : ", new Date().getTime());
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
-  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
+  JOS.emitEvent(JOS.parent)("onEvent")(JSON.stringify(payload))()();
 }
 
 function refreshFlow(){

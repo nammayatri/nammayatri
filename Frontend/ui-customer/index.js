@@ -375,7 +375,7 @@ if (typeof window.JOS != "undefined") {
   window.JOS.addEventListener("onMerchantEvent")();
   window.JOS.addEventListener("onActivityResult")();
   console.error("Calling action DUI_READY");
-  JOS.emitEvent("java")("onEvent")(JSON.stringify({ action: "DUI_READY", service : JOS.self }))()();
+  JOS.emitEvent(JOS.parent)("onEvent")(JSON.stringify({ action: "DUI_READY", service : JOS.self }))()();
 } else {
   console.error("JOS not present")
 }

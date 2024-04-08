@@ -53,6 +53,7 @@ type ImageConfig =
   , accessibility :: Accessiblity
   , cornerRadius :: Number
   , layoutMargin :: Margin
+  , layoutPadding :: Padding
   , enableRipple :: Boolean
   , rippleColor :: String
   }
@@ -64,6 +65,7 @@ type TextConfig =
   , color :: String
   , textStyle :: Style
   , accessibilityHint :: String
+  , padding :: Padding
   }
 
 config :: Config
@@ -90,6 +92,7 @@ config =
     , accessibilityHint : "Back : Button"
     , cornerRadius : 30.0
     , layoutMargin : (Margin 0 0 0 0)
+    , layoutPadding : PaddingTop 0
     , enableRipple : false
     , rippleColor : Color.rippleShade
     }
@@ -99,6 +102,7 @@ config =
     , margin : (Margin 0 0 0 0)
     , color : Color.black800
     , accessibilityHint : ""
+    , padding : PaddingTop 0
     }
   , suffixImageConfig : {
       height : V 25
@@ -111,6 +115,7 @@ config =
     , accessibilityHint : ""
     , cornerRadius : 0.0
     , layoutMargin : (Margin 0 0 0 0)
+    , layoutPadding : PaddingTop 0
     , enableRipple : false
     , rippleColor : Color.rippleShade
     }
@@ -141,6 +146,7 @@ merchantConfig =
     , accessibilityHint : "Back : Button"
     , cornerRadius : 30.0
     , layoutMargin : (Margin 0 0 0 0)
+    , layoutPadding : PaddingTop 0
     , enableRipple : false
     , rippleColor : Color.rippleShade
     }
@@ -150,6 +156,7 @@ merchantConfig =
     , margin : (Margin 16 0 16 10)
     , color : "#101010"
     , accessibilityHint : ""
+    , padding : PaddingTop 0
     }
   , suffixImageConfig : {
       height : V 25
@@ -162,6 +169,7 @@ merchantConfig =
     , accessibilityHint : ""
     , cornerRadius : 0.0
     , layoutMargin : (Margin 0 0 0 0)
+    , layoutPadding : PaddingTop 0
     , enableRipple : false
     , rippleColor : Color.rippleShade
     }

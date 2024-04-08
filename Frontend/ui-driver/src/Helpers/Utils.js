@@ -181,10 +181,13 @@ export const storeCallBackForNotification = function (cb) {
             cb(action(notificationType))();
           }
         });
-        window.onResumeListeners = [];
-        JBridge.storeCallBackForNotification(callback);
-      }
-      catch (error){
+        if (JBridge.storeCallBackForNotification) {
+          window.onResumeListeners = [];
+          JBridge.storeCallBackForNotification(callback);
+        } else if (window.__OS == "IOS" && JBridge.storeCallBackCustomer) {
+          JBridge.storeCallBackCustomer(callback);
+        }
+      } catch (error) {
         console.log("Error occurred in storeCallBackForNotification ------", error);
       }
     }
@@ -267,7 +270,15 @@ export const storeCallBackTime = function (cb) {
         const callback = callbackMapper.map(function (time, lat, lng) {
           cb(action(time)(lat)(lng))();
         });
-        JBridge.storeCallBackTime(callback);
+        if (window.__OS == "IOS") {
+          const payload = {
+            "event": "store_location_callback",
+            "callback" : callback
+          }
+          JOS.emitEvent("java")("onEvent")(JSON.stringify(payload))()();
+        } else {
+          JBridge.storeCallBackTime(callback);
+        }
       }
       catch (error){
         console.log("Error occurred in storeCallBackTime ------", error);

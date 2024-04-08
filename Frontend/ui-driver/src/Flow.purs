@@ -187,7 +187,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
       void $ pure $ setCleverTapUserProp [{key : "App Version", value : unsafeToForeign versionName},
                                           {key : "Bundle version", value : unsafeToForeign bundle},
                                           {key : "Platform", value : unsafeToForeign os}]
-      setValueToLocalStore VERSION_NAME versionName
+      setValueToLocalStore VERSION_NAME $ joinWith "." $ DA.take 3 $ split (Pattern ".") versionName
       setValueToLocalStore BUNDLE_VERSION bundle
       setValueToLocalStore CONFIG_VERSION config
       setValueToLocalStore BASE_URL (getBaseUrl "dummy")
@@ -341,10 +341,10 @@ getLatestAndroidVersion merchant =
     PASSCULTURE -> 1
 
 ifNotRegistered :: Unit -> Boolean
-ifNotRegistered _ = getValueToLocalStore REGISTERATION_TOKEN == "__failed"
+ifNotRegistered _ = elem (getValueToLocalStore REGISTERATION_TOKEN) ["__failed" , "(null)"]
 
 isTokenValid :: String -> Boolean
-isTokenValid = (/=) "__failed"
+isTokenValid token = not $ elem token ["__failed" , "(null)"]
 
 loginFlow :: FlowBT String Unit
 loginFlow = do
@@ -556,9 +556,9 @@ checkPreRequisites activeRideResp isActiveRide = do
   liftFlowBT $ markPerformance "CHECK_PRE_REQUISITES_FLOW"
   status <- checkAndUpdateRCStatus
   status ? do
-    checkStatusAndStartLocationUpdates
-    currentRideFlow activeRideResp isActiveRide
-    $ homeScreenFlow
+      checkStatusAndStartLocationUpdates
+      currentRideFlow activeRideResp isActiveRide
+      $ homeScreenFlow
 
 checkAndUpdateRCStatus :: FlowBT String Boolean
 checkAndUpdateRCStatus = do
@@ -1775,7 +1775,8 @@ myRidesScreenFlow = do
       specialZoneLayoutBackground = selectedCard.specialZoneLayoutBackground,
       specialZoneImage = selectedCard.specialZoneImage,
       specialZoneText = selectedCard.specialZoneText,
-      specialZonePickup = selectedCard.specialZonePickup
+      specialZonePickup = selectedCard.specialZonePickup,
+      goBackTo = ST.RideHistory
       }})
 
       tripDetailsScreenFlow
@@ -1935,6 +1936,7 @@ tripDetailsScreenFlow = do
   case flow of
     ON_SUBMIT  -> pure unit
     GO_TO_EARINING -> driverEarningsFlow
+    GO_TO_RIDE_HISTORY_SCREEN -> myRidesScreenFlow
     GO_TO_HOME_SCREEN -> homeScreenFlow
     OPEN_HELP_AND_SUPPORT -> do
       let language = ( case getLanguageLocale languageKey of
@@ -3052,11 +3054,11 @@ noInternetScreenFlow triggertype = do
 checkAllPermissions :: Boolean -> Boolean -> FlowBT String Boolean
 checkAllPermissions checkBattery checkLocation = do
   config <- getAppConfigFlowBT Constants.appConfig
-  androidVersion <- lift $ lift $ liftFlow $ getAndroidVersion
-  isNotificationPermission <- lift $ lift $ liftFlow $ isNotificationPermissionEnabled unit
-  isOverlayPermission <- lift $ lift $ liftFlow $ isOverlayPermissionEnabled unit
-  isBatteryUsagePermission <- lift $ lift $ liftFlow $ isBatteryPermissionEnabled unit
-  isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+  androidVersion <- liftFlowBT $ getAndroidVersion
+  isNotificationPermission <- liftFlowBT $ isNotificationPermissionEnabled unit
+  isOverlayPermission <- liftFlowBT $ isOverlayPermissionEnabled unit
+  isBatteryUsagePermission <- liftFlowBT $ isBatteryPermissionEnabled unit
+  isLocationPermission <- liftFlowBT $ isLocationPermissionEnabled unit
   pure $ (androidVersion < 13 || not config.permissions.notification || isNotificationPermission) && 
           isOverlayPermission && 
           (not checkBattery || isBatteryUsagePermission) && 

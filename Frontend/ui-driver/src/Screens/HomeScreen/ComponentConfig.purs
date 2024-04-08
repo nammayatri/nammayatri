@@ -1767,12 +1767,12 @@ gotoButtonConfig state = PrimaryButton.config
     }
   , height = WRAP_CONTENT
   , gravity = CENTER
-  , cornerRadius = 22.0
+  , cornerRadius = 18.0
   , width = WRAP_CONTENT
   , padding = if (state.data.driverGotoState.isGotoEnabled) then Padding 16 11 16 11 else Padding 24 11 24 11
   , margin = MarginLeft 0
   , isPrefixImage = true
-  , stroke = "0," <> Color.black900
+  , stroke = "1,"<> Color.grey900
   , background = gotoTimer.bgColor
   , prefixImageConfig
     { imageUrl = gotoTimer.imageString

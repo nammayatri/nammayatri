@@ -112,6 +112,7 @@ type CountryCodeOptionConfig  =
   , stroke :: String
   , cornerRadius :: Number 
   , margin :: Margin
+  , padding :: Padding
   }
 type CountryCodeOptionElementConfig = 
   { height :: Length
@@ -217,6 +218,7 @@ config = {
     , stroke : "1,"<>Color.grey900
     , cornerRadius : 8.0 
     , margin : MarginTop 10
+    , padding : PaddingHorizontal 16 8
   }
   , countryCodeOptionElementConfig :{ 
     height : WRAP_CONTENT

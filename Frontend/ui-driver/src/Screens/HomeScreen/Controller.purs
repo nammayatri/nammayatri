@@ -1564,7 +1564,7 @@ getPeekHeight state =
       density = (runFn1 HU.getDeviceDefaultDensity "")/  defaultDensity
       currentPeekHeight = headerLayout.height  + contentLayout.height + (if RideActionModal.isSpecialRide (rideActionModalConfig state) then (labelLayout.height + 6) else 0)
       requiredPeekHeight = ceil (((toNumber currentPeekHeight) /pixels) * density)
-    in if requiredPeekHeight == 0 then 470 else requiredPeekHeight
+    in if EHC.os == "IOS" then currentPeekHeight else if requiredPeekHeight == 0 then 470 else requiredPeekHeight
   
 getDriverSuggestions :: ST.HomeScreenState -> Array String-> Array String
 getDriverSuggestions state suggestions = case (Array.length suggestions == 0) of

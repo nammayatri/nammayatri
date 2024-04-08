@@ -123,7 +123,7 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  frameLayout
+  relativeLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     ]
@@ -133,6 +133,7 @@ view push state =
         , orientation VERTICAL
         , onBackPressed push $ const BackPressed
         , background Color.white900
+        , padding $ PaddingBottom EHC.safeMarginBottom
         , visibility if state.props.updateLanguages || state.props.updateDetails then GONE else VISIBLE
         ]
         [ settingsView state push
@@ -449,7 +450,7 @@ profileView push state =
             ]
             []
         , scrollView
-            [ height MATCH_PARENT
+            [ height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - (30 + (EHC.safeMarginTopWithDefault 13) + EHC.safeMarginBottom) else MATCH_PARENT
             , width MATCH_PARENT
             , background if state.props.screenType == ST.DRIVER_DETAILS then Color.white900 else Color.blue600
             , orientation VERTICAL
@@ -540,8 +541,8 @@ headerView state push =
     , width MATCH_PARENT
     , orientation HORIZONTAL
     , background Color.white900
-    , gravity BOTTOM
-    , padding $ Padding 5 16 5 16
+    , gravity CENTER
+    , padding $ Padding 5 (EHC.safeMarginTopWithDefault 13) 5 13
     ]
     [ imageView
         [ width $ V 40
@@ -625,7 +626,7 @@ tabView state push =
         , weight 1.0
         , background if state.props.screenType == ST.DRIVER_DETAILS then Color.black900 else Color.white900
         , text (getString DRIVER_DETAILS)
-        , cornerRadius 24.0
+        , cornerRadius 18.0
         , padding $ PaddingVertical 6 6
         , onClick push $ const $ ChangeScreen ST.DRIVER_DETAILS
         , fontStyle $ FontStyle.medium LanguageStyle
@@ -636,7 +637,7 @@ tabView state push =
         [ height WRAP_CONTENT
         , weight 1.0
         , gravity CENTER
-        , cornerRadius 24.0
+        , cornerRadius 18.0
         , onClick push $ const $ ChangeScreen ST.VEHICLE_DETAILS
         , padding $ PaddingVertical 6 6
         , text (getString VEHICLE_DETAILS)
@@ -1250,7 +1251,7 @@ showLiveStatsDashboard push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.grey800
-    , visibility if (DS.null state.data.config.dashboard.url) then GONE else VISIBLE
+    , visibility if not state.data.config.dashboard.enable || (DS.null state.data.config.dashboard.url) then GONE else VISIBLE
     , afterRender
         ( \action -> do
             JB.initialWebViewSetUp push (getNewIDWithTag "webview") HideLiveDashboard
@@ -1291,7 +1292,7 @@ profileOptionsLayout :: ST.DriverProfileScreenState -> (Action -> Effect Unit) -
 profileOptionsLayout state push =
   scrollView
     [ width MATCH_PARENT
-    , height WRAP_CONTENT
+    , height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - (30 + (EHC.safeMarginTopWithDefault 13) + EHC.safeMarginBottom) else MATCH_PARENT
     ]
     [ linearLayout
         [ width MATCH_PARENT
@@ -1418,7 +1419,7 @@ primaryButtons state push =
   linearLayout
     [ orientation HORIZONTAL
     , height MATCH_PARENT
-    , weight 1.0
+    , width MATCH_PARENT
     , gravity BOTTOM
     ]
     [ PrimaryButton.view (push <<< UpdateButtonClicked) (primaryButtonConfig state) ]
@@ -1843,7 +1844,11 @@ infoCard state push config =
             , linearLayout
                 [ height WRAP_CONTENT
                 , weight 1.0
-                , gravity RIGHT
+      ][]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+                , gravity CENTER
                 , orientation HORIZONTAL
                 ]
                 [ textView

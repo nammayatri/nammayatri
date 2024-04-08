@@ -69,13 +69,12 @@ genericHeaderConfig state = let
     , prefixImageConfig {
        visibility = VISIBLE
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
-      , height = (V 25)
-      , width = (V 25)
-      , margin = (Margin 8 8 8 8)
-      , layoutMargin = Margin 8 8 8 8
+      , height = V 30
+      , width = V 30
+      , margin = MarginTop 0
       , enableRipple = true
       }
-    , padding = (PaddingVertical 5 5)
+    , padding = Padding 10 (EHC.safeMarginTopWithDefault 13) 0 13
     , textConfig {
         text = if state.props.updateLanguages then (getString LANGUAGES_SPOKEN) else (getString SETTINGS)
       , color = Color.darkCharcoal
@@ -169,6 +168,7 @@ primaryButtonConfig state = let
       , margin = Margin 10 0 10 10
       , cornerRadius = 10.0
       , background = Color.black900
+      , width = MATCH_PARENT
       , height = (V 48)
       , id = "DriverProfilePrimaryButton"
       , enableRipple = true
