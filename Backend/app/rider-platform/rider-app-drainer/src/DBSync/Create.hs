@@ -6,6 +6,7 @@ import DBQuery.Types
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
+import qualified Data.List as List
 import qualified Data.Map.Strict as M
 import Data.Maybe
 import Data.Text as T hiding (any, map, null)
@@ -49,13 +50,19 @@ runCreate createDataEntry streamName = do
 
 -- | Run a create query for a single entry in the stream
 runCreateQuery :: (EL.KVDBStreamEntryID, ByteString) -> DBCreateObject -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
-runCreateQuery createDataEntry dbCreateObject = do
+runCreateQuery createDataEntry dbCreateObject' = do
   Env {..} <- ask
   let (entryId, byteString) = createDataEntry
-      dbModel = dbCreateObject.dbModel
+      dbModel = dbCreateObject'.dbModel
   if shouldPushToKafkaOnly dbModel _dontEnableDbTables
     then return $ Right entryId
     else do
+      -- Temporary for debug issue with huge values
+      let disToPickupThreshold = 1000000.0
+      let condition = invalidNumCondition (\d -> abs d > disToPickupThreshold)
+      mbUpdDbCreateObject <- replaceInvalidValue byteString dbCreateObject' (DBModel "BookingCancellationReason") (Column "driverDistToPickup") condition (SqlNum (-1.0))
+      let dbCreateObject = fromMaybe dbCreateObject' mbUpdDbCreateObject
+
       let insertQuery = generateInsertForTable dbCreateObject
       case insertQuery of
         Just query -> do
@@ -63,6 +70,8 @@ runCreateQuery createDataEntry dbCreateObject = do
           case result of
             Left (QueryError errorMsg) -> do
               EL.logError ("QUERY INSERT FAILED" :: Text) (errorMsg <> " for query :: " <> query)
+              EL.logError ("QUERY INSERT FAILED: BYTE STRING" :: Text) (show byteString)
+              EL.logError ("QUERY INSERT FAILED: DB OBJECT" :: Text) (show dbCreateObject)
               void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" dbModel.getDBModel
               return $ Left entryId
             Right _ -> do
@@ -86,3 +95,39 @@ getCreateObjectForKafka model content =
       "tag" A..= ((T.pack . pascal . T.unpack) model.getDBModel <> "Object"),
       "type" A..= ("INSERT" :: Text)
     ]
+
+invalidNumCondition :: (Double -> Bool) -> (Value -> Bool)
+invalidNumCondition cond (SqlNum d) = cond d
+invalidNumCondition _ _ = False
+
+-- TODO remove after debug
+replaceInvalidValue :: ByteString -> DBCreateObject -> DBModel -> Column -> (Value -> Bool) -> Value -> ReaderT Env EL.Flow (Maybe DBCreateObject)
+replaceInvalidValue byteString dbCreateObject checkDbModel checkColumn condition defaultVal = do
+  if dbCreateObject.dbModel == checkDbModel
+    then do
+      let DBCreateObjectContent columns = dbCreateObject.contents
+      let mbColumn = List.find (\(TermWrap column _) -> column == checkColumn) columns
+      case mbColumn of
+        Nothing -> pure Nothing
+        Just (TermWrap _ value) ->
+          if condition value
+            then do
+              logError ("REPLACE INVALID VALUE" :: Text) $
+                "checkDbModel: "
+                  <> show checkDbModel
+                  <> "checkColumn: "
+                  <> show checkColumn
+                  <> "invalid value: "
+                  <> show value
+                  <> "defaultValue: "
+                  <> show defaultVal
+              EL.logError ("REPLACE INVALID VALUE: BYTE STRING" :: Text) (show byteString)
+              EL.logError ("REPLACE INVALID VALUE: DB OBJECT" :: Text) (show dbCreateObject)
+              let updValue (TermWrap column val) =
+                    if column == checkColumn
+                      then TermWrap column defaultVal
+                      else TermWrap column val
+              let updColumns = map updValue columns
+              pure $ Just dbCreateObject{contents = DBCreateObjectContent updColumns}
+            else pure Nothing
+    else pure Nothing
