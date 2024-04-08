@@ -160,15 +160,15 @@ getDriverPoolConfigFromCAC dpcCond srId idName = do
     res
 
 doubleToInt :: Double -> Int
-doubleToInt = round
+doubleToInt = floor
 
 getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe DVST.ServiceTierType -> String -> Meters -> Maybe Text -> Maybe Text -> m DriverPoolConfig
 getConfigFromInMemory id mbvst tripCategory dist srId idName = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
-  let roundeDist = doubleToInt (fromIntegral (dist.getMeters + 500) / 1000)
+  let roundeDist = doubleToInt (fromIntegral (dist.getMeters) / 1000)
   dpc <- L.getOption (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundeDist)
   isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
-  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId id)), (pack "tripCategory", DA.String (Text.pack tripCategory)), (pack "tripDistance", DA.String (Text.pack (show dist)))] <> [("vehicleVariant", DA.String (Text.pack (show (fromJust mbvst)))) | isJust mbvst])
+  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId id)), (pack "tripCategory", DA.String (Text.pack tripCategory)), (pack "tripDistance", DA.Number (fromIntegral (getMeters dist)))] <> [("vehicleVariant", DA.String (Text.pack (show (fromJust mbvst)))) | isJust mbvst])
   cfg <-
     bool
       ( maybe
@@ -185,7 +185,9 @@ getConfigFromInMemory id mbvst tripCategory dist srId idName = do
                   config <- getDriverPoolConfigFromCAC dpcCond Nothing Nothing
                   L.setOption (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundeDist) config
                   pure config
-                else pure config'
+                else do
+                  logDebug $ "Getting driverPoolConfig from CAC InMemory for merchatOperatingCity:" <> getId id <> " for tripCategory " <> Text.pack tripCategory <> " and serviceTier " <> show mbvst <> " dist" <> show dist
+                  pure config'
           )
           dpc
       )
@@ -195,13 +197,13 @@ getConfigFromInMemory id mbvst tripCategory dist srId idName = do
     then pure cfg
     else do
       logDebug $ "Did not find driverPoolConfig for tripCategory " <> Text.pack tripCategory <> " and serviceTier " <> show mbvst <> " merchantOperatingCityid" <> show id
-      dpcCond' <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId id)), (pack "tripCategory", "All"), (pack "tripDistance", DA.String (Text.pack (show dist)))] <> [("vehicleVariant", DA.String (Text.pack (show (fromJust mbvst)))) | isJust mbvst])
+      dpcCond' <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId id)), (pack "tripCategory", DA.String "All"), (pack "tripDistance", DA.Number (fromIntegral (getMeters dist)))] <> [("vehicleVariant", DA.String (Text.pack (show (fromJust mbvst)))) | isJust mbvst])
       cfg' <- getDriverPoolConfigFromCAC dpcCond' srId idName
       if cfg'.vehicleVariant == mbvst
         then pure cfg'
         else do
           logDebug $ "Did not find driverPoolConfig for tripCategory ALL" <> " and serviceTier " <> show mbvst <> " merchantOperatingCityid" <> show id
-          dpcCond'' <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id)), (pack "tripCategory", "All"), (pack "tripDistance", DA.String (Text.pack (show dist)))]
+          dpcCond'' <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id)), (pack "tripCategory", DA.String "All"), (pack "tripDistance", DA.Number (fromIntegral (getMeters dist)))]
           getDriverPoolConfigFromCAC dpcCond'' srId idName
 
 getDriverPoolConfigHelper ::
