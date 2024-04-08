@@ -79,6 +79,7 @@ import SharedLogic.DriverOnboarding
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.Ride (multipleRouteKey, searchRequestKey)
+import SharedLogic.TollsDetector
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
@@ -135,6 +136,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   Hedis.del $ multipleRouteKey booking.transactionId
   Hedis.del $ searchRequestKey booking.transactionId
   clearCachedFarePolicyByEstOrQuoteId booking.quoteId
+  clearTollStartGateBatchCache ride.driverId
 
   when (thresholdConfig.subscription) $ do
     maxShards <- asks (.maxShards)

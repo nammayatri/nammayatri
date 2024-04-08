@@ -673,6 +673,7 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
+    congestionChargeMultiplier :: Maybe Centesimal,
     description :: Maybe Text,
     baseDistance :: Maybe Meters,
     baseFare :: Maybe Money,

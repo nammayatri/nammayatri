@@ -48,6 +48,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       serviceChargeCaption = show Enums.SERVICE_CHARGE
       mbServiceChargeItem = fmap (mkBreakupItem serviceChargeCaption) (mkPrice <$> fareParams.serviceCharge)
 
+      congestionChargeCaption = show Enums.CONGESTION_CHARGE
+      mbCongestionChargeItem = fmap (mkBreakupItem congestionChargeCaption) (mkPrice <$> fareParams.congestionCharge)
+
       mkSelectedFareCaption = show Enums.DRIVER_SELECTED_FARE
       mbSelectedFareItem =
         fareParams.driverSelectedFare <&> \selFare ->
@@ -81,6 +84,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
   catMaybes
     [ Just baseFareItem,
+      mbCongestionChargeItem,
       mbNightShiftChargeItem,
       mbWaitingChargesItem,
       mbFixedGovtRateItem,
@@ -184,10 +188,12 @@ calculateFareParameters params = do
           + partOfNightShiftCharge
   let resultNightShiftCharge = (\isCoefIncluded -> if isCoefIncluded then countNightShiftCharge fullRideCost <$> nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded
       resultWaitingCharge = countWaitingCharge =<< waitingChargeInfo
+      congestionChargeResult = fp.congestionChargeMultiplier <&> \congestionCharge -> roundToIntegral $ (fromIntegral fullRideCost * congestionCharge) - fromIntegral fullRideCost
       fullRideCostN {-without govtCharges and platformFee-} =
         fullRideCost
           + fromMaybe 0 resultNightShiftCharge
           + fromMaybe 0 resultWaitingCharge
+          + fromMaybe 0 congestionChargeResult
           + fromMaybe 0 fp.serviceCharge
           + notPartOfNightShiftCharge
       govtCharges =
@@ -203,6 +209,7 @@ calculateFareParameters params = do
             driverSelectedFare = params.driverSelectedFare,
             customerExtraFee = params.customerExtraFee,
             serviceCharge = fp.serviceCharge,
+            congestionCharge = congestionChargeResult,
             waitingCharge = resultWaitingCharge,
             nightShiftCharge = resultNightShiftCharge,
             rideExtraTimeFare = extraTimeFareInfo,

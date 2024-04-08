@@ -35,6 +35,7 @@ data FareParametersT f = FareParametersT
     govtCharges :: B.C f (Maybe Money),
     customerCancellationDues :: B.C f (Maybe HighPrecMoney),
     tollCharges :: B.C f (Maybe HighPrecMoney),
+    congestionCharge :: B.C f (Maybe Money),
     updatedAt :: B.C f (Maybe UTCTime)
   }
   deriving (Generic, B.Beamable)

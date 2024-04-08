@@ -56,6 +56,7 @@ update' farePolicy = do
       Se.Set BeamFP.govtCharges $ farePolicy.govtCharges,
       Se.Set BeamFP.serviceCharge $ farePolicy.serviceCharge,
       Se.Set BeamFP.perMinuteRideExtraTimeCharge $ farePolicy.perMinuteRideExtraTimeCharge,
+      Se.Set BeamFP.congestionChargeMultiplier $ farePolicy.congestionChargeMultiplier,
       Se.Set BeamFP.description $ farePolicy.description,
       Se.Set BeamFP.updatedAt now
     ]
@@ -129,6 +130,7 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.minAllowedTripDistance = (.minAllowedTripDistance) <$> allowedTripDistanceBounds,
         BeamFP.govtCharges = govtCharges,
         BeamFP.perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
+        BeamFP.congestionChargeMultiplier = congestionChargeMultiplier,
         BeamFP.farePolicyType = getFarePolicyType $ FarePolicy {..},
         BeamFP.description = description,
         BeamFP.createdAt = createdAt,
@@ -175,6 +177,7 @@ instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
                 driverExtraFeeBounds = nonEmpty fDEFB,
                 farePolicyDetails,
                 perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
+                congestionChargeMultiplier = congestionChargeMultiplier,
                 description = description,
                 createdAt = createdAt,
                 updatedAt = updatedAt

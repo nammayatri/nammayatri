@@ -225,7 +225,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
           ride <- QRide.getActiveByDriverId driverId
           updateDeviation transportConfig enableNightSafety ride batchWaypoints
       )
-      (TollsDetector.getTollChargesOnRoute merchantOpCityId)
+      (TollsDetector.getTollChargesOnRouteInBatchStep merchantOpCityId)
       ( \driverId estimatedDistance -> do
           ride <- QRide.getActiveByDriverId driverId
           getTravelledDistance ride estimatedDistance
