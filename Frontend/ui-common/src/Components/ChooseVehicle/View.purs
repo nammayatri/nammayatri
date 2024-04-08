@@ -6,7 +6,7 @@ import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
 import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), negate)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout)
 import Common.Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -20,37 +20,42 @@ import Animation.Config (translateFullYAnimWithDurationConfig, translateYAnimCon
 import Mobility.Prelude (boolToInvisibility)
 import Data.Maybe (isJust, Maybe (..), fromMaybe)
 import Engineering.Helpers.Utils as EHU
+import JBridge as JB
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
-  relativeLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  ]
-  [ PrestoAnim.animationSet
-    [ Anim.fadeInWithDuration 400 isActiveIndex,
-      Anim.fadeOutWithDuration 400 $ not isActiveIndex
-    ] $ 
-    cardView push config isActiveIndex false
-  , cardView push config false true
-  ]
+  cardView push config
   where
     isActiveIndex = config.index == config.activeIndex
 
-cardView :: forall w. (Action -> Effect Unit) -> Config -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
-cardView push config showBackground isVisible = 
+cardView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+cardView push config = 
   let isActiveIndex = config.index == config.activeIndex
       stroke' = if isActiveIndex then "2," <> Color.blue800 else "1," <> Color.white900
       background' = if isActiveIndex then Color.blue600 else Color.white900
       padding' = Padding 8 16 12 16
+      bounds = JB.getLayoutBounds $ EHC.getNewIDWithTag config.id
   in 
-  linearLayout
+  frameLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , background $ if showBackground then background' else Color.transparent
+  , margin $ MarginHorizontal 16 16
+  ]
+  [ PrestoAnim.animationSet
+    [ Anim.fadeInWithDuration 400 isActiveIndex,
+      Anim.fadeOutWithDuration 400 $ not isActiveIndex
+    ] $ linearLayout
+        [ width MATCH_PARENT
+        , height $ V bounds.height
+        , background background'
+        , cornerRadius 6.0
+        , stroke stroke'
+        ][]
+  , linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
   , cornerRadius 6.0
   , id $ EHC.getNewIDWithTag config.id
-  , stroke $ if showBackground then stroke' else "0," <> Color.transparent
   , margin $ config.layoutMargin
   , padding padding'
   , clickable config.isEnabled
@@ -60,7 +65,6 @@ cardView push config showBackground isVisible =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , afterRender push (const NoAction)
-      , visibility $ boolToInvisibility isVisible
       ][ linearLayout
           [ height $ V 48
           , width $ V 60
@@ -105,12 +109,13 @@ cardView push config showBackground isVisible =
         ]
       ]
   ]
+  ]
 
 vehicleDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 vehicleDetailsView push config =
   linearLayout
     [ height WRAP_CONTENT
-    , weight 1.0
+    , width WRAP_CONTENT
     , orientation HORIZONTAL
     ]
     [ textView
@@ -210,7 +215,7 @@ descriptionView description vehicleVariant =
     , gravity CENTER_VERTICAL
     , visibility $ boolToVisibility $ isJust description
     ][ imageView
-        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_circle"
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_circle"
         , width $ V 3
         , height $ V 3
         , margin $ Margin 2 2 0 0

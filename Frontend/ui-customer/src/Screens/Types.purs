@@ -837,7 +837,6 @@ type SearchLocationModelProps = {
   , showLoader :: Boolean
   , crossBtnSrcVisibility :: Boolean
   , crossBtnDestVisibility :: Boolean
-  , findPlaceIllustration :: Boolean
 }
 
 type SearchLocationModelData = {

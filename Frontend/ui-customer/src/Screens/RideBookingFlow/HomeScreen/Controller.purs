@@ -1502,7 +1502,7 @@ eval OpenSearchLocation state = do
   _ <- pure $ firebaseLogEvent "ny_user_hs_pickup_click"
   let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.PickupSearch" "true"
   let srcValue = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source
-  exit $ UpdateSavedLocation state { props { isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length srcValue) > 2, findPlaceIllustration = null state.data.locationList}, rideSearchProps{ sessionId = generateSessionId unit } }, data {source=srcValue, locationList = state.data.recentSearchs.predictionArray} }
+  exit $ UpdateSavedLocation state { props { isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length srcValue) > 2}, rideSearchProps{ sessionId = generateSessionId unit } }, data {source=srcValue, locationList = state.data.recentSearchs.predictionArray} }
 
 eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = continueWithCmd state [ do pure $ OpenSearchLocation ]
 
@@ -1663,7 +1663,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
         _ <- pure $ performHapticFeedback unit
         let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.DestinationSearch" "true"
         let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-        exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}, data{source= state.data.source}}
+        exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= state.data.source}}
       ConfirmingLocation -> do
         _ <- pure $ performHapticFeedback unit
         _ <- pure $ exitLocateOnMap ""
@@ -1684,7 +1684,7 @@ eval WhereToClick state = do
   _ <- pure $ performHapticFeedback unit
   let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.DestinationSearch" "true"
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-  exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }, rideSearchProps{sessionId = generateSessionId unit}}, data{source= if state.data.source == "" then getString CURRENT_LOCATION else state.data.source}}
+  exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }, rideSearchProps{sessionId = generateSessionId unit}}, data{source= if state.data.source == "" then getString CURRENT_LOCATION else state.data.source}}
   
 eval (RideCompletedAC RideCompletedCard.GoToSOS) state = exit $ GoToNammaSafety state true false 
 
@@ -1992,7 +1992,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SourceC
   else
     pure unit
   let predicArray = (updateLocListWithDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist)
-  continue state { data { source = "", recentSearchs {predictionArray = predicArray}, locationList = predicArray, searchLocationModelData{prevLocation = state.data.source}}, props { isSource = Just true, isSrcServiceable = true, isRideServiceable = true, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList} } }
+  continue state { data { source = "", recentSearchs {predictionArray = predicArray}, locationList = predicArray, searchLocationModelData{prevLocation = state.data.source}}, props { isSource = Just true, isSrcServiceable = true, isRideServiceable = true, searchLocationModelProps{crossBtnSrcVisibility = false} } }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DestinationClear)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -2002,7 +2002,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
   else
     pure unit
   let predicArray = (updateLocListWithDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist)
-  continue state { data { destination = "", locationList = predicArray }, props {isSource = Just false, isDestServiceable = true, isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = false, findPlaceIllustration = null state.data.locationList}} }
+  continue state { data { destination = "", locationList = predicArray }, props {isSource = Just false, isDestServiceable = true, isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = false}} }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -2702,7 +2702,7 @@ validateSearchInput state searchString =
   autoCompleteType = if state.props.isSource == Just true then Just ST.PICKUP else Just ST.DROP
   sourceManuallyMoved = if state.props.isSource == Just true then false else state.props.rideSearchProps.sourceManuallyMoved
   destManuallyMoved = if state.props.isSource == Just false then false else state.props.rideSearchProps.destManuallyMoved
-  callSearchLocationAPI = updateAndExit state{props{ searchLocationModelProps{showLoader = true, findPlaceIllustration = false}}} $ SearchPlace searchString state{ props{ rideSearchProps{ autoCompleteType = autoCompleteType, sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved } } }
+  callSearchLocationAPI = updateAndExit state{props{ searchLocationModelProps{showLoader = true}}} $ SearchPlace searchString state{ props{ rideSearchProps{ autoCompleteType = autoCompleteType, sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved } } }
 
 constructLatLong :: Number -> Number -> String -> JB.Location
 constructLatLong lat lng _ =
