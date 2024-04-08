@@ -59,6 +59,7 @@ data VehicleClassVariantMap = VehicleClassVariantMap
   { bodyType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     manufacturer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     manufacturerModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    priority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     reviewRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleClass :: Kernel.Prelude.Text,

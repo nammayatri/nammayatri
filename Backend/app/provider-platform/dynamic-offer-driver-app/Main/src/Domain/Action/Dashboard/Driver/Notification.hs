@@ -105,7 +105,7 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAdd
           keepHiddenForSeconds = Seconds 0,
           requestedVehicleVariant = driverVehicle,
           airConditioned = Nothing,
-          vehicleServiceTier = Just $ castVariantToServiceTier driverVehicle,
+          vehicleServiceTier = Just $ show $ castVariantToServiceTier driverVehicle,
           bapName = Nothing,
           bapLogo = Nothing,
           customerExtraFee = Nothing,

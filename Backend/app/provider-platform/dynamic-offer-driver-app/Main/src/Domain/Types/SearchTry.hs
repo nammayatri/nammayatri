@@ -38,6 +38,7 @@ data SearchTry = SearchTry
     startTime :: UTCTime,
     validTill :: UTCTime,
     vehicleServiceTier :: DVST.ServiceTierType,
+    vehicleServiceTierName :: Text,
     baseFare :: Money,
     customerExtraFee :: Maybe Money,
     status :: SearchTryStatus,

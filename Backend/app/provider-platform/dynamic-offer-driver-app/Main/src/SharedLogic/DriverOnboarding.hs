@@ -380,7 +380,8 @@ compareMaybe (Just x) (Just y) = compare x y
 
 compareVehicles :: DVC.VehicleClassVariantMap -> DVC.VehicleClassVariantMap -> Ordering
 compareVehicles a b =
-  compareMaybe a.manufacturer b.manufacturer
+  compareMaybe a.priority b.priority
+    `mappend` compareMaybe a.manufacturer b.manufacturer
     `mappend` compareMaybe a.manufacturerModel b.manufacturerModel
     `mappend` compareMaybe a.vehicleCapacity b.vehicleCapacity
 

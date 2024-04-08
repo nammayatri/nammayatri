@@ -37,6 +37,7 @@ data SearchTryT f = SearchTryT
     customerExtraFee :: B.C f (Maybe Money),
     status :: B.C f Domain.SearchTryStatus,
     vehicleVariant :: B.C f DVST.ServiceTierType,
+    vehicleServiceTierName :: B.C f (Maybe Text),
     searchRepeatCounter :: B.C f Int,
     tripCategory :: B.C f (Maybe DTC.TripCategory),
     searchRepeatType :: B.C f Domain.SearchRepeatType,

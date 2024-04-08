@@ -1086,7 +1086,8 @@ data CSVRow = CSVRow
     manufacturer :: Text,
     manufacturerModel :: Text,
     reviewRequired :: Text,
-    vehicleModel :: Text
+    vehicleModel :: Text,
+    priority :: Text
   }
 
 instance FromNamedRecord CSVRow where
@@ -1099,6 +1100,7 @@ instance FromNamedRecord CSVRow where
       <*> r .: "manufacturer_model"
       <*> r .: "review_required"
       <*> r .: "vehicle_model"
+      <*> r .: "priority"
 
 updateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> Context.City -> Common.UpdateOnboardingVehicleVariantMappingReq -> Flow APISuccess
 updateOnboardingVehicleVariantMapping merchantShortId opCity req = do
@@ -1144,5 +1146,6 @@ updateOnboardingVehicleVariantMapping merchantShortId opCity req = do
             manufacturerModel = cleanField row.manufacturerModel,
             reviewRequired = cleanField row.reviewRequired <&> (mapToBool . T.toLower),
             vehicleModel = Just vehicleModel,
+            priority = cleanField row.priority >>= readMaybe . T.unpack,
             bodyType = Nothing
           }

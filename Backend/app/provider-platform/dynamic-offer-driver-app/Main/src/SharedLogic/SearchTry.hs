@@ -42,6 +42,7 @@ import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.SearchTry as QST
@@ -188,9 +189,10 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
       return searchTry
 
 buildSearchTry ::
-  ( MonadTime m,
-    MonadGuid m,
-    MonadReader r m
+  ( MonadFlow m,
+    CacheFlow m r,
+    Metrics.CoreMetrics m,
+    EsqDBFlow m r
   ) =>
   Id DM.Merchant ->
   DSR.SearchRequest ->
@@ -206,10 +208,12 @@ buildSearchTry ::
 buildSearchTry merchantId searchReq estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory customerExtraFee messageId serviceTier = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
-  pure
+  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId serviceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))
+  pure $
     DST.SearchTry
       { id = id_,
         vehicleServiceTier = serviceTier,
+        vehicleServiceTierName = vehicleServiceTierItem.name,
         requestId = searchReq.id,
         estimateId = estOrQuoteId,
         merchantId = Just merchantId,

@@ -320,6 +320,7 @@ DocumentVerificationConfig:
       vehicleModel: Maybe Text
       reviewRequired: Maybe Bool
       bodyType: Maybe Text
+      priority: Maybe Int
       derive: "Eq, Ord, Read"
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"

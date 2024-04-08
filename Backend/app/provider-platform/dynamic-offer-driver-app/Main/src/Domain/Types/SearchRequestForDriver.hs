@@ -68,6 +68,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     durationToPickup :: Seconds,
     vehicleVariant :: Variant.Variant,
     vehicleServiceTier :: Maybe DVST.ServiceTierType,
+    vehicleServiceTierName :: Maybe Text,
     airConditioned :: Maybe Bool,
     status :: DriverSearchRequestStatus,
     batchNumber :: Int,
@@ -122,7 +123,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     keepHiddenForSeconds :: Seconds,
     goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
     requestedVehicleVariant :: Variant.Variant,
-    vehicleServiceTier :: Maybe DVST.ServiceTierType,
+    vehicleServiceTier :: Maybe Text,
     airConditioned :: Maybe Bool,
     isTranslated :: Bool,
     customerCancellationDues :: HighPrecMoney,
@@ -169,7 +170,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       pickupZone = nearbyReq.pickupZone,
       driverPickUpCharges = driverPickUpCharges,
       specialZoneExtraTip = min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation,
-      vehicleServiceTier = nearbyReq.vehicleServiceTier,
+      vehicleServiceTier = nearbyReq.vehicleServiceTierName,
       airConditioned = nearbyReq.airConditioned,
       ..
     }

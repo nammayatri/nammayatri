@@ -134,6 +134,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPickUp
                 driverId = cast dpRes.driverId,
                 vehicleVariant = dpRes.variant,
                 vehicleServiceTier = Just searchTry.vehicleServiceTier,
+                vehicleServiceTierName = Just searchTry.vehicleServiceTierName,
                 airConditioned = (> 0.0) <$> dpRes.airConditioned,
                 actualDistanceToPickup = dpwRes.actualDistanceToPickup,
                 straightLineDistanceToPickup = dpRes.distanceToPickup,

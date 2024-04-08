@@ -123,6 +123,7 @@ instance FromTType' BeamST.SearchTry SearchTry where
             tripCategory = fromMaybe (OneWay OneWayOnDemandDynamicOffer) tripCategory,
             isScheduled = fromMaybe False isScheduled,
             vehicleServiceTier = vehicleVariant,
+            vehicleServiceTierName = fromMaybe (show vehicleVariant) vehicleServiceTierName,
             ..
           }
 
@@ -138,6 +139,7 @@ instance ToTType' BeamST.SearchTry SearchTry where
         startTime = startTime,
         validTill = validTill,
         vehicleVariant = vehicleServiceTier,
+        vehicleServiceTierName = Just vehicleServiceTierName,
         baseFare = baseFare,
         customerExtraFee = customerExtraFee,
         status = status,

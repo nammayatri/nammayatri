@@ -36,6 +36,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     durationToPickup :: B.C f Seconds,
     vehicleVariant :: B.C f Variant.Variant,
     vehicleServiceTier :: B.C f (Maybe DVST.ServiceTierType),
+    vehicleServiceTierName :: B.C f (Maybe Text),
     airConditioned :: B.C f (Maybe Bool),
     batchNumber :: B.C f Int,
     lat :: B.C f (Maybe Double),

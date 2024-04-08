@@ -534,7 +534,8 @@ data VehicleClassVariantMap = VehicleClassVariantMap
     manufacturerModel :: Maybe Text,
     reviewRequired :: Maybe Bool,
     vehicleModel :: Text,
-    bodyType :: Maybe Text
+    bodyType :: Maybe Text,
+    priority :: Maybe Int
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

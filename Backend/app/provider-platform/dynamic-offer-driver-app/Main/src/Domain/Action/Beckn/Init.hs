@@ -39,6 +39,7 @@ import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.Quote as QQuote
@@ -141,6 +142,7 @@ handler merchantId req validatedReq = do
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
       exophone <- findRandomExophone searchRequest.merchantOperatingCityId
+      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       pure
         DRB.Booking
           { transactionId = searchRequest.transactionId,
@@ -154,6 +156,7 @@ handler merchantId req validatedReq = do
             bapCountry = Just req.bapCountry,
             riderId = Nothing,
             vehicleServiceTier = driverQuote.vehicleServiceTier,
+            vehicleServiceTierName = vehicleServiceTierItem.name,
             estimatedDistance = driverQuote.distance,
             maxEstimatedDistance = req.maxEstimatedDistance,
             createdAt = now,

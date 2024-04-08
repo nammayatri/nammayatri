@@ -67,6 +67,7 @@ data Booking = Booking
     fromLocation :: DLoc.Location,
     toLocation :: Maybe DLoc.Location,
     vehicleServiceTier :: DVST.ServiceTierType,
+    vehicleServiceTierName :: Text,
     estimatedDistance :: Maybe Meters,
     maxEstimatedDistance :: Maybe HighPrecMeters,
     estimatedFare :: Money,
