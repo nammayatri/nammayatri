@@ -35,6 +35,7 @@ data FareParameters = FareParameters
     fareParametersDetails :: FareParametersDetails,
     customerCancellationDues :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
+    congestionCharge :: Maybe Money,
     updatedAt :: UTCTime
   }
   deriving (Generic, Show, Eq, PrettyShow)
