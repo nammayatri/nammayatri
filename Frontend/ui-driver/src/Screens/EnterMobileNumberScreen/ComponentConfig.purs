@@ -28,7 +28,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB
 import Language.Types (STR(..))
-import Prelude (not)
+import Prelude (not, (==))
 import Resource.Constants as Constant
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -98,7 +98,8 @@ mobileNumberEditTextConfig state = let
     in primaryEditTextConfig'
 
 mobileNumberConfig :: ST.EnterMobileNumberScreenState -> MobileNumberEditor.Config
-mobileNumberConfig state = let 
+mobileNumberConfig state = let
+  paddingOffest = EHC.os == "IOS"
   config = MobileNumberEditor.config 
   mobileNumberEditor' = config 
     { editText
@@ -124,5 +125,8 @@ mobileNumberConfig state = let
         , margin = MarginBottom 1
         }
     , showErrorLabel = state.props.isValid
+    , countryCodeOptionConfig {
+        padding = Padding 16 ((if EHC.os == "IOS" then 16 else 12)) 8 (if EHC.os == "IOS" then 16 else 12)
+    }
     }
   in mobileNumberEditor'

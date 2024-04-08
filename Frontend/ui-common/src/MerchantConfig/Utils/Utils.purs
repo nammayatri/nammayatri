@@ -31,6 +31,7 @@ data Merchant
   | MOBILITY_PM
   | PASSCULTURE
   | MOBILITY_RS
+  | BRIDGE
 
 derive instance genericMerchant :: Generic Merchant _
 instance showMerchant :: Show Merchant where show = genericShow

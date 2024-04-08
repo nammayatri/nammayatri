@@ -2261,8 +2261,6 @@ permissionScreenFlow :: FlowBT String Unit
 permissionScreenFlow = do
   void $ pure $ hideKeyboardOnNavigation true
   flow <- UI.permissionScreen
-  permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
-  permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
   internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
   case flow of
     REFRESH_INTERNET -> do
@@ -2277,15 +2275,18 @@ permissionScreenFlow = do
                     else do
                       setValueToLocalStore PERMISSION_POPUP_TIRGGERED "true"
                       currentFlowStatus
-    TURN_ON_INTERNET -> case (getValueToLocalStore USER_NAME == "__failed") of
-                            true -> pure unit
-                            _ -> if os == "IOS" && not permissionConditionB then do 
-                                  modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DENIED})
-                                  permissionScreenFlow
-                                 else if not (permissionConditionA && permissionConditionB) then do 
-                                  modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
-                                  permissionScreenFlow 
-                                 else currentFlowStatus
+    TURN_ON_INTERNET -> do
+      permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+      permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
+      case (getValueToLocalStore USER_NAME == "__failed") of
+        true -> pure unit
+        _ -> if os == "IOS" && not permissionConditionB then do 
+              modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DENIED})
+              permissionScreenFlow
+              else if not (permissionConditionA && permissionConditionB) then do 
+              modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
+              permissionScreenFlow 
+              else currentFlowStatus
 
 myProfileScreenFlow :: FlowBT String Unit
 myProfileScreenFlow = do

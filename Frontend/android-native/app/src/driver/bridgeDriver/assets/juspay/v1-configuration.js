@@ -25,25 +25,21 @@ window.getMerchantConfig = function () {
     "showCorporateAddress" : true,
     "imageUploadOptional" : false,
     "BONUS_EARNED" : "true",
-    "clientName" : "Namma Yatri",
+    "clientName" : "Bridge",
     "languageList" : [
-      {"name":"English","value":"EN_US", "subtitle": "ಆಂಗ್ಲ"}, 
-      {"name":"ಕನ್ನಡ","value":"KN_IN", "subtitle": "Kannada"},
-      {"name":"हिंदी","value":"HI_IN", "subtitle": "Hindi"},
-      {"name":"தமிழ்","value":"TA_IN", "subtitle": "Tamil"},
-      {"name":"తెలుగు","value":"TE_IN", "subtitle": "Telugu"}
+      {"name":"English","value":"EN_US", "subtitle": "English"}
     ],
-    "engilshInNative" : "ಆಂಗ್ಲ",
+    "engilshInNative" : "English",
     "englishStrings": {
-      "NEED_IT_TO_ENABLE_LOCATION": "Namma Yatri Partner collect location data to enable share your location to monitor driver current location, even when the app is closed or not in use.",
+      "NEED_IT_TO_ENABLE_LOCATION": "Bridge Driver collect location data to enable share your location to monitor driver current location, even when the app is closed or not in use.",
       "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "Currently, We aren't operating with this vehicle registration number",
-      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "You are about to place a call to the Namma Yatri Support Team. Do you want to proceed?",
+      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "You are about to place a call to the Bridge Support Team. Do you want to proceed?",
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
-      "WHAT_IS_NAMMA_YATRI_BONUS" : "What is Namma Yatri Bonus?",
+      "WHAT_IS_NAMMA_YATRI_BONUS" : "What is Bridge Bonus?",
       "EARNED_ON_APP" : "Earned on NY",
-      "TRAVELLED_ON_APP" : "Travelled On Namma Yatri",
+      "TRAVELLED_ON_APP" : "Travelled On Bridge",
       "GUARANTEED_FIXED_PRICE" : "Guaranteed fixed price until \nApr 1, 2025",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\nNamma Yatri Plans!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\nBridge Plans!"
     },
     "hindiStrings": {
       "NEED_IT_TO_ENABLE_LOCATION": "नम्मा यात्री पार्टनर ड्राइवर के लोकेशन की निगरानी के लिए अपना स्थान साझा करने के लिए लोकेशन डेटा एकत्र करता है, तब भी जब ऐप बंद हो या उपयोग में न हो।",
@@ -100,9 +96,9 @@ window.getMerchantConfig = function () {
       "isMaskedName": false
     }
     , "subscriptionConfig" : {
-          "enableBlocking" : true,
-          "onBoardingSubscription" : true,
-          "showDUOfferBanner" : true,
+          "enableBlocking" : false,
+          "onBoardingSubscription" : false,
+          "showDUOfferBanner" : false,
           "offerBannerValidTill" : "2024-01-01T00:00:00",
           "offerBannerDeadline" : "December 31-*$*-ಡಿಸೆಂಬರ್ 31-*$*-31 दिसंबर-*$*-டிசம்பர் 31",
           "offerBannerConfig" : {
@@ -115,7 +111,7 @@ window.getMerchantConfig = function () {
           "maxDuesLimit" : 100.0,
           "highDueWarningLimit" : 75.0,
           "moveDriverToOfflineInHighDueDaily" : true,
-          "enableSubscriptionPopups" : true,
+          "enableSubscriptionPopups" : false,
           "faqLink" : "https://nammayatri.in/plans/",
           "supportNumber" : "08069724800",
           "whatsappSupportLink" : "https://wa.me/917483117936?text=Hello%2C%20I%20need%20help%20with%20setting%20up%20Autopay%20Subscription%0A%E0%B2%B8%E0%B3%8D%E0%B2%B5%E0%B2%AF%E0%B2%82%20%E0%B2%AA%E0%B2%BE%E0%B2%B5%E0%B2%A4%E0%B2%BF%20%E0%B2%9A%E0%B2%82%E0%B2%A6%E0%B2%BE%E0%B2%A6%E0%B2%BE%E0%B2%B0%E0%B2%BF%E0%B2%95%E0%B3%86%E0%B2%AF%E0%B2%A8%E0%B3%8D%E0%B2%A8%E0%B3%81%20%E0%B2%B9%E0%B3%8A%E0%B2%82%E0%B2%A6%E0%B2%BF%E0%B2%B8%E0%B2%B2%E0%B3%81%20%E0%B2%A8%E0%B2%A8%E0%B2%97%E0%B3%86%20%E0%B2%B8%E0%B2%B9%E0%B2%BE%E0%B2%AF%E0%B2%A6%20%E0%B2%85%E0%B2%97%E0%B2%A4%E0%B3%8D%E0%B2%AF%E0%B2%B5%E0%B2%BF%E0%B2%A6%E0%B3%86",
@@ -128,7 +124,8 @@ window.getMerchantConfig = function () {
           },
     }
     , "rideActionModelConfig" : {
-      "showVehicleVariant" : false
+      "showVehicleVariant" : false,
+        "mapBackground" : "#7435FC"
     }
     , "referralType" : "LeaderBoard"
     , "referral": {
@@ -137,16 +134,33 @@ window.getMerchantConfig = function () {
     }
     , "gotoConfig" : {
       "maxGotoLocations" : 5,
-      "enableGoto" : true
+      "enableGoto" : false
     }
     , "bottomNavConfig" : {
-      "subscription" : 
-            { "isVisible" : true
-            },
-      "referral" : 
-      { 
-        "showNew" : true
-      }
+        "home": {
+          "isVisible": true,
+          "showNew": false
+        },
+        "rideHistory": {
+          "isVisible": true,
+          "showNew": false
+        },
+        "driverEarnings": {
+          "isVisible": false,
+          "showNew": false
+        },
+        "subscription": {
+          "isVisible": false,
+          "showNew": false
+        },
+        "referral": {
+          "isVisible": false,
+          "showNew": false
+        },
+        "notifications": {
+          "isVisible": false,
+          "showNew": false
+        }
     }
     , "purpleRideConfig" : {
       "showPurpleVideos" : false,
@@ -156,19 +170,19 @@ window.getMerchantConfig = function () {
       "genericAccessibilityVideo" : "https://youtu.be/5s21p2rI58c"
     }
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
-    , "termsLink" : "https://docs.google.com/document/d/1K68xvtReD9FVpx-IshtKNMt4baQNgKXt"
+    , "termsLink" : "https://docs.google.com/document/d/1JjV2CEh2y2pBJ5FPe8NUBdj5UpyhmPsEdArKWng0c4o"
     , "termsVersion" : 2.0
-    , "privacyLink" : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9"
+    , "privacyLink" : "https://docs.google.com/document/d/1NtSYItpiJnKbGkup2q88EYmkQ4pn0dul-pk6D1HYHLo"
     , "feature" : {
-      "enableBonus" : true
+      "enableBonus" : false
       , "enableImageUpload" : false
       , "enableGender" : true
       , "enableOtpRide" : false
-      , "enableYatriCoins" : true
+      , "enableYatriCoins" : false
     }
     , "appData" : {
       "link" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"
-      , "name" : "Namma Yatri"
+      , "name" : "Bridge"
     }
     , "enableMockLocation" : false
     , "cityConfig" : [
@@ -194,7 +208,7 @@ window.getMerchantConfig = function () {
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
           "variantList" : ["AutoCategory"],
-          "enableCabsSubscriptionView" : true,
+          "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -202,9 +216,7 @@ window.getMerchantConfig = function () {
             "domain" : "https://nammayatri.in"
           , "customerAppId" : "in.juspay.nammayatri"
           , "driverAppId" : "in.juspay.nammayatripartner"
-        },
-        "waitingCharges" : 1.50,
-        "waitingChargesConfig" : defWaitingChargesConfig
+        }
       },
       {
         "cityName" : "Hyderabad",
@@ -226,9 +238,9 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
+          "enableVariantBasedSubscription" : false,
           "variantList" : [],
-          "enableCabsSubscriptionView" : true,
+          "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -269,9 +281,9 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : ["AutoCategory"],
-          "enableCabsSubscriptionView" : true,
+          "enableVariantBasedSubscription" : false,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -303,9 +315,9 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
+          "enableVariantBasedSubscription" : false,
           "variantList" : [],
-          "enableCabsSubscriptionView" : true,
+          "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -351,7 +363,7 @@ window.getMerchantConfig = function () {
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
-        "showEarningSection" : true,
+        "showEarningSection" : false,
         "referral" : {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
@@ -389,9 +401,9 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : false
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
+          "enableVariantBasedSubscription" : false,
           "variantList" : [],
-          "enableCabsSubscriptionView" : true,
+          "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -423,12 +435,12 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
+          "enableVariantBasedSubscription" : false,
           "variantList" : [],
-          "enableCabsSubscriptionView" : true,
+          "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
         },
-        "showEarningSection" : true,
+        "showEarningSection" : false,
         "referral" : {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
@@ -457,9 +469,9 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : ["AutoCategory"],
-          "enableCabsSubscriptionView" : true,
+          "enableVariantBasedSubscription" : false,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -491,9 +503,9 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
+          "enableVariantBasedSubscription" : false,
           "variantList" : [],
-          "enableCabsSubscriptionView" : true,
+          "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -525,9 +537,9 @@ window.getMerchantConfig = function () {
         },
         "vehicleNSImg" : "ny_ic_auto_image_old",
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
+          "enableVariantBasedSubscription" : false,
           "variantList" : [],
-          "enableCabsSubscriptionView" : true,
+          "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -559,12 +571,12 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
+          "enableVariantBasedSubscription" : false,
           "variantList" : [],
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
-        "showEarningSection" : true,
+        "showEarningSection" : false,
         "referral" : {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
@@ -593,9 +605,9 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
+          "enableVariantBasedSubscription" : false,
           "variantList" : [],
-          "enableCabsSubscriptionView" : true,
+          "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : false,
@@ -608,25 +620,13 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig
       }
   ]
-  , "coinsConfig" : {
-    "minCoinSliderValue" : 250,
-    "stepFunctionForCoinConversion" : 250,
-    "eightPlusRidesCoins" : "+25",
-    "purpleRideCoins" : "+5",
-    "customerReferralCoins" : "+200",
-    "whatAreYatriCoinFAQ" : "https://www.youtube.com/shorts/vt_Z4wu4otY",
-    "howToEarnYatriCoinFAQ" : "https://www.youtube.com/shorts/teQyPdP1fRc",
-    "howToRedeemYatriCoinFAQ" : "https://www.youtube.com/shorts/dU3XxAisGjo",
-    "eightRideCoinEvent" : true,
-    "prupleRideCoinEvent" : true,
-    "driverToCustomerRefCoinEvent" : true
-  }
   , "dashboard" : {
-        "enable" : true,
+        "enable" : false,
         "url" : "https://nammayatri.in/open?source=in-app"
     }
   , "profile" : {
-    "showBookingOption" : true
+    "showBookingOption" : false
+  , "enableMultipleRC" : false
   }
   , "waitTimeConfig" : {
     "thresholdDist" : 0.03,
@@ -634,12 +634,41 @@ window.getMerchantConfig = function () {
     "diffBtwTwoHeartBeats" : 10,
     "straightLineDist" : 0.015
   }
+  , "primaryTextColor" : "#FFFFFF"
+  , "primaryBackground" : "#7435FC"
   , "rideCompletedCardConfig" : {
       "lottieQRAnim" : true
   }
+  , "showPaymentDetails": false
    , "vehicle" : {
       "validationPrefix" : "KA|AP|TS|DL|TN|PY|UP|HR|TG"
     }
+   , "welcomeScreen" : {
+          "background" :"#F5EDFF"
+        }
+  , "enterMobileNumberScreen" : {
+        "headerBackground": "#11032F"
+      }
+  , "defaultCountryCodeConfig" : {
+      "countryName" : "India"
+    , "countryCode"  : "+91"
+    , "countryShortCode" : "IN"
+    }
+  , "flowConfig" : {
+      "chooseCity" : {
+        "runFlow" : false,
+        "directAuth" : true,
+        "defCity" : "Bangalore",
+        "useDefault" : true
+      }
+  }
+  , "homeScreen": {
+          "statusPills": {
+              "Silent": {
+                  "background": "#7435FC"
+              }
+          }
+      }
   })
 }
 

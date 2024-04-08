@@ -194,15 +194,16 @@ editTextView push config = linearLayout
   , orientation HORIZONTAL
   , cornerRadius 8.0
   , padding $ PaddingRight 3
+  , gravity CENTER
   , stroke if config.showErrorLabel then config.warningStroke else if config.editText.focused then config.focusedStroke else config.stroke
   ][ textView
       $ [ text config.countryCodeField.countryCode
-        , padding $ PaddingHorizontal 16 8
+        , padding config.countryCodeOptionConfig.padding
         , color config.editText.color
         , margin $ Margin 4 1 0 0
         , cornerRadius 8.0
-        , gravity CENTER_VERTICAL
-        , height MATCH_PARENT
+        , gravity CENTER
+        , height WRAP_CONTENT
         , width WRAP_CONTENT
         , clickable false
         , visibility if config.showCountryCodeField then GONE else VISIBLE

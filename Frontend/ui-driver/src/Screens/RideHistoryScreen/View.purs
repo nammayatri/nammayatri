@@ -40,11 +40,11 @@ import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn2, runEffectFn3)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, getDateFromObj, getFormattedDate, getNewIDWithTag)
-import Engineering.Helpers.Commons (safeMarginBottom, screenWidth)
+import Engineering.Helpers.Commons (safeMarginBottom, screenWidth, safeMarginTopWithDefault, os)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getcurrentdate, getPastDays, convertUTCtoISC, fetchImage, FetchImageFrom(..))
-import JBridge (horizontalScrollToPos)
+import JBridge (horizontalScrollToPos, getArray)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -105,24 +105,25 @@ view rideListItem push state =
     , orientation VERTICAL
     , onBackPressed push (const BackPressed)
     , afterRender push (const AfterRender)
+    , padding $ PaddingBottom safeMarginBottom
     ][ Anim.screenAnimationFadeInOut
         $ relativeLayout
             [ height MATCH_PARENT
-            , width WRAP_CONTENT
+            , width MATCH_PARENT
             ]$[rideListView rideListItem push state] <> if state.props.showPaymentHistory then [paymentHistoryModel push state] else []
     ]
 
 rideListView :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
 rideListView rideListItem push state = 
   linearLayout
-  [ height WRAP_CONTENT
+  [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , gradient (Linear 0.0 ["#F5F8FF", "#E2EAFF"])
+  , gradient (Linear (if os == "IOS" then 90.0 else 0.0) ["#F5F8FF", "#E2EAFF"])
   ]
   [ linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
+      [
+        width MATCH_PARENT
       , orientation VERTICAL
       , weight 1.0
       ]
@@ -180,20 +181,19 @@ headerView push state =
         , height WRAP_CONTENT
         , gravity CENTER_VERTICAL
         , background Color.white900
+        , padding $ Padding 10 (safeMarginTopWithDefault 13) 10 13
         ][ imageView
-            [ width $ V 55
-            , height $ V 55
+            [ width $ V 30
+            , height $ V 30
             , imageWithFallback $ fetchImage FF_ASSET  "ny_ic_chevron_left"
             , onClick push $ const BackPressed
-            , gravity CENTER_VERTICAL
-            , padding $ Padding 10 13 10 13
             ]
           , textView $
             [ text $ getString MY_RIDES
             , gravity CENTER_VERTICAL
             , color Color.black900
             , margin $ MarginLeft 10
-            , padding $ PaddingBottom 3
+            , padding $ PaddingBottom 2
             ] <> FontStyle.h3 TypoGraphy
         ]
       , tabsView push state
@@ -205,7 +205,7 @@ tabsView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , cornerRadius 24.0
+  , cornerRadius 20.0
   , margin $ Margin 16 16 16 0
   , padding $ Padding 6 6 6 6
   , background Color.white900
@@ -215,7 +215,7 @@ tabsView push state =
       , weight 1.0
       , background if state.currentTab == "COMPLETED" then Color.black900 else Color.white900
       , text $ getString COMPLETED_
-      , cornerRadius 24.0
+      , cornerRadius 14.0
       , padding $ PaddingVertical 6 6
       , onClick push $ const $ SelectTab "COMPLETED"
       , gravity CENTER
@@ -225,7 +225,7 @@ tabsView push state =
       [ height WRAP_CONTENT
       , weight 1.0
       , gravity CENTER
-      , cornerRadius 24.0
+      , cornerRadius 14.0
       , onClick push $ const $ SelectTab "CANCELLED"
       , padding $ PaddingVertical 6 6
       , text $ getString CANCELLED_
@@ -267,7 +267,7 @@ calendarView push state =
             [ height $ V 24
             , width $ V 24
             , background Color.grey700
-            , cornerRadius 17.0
+            , cornerRadius 12.0
             , gravity CENTER
             ]
             [ imageView
@@ -291,21 +291,18 @@ ridesView rideListItem push state =
   in
   relativeLayout
   [ width MATCH_PARENT
-  , height MATCH_PARENT
-  ]$[ linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      ][ swipeRefreshLayout
-          [height MATCH_PARENT
+  , weight 1.0
+  ]$[ swipeRefreshLayout
+          ([height MATCH_PARENT
           , width MATCH_PARENT
           , onRefresh push (const Refresh)
-          , id "2000030"
-          ]
+          ] <> if os == "IOS" then [] else [id $ getNewIDWithTag "MyRidesSceenSwipeRefreshLayout"] )
           [ Keyed.relativeLayout
             [ width MATCH_PARENT
             , height MATCH_PARENT
             , orientation VERTICAL
-            ]([ DT.Tuple "Rides"
+            ]([ 
+              DT.Tuple "Rides"
                 $ PrestoList.list
                 [ height MATCH_PARENT
                 , scrollBarY false
@@ -320,29 +317,17 @@ ridesView rideListItem push state =
                 ]
               , DT.Tuple "LOADER"
                   $ PrestoAnim.animationSet
-                  [ PrestoAnim.Animation
-                    [ PrestoAnim.duration 1000
-                    , PrestoAnim.toAlpha $
-                        case state.shimmerLoader of
-                            ST.AnimatingIn -> 1.0
-                            ST.AnimatedIn -> 1.0
-                            ST.AnimatingOut -> 0.0
-                            ST.AnimatedOut -> 0.0
-                    , PrestoAnim.fromAlpha $
-                        case state.shimmerLoader of
-                            ST.AnimatingIn -> 0.0
-                            ST.AnimatedIn -> 1.0
-                            ST.AnimatingOut -> 1.0
-                            ST.AnimatedOut -> 0.0
-                    , PrestoAnim.tag "Shimmer"
-                    ] true
-                  ] $ PrestoList.list
+                  [ fadeIn $ state.shimmerLoader == ST.AnimatingIn
+                  , fadeOut $ state.shimmerLoader == ST.AnimatingOut
+                  ] 
+                  $ PrestoList.list
                     [ height MATCH_PARENT
                     , scrollBarY false
                     , width MATCH_PARENT
                     , onAnimationEnd push OnFadeComplete
                     , PrestoList.listItem rideListItem
-                    , PrestoList.listDataV2 $ shimmerData <$> (1..5)
+                    , PrestoList.listDataV2 $ shimmerData <$> (getArray 5)
+                    , background Color.transparent
                     , visibility $ case state.shimmerLoader of
                             ST.AnimatedOut -> GONE
                             _ -> if state.props.showPaymentHistory then GONE else VISIBLE
@@ -358,7 +343,6 @@ ridesView rideListItem push state =
                     ][  ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state)]
               ])
             ]
-      ]
   ] <> if state.props.showDatePicker then [linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT

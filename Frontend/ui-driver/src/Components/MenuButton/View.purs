@@ -70,6 +70,7 @@ view push state =
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , text state.text.subtitle
+                , color Color.black600
                 , visibility if DSC.null state.text.subtitle then GONE else VISIBLE
                 ] <> if state.isSelected then FontStyle.subHeading2 TypoGraphy else FontStyle.body5 TypoGraphy
               ]

@@ -13,6 +13,8 @@ import Engineering.Helpers.Commons (getNewIDWithTag)
 import Data.Function.Uncurried (runFn2)
 import Screens.WelcomeScreen.ComponentConfig
 import Helpers.Utils as HU
+import ConfigProvider
+import MerchantConfig.Types (AppConfig)
 
 screen :: WelcomeScreenState -> Screen Action WelcomeScreenState ScreenOutput
 screen initialState =
@@ -31,7 +33,8 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> WelcomeScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation
+  let config = getAppConfig appConfig
+  in Anim.screenAnimation
     $ linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -40,7 +43,7 @@ view push state =
         , gravity CENTER
         , onBackPressed push $ const BackPressed
         , afterRender push $ const AfterRender
-        , background "#FFFAED"
+        , background config.welcomeScreen.background
         , padding $ PaddingBottom 24
         ][  imageView
             [ height $ V 50
@@ -48,13 +51,13 @@ view push state =
             , margin $ MarginTop 50
             , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ic_namma_yatri_logo"
             ]
-            , carouselView state push
+            , carouselView config state push
             , PrimaryButton.view (push <<< PrimaryButtonAC ) (primaryButtonConfig state)
         ]
 
 
-carouselView:: WelcomeScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
-carouselView state push = 
+carouselView:: AppConfig -> WelcomeScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
+carouselView config state push = 
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -64,6 +67,7 @@ carouselView state push =
     , gravity CENTER
     , weight 1.0
     , margin $ MarginBottom 20
+    , background config.welcomeScreen.background
     , afterRender (\action -> do
         addCarousel (carouselData state) (getNewIDWithTag "CarouselView")
         push action

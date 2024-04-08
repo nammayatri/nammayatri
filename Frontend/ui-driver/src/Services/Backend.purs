@@ -61,6 +61,8 @@ import Data.Boolean (otherwise)
 import Screens.Types as ST
 import Resource.Constants as RC
 import SessionCache
+import ConfigProvider
+import MerchantConfig.Types 
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -74,7 +76,7 @@ getHeaders dummy isGzipCompressionEnabled = do
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                     ] <> case regToken of
                         Nothing -> []
-                        Just token -> [Header "token" token]
+                        Just token -> if token == "(null)" then [] else [Header "token" token]
                     <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 
@@ -90,11 +92,11 @@ getHeaders' dummy isGzipCompressionEnabled = do
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                     ] <> case regToken of
                         Nothing -> []
-                        Just token -> [Header "token" token]
+                        Just token -> if token == "(null)" then [] else [Header "token" token]
                     <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 withAPIResult url f flow = do
-    if (isInvalidUrl url) then pure $ Left customError
+    if (isInvalidUrl url) then pure $ Left (customError "")
     else do
         let start = getTime unit        
         resp <- Events.measureDurationFlow ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
@@ -123,7 +125,7 @@ withAPIResult url f flow = do
 
 
 withAPIResultBT url f errorHandler flow = do
-    if (isInvalidUrl url) then errorHandler customErrorBT
+    if (isInvalidUrl url) then errorHandler (customErrorBT "")
     else do
         let start = getTime unit        
         resp <- Events.measureDurationFlowBT ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
@@ -151,7 +153,8 @@ withAPIResultBT url f errorHandler flow = do
                         else pure unit
                 errorHandler (ErrorPayload err)
 
-customErrorBT = ErrorPayload { code : 400
+customErrorBT :: String -> ErrorPayloadWrapper
+customErrorBT dummy = ErrorPayload { code : 400
   , status : "success"
   , response : {
        error : true
@@ -161,8 +164,8 @@ customErrorBT = ErrorPayload { code : 400
   , responseHeaders : empty
   }
 
-customError :: ErrorResponse
-customError =  { code : 400
+customError :: String -> ErrorResponse
+customError dummy =  { code : 400
   , status : "success"
   , response : {
        error : true
@@ -194,19 +197,21 @@ makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
     let operatingCity = getValueToLocalStore DRIVER_LOCATION
         latitude = mkLatLon lat
         longitude = mkLatLon lng
+        config = getAppConfig appConfig
+        cityConfig = config.flowConfig.chooseCity
     in
     {
       "mobileNumber"      : mobileNumber,
-      "mobileCountryCode" : "+91",
+      "mobileCountryCode" : config.defaultCountryCodeConfig.countryCode,
       "merchantId" : if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" ),
-      "merchantOperatingCity" : mkOperatingCity operatingCity,
+      "merchantOperatingCity" : mkOperatingCity operatingCity config,
       "registrationLat" : latitude,
       "registrationLon" : longitude
     }
     where 
-        mkOperatingCity :: String -> Maybe String
-        mkOperatingCity operatingCity
-            | operatingCity `DA.elem` ["__failed", "--"] = Nothing
+        mkOperatingCity :: String -> AppConfig -> Maybe String
+        mkOperatingCity operatingCity config
+            | operatingCity `DA.elem` ["__failed", "--", "(null)"] = if config.flowConfig.chooseCity.useDefault then Just config.flowConfig.chooseCity.defCity else Nothing
             | operatingCity == "Puducherry"          = Just "Pondicherry"
             | operatingCity == "Tamil Nadu"          = Just "TamilNaduCities"
             | otherwise                              = Just operatingCity

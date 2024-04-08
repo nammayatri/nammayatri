@@ -25,7 +25,7 @@ import Data.Array (length, (..))
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, safeMarginBottom, screenWidth)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, safeMarginBottom, screenWidth, safeMarginTopWithDefault)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -52,6 +52,8 @@ import Components.PrimaryButton (view) as PrimaryButton
 import Services.Backend as Remote
 import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
+import JBridge (getArray)
+import Animation (fadeIn, fadeOut)
 
 screen :: RideSelectionScreenState -> PrestoList.ListItem -> Screen Action RideSelectionScreenState ScreenOutput
 screen initialState rideListItem =
@@ -82,6 +84,7 @@ view rideListItem push state =
     , orientation VERTICAL
     , onBackPressed push (const BackPressed)
     , afterRender push (const AfterRender)
+    , padding $ PaddingBottom safeMarginBottom
     ][ linearLayout
        [ height WRAP_CONTENT
        , width MATCH_PARENT
@@ -138,24 +141,19 @@ headerLayout state push =
      , orientation HORIZONTAL
      , gravity CENTER_VERTICAL
      , layoutGravity "center_vertical"
-     , padding $ Padding 5 16 5 16
+     , padding $ Padding 10 (safeMarginTopWithDefault 13) 10 13
      ][ imageView
-        [ width $ V 40
-        , height $ V 40
+        [ width $ V 30
+        , height $ V 30
         , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left"
         , onClick push $ const BackPressed
-        , padding $ Padding 7 7 7 7
-        , margin $ MarginLeft 5
         , rippleColor Color.rippleShade
-        , cornerRadius 20.0
         ]
       , textView
         ([ width WRAP_CONTENT
          , height WRAP_CONTENT
          , text $ getCategoryName state.selectedCategory.categoryAction
-         , textSize FontSize.a_18
          , margin $ MarginLeft 10
-         , weight 1.0
          , color Color.black900
          ]
          <> FontStyle.h3 TypoGraphy
@@ -202,14 +200,14 @@ selectARideHeader state push =
 ridesView :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> RideSelectionScreenState -> PrestoDOM (Effect Unit) w
 ridesView rideListItem push state =
   linearLayout
-  [ height WRAP_CONTENT
+  [ weight 1.0
   , width MATCH_PARENT
   ][ swipeRefreshLayout
-     [ height MATCH_PARENT
+     ([ height MATCH_PARENT
      , width MATCH_PARENT
      , onRefresh push (const Refresh)
-     , id "2000030"
-     ][ Keyed.relativeLayout
+     ] <> if os == "IOS" then [] else [id $ getNewIDWithTag "RideSelectionScreenSwipeRefreshLayout"] )
+     [ Keyed.relativeLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , orientation VERTICAL
@@ -229,22 +227,8 @@ ridesView rideListItem push state =
            ]
          , Tuple "LOADER" $
            PrestoAnim.animationSet
-           [ PrestoAnim.Animation
-             [ PrestoAnim.duration 1000
-             , PrestoAnim.toAlpha $
-                 case state.shimmerLoader of
-                   AnimatingIn -> 1.0
-                   AnimatedIn -> 1.0
-                   AnimatingOut -> 0.0
-                   AnimatedOut -> 0.0
-             , PrestoAnim.fromAlpha $
-                 case state.shimmerLoader of
-                   AnimatingIn -> 0.0
-                   AnimatedIn -> 1.0
-                   AnimatingOut -> 1.0
-                   AnimatedOut -> 0.0
-             , PrestoAnim.tag "Shimmer"
-             ] true
+            [ fadeIn $ state.shimmerLoader == AnimatingIn
+            , fadeOut $ state.shimmerLoader == AnimatingOut
            ] $
              PrestoList.list
              [ height MATCH_PARENT
@@ -253,7 +237,7 @@ ridesView rideListItem push state =
              , width MATCH_PARENT
              , onAnimationEnd push OnFadeComplete
              , PrestoList.listItem rideListItem
-             , PrestoList.listDataV2 $ shimmerData <$> (1..5)
+             , PrestoList.listDataV2 $ shimmerData <$> (getArray 5)
              , visibility $ case state.shimmerLoader of
                               AnimatedOut -> GONE
                               _ -> VISIBLE
@@ -267,7 +251,7 @@ ridesView rideListItem push state =
            , visibility $ case state.shimmerLoader of
                             AnimatedOut ->  if length state.prestoListArrayItems > 0 then GONE else VISIBLE
                             _ -> GONE
-           ][ ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig)]
+           ][ ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state)]
          ]
         )
       ]

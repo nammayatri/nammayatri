@@ -413,30 +413,30 @@ getMerchantVehicleSize unit =
 
 getAssetLink :: LazyCheck -> String
 getAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/images/"
   YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/images/"
   YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/images/"
   MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/driver/"
   PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
   MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
+  _ -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/images/"
 
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/"
   YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/"
   YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/"
   MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/"
   PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver"
   MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver"
+  _ -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/"
 
 getCommonAssetLink :: LazyCheck -> String
 getCommonAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/nammayatricommon/images/"
   YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://" <> assetDomain <> "/beckn/yatri/yatricommon/images/"
   MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/mobilitypaytmcommon/"
   PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
   MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
+  _ -> "https://" <> assetDomain <> "/beckn/nammayatri/nammayatricommon/images/"
 
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName =   

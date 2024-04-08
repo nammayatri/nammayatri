@@ -475,30 +475,30 @@ updateLocListWithDistance arr currLat currLon useThreshold threshold =
 
 getAssetLink :: LazyCheck -> String
 getAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/user/images/"
   YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/user/images/"
   YATRI -> "https://" <> assetDomain <> "/beckn/yatri/user/images/"
   MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/user/"
   PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/user/images/"
   MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/user/images/"
+  _ -> "https://" <> assetDomain <> "/beckn/nammayatri/user/images/"
 
 getCommonAssetLink :: LazyCheck -> String
 getCommonAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/nammayatricommon/images/"
   YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://" <> assetDomain <> "/beckn/yatri/yatricommon/images/"
   MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/mobilitypaytmcommon/"
   PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
   MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/mobilityredbuscommon/"
+  _ -> "https://" <> assetDomain <> "/beckn/nammayatri/nammayatricommon/images/"
 
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/user/"
   YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/user/"
   YATRI -> "https://" <> assetDomain <> "/beckn/yatri/user/"
   MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/user/"
   PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/user/"
   MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/user/"
+  _ -> "https://" <> assetDomain <> "/beckn/nammayatri/user/"
 
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName = do

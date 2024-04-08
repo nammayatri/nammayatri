@@ -32,6 +32,8 @@ import Screens (ScreenName(..), getScreen)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 import ConfigProvider
+import Common.Types.App (MobileNumberValidatorResp(..)) as MVR
+import Engineering.Helpers.Utils (mobileNumberValidator, mobileNumberMaxLength)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -76,22 +78,19 @@ eval BackPressed state = do
         exit GoBack
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = exit (GoToNextScreen state)
 eval (PrimaryEditTextAction (MobileNumberEditor.TextChanged valId newVal)) state = do
-  _ <- if length newVal == 10 then do
-            pure $ hideKeyboardOnNavigation true 
-            else pure unit    
   let config = getAppConfig appConfig
-      isValidMobileNumber = if config.allowAllMobileNumber then true
-                              else case (charAt 0 newVal) of 
-                                Just a -> if a=='0' || a=='1' || a=='2' || a=='5' then false 
-                                            else if a=='3' || a=='4' then
-                                                if newVal=="4000400040" || newVal=="3000300030" || newVal=="5000500050" then true else false 
-                                                    else true 
-                                Nothing -> true
-  if (length newVal == 10 && isValidMobileNumber) then do 
+  _ <- if length newVal ==  mobileNumberMaxLength config.defaultCountryCodeConfig.countryShortCode then do
+            pure $ hideKeyboardOnNavigation true
+            else pure unit
+  let validatorResp = mobileNumberValidator config.defaultCountryCodeConfig.countryCode config.defaultCountryCodeConfig.countryShortCode newVal
+  if isValidMobileNumber validatorResp then do 
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_mobnum_entry"
     pure unit
     else pure unit
-  continue  state { props = state.props { btnActive = if (length newVal == 10 && isValidMobileNumber) then true else false
-                                        , isValid = not isValidMobileNumber }
-                                        , data = state.data { mobileNumber = if length newVal <= 10 then newVal else state.data.mobileNumber}}
-eval _ state = update state
+  continue  state { props = state.props { btnActive = if (length newVal == 10 && (isValidMobileNumber validatorResp)) then true else false
+                                        , isValid = not (isValidMobileNumber validatorResp) }
+                                        , data = state.data { mobileNumber = if validatorResp == MVR.MaxLengthExceeded then state.data.mobileNumber else newVal}}
+eval _ state = continue state
+
+isValidMobileNumber :: MVR.MobileNumberValidatorResp -> Boolean 
+isValidMobileNumber resp = (resp == MVR.ValidPrefix || resp == MVR.Valid)

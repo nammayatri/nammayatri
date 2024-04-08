@@ -49,7 +49,7 @@ view push state =
           , onClick push $ const PrefixImgOnClick
           ]
         , linearLayout
-          [weight 1.0
+          [--weight 1.0
           ][ GenericHeader.view (push <<< GenericHeaderAC) (state.genericHeaderConfig)]
         , logoutButtonView push state
       ]

@@ -187,7 +187,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
       void $ pure $ setCleverTapUserProp [{key : "App Version", value : unsafeToForeign versionName},
                                           {key : "Bundle version", value : unsafeToForeign bundle},
                                           {key : "Platform", value : unsafeToForeign os}]
-      setValueToLocalStore VERSION_NAME versionName
+      setValueToLocalStore VERSION_NAME $ joinWith "." $ DA.take 3 $ split (Pattern ".") versionName
       setValueToLocalStore BUNDLE_VERSION bundle
       setValueToLocalStore CONFIG_VERSION config
       setValueToLocalStore BASE_URL (getBaseUrl "dummy")
@@ -231,7 +231,8 @@ baseAppFlow baseFlow event driverInfoResponse = do
       if isTokenValid regToken then do
         checkRideAndInitiate event driverInfoResponse
       else if not config.flowConfig.chooseCity.runFlow then
-        chooseLanguageFlow
+        if config.flowConfig.chooseCity.directAuth then authenticationFlow "" 
+        else chooseLanguageFlow
       else if (getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission) then do
         chooseCityFlow
       else do
@@ -311,8 +312,8 @@ appUpdatedFlow payload = do
   fl <- UI.handleAppUpdatePopUp
   case fl of
     UpdateNow -> do 
-      liftFlowBT showSplash
-      liftFlowBT reboot
+      liftFlowBT $ runEffectFn1 showSplash ""
+      liftFlowBT $ runEffectFn1 reboot ""
     Later -> pure unit
 
 checkTimeSettings :: FlowBT String Unit
@@ -335,15 +336,13 @@ getLatestAndroidVersion merchant =
     NAMMAYATRI -> 90
     YATRI -> 48
     YATRISATHI -> 16
-    MOBILITY_PM -> 1
-    MOBILITY_RS -> 1
-    PASSCULTURE -> 1
+    _ -> 1
 
 ifNotRegistered :: Unit -> Boolean
-ifNotRegistered _ = getValueToLocalStore REGISTERATION_TOKEN == "__failed"
+ifNotRegistered _ = elem (getValueToLocalStore REGISTERATION_TOKEN) ["__failed" , "(null)"]
 
 isTokenValid :: String -> Boolean
-isTokenValid = (/=) "__failed"
+isTokenValid token = not $ elem token ["__failed" , "(null)"]
 
 loginFlow :: FlowBT String Unit
 loginFlow = do
@@ -563,9 +562,9 @@ checkPreRequisites activeRideResp isActiveRide = do
   liftFlowBT $ markPerformance "CHECK_PRE_REQUISITES_FLOW"
   status <- checkAndUpdateRCStatus
   status ? do
-    checkStatusAndStartLocationUpdates
-    currentRideFlow activeRideResp isActiveRide
-    $ homeScreenFlow
+      checkStatusAndStartLocationUpdates
+      currentRideFlow activeRideResp isActiveRide
+      $ homeScreenFlow
 
 checkAndUpdateRCStatus :: FlowBT String Boolean
 checkAndUpdateRCStatus = do
@@ -592,25 +591,23 @@ checkStatusAndStartLocationUpdates = do
   setDriverStatusInLocal (show (not isOffline)) $ show $ getDriverStatusFromMode currentMode
   liftFlowBT $ if isOffline then do 
                     stopLocationPollingAPI 
-                    void $ pure $ stopGrpcService
+                    stopGrpcService
                else do
                     startLocationPollingAPI
-                    void $ pure $ startGrpcService
+                    startGrpcService
 
 
-startGrpcService :: FlowBT String Unit
-startGrpcService =
-  let grpcServiceRunning = runFn1 JB.isServiceRunning "in.juspay.mobility.app.GRPCNotificationService"
-      locationUpdateServiceRunning = runFn1 JB.isServiceRunning "in.juspay.mobility.app.LocationUpdateService"
-  in
-  if locationUpdateServiceRunning && (not grpcServiceRunning) then void $ pure $ JB.startService "in.juspay.mobility.app.GRPCNotificationService"
+startGrpcService :: Effect Unit
+startGrpcService = do
+  grpcServiceRunning <- runEffectFn1 JB.isServiceRunning "in.juspay.mobility.app.GRPCNotificationService"
+  locationUpdateServiceRunning <- runEffectFn1 JB.isServiceRunning "in.juspay.mobility.app.LocationUpdateService"
+  if locationUpdateServiceRunning && (not grpcServiceRunning) then void $ runEffectFn1 JB.startService "in.juspay.mobility.app.GRPCNotificationService"
   else pure unit
 
-stopGrpcService :: FlowBT String Unit
-stopGrpcService =
-  let grpcServiceRunning = runFn1 JB.isServiceRunning "in.juspay.mobility.app.GRPCNotificationService"
-  in
-  if grpcServiceRunning then void $ pure $ JB.stopService "in.juspay.mobility.app.GRPCNotificationService"
+stopGrpcService :: Effect Unit
+stopGrpcService = do
+  grpcServiceRunning <- runEffectFn1  JB.isServiceRunning "in.juspay.mobility.app.GRPCNotificationService"
+  if grpcServiceRunning then void $ runEffectFn1 JB.stopService "in.juspay.mobility.app.GRPCNotificationService"
   else pure unit
 
 
@@ -1810,7 +1807,8 @@ myRidesScreenFlow = do
       specialZoneLayoutBackground = selectedCard.specialZoneLayoutBackground,
       specialZoneImage = selectedCard.specialZoneImage,
       specialZoneText = selectedCard.specialZoneText,
-      specialZonePickup = selectedCard.specialZonePickup
+      specialZonePickup = selectedCard.specialZonePickup,
+      goBackTo = ST.RideHistory
       }})
 
       tripDetailsScreenFlow
@@ -1970,6 +1968,7 @@ tripDetailsScreenFlow = do
   case flow of
     ON_SUBMIT  -> pure unit
     GO_TO_EARINING -> driverEarningsFlow
+    GO_TO_RIDE_HISTORY_SCREEN -> myRidesScreenFlow
     GO_TO_HOME_SCREEN -> homeScreenFlow
     OPEN_HELP_AND_SUPPORT -> do
       let language = ( case getLanguageLocale languageKey of
@@ -3111,11 +3110,11 @@ noInternetScreenFlow triggertype = do
 checkAllPermissions :: Boolean -> Boolean -> FlowBT String Boolean
 checkAllPermissions checkBattery checkLocation = do
   config <- getAppConfigFlowBT Constants.appConfig
-  androidVersion <- lift $ lift $ liftFlow $ getAndroidVersion
-  isNotificationPermission <- lift $ lift $ liftFlow $ isNotificationPermissionEnabled unit
-  isOverlayPermission <- lift $ lift $ liftFlow $ isOverlayPermissionEnabled unit
-  isBatteryUsagePermission <- lift $ lift $ liftFlow $ isBatteryPermissionEnabled unit
-  isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+  androidVersion <- liftFlowBT $ getAndroidVersion
+  isNotificationPermission <- liftFlowBT $ isNotificationPermissionEnabled unit
+  isOverlayPermission <- liftFlowBT $ isOverlayPermissionEnabled unit
+  isBatteryUsagePermission <- liftFlowBT $ isBatteryPermissionEnabled unit
+  isLocationPermission <- liftFlowBT $ isLocationPermissionEnabled unit
   pure $ (androidVersion < 13 || not config.permissions.notification || isNotificationPermission) && 
           isOverlayPermission && 
           (not checkBattery || isBatteryUsagePermission) && 
@@ -3493,7 +3492,7 @@ logoutFlow = do
   pure $ factoryResetApp ""
   void $ lift $ lift $ liftFlow $ logEvent logField_ "logout"
   isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
-  void $ pure $ JB.stopService "in.juspay.mobility.app.GRPCNotificationService"
+  void $ liftFlowBT $  runEffectFn1 JB.stopService "in.juspay.mobility.app.GRPCNotificationService"
   if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
     chooseCityFlow
   else authenticationFlow ""

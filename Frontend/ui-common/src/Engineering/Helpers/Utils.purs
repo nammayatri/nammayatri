@@ -61,9 +61,9 @@ import Data.Int as DI
 import Data.Number.Format (fixed, toStringWith)
 
 -- Common Utils
-foreign import reboot :: Effect Unit
+foreign import reboot :: EffectFn1 String Unit
 
-foreign import showSplash :: Effect Unit
+foreign import showSplash :: EffectFn1 String Unit
 
 ifelse :: forall a. Boolean -> a -> a -> a
 ifelse p a b = if p then a else b

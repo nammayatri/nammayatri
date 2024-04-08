@@ -26,7 +26,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, ($), (<>), (==), bind, pure, unit, (<<<))
+import Prelude (Unit, const, ($), (<>), (==), bind, pure, unit, (<<<), (-), (+))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width, cornerRadius, rippleColor)
 import Screens.AboutUsScreen.ComponentConfig (demoModePopUpConfig)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
@@ -35,6 +35,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import DecodeUtil (getAnyFromWindow)
 import Styles.Colors as Color
 import ConfigProvider
+import Engineering.Helpers.Commons as EHC
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -59,6 +60,7 @@ view push state =
         , background Color.white900
         , onBackPressed push (const BackPressed state.props.demoModePopup)
         , afterRender push (const AfterRender)
+        , padding $ PaddingBottom EHC.safeMarginBottom
         ]
         ( [ linearLayout
               [ height MATCH_PARENT
@@ -68,7 +70,7 @@ view push state =
               [ headerLayout state push
               , scrollView
                   [ width MATCH_PARENT
-                  , height MATCH_PARENT
+                  , height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - (30 + (EHC.safeMarginTopWithDefault 13) + EHC.safeMarginBottom) else MATCH_PARENT
                   , scrollBarY false
                   ]
                   [ linearLayout
@@ -79,8 +81,7 @@ view push state =
                       [ applicationInformationLayout state push
                       , linearLayout
                           [ width MATCH_PARENT
-                          , weight 1.0
-                          , gravity BOTTOM
+                          , height WRAP_CONTENT
                           ]
                           [ footerView state ]
                       ]
@@ -108,30 +109,26 @@ headerLayout state push =
     ]
     [ linearLayout
         [ width MATCH_PARENT
-        , height MATCH_PARENT
+        , height WRAP_CONTENT
         , orientation HORIZONTAL
-        , layoutGravity "center_vertical"
-        , padding (Padding 5 12 5 12)
+        , gravity CENTER_VERTICAL
+        , padding $ Padding 10 (EHC.safeMarginTopWithDefault 13) 10 13
         ]
         [ imageView
-            [ width $ V 40
-            , height $ V 40
-            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
-            , gravity CENTER_VERTICAL
-            , onClick push (const $ BackPressed state.props.demoModePopup)
-            , padding (Padding 10 10 10 10)
-            , margin (MarginLeft 5)
-            , cornerRadius 20.0
+            [ width $ V 30
+            , height $ V 30
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+            , onClick push $ const $ BackPressed state.props.demoModePopup
             , rippleColor Color.rippleShade
+            , cornerRadius 15.0
             ]
         , textView
             $ [ width WRAP_CONTENT
-              , height MATCH_PARENT
+              , height WRAP_CONTENT
               , text (getString ABOUT)
-              , margin (MarginLeft 10)
-              , color Color.black
-              , weight 1.0
-              , gravity CENTER_VERTICAL
+              , margin $ MarginLeft 10
+              , padding $ PaddingBottom 2
+              , color Color.black900
               ]
             <> FontStyle.h3 TypoGraphy
         ]
@@ -169,6 +166,7 @@ applicationInformationLayout state push =
     , orientation VERTICAL
     , margin (MarginTop 20)
     , padding (PaddingHorizontal 20 20)
+    , gravity CENTER
     ]
     [ imageView
         ( [ width $ V 150
@@ -188,11 +186,11 @@ applicationInformationLayout state push =
           , padding (Padding 20 0 20 0)
           ]
         <> FontStyle.body5 TypoGraphy
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , visibility if config.showCorporateAddress then VISIBLE else GONE
-        ][ComplaintsModel.view (ComplaintsModel.config { cardData = contactUsData state })]
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , visibility if state.appConfig.showCorporateAddress then VISIBLE else GONE
+          ][ ComplaintsModel.view (ComplaintsModel.config{cardData = contactUsData state})]
     , underlinedTextView (getString T_C) push
     , underlinedTextView (getString PRIVACY_POLICY) push
     ]
