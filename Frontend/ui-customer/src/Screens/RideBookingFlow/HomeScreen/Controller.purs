@@ -2530,9 +2530,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC ChooseVehic
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".ChooseVehicle") "true"
   if config.activeIndex == config.index then 
-    continueWithCmd state [do
-      pure (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config)))
-    ]
+    continue state
   else do
       let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
           props = if config.activeIndex == config.index then state.props else state.props{customerTip = HomeScreenData.initData.props.customerTip, tipViewProps = HomeScreenData.initData.props.tipViewProps}
