@@ -808,7 +808,7 @@ homeScreenFlow = do
       case DHM.lookup input state.props.rideSearchProps.cachedPredictions of
         Just locationList' -> do
           logInfo "auto_complete_cached_predictions" input
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{locationList = locationList'}, props{searchLocationModelProps{isAutoComplete = true, showLoader = false, findPlaceIllustration = false}}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{locationList = locationList'}, props{searchLocationModelProps{isAutoComplete = true, showLoader = false}}})
         Nothing -> do
           logInfo "auto_complete_search_predictions" input
           (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input state.props.sourceLat state.props.sourceLong (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "" cityConfig.geoCodeConfig state.props.rideSearchProps.autoCompleteType state.props.rideSearchProps.sessionId)
@@ -849,8 +849,7 @@ homeScreenFlow = do
             cachedPredictions = DHM.insert input filteredLocationList state.props.rideSearchProps.cachedPredictions
           modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data {locationList = filteredLocationList}
                                                                       , props{ searchLocationModelProps{ isAutoComplete = true
-                                                                                                      , showLoader = false
-                                                                                                      , findPlaceIllustration = false }
+                                                                                                      , showLoader = false }
                                                                              , rideSearchProps { cachedPredictions = cachedPredictions } }})
       homeScreenFlow
     GET_QUOTES state -> do

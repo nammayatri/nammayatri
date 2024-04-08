@@ -3142,13 +3142,12 @@ homeScreenViewV2 push state =
           , orientation VERTICAL
           ][  homescreenHeader push state 
             , linearLayout
-              [ height MATCH_PARENT
-              , width WRAP_CONTENT
+              [ weight 1.0
               , background Color.white900
               , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
               , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.white900, Color.grey700]) else (Linear 180.0 [Color.white900 , Color.white900,  Color.grey700])
               ][ scrollView
-                  [ height $ if os == "IOS" then (V (getHeightFromPercent 90)) else MATCH_PARENT
+                  [ height MATCH_PARENT
                   , width MATCH_PARENT
                   , padding $ PaddingBottom 70
                   , nestedScrollView true
