@@ -2148,13 +2148,14 @@ generateReferralLink :: String -> String -> String -> String -> String -> String
 generateReferralLink source medium term content campaign  =
   let config = getAppConfig appConfig 
       cityConfig = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-      path = "/refer"
+      path = "link/rider/SJ8D"
       packageId = config.referral.customerAppId
       domain = config.referral.domain
   in domain <> path <> "?referrer=" 
-      <> "utm_source%3D" <> source 
-      <> "%26utm_medium%3D" <> medium 
-      <> "%26utm_term%3D" <> term 
-      <> "%26utm_content%3D" <> content 
+      -- <> "utm_source%3D" <> source 
+      -- <> "%26utm_medium%3D" <> medium 
+      -- <> "%26utm_term%3D" <> term 
+      -- <> "%26utm_content%3D" <> content 
       <> "%26utm_campaign%3D" <> campaign 
-      <> "%26anid%3Dadmob&id=" <> packageId
+      -- <> "%26anid%3Dadmob&id=" <> packageId
+-- TODO: Add the above query params when needed
