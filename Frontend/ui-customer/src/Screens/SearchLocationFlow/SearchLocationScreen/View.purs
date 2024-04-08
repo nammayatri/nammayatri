@@ -106,7 +106,7 @@ view globalProps push state =
     mapRenderAction :: Action -> Effect Unit
     mapRenderAction action = do
       void $ push action
-      void $ showMap (getNewIDWithTag "SearchLocationScreenMap") true "satellite" 17.0 push MapReady
+      void $ showMap (getNewIDWithTag "SearchLocationScreenMap") true "satellite" 17.0 0.0 0.0 push MapReady
       void $ fetchAndUpdateCurrentLocation push (UpdateLocAndLatLong globalProps.recentSearches) RecenterCurrentLocation
       pure unit
 

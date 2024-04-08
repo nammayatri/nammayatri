@@ -428,7 +428,7 @@ locationAndMap state push visibility' =
             , id (EHC.getNewIDWithTag "DriverSavedLoc")
             , afterRender
                 ( \action -> do
-                    _ <- (JB.showMap (EHC.getNewIDWithTag "DriverSavedLoc") true "satellite" (19.0) push MAPREADY)
+                    _ <- (JB.showMap (EHC.getNewIDWithTag "DriverSavedLoc") true "satellite" (19.0) 0.0 0.0 push MAPREADY)
                     pure unit
                 )
                 (const AfterRender)

@@ -1875,7 +1875,7 @@ locationTagBarConfig state  = let
           { imageConfig : 
               { height : V 20
               , width : V 20
-              , imageWithFallback : item.image
+              , imageWithFallback : fetchImage FF_ASSET item.image
               } ,
             textConfig : 
               { text : item.text
@@ -1959,7 +1959,7 @@ shareRideConfig state = let
     title = getString SHARE_RIDE,
     description = getString $ SHARE_RIDE_DESCRIPTION "SHARE_RIDE_DESCRIPTION",
     secondaryButtonText = getString SHARE_LINK,
-    secondaryButtonImage = fetchImage FF_ASSET "ny_ic_share",
+    secondaryButtonImage = HU.fetchImage HU.FF_ASSET "ny_ic_share",
     secondaryButtonVisibliity = true, 
     contactList = fromMaybe [] state.data.contactList,
     primaryButtonConfig = shareRideButtonConfig state

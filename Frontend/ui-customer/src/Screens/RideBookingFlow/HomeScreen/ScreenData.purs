@@ -282,7 +282,7 @@ initData = {
     , reAllocation : {
         showPopUp : false
       }
-    , showShimmer : false
+    , showShimmer : true
     , homeScreenSheetState : COLLAPSED
     , autoScrollTimer : ""
     , autoScrollTimerId : ""
