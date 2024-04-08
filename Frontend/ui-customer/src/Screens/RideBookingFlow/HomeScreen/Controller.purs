@@ -1600,7 +1600,7 @@ eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) st
         shareAppConfig = state.data.config.shareAppConfig
         title = shareAppConfig.title
         mbcustomerReferralCode = fromMaybe "" state.data.customerReferralCode
-        message = shareAppConfig.description  <> (generateReferralLink (getValueToLocalStore CUSTOMER_LOCATION) "share" "referral" "refer" mbcustomerReferralCode)
+        message = shareAppConfig.description <> "Referral Code : " <> mbcustomerReferralCode <>  "\n" <> (generateReferralLink (getValueToLocalStore CUSTOMER_LOCATION) "share" "referral" "refer" mbcustomerReferralCode)
     void $ pure $ shareTextMessage title message
     continue state
 
