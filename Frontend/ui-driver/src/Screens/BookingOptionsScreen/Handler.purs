@@ -3,7 +3,7 @@ module Screens.BookingOptionsScreen.Handler where
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
-import Prelude (bind, pure, ($), (<$>))
+import Prelude (bind, pure, ($), (<$>), discard)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.BookingOptionsScreen.Controller (ScreenOutput(..))
 import Screens.BookingOptionsScreen.View as BookingOptionsScreen
@@ -15,10 +15,7 @@ bookingOptions = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ BookingOptionsScreen.screen state.bookingOptionsScreen
   case action of
-    SelectCab updatedState toggleDowngrade -> do
-      _ <- modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ SELECT_CAB updatedState toggleDowngrade)
+    ChangeRidePreference updatedState service -> do
+      modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CHANGE_RIDE_PREFERENCE updatedState service)
     GoBack -> App.BackT $ pure App.GoBack
-    EnableRental updatedState toggleRental -> do
-      _ <- modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ ENABLE_RENTAL_RIDE updatedState toggleRental)

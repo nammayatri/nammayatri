@@ -322,5 +322,11 @@ specialLocationList _ = (getBaseUrl "") <> "/specialLocation/list"
 onBoardingConfigs :: String -> String
 onBoardingConfigs qp = (getBaseUrl "") <> "/onboarding/configs" <> qp
 
+driverVehicleServiceTier :: String -> String
+driverVehicleServiceTier _ = (getBaseUrl "") <> "/driver/vehicleServiceTiers"
+
+updateDriverVehicleServiceTier :: String -> String
+updateDriverVehicleServiceTier _ = (getBaseUrl "") <> "/driver/updateServiceTiers"
+
 uploadOdometerImage :: String -> String
 uploadOdometerImage rideId = (getBaseUrl "") <> "/driver/ride/"<>rideId<>"/uploadOdometer"

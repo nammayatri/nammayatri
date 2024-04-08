@@ -1457,3 +1457,25 @@ getSpecialLocationListBT req = do
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
+
+mkUpdateDriverVehiclesServiceTier :: ST.RidePreference -> UpdateDriverVehicleServiceTierReq
+mkUpdateDriverVehiclesServiceTier ridePreferences = 
+    let tierArray = [
+            DriverVehicleServiceTier{
+                airConditioned : Nothing,
+                driverRating : Nothing,
+                isDefault : ridePreferences.isDefault,
+                isSelected : not ridePreferences.isSelected,
+                longDescription : Nothing,
+                luggageCapacity : Nothing,
+                name : ridePreferences.name,
+                seatingCapacity : Nothing,
+                serviceTierType : ridePreferences.serviceTierType,
+                shortDescription : Nothing,
+                vehicleRating : Nothing
+            }
+        ]
+    in 
+        UpdateDriverVehicleServiceTierReq {
+            tiers : tierArray
+        }
