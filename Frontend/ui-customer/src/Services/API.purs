@@ -590,7 +590,9 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   totalFareRange :: Maybe FareRange,
   nightShiftRate :: Maybe NightShiftRate,
   specialLocationTag :: Maybe String,
-  driversLatLong :: Array LatLong
+  driversLatLong :: Array LatLong,
+  serviceTierName :: Maybe String,
+  serviceTierShortDesc :: Maybe String
 }
 
 newtype NightShiftRate = NightShiftRate {
@@ -630,7 +632,9 @@ newtype QuoteAPIEntity = QuoteAPIEntity {
   estimatedFare :: Int,
   tripTerms :: Array String,
   id :: String,
-  agencyCompletedRidesCount :: Maybe Int
+  agencyCompletedRidesCount :: Maybe Int,
+  serviceTierName :: Maybe String,
+  serviceTierShortDesc :: Maybe String
 }
 
 newtype QuoteAPIDetails = QuoteAPIDetails {

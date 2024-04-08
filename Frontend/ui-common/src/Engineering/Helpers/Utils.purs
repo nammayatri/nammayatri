@@ -404,3 +404,16 @@ getFlexBoxCompatibleVersion _ =
         YATRISATHI -> "0.1.7"
         YATRI -> "2.2.2"
         _ -> "0.0.0"
+
+getAcDetails :: String -> Boolean
+getAcDetails vehicleVariant = 
+  case vehicleVariant of
+    "AUTO_RICKSHAW" -> false
+    "ECO" -> false 
+    "COMFY" -> true
+    "HATCHBACK" -> true
+    "SEDAN" -> true
+    "SUV" -> true
+    "TAXI" -> false
+    "PREMIUM" -> true
+    _ -> false
