@@ -3502,7 +3502,7 @@ chooseCityFlow = do
     detectCityAPI :: Number -> Number -> ST.ChooseCityScreenState -> FlowBT String Unit
     detectCityAPI lat lon state = do
       package <- lift $ lift $ liftFlow $ JB.fetchPackageName unit
-      if has package "manayatri" 
+      if (has package "manayatri" || has package "movingtech" )
         then modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = Just "Hyderabad" }, props { locationUnserviceable = false, locationDetectionFailed = false }}
         else do
           resp <- lift $ lift $ Remote.detectCity lat lon
