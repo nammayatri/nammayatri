@@ -37,6 +37,7 @@ type RemoteConfig a = {
     pondicherry :: a,
     goa :: a,
     pune :: a,
+    tamilnaducities :: a,
     default :: a,
     config :: Maybe Config
 }
