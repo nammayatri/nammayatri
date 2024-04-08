@@ -73,7 +73,7 @@ import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getCityConfig, getVehicleVariantImage, getImageBasedOnCity)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize)
 import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -251,7 +251,7 @@ screen initialState =
               ConfirmingLocation -> do
                 void $ pure $ enableMyLocation true
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                void $ setMapPadding 0 0 0 112
+                -- void $ setMapPadding 0 0 0 112
                 _ <- storeCallBackLocateOnMap push UpdatePickupLocation
                 pure unit
               TryAgain -> do
@@ -1152,7 +1152,8 @@ savedLocationsView state push =
     , clickable state.props.isSrcServiceable
     , padding $ PaddingHorizontal 16 16
     ]
-    [ linearLayout
+    [ PrestoAnim.animationSet [ fadeIn true ] $
+      linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , margin $ MarginTop 16
@@ -3156,18 +3157,22 @@ homeScreenViewV2 push state =
                       [ width $ V (screenWidth unit)
                       , height WRAP_CONTENT
                       , orientation VERTICAL
+                      , gravity $ CENTER_HORIZONTAL
                       ] $ [savedLocationsView state push] <> 
-                        (if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
+                        ((if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
                           [locationUnserviceableView push state]
                         else 
-                          []
+                          [])
+                          <> (if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else [])
                           <> contentView state
+                          -- <> if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else []
                           <> [ shimmerView state
                           , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
                           , suggestionsView push state
                           , emptySuggestionsBanner state push
                           , footerView push state
-                          ])
+                          ]
+                          )
                   ]
               ]
           ]
@@ -3193,10 +3198,7 @@ homeScreenViewV2 push state =
         ][]] 
       else
       (maybe 
-        (if isHomeScreenView state && state.props.isBannerDataComputed 
-          then [mapView push state "CustomerHomeScreenMap"] 
-          else [emptyTextView state]
-        ) 
+        ([]) 
         (\item -> [bannersCarousal item state push]) 
         state.data.bannerData.bannerItem)
 
@@ -3410,19 +3412,22 @@ pickupLocationView push state =
 mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> PrestoDOM (Effect Unit) w
 mapView push state idTag = 
   let mapDimensions = getMapDimensions state
+      bottomPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize 112 else 0
   in
   PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
   relativeLayout
-    [ height mapDimensions.height
+    [ height if isHomeScreenView state && (isJust state.data.bannerData.bannerItem) then V 0 else mapDimensions.height
     , width mapDimensions.width 
     -- , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
-    , stroke $ "1,"<>Color.grey700
-    , margin if state.props.currentStage == HomeScreen then (Margin 16 16 16 0) else (Margin 0 0 0 0)
+    , visibility $ if isHomeScreenView state then 
+                      if isNothing state.data.bannerData.bannerItem && state.props.isBannerDataComputed then VISIBLE else INVISIBLE
+                      else VISIBLE
+    , padding $ PaddingBottom $ bottomPadding
     , onAnimationEnd
             ( \action -> do
                 _ <- push action
                 _ <- getCurrentPosition push CurrentLocation
-                _ <- showMap (getNewIDWithTag idTag) isCurrentLocationEnabled "satellite" zoomLevel push MAPREADY
+                _ <- showMap (getNewIDWithTag idTag) isCurrentLocationEnabled "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
                 if os == "IOS" then
                   case state.props.currentStage of  
                     HomeScreen -> void $ setMapPadding 0 0 0 0
@@ -3437,7 +3442,7 @@ mapView push state idTag =
             )
             (const MapReadyAction)
     ]$[ linearLayout
-        [ height  $ mapDimensions.height
+        [ height  $ if isHomeScreenView state && (isJust state.data.bannerData.bannerItem) then V 0 else mapDimensions.height
         , width $ mapDimensions.width 
         , accessibility DISABLE_DESCENDANT
         , id (getNewIDWithTag idTag)
