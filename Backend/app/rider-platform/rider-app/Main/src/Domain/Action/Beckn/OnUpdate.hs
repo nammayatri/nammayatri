@@ -286,7 +286,7 @@ validateRequest = \case
     unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus "The ride has already started."
     return $ OUValidatedNewMessageReq ValidatedNewMessageReq {..}
     where
-      isValidRideStatus status = status == DRide.NEW
+      isValidRideStatus status = status `elem` [DRide.NEW, DRide.INPROGRESS]
   OUEstimateRepetitionReq EstimateRepetitionReq {..} -> do
     booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
     searchReq <- QSR.findById searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)

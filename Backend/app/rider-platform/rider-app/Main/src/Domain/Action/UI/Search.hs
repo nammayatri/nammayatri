@@ -23,6 +23,7 @@ import Domain.Action.UI.HotSpot
 import Domain.Action.UI.Maps (makeAutoCompleteKey)
 import qualified Domain.Action.UI.Maps as DMaps
 import qualified Domain.Action.UI.Serviceability as Serviceability
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
 import Domain.Types.HotSpot hiding (address, updatedAt)
 import Domain.Types.HotSpotConfig
@@ -64,6 +65,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedLocation as CSavedLocation
+import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -223,6 +225,8 @@ search personId req bundleVersion clientVersion clientId device = do
           RentalSearch rentalReq ->
             (SearchRequest.Rental, rentalReq.origin, fromMaybe [] rentalReq.stops, rentalReq.isSourceManuallyMoved, rentalReq.isSpecialLocation, rentalReq.startTime, Nothing)
   unless ((120 `addUTCTime` startTime) >= now) $ throwError (InvalidRequest "Ride time should only be future time") -- 2 mins buffer
+  scheduledBookings <- QRideB.findByRiderIdAndStatus personId [DRB.CONFIRMED]
+
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
 
@@ -323,6 +327,8 @@ search personId req bundleVersion clientVersion clientId device = do
         return (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, Just $ updateEfficientRoutePosition routeResponse shortestRouteIndex)
       RentalSearch rentalReq -> return (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Nothing, Nothing)
 
+  let overlap = any (checkOverlap (maybe 0 (.getMeters) shortestRouteDistance) (maybe 0 (.getSeconds) shortestRouteDuration) startTime) scheduledBookings
+  when overlap $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
   fromLocation <- buildSearchReqLoc origin
   stopLocations <- buildSearchReqLoc `mapM` stops
   searchRequest <-
@@ -377,6 +383,13 @@ search personId req bundleVersion clientVersion clientId device = do
       if all (\d -> d.currentCity.state `elem` allowedStates) stopCitiesAndStates
         then return nearestOperatingCity.city
         else throwError RideNotServiceable
+
+checkOverlap :: Int -> Int -> UTCTime -> DRB.Booking -> Bool
+checkOverlap estimatedDistance estimatedDuration curBookingStartTime booking = do
+  let estimatedDistanceInKm = estimatedDistance `div` 1000
+      estRideEndTimeByDuration = addUTCTime (intToNominalDiffTime estimatedDuration) curBookingStartTime
+      estRideEndTimeByDist = addUTCTime (intToNominalDiffTime $ (estimatedDistanceInKm * 3 * 60) + (30 * 60)) curBookingStartTime -- TODO: Make config later
+  max estRideEndTimeByDuration estRideEndTimeByDist >= booking.startTime
 
 getLongestRouteDistance :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
 getLongestRouteDistance [] = Nothing

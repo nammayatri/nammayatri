@@ -16,6 +16,7 @@ module SharedLogic.Confirm where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.Quote as DQuote
+import qualified Domain.Action.UI.Search as DSR
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Estimate as DEstimate
@@ -125,7 +126,7 @@ confirm DConfirmReq {..} = do
   scheduledBookings <- QRideB.findByRiderIdAndStatus personId [DRB.CONFIRMED]
   let searchDist = round $ fromMaybe 0 $ (.getHighPrecMeters) <$> searchRequest.distance
       searchDur = fromMaybe 0 $ (.getSeconds) <$> searchRequest.estimatedRideDuration
-      overlap = any (checkOverlap searchDist searchDur searchRequest.startTime) scheduledBookings
+      overlap = any (DSR.checkOverlap searchDist searchDur searchRequest.startTime) scheduledBookings
   case (activeBooking, overlap) of
     (_, True) -> throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
     (Just booking, _) -> DQuote.processActiveBooking booking OnConfirm
@@ -188,12 +189,6 @@ confirm DConfirmReq {..} = do
           bppQuoteId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
           pure $ ConfirmAutoDetails bppQuoteId
         DQuote.OneWaySpecialZoneDetails details -> pure $ ConfirmOneWaySpecialZoneDetails details.quoteId
-    checkOverlap :: Int -> Int -> UTCTime -> DRB.Booking -> Bool
-    checkOverlap estimatedDistance estimatedDuration curBookingStartTime booking = do
-      let estimatedDistanceInKm = estimatedDistance `div` 1000
-          estRideEndTimeByDuration = addUTCTime (intToNominalDiffTime estimatedDuration) curBookingStartTime
-          estRideEndTimeByDist = addUTCTime (intToNominalDiffTime $ (estimatedDistanceInKm * 3 * 60) + (30 * 60)) curBookingStartTime -- TODO: Make config later
-      max estRideEndTimeByDuration estRideEndTimeByDist >= booking.startTime
 
 buildBooking ::
   MonadFlow m =>
