@@ -18,6 +18,7 @@ module Storage.Beam.Merchant.TransporterConfig where
 import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import Domain.Types.UtilsTH
+import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -147,6 +148,7 @@ data TransporterConfigT f = TransporterConfigT
     dummyToLocation :: B.C f (Maybe A.Value),
     scheduleRideBufferTime :: B.C f Seconds,
     fakeOtpMobileNumbers :: B.C f [Text],
+    variantsToEnableForSubscription :: B.C f [Vehicle.Variant],
     considerDriversForSearch :: B.C f Bool,
     pastDaysRideCounter :: B.C f Int
   }

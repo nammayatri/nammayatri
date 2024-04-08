@@ -148,6 +148,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             scheduleRideBufferTime = secondsToNominalDiffTime scheduleRideBufferTime,
             canSuvDowngradeToHatchback = fromMaybe False canSuvDowngradeToHatchback,
             arrivedPickupThreshold = fromMaybe 100 arrivedPickupThreshold,
+            variantsToEnableForSubscription = variantsToEnableForSubscription,
             ..
           }
     where
@@ -284,5 +285,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.fakeOtpMobileNumbers = fakeOtpMobileNumbers,
         BeamTC.dummyFromLocation = Just $ toJSON dummyFromLocation,
         BeamTC.dummyToLocation = Just $ toJSON dummyToLocation,
+        BeamTC.variantsToEnableForSubscription = variantsToEnableForSubscription,
         BeamTC.pastDaysRideCounter = pastDaysRideCounter
       }

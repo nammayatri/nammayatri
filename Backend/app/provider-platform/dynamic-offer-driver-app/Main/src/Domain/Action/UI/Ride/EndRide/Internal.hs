@@ -55,7 +55,7 @@ import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
-import EulerHS.Prelude hiding (foldr, id, length, null)
+import EulerHS.Prelude hiding (elem, foldr, id, length, null)
 import GHC.Float (double2Int)
 import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -94,6 +94,7 @@ import qualified Storage.Queries.FareParameters as QFare
 import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
+import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
@@ -371,7 +372,9 @@ createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxS
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverIdAndServiceName driverId serviceName
   driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig (Just booking)
-  let toUpdateOrCreateDriverfee = totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan)
+  vehicle <- QV.findById driverId
+  let isEnableForVariant = maybe True (`elem` transporterConfig.variantsToEnableForSubscription) (vehicle <&> (.variant))
+  let toUpdateOrCreateDriverfee = (totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan)) && isEnableForVariant
   when (toUpdateOrCreateDriverfee && isEligibleForCharge transporterConfig freeTrialDaysLeft) $ do
     numRides <- case lastDriverFee of
       Just ldFee ->
