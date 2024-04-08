@@ -322,7 +322,9 @@ type RegistrationScreenProps = {
   confirmChangeVehicle :: Boolean,
   refreshAnimation :: Boolean,
   driverEnabled :: Boolean,
-  menuOptions :: Boolean
+  menuOptions :: Boolean,
+  manageVehicle :: Boolean,
+  manageVehicleCategory :: Maybe VehicleCategory
 }
 
 data AnimType = HIDE | SHOW | ANIMATING

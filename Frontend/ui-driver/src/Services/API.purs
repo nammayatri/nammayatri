@@ -4382,8 +4382,7 @@ instance decodeGateInfoFull :: Decode GateInfoFull where decode = defaultDecode
 instance encodeGateInfoFull :: Encode GateInfoFull where encode = defaultEncode
 
 
-
-data OnboardingDocsReq = OnboardingDocsReq
+data OnboardingDocsReq = OnboardingDocsReq String
 
 newtype OnboardingDocsRes = OnboardingDocsRes {
   autos :: Maybe (Array OnboardingDoc),
@@ -4404,12 +4403,12 @@ newtype OnboardingDoc = OnboardingDoc {
 }
 
 instance makeOnboardingDocsReq :: RestEndpoint OnboardingDocsReq OnboardingDocsRes where
-  makeRequest reqBody headers = defaultMakeRequest GET (EP.onBoardingConfigs "") headers reqBody Nothing
+  makeRequest reqBody@(OnboardingDocsReq qp) headers = defaultMakeRequest GET (EP.onBoardingConfigs qp) headers reqBody Nothing
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericOnboardingDocsReq :: Generic OnboardingDocsReq _
-instance standardEncodeOnboardingDocsReq :: StandardEncode OnboardingDocsReq where standardEncode (OnboardingDocsReq) = standardEncode {}
+instance standardEncodeOnboardingDocsReq :: StandardEncode OnboardingDocsReq where standardEncode (OnboardingDocsReq qp) = standardEncode {}
 instance showOnboardingDocsReq :: Show OnboardingDocsReq where show = genericShow
 instance decodeOnboardingDocsReq :: Decode OnboardingDocsReq where decode = defaultDecode
 instance encodeOnboardingDocsReq  :: Encode OnboardingDocsReq where encode = defaultEncode
