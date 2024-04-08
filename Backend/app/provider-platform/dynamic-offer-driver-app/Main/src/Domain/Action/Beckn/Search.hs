@@ -236,7 +236,7 @@ handler ValidatedDSearchReq {..} sReq = do
       where
         isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && autosAllowedOnTollRoute farePolicy
 
-        autosAllowedOnTollRoute farePolicy = (farePolicy.vehicleServiceTier == DVST.AUTO_RICKSHAW) && (isNothing mbTollCharges || transporterConfig.allowAutosOnTollRoute)
+        autosAllowedOnTollRoute farePolicy = if farePolicy.vehicleServiceTier == DVST.AUTO_RICKSHAW then (isNothing mbTollCharges || transporterConfig.allowAutosOnTollRoute) else True
 
         checkDistanceBounds farePolicy = maybe True checkBounds farePolicy.allowedTripDistanceBounds
 
