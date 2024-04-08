@@ -331,15 +331,15 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
               whenJust (nonEmpty tripEndPoints) \tripEndPoints' -> do
                 withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges pickupDropOutsideOfThreshold
 
+              distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed driverId
+              when distanceCalculationFailed $ do
+                logWarning $ "Failed to calculate distance for this ride: " <> rideId.getId
+                whenJust estimatedTollCharges $ \tollCharges -> void (QRide.updateTollCharges driverId tollCharges) -- If distance calculation fails, then we will fallback to estimated tollCharges
               ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
 
-              distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed driverId
-              when distanceCalculationFailed $ logWarning $ "Failed to calculate distance for this ride: " <> ride.id.getId
               (chargeableDistance, finalFare, mbUpdatedFareParams) <-
                 if distanceCalculationFailed
-                  then do
-                    whenJust estimatedTollCharges $ \tollCharges -> void (QRide.updateTollCharges driverId tollCharges) -- If distance calculation fails, then we will fallback to estimated tollCharges
-                    calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
+                  then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
                   else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig
               pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
     let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
