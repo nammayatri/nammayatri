@@ -84,31 +84,36 @@ findById :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Maybe Text -> Id Far
 findById txnId idName id = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
-  ( if "fare_policy" `GL.elem` useCACConfig
-      then
-        ( do
-            tenant <- liftIO $ SE.lookupEnv "TENANT"
-            isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
-            if isExp && isJust txnId
-              then do
-                Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACFarePolicy (fromJust txnId)) >>= \case
-                  Just (a :: Int) -> do
-                    findFarePolicyFromCAC id a txnId idName
-                  Nothing -> do
-                    gen <- newStdGen
-                    let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
-                    _ <- cacheToss (fromJust txnId) toss
-                    findFarePolicyFromCAC id toss txnId idName
-              else getConfigFromInMemory id 1
-        )
-      else
-        ( do
-            Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
-              Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
-              Nothing -> do
-                flip whenJust cacheFarePolicy /=<< Queries.findById id
-        )
-    )
+  config <-
+    ( if "fare_policy" `GL.elem` useCACConfig
+        then
+          ( do
+              logDebug $ "Getting farePolicy from CAC for farePolicyId:" <> getId id
+              tenant <- liftIO $ SE.lookupEnv "TENANT"
+              isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
+              if isExp && isJust txnId
+                then do
+                  Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACFarePolicy (fromJust txnId)) >>= \case
+                    Just (a :: Int) -> do
+                      findFarePolicyFromCAC id a txnId idName
+                    Nothing -> do
+                      gen <- newStdGen
+                      let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
+                      _ <- cacheToss (fromJust txnId) toss
+                      findFarePolicyFromCAC id toss txnId idName
+                else getConfigFromInMemory id 1
+          )
+        else
+          ( do
+              logDebug $ "Getting farePolicy from DB for farePolicyId:" <> getId id
+              Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
+                Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
+                Nothing -> do
+                  flip whenJust cacheFarePolicy /=<< Queries.findById id
+          )
+      )
+  logDebug $ "farePlicy we recieved for farePolicyId:" <> getId id <> " is:" <> show config
+  pure config
 
 cacheFarePolicy :: (CacheFlow m r) => FarePolicy -> m ()
 cacheFarePolicy fp = do

@@ -161,9 +161,16 @@ findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperating
 findByMerchantOpCityId id srId idName = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
-  if "driver_intelligent_pool_config" `GL.elem` useCACConfig
-    then Just <$> getConfigFromInMemory id srId idName
-    else getDriverIntelligentPoolConfigFromDB id
+  config <-
+    if "driver_intelligent_pool_config" `GL.elem` useCACConfig
+      then do
+        logDebug $ "Getting driverIntelligentPoolConfig from CAC for merchantOperatingCity:" <> getId id
+        Just <$> getConfigFromInMemory id srId idName
+      else do
+        logDebug $ "Getting driverIntelligentPoolConfig from DB for merchantOperatingCity:" <> getId id
+        getDriverIntelligentPoolConfigFromDB id
+  logDebug $ "merchantOperatingCity for merchantOperatingCity:" <> getId id <> " is:" <> show config
+  pure config
 
 cacheDriverIntelligentPoolConfig :: CacheFlow m r => DriverIntelligentPoolConfig -> m ()
 cacheDriverIntelligentPoolConfig cfg = do
