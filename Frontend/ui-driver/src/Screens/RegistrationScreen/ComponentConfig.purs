@@ -32,7 +32,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Storage ( getValueToLocalStore , KeyStore(..))
 import Components.InAppKeyboardModal as InAppKeyboardModal
-import Prelude ((<), not, ($))
+import Prelude ((<), not, ($), (&&))
 import Data.String as DS
 import Mobility.Prelude
 import Prelude ((==))
@@ -43,7 +43,7 @@ primaryButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig { text = getString COMPLETE_REGISTRATION}
+      { textConfig { text = getString if state.props.manageVehicle then ADD_VEHICLE else COMPLETE_REGISTRATION }
       , width = MATCH_PARENT
       , background = Color.black900
       , height = V 48
@@ -59,6 +59,7 @@ appOnboardingNavBarConfig state =
     appConfig = state.data.config,
     headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{
       text = case state.data.vehicleCategory of
+              _ | state.props.manageVehicle -> getString ADD_VEHICLE
               Just ST.CarCategory -> getString REGISTER_YOUR_CAR
               Just ST.AutoCategory -> getString REGISTER_YOUR_AUTO
               Nothing -> getString REGISTRATION
@@ -257,9 +258,9 @@ optionsMenuConfig :: ST.RegistrationScreenState -> OptionsMenuConfig.Config
 optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : true},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : isJust state.data.vehicleCategory},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  true}
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : not state.props.manageVehicle},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : (isJust state.data.vehicleCategory) && not state.props.manageVehicle},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  not state.props.manageVehicle}
   ],
   backgroundColor = Color.blackLessTrans,
   menuBackgroundColor = Color.white900,

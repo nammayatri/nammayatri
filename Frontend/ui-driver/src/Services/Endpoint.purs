@@ -320,7 +320,7 @@ specialLocationList :: String -> String
 specialLocationList _ = (getBaseUrl "") <> "/specialLocation/list"
 
 onBoardingConfigs :: String -> String
-onBoardingConfigs _ = (getBaseUrl "") <> "/onboarding/configs"
+onBoardingConfigs qp = (getBaseUrl "") <> "/onboarding/configs" <> qp
 
 uploadOdometerImage :: String -> String
 uploadOdometerImage rideId = (getBaseUrl "") <> "/driver/ride/"<>rideId<>"/uploadOdometer"

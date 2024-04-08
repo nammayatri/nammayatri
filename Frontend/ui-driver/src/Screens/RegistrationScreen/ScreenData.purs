@@ -73,7 +73,9 @@ initData = {
         confirmChangeVehicle : false,
         refreshAnimation : false,
         driverEnabled : false,
-        menuOptions : false
+        menuOptions : false,
+        manageVehicle : false,
+        manageVehicleCategory : Nothing
       }
   }
 

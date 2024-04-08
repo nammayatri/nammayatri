@@ -92,7 +92,7 @@ data ScreenOutput = GoBack
                   | GoToPermissionScreen RegistrationScreenState
                   | LogoutAccount
                   | GoToOnboardSubscription
-                  | GoToHomeScreen
+                  | GoToHomeScreen RegistrationScreenState
                   | RefreshPage
                   | ReferralCode RegistrationScreenState
                   | DocCapture RegistrationScreenState RegisterationStep
@@ -135,7 +135,7 @@ eval BackPressed state = do
   else if state.data.vehicleTypeMismatch then continue state { data { vehicleTypeMismatch = false}}
   else if state.props.confirmChangeVehicle then continue state { props { confirmChangeVehicle = false}}
   else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
-  else if DA.notElem state.data.vehicleDetailsStatus [COMPLETED, IN_PROGRESS] && Mb.isJust state.data.vehicleCategory then continue state { data {vehicleCategory = Mb.Nothing}}
+  else if state.props.manageVehicle then exit $ GoToHomeScreen state
   else do
       void $ pure $ JB.minimizeApp ""
       continue state
@@ -187,11 +187,11 @@ eval CallButtonClick state = do
   continue state
 
 eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_complete_registration"
+  void $ pure if state.props.manageVehicle then unit else  unsafePerformEffect $ logEvent state.data.logField "ny_driver_complete_registration"
   when state.props.referralCodeSubmitted $ do
     let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField "ny_driver_complete_registration_with_referral_code" $ [{key : "Referee Code", value : unsafeToForeign state.data.referralCode}]
     pure unit
-  exit GoToHomeScreen
+  exit $ GoToHomeScreen state
 
 eval Refresh state = updateAndExit state { props { refreshAnimation = true}} RefreshPage
 
@@ -253,6 +253,7 @@ eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
     Mb.Nothing -> continue state
     Mb.Just index -> do
       case (state.data.variantList) DA.!! index of
+        Mb.Just vehicleType | state.props.manageVehicle -> continue state { data { vehicleCategory = Mb.Just vehicleType }, props { manageVehicleCategory = Mb.Just vehicleType} }
         Mb.Just vehicleType -> do
           void $ pure $ setValueToLocalStore VEHICLE_CATEGORY $ show vehicleType
           void $ pure $ setValueToLocalStore SHOW_SUBSCRIPTIONS 

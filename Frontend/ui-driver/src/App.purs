@@ -331,7 +331,7 @@ data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
                                 | PERMISSION_SCREEN RegistrationScreenState
                                 | LOGOUT_FROM_REGISTERATION_SCREEN
                                 | GO_TO_ONBOARD_SUBSCRIPTION
-                                | GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN
+                                | GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN RegistrationScreenState
                                 | REFRESH_REGISTERATION_SCREEN
                                 | REFERRAL_CODE_SUBMIT RegistrationScreenState
                                 | DOCUMENT_CAPTURE_FLOW RegistrationScreenState RegisterationStep

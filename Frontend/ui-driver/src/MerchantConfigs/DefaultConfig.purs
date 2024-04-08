@@ -523,7 +523,7 @@ config =
   , logFunctionCalls : false
   , rideRequest : {
       negotiationUnit : {
-        cab : "20",
+        cab : "10",
         auto : "10"
       }
     }
