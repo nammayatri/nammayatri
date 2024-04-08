@@ -45,6 +45,7 @@ defaultRemoteConfig ={
     pondicherry : [],
     goa : [],
     pune : [],
+    tamilnaducities : [],
     default : [],
     config : Nothing
 }
@@ -93,4 +94,5 @@ getCityBasedConfig config city =
         "pondicherry" -> config.pondicherry
         "goa" -> config.goa
         "pune" -> config.pune
+        "tamilnaducities" -> config.tamilnaducities
         _ -> config.default
