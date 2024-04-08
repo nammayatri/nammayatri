@@ -1651,6 +1651,8 @@ chooseVehicleConfig state = let
     , pickUpCharges = selectedEstimates.pickUpCharges 
     , layoutMargin = Margin 0 0 0 0
     , isSingleEstimate = isSingleEstimate
+    , serviceTierName = selectedEstimates.serviceTierName
+    , serviceTierShortDesc = selectedEstimates.serviceTierShortDesc
     }
   in chooseVehicleConfig'
 

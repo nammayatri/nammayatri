@@ -664,6 +664,8 @@ getVehicleVariantImage variant =
       "SEDAN"         -> variantConfig.sedan.image
       "SUV"           -> variantConfig.suv.image
       "HATCHBACK"     -> variantConfig.hatchback.image
+      "ECO"           -> variantConfig.hatchback.image
+      "COMFY"         -> variantConfig.sedan.image
       "AUTO_RICKSHAW" -> case city of 
                           Kochi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
                           Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 

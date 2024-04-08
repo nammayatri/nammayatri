@@ -7,6 +7,7 @@ import Data.Show.Generic (genericShow)
 import Foreign.Generic (decode, encode, class Decode, class Encode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (Margin(..))
+import Data.Maybe (Maybe(..))
 
 data Action
   = NoAction
@@ -34,6 +35,8 @@ type Config
     , pickUpCharges :: Int 
     , layoutMargin :: Margin
     , isSingleEstimate :: Boolean
+    , serviceTierShortDesc :: Maybe String
+    , serviceTierName :: Maybe String
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -66,4 +69,6 @@ config =
   , pickUpCharges : 0
   , layoutMargin : MarginHorizontal 12 12
   , isSingleEstimate : false
+  , serviceTierShortDesc : Nothing
+  , serviceTierName : Nothing
   }

@@ -332,6 +332,8 @@ getSpecialZoneQuote quote index =
       , showInfo = estimatesConfig.showInfoIcon
       , searchResultType = ChooseVehicle.QUOTES
       , pickUpCharges = 0
+      , serviceTierName = quoteEntity.serviceTierName
+      , serviceTierShortDesc = quoteEntity.serviceTierShortDesc
       }
     Metro body -> ChooseVehicle.config
     Public body -> ChooseVehicle.config
@@ -425,6 +427,8 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
       , basePrice = estimate.estimatedTotalFare
       , searchResultType = if isFareRange then ChooseVehicle.ESTIMATES else ChooseVehicle.QUOTES
       , pickUpCharges = pickUpCharges
+      , serviceTierName = estimate.serviceTierName
+      , serviceTierShortDesc = estimate.serviceTierShortDesc
       }
 
 dummyFareRange :: FareRange
@@ -578,6 +582,8 @@ dummyEstimateEntity =
     , nightShiftRate: Nothing
     , specialLocationTag: Nothing
     , driversLatLong : []
+    , serviceTierShortDesc: Nothing
+    , serviceTierName : Nothing
     }
 
 getSpecialTag :: Maybe String -> SpecialTags
