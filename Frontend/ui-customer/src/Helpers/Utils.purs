@@ -509,21 +509,21 @@ updateLocListWithDistance arr currLat currLon useThreshold threshold =
 
 getAssetLink :: LazyCheck -> String
 getAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/user/images/"
   YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/user/images/"
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/user/images/"
   MOBILITY_RS -> "https://assets.juspay.in/beckn/mobilityredbus/user/images/"
+  _ -> "https://assets.juspay.in/beckn/nammayatri/user/images/"
 
 getCommonAssetLink :: LazyCheck -> String
 getCommonAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
   YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
   MOBILITY_RS -> "https://assets.juspay.in/beckn/mobilityredbus/mobilityredbuscommon/"
+  _ -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
 
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
@@ -533,6 +533,7 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/user/"
   MOBILITY_RS -> "https://assets.juspay.in/beckn/mobilityredbus/user/"
+  _ -> "https://assets.juspay.in/beckn/nammayatri/user/"
 
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName = do

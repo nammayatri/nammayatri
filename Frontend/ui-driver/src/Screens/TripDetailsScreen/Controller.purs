@@ -73,7 +73,7 @@ data Action = PrimaryButtonActionController ST.TripDetailsScreenState PrimaryBut
             | HelpAndSupport
             | NoAction
             | AfterRender
-data ScreenOutput = OnSubmit | GoToEarning | GoToHelpAndSupport | GoToHome
+data ScreenOutput = OnSubmit | GoToEarning | GoToHelpAndSupport | GoToHome | GoToMyRides
 
 eval :: Action -> ST.TripDetailsScreenState -> Eval Action ScreenOutput ST.TripDetailsScreenState
 
@@ -83,6 +83,7 @@ eval BackPressed state =
     case state.data.goBackTo of
         ST.Home -> exit GoToHome
         ST.Earning -> exit GoToEarning
+        ST.RideHistory -> exit GoToMyRides
 
 eval ReportIssue state = continue state { props { reportIssue = not state.props.reportIssue}}
 

@@ -48,6 +48,7 @@ primaryButtonConfig state = PrimaryButton.config {
   , alpha = if disabled then 0.7 else 1.0
   , isClickable = not disabled
   , enableRipple = not disabled
+  , id = "DriverSavedLocationScreenStatePB"
   }
   where disabled = state.props.viewType == ST.ConfirmLocation && (length state.data.saveLocationObject.tag < 1 || isJust state.props.errorText)
 

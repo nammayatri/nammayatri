@@ -84,7 +84,7 @@ view push state =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , background state.data.config.primaryBackground
+        , background state.data.config.enterMobileNumberScreen.headerBackground
         , padding $ Padding 16 16 16 16
         ][  imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"

@@ -178,8 +178,8 @@ foreign import openNavigation  :: Number -> Number -> String -> Unit
 foreign import stopLocationPollingAPI :: Effect Unit
 foreign import startLocationPollingAPI :: Effect Unit
 foreign import startChatListenerService :: Effect Unit
-foreign import startService :: String -> Unit
-foreign import stopService :: String -> Unit
+foreign import startService :: EffectFn1 String Unit
+foreign import stopService :: EffectFn1 String Unit
 foreign import scrollOnResume :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit
 foreign import stopChatListenerService :: Effect Unit
 foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect Unit) -> String -> String  -> (String -> String -> String -> String -> action) -> action -> Effect Unit
@@ -252,9 +252,10 @@ foreign import methodArgumentCount :: String -> Int
 foreign import hideLoader :: Effect Unit
 foreign import emitJOSEvent :: Fn3 String String Foreign Unit
 foreign import getLayoutBounds :: Fn1 String LayoutBound
-foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
+foreign import horizontalScrollToPos :: EffectFn4 String String Int Int Unit
 foreign import withinTimeRange :: String -> String -> String -> Boolean
-foreign import isServiceRunning :: Fn1 String Boolean
+foreign import isServiceRunning :: EffectFn1 String Boolean
+foreign import openLocationSettings :: EffectFn1 String Unit
 foreign import getChatMessages :: LazyCheck -> Array ChatComponent
 foreign import storeKeyBoardCallback :: forall action. EffectFn2 (action -> Effect Unit) (String -> action) Unit
 foreign import scrollViewFocus :: String -> Int -> Boolean

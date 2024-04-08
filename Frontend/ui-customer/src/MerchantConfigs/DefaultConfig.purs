@@ -424,6 +424,7 @@ config =
   , safety : {
       pastRideInterval : 15
   }
+  , defaultCountryCodeConfig : countryCode
 }
 
 defaultCityConfig :: CityConfig

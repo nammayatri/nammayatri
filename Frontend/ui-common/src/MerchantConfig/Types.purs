@@ -34,6 +34,7 @@ type CommonAppConfig = (
   , logFunctionCalls :: Boolean
   , bannerCarousel :: BannerCarousalConfig 
   , countryCodeConfig ::  Array CountryCodeObj
+  , defaultCountryCodeConfig :: CountryCodeObj
   , defaultLanguage :: String)
   
 type Colors = {

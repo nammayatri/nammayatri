@@ -18,6 +18,7 @@ import Common.Types.Config
 import Data.List
 import Screens.DriverProfileScreen.ComponentConfig
 import Screens.SubscriptionScreen.Transformer
+import Mobility.Prelude (boolToVisibility)
 import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
@@ -121,7 +122,7 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  frameLayout
+  relativeLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     ]
@@ -131,6 +132,7 @@ view push state =
         , orientation VERTICAL
         , onBackPressed push $ const BackPressed
         , background Color.white900
+        , padding $ PaddingBottom EHC.safeMarginBottom
         , visibility if state.props.updateLanguages || state.props.updateDetails then GONE else VISIBLE
         ]
         [ settingsView state push
@@ -273,7 +275,7 @@ manageVehiclesView state push =
         ]
         []
     , scrollView
-        [ height WRAP_CONTENT
+        [ height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - (30 + (EHC.safeMarginTopWithDefault 13) + EHC.safeMarginBottom) else MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
         , weight 1.0
@@ -479,7 +481,7 @@ profileView push state =
                 -- , if (not null state.data.inactiveRCArray) && state.props.screenType == ST.VEHICLE_DETAILS then vehicleRcDetails push state else dummyTextView
                 ]
             ]
-        , if (length state.data.inactiveRCArray < 2) && state.props.screenType == ST.VEHICLE_DETAILS then addRcView state push else dummyTextView
+        , if (length state.data.inactiveRCArray < 2) && state.props.screenType == ST.VEHICLE_DETAILS  && state.data.config.profile.enableMultipleRC then addRcView state push else dummyTextView
         ]
 
 verifiedVehiclesView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -540,18 +542,16 @@ headerView state push =
     , width MATCH_PARENT
     , orientation HORIZONTAL
     , background Color.white900
-    , gravity BOTTOM
-    , padding $ Padding 5 16 5 16
+    , gravity CENTER
+    , padding $ Padding 5 (EHC.safeMarginTopWithDefault 13) 5 13
     ]
     [ imageView
-        [ width $ V 40
-        , height $ V 40
+        [ width $ V 30
+        , height $ V 30
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
         , onClick push $ const BackPressed
         , rippleColor Color.rippleShade
-        , cornerRadius 20.0
-        , padding $ Padding 7 7 7 7
-        , margin $ MarginLeft 5
+        , cornerRadius 15.0
         ]
     , textView
         ( [ weight 1.0
@@ -624,7 +624,7 @@ tabView state push =
         , weight 1.0
         , background if state.props.screenType == ST.DRIVER_DETAILS then Color.black900 else Color.white900
         , text (getString DRIVER_DETAILS)
-        , cornerRadius 24.0
+        , cornerRadius 18.0
         , padding $ PaddingVertical 6 6
         , onClick push $ const $ ChangeScreen ST.DRIVER_DETAILS
         , fontStyle $ FontStyle.medium LanguageStyle
@@ -635,7 +635,7 @@ tabView state push =
         [ height WRAP_CONTENT
         , weight 1.0
         , gravity CENTER
-        , cornerRadius 24.0
+        , cornerRadius 18.0
         , onClick push $ const $ ChangeScreen ST.VEHICLE_DETAILS
         , padding $ PaddingVertical 6 6
         , text (getString VEHICLE_DETAILS)
@@ -706,7 +706,7 @@ tabImageView state push =
               , alpha if (state.props.screenType == ST.VEHICLE_DETAILS) then 1.0 else 0.4
               ]
               [ imageView
-                  [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage $ getVehicleCategory state.data.vehicleDetails
+                  [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage $ spy "VehicleCategory" $ getVehicleCategory state.data.vehicleDetails
                   , height $ V 68
                   , width $ V 68
                   ]
@@ -872,7 +872,7 @@ addRcView state push =
         ]
         []
     , PrimaryButton.view (push <<< AddRcButtonAC) (addRCButtonConfig state)
-    , PrimaryButton.view (push <<< ManageVehicleButtonAC) (addRCButtonConfigs state)
+    , PrimaryButton.view (push <<< ManageVehicleButtonAC) (manageRCButtonConfig state)
     ]
 
 ------------------------------ CHIP RAIL LAYOUT ---------------------------------------------
@@ -1079,11 +1079,13 @@ payment push state =
 --------------------------------------- ADDITIONAL DETAILS VIEW ------------------------------------------------------------
 additionalDetails :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 additionalDetails push state =
-  linearLayout
+  let list = if state.props.screenType == ST.DRIVER_DETAILS then driverAboutMeArray state else vehicleAboutMeArray state
+  in linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , margin $ Margin 16 40 16 0
     , orientation VERTICAL
+    , visibility $ boolToVisibility $ (length list) > 0
     ]
     ( [ textView
           [ text if state.props.screenType == ST.DRIVER_DETAILS then (getString ABOUT_ME) else (getString ABOUT_VEHICLE)
@@ -1097,7 +1099,7 @@ additionalDetails push state =
               { backgroundColor: Color.blue600
               , separatorColor: Color.white900
               , isLeftKeyClickable: false
-              , arrayList: if state.props.screenType == ST.DRIVER_DETAILS then driverAboutMeArray state else vehicleAboutMeArray state
+              , arrayList: list
               }
           ]
     )
@@ -1185,7 +1187,7 @@ alternateNumberLayoutView state push =
           [ textView
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
-              , text $ "+91 " <> fromMaybe "" state.data.driverAlternateNumber
+              , text $ state.data.config.defaultCountryCodeConfig.countryCode <> fromMaybe "" state.data.driverAlternateNumber
               , color Color.black800
               ]
           , linearLayout
@@ -1253,7 +1255,7 @@ showLiveStatsDashboard push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.grey800
-    , visibility if (DS.null state.data.config.dashboard.url) then GONE else VISIBLE
+    , visibility if not state.data.config.dashboard.enable || (DS.null state.data.config.dashboard.url) then GONE else VISIBLE
     , afterRender
         ( \action -> do
             JB.initialWebViewSetUp push (getNewIDWithTag "webview") HideLiveDashboard
@@ -1294,8 +1296,8 @@ profileOptionsLayout :: ST.DriverProfileScreenState -> (Action -> Effect Unit) -
 profileOptionsLayout state push =
   scrollView
     [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    ]
+    , height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - (30 + (EHC.safeMarginTopWithDefault 13) + EHC.safeMarginBottom) else MATCH_PARENT
+  ]
     [ linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
@@ -1421,7 +1423,7 @@ primaryButtons state push =
   linearLayout
     [ orientation HORIZONTAL
     , height MATCH_PARENT
-    , weight 1.0
+    , width MATCH_PARENT
     , gravity BOTTOM
     ]
     [ PrimaryButton.view (push <<< UpdateButtonClicked) (primaryButtonConfig state) ]
@@ -1742,7 +1744,8 @@ detailsListViewComponent state push config =
     , margin $ Margin 0 0 0 0
     , orientation VERTICAL
     , cornerRadius 10.0
-    ]
+    , visibility $ boolToVisibility $ (length config.arrayList) > 0
+  ]
     $ ( mapWithIndex
           ( \index item ->
               linearLayout
@@ -1873,7 +1876,11 @@ infoCard state push config =
             , linearLayout
                 [ height WRAP_CONTENT
                 , weight 1.0
-                , gravity RIGHT
+      ][]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+                , gravity CENTER
                 , orientation HORIZONTAL
                 ]
                 [ textView
@@ -1976,9 +1983,8 @@ vehicleAboutMeArray state =
 
 driverAboutMeArray :: ST.DriverProfileScreenState -> Array { key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean, keyInfo :: Boolean, isRightInfo :: Boolean }
 driverAboutMeArray state =
-  [ { key: (getString LANGUAGES_SPOKEN), value: ((getLanguagesSpoken (map (\item -> (getLangFromVal item)) (state.data.languagesSpoken)))), action: UpdateValue ST.LANGUAGE, isEditable: true, keyInfo: false, isRightInfo: false }
+  if (length state.data.config.languageList) <= 1 then [] else [ { key: (getString LANGUAGES_SPOKEN), value: ((getLanguagesSpoken (map (\item -> (getLangFromVal item)) (state.data.languagesSpoken)))), action: UpdateValue ST.LANGUAGE, isEditable: true, keyInfo: false, isRightInfo: false }]
   -- , { key : (getString HOMETOWN) , value : Nothing , action : UpdateValue ST.HOME_TOWN , isEditable : true }
-  ]
 
 driverPaymentsArray :: ST.DriverProfileScreenState -> Array { key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean, keyInfo :: Boolean, isRightInfo :: Boolean }
 driverPaymentsArray state =

@@ -2575,7 +2575,7 @@ derive instance genericReferralInfoPopType :: Generic ReferralInfoPopType _
 instance showReferralInfoPopType :: Show ReferralInfoPopType where show = genericShow
 instance eqReferralInfoPopType :: Eq ReferralInfoPopType where eq = genericEq
 
-data GoBackToScreen = Earning | Home
+data GoBackToScreen = Earning | Home | RideHistory
 
 derive instance genericGoBackToScreen :: Generic GoBackToScreen _
 instance showGoBackToScreen :: Show GoBackToScreen where show = genericShow

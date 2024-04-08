@@ -413,30 +413,30 @@ getMerchantVehicleSize unit =
 
 getAssetLink :: LazyCheck -> String
 getAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/driver/images/"
   YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/driver/images/"
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/driver/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/driver/images"
   MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/driver/images"
+  _ -> "https://assets.juspay.in/beckn/nammayatri/driver/images/"
 
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/driver/"
   YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/driver/"
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/driver"
   MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/driver"
+  _ -> "https://assets.juspay.in/beckn/nammayatri/driver/"
 
 getCommonAssetLink :: LazyCheck -> String
 getCommonAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
   YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
   MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
+  _ -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
 
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName =   

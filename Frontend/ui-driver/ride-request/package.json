@@ -1,0 +1,35 @@
+{
+  "name": "ride-request-overlay",
+  "version": "1.0.0",
+  "description": "Ride Request PopUp for Driver App",
+  "main": "index.js",
+  "scripts": {
+    "compile:purs": "spago build",
+    "dev": "spago build --watch --purs-args '--purs=fastpurs'",
+    "webpack-dev": "webpack-dev-server --env sandbox --mode development --config webpack.config.js --host",
+    "start": "npm run start:ios",
+    "bundle:ios": "webpack --env prod --mode=production --progress --config webpack.ios.js",
+    "prod:ios": "npm-run-all compile:purs \"bundle:ios\"",
+    "webpack-dev-ios": "webpack-dev-server --env master --mode development --config webpack.ios.js --host",
+    "start:ios": "npm-run-all -p dev webpack-dev-ios"
+  },
+  "author": "Vignesh S",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.7.7",
+    "@babel/preset-env": "^7.7.7",
+    "babel-loader": "^8.0.6",
+    "npm-run-all": "^4.1.5",
+    "webpack": "^4.41.5",
+    "webpack-cli": "^3.3.10",
+    "webpack-dev-server": "^3.10.1",
+    "webpack-merge": "^5.8.0",
+    "hyper-purescript": "^0.0.36",
+    "purty": "^7.0.0",
+    "purescript": "0.15.15"
+  },
+  "dependencies": {
+    "presto-ui": "git+https://github.com/Vignesh-772/presto-ui.git#nammayatri",
+    "spago": "^0.21.0"
+  }
+}

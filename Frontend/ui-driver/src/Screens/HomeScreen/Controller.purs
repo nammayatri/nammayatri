@@ -126,6 +126,8 @@ import Foreign (unsafeToForeign)
 import SessionCache (getValueFromWindow)
 import Timers as TF
 import Data.Ord (abs)
+import Services.API
+
 
 instance showAction :: Show Action where
   show _ = ""
@@ -435,7 +437,9 @@ eval BgLocationAC state = continue state { props { bgLocationPopup = true}}
 
 eval (BgLocationPopupAC PopUpModal.OnButton1Click) state = 
   continueWithCmd state { props { bgLocationPopup = false}} [do
-    void $ JB.requestBackgroundLocation unit
+    if EHC.os == "IOS" then
+      runEffectFn1 JB.openLocationSettings ""
+      else void $ JB.requestBackgroundLocation unit
     pure NoAction
   ]
 
@@ -1573,7 +1577,7 @@ getPeekHeight state =
       density = (runFn1 HU.getDeviceDefaultDensity "")/  defaultDensity
       currentPeekHeight = headerLayout.height  + contentLayout.height + (if RideActionModal.isSpecialRide (rideActionModalConfig state) then (labelLayout.height + 6) else 0)
       requiredPeekHeight = ceil (((toNumber currentPeekHeight) /pixels) * density)
-    in if requiredPeekHeight == 0 then 470 else requiredPeekHeight
+    in if EHC.os == "IOS" then currentPeekHeight else if requiredPeekHeight == 0 then 470 else requiredPeekHeight
   
 getDriverSuggestions :: ST.HomeScreenState -> Array String-> Array String
 getDriverSuggestions state suggestions = case (Array.length suggestions == 0) of
@@ -1586,6 +1590,7 @@ getPreviousVersion merchant =
     NAMMAYATRI -> "1.4.8"
     YATRI -> "2.3.0"
     YATRISATHI -> "0.1.8"
+    BRIDGE -> "0.0.0"
     _ -> "100.100.100"
 
 
