@@ -172,9 +172,16 @@ findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merc
 findByMerchantOpCityId id mbstickId idName = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
-  if "transporter_config" `GL.elem` useCACConfig
-    then Just <$> findByMerchantOpCityIdCAC id mbstickId idName
-    else getTransporterConfigFromDB id
+  config <-
+    if "transporter_config" `GL.elem` useCACConfig
+      then do
+        logDebug $ "Getting transporterConfig from CAC for merchatOperatingCity:" <> getId id
+        Just <$> findByMerchantOpCityIdCAC id mbstickId idName
+      else do
+        logDebug $ "Getting transporterConfig from DB for merchatOperatingCity:" <> getId id
+        getTransporterConfigFromDB id
+  logDebug $ "transporterConfig we recieved for merchantOperatingCityId:" <> getId id <> " is:" <> show config
+  pure config
 
 findByMerchantOpCityIdCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m TransporterConfig
 findByMerchantOpCityIdCAC id (Just stickId) idName = do

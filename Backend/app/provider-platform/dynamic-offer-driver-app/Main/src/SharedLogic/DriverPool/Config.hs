@@ -217,8 +217,12 @@ getDriverPoolConfigHelper merchantOpCityId serviceTier tripCategory mbDist srId 
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
   if "driver_pool_config" `GL.elem` useCACConfig
-    then getConfigFromInMemory merchantOpCityId serviceTier tripCategory (fromMaybe 0 mbDist) srId idName
-    else getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory mbDist
+    then do
+      logDebug $ "Getting driverPoolConfig from CAC for merchatOperatingCity:" <> getId merchantOpCityId
+      getConfigFromInMemory merchantOpCityId serviceTier tripCategory (fromMaybe 0 mbDist) srId idName
+    else do
+      logDebug $ "Getting driverPoolConfig from DB for merchatOperatingCity:" <> getId merchantOpCityId
+      getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory mbDist
 
 getDriverPoolConfig ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -229,7 +233,10 @@ getDriverPoolConfig ::
   Maybe Text ->
   Maybe Text ->
   m DriverPoolConfig
-getDriverPoolConfig merchantOpCityId serviceTier tripCategory = getDriverPoolConfigHelper merchantOpCityId (Just serviceTier) (show tripCategory)
+getDriverPoolConfig merchantOpCityId serviceTier tripCategory tripDistance srId idName = do
+  config <- getDriverPoolConfigHelper merchantOpCityId (Just serviceTier) (show tripCategory) tripDistance srId idName
+  logDebug $ "driverPoolConfig we recieved for merchantOpCityId:" <> getId merchantOpCityId <> " and serviceTier:" <> show serviceTier <> " and tripCategory:" <> show tripCategory <> " and tripDistance:" <> show tripDistance <> " is:" <> show config
+  pure config
 
 filterByDistAndDveh :: Maybe DVST.ServiceTierType -> Text -> Meters -> DriverPoolConfig -> Bool
 filterByDistAndDveh serviceTier tripCategory dist cfg =

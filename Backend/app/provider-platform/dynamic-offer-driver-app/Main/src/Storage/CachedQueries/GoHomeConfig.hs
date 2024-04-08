@@ -112,23 +112,29 @@ findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Merc
 findByMerchantOpCityId id stickyId idName = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
-  if "go_home_config" `GL.elem` useCACConfig
-    then do
-      tenant <- liftIO $ Se.lookupEnv "TENANT"
-      isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
-      if isExp
-        then do
-          Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACGoHomeConfigKey stickyId) >>= \case
-            (Just (a :: Int)) -> do
-              getGoHomeConfigFromCAC id a stickyId idName
-            Nothing -> do
-              gen <- newStdGen
-              let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
-              when (isJust stickyId) do
-                cacheToss stickyId toss
-              getGoHomeConfigFromCAC id toss stickyId idName
-        else getConfigsFromMemory id
-    else getGoHomeConfigFromDB id
+  config <-
+    if "go_home_config" `GL.elem` useCACConfig
+      then do
+        logDebug $ "Getting goHomeConfig from CAC for merchatOperatingCity:" <> getId id
+        tenant <- liftIO $ Se.lookupEnv "TENANT"
+        isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
+        if isExp
+          then do
+            Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACGoHomeConfigKey stickyId) >>= \case
+              (Just (a :: Int)) -> do
+                getGoHomeConfigFromCAC id a stickyId idName
+              Nothing -> do
+                gen <- newStdGen
+                let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
+                when (isJust stickyId) do
+                  cacheToss stickyId toss
+                getGoHomeConfigFromCAC id toss stickyId idName
+          else getConfigsFromMemory id
+      else do
+        logDebug $ "Getting goHomeConfig from DB for merchatOperatingCity:" <> getId id
+        getGoHomeConfigFromDB id
+  logDebug $ "goHomeConfig we recieved for merchantOpCityId:" <> getId id <> " is:" <> show config
+  pure config
 
 getConfigsFromMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
 getConfigsFromMemory id = do
