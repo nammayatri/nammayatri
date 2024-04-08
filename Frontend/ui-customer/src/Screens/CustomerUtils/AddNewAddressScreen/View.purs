@@ -82,7 +82,7 @@ view push state =
   , accessibility DISABLE
   , afterRender
     (\action -> do
-          _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" pickupZoomLevel push MAPREADY)
+          _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" pickupZoomLevel 0.0 0.0 push MAPREADY)
           pure $ HU.setText (EHC.getNewIDWithTag "SavedLocationEditText") (state.data.address)
           pure $ HU.setText (EHC.getNewIDWithTag "SaveAsEditText") (state.data.addressSavedAs)
           _ <- runEffectFn1 JB.locateOnMap JB.locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = pickupZoomLevel, labelId = EHC.getNewIDWithTag "AddAddressPin"}
