@@ -24,6 +24,8 @@ jobs:
           echo "token=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
           git_user_name=$(git config user.name)
           git_user_email=$(git config user.email)
+          echo "git_user_name=$COMMIT_HASH" >> $GITHUB_ENV
+          echo "git_user_email=$COMMIT_HASH" >> $GITHUB_ENV
           
       - name: Run script
         run: |
