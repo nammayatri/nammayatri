@@ -795,6 +795,7 @@ type HomeScreenStateProps =
   , hotSpot :: HotSpotProps
   , isBannerDataComputed :: Boolean
   , repeatRideVariant :: String
+  , hasToll :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -938,7 +939,8 @@ type RateCard =
     currentRateCardType :: RateCardType,
     onFirstPage :: Boolean,
     vehicleVariant :: String,
-    createdTime :: String
+    createdTime :: String,
+    tollCharge :: Int
   }
 
 type RateCardDetails = {
@@ -995,7 +997,8 @@ type EstimateInfo = {
   extraFare :: Int,
   showRateCardIcon :: Boolean,
   zoneType :: SpecialTags,
-  createdTime :: String
+  createdTime :: String,
+  hasToll :: Boolean
 }
 
 -- ################################## SelectLanguageScreenState ###############################

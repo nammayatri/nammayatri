@@ -426,6 +426,7 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
       , basePrice = estimate.estimatedTotalFare
       , searchResultType = if isFareRange then ChooseVehicle.ESTIMATES else ChooseVehicle.QUOTES
       , pickUpCharges = pickUpCharges
+      , tollCharge = fetchTollCharge estimateFareBreakup
       }
 
 dummyFareRange :: FareRange
@@ -475,7 +476,8 @@ getTripDetailsState (RideBookingRes ride) state = do
                         <> (if (isHaveFare "DRIVER_SELECTED_FARE" (updatedFareList)) then "\n\n" <> (getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) else "")
                         <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" updatedFareList) then "\n\n" <> (getEN WAITING_CHARGE_DESCRIPTION) else "")
                         <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" (updatedFareList)) then "\n\n" <> (getEN EARLY_END_RIDE_CHARGES_DESCRIPTION) else "")
-                        <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" ((updatedFareList))) then "\n\n" <> (getEN CUSTOMER_TIP_DESCRIPTION) else ""),
+                        <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" ((updatedFareList))) then "\n\n" <> (getEN CUSTOMER_TIP_DESCRIPTION) else "")
+                        <> (if isHaveFare "TOLL_CHARGES" updatedFareList then "\n\n" <> "⁺" <> (getEN TOLL_CHARGES_DESC) else ""),
         merchantExoPhone = ride.merchantExoPhone
       },
       vehicleVariant = fetchVehicleVariant rideDetails.vehicleVariant
@@ -518,6 +520,7 @@ getEstimatesInfo estimates vehicleVariant state =
   , showRateCardIcon: showRateCardIcon
   , zoneType: zoneType
   , createdTime : createdTime
+  , hasToll : hasToll
   }
   where
     estimatedVariant = 
@@ -560,6 +563,11 @@ getEstimatesInfo estimates vehicleVariant state =
                   Nothing -> Nothing
     createdTime = maybe "" (view _createdAt) (head estimatedVariant)
 
+    hasToll = DA.any (\item -> maybe false (\fareBreakupList -> isEstimateFareBreakupHastitle fareBreakupList "TOLL_CHARGES") (item ^. _estimateFareBreakup)) estimates
+
+
+isEstimateFareBreakupHastitle :: Array EstimateFares -> String ->  Boolean
+isEstimateFareBreakupHastitle fareBreakUpList title = DA.any (\item -> item ^. _title == title) fareBreakUpList
 
 dummyEstimateEntity :: EstimateAPIEntity
 dummyEstimateEntity =
@@ -625,6 +633,14 @@ fetchPickupCharges estimateFareBreakup =
     deadKmFare = find (\a -> a ^. _title == "DEAD_KILOMETER_FARE") estimateFareBreakup
   in 
     maybe 0 (\fare -> fare ^. _price) deadKmFare
+
+
+fetchTollCharge :: Array EstimateFares -> Int
+fetchTollCharge estimateFareBreakup = 
+  let 
+    tollCharge = find (\a -> a ^. _title == "TOLL_CHARGES") estimateFareBreakup
+  in 
+    maybe 0 (\fare -> fare ^. _price) tollCharge
 
 getActiveBooking :: Flow GlobalState (Maybe RideBookingRes)
 getActiveBooking = do

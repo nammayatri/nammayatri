@@ -596,7 +596,9 @@ newtype RidesInfo = RidesInfo
       estimatedDuration :: Maybe Int,
       actualDuration :: Maybe Int,
       startOdometerReading :: Maybe OdometerReading,
-      endOdometerReading :: Maybe OdometerReading
+      endOdometerReading :: Maybe OdometerReading,
+      tollCharges :: Maybe Int,
+      estimatedTollCharges :: Maybe Int
   }
 
 newtype OdometerReading = OdometerReading

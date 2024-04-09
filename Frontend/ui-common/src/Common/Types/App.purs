@@ -232,7 +232,7 @@ type LayoutBound =
 -- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
 -- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
 
-data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup | WaitingCharges
+data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup | WaitingCharges | TollOrParkingCharges
 derive instance genericRateCardType :: Generic RateCardType _
 instance eqRateCardType :: Eq RateCardType where eq = genericEq
 

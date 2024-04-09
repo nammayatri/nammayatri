@@ -57,6 +57,7 @@ import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
 import Timers as ET
 import Types.App (defaultGlobalState)
+import Mobility.Prelude
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -802,16 +803,35 @@ rentalRideInfoView push config =
 
 normalRideInfoView :: (Action -> Effect Unit) -> Config -> forall w . Array (PrestoDOM (Effect Unit) w) 
 normalRideInfoView push config =
-  [
-    estimatedFareView push config
-    , separator true
-    , totalDistanceView push config
-    , separator $ config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
-    , waitTimeView push config
-    , linearLayout
-      [ weight 1.0
-      , height MATCH_PARENT
-      ][]
+  [ 
+    linearLayout[
+      width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    ][
+      linearLayout [
+        height WRAP_CONTENT,
+        width MATCH_PARENT
+      ][
+        estimatedFareView push config
+        , separator true
+        , totalDistanceView push config
+        , separator $ config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
+        , waitTimeView push config
+        , linearLayout
+          [ weight 1.0
+          , height MATCH_PARENT
+          ][]
+      ]
+    , textView $ [
+        text $ getString RIDE_TOLL_FARE_INCLUDES
+      , color Color.black650
+      , width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ MarginTop 12
+      , visibility $ boolToVisibility config.tollText
+      ] <> FontStyle.body1 TypoGraphy
+    ]
   ]
 
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w

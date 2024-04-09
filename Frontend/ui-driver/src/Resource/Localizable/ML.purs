@@ -1359,3 +1359,8 @@ getML stringKey =
         ENTER_END_RIDE_OTP -> "റൈഡ് അവസാനിപ്പിക്കുക ഓടിപി നൽകുക"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "നിങ്ങൾ സ്റ്റോപ്പ് സ്ഥലത്തിലാണ്"
         ARRIVED_AT_STOP -> "സ്റ്റോപ്പിൽ എത്തി"
+        DOCUMENT_UPLOADED_SUCCESSFULLY -> "പ്രമാണം വിജയകരമായി അപ്‌ലോഡ് ചെയ്തു"
+        TOLL_CHARGES_INCLUDING amount -> "ടോൾ ചാർജുകൾ " <> amount <>" നിരക്കിൽ ഉൾപ്പെടുത്തിയിട്ടുണ്ട്"
+        TOLL_ROAD_CHANGED -> "ടോൾ റോഡ് എടുക്കാത്തതിനാൽ ടോൾ നിരക്കുകൾ കുറച്ചു"
+        RIDE_TOLL_FARE_INCLUDES -> "*റൈഡ് നിരക്കിൽ ടോൾ നിരക്കുകളും ഉൾപ്പെടുന്നു."
+        TOLL_INCLUDED -> "ടോൾ (നിരക്കിൽ ഉൾപ്പെടുത്തിയിരിക്കുന്നു)"

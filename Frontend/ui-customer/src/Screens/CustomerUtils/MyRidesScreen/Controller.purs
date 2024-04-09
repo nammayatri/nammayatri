@@ -271,6 +271,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
                         <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" updatedFareList) then "\n\n" <> (getEN WAITING_CHARGE_DESCRIPTION) else "")
                         <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" (updatedFareList)) then "\n\n" <> (getEN EARLY_END_RIDE_CHARGES_DESCRIPTION) else "")
                         <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" ((updatedFareList))) then "\n\n" <> (getEN CUSTOMER_TIP_DESCRIPTION) else "")
+                        <> (if (isHaveFare "TOLL_CHARGES" updatedFareList) then "\n\n" <> "⁺" <>  (getString TOLL_CHARGES_DESC) else "")
   , nightCharges : nightChargesVal
   , isSpecialZone : (null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode))
   , zoneType : specialTags.priorityTag

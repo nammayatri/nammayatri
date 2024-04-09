@@ -74,7 +74,8 @@ initData =
             specialZoneImage : "",
             specialZoneText : "",
             specialZonePickup : false,
-            tripType : OneWay
+            tripType : OneWay,
+            tollCharge : 0
         }
       , logField : empty
       }

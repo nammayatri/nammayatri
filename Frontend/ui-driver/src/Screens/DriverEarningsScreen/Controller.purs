@@ -503,7 +503,8 @@ rideHistoryItemTransformer (RidesInfo ride) =
     specialZoneLayoutBackground : specialLocationConfig.backgroundColor,
     specialZoneImage : specialLocationConfig.imageUrl,
     specialZoneText : specialLocationConfig.text,
-    specialZonePickup : checkSpecialPickupZone ride.specialLocationTag
+    specialZonePickup : checkSpecialPickupZone ride.specialLocationTag,
+    tollCharge : fromMaybe 0 ride.tollCharges
   }
 
 getDisabilityType :: Maybe String -> Maybe DisabilityType
@@ -726,7 +727,9 @@ dummyRideHistoryItem = RidesInfo {
       estimatedDuration : Nothing,
       actualDuration : Nothing,
       startOdometerReading : Nothing,
-      endOdometerReading : Nothing
+      endOdometerReading : Nothing,
+      tollCharges : Nothing,
+      estimatedTollCharges : Nothing
   }
 
 dummyLocationInfo :: LocationInfo

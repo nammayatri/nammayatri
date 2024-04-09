@@ -794,7 +794,8 @@ type IndividualRideCardState =
     specialZoneText :: String,
     spLocTagVisibility :: Boolean,
     specialZonePickup :: Boolean,
-    tripType :: TripType
+    tripType :: TripType,
+    tollCharge :: Int
   }
 
 
@@ -1016,7 +1017,9 @@ type EndRideData = {
     feedback :: String,
     disability :: Maybe String,
     payerVpa :: String,
-    specialZonePickup :: Maybe Boolean
+    specialZonePickup :: Maybe Boolean,
+    actualTollCharge :: Int,
+    estimatedTollCharge :: Int
   }
 type PaymentState = {
   rideCount :: Int,
@@ -1197,7 +1200,8 @@ type HomeScreenProps =  {
   rideStartTimer :: Int,
   odometerFileId :: Maybe String,
   odometerUploadAttempts :: Int,
-  odometerImageUploading :: Boolean
+  odometerImageUploading :: Boolean,
+  hasToll :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -1324,7 +1328,8 @@ type TripDetailsScreenData =
     specialZoneText :: String,
     config :: AppConfig,
     goBackTo :: GoBackToScreen,
-    specialZonePickup :: Boolean
+    specialZonePickup :: Boolean,
+    tollCharge :: Int
   }
 
 type TripDetailsScreenProps =

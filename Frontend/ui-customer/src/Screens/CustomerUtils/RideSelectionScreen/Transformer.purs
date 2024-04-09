@@ -87,6 +87,7 @@ myRideListTransformer isSrcServiceable listRes = filter (\item -> (item.status =
                         <> (if isHaveFare "WAITING_CHARGES" updatedFareList then "\n\n" <> getEN WAITING_CHARGE_DESCRIPTION else "")
                         <> (if isHaveFare "EARLY_END_RIDE_PENALTY" updatedFareList then "\n\n" <> getEN EARLY_END_RIDE_CHARGES_DESCRIPTION else "")
                         <> (if isHaveFare "CUSTOMER_SELECTED_FARE" updatedFareList then "\n\n" <> getEN CUSTOMER_TIP_DESCRIPTION else "")
+                        <> (if isHaveFare "TOLL_CHARGES" updatedFareList then "\n\n" <> "⁺" <> getEN TOLL_CHARGES_DESC else "")
   in {
     date : (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") ,
     time :  convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A",
