@@ -391,36 +391,6 @@ eval (RegStatusResponse  (SA.DriverRegistrationStatusResp regStatusResp)) state 
         }
       ) vehicleData
 
--- type DriverVehicleDetails = {
---     registrationNo :: String,
---     userSelectedVehicleCategory :: VehicleCategory,
---     verifiedVehicleCategory :: Maybe VehicleCategory,
---     isVerified :: Boolean,
---     vehicleModel :: Maybe String
--- }
-
--- newtype VehicleDocumentItem = VehicleDocumentItem
---   { registrationNo :: String,
---     userSelectedVehicleCategory :: String,
---     verifiedVehicleCategory :: Maybe String,
---     documents :: Array DocumentStatusItem,
---     isVerified :: Boolean,
---     vehicleModel :: Maybe String
---   }
---   let rctransformedData = makeRcsTransformData rcDataArray
---   if (length rctransformedData == 1)
---     then do
---       let activeRcVal = rctransformedData
---       continue state{data{rcDataArray = rctransformedData, inactiveRCArray = drop 1 rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (activeRcVal!!0)}}
---     else do
---       let activeRcVal = filter _.rcStatus rctransformedData
---       if (length activeRcVal == 0)
---         then continue state {data{rcDataArray = rctransformedData, inactiveRCArray = drop 1 rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (rctransformedData!!0) }}
---         else
---           continue state{data{rcDataArray = rctransformedData, inactiveRCArray = filter (not _.rcStatus) $ rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (activeRcVal!!0)}}
-
-
-
 eval (DriverSummary response) state = do
   let (DriverProfileSummaryRes resp) = response
   continue state{data{analyticsData = getAnalyticsData response, languagesSpoken = (fromMaybe [] resp.languagesSpoken), languageList = updateLanguageList state (fromMaybe [] resp.languagesSpoken)}}

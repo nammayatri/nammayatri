@@ -223,7 +223,7 @@ vehicleDetailsView push state =
         , weight 1.0
         ]
         [ customTV (getString YOUR_VEHICLE) FontSize.a_12 FontStyle.body3 Color.black650
-        , customTV (MP.spaceSeparatedPascalCase state.data.vehicleName) FontSize.a_20 FontStyle.h3 Color.black800
+        , customTV (MP.spaceSeparatedPascalCase state.data.defaultRidePreference.name) FontSize.a_20 FontStyle.h3 Color.black800
         ]
     , linearLayout
         [ width WRAP_CONTENT
