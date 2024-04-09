@@ -311,6 +311,7 @@ currentFlowStatus = do
       updateLanguageAndReferralCode $ response ^. _language
       updateFlowStatusStorage response
       updateCTEventData response
+      setValueToLocalStore CUSTOMER_REFERRAL_CODE (fromMaybe "" (response ^. _customerReferralCode))
       if isNothing (response ^. _firstName) 
         then do
           void $ updateLocalStage HomeScreen
@@ -331,7 +332,6 @@ currentFlowStatus = do
                         { data
                           { disability = Just { tag: tag, id: "", description: "" }
                           , followers = Nothing
-                          , customerReferralCode = response ^. _customerReferralCode
                           , settingSideBar
                             { name = fromMaybe "" (response ^. _firstName)
                             , gender = response ^. _gender

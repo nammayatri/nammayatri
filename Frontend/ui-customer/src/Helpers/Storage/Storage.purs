@@ -98,6 +98,7 @@ data KeyStore
   | METRO_STATIONS
   | METRO_PAYMENT_SDK_POLLING
   | MOCK_SOS_FOR_RIDES
+  | CUSTOMER_REFERRAL_CODE
 
 derive instance genericKeyStore :: Generic KeyStore _
 

@@ -110,7 +110,9 @@ priceDetailsView push config =
     , padding $ PaddingLeft 8
     , gravity CENTER_VERTICAL
     , clickable isActiveIndex
-    , onClick push $ const $ ShowRateCard config
+    , onClick push $ case (config.showInfo && isActiveIndex) of
+                          false -> const $ NoAction
+                          true  -> const $ ShowRateCard config
     ]
     [ textView
         $ [ width WRAP_CONTENT
