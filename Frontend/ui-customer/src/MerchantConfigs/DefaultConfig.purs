@@ -370,6 +370,9 @@ config =
             , strictBounds : true
             }
         , enableCabs : false
+        , estimateAndQuoteConfig : {
+          showInfoIcon : true
+          }
         }
       , { cityCode : "std:044"
         , cityName : "Chennai"
@@ -378,6 +381,9 @@ config =
             , strictBounds : true
             }
         , enableCabs : true
+        , estimateAndQuoteConfig : {
+          showInfoIcon : false
+          }
         }
       ]
   , bannerCarousel : defaultBannerCarousel
@@ -404,6 +410,9 @@ defaultCityConfig :: CityConfig
 defaultCityConfig =
   { cityName : "",
     cityCode : "",
+    estimateAndQuoteConfig : {
+          showInfoIcon : true
+          },
     geoCodeConfig :
       { radius : 100000
       , strictBounds : false

@@ -31,7 +31,7 @@ import Data.Eq
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim, null)
 import Data.Function.Uncurried (runFn1)
-import Helpers.Utils (parseFloat, withinTimeRange,isHaveFare, getVehicleVariantImage, getDistanceBwCordinates)
+import Helpers.Utils (parseFloat, withinTimeRange,isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -408,6 +408,7 @@ getEstimates :: EstimateAPIEntity -> Int -> Boolean -> ChooseVehicle.Config
 getEstimates (EstimateAPIEntity estimate) index isFareRange =
   let currency = getCurrency appConfig
       estimateAndQuoteConfig = (getAppConfig appConfig).estimateAndQuoteConfig
+      config = getCityConfig (getAppConfig appConfig).cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
       estimateFareBreakup = fromMaybe [] estimate.estimateFareBreakup
       pickUpCharges = fetchPickupCharges estimateFareBreakup
   in ChooseVehicle.config {
@@ -421,7 +422,7 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
       , index = index
       , id = trim estimate.id
       , capacity = getVehicleCapacity estimate.vehicleVariant
-      , showInfo = estimateAndQuoteConfig.showInfoIcon
+      , showInfo = config.estimateAndQuoteConfig.showInfoIcon
       , basePrice = estimate.estimatedTotalFare
       , searchResultType = if isFareRange then ChooseVehicle.ESTIMATES else ChooseVehicle.QUOTES
       , pickUpCharges = pickUpCharges

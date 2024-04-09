@@ -1599,8 +1599,9 @@ eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) st
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_share_app_menu"
         shareAppConfig = state.data.config.shareAppConfig
         title = shareAppConfig.title
-        mbcustomerReferralCode = fromMaybe "" state.data.customerReferralCode
-        message = shareAppConfig.description <> "Referral Code : " <> mbcustomerReferralCode <>  "\n" <> (generateReferralLink (getValueToLocalStore CUSTOMER_LOCATION) "share" "referral" "refer" mbcustomerReferralCode)
+        referralCode = getValueToLocalStore CUSTOMER_REFERRAL_CODE
+        code = if (referralCode `elem` ["__failed", "(null)",""]) then "" else "Referral Code : " <> referralCode
+        message = shareAppConfig.description <> code <>  "\n" <> (generateReferralLink (getValueToLocalStore CUSTOMER_LOCATION) "share" "referral" "refer" referralCode)
     void $ pure $ shareTextMessage title message
     continue state
 

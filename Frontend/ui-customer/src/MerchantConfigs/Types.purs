@@ -391,7 +391,12 @@ type CityConfig = {
   cityName :: String,
   cityCode :: String,
   geoCodeConfig :: GeoCodeConfig,
-  enableCabs :: Boolean
+  enableCabs :: Boolean,
+  estimateAndQuoteConfig :: EstimateConfig
+}
+
+type EstimateConfig = {
+  showInfoIcon :: Boolean
 }
 
 type GeoCodeConfig = {
