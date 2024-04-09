@@ -1585,7 +1585,7 @@ estimateHeaderView push state =
                          <> state.data.destination
     ]
     [ textView $
-        [ text (getString CONFIRM_YOUR_RIDE)
+        [ text$ getString CONFIRM_YOUR_RIDE
         , color Color.black800
         , gravity CENTER_HORIZONTAL
         , height WRAP_CONTENT
@@ -1593,6 +1593,16 @@ estimateHeaderView push state =
         ] 
         <> FontStyle.h1 TypoGraphy
     , estimatedTimeDistanceView push state
+    , textView $
+      [ text $ getString TOLL_CHARGES_WILL_BE_EXTRA
+      , color Color.black650
+      , gravity CENTER_HORIZONTAL
+      , height WRAP_CONTENT
+      , gravity CENTER_HORIZONTAL
+      , width MATCH_PARENT
+      , margin $ MarginTop 4
+      , visibility $  boolToVisibility state.props.hasToll
+      ] <> FontStyle.paragraphText TypoGraphy
     , linearLayout
         [ height $ V 1
         , width MATCH_PARENT

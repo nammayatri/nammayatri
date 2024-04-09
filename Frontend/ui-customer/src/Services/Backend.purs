@@ -740,13 +740,9 @@ drawMapRoute srcLat srcLng destLat destLng sourceMarkerConfig destMarkerConfig r
         callDrawRoute :: Maybe Route -> FlowBT String (Maybe Route)
         callDrawRoute route = do
             case route of
-                Just (Route routes) ->
-                    if (routes.distance <= 50000) then do
-                      void $ liftFlowBT $ runEffectFn9 drawRoute (walkCoordinates routes.points) "LineString" "#323643" true sourceMarkerConfig destMarkerConfig 8 routeType specialLocation
-                      pure route
-                    else do
-                      void $ liftFlowBT $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false sourceMarkerConfig destMarkerConfig 8 routeType specialLocation
-                      pure route 
+                Just (Route routes) -> do
+                  void $ liftFlowBT $ runEffectFn9 drawRoute (walkCoordinates routes.points) "LineString" "#323643" true sourceMarkerConfig destMarkerConfig 8 routeType specialLocation
+                  pure route
                 Nothing -> pure route
 
 type Markers = {

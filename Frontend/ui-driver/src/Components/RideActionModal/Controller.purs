@@ -67,7 +67,8 @@ type Config = {
   startODOReading :: String,
   tripDuration :: Mb.Maybe String,
   durationTravelled :: String,
-  rideStartTimer :: Int
+  rideStartTimer :: Int,
+  tollText :: Boolean
   }
 
 type AddressConfig = {
@@ -111,5 +112,6 @@ config = {
   tripDuration : Mb.Nothing,
   durationTravelled : "0",
   rideStartTimer : 0,
-  rideStartTime : Mb.Nothing
+  rideStartTime : Mb.Nothing,
+  tollText : false
 }

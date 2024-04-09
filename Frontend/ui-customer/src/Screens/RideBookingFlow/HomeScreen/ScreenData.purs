@@ -73,7 +73,8 @@ initData = {
        extraFare : 0,
        pickUpCharges : 0,
        vehicleVariant : "",
-       createdTime : ""
+       createdTime : "",
+       tollCharge : 0
        }
     , speed : 0
     , selectedLocationListItem : Nothing
@@ -116,6 +117,7 @@ initData = {
       , pickUpCharges : 0
       , layoutMargin : Margin 0 0 0 0
       , isSingleEstimate : false
+      , tollCharge : 0
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -314,6 +316,7 @@ initData = {
     , hotSpot : { selectedSpot : Nothing, centroidPoint : Nothing }
     , isBannerDataComputed : false
     , repeatRideVariant : ""
+    , hasToll : false
   }
 }
 

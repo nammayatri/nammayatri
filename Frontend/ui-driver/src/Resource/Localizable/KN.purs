@@ -1359,3 +1359,7 @@ getKN stringKey =
         ENTER_END_RIDE_OTP -> "ಸವಾರಿ ಮುಗಿಸಲು ಒಟಿಪಿ ನಮೂದಿಸಿ"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "ನೀವು ನಿಲ್ದಾಣ ಸ್ಥಳದಲ್ಲಿ ಇಲ್ಲ"
         ARRIVED_AT_STOP -> "ನಿಲ್ದಾಣದಲ್ಲಿ ಬಂದಿದ್ದೇನೆ"
+        TOLL_CHARGES_INCLUDING amount -> "ಟೋಲ್ ಶುಲ್ಕಗಳು " <> amount <>" ದರದಲ್ಲಿ ಸೇರಿಸಲಾಗಿದೆ"
+        TOLL_ROAD_CHANGED -> "ಟೋಲ್ ರಸ್ತೆಯನ್ನು ತೆಗೆದುಕೊಳ್ಳದ ಕಾರಣ ಟೋಲ್ ಶುಲ್ಕಗಳನ್ನು ಕಡಿಮೆ ಮಾಡಲಾಗಿದೆ"
+        RIDE_TOLL_FARE_INCLUDES -> "*ರೈಡ್ ದರವು ಟೋಲ್ ಶುಲ್ಕಗಳನ್ನು ಒಳಗೊಂಡಿರುತ್ತದೆ."
+        TOLL_INCLUDED -> "ಟೋಲ್ (ಶುಲ್ಕದಲ್ಲಿ ಸೇರಿಸಲಾಗಿದೆ)"

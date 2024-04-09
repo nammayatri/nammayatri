@@ -1342,7 +1342,6 @@ getEN stringKey =
         VEHICLE_PUC_STR -> "Vehicle PUC"
         RC_MANDATORY -> "RC is mandatory for this document"
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "Document uploaded successfully"        
-
         RENTAL_FARE -> "Rental Fare"
         DURATION -> "Duration"
         START_ODO_READING -> "Start ODO Reading"
@@ -1360,3 +1359,8 @@ getEN stringKey =
         ENTER_END_RIDE_OTP -> "Enter end ride OTP"
         ARRIVED_AT_STOP -> "Arrived at stop"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "You are not at the stop location"
+        DOCUMENT_UPLOADED_SUCCESSFULLY -> "Document uploaded successfully"
+        TOLL_CHARGES_INCLUDING amount -> "Toll charges " <> amount <>" included in the fare" 
+        TOLL_ROAD_CHANGED -> "Toll charges reduced as toll road was not taken"
+        RIDE_TOLL_FARE_INCLUDES -> "*Ride fare includes toll charges."
+        TOLL_INCLUDED -> "Toll (included in fare)"

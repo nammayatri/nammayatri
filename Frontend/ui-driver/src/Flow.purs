@@ -1964,6 +1964,7 @@ currentRideFlow activeRideResp isActiveRide = do
           else ceil ((toNumber (rideRequestPollingData.duration - (getExpiryTime (getValueToLocalNativeStore RIDE_REQUEST_TIME) true)) * 1000.0)/rideRequestPollingData.delay) > 0
       onBoardingSubscriptionViewCount =  fromMaybe 0 (fromString (getValueToLocalNativeStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT))
   
+
   (isLocalStageOn RideRequested && (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "false" && isRequestExpired) ? homeScreenFlow $ pure unit
 
   (GlobalState allState) <- getState
@@ -1996,7 +1997,7 @@ currentRideFlow activeRideResp isActiveRide = do
   homeScreenFlow
   where
     activeRidePatch activeRideResponse allState onBoardingSubscriptionViewCount = 
-      case (activeRideResponse.list !! 0 ) of
+      case (activeRideResponse.list !! 0 ) of 
         Just (RidesInfo ride) -> do
           let decodedSource = decodeAddress ride.fromLocation true 
               decodedDestination = (\toLocation -> decodeAddress toLocation true) <$> ride.toLocation
@@ -2004,7 +2005,7 @@ currentRideFlow activeRideResp isActiveRide = do
               decodeLastStopAddress = (\(API.StopLocation {address,lat,lon}) -> decodeAddress (RC.getLocationInfoFromStopLocation address lat lon) true) <$> ride.lastStopLocation
               state = allState.homeScreen
               activeRide = (activeRideDetail state (RidesInfo ride))
-              stage = (if activeRide.status == NEW then (if state.props.currentStage == ChatWithCustomer then ChatWithCustomer else RideAccepted) else RideStarted)
+              stage = if activeRide.status == NEW then (if state.props.currentStage == ChatWithCustomer then ChatWithCustomer else RideAccepted) else RideStarted
           sourceMod <- translateString decodedSource 500
           destinationMod <- maybe (pure Nothing) (\decodedDestination' -> do 
             destMod <- translateString decodedDestination' 500
@@ -2032,7 +2033,18 @@ currentRideFlow activeRideResp isActiveRide = do
          
           void $ updateStage $ HomeScreenStage stage
           void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "Yes"}]
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod, destination = destinationMod, lastStopAddress = lastStopAddressMod, nextStopAddress = nextStopAddressMod }}, props{ silentPopUpView = false, goOfflineModal = false}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {
+             data{ 
+                activeRide = activeRide{
+                  source = sourceMod, 
+                  destination = destinationMod, lastStopAddress = lastStopAddressMod, nextStopAddress = nextStopAddressMod 
+                }
+              }, 
+              props{ 
+                silentPopUpView = false, 
+                goOfflineModal = false,
+                hasToll = maybe false (\charge -> charge /= 0) ride.estimatedTollCharges
+              }})
         Nothing -> do
           setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
           void $ updateStage $ HomeScreenStage HomeScreen
@@ -2341,13 +2353,14 @@ homeScreenFlow = do
                     specialZoneLayoutBackground = specialZoneConfig.backgroundColor,
                     specialZoneImage = specialZoneConfig.imageUrl,
                     specialZoneText = specialZoneConfig.text,
-                    specialZonePickup = isSpecialPickUpZone
+                    specialZonePickup = isSpecialPickUpZone,
+                    tollCharge = fromMaybe 0 response.tollCharges
                   }})
                 let payerVpa = fromMaybe "" response.payerVpa
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
                   { data {
                       activeRide {endOdometerReading = (\(API.OdometerReading {value}) -> value) <$> response.endOdometerReading}, 
-                      endRideData {actualRideDuration = response.actualDuration,actualRideDistance = response.chargeableDistance, finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag, payerVpa = payerVpa, specialZonePickup = if isSpecialPickUpZone then Just true else Nothing }
+                      endRideData {actualTollCharge = fromMaybe 0 response.tollCharges, estimatedTollCharge = fromMaybe 0 response.estimatedTollCharges, actualRideDuration = response.actualDuration,actualRideDistance = response.chargeableDistance, finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag, payerVpa = payerVpa, specialZonePickup = if isSpecialPickUpZone then Just true else Nothing }
                     },
                     props {
                       isFreeRide = fromMaybe false response.isFreeRide
@@ -3729,6 +3742,7 @@ driverEarningsFlow = do
       specialZoneImage = selectedCard.specialZoneImage,
       specialZoneText = selectedCard.specialZoneText,
       specialZonePickup = selectedCard.specialZonePickup,
+      tollCharge = selectedCard.tollCharge,
       goBackTo = ST.Earning
       }})
       tripDetailsScreenFlow

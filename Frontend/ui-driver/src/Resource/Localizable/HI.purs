@@ -1344,7 +1344,6 @@ getHI stringKey =
         VEHICLE_PUC_STR -> "वाहन पीयूसी"
         RC_MANDATORY -> "इस दस्तावेज़ के लिए RC अनिवार्य है"
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "दस्तावेज़ सफलतापूर्वक अपलोड किया गया"        
-
         START_TIME -> "शुरुआत का समय"
         START_ODO_READING -> "शुरुआती ओडो पढ़ना"
         RIDE_START -> "सवारी प्रारंभ"
@@ -1360,3 +1359,8 @@ getHI stringKey =
         ENTER_END_RIDE_OTP -> "सवारी समाप्त करने के लिए ओटीपी दर्ज करें"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "आप स्टॉप स्थान पर नहीं हैं"
         ARRIVED_AT_STOP -> "स्टॉप पर पहुंच गए"
+        DOCUMENT_UPLOADED_SUCCESSFULLY -> "दस्तावेज़ सफलतापूर्वक अपलोड किया गया"
+        TOLL_CHARGES_INCLUDING amount -> "टोल शुल्क " <> amount <>" किराए में शामिल"
+        TOLL_ROAD_CHANGED -> "टोल रोड नहीं लिए जाने से टोल शुल्क कम हो गया"
+        RIDE_TOLL_FARE_INCLUDES -> "*सवारी किराये में टोल शुल्क शामिल है।"
+        TOLL_INCLUDED -> "टोल (किराया में शामिल)"

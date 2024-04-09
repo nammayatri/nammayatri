@@ -226,6 +226,7 @@ getFaresList fares baseDistance =
                       "PLATFORM_FEE" -> getEN PLATFORM_FEE
                       "SGST" -> getEN PLATFORM_GST
                       "CUSTOMER_CANCELLATION_DUES" -> getEN CUSTOMER_CANCELLATION_DUES
+                      "TOLL_CHARGES" ->  getEN TOLL_CHARGES <> "⁺"
                       _ -> formatFareType $ item.description
           }
     )

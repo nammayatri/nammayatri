@@ -79,7 +79,7 @@ import Data.Either (Either(..))
 import Font.Style (Style(..))
 import Services.API as API
 import Data.Lens ((^.))
-import Accessor (_fareBreakup, _description, _rideEndTime)
+import Accessor (_fareBreakup, _description, _rideEndTime, _amount)
 import Resources.Localizable.EN(getEN)
 import Engineering.Helpers.Utils as EHU
 import Mobility.Prelude
@@ -890,7 +890,7 @@ rateCardConfig state =
                                         _ -> getString RATE_CARD
                       MU.YATRI -> getVehicleTitle state.data.rateCard.vehicleVariant
                       _ -> ""
-        , fareList = case MU.getMerchant FunctionCall of
+        , fareList = (case MU.getMerchant FunctionCall of
                       MU.NAMMAYATRI -> case city of
                                         Delhi -> nyRateCardListForDelhi state
                                         Kochi -> yatriRateCardList state.data.rateCard.vehicleVariant state
@@ -900,7 +900,8 @@ rateCardConfig state =
                                         Bangalore -> nyRateCardList state
                                         _ -> nyRateCardList state
                       MU.YATRI -> yatriRateCardList state.data.rateCard.vehicleVariant state
-                      _ -> []
+                      _ -> []) 
+                      <> if state.data.rateCard.tollCharge > 0 then [{key : getString TOLL_CHARGES_ESTIMATED, val : (getCurrency appConfig) <> (show state.data.rateCard.tollCharge)}] else []
 
         , otherOptions  = cityBasedOtherOptions city
         , fareInfoText = fareInfoText
@@ -916,7 +917,12 @@ rateCardConfig state =
           {key : "WAITING_CHARGE_RATECARD_DESCRIPTION", val : (getString $ WAITING_CHARGE_RATECARD_DESCRIPTION waitingChargesPerMin freeWaitingTime)},
           {key : "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS", val : (getString YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS)},
           {key : "REASON_CHANGE_IN_ROUTE", val : ("<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B))},
-          {key : "WAITING_CHARGES_APPLICABLE", val : ("<span style=\"color:black;\">" <> "2." <> (getString WAITING_CHARGE) <> "</span>" <> " "  <> (getString $ WAITING_CHARGE_INFO waitingChargesPerMin freeWaitingTime) )}]
+          {key : "WAITING_CHARGES_APPLICABLE", val : ("<span style=\"color:black;\">" <> "2." <> (getString WAITING_CHARGE) <> "</span>" <> " "  <> (getString $ WAITING_CHARGE_INFO waitingChargesPerMin freeWaitingTime) )},
+          {key : "TOLL_OR_PARKING_CHARGES", val : (getString TOLL_OR_PARKING_CHARGES)},
+          {key : "TOLL_CHARGES", val : (getString TOLL_CHARGES)},
+          {key : "TOLL_CHARGES_DESC", val : (getString TOLL_CHARGES_DESC)},
+          {key : "PARKING_CHARGES", val : (getString PARKING_CHARGES)},
+          {key : "PARKING_CHARGES_DESC", val : (getString PARKING_CHARGES_DESC)}]
           <> if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" && state.data.config.searchLocationConfig.showChargeDesc then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else []
         }
   in
@@ -933,30 +939,36 @@ rateCardConfig state =
     cityBasedOtherOptions city = case city of 
                                     Delhi -> [
                                                   {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE },
+                                                  {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
                                                  ]
                                     Kochi -> [
                                                   {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE },
+                                                  {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
                                                  ]
                                     Hyderabad -> [
                                                   {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE },
+                                                  {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
                                                  ]
                                     Chennai -> [
                                                   {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE },
+                                                  {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
                                                  ]
                                     Pondicherry -> []
                                     Bangalore -> [
                                                   {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
                                                   {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE },
+                                                  {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
                                                  ]
                                     _ -> [
                                           {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
                                           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                          {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                          {key : "WAITING_CHARGES", val : getString WAITING_CHARGE },
+                                          {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
                                           ]
 
     cityBasedWaitingCharge :: City -> String
@@ -1466,7 +1478,7 @@ chooseYourRideConfig state =
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
     quoteList = state.data.specialZoneQuoteList,
-    showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText,
+    showTollExtraCharges = state.props.hasToll,
     nearByDrivers = state.data.nearByDrivers,
     showPreferences = state.data.showPreferences,
     bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city == Bangalore,
@@ -1651,6 +1663,7 @@ chooseVehicleConfig state = let
     , pickUpCharges = selectedEstimates.pickUpCharges 
     , layoutMargin = Margin 0 0 0 0
     , isSingleEstimate = isSingleEstimate
+    , tollCharge = selectedEstimates.tollCharge
     }
   in chooseVehicleConfig'
 
@@ -1662,6 +1675,7 @@ rideCompletedCardConfig state =
       headerConfig = mkHeaderConfig state.props.nightSafetyFlow state.props.showOfferedAssistancePopUp
       appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
       isRecentRide = EHC.getExpiryTime (fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
+      actualTollCharge =  maybe 0 (\obj ->  obj^._amount) $ DA.find (\entity  -> entity ^._description == "TOLL_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
   in RideCompletedCard.config {
         isDriver = false,
         customerIssueCard{
@@ -1694,6 +1708,8 @@ rideCompletedCardConfig state =
             imageVis = VISIBLE,
             visible = if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE
           },
+          tollCharge =  actualTollCharge > 0,
+          tollChargeText = if actualTollCharge > 0 then getString $ TOLL_CHARGES_INCLUDING $ (getCurrency appConfig) <> (show actualTollCharge) else getString TOLL_ROAD_CHANGED,
           bottomText =  getString RIDE_DETAILS
         },
         customerBottomCard {

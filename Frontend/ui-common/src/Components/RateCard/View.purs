@@ -92,6 +92,7 @@ view push config =
             FareUpdate -> fareUpdateView push config
             PaymentFareBreakup -> paymentfareBreakup push config
             WaitingCharges -> waitingChargesView push config
+            TollOrParkingCharges -> tollOrParkingView push config
             _ -> defaultRateCardView push config 
         ]     
       ,linearLayout
@@ -206,6 +207,7 @@ defaultRateCardView push config =
                         "DRIVER_ADDITIONS" -> GoToDriverAddition
                         "FARE_UPDATE_POLICY" -> GoToFareUpdate
                         "WAITING_CHARGES" -> GoToWaitingCharges
+                        "TOLL_OR_PARKING_CHARGES" -> GoToTollOrParkingCharges
                         _  -> NoAction
                     ][  textView
                         [ width WRAP_CONTENT
@@ -317,6 +319,21 @@ fareUpdateView push config =
       , margin $ MarginTop 12
       ]
   ]
+
+tollOrParkingView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+tollOrParkingView push config = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , padding $ Padding 20 0 20 160
+  ][
+    commonTV push (getStringByKey config "TOLL_CHARGES") Color.black800 FontStyle.subHeading1 LEFT 20 NoAction,
+    commonTV push (getStringByKey config "TOLL_CHARGES_DESC") Color.black800 FontStyle.body3 LEFT 8 NoAction,
+    commonTV push (getStringByKey config "PARKING_CHARGES") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction,
+    commonTV push (getStringByKey config "PARKING_CHARGES_DESC") Color.black800 FontStyle.body3 LEFT 8 NoAction
+  ]
+
 
 waitingChargesView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 waitingChargesView push config = 

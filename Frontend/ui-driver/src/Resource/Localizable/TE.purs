@@ -1359,3 +1359,8 @@ getTE stringKey =
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "పత్రం విజయవంతంగా అప్‌లోడ్ చేయబడింది"        
         YOU_ARE_NOT_AT_STOP_LOCATION -> "మీరు స్టాప్ లో ఉన్నారు"
         ARRIVED_AT_STOP -> "స్టాప్ లో చేరింది"
+        DOCUMENT_UPLOADED_SUCCESSFULLY -> "పత్రం విజయవంతంగా అప్‌లోడ్ చేయబడింది"
+        TOLL_CHARGES_INCLUDING amount -> "టోల్ ఛార్జీలు " <> amount <>" ఛార్జీలో చేర్చబడ్డాయి"
+        TOLL_ROAD_CHANGED -> "టోల్ రోడ్ తీసుకోనందున టోల్ ఛార్జీలు తగ్గించబడ్డాయి"
+        RIDE_TOLL_FARE_INCLUDES -> "*రైడ్ ఛార్జీలో టోల్ ఛార్జీలు ఉంటాయి."
+        TOLL_INCLUDED -> "టోల్ (ఛార్జీలో చేర్చబడింది)"

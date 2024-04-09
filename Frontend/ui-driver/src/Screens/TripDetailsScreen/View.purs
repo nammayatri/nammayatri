@@ -31,8 +31,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage, ge
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (/), (<<<), (<>), (==), (||))
-import Prelude (show, (<>))
+import Prelude 
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, hint, horizontalScrollView, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollBarX, scrollView, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
@@ -41,6 +40,7 @@ import Styles.Colors as Color
 import Common.Styles.Colors as Colors
 import Storage(getValueToLocalStore , KeyStore(..))
 import ConfigProvider
+import Mobility.Prelude as MP
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -286,12 +286,10 @@ tripDataView push state =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation HORIZONTAL
-        , gravity CENTER_VERTICAL
         ][ linearLayout
             [ height WRAP_CONTENT
-            , width WRAP_CONTENT
+            , width $ V $ (EHC.screenWidth unit) / 2
             , orientation VERTICAL
-            , weight 0.75
             ][ textView $
                 [ text (getString TRIP_ID)
                 , color Color.black700
@@ -320,9 +318,8 @@ tripDataView push state =
             ]
           , linearLayout
             [ height WRAP_CONTENT
-            , width WRAP_CONTENT
+            , width $ V $ (EHC.screenWidth unit) / 2
             , orientation VERTICAL
-            , weight 0.25
             ][ textView $
                 [ text (getString RIDER)
                 , color Color.black700
@@ -338,14 +335,12 @@ tripDataView push state =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation HORIZONTAL
-        , gravity CENTER_VERTICAL
-        , margin (MarginTop 20)
+        , margin $ MarginTop 20
         , visibility if state.data.status == "CANCELLED" then GONE else VISIBLE
         ][ linearLayout
             [ height WRAP_CONTENT
-            , width WRAP_CONTENT
+            , width $ V $ (EHC.screenWidth unit) / 2
             , orientation VERTICAL
-            , weight 0.865
             ][ textView $
                 [ text (getString DISTANCE)
                 , color Color.black700
@@ -358,17 +353,16 @@ tripDataView push state =
             ]
           , linearLayout
             [ height WRAP_CONTENT
-            , width WRAP_CONTENT
+            , width $ V $ (EHC.screenWidth unit) / 2
             , orientation VERTICAL
-            , weight 0.135
-            , visibility GONE
+            , visibility $ MP.boolToVisibility $ state.data.tollCharge /= 0
             ][ textView $
-                [ text (getString TIME_TAKEN)
+                [ text $ getString TOLL_INCLUDED
                 , color Color.black700
-                , margin (MarginBottom 4)
+                , margin $ MarginBottom 4
                 ] <> FontStyle.body5 TypoGraphy
               , textView $
-                [ text state.data.timeTaken
+                [ text $ (getCurrency appConfig) <> (show state.data.tollCharge)
                 , color Color.black900
                 ] <> FontStyle.body14 TypoGraphy
             ]

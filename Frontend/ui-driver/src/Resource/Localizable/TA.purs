@@ -1359,3 +1359,8 @@ getTA stringKey =
         ENTER_END_RIDE_OTP -> "சவாரி முடிவு OTP ஐ உள்ளிடவும்"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "நீங்கள் நிறுத்த இடத்தில் இல்லை"
         ARRIVED_AT_STOP -> "நிறுத்தம் வந்துவிட்டது"
+        DOCUMENT_UPLOADED_SUCCESSFULLY -> "ஆவணம் வெற்றிகரமாக பதிவேற்றப்பட்டது"
+        TOLL_CHARGES_INCLUDING amount -> "டோல் கட்டணங்கள் " <> amount <>" கட்டணத்தில் சேர்க்கப்பட்டுள்ளது"
+        TOLL_ROAD_CHANGED -> "டோல் ரோடு எடுக்கப்படாததால் டோல் கட்டணம் குறைக்கப்பட்டது"
+        RIDE_TOLL_FARE_INCLUDES -> "*சவாரி கட்டணத்தில் டோல் கட்டணங்களும் அடங்கும்."
+        TOLL_INCLUDED -> "டோல் (கட்டணத்தில் சேர்க்கப்பட்டுள்ளது)"

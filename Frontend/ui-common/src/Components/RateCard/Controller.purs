@@ -30,6 +30,7 @@ data Action = Close
               | GoToDriverAddition 
               | GoToFareUpdate 
               | GoToWaitingCharges
+              | GoToTollOrParkingCharges
               | PrimaryButtonAC PrimaryButton.Action
 
 

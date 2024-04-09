@@ -44,7 +44,8 @@ initData = {
       specialZoneText : "",
       goBackTo : ST.Earning,
       config : DC.config,
-      specialZonePickup : false 
+      specialZonePickup : false ,
+      tollCharge : 0
   },
   props: {
     rating : 4,

@@ -120,7 +120,8 @@ rideActionModalConfig state =
     rideStartTimer = state.props.rideStartTimer,
     tripDuration = (\tripDuration -> (if ( tripDuration / 3600) < 10 then "0" else "") <> (show ( tripDuration / 3600) <> ":") <> (if (tripDuration `mod` 3600) / 60 < 10 then "0" else "") <> show ( (tripDuration `mod` 3600) / 60)  <> " Hr") <$> state.data.activeRide.tripDuration,
     rideStartTime = state.data.activeRide.tripStartTime,
-    startODOReading = fromMaybe "--" $ show <$> state.data.activeRide.startOdometerReading
+    startODOReading = fromMaybe "--" $ show <$> state.data.activeRide.startOdometerReading,
+    tollText = state.props.hasToll
     }
     in rideActionModalConfig'
 
@@ -1337,7 +1338,9 @@ getRideCompletedConfig state = let
         visible = if state.props.isFreeRide then VISIBLE else GONE
       },
       topPill = topPillConfig,
-      bottomText = getString RIDE_DETAILS
+      bottomText = getString RIDE_DETAILS,
+      tollCharge = state.data.endRideData.estimatedTollCharge > 0,
+      tollChargeText = getString if state.data.endRideData.actualTollCharge > 0 then TOLL_CHARGES_INCLUDING $ (CP.getCurrency appConfig) <> (show state.data.endRideData.actualTollCharge) else TOLL_ROAD_CHANGED
     },
     driverBottomCard {
       visible = showDriverBottomCard,

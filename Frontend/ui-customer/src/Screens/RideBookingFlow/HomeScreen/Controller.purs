@@ -900,7 +900,8 @@ eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) s
         { onFirstPage = false
         , vehicleVariant = config.vehicleVariant
         , currentRateCardType = DefaultRateCard
-        , pickUpCharges = config.pickUpCharges
+        , pickUpCharges = config.pickUpCharges 
+        , tollCharge = config.tollCharge
         }
       }
     }
@@ -2382,6 +2383,8 @@ eval (RateCardAction RateCard.GoToFareUpdate) state = continue state { data{rate
 
 eval (RateCardAction RateCard.GoToWaitingCharges) state = continue state { data{rateCard{currentRateCardType = WaitingCharges,onFirstPage = true}}}
 
+eval (RateCardAction RateCard.GoToTollOrParkingCharges) state = continue state { data{rateCard{currentRateCardType = TollOrParkingCharges,onFirstPage = true}}}
+
 eval (RequestInfoCardAction RequestInfoCard.Close) state = 
   continueWithCmd state [ do
     pure $ (RequestInfoCardAction RequestInfoCard.BackPressed)
@@ -2549,6 +2552,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
                                     , vehicleVariant = config.vehicleVariant
                                     , currentRateCardType = DefaultRateCard
                                     , pickUpCharges = config.pickUpCharges
+                                    , tollCharge = config.tollCharge
                                     }}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
@@ -3032,6 +3036,7 @@ estimatesListFlow estimates state = do
         { currentStage = SettingPrice
         , estimateId = estimatesInfo.defaultQuote.id
         , zoneType = estimatesInfo.zoneType
+        , hasToll = estimatesInfo.hasToll
         }
       }
   else do

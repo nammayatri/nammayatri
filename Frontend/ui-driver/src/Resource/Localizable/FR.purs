@@ -982,5 +982,8 @@ getFR stringKey =
         ENTER_END_RIDE_OTP -> "Entrez le OTP de fin de trajet"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "Vous n'êtes pas à l'emplacement de l'arrêt"
         ARRIVED_AT_STOP -> "Arrivé à l'arrêt"
+        TOLL_CHARGES_INCLUDING amount  -> "Frais de péage " <> amount <>" inclus dans le tarif"
+        TOLL_ROAD_CHANGED -> "Frais de péage réduits car la route à péage n'a pas été empruntée"
+        RIDE_TOLL_FARE_INCLUDES -> "*Le tarif du trajet inclut les frais de péage."
+        TOLL_INCLUDED -> "Péage (inclus dans le tarif)"
         _ -> ""
-

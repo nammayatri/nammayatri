@@ -75,6 +75,21 @@ topGradientView config push =
       , rideDetailsButtonView config push 
     ]
 
+tollTextVew :: forall w. Config -> PrestoDOM (Effect Unit) w
+tollTextVew config = 
+  linearLayout [
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity CENTER
+  , margin $ MarginBottom 16
+  , visibility $ boolToVisibility config.topCard.tollCharge
+  ][
+    textView $ [
+      text $ config.topCard.tollChargeText 
+    , color Color.black600
+    ] <> FontStyle.body3 TypoGraphy
+  ]
+
 topPillAndSupportView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 topPillAndSupportView config push = 
   relativeLayout
@@ -189,6 +204,7 @@ priceAndDistanceUpdateView config push =
               , visibility if config.topCard.fareUpdatedVisiblity then VISIBLE else GONE
               ] <> (FontStyle.title1 TypoGraphy)
           ]
+        , tollTextVew config
         , pillView config push
       ]
 

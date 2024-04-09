@@ -148,6 +148,8 @@ initData =
           , disability: Nothing
           , payerVpa: ""
           , specialZonePickup: Nothing
+          , actualTollCharge : 0
+          , estimatedTollCharge : 0
           }
       , driverGotoState:
           { gotoCount: 0
@@ -246,6 +248,7 @@ initData =
       , odometerFileId: Nothing
       , odometerUploadAttempts: 0
       , odometerImageUploading: false
+      , hasToll: false
       }
   }
 

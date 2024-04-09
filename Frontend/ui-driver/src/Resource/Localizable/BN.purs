@@ -1343,7 +1343,6 @@ getBN stringKey =
         VEHICLE_PUC_STR -> "গাড়ির PUC"
         RC_MANDATORY -> "আরসি এই নথির জন্য বাধ্যতামূলক"
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "নথিপত্র সফলভাবে আপলোড হয়েছে"        
-
         RENTAL_FARE -> "ভাড়া ভাড়া"
         DURATION -> "সময়কাল"
         START_ODO_READING -> "শুরুর ওডো পঠন"
@@ -1361,3 +1360,8 @@ getBN stringKey =
         ENTER_END_RIDE_OTP -> "শেষ রাইড ওটিপি প্রবেশ করুন"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "আপনি স্টপ স্থানে নেই"
         ARRIVED_AT_STOP -> "স্টপে আগত হয়েছে"
+        DOCUMENT_UPLOADED_SUCCESSFULLY -> "নথিপত্র সফলভাবে আপলোড হয়েছে"
+        TOLL_CHARGES_INCLUDING amount -> "টোল চার্জ " <> amount <>" ভাড়া অন্তর্ভুক্ত"
+        TOLL_ROAD_CHANGED -> "টোল রোড নেওয়া না হওয়ায় টোল চার্জ কমে গেছে"
+        RIDE_TOLL_FARE_INCLUDES -> "*রাইডের ভাড়া টোল চার্জ অন্তর্ভুক্ত।"
+        TOLL_INCLUDED -> "টোল (ভাড়ায় অন্তর্ভুক্ত)"
