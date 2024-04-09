@@ -228,6 +228,7 @@ data UserActionType
   | UNDER_REVIEW_DRIVERS_LIST
   | DRIVER_DOCUMENT_INFO
   | UPDATE_DOCUMENT
+  | GET_TICKET_PLACES
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)
