@@ -246,11 +246,11 @@ cancelSearch personId dcr = do
       do
         _ <- QPFS.updateStatus personId DPFS.IDLE
         void $ QEstimate.updateStatus dcr.estimateId DEstimate.DRIVER_QUOTE_CANCELLED
-        QDOffer.updateStatus dcr.estimateId DDO.INACTIVE
+        QDOffer.updateStatus DDO.INACTIVE dcr.estimateId
       else do
         _ <- QPFS.updateStatus personId DPFS.IDLE
         void $ QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
-        QDOffer.updateStatus dcr.estimateId DDO.INACTIVE
+        QDOffer.updateStatus DDO.INACTIVE dcr.estimateId
   QPFS.clearCache personId
 
 driverDistanceToPickup ::

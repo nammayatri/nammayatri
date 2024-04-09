@@ -166,7 +166,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   _ <- QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
   _ <- QEstimate.updateStatus estimateId DEstimate.DRIVER_QUOTE_REQUESTED
-  _ <- QDOffer.updateStatus estimateId DDO.INACTIVE
+  _ <- QDOffer.updateStatus DDO.INACTIVE estimateId
   let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney <$> req.customerExtraFee) -- TODO check for correct currency
   when (isJust mbCustomerExtraFee || isJust req.paymentMethodId) $ do
     void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee req.paymentMethodId
