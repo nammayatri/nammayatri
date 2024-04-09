@@ -5,6 +5,7 @@ TARGET_REPOS=("https://github.com/MercyQueen/asset-store")
 branch_name=$1
 BRANCH_NAME=$2
 COMMIT_HASH=$3
+token=$4
 
 files_to_be_added=();
 
