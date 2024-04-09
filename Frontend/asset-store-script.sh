@@ -62,7 +62,7 @@ create_pull_request() {
     if [ ! -d "$target_repo_name" ]; then
         # git clone "$target_repo" "$target_repo_name" || { echo "Error: Failed to clone repository"; return 1; }
         git config user.email 'mercyqueen71@gmail.com'
-        git config user.name 'S S Mercy Queen'
+        git config user.name 'MercyQueen'
         git remote set-url origin git@github.com:nammayatri/asset-store.git "$target_repo_name"
         git clone git@github.com:nammayatri/asset-store.git "$target_repo_name"
 
