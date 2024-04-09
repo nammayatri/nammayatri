@@ -16,15 +16,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-        
       - name: Set up environment variables
         run: |
           COMMIT_HASH=$(git rev-parse HEAD)
           echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
           echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
           echo "token=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+          git_user_name=$(git config user.name)
+          git_user_email=$(git config user.email)
           
       - name: Run script
         run: |
           chmod +x asset-store-script.sh  # Ensure script has executable permissions
-          ./asset-store-script.sh abcd $COMMIT_HASH $BRANCH_NAME $token
+          ./asset-store-script.sh abcd 
