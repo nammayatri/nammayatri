@@ -3,9 +3,6 @@
 # Define the source and target repositories
 TARGET_REPOS=("https://github.com/MercyQueen/asset-store")
 branch_name=$1
-BRANCH_NAME=$2
-COMMIT_HASH=$3
-token=$4
 
 files_to_be_added=();
 
@@ -61,7 +58,9 @@ create_pull_request() {
     echo "Target repository: $target_repo_name"
     # git clone "$target_repo" || { echo "Error: Failed to clone repository"; return 1; }
     if [ ! -d "$target_repo_name" ]; then
-        git clone "$target_repo" "$target_repo_name" || { echo "Error: Failed to clone repository"; return 1; }
+        # git clone "$target_repo" "$target_repo_name" || { echo "Error: Failed to clone repository"; return 1; }
+        git clone https://$git_user_name@github.com/$git_user_name/MercyQueen/asset-store.git
+
     else
         echo "Repository already exists in $target_repo_name"
     fi
