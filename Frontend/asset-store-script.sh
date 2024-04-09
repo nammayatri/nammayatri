@@ -3,6 +3,7 @@
 # Define the source and target repositories
 TARGET_REPOS=("https://github.com/MercyQueen/asset-store")
 branch_name=$1
+abcd=$2
 
 files_to_be_added=();
 
@@ -23,6 +24,7 @@ create_pull_request() {
     local target_repo="$TARGET_REPOS"
     local target_repo_name="$(basename "$target_repo")" || { echo "Error: Invalid target repository URL"; return 1; }
 
+    echo "acbdbksjhjksdhf $abcd"
     if [ -z "$branch_name" ]; then
         echo "Error: Branch name not provided"
         return 1
