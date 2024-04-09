@@ -61,7 +61,9 @@ create_pull_request() {
     # git clone "$target_repo" || { echo "Error: Failed to clone repository"; return 1; }
     if [ ! -d "$target_repo_name" ]; then
         # git clone "$target_repo" "$target_repo_name" || { echo "Error: Failed to clone repository"; return 1; }
-        git clone https://$git_user_name@github.com/$git_user_name/MercyQueen/asset-store.git
+        git config user.email 'namma.yatri.jenkins@gmail.com'
+        git config user.name 'ny-jenkins'
+        git remote set-url origin git@github.com:nammayatri/asset-store.git
 
     else
         echo "Repository already exists in $target_repo_name"
