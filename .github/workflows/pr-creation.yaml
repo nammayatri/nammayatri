@@ -1,0 +1,29 @@
+name: Execute Script
+
+on:
+  push:
+    branches:
+      - main  # Adjust this to the branch you want to trigger the workflow on
+
+jobs:
+  execute_script:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: Frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        
+      - name: Set up environment variables
+        run: |
+          COMMIT_HASH=$(git rev-parse HEAD)
+          echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
+          echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+          
+      - name: Run script
+        run: |
+          chmod +x asset-store-script.sh  # Ensure script has executable permissions
+          ./asset-store-script.sh abcd $COMMIT_HASH $BRANCH_NAME
