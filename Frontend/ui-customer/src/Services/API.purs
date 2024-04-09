@@ -990,7 +990,8 @@ newtype RideBookingRes = RideBookingRes {
   specialLocationTag :: Maybe String,
   status :: String,
   tripTerms :: Array String,
-  updatedAt :: String
+  updatedAt :: String,
+  vehicleServiceTierType :: Maybe String
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {

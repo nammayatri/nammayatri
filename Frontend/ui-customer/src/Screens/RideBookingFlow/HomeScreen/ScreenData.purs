@@ -557,7 +557,8 @@ dummyRideBooking = RideBookingRes
   sosStatus: Nothing,
   estimatedDistance : Nothing,
   estimatedDuration : Nothing,
-  rideScheduledTime : Nothing
+  rideScheduledTime : Nothing,
+  vehicleServiceTierType : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails
