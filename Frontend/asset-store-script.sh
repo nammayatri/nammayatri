@@ -120,7 +120,7 @@ create_pull_request() {
             add_file_for_commit "$dir" "$sub_directory" "$asset_type" "$asset_name" "$source_path"
         done
     fi
-    done
+    done 
     for item in "${files_to_be_added[@]}"; do
       source_path="${item%:*}"
       updated_path="${item#*:}"
