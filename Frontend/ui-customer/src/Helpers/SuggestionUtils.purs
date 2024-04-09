@@ -150,6 +150,7 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config =
           updateExisting existingTrip =
             if (getDistanceBwCordinates trip.sourceLat trip.sourceLong existingTrip.sourceLat existingTrip.sourceLong) < config.tripDistanceThreshold
             && (getDistanceBwCordinates trip.destLat trip.destLong existingTrip.destLat existingTrip.destLong) < config.tripDistanceThreshold
+            && existingTrip.serviceTierName == trip.serviceTierName
             then existingTrip
                   { frequencyCount = Just $ (fromMaybe 0 existingTrip.frequencyCount) +  1
                   , recencyDate = if isPastTrip then existingTrip.recencyDate else Just $ getCurrentUTC ""
@@ -160,7 +161,7 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config =
 
           updatedTrips = map updateExisting trips
           tripExists = any (\tripItem -> (getDistanceBwCordinates tripItem.sourceLat tripItem.sourceLong trip.sourceLat trip.sourceLong) < config.tripDistanceThreshold
-            && (getDistanceBwCordinates tripItem.destLat tripItem.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold && tripItem.vehicleVariant == trip.vehicleVariant) trips
+            && (getDistanceBwCordinates tripItem.destLat tripItem.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold && tripItem.serviceTierName == trip.serviceTierName) trips
           sortedTrips = sortTripsByScore updatedTrips
         in
           if tripExists
@@ -281,7 +282,8 @@ rideListToTripsTransformer listRes =
              isSpecialZone : (null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode)),
              locationScore : Nothing,
              frequencyCount : Nothing,
-             vehicleVariant : (fromMaybe dummyRideAPIEntity (head ride.rideList))^._vehicleVariant
+             vehicleVariant : (fromMaybe dummyRideAPIEntity (head ride.rideList))^._vehicleVariant,
+             serviceTierName : (fromMaybe "" ride.serviceTierName)
          }
 
 updateMapWithPastTrips :: Array Trip -> HomeScreenState -> SuggestionsMap

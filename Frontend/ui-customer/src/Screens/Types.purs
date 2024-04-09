@@ -451,6 +451,7 @@ type IndividualRideCardState =
   , isSrcServiceable :: Boolean
   , optionsVisibility :: Boolean
   , merchantExoPhone :: String
+  , serviceTierName :: String
   }
 
 
@@ -794,7 +795,7 @@ type HomeScreenStateProps =
   , showSpecialZoneInfoPopup :: Boolean
   , hotSpot :: HotSpotProps
   , isBannerDataComputed :: Boolean
-  , repeatRideVariant :: String
+  , repeatRideServiceTierName :: String
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -1146,6 +1147,7 @@ type DriverInfoCard =
   , sourceAddress :: Address
   , destinationAddress :: Address
   , status :: String
+  , serviceTierName :: String
   }
 
 type RatingCard =
@@ -1387,6 +1389,7 @@ type Trip = {
   , locationScore :: Maybe Number
   , isSpecialZone :: Boolean
   , vehicleVariant :: String
+  , serviceTierName :: String
 }
 type SuggestionsData =  {
     suggestionsMap :: SuggestionsMap
