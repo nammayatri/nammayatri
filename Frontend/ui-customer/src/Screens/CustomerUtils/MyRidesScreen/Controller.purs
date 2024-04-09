@@ -202,7 +202,7 @@ myRideListTransformerProp listRes =
         destination = fromMaybe dummyBookingDetails $ if (getFareProductType rideApiDetails.fareProductType) == FPT.RENTAL then (ride.bookingDetails ^._contents^._stopLocation) else (ride.bookingDetails ^._contents^._toLocation)
         imageInfo = case fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleVariant)of
                     Just variant -> split (Pattern ",") (getVehicleVariantImage $ show variant)
-                    Nothing -> ["",""]
+                    Nothing -> if isJust ride.vehicleServiceTierType then split (Pattern ",") (getVehicleVariantImage $ fromMaybe "" ride.vehicleServiceTierType) else ["",""]
         imageName = fromMaybe "" $ imageInfo !!0
         imageUrl = fromMaybe "" $ imageInfo !!1
     in
