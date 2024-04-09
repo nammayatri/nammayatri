@@ -68,7 +68,8 @@ create_pull_request() {
     else
         echo "Repository already exists in $target_repo_name"
     fi
-
+    lss=$(ls)
+    echo "ls is $lss"
     cd "$target_repo_name" || { echo "Error: Directory $target_repo_name does not exist after cloning"; return 1; }
     git checkout main
     git pull origin --rebase main || { echo "Error: Failed to pull latest changes"; return 1; }
