@@ -21,7 +21,7 @@ import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Common (distanceToHighPrecMeters)
+import Kernel.Types.Common (distanceToHighPrecDistance, distanceToHighPrecMeters)
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
@@ -90,6 +90,7 @@ updateRideRating rideId rideRating = do
 
 updateMultiple :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Ride -> m ()
 updateMultiple rideId ride = do
+  let distanceUnit = ride.chargeableDistance <&> (.unit) -- should be the same for all fields
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamR.status ride.status,
@@ -97,8 +98,8 @@ updateMultiple rideId ride = do
       Se.Set BeamR.totalFare (ride.totalFare <&> (.amount)),
       Se.Set BeamR.currency (ride.fare <&> (.currency)),
       Se.Set BeamR.chargeableDistance (distanceToHighPrecMeters <$> ride.chargeableDistance),
-      Se.Set BeamR.chargeableDistanceValue (ride.chargeableDistance <&> (.value)),
-      Se.Set BeamR.distanceUnit (ride.chargeableDistance <&> (.unit)),
+      Se.Set BeamR.chargeableDistanceValue $ distanceToHighPrecDistance distanceUnit <$> ride.chargeableDistance,
+      Se.Set BeamR.distanceUnit distanceUnit,
       Se.Set BeamR.rideStartTime ride.rideStartTime,
       Se.Set BeamR.rideEndTime ride.rideEndTime,
       Se.Set BeamR.endOtp ride.endOtp,

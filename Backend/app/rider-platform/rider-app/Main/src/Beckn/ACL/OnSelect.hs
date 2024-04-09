@@ -154,7 +154,7 @@ buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl = do
   bppQuoteId <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest $ "Missing fulfillmentId, fulfillment:-" <> show fulfillment)
   pure $
     DOnSelect.DriverOfferQuoteDetails
-      { distanceToPickup, -- realToFrac <$> distanceToPickup',
+      { distanceToPickup,
         bppDriverQuoteId = bppQuoteId,
         ..
       }

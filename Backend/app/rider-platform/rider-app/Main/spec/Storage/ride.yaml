@@ -144,16 +144,17 @@ Ride:
     chargeableDistance: Kernel.Types.Common.mkDistanceWithDefault distanceUnit chargeableDistanceValue <$> chargeableDistance|E
     traveledDistance: Kernel.Types.Common.mkDistanceWithDefault distanceUnit traveledDistanceValue <$> traveledDistance|E
 
+  # distanceUnit should be the same for all fields
   toTType:
     fare: Kernel.Prelude.fmap (.amount)|I
     totalFare: Kernel.Prelude.fmap (.amount)|I
     currency: Kernel.Prelude.fmap (.currency)|I
     trackingUrl: Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl|I
     chargeableDistance: Kernel.Prelude.fmap Kernel.Types.Common.distanceToHighPrecMeters|I
-    chargeableDistanceValue: Kernel.Prelude.fmap (.value)|I
-    distanceUnit: Kernel.Prelude.fmap (.unit)|I
+    chargeableDistanceValue: Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.fmap (.unit) chargeableDistance))|I
+    distanceUnit: Kernel.Prelude.fmap (.unit) chargeableDistance|E
     traveledDistance: Kernel.Prelude.fmap Kernel.Types.Common.distanceToHighPrecMeters|I
-    traveledDistanceValue: Kernel.Prelude.fmap (.value)|I
+    traveledDistanceValue: Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.fmap (.unit) chargeableDistance))|I
 
   beamType:
     fare: Maybe HighPrecMoney

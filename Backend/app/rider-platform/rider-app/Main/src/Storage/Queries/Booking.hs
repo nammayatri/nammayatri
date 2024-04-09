@@ -431,6 +431,7 @@ instance ToTType' BeamB.Booking Booking where
           DRB.DriverOfferDetails details -> (DQuote.DRIVER_OFFER, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
           DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode)
           DRB.InterCityDetails details -> (DQuote.INTER_CITY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
+        distanceUnit = distance <&> (.unit) -- should be the same for all fields
      in BeamB.BookingT
           { BeamB.id = getId id,
             BeamB.clientId = getId <$> clientId,
@@ -457,8 +458,8 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.otpCode = otpCode,
             BeamB.vehicleVariant = vehicleServiceTierType,
             BeamB.distance = distanceToHighPrecMeters <$> distance,
-            BeamB.distanceValue = distance <&> (.value),
-            BeamB.distanceUnit = distance <&> (.unit),
+            BeamB.distanceValue = distanceToHighPrecDistance distanceUnit <$> distance,
+            BeamB.distanceUnit,
             BeamB.tripTermsId = getId <$> (tripTerms <&> (.id)),
             BeamB.isScheduled = Just isScheduled,
             BeamB.stopLocationId = stopLocationId,
@@ -466,7 +467,7 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
             BeamB.specialLocationTag = specialLocationTag,
             BeamB.estimatedDistance = distanceToHighPrecMeters <$> estimatedDistance,
-            BeamB.estimatedDistanceValue = estimatedDistance <&> (.value),
+            BeamB.estimatedDistanceValue = distanceToHighPrecDistance distanceUnit <$> estimatedDistance,
             BeamB.estimatedDuration = estimatedDuration,
             BeamB.createdAt = createdAt,
             BeamB.updatedAt = updatedAt,
