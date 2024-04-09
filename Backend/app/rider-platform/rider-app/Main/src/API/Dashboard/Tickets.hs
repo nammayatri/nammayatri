@@ -38,6 +38,10 @@ type GetServicesAPI =
     :> "services"
     :> Post '[JSON] [ATB.TicketServiceResp]
 
+type GetTicketPlacesAPI =
+  "places"
+    :> Get '[JSON] [DTB.TicketPlace]
+
 type UpdateSeatManagementAPI =
   "update"
     :> ReqBody '[JSON] ATB.TicketBookingUpdateSeatsReq
@@ -48,12 +52,14 @@ type API =
     :> VerifyBookingDetailsAPI
     :<|> GetServicesAPI
     :<|> UpdateSeatManagementAPI
+    :<|> GetTicketPlacesAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   verifyBookingDetails merchantId
     :<|> getServices merchantId
     :<|> updateSeatManagement merchantId
+    :<|> getTicketPlaces merchantId
 
 verifyBookingDetails :: ShortId DM.Merchant -> Id DTB.TicketService -> ShortId DTB.TicketBookingService -> FlowHandler ATB.TicketServiceVerificationResp
 verifyBookingDetails merchantShortId personServiceId ticketBookingServiceShortId = do
@@ -69,3 +75,8 @@ updateSeatManagement :: ShortId DM.Merchant -> ATB.TicketBookingUpdateSeatsReq -
 updateSeatManagement merchantShortId req = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
   withFlowHandlerAPI $ DTB.postTicketBookingsUpdateSeats (Nothing, m.id) req
+
+getTicketPlaces :: ShortId DM.Merchant -> FlowHandler [DTB.TicketPlace]
+getTicketPlaces merchantShortId = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  withFlowHandlerAPI $ DTB.getTicketPlaces (Nothing, m.id)

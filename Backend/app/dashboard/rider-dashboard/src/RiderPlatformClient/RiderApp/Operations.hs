@@ -117,7 +117,8 @@ data IssueAPIs = IssueAPIs
 data TicketAPIs = TicketAPIs
   { verifyBookingDetails :: Id DTB.TicketService -> ShortId DTB.TicketBookingService -> Euler.EulerClient DTB.TicketServiceVerificationResp,
     getServices :: Id DTB.TicketPlace -> Maybe Day -> Euler.EulerClient [DTB.TicketServiceResp],
-    updateSeatManagement :: DTB.TicketBookingUpdateSeatsReq -> Euler.EulerClient APISuccess
+    updateSeatManagement :: DTB.TicketBookingUpdateSeatsReq -> Euler.EulerClient APISuccess,
+    getTicketPlaces :: Euler.EulerClient [DTB.TicketPlace]
   }
 
 newtype HotSpotAPIs = HotSpotAPIs
@@ -189,7 +190,8 @@ mkAppBackendAPIs merchantId city token = do
 
     verifyBookingDetails
       :<|> getServices
-      :<|> updateSeatManagement = ticketsClient
+      :<|> updateSeatManagement
+      :<|> getTicketPlaces = ticketsClient
 
     removeExpires = hotSpotClient
 
