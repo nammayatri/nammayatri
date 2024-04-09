@@ -46,6 +46,7 @@ instance FromTType' BeamRS.RentalDetails RentalDetails where
 
 instance ToTType' BeamRS.RentalDetails RentalDetails where
   toTType' RentalDetails {..} = do
+    let distanceUnit = Just includedDistancePerHr.unit -- should be the same for all fields
     BeamRS.RentalDetailsT
       { BeamRS.id = getId id,
         BeamRS.baseFare = baseFare.amountInt,
@@ -57,8 +58,8 @@ instance ToTType' BeamRS.RentalDetails RentalDetails where
         BeamRS.perExtraMinRateAmount = Just perExtraMinRate.amount,
         BeamRS.perExtraKmRateAmount = Just perExtraKmRate.amount,
         BeamRS.includedKmPerHr = metersToKilometers $ distanceToMeters includedDistancePerHr,
-        BeamRS.includedDistancePerHrValue = Just includedDistancePerHr.value,
-        BeamRS.distanceUnit = Just includedDistancePerHr.unit,
+        BeamRS.includedDistancePerHrValue = Just $ distanceToHighPrecDistance distanceUnit includedDistancePerHr,
+        BeamRS.distanceUnit = distanceUnit,
         BeamRS.plannedPerKmRate = plannedPerKmRate.amountInt,
         BeamRS.nightShiftCharge = (.nightShiftCharge.amountInt) <$> nightShiftInfo,
         BeamRS.plannedPerKmRateAmount = Just plannedPerKmRate.amount,

@@ -166,6 +166,7 @@ instance ToTType' BeamQ.Quote Quote where
           DQ.DriverOfferDetails driverOffer -> (DFFP.DRIVER_OFFER, Nothing, Nothing, Just $ getId driverOffer.id, Nothing)
           DQ.OneWaySpecialZoneDetails specialZoneQuote -> (DFFP.ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Nothing, Just $ getId specialZoneQuote.id)
           DQ.InterCityDetails details -> (DFFP.INTER_CITY, Nothing, Nothing, Nothing, Just $ getId details.id)
+        distanceUnit = distanceToNearestDriver <&> (.unit) -- should be the same for all fields
      in BeamQ.QuoteT
           { BeamQ.id = getId id,
             BeamQ.fareProductType = fareProductType,
@@ -178,8 +179,8 @@ instance ToTType' BeamQ.Quote Quote where
             BeamQ.itemId = itemId,
             BeamQ.providerUrl = showBaseUrl providerUrl,
             BeamQ.distanceToNearestDriver = distanceToHighPrecMeters <$> distanceToNearestDriver,
-            BeamQ.distanceToNearestDriverValue = distanceToNearestDriver <&> (.value),
-            BeamQ.distanceUnit = distanceToNearestDriver <&> (.unit),
+            BeamQ.distanceToNearestDriverValue = distanceToHighPrecDistance distanceUnit <$> distanceToNearestDriver,
+            BeamQ.distanceUnit,
             BeamQ.vehicleVariant = vehicleServiceTierType,
             BeamQ.serviceTierName = serviceTierName,
             BeamQ.serviceTierShortDesc = serviceTierShortDesc,

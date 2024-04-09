@@ -129,6 +129,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
 
 instance ToTType' BeamSR.SearchRequest SearchRequest where
   toTType' SearchRequest {..} = do
+    let distanceUnit = distance <&> (.unit) -- should be the same for all fields
     BeamSR.SearchRequestT
       { BeamSR.id = getId id,
         BeamSR.startTime = startTime,
@@ -138,10 +139,10 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.fromLocationId = Just $ getId fromLocation.id,
         BeamSR.toLocationId = getId <$> (toLocation <&> (.id)),
         BeamSR.distance = getHighPrecMeters . distanceToHighPrecMeters <$> distance,
-        BeamSR.distanceValue = distance <&> (.value),
-        BeamSR.distanceUnit = distance <&> (.unit),
+        BeamSR.distanceValue = distanceToHighPrecDistance distanceUnit <$> distance,
+        BeamSR.distanceUnit,
         BeamSR.maxDistance = getHighPrecMeters . distanceToHighPrecMeters <$> maxDistance,
-        BeamSR.maxDistanceValue = maxDistance <&> (.value),
+        BeamSR.maxDistanceValue = distanceToHighPrecDistance distanceUnit <$> maxDistance,
         BeamSR.estimatedRideDuration = estimatedRideDuration,
         BeamSR.device = device,
         BeamSR.merchantId = getId merchantId,

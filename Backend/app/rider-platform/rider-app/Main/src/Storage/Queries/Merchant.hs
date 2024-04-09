@@ -119,6 +119,7 @@ instance FromTType' BeamM.Merchant Merchant where
 instance ToTType' BeamM.Merchant Merchant where
   toTType' Merchant {..} = do
     let Geo.GeofencingConfig {..} = geofencingConfig
+    let distanceUnit = Just editPickupDistanceThreshold.unit -- should be the same for all fields
     BeamM.MerchantT
       { BeamM.id = getId id,
         BeamM.subscriberId = getShortId subscriberId,
@@ -150,16 +151,16 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
         BeamM.mediaFileUrlPattern = mediaFileUrlPattern,
         BeamM.editPickupDistanceThreshold = distanceToHighPrecMeters editPickupDistanceThreshold,
-        BeamM.editPickupDistanceThresholdValue = Just editPickupDistanceThreshold.value,
-        BeamM.distanceUnit = Just editPickupDistanceThreshold.unit,
+        BeamM.editPickupDistanceThresholdValue = Just $ distanceToHighPrecDistance distanceUnit editPickupDistanceThreshold,
+        BeamM.distanceUnit,
         BeamM.driverDistanceThresholdFromPickup = distanceToHighPrecMeters driverDistanceThresholdFromPickup,
-        BeamM.driverDistanceThresholdFromPickupValue = Just driverDistanceThresholdFromPickup.value,
+        BeamM.driverDistanceThresholdFromPickupValue = Just $ distanceToHighPrecDistance distanceUnit driverDistanceThresholdFromPickup,
         BeamM.numOfAllowedEditPickupLocationAttemptsThreshold = numOfAllowedEditPickupLocationAttemptsThreshold,
         BeamM.publicMediaFileUrlPattern = publicMediaFileUrlPattern,
         BeamM.scheduleRideBufferTime = nominalDiffTimeToSeconds scheduleRideBufferTime,
         BeamM.fakeOtpMobileNumbers = fakeOtpMobileNumbers,
         BeamM.kaptureDisposition = kaptureDisposition,
         BeamM.arrivedPickupThreshold = Just $ distanceToMeters arrivedPickupThreshold,
-        BeamM.arrivedPickupThresholdValue = Just $ arrivedPickupThreshold.value,
+        BeamM.arrivedPickupThresholdValue = Just $ distanceToHighPrecDistance distanceUnit arrivedPickupThreshold,
         BeamM.driverOnTheWayNotifyExpiry = Just driverOnTheWayNotifyExpiry
       }

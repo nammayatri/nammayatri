@@ -125,6 +125,7 @@ instance FromTType' BeamE.Estimate Estimate where
 
 instance ToTType' BeamE.Estimate Estimate where
   toTType' Estimate {..} = do
+    let distanceUnit = estimatedDistance <&> (.unit) -- should be the same for all fields
     BeamE.EstimateT
       { BeamE.id = getId id,
         BeamE.requestId = getId requestId,
@@ -140,8 +141,8 @@ instance ToTType' BeamE.Estimate Estimate where
         BeamE.maxTotalFare = totalFareRange.maxFare.amount,
         BeamE.estimatedDuration = estimatedDuration,
         BeamE.estimatedDistance = distanceToHighPrecMeters <$> estimatedDistance,
-        BeamE.estimatedDistanceValue = estimatedDistance <&> (.value),
-        BeamE.distanceUnit = estimatedDistance <&> (.unit),
+        BeamE.estimatedDistanceValue = distanceToHighPrecDistance distanceUnit <$> estimatedDistance,
+        BeamE.distanceUnit,
         BeamE.device = device,
         BeamE.providerId = providerId,
         BeamE.providerUrl = showBaseUrl providerUrl,

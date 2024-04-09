@@ -64,6 +64,7 @@ instance FromTType' BeamDO.DriverOffer DriverOffer where
 
 instance ToTType' BeamDO.DriverOffer DriverOffer where
   toTType' DriverOffer {..} = do
+    let distanceUnit = distanceToPickup <&> (.unit) -- should be the same for all fields
     BeamDO.DriverOfferT
       { BeamDO.id = getId id,
         BeamDO.estimateId = getId estimateId,
@@ -72,8 +73,8 @@ instance ToTType' BeamDO.DriverOffer DriverOffer where
         BeamDO.driverName = driverName,
         BeamDO.durationToPickup = durationToPickup,
         BeamDO.distanceToPickup = distanceToHighPrecMeters <$> distanceToPickup,
-        BeamDO.distanceToPickupValue = distanceToPickup <&> (.value),
-        BeamDO.distanceUnit = distanceToPickup <&> (.unit),
+        BeamDO.distanceToPickupValue = distanceToHighPrecDistance distanceUnit <$> distanceToPickup,
+        BeamDO.distanceUnit,
         BeamDO.validTill = validTill,
         BeamDO.bppQuoteId = bppQuoteId,
         BeamDO.rating = rating,

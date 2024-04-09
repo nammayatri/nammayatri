@@ -82,6 +82,7 @@ instance FromTType' BeamBCR.BookingCancellationReason BookingCancellationReason 
 
 instance ToTType' BeamBCR.BookingCancellationReason BookingCancellationReason where
   toTType' BookingCancellationReason {..} = do
+    let distanceUnit = driverDistToPickup <&> (.unit) -- should be the same for all fields
     BeamBCR.BookingCancellationReasonT
       { BeamBCR.bookingId = getId bookingId,
         BeamBCR.rideId = getId <$> rideId,
@@ -93,6 +94,6 @@ instance ToTType' BeamBCR.BookingCancellationReason BookingCancellationReason wh
         BeamBCR.driverCancellationLocationLat = driverCancellationLocation <&> (.lat),
         BeamBCR.driverCancellationLocationLon = driverCancellationLocation <&> (.lon),
         BeamBCR.driverDistToPickup = distanceToMeters <$> driverDistToPickup,
-        BeamBCR.driverDistToPickupValue = driverDistToPickup <&> (.value),
-        BeamBCR.distanceUnit = driverDistToPickup <&> (.unit)
+        BeamBCR.driverDistToPickupValue = distanceToHighPrecDistance distanceUnit <$> driverDistToPickup,
+        BeamBCR.distanceUnit
       }
