@@ -18,14 +18,15 @@ jobs:
         uses: actions/checkout@v2
       - name: Set up environment variables
         run: |
+          
+          echo "token=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
           COMMIT_HASH=$(git rev-parse HEAD)
           echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
           echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
-          echo "token=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
-          git_user_name=$(git config user.name)
-          git_user_email=$(git config user.email)
-          echo "git_user_name=$COMMIT_HASH" >> $GITHUB_ENV
-          echo "git_user_email=$COMMIT_HASH" >> $GITHUB_ENV
+          GIT_USER_NAME=$(git config user.name)
+          GIT_USER_EMAIL=$(git config user.email)
+          echo "GIT_USER_NAME=$GIT_USER_NAME" >> $GITHUB_ENV
+          echo "GIT_USER_EMAIL=$GIT_USER_EMAIL" >> $GITHUB_ENV
           
       - name: Run script
         run: |
