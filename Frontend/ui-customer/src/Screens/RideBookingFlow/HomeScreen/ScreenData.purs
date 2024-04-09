@@ -315,7 +315,7 @@ initData = {
     , showSpecialZoneInfoPopup : false
     , hotSpot : { selectedSpot : Nothing, centroidPoint : Nothing }
     , isBannerDataComputed : false
-    , repeatRideVariant : ""
+    , repeatRideServiceTierName : ""
   }
 }
 
@@ -418,6 +418,7 @@ dummyDriverInfo =
   , sourceAddress : dummyAddress
   , destinationAddress : dummyAddress
   , status : ""
+  , serviceTierName : ""
   }
 
 dummySettingBar :: SettingSideBarState
@@ -528,7 +529,8 @@ dummyRideBooking = RideBookingRes
   merchantExoPhone : "",
   specialLocationTag : Nothing,
   hasDisability : Nothing,
-  sosStatus: Nothing
+  sosStatus: Nothing,
+  serviceTierName : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails
@@ -564,5 +566,6 @@ dummyTrip = {
     recencyDate: Nothing,  
     locationScore: Nothing,  
     isSpecialZone: true,
-    vehicleVariant: ""
+    vehicleVariant: "",
+    serviceTierName : ""
 }

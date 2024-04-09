@@ -127,6 +127,7 @@ myRideListTransformer isSrcServiceable listRes = filter (\item -> (item.status =
   , isSrcServiceable
   , vehicleVariant : fetchVehicleVariant rideDetails.vehicleVariant
   , merchantExoPhone : ride.merchantExoPhone
+  , serviceTierName : fromMaybe "" ride.serviceTierName
   }) listRes)
 
 matchRidebyId :: IndividualRideCardState -> IndividualRideCardState -> Boolean

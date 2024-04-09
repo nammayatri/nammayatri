@@ -992,7 +992,8 @@ homeScreenFlow = do
                                                         recencyDate : Nothing,
                                                         frequencyCount : Just 1,
                                                         isSpecialZone : state.props.isSpecialZone,
-                                                        vehicleVariant : state.data.driverInfoCardState.vehicleVariant
+                                                        vehicleVariant : state.data.driverInfoCardState.vehicleVariant,
+                                                        serviceTierName : state.data.driverInfoCardState.serviceTierName
                                                         }
                                             currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
                                             currentMap = getSuggestionsMapFromLocal FunctionCall
@@ -1537,7 +1538,7 @@ homeScreenFlow = do
           (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
           geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
           pickUpPoints = mapSpecialZoneGates srcSpecialLocation.gatesInfo
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = cityName, locateOnMapProps{ sourceLocationName = Just srcSpecialLocation.locationName, sourceGeoJson = Just geoJson, sourceGates = Just pickUpPoints}, repeatRideVariant = state.vehicleVariant}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = cityName, locateOnMapProps{ sourceLocationName = Just srcSpecialLocation.locationName, sourceGeoJson = Just geoJson, sourceGates = Just pickUpPoints}, repeatRideServiceTierName = state.serviceTierName}})
       setValueToLocalStore CUSTOMER_LOCATION $ show cityName
       when (state.isSpecialZone) $ do
         modifyScreenState $ HomeScreenStateType 

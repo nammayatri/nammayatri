@@ -2476,7 +2476,7 @@ eval (RepeatRide index item) state = do
   void $ pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ "4" 
   void $ pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ "8000.0" 
   void $ pure $ setValueToLocalStore TEST_POLLING_COUNT $ "22" 
-  updateAndExit state{props{currentStage = LoadMap, suggestedRideFlow = true}, data{settingSideBar { opened = SettingSideBarController.CLOSED }}} $ RepeatTrip state{props{isRepeatRide = true, suggestedRideFlow = true, repeatRideVariant = item.vehicleVariant}} item
+  updateAndExit state{props{currentStage = LoadMap, suggestedRideFlow = true}, data{settingSideBar { opened = SettingSideBarController.CLOSED }}} $ RepeatTrip state{props{isRepeatRide = true, suggestedRideFlow = true, repeatRideServiceTierName = item.serviceTierName}} item
 
 eval (ReferralFlowAction) state = exit $ GoToReferral state
 eval NewUser state = continueWithCmd state [ do
@@ -2999,7 +2999,7 @@ specialZoneFlow estimatedQuotes state = do
 
 estimatesListFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 estimatesListFlow estimates state = do
-  let newState = if state.props.isRepeatRide && not checkRecentRideVariant state
+  let newState = if state.props.isRepeatRide && not checkRecentRideVariantInEstimates estimates state.props.repeatRideServiceTierName
                          then state { props {isRepeatRide = false}}
                          else state
       estimatesInfo = getEstimatesInfo estimates "" newState
@@ -3158,4 +3158,8 @@ getPeekHeight state =
           in (screenHeight unit) - ( ceil(((toNumber homescreenHeader)/androidPixels) *androidDensity))
 
 checkRecentRideVariant :: HomeScreenState -> Boolean
-checkRecentRideVariant state = any (\item -> item.vehicleVariant == state.props.repeatRideVariant) state.data.specialZoneQuoteList
+checkRecentRideVariant state = any (\item -> (fromMaybe "" item.serviceTierName) == state.props.repeatRideServiceTierName) state.data.specialZoneQuoteList
+
+checkRecentRideVariantInEstimates :: Array EstimateAPIEntity -> String -> Boolean
+checkRecentRideVariantInEstimates estimates repeatRideServiceName = 
+  any (\(EstimateAPIEntity item) -> (fromMaybe "" item.serviceTierName) == repeatRideServiceName) estimates

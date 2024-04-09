@@ -921,7 +921,8 @@ newtype RideBookingRes = RideBookingRes {
   specialLocationTag :: Maybe String,
   hasDisability :: Maybe Boolean,
   hasNightIssue :: Maybe Boolean,
-  sosStatus :: Maybe CTA.SosStatus
+  sosStatus :: Maybe CTA.SosStatus,
+  serviceTierName :: Maybe String
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
