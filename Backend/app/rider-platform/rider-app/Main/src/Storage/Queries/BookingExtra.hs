@@ -1,26 +1,15 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.Booking where
+module Storage.Queries.BookingExtra where
 
 import Control.Applicative
 import Data.List (sortBy)
 import Data.Ord
 import qualified Database.Beam as B
-import Domain.Types.Booking.Type as Domain
-import qualified Domain.Types.Booking.Type as DRB
+import Domain.Types.Booking
+import Domain.Types.Booking as Domain
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingLocation as DBBL
 import Domain.Types.Estimate (Estimate)
 import Domain.Types.FarePolicy.FareProductType as DFF
@@ -33,11 +22,13 @@ import Domain.Types.Person (Person)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
@@ -49,6 +40,7 @@ import qualified Storage.Queries.BookingLocation as QBBL
 import qualified Storage.Queries.DriverOffer ()
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
+import Storage.Queries.OrphanInstances.Booking
 import qualified Storage.Queries.Quote ()
 import qualified Storage.Queries.TripTerms as QTT
 import Tools.Error
@@ -291,184 +283,6 @@ cancelBookings bookingIds now =
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
-
-instance FromTType' BeamB.Booking Booking where
-  fromTType' BeamB.BookingT {..} = do
-    mappings <- QLM.findByEntityId id
-    logTagDebug ("bookingId:-" <> id) $ "Location Mappings:-" <> show mappings
-    (fl, bookingDetails) <-
-      if null mappings
-        then do
-          -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-          logInfo "Accessing Booking Location Table"
-          pickupLoc <- upsertFromLocationAndMappingForOldData (Id <$> fromLocationId) id merchantId merchantOperatingCityId
-          bookingDetails <- case fareProductType of
-            DFF.ONE_WAY -> do
-              upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
-              DRB.OneWayDetails <$> buildOneWayDetails toLocationId
-            DFF.RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
-            DFF.DRIVER_OFFER -> do
-              upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
-              DRB.OneWayDetails <$> buildOneWayDetails toLocationId
-            DFF.ONE_WAY_SPECIAL_ZONE -> do
-              upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
-              DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
-            DFF.INTER_CITY -> do
-              upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
-              DRB.InterCityDetails <$> buildInterCityDetails toLocationId
-          return (pickupLoc, bookingDetails)
-        else do
-          fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
-          fl <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
-
-          mbToLocationMapping <- QLM.getLatestEndByEntityId id
-          let toLocId = (.locationId.getId) <$> mbToLocationMapping
-
-          logTagDebug ("bookingId:-" <> id) $ "To Location Mapping:-" <> show mbToLocationMapping
-          logTagDebug ("bookingId:-" <> id) $ "To Location Id:-" <> show toLocId
-
-          bookingDetails <- case fareProductType of
-            DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
-            DFF.RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
-            DFF.DRIVER_OFFER -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
-            DFF.ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
-            DFF.INTER_CITY -> DRB.InterCityDetails <$> buildInterCityDetails toLocId
-          return (fl, bookingDetails)
-    tt <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
-    pUrl <- parseBaseUrl providerUrl
-    merchantOperatingCityId' <- backfillMOCId merchantOperatingCityId
-    let pickupLocationMap = filter (\map1 -> map1.order == 0) mappings
-        sortedPickupLocationMap = sortBy (comparing (.version)) pickupLocationMap
-    initialPickupLocation <-
-      if null sortedPickupLocationMap
-        then pure fl
-        else do
-          let initialPickupLocMapping = last sortedPickupLocationMap
-          QL.findById initialPickupLocMapping.locationId >>= fromMaybeM (InternalError "Incorrect Location Mapping")
-    pure $
-      Just
-        Booking
-          { id = Id id,
-            transactionId = transactionId,
-            clientId = Id <$> clientId,
-            bppBookingId = Id <$> bppBookingId,
-            quoteId = Id <$> quoteId,
-            paymentMethodId = Id <$> paymentMethodId,
-            paymentUrl = paymentUrl,
-            status = status,
-            providerId = providerId,
-            providerUrl = pUrl,
-            fulfillmentId = fulfillmentId,
-            itemId = itemId,
-            primaryExophone = primaryExophone,
-            startTime = startTime,
-            riderId = Id riderId,
-            fromLocation = fl,
-            estimatedFare = mkPrice currency estimatedFare,
-            discount = mkPrice currency <$> discount,
-            estimatedTotalFare = mkPrice currency estimatedTotalFare,
-            vehicleVariant = vehicleVariant,
-            isScheduled = fromMaybe False isScheduled,
-            bookingDetails = bookingDetails,
-            tripTerms = tt,
-            merchantId = Id merchantId,
-            merchantOperatingCityId = merchantOperatingCityId',
-            specialLocationTag = specialLocationTag,
-            createdAt = createdAt,
-            estimatedDistance = estimatedDistance,
-            estimatedDuration = estimatedDuration,
-            updatedAt = updatedAt,
-            initialPickupLocation = initialPickupLocation,
-            serviceTierName = serviceTierName,
-            paymentStatus = paymentStatus
-          }
-    where
-      buildOneWayDetails mbToLocid = do
-        toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
-        toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way booking")
-        distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
-        pure
-          DRB.OneWayBookingDetails
-            { toLocation = toLocation,
-              distance = distance'
-            }
-      buildInterCityDetails mbToLocid = do
-        toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
-        toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way booking")
-        distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
-        pure
-          DRB.InterCityBookingDetails
-            { toLocation = toLocation,
-              distance = distance'
-            }
-      buildOneWaySpecialZoneDetails mbToLocid = do
-        toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
-        toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way special zone booking")
-        distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
-        pure
-          DRB.OneWaySpecialZoneBookingDetails
-            { distance = distance',
-              toLocation = toLocation,
-              ..
-            }
-      buildRentalDetails mbStopLocationId = do
-        mbStopLocation <- maybe (pure Nothing) (QL.findById . Id) mbStopLocationId
-        pure
-          DRB.RentalBookingDetails
-            { stopLocation = mbStopLocation
-            }
-
-      backfillMOCId = \case
-        Just mocId -> pure $ Id mocId
-        Nothing -> (.id) <$> CQM.getDefaultMerchantOperatingCity (Id merchantId)
-
-instance ToTType' BeamB.Booking Booking where
-  toTType' DRB.Booking {..} =
-    let (fareProductType, toLocationId, distance, stopLocationId, otpCode) = case bookingDetails of
-          DRB.OneWayDetails details -> (DQuote.ONE_WAY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
-          DRB.RentalDetails rentalDetails -> (DQuote.RENTAL, Nothing, Nothing, (getId . (.id)) <$> rentalDetails.stopLocation, Nothing)
-          DRB.DriverOfferDetails details -> (DQuote.DRIVER_OFFER, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
-          DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode)
-          DRB.InterCityDetails details -> (DQuote.INTER_CITY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
-     in BeamB.BookingT
-          { BeamB.id = getId id,
-            BeamB.clientId = getId <$> clientId,
-            BeamB.transactionId = transactionId,
-            BeamB.fareProductType = fareProductType,
-            BeamB.bppBookingId = getId <$> bppBookingId,
-            BeamB.quoteId = getId <$> quoteId,
-            BeamB.paymentMethodId = getId <$> paymentMethodId,
-            BeamB.paymentUrl = paymentUrl,
-            BeamB.status = status,
-            BeamB.providerId = providerId,
-            BeamB.providerUrl = showBaseUrl providerUrl,
-            BeamB.primaryExophone = primaryExophone,
-            BeamB.startTime = startTime,
-            BeamB.riderId = getId riderId,
-            BeamB.fulfillmentId = fulfillmentId,
-            BeamB.itemId = itemId,
-            BeamB.fromLocationId = Just $ getId fromLocation.id,
-            BeamB.toLocationId = toLocationId,
-            BeamB.estimatedFare = estimatedFare.amount,
-            BeamB.discount = discount <&> (.amount),
-            BeamB.estimatedTotalFare = estimatedTotalFare.amount,
-            BeamB.currency = Just estimatedFare.currency,
-            BeamB.otpCode = otpCode,
-            BeamB.vehicleVariant = vehicleVariant,
-            BeamB.distance = distance,
-            BeamB.tripTermsId = getId <$> (tripTerms <&> (.id)),
-            BeamB.isScheduled = Just isScheduled,
-            BeamB.stopLocationId = stopLocationId,
-            BeamB.merchantId = getId merchantId,
-            BeamB.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
-            BeamB.specialLocationTag = specialLocationTag,
-            BeamB.estimatedDistance = estimatedDistance,
-            BeamB.estimatedDuration = estimatedDuration,
-            BeamB.createdAt = createdAt,
-            BeamB.updatedAt = updatedAt,
-            BeamB.serviceTierName = serviceTierName,
-            BeamB.paymentStatus = paymentStatus
-          }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
 

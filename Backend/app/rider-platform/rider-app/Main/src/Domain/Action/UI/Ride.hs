@@ -31,8 +31,8 @@ import Data.List (sortBy)
 import Data.Ord
 import qualified Domain.Action.Beckn.OnTrack as OnTrack
 import Domain.Action.UI.Location (makeLocationAPIEntity)
+import qualified Domain.Types.Booking as DB
 import Domain.Types.Booking.API (makeRideAPIEntity)
-import qualified Domain.Types.Booking.Type as DB
 import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DLA

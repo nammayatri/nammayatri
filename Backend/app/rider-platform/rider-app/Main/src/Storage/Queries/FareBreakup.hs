@@ -15,7 +15,7 @@
 
 module Storage.Queries.FareBreakup where
 
-import Domain.Types.Booking.Type
+import Domain.Types.Booking
 import Domain.Types.FarePolicy.FareBreakup
 import Kernel.Beam.Functions
 import Kernel.Prelude

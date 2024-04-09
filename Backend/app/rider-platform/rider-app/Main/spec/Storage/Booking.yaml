@@ -12,6 +12,15 @@ imports:
   Money: Kernel.Utils.Common
   Centesimal: Kernel.Utils.Common
   LocationAddress: Domain.Types.LocationAddress
+  BookingStatus: Domain.Types.Extra.Booking
+  Quote: Domain.Types.Quote
+  MerchantPaymentMethod: Domain.Types.Merchant.MerchantPaymentMethod
+  TripTerms: Domain.Types.TripTerms
+  VehicleVariant: Domain.Types.VehicleVariant
+  PaymentStatus: BecknV2.OnDemand.Enums
+  BaseUrl: Kernel.Types.Common
+  FareProductType: Domain.Types.FarePolicy.FareProductType
+  HighPrecMeters: Kernel.Types.Common
 
 BookingLocation:
   tableName: booking_location
@@ -94,3 +103,136 @@ BookingLocation:
       kvFunction: updateOneWithKV
       params: [address]
       where: id
+
+Booking:
+  tableName: booking
+
+  derives: Generic,Show
+
+  types:
+    BPPBooking: {}
+    BookingDetails:
+      enum: OneWayDetails OneWayBookingDetails,RentalDetails RentalBookingDetails,DriverOfferDetails OneWayBookingDetails,OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails,InterCityDetails InterCityBookingDetails
+      derive': Show
+    OneWayBookingDetails:
+      toLocation: Location
+      distance: HighPrecMeters
+      derive': Show
+    RentalBookingDetails:
+      stopLocation: Maybe Location
+      derive': Show
+    OneWaySpecialZoneBookingDetails:
+      toLocation: Location
+      distance: HighPrecMeters
+      otpCode: Maybe Text
+      derive': Show
+    InterCityBookingDetails:
+      toLocation: Location
+      distance: HighPrecMeters
+      derive': Show
+
+  fields:
+    id: Id Booking
+    transactionId: Text
+    fulfillmentId: Maybe Text
+    clientId: Maybe (Id Client)
+    bppBookingId: Maybe (Id BPPBooking)
+    quoteId: Maybe (Id Quote)
+    paymentMethodId: Maybe (Id MerchantPaymentMethod)
+    paymentUrl: Maybe Text
+    status: BookingStatus
+    providerId: Text
+    providerUrl: BaseUrl
+    itemId: Text
+    primaryExophone: Text
+    startTime: UTCTime
+    riderId: Id Person
+    fromLocation: Location
+    initialPickupLocation: Location|NoRelation
+    estimatedFare: Price
+    estimatedDistance: Maybe HighPrecMeters
+    estimatedDuration: Maybe Seconds
+    discount: Maybe Price
+    estimatedTotalFare: Price
+    isScheduled: Bool
+    vehicleVariant: VehicleVariant|NoRelation
+    bookingDetails: BookingDetails
+    tripTerms: Maybe TripTerms
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    specialLocationTag: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    serviceTierName: Maybe Text
+    paymentStatus: Maybe PaymentStatus
+
+  beamFields:
+    bookingDetails:
+      fareProductType: FareProductType
+      toLocationId: Maybe Text
+      distance: Maybe HighPrecMeters
+      stopLocationId: Maybe Text
+      otpCode: Maybe Text
+    fromLocation:
+      fromLocationId: Maybe Text
+    tripTerms:
+      tripTermsId: Maybe Text
+    estimatedFare:
+      currency: Maybe Currency
+      estimatedFare: HighPrecMoney
+    initialPickupLocation: {}
+  beamInstance: MakeTableInstancesWithTModifier [("bppBookingId", "bpp_ride_booking_id")]
+  beamType:
+    providerUrl: Text
+    discount: Maybe HighPrecMoney
+    estimatedTotalFare: HighPrecMoney
+    currency: Maybe Currency
+    tripTermsId: Maybe Text
+    isScheduled: Maybe Bool
+    merchantOperatingCityId: Maybe Text
+
+  toTType:
+    fareProductType: getFareProductType
+    toLocationId: getToLocationId
+    distance: getDistance
+    stopLocationId: getStopLocationId
+    otpCode: getOtpCode
+    providerUrl: (showBaseUrl providerUrl)|E
+    fromLocationId: (Just $ Kernel.Types.Id.getId $ (.id) fromLocation)|E
+    estimatedFare: ((.amount) estimatedFare)|E
+    discount: (discount <&> (.amount))|E
+    estimatedTotalFare: ((.amount) estimatedTotalFare)|E
+    currency: (Just $ (.currency) estimatedFare)|E
+    tripTermsId: (Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))|E
+    isScheduled: (Just isScheduled)|E
+    merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
+
+  intermediateTransformers:
+    fromTType:
+      - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
+      - fromLocationAndBookingDetails': Storage.Queries.Transformers.Booking.fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings distance fareProductType toLocationId fromLocationId stopLocationId otpCode|EM #check
+  fromTType:
+    providerUrl: parseBaseUrl providerUrl|EM
+    fromLocation: (fst fromLocationAndBookingDetails')|E
+    bookingDetails: (snd fromLocationAndBookingDetails')|E
+    tripTerms: if isJust tripTermsId then Storage.Queries.TripTerms.findById'' (Kernel.Types.Id.Id (fromJust tripTermsId)) else pure Nothing|EM
+    merchantOperatingCityId: Storage.Queries.Transformers.Booking.backfillMOCId merchantOperatingCityId merchantId|EM
+    initialPickupLocation: Storage.Queries.Transformers.Booking.getInitialPickupLocation mappings (fst fromLocationAndBookingDetails')|EM
+    estimatedFare: (Kernel.Types.Common.mkPrice currency estimatedFare)|E
+    discount: (Kernel.Types.Common.mkPrice currency <$> discount)|E
+    estimatedTotalFare: (Kernel.Types.Common.mkPrice currency estimatedTotalFare)|E
+    isScheduled: (fromMaybe False isScheduled)|E
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+
+  constraints:
+    bppBookingId: SecondaryKey
+    riderId: SecondaryKey
+    quoteId: SecondaryKey
+    transactionId: SecondaryKey

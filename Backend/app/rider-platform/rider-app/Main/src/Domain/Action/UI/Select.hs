@@ -31,7 +31,7 @@ import Control.Applicative ((<|>))
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
-import Domain.Types.Booking.Type
+import Domain.Types.Booking
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DM

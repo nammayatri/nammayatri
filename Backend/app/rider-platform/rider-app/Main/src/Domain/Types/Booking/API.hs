@@ -16,7 +16,7 @@ module Domain.Types.Booking.API where
 
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.Location as SLoc -- TODO:Move api entity of booking to UI
-import Domain.Types.Booking.Type
+import Domain.Types.Booking
 import qualified Domain.Types.BppDetails as DBppDetails
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.FarePolicy.FareBreakup

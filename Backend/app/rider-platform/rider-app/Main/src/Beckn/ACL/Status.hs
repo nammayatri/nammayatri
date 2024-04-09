@@ -22,7 +22,7 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Text as T
-import Domain.Types.Booking.Type (Booking)
+import Domain.Types.Booking (Booking)
 import Domain.Types.Merchant (Merchant)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context

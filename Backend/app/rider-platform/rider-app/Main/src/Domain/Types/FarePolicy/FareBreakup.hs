@@ -14,7 +14,7 @@
 
 module Domain.Types.FarePolicy.FareBreakup where
 
-import Domain.Types.Booking.Type
+import Domain.Types.Booking
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id

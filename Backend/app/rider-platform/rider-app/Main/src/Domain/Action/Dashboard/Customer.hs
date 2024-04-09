@@ -26,7 +26,7 @@ where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
 import qualified Domain.Action.UI.Cancel as DCancel
-import qualified Domain.Types.Booking.Type as DRB
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment

@@ -34,7 +34,7 @@ import qualified Beckn.ACL.Select as ACL
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Select as DSelect
-import Domain.Types.Booking.Type
+import Domain.Types.Booking
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson

@@ -22,6 +22,7 @@ import BecknV2.Utils
 import Data.OpenApi (ToSchema (..))
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.Booking.API as SRB
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Client as DC
 import Domain.Types.Location
