@@ -191,6 +191,7 @@ buildDriverOffer estimateId DriverOfferQuoteDetails {..} searchRequest = do
         merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
         bppQuoteId = bppDriverQuoteId,
         status = DDriverOffer.ACTIVE,
+        createdAt = now,
         updatedAt = now,
         ..
       }

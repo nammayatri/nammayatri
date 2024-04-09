@@ -174,6 +174,7 @@ library
       Domain.Action.UI.Confirm
       Domain.Action.UI.CustomerReferral
       Domain.Action.UI.Disability
+      Domain.Action.UI.DriverOffer
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
       Domain.Action.UI.FollowRide
@@ -207,7 +208,6 @@ library
       Domain.Types.CacType
       Domain.Types.CancellationReason
       Domain.Types.Common
-      Domain.Types.DriverOffer
       Domain.Types.Estimate
       Domain.Types.FarePolicy.FareBreakup
       Domain.Types.FarePolicy.FareProductType
@@ -257,7 +257,6 @@ library
       Storage.Beam.Common
       Storage.Beam.Disability
       Storage.Beam.DisabilityTranslation
-      Storage.Beam.DriverOffer
       Storage.Beam.Estimate
       Storage.Beam.EstimateBreakup
       Storage.Beam.FarePolicy.FareBreakup
@@ -317,7 +316,6 @@ library
       Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationReason
       Storage.Queries.Disability
-      Storage.Queries.DriverOffer
       Storage.Queries.Estimate
       Storage.Queries.EstimateBreakup
       Storage.Queries.ExophoneExtra
@@ -400,6 +398,7 @@ library
       Domain.Types.CallbackRequest
       Domain.Types.CallStatus
       Domain.Types.Client
+      Domain.Types.DriverOffer
       Domain.Types.Exophone
       Domain.Types.FRFSQuote
       Domain.Types.FRFSRecon
@@ -452,6 +451,7 @@ library
       Storage.Beam.CallbackRequest
       Storage.Beam.CallStatus
       Storage.Beam.Client
+      Storage.Beam.DriverOffer
       Storage.Beam.Exophone
       Storage.Beam.FRFSQuote
       Storage.Beam.FRFSRecon
@@ -504,6 +504,7 @@ library
       Storage.Queries.CallbackRequest
       Storage.Queries.CallStatus
       Storage.Queries.Client
+      Storage.Queries.DriverOffer
       Storage.Queries.Exophone
       Storage.Queries.FRFSQuote
       Storage.Queries.FRFSRecon
