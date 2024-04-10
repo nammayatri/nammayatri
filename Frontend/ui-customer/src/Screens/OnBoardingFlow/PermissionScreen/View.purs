@@ -93,9 +93,9 @@ locationAccessPermissionView push state =
         , cornerRadius 8.0
         , background Color.white900
         ][  imageView
-            [ imageWithFallback $ fetchImage FF_ASSET "ic_location_permission_logo"
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_location_permission_logo"
             , height $ V 213
-            , width $ V 240
+            , width MATCH_PARENT
             , gravity CENTER
             ]
           , textView 

@@ -380,7 +380,8 @@ type CarouselImageConfig = {
   width :: Int,
   bgColor :: String,
   cornerRadius :: Number,
-  image :: String
+  image :: String,
+  isUrl :: Boolean
 }
 
 type CarouselTextConfig = {

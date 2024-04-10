@@ -1508,6 +1508,8 @@ getTipViewProps state = do
                             , isprimaryButtonVisible = false
                             , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
                             , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
+                            -- , secondaryButtonText = getString GO_BACK_
+                            -- , secondaryButtonVisibility = true
                             }
     TIP_AMOUNT_SELECTED -> tipViewProps{ stage = TIP_AMOUNT_SELECTED
                                        , onlyPrimaryText = false
@@ -1515,9 +1517,19 @@ getTipViewProps state = do
                                        , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
                                        , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
                                        , primaryButtonText = getTipViewText tipViewProps state (getString CONTINUE_SEARCH_WITH)
+                                      --  , secondaryButtonText = getString GO_BACK_
+                                      --  , secondaryButtonVisibility = true
                                        }
     TIP_ADDED_TO_SEARCH -> tipViewProps{ onlyPrimaryText = true, isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "." }
     RETRY_SEARCH_WITH_TIP -> tipViewProps{ onlyPrimaryText = true , isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "." }
+    -- ADD_TIP_OR_CHANGE_RIDE_TYPE -> tipViewProps{ showTipsList = false
+    --                                           , isprimaryButtonVisible = true
+    --                                           , primaryText = getString TRY_ADDING_TIP_OR_CHANGE_RIDE_TYPE
+    --                                           , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
+    --                                           , primaryButtonText = getString ADD_TIP
+    --                                           , secondaryButtonText = getString CHANGE_RIDE_TYPE
+    --                                           , secondaryButtonVisibility = true
+    --                                           }
 
 getTipViewText :: TipViewProps -> ST.HomeScreenState -> String -> String
 getTipViewText tipViewProps state prefixString = do
@@ -1786,7 +1798,7 @@ feedbackPillDataWithRating5 state = [
 getCarouselData :: ST.HomeScreenState -> Array CarouselData
 getCarouselData state =
   map (\item -> 
-    { imageConfig : { image : item.image , height : item.imageHeight , width : 200, bgColor : item.imageBgColor, cornerRadius : 8.0 },
+    { imageConfig : { image : item.image , height : item.imageHeight , width : 200, bgColor : item.imageBgColor, cornerRadius : 8.0, isUrl : false },
       youtubeConfig : EHC.getYoutubeData{ videoId = item.videoLink , videoType = "PORTRAIT_VIDEO",  videoHeight = item.videoHeight},
       contentType : if item.videoLink == "" then "IMAGE" else "VIDEO" ,
       gravity : item.gravity ,
