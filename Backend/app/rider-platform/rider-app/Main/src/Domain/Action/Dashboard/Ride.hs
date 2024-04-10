@@ -415,7 +415,7 @@ bookingCancel BookingCancelledReq {..} = do
     throwError (BookingInvalidStatus (show booking.status))
   mbRide <- QRide.findActiveByRBId booking.id
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCReason.ByMerchant)
-  let bookingCancellationReason = buildBookingCancellationReason booking.id (mbRide <&> (.id)) booking.merchantId
+  bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) booking.merchantId
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
   _ <- QRB.updateStatus booking.id DTB.CANCELLED
   _ <- whenJust mbRide $ \ride -> void $ QRide.updateStatus ride.id DRide.CANCELLED
@@ -425,22 +425,27 @@ bookingCancel BookingCancelledReq {..} = do
       booking.status `elem` [DTB.NEW, DTB.CONFIRMED, DTB.AWAITING_REASSIGNMENT, DTB.TRIP_ASSIGNED]
 
 buildBookingCancellationReason ::
+  (MonadFlow m) =>
   Id DTB.Booking ->
   Maybe (Id DRide.Ride) ->
   Id DM.Merchant ->
-  DBCReason.BookingCancellationReason
+  m DBCReason.BookingCancellationReason
 buildBookingCancellationReason bookingId mbRideId merchantId = do
-  DBCReason.BookingCancellationReason
-    { bookingId = bookingId,
-      rideId = mbRideId,
-      merchantId = Just merchantId,
-      source = DBCReason.ByMerchant,
-      reasonCode = Just $ CancellationReasonCode "BOOKING_NEW_STATUS_MORE_THAN_6HRS",
-      reasonStage = Nothing,
-      additionalInfo = Nothing,
-      driverCancellationLocation = Nothing,
-      driverDistToPickup = Nothing
-    }
+  now <- getCurrentTime
+  return $
+    DBCReason.BookingCancellationReason
+      { bookingId = bookingId,
+        rideId = mbRideId,
+        merchantId = Just merchantId,
+        source = DBCReason.ByMerchant,
+        reasonCode = Just $ CancellationReasonCode "BOOKING_NEW_STATUS_MORE_THAN_6HRS",
+        reasonStage = Nothing,
+        additionalInfo = Nothing,
+        driverCancellationLocation = Nothing,
+        driverDistToPickup = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }
 
 multipleRideCancel ::
   MultipleRideCancelReq ->

@@ -204,7 +204,6 @@ library
       Domain.Types.Booking.API
       Domain.Types.Booking.BookingLocation
       Domain.Types.Booking.Type
-      Domain.Types.BookingCancellationReason
       Domain.Types.CacType
       Domain.Types.Common
       Domain.Types.Estimate
@@ -252,7 +251,6 @@ library
       Storage.Beam.BecknRequest
       Storage.Beam.Booking
       Storage.Beam.Booking.BookingLocation
-      Storage.Beam.BookingCancellationReason
       Storage.Beam.Common
       Storage.Beam.Disability
       Storage.Beam.DisabilityTranslation
@@ -311,7 +309,7 @@ library
       Storage.Queries.AppInstallsExtra
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
-      Storage.Queries.BookingCancellationReason
+      Storage.Queries.BookingCancellationReasonExtra
       Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationReasonExtra
       Storage.Queries.Disability
@@ -345,6 +343,7 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.Transformers.AppInstalls
       Storage.Queries.Transformers.BlackListOrg
+      Storage.Queries.Transformers.BookingCancellationReason
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.Transformers.Person
@@ -393,6 +392,7 @@ library
       Domain.Types.AppInstalls
       Domain.Types.BecknConfig
       Domain.Types.BlackListOrg
+      Domain.Types.BookingCancellationReason
       Domain.Types.BppDetails
       Domain.Types.BusinessHour
       Domain.Types.CallbackRequest
@@ -447,6 +447,7 @@ library
       Storage.Beam.AppInstalls
       Storage.Beam.BecknConfig
       Storage.Beam.BlackListOrg
+      Storage.Beam.BookingCancellationReason
       Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
       Storage.Beam.CallbackRequest
@@ -501,6 +502,7 @@ library
       Storage.Queries.AppInstalls
       Storage.Queries.BecknConfig
       Storage.Queries.BlackListOrg
+      Storage.Queries.BookingCancellationReason
       Storage.Queries.BppDetails
       Storage.Queries.BusinessHour
       Storage.Queries.CallbackRequest
@@ -525,6 +527,7 @@ library
       Storage.Queries.NotificationSoundsConfig
       Storage.Queries.OnSearchEvent
       Storage.Queries.OrphanInstances.AppInstalls
+      Storage.Queries.OrphanInstances.BookingCancellationReason
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.Exophone

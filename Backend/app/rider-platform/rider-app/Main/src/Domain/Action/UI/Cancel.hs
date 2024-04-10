@@ -178,6 +178,7 @@ cancel bookingId _ req = do
   where
     buildBookingCancelationReason currentDriverLocation disToPickup merchantId = do
       let CancelReq {..} = req
+      now <- getCurrentTime
       return $
         SBCR.BookingCancellationReason
           { bookingId = bookingId,
@@ -189,6 +190,8 @@ cancel bookingId _ req = do
             additionalInfo = additionalInfo,
             driverCancellationLocation = currentDriverLocation,
             driverDistToPickup = disToPickup,
+            createdAt = now,
+            updatedAt = now,
             ..
           }
 
