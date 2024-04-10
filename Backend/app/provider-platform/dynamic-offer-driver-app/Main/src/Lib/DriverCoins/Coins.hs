@@ -23,6 +23,7 @@ module Lib.DriverCoins.Coins
     incrementValidRideCount,
     updateDriverCoins,
     sendCoinsNotification,
+    sendCoinsNotificationV2,
     safeIncrBy,
   )
 where
@@ -207,11 +208,31 @@ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction m
     sendCoinsNotification merchantOpCityId driverId numCoins
   pure numCoins
 
+sendCoinsNotificationV2 :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> HighPrecMoney -> Int -> DCT.DriverCoinsFunctionType -> m ()
+sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue (DCT.BulkUploadFunctionV2 messageKey) = do
+  B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
+    let language = fromMaybe L.ENGLISH driver.language
+     in MTQuery.findByErrorAndLanguage (T.pack (show messageKey)) language >>= processMessage driver amount
+  where
+    processMessage driver amount' mbCoinsMessage =
+      case mbCoinsMessage of
+        Just coinsMessage ->
+          case T.splitOn " | " coinsMessage.message of
+            [title, description] -> do
+              let descriptionReplaced = replaceAmountValue amount' $ replaceCoinsValue description
+              Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS title descriptionReplaced driverId (driver.deviceToken)
+            _ -> logDebug "Invalid message format."
+        Nothing -> logDebug "Could not find Translations."
+    replaceCoinsValue = T.replace "{#coinsValue#}" (T.pack $ show coinsValue)
+    replaceAmountValue amount' = T.replace "{#amountValue#}" (T.pack $ show amount')
+sendCoinsNotificationV2 _merchantOpCityId _driverId _amount _coinsValue _eventFunction = pure ()
+
 sendCoinsNotification :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Int -> m ()
 sendCoinsNotification merchantOpCityId driverId coinsValue =
   B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
     let language = fromMaybe L.ENGLISH driver.language
-     in MTQuery.findByErrorAndLanguage (T.pack (show DCT.CoinAdded)) language >>= processMessage driver
+        queryType = if coinsValue > 0 then DCT.CoinAdded else DCT.CoinSubtracted
+     in MTQuery.findByErrorAndLanguage (T.pack (show queryType)) language >>= processMessage driver
   where
     processMessage driver mbCoinsMessage =
       case mbCoinsMessage of
