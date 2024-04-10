@@ -33,7 +33,7 @@ createDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => QuoteDetails -> 
 createDetails = \case
   OneWayDetails _ -> pure ()
   RentalDetails rentalDetails -> QueryRD.createRentalDetails rentalDetails
-  DriverOfferDetails driverOffer -> QueryDO.createDriverOffer driverOffer
+  DriverOfferDetails driverOffer -> QueryDO.create driverOffer
   OneWaySpecialZoneDetails specialZoneQuote -> QuerySZQ.create specialZoneQuote
   InterCityDetails specialZoneQuote -> QuerySZQ.create specialZoneQuote
 
