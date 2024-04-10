@@ -133,6 +133,7 @@
           jq
           gdal
           postgis
+          newman
         ];
         # cf. https://haskell.flake.page/devshell#composing-devshells
         inputsFrom = [
