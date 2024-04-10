@@ -36,6 +36,7 @@ data DriverCoinsFunctionType
   | LeaderBoardTopFiveHundred
   | TrainingCompleted
   | BulkUploadFunction
+  | BulkUploadFunctionV2 CoinMessage
   deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
 
 data DriverCoinsEventType
@@ -51,6 +52,8 @@ data DriverCoinsEventType
 
 data CoinMessage
   = CoinAdded
+  | CoinSubtracted
+  | FareRecomputation
   deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
 
 $(mkBeamInstancesForEnum ''CoinMessage)

@@ -29,16 +29,21 @@ import Servant hiding (throwError)
 type API =
   "coins"
     :> ( Common.BulkUploadCoinsAPI
+           :<|> Common.BulkUploadCoinsAPIV2
            :<|> Common.CoinHistoryAPI
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantShortId opCity =
   bulkUploadCoins merchantShortId opCity
+    :<|> bulkUploadCoinsV2 merchantShortId opCity
     :<|> coinHistory merchantShortId opCity
 
 bulkUploadCoins :: ShortId DM.Merchant -> Context.City -> Common.BulkUploadCoinsReq -> FlowHandler APISuccess
 bulkUploadCoins merchantShortId opCity = withFlowHandlerAPI . DDriverCoins.bulkUploadCoinsHandler merchantShortId opCity
+
+bulkUploadCoinsV2 :: ShortId DM.Merchant -> Context.City -> Common.BulkUploadCoinsReqV2 -> FlowHandler APISuccess
+bulkUploadCoinsV2 merchantShortId opCity = withFlowHandlerAPI . DDriverCoins.bulkUploadCoinsV2Handler merchantShortId opCity
 
 coinHistory :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Integer -> Maybe Integer -> FlowHandler Common.CoinHistoryRes
 coinHistory merchantShortId opCity driverId mbLimit mbOffset = withFlowHandlerAPI $ DDriverCoins.coinHistoryHandler merchantShortId opCity (cast @Common.Driver @DP.Driver driverId) mbLimit mbOffset
