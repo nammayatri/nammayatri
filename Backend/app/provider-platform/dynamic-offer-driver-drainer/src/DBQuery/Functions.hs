@@ -35,7 +35,7 @@ generateUpdateQuery UpdateQuery {..} = do
       setQuery = makeSetConditions
       table = schemaName <> "." <> quote' (textToSnakeCaseText dbModel.getDBModel)
   if T.null correctWhereClauseText
-    then Nothing -- why?
+    then Nothing
     else Just $ "UPDATE " <> table <> " SET " <> setQuery <> " WHERE " <> correctWhereClauseText <> ";"
   where
     makeSetConditions :: Text
@@ -49,7 +49,7 @@ generateDeleteQuery DeleteQuery {..} = do
       correctWhereClauseText = makeWhereCondition whereClause mappings
       table = schemaName <> "." <> quote' (textToSnakeCaseText dbModel.getDBModel)
   if T.null correctWhereClauseText
-    then Nothing -- why?
+    then Nothing
     else Just $ "DELETE FROM " <> table <> " WHERE " <> correctWhereClauseText <> ";"
 
 executeQuery :: Pg.Connection -> Pg.Query -> IO ()
@@ -80,6 +80,7 @@ valueToText :: Value -> T.Text
 valueToText value = case value of
   SqlNull -> "null"
   SqlString t -> quote t
+  SqlInteger n -> show n
   SqlNum n -> show n
   SqlValue t -> quote t
   SqlList a -> quote $ "{" <> T.intercalate "," (map valueToText' a) <> "}" -- in case of array of value of a key in object
@@ -89,6 +90,7 @@ valueToText value = case value of
     valueToText' SqlNull = "null"
     valueToText' (SqlString t) = show t -- quote' t
     valueToText' (SqlNum n) = show n
+    valueToText' (SqlInteger n) = show n
     valueToText' (SqlValue t) = show t -- quote' t
     valueToText' (SqlList a) = "[" <> T.intercalate "," (map valueToText' a) <> "]"
 
@@ -100,7 +102,7 @@ makeWhereCondition whereClause mappings = do
   case whereClause of
     [] -> "true" -- TODO test this
     [clause] -> makeClauseCondition clause
-    clauses -> makeClauseCondition (And clauses) -- is it correct?
+    clauses -> makeClauseCondition (And clauses)
   where
     makeClauseCondition :: Clause -> Text
     makeClauseCondition clause = do
