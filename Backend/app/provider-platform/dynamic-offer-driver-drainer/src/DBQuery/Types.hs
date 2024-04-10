@@ -80,7 +80,7 @@ data TermWrap where
   TermWrap :: Column -> Value -> TermWrap
   deriving stock (Show)
 
-data Value = SqlNull | SqlString Text | SqlNum Double | SqlValue Text | SqlList [Value]
+data Value = SqlNull | SqlString Text | SqlInteger Integer | SqlNum Double | SqlValue Text | SqlList [Value]
   deriving stock (Show)
 
 instance FromJSON Value where
@@ -89,8 +89,9 @@ instance FromJSON Value where
     case readMaybe @Text $ T.unpack str of
       Just txt -> pure $ SqlString txt
       Nothing -> fail "Could not read Text in double quotes"
-  parseJSON (A.String str) = do
-    case readMaybe @Double $ T.unpack str of
+  parseJSON (A.String str) = case readMaybe @Integer $ T.unpack str of
+    Just int -> pure $ SqlInteger int
+    Nothing -> case readMaybe @Double $ T.unpack str of
       Just num -> pure $ SqlNum num
       Nothing -> pure $ SqlValue str
   parseJSON (A.Array ar) = SqlList . V.toList <$> (parseJSON `mapM` ar)

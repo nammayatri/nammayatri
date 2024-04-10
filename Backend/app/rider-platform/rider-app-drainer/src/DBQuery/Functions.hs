@@ -80,6 +80,7 @@ valueToText :: Value -> T.Text
 valueToText value = case value of
   SqlNull -> "null"
   SqlString t -> quote t
+  SqlInteger n -> show n
   SqlNum n -> show n
   SqlValue t -> quote t
   SqlList a -> quote $ "{" <> T.intercalate "," (map valueToText' a) <> "}" -- in case of array of value of a key in object
@@ -89,6 +90,7 @@ valueToText value = case value of
     valueToText' SqlNull = "null"
     valueToText' (SqlString t) = show t -- quote' t
     valueToText' (SqlNum n) = show n
+    valueToText' (SqlInteger n) = show n
     valueToText' (SqlValue t) = show t -- quote' t
     valueToText' (SqlList a) = "[" <> T.intercalate "," (map valueToText' a) <> "]"
 
