@@ -137,9 +137,9 @@ config =
         geohashLimitForMap : 60,
         geohashPrecision : 7,
         maxLocationsToBeShown : 10,
-        minLocationsToBeShown : 2,
+        minLocationsToBeShown : 3,
         maxTripsToBeShown : 10,
-        minTripsToBeShown : 2,
+        minTripsToBeShown : 3,
         locationsToBeStored : 30,
         tripsToBeStored : 30,
         frequencyWeight : 0.85,
@@ -315,12 +315,12 @@ config =
           bottom : 16
         },
         shadow : {
-          color : "#2C2F3A",
+          color : "#000000",
           x: 0.0,
-          y: 0.9,
-          blur: 10.0,
-          spread: 24.0,
-          opacity : 0.14
+          y: 0.8,
+          blur: 4.0,
+          spread: 2.0,
+          opacity : 0.3
         }
       },
       showAdditionalServicesNew : true

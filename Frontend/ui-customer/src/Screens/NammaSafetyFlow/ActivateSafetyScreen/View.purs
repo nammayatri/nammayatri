@@ -901,25 +901,25 @@ confirmSafetyDrillView state push =
             , width $ V 24
             ]
         ]
-    , relativeLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , padding $ Padding 0 16 16 0
-        , onClick push $ const BackPressed
-        ]
-        [ imageView
-          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_start_test_drill"
-          , width MATCH_PARENT
-          , height $ V 200
-          ]
+    , imageView
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_start_test_drill"
+        , width MATCH_PARENT
+        , height $ V 200
         ]
     , textView $
       [ text $ getString PREPARE_EMERGENCY_CONTACTS
       , color Color.white900
       , margin $ MarginTop 16
       ] <> FontStyle.h2 TypoGraphy
-    , imageWithTextView configActionOne
-    , imageWithTextView configActionTwo
+    , linearLayout
+        [ height WRAP_CONTENT
+        , orientation VERTICAL
+        , width $ V $ EHC.screenWidth unit
+        , padding $ PaddingHorizontal 5 5 
+        ]
+        [ imageWithTextView configActionOne
+        , imageWithTextView configActionTwo
+        ]
     , layoutWithWeight
     , PrimaryButton.view (push <<< StartTestDrill) $ startTestDrillButtonConfig state
     ]
