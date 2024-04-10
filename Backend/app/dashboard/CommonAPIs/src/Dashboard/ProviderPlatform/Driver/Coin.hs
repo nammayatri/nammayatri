@@ -32,6 +32,11 @@ type BulkUploadCoinsAPI =
     :> ReqBody '[JSON] BulkUploadCoinsReq
     :> Post '[JSON] APISuccess
 
+type BulkUploadCoinsAPIV2 =
+  "bulkUploadCoinsV2"
+    :> ReqBody '[JSON] BulkUploadCoinsReqV2
+    :> Post '[JSON] APISuccess
+
 type CoinHistoryAPI =
   "coinHistory"
     :> Capture "driverId" (Id Driver)
@@ -45,6 +50,20 @@ data BulkUploadCoinsReq = BulkUploadCoinsReq
     expirationTime :: Maybe Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data BulkUploadCoinsReqV2 = BulkUploadCoinsReqV2
+  { driverIdListWithCoins :: [DriverIdListWithAmount],
+    bulkUploadTitle :: Translations,
+    expirationTime :: Maybe Int,
+    eventFunction :: DriverCoinsFunctionType
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data DriverIdListWithAmount = DriverIdListWithAmount
+  { driverId :: Text,
+    amount :: HighPrecMoney
+  }
+  deriving (Generic, Read, Eq, Show, FromJSON, ToJSON, Ord, ToSchema)
 
 data DriverIdListWithCoins = DriverIdListWithCoins
   { driverId :: Text,
@@ -108,6 +127,13 @@ data DriverCoinsFunctionType
   | LeaderBoardTopFiveHundred
   | TrainingCompleted
   | BulkUploadFunction
+  | BulkUploadFunctionV2 CoinMessage
+  deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
+
+data CoinMessage
+  = CoinAdded
+  | CoinSubtracted
+  | FareRecomputation
   deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
 
 $(mkBeamInstancesForEnum ''DriverCoinsFunctionType)

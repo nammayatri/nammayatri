@@ -35,22 +35,31 @@ import "lib-dashboard" Tools.Auth.Merchant
 type API =
   "coins"
     :> ( DriverBulkUploadCoinsAPI
+           :<|> DriverBulkUploadCoinsAPIV2
            :<|> DriverCoinHistoryAPI
        )
 
 type DriverBulkUploadCoinsAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DRIVER_COIN_BULK_UPLOAD :> Common.BulkUploadCoinsAPI
+
+type DriverBulkUploadCoinsAPIV2 = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DRIVER_COIN_BULK_UPLOAD_V2 :> Common.BulkUploadCoinsAPIV2
 
 type DriverCoinHistoryAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DRIVER_COIN_HISTORY :> Common.CoinHistoryAPI
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   driverBulkUploadCoins merchantId city
+    :<|> driverBulkUploadCoinsV2 merchantId city
     :<|> driverCoinHistory merchantId city
 
 driverBulkUploadCoins :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.BulkUploadCoinsReq -> FlowHandler APISuccess
 driverBulkUploadCoins merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCoins.driverCoinBulkUpload) req
+
+driverBulkUploadCoinsV2 :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.BulkUploadCoinsReqV2 -> FlowHandler APISuccess
+driverBulkUploadCoinsV2 merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCoins.driverCoinBulkUploadV2) req
 
 driverCoinHistory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Integer -> Maybe Integer -> FlowHandler Common.CoinHistoryRes
 driverCoinHistory merchantShortId opCity apiTokenInfo driverId mbLimit mbOffset = withFlowHandlerAPI' $ do
