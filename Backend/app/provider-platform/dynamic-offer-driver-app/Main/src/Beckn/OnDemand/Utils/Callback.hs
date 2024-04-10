@@ -35,14 +35,14 @@ withCallback ::
     CacheFlow m r,
     EsqDBFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
   ) =>
   DM.Merchant ->
   WithBecknCallback api callback_success m
 withCallback = withCallback' withShortRetry
 
 withCallback' ::
-  (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]) =>
+  (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]) =>
   (m () -> m ()) ->
   (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, CacheFlow m r) =>
   DM.Merchant ->
@@ -52,7 +52,7 @@ withCallback' doWithCallback transporter action api cbUrl internalEndPointHashMa
       authKey = getHttpManagerKey bppSubscriberId
   fork ("sending " <> show action <> ", pushing ondc logs") do
     ondcTokenHashMap <- asks (.ondcTokenHashMap)
-    let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup transporter.id.getId ondcTokenHashMap
+    let tokenConfig = HMS.lookup (KeyConfig transporter.id.getId "MOBILITY") ondcTokenHashMap
     req <- f
     void $ pushLogs action (toJSON req) tokenConfig
   withBecknCallback doWithCallback (Just $ ET.ManagerSelector authKey) action api cbUrl internalEndPointHashMap fromError f

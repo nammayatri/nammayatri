@@ -63,7 +63,7 @@ rating merchantId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBeck
       fork "rating received pushing ondc logs" do
         booking <- B.runInReplica $ QRB.findById dRatingReq.bookingId >>= fromMaybeM (BookingDoesNotExist dRatingReq.bookingId.getId)
         ondcTokenHashMap <- asks (.ondcTokenHashMap)
-        let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup booking.providerId.getId ondcTokenHashMap
+        let tokenConfig = HMS.lookup (KeyConfig booking.providerId.getId "MOBILITY") ondcTokenHashMap
         void $ pushLogs "rating" (toJSON reqV2) tokenConfig
     pure Ack
 

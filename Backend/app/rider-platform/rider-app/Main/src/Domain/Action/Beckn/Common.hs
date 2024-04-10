@@ -52,6 +52,7 @@ import Tools.Event
 import Tools.Maps (LatLong)
 import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
+import TransactionLogs.Types
 
 data BookingDetails = BookingDetails
   { bppBookingId :: Id DRB.BPPBooking,
@@ -190,7 +191,7 @@ rideAssignedReqHandler ::
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r

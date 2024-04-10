@@ -59,7 +59,7 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
           DSelect.handler merchant dSelectReq searchRequest estimates
       fork "select received pushing ondc logs" do
         ondcTokenHashMap <- asks (.ondcTokenHashMap)
-        let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup merchant.id.getId ondcTokenHashMap
+        let tokenConfig = HMS.lookup (KeyConfig merchant.id.getId "MOBILITY") ondcTokenHashMap
         void $ pushLogs "select" (toJSON reqV2) tokenConfig
     pure Ack
 

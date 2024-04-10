@@ -67,7 +67,7 @@ onUpdate _ reqV2 = withFlowHandlerBecknAPI do
             DOnUpdate.OUValidatedStopArrivedReq req -> return req.booking
             DOnUpdate.OUValidatedFarePaidReq req -> return req.booking
           ondcTokenHashMap <- asks (.ondcTokenHashMap)
-          let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HM.lookup booking.merchantId.getId ondcTokenHashMap
+          let tokenConfig = HM.lookup (KeyConfig booking.merchantId.getId "MOBILITY") ondcTokenHashMap
           void $ pushLogs "on_update" (toJSON reqV2) tokenConfig
   pure Ack
 

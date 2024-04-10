@@ -63,7 +63,7 @@ onCancel _ req = withFlowHandlerBecknAPI do
                 DOnCancel.onCancel validatedOnCancelReq
                 fork "on cancel received pushing ondc logs" do
                   ondcTokenHashMap <- asks (.ondcTokenHashMap)
-                  let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HM.lookup validatedOnCancelReq.booking.merchantId.getId ondcTokenHashMap
+                  let tokenConfig = HM.lookup (KeyConfig validatedOnCancelReq.booking.merchantId.getId "MOBILITY") ondcTokenHashMap
                   void $ pushLogs "on_cancel" (toJSON req) tokenConfig
       _ -> throwError . InvalidBecknSchema $ "on_cancel order.status expected:-CANCELLED, received:-" <> cancelStatus'
   pure Ack

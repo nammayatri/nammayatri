@@ -27,3 +27,9 @@ data TokenConfig = TokenConfig
     ondcUrl :: BaseUrl
   }
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, FromDhall)
+
+data KeyConfig = KeyConfig
+  { merchantId :: Text,
+    domain :: Text
+  }
+  deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, FromDhall, Hashable)

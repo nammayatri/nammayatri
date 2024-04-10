@@ -150,7 +150,7 @@ data AppCfg = AppCfg
     collectRouteData :: Bool,
     cacConfig :: CacConfig,
     superPositionConfig :: SuperPositionConfig,
-    ondcTokenMap :: M.Map Text TokenConfig
+    ondcTokenMap :: M.Map KeyConfig TokenConfig
   }
   deriving (Generic, FromDhall)
 
@@ -226,7 +226,7 @@ data AppEnv = AppEnv
     shouldLogRequestId :: Bool,
     requestId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    ondcTokenHashMap :: HM.HashMap Text (Text, BaseUrl)
+    ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig
   }
   deriving (Generic)
 
@@ -263,8 +263,8 @@ buildAppEnv cfg@AppCfg {..} = do
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   serviceClickhouseEnv <- createConn riderClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
-  let tokenMap :: (M.Map Text (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
-  let ondcTokenHashMap = HM.fromList $ M.toList tokenMap
+  -- let tokenMap :: (M.Map Text (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
+  let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
   return AppEnv {minTripDistanceForReferralCfg = highPrecMetersToDistance <$> minTripDistanceForReferralCfg, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
