@@ -206,9 +206,9 @@ library
       Domain.Types.Booking.Type
       Domain.Types.BookingCancellationReason
       Domain.Types.CacType
-      Domain.Types.CancellationReason
       Domain.Types.Common
       Domain.Types.Estimate
+      Domain.Types.Extra.CancellationReason
       Domain.Types.FarePolicy.FareBreakup
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.FeedbackForm
@@ -253,7 +253,6 @@ library
       Storage.Beam.Booking
       Storage.Beam.Booking.BookingLocation
       Storage.Beam.BookingCancellationReason
-      Storage.Beam.CancellationReason
       Storage.Beam.Common
       Storage.Beam.Disability
       Storage.Beam.DisabilityTranslation
@@ -314,7 +313,7 @@ library
       Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
       Storage.Queries.CallStatusExtra
-      Storage.Queries.CancellationReason
+      Storage.Queries.CancellationReasonExtra
       Storage.Queries.Disability
       Storage.Queries.Estimate
       Storage.Queries.EstimateBreakup
@@ -346,6 +345,7 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.Transformers.AppInstalls
       Storage.Queries.Transformers.BlackListOrg
+      Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.Quote
@@ -397,6 +397,7 @@ library
       Domain.Types.BusinessHour
       Domain.Types.CallbackRequest
       Domain.Types.CallStatus
+      Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.DriverOffer
       Domain.Types.Exophone
@@ -450,6 +451,7 @@ library
       Storage.Beam.BusinessHour
       Storage.Beam.CallbackRequest
       Storage.Beam.CallStatus
+      Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.DriverOffer
       Storage.Beam.Exophone
@@ -503,6 +505,7 @@ library
       Storage.Queries.BusinessHour
       Storage.Queries.CallbackRequest
       Storage.Queries.CallStatus
+      Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.DriverOffer
       Storage.Queries.Exophone
@@ -523,6 +526,7 @@ library
       Storage.Queries.OnSearchEvent
       Storage.Queries.OrphanInstances.AppInstalls
       Storage.Queries.OrphanInstances.CallStatus
+      Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.LocationMapping

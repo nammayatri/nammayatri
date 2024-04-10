@@ -8,7 +8,7 @@ imports:
   RentalDetails: Domain.Types.RentalDetails
   DriverOffer: Domain.Types.DriverOffer
   RentalDetailsAPIEntity: Domain.Types.RentalDetails
-  DriverOfferAPIEntity: Domain.Types.DriverOffer
+  DriverOfferAPIEntity: Domain.Action.UI.DriverOffer
   InterCityQuoteAPIEntity: Domain.Action.UI.SpecialZoneQuote
   SpecialZoneQuoteAPIEntity: Domain.Action.UI.SpecialZoneQuote
   parseBaseUrl: Kernel.Prelude
