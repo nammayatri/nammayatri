@@ -1161,6 +1161,14 @@ export const getCurrentPosition = function (cb) {
   };
 };
 
+export const updateSliderValue = function (config) {
+  return function () {
+    if (window.JBridge.updateSliderValue){
+      window.JBridge.updateSliderValue(JSON.stringify(config));
+    };
+  };
+};
+
 export const getCurrentPositionWithTimeoutImpl = function (cb, action, delay, shouldFallBack) {
   const callbackFallback = function () {
     cb(action("0.0")("0.0")(new Date().toISOString()))();

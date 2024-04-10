@@ -41,11 +41,11 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2)
 import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote)
-import JBridge (showDateTimePicker, toast)
+import JBridge (showDateTimePicker, toast, updateSliderValue)
 import Language.Strings (getVarString)
 import Language.Types (STR(..)) as STR
 import Log (trackAppActionClick)
-import Prelude (class Eq, class Show, bind, map, negate, pure, show, unit, ($), (&&), (*), (+), (<), (<>), (==), (>), (/=), discard, void, (||), not, min, (-), max, compare, Ordering(..))
+import Prelude (class Eq, class Show, bind, map, negate, pure, show, unit, ($), (&&), (*), (+), (<), (<>), (==), (>), (/=), (<=), (>=), discard, void, (||), not, min, (-), max, compare, Ordering(..), when)
 import PrestoDOM (class Loggable, Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Core (getPushFn)
 import Screens (getScreen, ScreenName(..))
@@ -90,6 +90,7 @@ data Action =
   | UpdateLocAndLatLong String String
   | PopUpModalAC PopUpModalController.Action
   | RequestInfoCardAction RequestInfoCardController.Action
+  | UpdateSliderValue Int
 
 data ScreenOutput = NoScreen
                   | GoToHomeScreen
@@ -127,6 +128,15 @@ eval (SliderCallback hours) state =
   let minDistance = hours * 10
       maxDistance = minDistance + (min 50 $ min (hours * 10) $ 120 - (hours * 10))
   in continue state{data{rentalBookingData{baseDuration = hours, baseDistance = minDistance}}, props{minDistance = minDistance, maxDistance = maxDistance}}
+
+eval (UpdateSliderValue value) state = do 
+  continueWithCmd state [do 
+    let isSliderValueValid = value <= state.props.maxDuration && value >= state.props.minDuration
+    if isSliderValueValid then do 
+      void $ updateSliderValue {sliderValue : value, id : (EHC.getNewIDWithTag "DurationSliderView")}
+      pure $ SliderCallback value 
+      else pure $ NoAction
+    ]
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = 
   case state.data.currentStage of

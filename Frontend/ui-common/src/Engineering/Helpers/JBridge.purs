@@ -785,3 +785,10 @@ showDateTimePicker push action = do
 
 renderSlider :: forall action. (action -> Effect Unit) -> (Int -> action) -> SliderConfig -> Effect Unit
 renderSlider = runEffectFn3 renderSliderImpl
+
+foreign import updateSliderValue :: UpdateSliderConfig -> Effect Unit
+
+type UpdateSliderConfig = {
+  sliderValue :: Int,
+  id :: String
+}

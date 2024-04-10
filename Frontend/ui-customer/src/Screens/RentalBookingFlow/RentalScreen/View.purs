@@ -39,7 +39,7 @@ import Language.Types (STR(..))
 import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..))
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback, alignParentBottom, singleLine, ellipsize)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback, alignParentBottom, singleLine, ellipsize, clickable)
 import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, locUnserviceablePopUpConfig, rentalPolicyInfoConfig)
 import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval, dummyRentalQuote)
 import Screens.Types (RentalScreenState, RentalScreenStage(..))
@@ -181,15 +181,25 @@ rentalPackageSelectionView push state =
 
 sliderView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
 sliderView push state = 
+  let 
+    updateSliderMethodExists = EHC.jBridgeMethodExists "updateSliderValue" 
+    prefixText = if updateSliderMethodExists then "-" else "2 hr"
+    suffixText = if updateSliderMethodExists then "+" else show state.props.maxDuration <> " hrs"
+    buttonPadding = if updateSliderMethodExists then Padding 18 2 18 8 else Padding 0 0 0 0
+    fontStyle = if updateSliderMethodExists then FontStyle.h1 TypoGraphy else FontStyle.body1 TypoGraphy
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , gravity CENTER
     , margin $ MarginTop 24
     ][  textView $ 
-          [ text "2 hr"
+          [ text prefixText
           , color Color.white900
-          ] <> FontStyle.body1 TypoGraphy
+          , padding $ buttonPadding
+          , clickable updateSliderMethodExists
+          , onClick push $ const $ UpdateSliderValue (state.data.rentalBookingData.baseDuration - 1 )
+          ] <> fontStyle
       , PrestoAnim.animationSet [Anim.fadeIn true] $
           linearLayout
             [ height $ V 35
@@ -214,9 +224,12 @@ sliderView push state =
                 )(const NoAction)
               ][]
       , textView $ 
-          [ text $ show state.props.maxDuration <> " hrs"
+          [ text suffixText
+          , padding $ buttonPadding
+          , clickable updateSliderMethodExists
+          , onClick push $ const $ UpdateSliderValue (state.data.rentalBookingData.baseDuration + 1 )
           , color Color.white900
-          ] <> FontStyle.body1 TypoGraphy
+          ] <> fontStyle
     ]
 
 rentalVariantSelectionView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w

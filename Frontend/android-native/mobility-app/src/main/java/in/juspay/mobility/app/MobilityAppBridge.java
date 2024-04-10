@@ -135,6 +135,7 @@ public class MobilityAppBridge extends HyperBridge {
     private static final ArrayList<SendMessageCallBack> sendMessageCallBacks = new ArrayList<>();
     private CallBack callBack;
 
+    private HashMap<String, SliderComponent> sliderComponentHashMap = new HashMap<>();
     public MobilityAppBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(bridgeComponents.getContext());
@@ -1154,6 +1155,23 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public void updateSliderValue(String config){
+        ExecutorManager.runOnMainThread(() -> {
+            try{
+                JSONObject jsonData = new JSONObject(config);
+                int sliderValue = jsonData.optInt("sliderValue",0);
+                String id = jsonData.getString("id");
+                SliderComponent sliderComponent = sliderComponentHashMap.get(id);
+                if(sliderComponent != null)
+                    sliderComponent.updateSliderValue(sliderValue);
+
+            } catch(Exception e){
+                Log.e(UTILS, "Error in updating slider value: " + e);
+                e.printStackTrace();
+            }
+        });
+    }
+    @JavascriptInterface
     public void renderSlider(String config) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -1171,10 +1189,12 @@ public class MobilityAppBridge extends HyperBridge {
                 String thumbColor = jsonData.optString("thumbColor", "#2194FF");
                 int bgAlpha  = jsonData.optInt("bgAlpha", 50);
                 SliderComponent sliderComponent = new SliderComponent();
+                sliderComponentHashMap.put(id, sliderComponent);
                 sliderComponent.addSlider(id, callback, conversionRate , minLimit, maxLimit, defaultValue, toolTipId, enableToolTip, progressColor, thumbColor, bgColor, bgAlpha, bridgeComponents);
             } catch (JSONException e) {
-                throw new RuntimeException(e);
+                e.printStackTrace();
             }
         });
+
     }
 }

@@ -24,6 +24,7 @@ import java.util.Locale;
 import in.juspay.hyper.core.BridgeComponents;
 
 public class SliderComponent {
+    private SeekBar seekBar;
 
     public SliderComponent(){
 
@@ -46,6 +47,11 @@ public class SliderComponent {
         }
     }
 
+    public void updateSliderValue (int sliderValue){
+        if (seekBar!=null && seekBar.getProgress() != sliderValue && sliderValue <= seekBar.getMax() && sliderValue >= 0){
+            seekBar.setProgress(sliderValue);
+        }
+    }
     public void addSlider(String id, String callback, float conversionRate, int minLimit, int maxLimit, int defaultValue, String toolTipId, Boolean enableToolTip, String progressColor, String thumbColor, String bgColor, int bgAlpha, BridgeComponents bridgeComponents){
         Activity activity = bridgeComponents.getActivity();
         Context context = bridgeComponents.getContext();
@@ -54,7 +60,7 @@ public class SliderComponent {
             LinearLayout toolTipView = activity.findViewById(Integer.parseInt(toolTipId));
             if (layout == null || (toolTipView == null && enableToolTip))
                 return;
-            SeekBar seekBar = new SeekBar(context);
+            seekBar = new SeekBar(context);
             ShapeDrawable thumbDrawable = new ShapeDrawable(new OvalShape());
             thumbDrawable.getPaint().setColor(Color.parseColor(thumbColor));
             thumbDrawable.setIntrinsicHeight(dpToPx(context, 20));

@@ -112,7 +112,7 @@ incrementDecrementConfig state = let
       , gravity = CENTER_HORIZONTAL
       }
     , background = Color.blue600
-    , padding = Padding 32 10 32 10
+    , padding = Padding 16 10 16 10
     , gravity = CENTER_HORIZONTAL
     , width = MATCH_PARENT
     , orientation = HORIZONTAL
