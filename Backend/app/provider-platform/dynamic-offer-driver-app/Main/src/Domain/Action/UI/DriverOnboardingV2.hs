@@ -124,18 +124,17 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchanOperatingCityId) API.Types.U
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchanOperatingCityId
 
   let driverVehicleServiceTierTypes = selectVehicleTierForDriver person driverInfo vehicle cityVehicleServiceTiers
-  let defaultServiceTierForDriver = (.serviceTierType) <$> (find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) driverVehicleServiceTierTypes)
 
   mbSelectedServiceTiers <-
-    tiers `forM` \API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier {..} -> do
-      when (isSelected && serviceTierType `notElem` (map (.serviceTierType) driverVehicleServiceTierTypes)) $
-        throwError $ InvalidRequest "Driver can't select a service tier that is not available"
-      if isSelected || defaultServiceTierForDriver == Just serviceTierType
-        then return $ Just serviceTierType
-        else return Nothing
+    driverVehicleServiceTierTypes `forM` \driverServiceTier -> do
+      let isAlreadySelected = driverServiceTier.serviceTierType `elem` vehicle.selectedServiceTiers
+          isDefault = vehicle.variant `elem` driverServiceTier.defaultForVehicleVariant
+          mbServiceTierDriverRequest = find (\tier -> tier.serviceTierType == driverServiceTier.serviceTierType) tiers
+          isSelected = maybe isAlreadySelected (.isSelected) mbServiceTierDriverRequest
 
-  when (any (\tier -> tier.serviceTierType `elem` (map (.serviceTierType) driverVehicleServiceTierTypes)) tiers) $
-    throwError $ InvalidRequest "Drive can't select a service tier that is not available"
+      if isSelected || isDefault
+        then return $ Just driverServiceTier.serviceTierType
+        else return Nothing
 
   QVehicle.updateSelectedServiceTiers (catMaybes mbSelectedServiceTiers) personId
 
