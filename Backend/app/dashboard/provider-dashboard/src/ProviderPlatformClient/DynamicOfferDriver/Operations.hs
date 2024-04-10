@@ -230,6 +230,7 @@ data SubscriptionAPIs = SubscriptionAPIs
 
 data CoinAPIs = CoinAPIs
   { driverCoinBulkUpload :: Coins.BulkUploadCoinsReq -> Euler.EulerClient APISuccess,
+    driverCoinBulkUploadV2 :: Coins.BulkUploadCoinsReqV2 -> Euler.EulerClient APISuccess,
     driverCoinsHistory :: Id Driver.Driver -> Maybe Integer -> Maybe Integer -> Euler.EulerClient Coins.CoinHistoryRes
   }
 
@@ -396,6 +397,7 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> getAllDriverFeeHistory = revenueClient
 
     driverCoinBulkUpload
+      :<|> driverCoinBulkUploadV2
       :<|> driverCoinsHistory = driverCoinsClient
 
 callDriverOfferBPPOperations ::
