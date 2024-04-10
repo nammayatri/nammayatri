@@ -270,7 +270,7 @@ vehicleLogoAndType push state =
             , margin $ MarginLeft 7
             ]
             [ customTV (getVariantRideType state.data.vehicleType) FontSize.a_20 FontStyle.h3 Color.black800
-            , customTV (state.data.defaultRidePreference.name <> " · " <> (fromMaybe (getString COMFY) state.data.defaultRidePreference.shortDescription)) FontSize.a_12 FontStyle.body3 Color.black650
+            , customTV (fromMaybe "" state.data.defaultRidePreference.shortDescription) FontSize.a_12 FontStyle.body3 Color.black650
             ]
         ]
     ]
