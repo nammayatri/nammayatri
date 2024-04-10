@@ -197,7 +197,7 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "CAB", Just "SEDAN") -> Just VehVar.SEDAN
     (Just "CAB", Just "SUV") -> Just VehVar.SUV
     (Just "CAB", Just "HATCHBACK") -> Just VehVar.HATCHBACK
-    (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just VehVar.AUTO_RICKSHAW
+    (Just "AUTO_RICKSHAW", _) -> Just VehVar.AUTO_RICKSHAW
     (Just "CAB", Just "TAXI") -> Just VehVar.TAXI
     (Just "CAB", Just "TAXI_PLUS") -> Just VehVar.TAXI_PLUS
     _ -> Nothing
