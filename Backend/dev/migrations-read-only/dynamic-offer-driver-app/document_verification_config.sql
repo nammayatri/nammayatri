@@ -20,3 +20,9 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN vehic
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD PRIMARY KEY ( document_type, merchant_operating_city_id, vehicle_category);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN "order" integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN dl_number_verification boolean ;
