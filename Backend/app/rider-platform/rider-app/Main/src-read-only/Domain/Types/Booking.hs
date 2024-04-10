@@ -11,8 +11,8 @@ import Domain.Types.Extra.Booking as ReExport
 import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantPaymentMethod
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
 import qualified Domain.Types.TripTerms
@@ -40,7 +40,7 @@ data Booking = Booking
     itemId :: Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    paymentMethodId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantPaymentMethod.MerchantPaymentMethod),
+    paymentMethodId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod),
     paymentStatus :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.PaymentStatus,
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     primaryExophone :: Kernel.Prelude.Text,

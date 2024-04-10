@@ -5,8 +5,8 @@ module Storage.Queries.SearchRequestExtra where
 
 import Data.Text (strip)
 import qualified Domain.Types.LocationMapping as DLM
-import Domain.Types.Merchant.MerchantPaymentMethod (MerchantPaymentMethod)
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import Domain.Types.MerchantPaymentMethod (MerchantPaymentMethod)
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Person)
 import Domain.Types.SearchRequest
 import EulerHS.Prelude (whenNothingM_)

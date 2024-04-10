@@ -14,7 +14,7 @@ imports:
   LocationAddress: Domain.Types.LocationAddress
   BookingStatus: Domain.Types.Extra.Booking
   Quote: Domain.Types.Quote
-  MerchantPaymentMethod: Domain.Types.Merchant.MerchantPaymentMethod
+  MerchantPaymentMethod: Domain.Types.MerchantPaymentMethod
   TripTerms: Domain.Types.TripTerms
   VehicleVariant: Domain.Types.VehicleVariant
   PaymentStatus: BecknV2.OnDemand.Enums

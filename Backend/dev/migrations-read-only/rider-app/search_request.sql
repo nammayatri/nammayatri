@@ -27,3 +27,9 @@ ALTER TABLE atlas_app.search_request ADD COLUMN start_time timestamp with time z
 ALTER TABLE atlas_app.search_request ADD COLUMN to_location_id character varying(36) ;
 ALTER TABLE atlas_app.search_request ADD COLUMN valid_till timestamp with time zone NOT NULL;
 ALTER TABLE atlas_app.search_request ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ALTER COLUMN rider_preferred_option DROP NOT NULL;
+ALTER TABLE atlas_app.search_request ALTER COLUMN merchant_operating_city_id DROP NOT NULL;

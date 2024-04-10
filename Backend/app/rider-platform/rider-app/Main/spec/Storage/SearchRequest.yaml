@@ -4,7 +4,7 @@ imports:
   Version: Kernel.Types.Version
   Price: Kernel.Types.Common
   Seconds: Kernel.Types.Common
-  MerchantPaymentMethod: Domain.Types.Merchant.MerchantPaymentMethod
+  MerchantPaymentMethod: Domain.Types.MerchantPaymentMethod
   Person: Domain.Types.Person
   Client: Domain.Types.Client
   Location: Domain.Types.Location

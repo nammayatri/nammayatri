@@ -28,12 +28,12 @@ import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Location as DL
+import qualified Domain.Action.UI.MerchantPaymentMethod as DMPM
 import Domain.Types.Booking
 import Domain.Types.CancellationReason
 import Domain.Types.Estimate (EstimateAPIEntity)
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Location as DL
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Quote (QuoteAPIEntity)
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.SearchRequest as SSR

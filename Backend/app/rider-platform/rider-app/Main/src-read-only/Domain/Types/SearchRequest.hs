@@ -8,8 +8,8 @@ import Data.Aeson
 import qualified Domain.Types.Client
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantPaymentMethod
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.Person
 import qualified Kernel.External.Maps
 import Kernel.Prelude
@@ -22,7 +22,7 @@ import qualified Tools.Beam.UtilsTH
 data SearchRequest = SearchRequest
   { autoAssignEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoAssignEnabledV2 :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    availablePaymentMethods :: [Kernel.Types.Id.Id Domain.Types.Merchant.MerchantPaymentMethod.MerchantPaymentMethod],
+    availablePaymentMethods :: [Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod],
     bundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),
     clientVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -40,7 +40,7 @@ data SearchRequest = SearchRequest
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     riderPreferredOption :: Domain.Types.SearchRequest.RiderPreferredOption,
-    selectedPaymentMethodId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantPaymentMethod.MerchantPaymentMethod),
+    selectedPaymentMethodId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod),
     startTime :: Kernel.Prelude.UTCTime,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     validTill :: Kernel.Prelude.UTCTime

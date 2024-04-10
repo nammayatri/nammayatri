@@ -1,20 +1,10 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
-module Domain.Types.Merchant.MerchantPaymentMethod where
+module Domain.Types.Extra.MerchantPaymentMethod where
 
 import Data.Aeson.Types
 import qualified Data.List as List
@@ -27,25 +17,7 @@ import Kernel.Types.Id
 import qualified Text.Show
 import Tools.Beam.UtilsTH
 
-data MerchantPaymentMethodD (s :: UsageSafety) = MerchantPaymentMethod
-  { id :: Id MerchantPaymentMethod,
-    merchantId :: Id Merchant,
-    merchantOperatingCityId :: Id MerchantOperatingCity,
-    paymentType :: PaymentType,
-    paymentInstrument :: PaymentInstrument,
-    collectedBy :: PaymentCollector,
-    priority :: Int,
-    updatedAt :: UTCTime,
-    createdAt :: UTCTime
-  }
-  deriving (Generic)
-
-type MerchantPaymentMethod = MerchantPaymentMethodD 'Safe
-
-instance FromJSON (MerchantPaymentMethodD 'Unsafe)
-
-instance ToJSON (MerchantPaymentMethodD 'Unsafe)
-
+-- Extra code goes here --
 data PaymentType = ON_FULFILLMENT | POSTPAID
   deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, Ord, ToSchema)
 
@@ -132,19 +104,8 @@ instance FromJSON WalletType where
 instance ToJSON WalletType where
   toJSON = String . show
 
-data PaymentMethodAPIEntity = PaymentMethodAPIEntity
-  { id :: Id MerchantPaymentMethod,
-    paymentType :: PaymentType,
-    paymentInstrument :: PaymentInstrument,
-    collectedBy :: PaymentCollector
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
 data PaymentCollector = BAP | BPP
   deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, ToSchema, Ord)
-
-mkPaymentMethodAPIEntity :: MerchantPaymentMethod -> PaymentMethodAPIEntity
-mkPaymentMethodAPIEntity MerchantPaymentMethod {..} = PaymentMethodAPIEntity {..}
 
 data PaymentMethodInfo = PaymentMethodInfo
   { paymentType :: PaymentType,
@@ -152,9 +113,6 @@ data PaymentMethodInfo = PaymentMethodInfo
     collectedBy :: PaymentCollector
   }
   deriving (Show)
-
-mkPaymentMethodInfo :: MerchantPaymentMethod -> PaymentMethodInfo
-mkPaymentMethodInfo MerchantPaymentMethod {..} = PaymentMethodInfo {..}
 
 $(mkBeamInstancesForEnum ''PaymentCollector)
 

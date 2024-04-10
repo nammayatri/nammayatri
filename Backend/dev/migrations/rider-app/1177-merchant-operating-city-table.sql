@@ -11,9 +11,6 @@ FROM atlas_app.merchant;
 ALTER TABLE atlas_app.merchant_service_usage_config
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
 
-ALTER TABLE atlas_app.merchant_payment_method
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
-
 -- Update the values of the new column
 UPDATE atlas_app.merchant_service_usage_config
 SET merchant_operating_city_id = merchant_operating_city.id
@@ -39,9 +36,6 @@ WHERE atlas_app.merchant_config.merchant_id = merchant_operating_city.merchant_i
 ALTER TABLE atlas_app.merchant_service_usage_config
 ALTER COLUMN merchant_operating_city_id SET NOT NULL;
 
-
-ALTER TABLE atlas_app.merchant_payment_method
-ALTER COLUMN merchant_operating_city_id SET NOT NULL;
 
 ALTER TABLE atlas_app.exophone
 ALTER COLUMN merchant_operating_city_id SET NOT NULL;

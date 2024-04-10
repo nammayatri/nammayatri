@@ -4,6 +4,43 @@ imports:
   MerchantMessageDefaultDataJSON: Domain.Types.Extra.MerchantMessage
 
 
+MerchantPaymentMethod:
+  derives: "Generic,'UsageSafety"
+  fields:
+    id: Id MerchantPaymentMethod
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    paymentType: Domain.Types.Extra.MerchantPaymentMethod.PaymentType
+    paymentInstrument: Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument
+    collectedBy: Domain.Types.Extra.MerchantPaymentMethod.PaymentCollector
+    priority: Int
+    updatedAt: UTCTime
+    createdAt: UTCTime
+
+  default: {}
+  sqlType:
+    paymentType: character varying(30)
+    paymentInstrument: character varying(255)
+    collectedBy: character varying(30)
+    priority: int
+
+
+  fromTType:
+    paymentType: paymentTypeTrans
+
+  constraints:
+    merchantOperatingCityId: SecondaryKey
+
+  excludedDefaultQueries:
+   - findByPrimaryKey
+   - updateByPrimaryKey
+
+  extraOperations:
+   - EXTRA_DOMAIN_TYPE_FILE
+   - EXTRA_QUERY_FILE
+
+
+
 MerchantMessage:
   tableName: merchant_message
 
@@ -59,7 +96,6 @@ MerchantMessage:
 
   extraOperations:
    - EXTRA_DOMAIN_TYPE_FILE
-
 
 
 

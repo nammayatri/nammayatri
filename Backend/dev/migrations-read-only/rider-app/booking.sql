@@ -39,3 +39,9 @@ ALTER TABLE atlas_app.booking ADD COLUMN trip_terms_id text ;
 ALTER TABLE atlas_app.booking ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.booking ADD COLUMN vehicle_variant text NOT NULL;
 ALTER TABLE atlas_app.booking ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ALTER COLUMN merchant_operating_city_id DROP NOT NULL;
+ALTER TABLE atlas_app.booking ALTER COLUMN is_scheduled DROP NOT NULL;
