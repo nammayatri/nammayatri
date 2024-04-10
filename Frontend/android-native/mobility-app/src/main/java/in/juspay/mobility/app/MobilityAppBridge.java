@@ -47,6 +47,7 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.android.installreferrer.api.InstallReferrerClient;
 import com.android.installreferrer.api.InstallReferrerStateListener;
 import com.android.installreferrer.api.ReferrerDetails;
+import com.bumptech.glide.Glide;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.facebook.appevents.AppEventsLogger;
 import com.google.android.gms.auth.api.credentials.Credential;
@@ -895,7 +896,12 @@ public class MobilityAppBridge extends HyperBridge {
             float density = (Resources.getSystem().getDisplayMetrics().density);
             // imageView Config ------------------------------------------
             if ((viewPagerItem.getContentType()).equals("IMAGE")){
-                holder.imageView.setImageResource(viewPagerItem.getImageID());
+                if (viewPagerItem.isImageUrl())
+                    Glide.with(context)
+                            .load(viewPagerItem.getImage())
+                            .into(holder.imageView);
+                else
+                    holder.imageView.setImageResource(viewPagerItem.getImageID());
                 holder.imageView.getLayoutParams().height = (int) (viewPagerItem.getImageHeight() * density);
                 GradientDrawable gradientDrawable = new GradientDrawable();
                 gradientDrawable.setShape(GradientDrawable.RECTANGLE);
