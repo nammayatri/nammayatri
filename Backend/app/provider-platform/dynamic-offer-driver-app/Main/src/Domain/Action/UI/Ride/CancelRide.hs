@@ -171,7 +171,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
           -- Temporary for debug issue with huge values
           let disToPickupThreshold = 1000000 --1000km can be max valid distance
           updatedDisToPickup :: Maybe Meters <- case disToPickup of
-            Just dis -> if abs dis > disToPickupThreshold then logWarning ("Driver distance to pickup is huge" <> show disToPickup) >> return (Just (-1)) else return (Just dis)
+            Just dis -> if abs (toInteger dis) > disToPickupThreshold then logWarning ("Invalid disToPickup received:" <> show disToPickup) >> return Nothing else return (Just dis)
             Nothing -> return Nothing
 
           let currentDriverLocation = getCoordinates <$> mbLocation
