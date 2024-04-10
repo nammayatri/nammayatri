@@ -55,6 +55,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error
 import Tools.Event
+import TransactionLogs.Types
 
 data DConfirmReq = DConfirmReq
   { personId :: Id DP.Person,
@@ -102,7 +103,7 @@ confirm ::
     EventStreamFlow m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "version" ::: DeploymentVersion],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     EncFlow m r
   ) =>

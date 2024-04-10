@@ -52,6 +52,6 @@ onTrack _ reqV2 = withFlowHandlerBecknAPI do
       fork "on track received pushing ondc logs" do
         booking <- QRB.findById validatedReq.ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BookingId:-" <> validatedReq.ride.bookingId.getId)
         ondcTokenHashMap <- asks (.ondcTokenHashMap)
-        let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HM.lookup booking.merchantId.getId ondcTokenHashMap
+        let tokenConfig = HM.lookup (KeyConfig booking.merchantId.getId "MOBILITY") ondcTokenHashMap
         void $ pushLogs "on_track" (toJSON reqV2) tokenConfig
     pure Ack

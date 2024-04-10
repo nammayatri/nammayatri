@@ -45,6 +45,7 @@ import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import Tools.Metrics (HasBAPMetrics)
 import qualified Tools.SMS as Sms
+import TransactionLogs.Types
 
 data OnConfirmReq
   = RideAssigned RideAssignedInfo
@@ -91,7 +92,7 @@ onConfirm ::
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasBAPMetrics m r,
     EventStreamFlow m r
   ) =>

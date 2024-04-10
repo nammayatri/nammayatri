@@ -80,7 +80,7 @@ track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBe
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporterId (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
     fork "track received pushing ondc logs" do
       ondcTokenHashMap <- asks (.ondcTokenHashMap)
-      let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup transporterId.getId ondcTokenHashMap
+      let tokenConfig = HMS.lookup (KeyConfig transporterId.getId "MOBILITY") ondcTokenHashMap
       void $ pushLogs "track" (toJSON reqV2) tokenConfig
     ttl <- bppConfig.onTrackTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
     onTrackContext <- ContextV2.buildContextV2 Context.ON_TRACK Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttl)

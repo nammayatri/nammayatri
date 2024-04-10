@@ -60,6 +60,7 @@ import Tools.Error
 import Tools.Maps (LatLong)
 import Tools.Metrics (HasBAPMetrics)
 import qualified Tools.Notifications as Notify
+import TransactionLogs.Types
 
 data OnUpdateReq
   = OURideAssignedReq Common.RideAssignedReq
@@ -211,7 +212,7 @@ onUpdate ::
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
     HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasBAPMetrics m r,
     EventStreamFlow m r,
     HasField "hotSpotExpiry" r Seconds

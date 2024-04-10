@@ -148,7 +148,7 @@ data AppCfg = AppCfg
     superPositionConfig :: SuperPositionConfig,
     maxStraightLineRectificationThreshold :: HighPrecMeters,
     singleBatchProcessingTempDelay :: NominalDiffTime,
-    ondcTokenMap :: M.Map Text TokenConfig
+    ondcTokenMap :: M.Map KeyConfig TokenConfig
   }
   deriving (Generic, FromDhall)
 
@@ -233,7 +233,7 @@ data AppEnv = AppEnv
     kafkaProducerForART :: Maybe KafkaProducerTools,
     maxStraightLineRectificationThreshold :: HighPrecMeters,
     singleBatchProcessingTempDelay :: NominalDiffTime,
-    ondcTokenHashMap :: HMS.HashMap Text (Text, BaseUrl)
+    ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig
   }
   deriving (Generic)
 
@@ -276,8 +276,8 @@ buildAppEnv cfg@AppCfg {..} = do
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
   let internalEndPointHashMap = HMS.fromList $ M.toList internalEndPointMap
-  let tokenMap :: (M.Map Text (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
-  let ondcTokenHashMap = HMS.fromList $ M.toList tokenMap
+  -- let tokenMap :: (M.Map KeyConfig (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
+  let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

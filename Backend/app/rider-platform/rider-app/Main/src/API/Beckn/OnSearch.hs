@@ -52,7 +52,7 @@ onSearch _ reqV2 = withFlowHandlerBecknAPI do
         validatedRequest <- DOnSearch.validateRequest request
         fork "on search received pushing ondc logs" do
           ondcTokenHashMap <- asks (.ondcTokenHashMap)
-          let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HM.lookup validatedRequest.merchant.id.getId ondcTokenHashMap
+          let tokenConfig = HM.lookup (KeyConfig validatedRequest.merchant.id.getId "MOBILITY") ondcTokenHashMap
           void $ pushLogs "on_search" (toJSON reqV2) tokenConfig
         fork "on search processing" $ do
           Redis.whenWithLockRedis (onSearchProcessingLockKey messageId bppSubId) 60 $

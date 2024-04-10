@@ -55,8 +55,6 @@ updateByPrimaryKey (Domain.Types.BecknConfig.BecknConfig {..}) = do
       Se.Set Beam.collectedBy collectedBy,
       Se.Set Beam.domain domain,
       Se.Set Beam.gatewayUrl (Kernel.Prelude.showBaseUrl gatewayUrl),
-      Se.Set Beam.logsToken logsToken,
-      Se.Set Beam.logsUrl (Kernel.Prelude.showBaseUrl logsUrl),
       Se.Set Beam.onCancelTTLSec onCancelTTLSec,
       Se.Set Beam.onConfirmTTLSec onConfirmTTLSec,
       Se.Set Beam.onInitTTLSec onInitTTLSec,
@@ -84,7 +82,6 @@ updateByPrimaryKey (Domain.Types.BecknConfig.BecknConfig {..}) = do
 instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   fromTType' (Beam.BecknConfigT {..}) = do
     gatewayUrl' <- Kernel.Prelude.parseBaseUrl gatewayUrl
-    logsUrl' <- Kernel.Prelude.parseBaseUrl logsUrl
     registryUrl' <- Kernel.Prelude.parseBaseUrl registryUrl
     staticTermsUrl' <- ((Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))) staticTermsUrl
     subscriberUrl' <- Kernel.Prelude.parseBaseUrl subscriberUrl
@@ -98,8 +95,6 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
             domain = domain,
             gatewayUrl = gatewayUrl',
             id = Kernel.Types.Id.Id id,
-            logsToken = logsToken,
-            logsUrl = logsUrl',
             onCancelTTLSec = onCancelTTLSec,
             onConfirmTTLSec = onConfirmTTLSec,
             onInitTTLSec = onInitTTLSec,
@@ -133,8 +128,6 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
         Beam.domain = domain,
         Beam.gatewayUrl = Kernel.Prelude.showBaseUrl gatewayUrl,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.logsToken = logsToken,
-        Beam.logsUrl = Kernel.Prelude.showBaseUrl logsUrl,
         Beam.onCancelTTLSec = onCancelTTLSec,
         Beam.onConfirmTTLSec = onConfirmTTLSec,
         Beam.onInitTTLSec = onInitTTLSec,

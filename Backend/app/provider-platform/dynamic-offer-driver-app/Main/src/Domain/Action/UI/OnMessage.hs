@@ -36,6 +36,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import TransactionLogs.Types
 
 data FCMReq = FCMReq
   { rideId :: Id Ride.Ride,
@@ -43,7 +44,7 @@ data FCMReq = FCMReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-sendMessageFCM :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]) => (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FCMReq -> m APISuccess.APISuccess
+sendMessageFCM :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]) => (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FCMReq -> m APISuccess.APISuccess
 sendMessageFCM (_personId, _, _) FCMReq {..} = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
