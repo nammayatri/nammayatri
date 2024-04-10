@@ -1471,3 +1471,6 @@ getTE stringKey =
         ONLY_3_MORE_RIDES_FOR_50_COINS -> "మాత్రమే 3 రైడ్‌లు మరియు 50 నాణేలు"
         YOU_GOT_50_COINS -> "మీకు 50 నాణేలు వచ్చాయి"
         YOU_GOT_10_COINS -> "మీకు 10 నాణేలు వచ్చాయి"
+        TO_GET_YOU_RIDES -> "మీ రైడ్‌లను పొందడానికి, మాకు మీ పరికరం స్థానం అవసరం."
+        ALLOW -> "అనుమతించు"
+        PERMISSIONS_REQUIRED -> "అనుమతులు అవసరం"

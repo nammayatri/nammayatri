@@ -1470,3 +1470,6 @@ getBN stringKey =
         ONLY_3_MORE_RIDES_FOR_50_COINS -> "শুধুমাত্র ৩ টি আরও রাইড নিন এবং ৫০ কয়েন পান"
         YOU_GOT_50_COINS -> "আপনি ৫০ কয়েন পেয়েছেন"
         YOU_GOT_10_COINS -> "আপনি ১০ কয়েন পেয়েছেন"
+        TO_GET_YOU_RIDES -> "আপনাকে রাইড করতে, আমাদের আপনার ডিভাইসের অবস্থান প্রয়োজন।"
+        ALLOW -> "অনুমতি দিন"
+        PERMISSIONS_REQUIRED -> "অনুমতি প্রয়োজন"

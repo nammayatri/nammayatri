@@ -275,6 +275,7 @@ screen initialState (GlobalState globalState) =
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.invoiceId 4 5000.0 initialState push PaymentStatusAction
                                 
                                 pure unit
+          void $ launchAff $ EHC.flowRunner defaultGlobalState $ doAff do liftEffect $ push $ CheckPermissionsAsync false
           runEffectFn1 consumeBP unit
           pure $ pure unit
         )
@@ -876,7 +877,8 @@ offlineView push state =
   , height MATCH_PARENT
   , gravity BOTTOM
   , background Color.black9000
-  ][ frameLayout
+  , orientation VERTICAL
+  ] $ [ frameLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       ][ linearLayout
@@ -949,9 +951,41 @@ offlineView push state =
           ]
       ]
     ]
-  ]
+  ] <> case state.props.missingPermission of
+        Just number -> [permissionRequired push number]
+        Nothing -> []
   where
     isBookingPreferenceVisible = state.data.linkedVehicleCategory /= "AUTO_RICKSHAW" && state.props.driverStatusSet == ST.Offline
+
+permissionRequired :: forall w . (Action -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
+permissionRequired push length = 
+  PrestoAnim.animationSet [ Anim.fadeIn true ] $
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , background Color.red900
+    , gravity CENTER_VERTICAL
+    , padding $ Padding 16 8 16 8
+    , onClick push $ const $ CheckPermissionsAsync true
+    ][  imageView
+        [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_missing_permissions"
+        , height $ V 40
+        , width $ V 40
+        , margin $ MarginLeft 8
+        ]
+      , textView $
+        [ text $ (getString PERMISSIONS_REQUIRED) <> " (" <> show length <> ")"
+        , height WRAP_CONTENT
+        , color Color.white900
+        , weight 1.0
+        , margin $ MarginLeft 8
+        ] <> FontStyle.body1 TypoGraphy
+      , imageView
+        [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_right_white"
+        , height $ V 20
+        , width $ V 20
+        ]
+    ]
 
 popupModelSilentAsk :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 popupModelSilentAsk push state =

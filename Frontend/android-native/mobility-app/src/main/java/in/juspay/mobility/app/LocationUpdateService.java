@@ -927,8 +927,10 @@ public class LocationUpdateService extends Service {
             return;
         }
         notificationManager.notify(alertNotificationId, mBuilder.build());
-
-        startGPSListeningService();
+        LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        if (!locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)){
+            startGPSListeningService();
+        }
     }
 
     private void startGPSListeningService() {

@@ -51,7 +51,7 @@ import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState, GlobalState(..))
-
+import Screens.Types as ST
 
 screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
 screen initialState =

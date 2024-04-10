@@ -1238,7 +1238,9 @@ type HomeScreenProps =  {
   toll :: TollState,
   bookingStage :: BookingTypes,
   showAdvancedRidePopUp :: Boolean,
-  showInterOperablePopUp :: Boolean
+  showInterOperablePopUp :: Boolean,
+  missingPermission :: Maybe Int,
+  onPermissionScreen :: Boolean
  }
 
 type TollState = {
@@ -2787,3 +2789,26 @@ type RateCardScreenProps = {
   sliderMaxValue :: Int,
   sliderLoading :: Boolean
 }
+-- ######################################### AskPermissionScreenState ####################################################
+
+type AskPermissionScreenState = {
+  data :: AskPermissionScreenData ,
+  props :: AskPermissionScreenProps
+}
+
+type AskPermissionScreenData = {
+  permissionList :: Array Permissions
+} 
+
+type AskPermissionScreenProps = {
+  backpressEnabled :: Boolean,
+  currentStep :: Maybe Permissions,
+  ifAnim :: Boolean
+} 
+
+data Permissions = Overlay | Battery | AutoStart | Notifications | LocationPermission
+derive instance genericPermissions :: Generic Permissions _
+instance eqPermissions :: Eq Permissions where eq = genericEq
+instance showPermissions :: Show Permissions where show = genericShow
+instance decodePermissions :: Decode Permissions where decode = defaultEnumDecode
+instance encodePermissions :: Encode Permissions where encode = defaultEnumEncode

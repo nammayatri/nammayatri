@@ -16,7 +16,7 @@
 module Screens.PermissionsScreen.ScreenData where
 
 import Prelude (class Eq, (<>), (>=))
-import Screens.Types(PermissionsScreenState)
+import Screens.Types(PermissionsScreenState, Permissions(..))
 import Data.Eq.Generic (genericEq)
 import Foreign.Object (empty)
 import Data.Generic.Rep (class Generic)
@@ -40,10 +40,6 @@ initData = {
     , isDriverEnabled : false
     }
 }
-
-data Permissions = Overlay | Battery | AutoStart | Notifications | LocationPermission
-derive instance genericPermissions :: Generic Permissions _
-instance eqPermissions :: Eq Permissions where eq = genericEq
 
 type Listtype =
     { icon :: String,

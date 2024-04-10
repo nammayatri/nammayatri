@@ -15,7 +15,7 @@ import Language.Types (STR(..))
 import Mobility.Prelude as MP
 import Prelude (Unit, const, (<>), bind, ($), pure, unit, show, (==), (||), (&&), (/=), not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, id, afterRender, visibility, background, padding, accessibilityHint, accessibility, rippleColor, cornerRadius)
-import Screens.Types (StepsHeaderModelState, FareProductType(..))
+import Screens.Types (FareProductType(..))
 import Styles.Colors as Color
 
 view :: forall w. Config -> PrestoDOM (Effect Unit) w

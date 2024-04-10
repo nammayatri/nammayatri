@@ -5,13 +5,13 @@ import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, (<>), bind, ($), pure, unit, show, (+), (>=), (&&), (>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, lottieAnimationView, id, afterRender, visibility, background, padding, accessibilityHint, accessibility, rippleColor, cornerRadius)
-import Screens.Types (StepsHeaderModelState)
 import Styles.Colors as Color
-import Components.StepsHeaderModel.Controller (Action(..))
+import Components.StepsHeaderModel.Controller (Action(..), StepsHeaderModelState)
 import Data.Array as Array
 import Data.Maybe as Maybe
 import Common.Types.App (LazyCheck(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Mobility.Prelude (boolToVisibility)
 
 view :: forall w . (Action -> Effect Unit) -> StepsHeaderModelState -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -19,7 +19,7 @@ view push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , background state.config.primaryBackground
+    , background state.primaryBackground
     , padding $ PaddingVertical 10 10
     ][ linearLayout
         [ width MATCH_PARENT
@@ -34,12 +34,10 @@ view push state =
             , onClick push $ const OnArrowClick
             , accessibilityHint "Back"
             , accessibility ENABLE
-            , visibility case state.backArrowVisibility of 
-                true -> VISIBLE
-                false -> if state.activeIndex > 0 then VISIBLE else GONE
             , cornerRadius 20.0
             , rippleColor Color.rippleShade
             , padding $ Padding 7 7 7 7
+            , visibility $ boolToVisibility state.backArrowVisibility
             ]
           , linearLayout
             [ width WRAP_CONTENT
@@ -59,7 +57,7 @@ view push state =
             , width WRAP_CONTENT
             , accessibility ENABLE
             , accessibilityHint $ "Step " <> (show (state.activeIndex + 1)) <> " Of "<> (show (Array.length state.textArray))
-            , text $ "Step "<> (show (state.activeIndex + 1)) <> "/"<> (show (Array.length state.textArray))
+            , text $ state.stepsTranslation <> " "<> (show (state.activeIndex + 1)) <> "/"<> (show (Array.length state.textArray))
             , color Color.white900
             ] <> FontStyle.body3 TypoGraphy
 

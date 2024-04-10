@@ -1469,3 +1469,6 @@ getEN stringKey =
         ONLY_3_MORE_RIDES_FOR_50_COINS -> "Only 3 more rides for 50 coins"
         YOU_GOT_50_COINS -> "You got 50 coins"
         YOU_GOT_10_COINS -> "You got 10 coins"
+        TO_GET_YOU_RIDES -> "To get you rides, we require your device location."
+        ALLOW -> "Allow"
+        PERMISSIONS_REQUIRED -> "Permissions Required"

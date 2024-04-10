@@ -33,6 +33,9 @@ import Screens.NoInternetScreen.ComponentConfig
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Effect.Uncurried(runEffectFn3)
+import Common.Animation.Config as AnimConfig
+import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
 
 screen :: ST.NoInternetScreenState -> String -> Screen Action ST.NoInternetScreenState ScreenOutput
 screen initialState triggertype = 
@@ -47,17 +50,18 @@ screen initialState triggertype =
   }
 
 view :: forall w . String -> (Action -> Effect Unit) -> ST.NoInternetScreenState -> PrestoDOM (Effect Unit) w 
-view triggertype push state =
-  linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , background Color.white900
-  , gravity CENTER
-  , afterRender push (const AfterRender)
-  ][ if triggertype == "INTERNET_ACTION" then noInternetScreenView push state triggertype 
-      else if triggertype == "LOCATION_DISABLED" then locationAccessPermissionView push state triggertype 
-        else  textView[] 
-    ]
+view triggertype push state = 
+  PrestoAnim.animationSet [ Anim.translateYAnim AnimConfig.animConfig {fromY = 800, toY = 0, ifAnim = true}] $
+    linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.white900
+    , gravity CENTER
+    , afterRender push (const AfterRender)
+    ][ if triggertype == "INTERNET_ACTION" then noInternetScreenView push state triggertype 
+        else if triggertype == "LOCATION_DISABLED" then locationAccessPermissionView push state triggertype 
+          else  textView[] 
+      ]
   
 
 locationAccessPermissionView :: forall w. (Action -> Effect Unit) -> ST.NoInternetScreenState -> String -> PrestoDOM (Effect Unit) w 
@@ -70,29 +74,33 @@ locationAccessPermissionView push state triggertype =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , padding (Padding 16 16 0 0)
+      , gravity CENTER
       ][  textView $
+          [ text $ getString GRANT_PERMISSIONS
+          , color Color.white900
+          , height WRAP_CONTENT
+          , width MATCH_PARENT
+          , background Color.black900
+          , padding $ Padding 16 46 16 26
+          ] <> FontStyle.h1 TypoGraphy,
+          imageView
+          [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_location_2"
+          , height $ V 132
+          , width $ V 132
+          , margin $ MarginTop 22
+          ],
+          textView $
           [ text (getString WE_NEED_ACCESS_TO_YOUR_LOCATION)
           , color Color.black800
           , gravity LEFT
-          , margin (MarginVertical 22 16)
-          ] <> FontStyle.h1 LanguageStyle
-        , textView $
+          , margin $ Margin 22 12 22 0
+          ] <> FontStyle.h1 LanguageStyle,
+          textView $
           [ text $ getString $ YOUR_LOCATION_HELPS_OUR_SYSTEM "YOUR_LOCATION_HELPS_OUR_SYSTEM"
           , color Color.black800
+          , margin $ Margin 22 10 22 0
           ] <> FontStyle.body5 TypoGraphy
         ]
-        , linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , gravity CENTER
-        ][  imageView
-            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_location_access"
-            , height $ V 213
-            , width $ V 240
-            , gravity CENTER
-            ]
-          ]
         , buttonView push state triggertype
   ]
 

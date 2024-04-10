@@ -1475,4 +1475,6 @@ data STR = LETS_GET_STARTED
         | ONLY_3_MORE_RIDES_FOR_50_COINS
         | YOU_GOT_50_COINS
         | YOU_GOT_10_COINS
-        
+        | TO_GET_YOU_RIDES
+        | ALLOW
+        | PERMISSIONS_REQUIRED

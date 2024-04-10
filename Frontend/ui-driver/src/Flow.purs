@@ -445,14 +445,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
               if (isJust getDriverInfoResp.autoPayStatus) 
                 then setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
                 else pure unit
-              permissionsGiven <- checkAllPermissions true config.permissions.locationPermission            
-              if permissionsGiven
-                then do
-                  liftFlowBT $ markPerformance "GET_DRIVER_INFO_FLOW_END"
-                  handleDeepLinksFlow event activeRideResp (Just getDriverInfoResp.onRide)
-                else do
-                  modifyScreenState $ PermissionsScreenStateType (\permissionScreen -> permissionScreen{props{isDriverEnabled = true}})
-                  permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide)
+              handleDeepLinksFlow event activeRideResp Nothing
             else do
               -- modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
               setValueToLocalStore IS_DRIVER_ENABLED "false"
@@ -467,11 +460,8 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
             then onBoardingFlow
             else do
               void $ pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-              if getValueToLocalStore IS_DRIVER_ENABLED == "true" then do                
-                permissionsGiven <- checkAllPermissions true config.permissions.locationPermission                
-                if permissionsGiven then
-                  handleDeepLinksFlow event activeRideResp Nothing
-                  else permissionsScreenFlow event activeRideResp Nothing
+              if getValueToLocalStore IS_DRIVER_ENABLED == "true" then
+                handleDeepLinksFlow event activeRideResp Nothing
                 else do
                   onBoardingFlow
     getUpdateToken :: String -> FlowBT String Unit
@@ -704,7 +694,7 @@ onBoardingFlow = do
       addVehicleDetailsflow false
     PERMISSION_SCREEN state -> do
       modifyScreenState $ PermissionsScreenStateType $ \permissionsScreen -> permissionsScreen { data {driverMobileNumber = state.data.phoneNumber}}
-      permissionsScreenFlow Nothing Nothing Nothing
+      permissionsScreenFlow
     LOGOUT_FROM_REGISTERATION_SCREEN -> logoutFlow
     GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN state -> 
       if state.props.manageVehicle then driverProfileFlow
@@ -1798,8 +1788,8 @@ writeToUsFlow = do
   case action of
     GO_TO_HOME_SCREEN_FLOW -> homeScreenFlow
 
-permissionsScreenFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> Maybe Boolean -> FlowBT String Unit
-permissionsScreenFlow event activeRideResp isActiveRide = do
+permissionsScreenFlow :: FlowBT String Unit
+permissionsScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
   liftFlowBT hideSplash
   void $ pure $ hideKeyboardOnNavigation true
@@ -1808,7 +1798,7 @@ permissionsScreenFlow event activeRideResp isActiveRide = do
   case action of
     DRIVER_HOME_SCREEN -> do
       liftFlowBT $ logEvent logField_ "ny_driver_submit_permissions"
-      handleDeepLinksFlow event activeRideResp isActiveRide
+      homeScreenFlow
     LOGOUT_FROM_PERMISSIONS_SCREEN -> logoutFlow
     GO_TO_REGISTERATION_SCREEN state -> do
       let allChecked = state.props.isNotificationPermissionChecked && state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked
@@ -3186,11 +3176,7 @@ noInternetScreenFlow triggertype = do
                       baseAppFlow false Nothing Nothing
     CHECK_INTERNET -> case ((ifNotRegistered unit) || (getValueToLocalStore IS_DRIVER_ENABLED == "false")) of
                       true  -> pure unit
-                      false -> do
-                        permissionsGiven <- checkAllPermissions true config.permissions.locationPermission
-                        if permissionsGiven
-                          then baseAppFlow false Nothing Nothing
-                          else permissionsScreenFlow Nothing Nothing Nothing
+                      false -> baseAppFlow false Nothing Nothing
 
 checkAllPermissions :: Boolean -> Boolean -> FlowBT String Boolean
 checkAllPermissions checkBattery checkLocation = do
@@ -3998,6 +3984,7 @@ documentcaptureScreenFlow = do
         Left error -> do
           modifyScreenState $ DocumentCaptureScreenStateType $ \docCapScreenState -> docCapScreenState { props {validating = false}, data {errorMessage = Just $ Remote.getCorrespondingErrorMessage error}}
           documentcaptureScreenFlow
+
 getSrcDestConfig :: HomeScreenState -> UpdateRouteSrcDestConfig
 getSrcDestConfig state = 
   if state.props.currentStage == RideAccepted then

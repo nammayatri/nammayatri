@@ -393,3 +393,11 @@ triggerOnAnimationEnd ifAnim =
   PrestoAnim.Animation
     [ PrestoAnim.duration 10
     ] ifAnim
+
+translateYScreenAnimation :: forall w. PrestoDOM (Effect Unit) w -> PrestoDOM (Effect Unit) w
+translateYScreenAnimation screen =
+    PrestoAnim.entryAnimationSetForward [translateYAnim animConfig {fromY = 800, toY = 0, ifAnim = true, duration = 500}]
+    $ PrestoAnim.exitAnimationSetForward [translateYAnim animConfig {fromY = 0, toY = 800, ifAnim = true, duration = 500}]
+    $ PrestoAnim.entryAnimationSetBackward [translateYAnim animConfig {fromY = 800, toY = 0, ifAnim = true, duration = 500}]
+    $ PrestoAnim.exitAnimationSetBackward [translateYAnim animConfig {fromY = 0, toY = 800, ifAnim = true, duration = 500}]
+      screen

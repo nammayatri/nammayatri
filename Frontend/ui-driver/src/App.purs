@@ -64,6 +64,7 @@ import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScre
 import Screens.VehicleDetailsScreen.ScreenData as VehicleDetailsScreenData
 import Screens.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.WriteToUsScreen.ScreenData as WriteToUsScreenData
+import Screens.AskPermissionScreen.ScreenData as AskPermissionScreenData
 import Data.Maybe (Maybe(..))
 import MerchantConfig.Types (AppConfig(..))
 import Screens.Benefits.BenefitsScreen.ScreenData as BenefitsScreenData
@@ -127,6 +128,7 @@ newtype GlobalState = GlobalState {
   , lmsQuizScreen :: LmsQuizScreenState
   , documentDetailsScreen :: DocumentDetailsScreenState
   , rateCardScreen :: RateCardScreenState
+  , askPermissionScreen :: AskPermissionScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -180,6 +182,7 @@ defaultGlobalState = GlobalState {
 , lmsQuizScreen : LmsQuizScreenData.initData
 , documentDetailsScreen : DocumentDetailsScreenData.initData
 , rateCardScreen : RateCardScreenData.initData
+, askPermissionScreen : AskPermissionScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -243,6 +246,8 @@ data ScreenType =
   | DocumentCaptureScreenStateType (DocumentCaptureScreenState -> DocumentCaptureScreenState)
   | DocumentDetailsScreenStateType (DocumentDetailsScreenState -> DocumentDetailsScreenState)
   | RateCardScreenStateType (RateCardScreenState -> RateCardScreenState)
+  | AskPermissionScreenStateType (AskPermissionScreenState -> AskPermissionScreenState)
+  
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -532,3 +537,5 @@ data DOCUMENT_CAPTURE_SCREEN_OUTPUT = UPLOAD_DOC_API DocumentCaptureScreenState 
                                       | CHANGE_VEHICLE_FROM_DOCUMENT_CAPTURE
 
 data RATE_CARD_SCREEN_OUTPUT = REFRESH_RATE_CARD RateCardScreenState | RATE_CARD_API RateCardScreenState Int
+
+data ASK_PERMISSION_SCREEN_OUTPUT = HOME_FROM_PERMISSION

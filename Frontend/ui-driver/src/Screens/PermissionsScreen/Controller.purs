@@ -32,8 +32,7 @@ import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (==), voi
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.PermissionsScreen.ScreenData (Permissions(..))
-import Screens.Types (PermissionsScreenState)
+import Screens.Types (PermissionsScreenState, Permissions(..))
 
 instance showAction :: Show Action where
     show _ = ""

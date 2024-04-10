@@ -46,6 +46,9 @@ import Components.SelectListModal as SelectListModal
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
+import Components.StatsModel.Controller as StatsModelController
+import Components.GoToLocationModal as GoToLocationModal
+import Screens.AskPermissionScreen.Handler (askPermissionScreen)
 import Control.Monad.State (state)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as Array
@@ -432,6 +435,15 @@ data Action = NoAction
             | SwitchBookingStage BookingTypes
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
+            | CheckPermissionsAsync Boolean
+            | MissingPermission Int
+            | PermissionRequiredClick (Array ST.Permissions)
+            | LocationBlocker
+            | RemoveMissingPermission
+            | CheckPermission 
+            | OnPermissionScreen Boolean
+            | Reload
+            
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -523,7 +535,8 @@ eval AfterRender state = continue state { props { mapRendered = true}}
 eval SpecialZonePopup state = continue state{ props{ specialZoneProps{ specialZonePopup = true }}}
 
 eval BackPressed state = do
-  if state.props.showGenericAccessibilityPopUp then do 
+  if state.props.onPermissionScreen then continue state
+  else if state.props.showGenericAccessibilityPopUp then do 
     _ <- pure $ pauseYoutubeVideo unit
     continue state{props{showGenericAccessibilityPopUp = false}}
   else if state.props.showRideRating then continue state{props{showRideRating = false}}
@@ -1092,7 +1105,9 @@ eval (SetToken id )state = do
   
 eval (CurrentLocation lat lng) state = do
   let newState = state{data{ currentDriverLat = getLastKnownLocValue ST.LATITUDE lat,  currentDriverLon = getLastKnownLocValue ST.LONGITUDE lng }}
-  exit $ UpdatedState newState
+      onRide = (Array.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer])
+  if not onRide then continue newState else exit $ UpdatedState newState
+
 eval (ModifyRoute lat lon) state = do
   let newState = state { data = state.data {currentDriverLat = getLastKnownLocValue ST.LATITUDE lat, currentDriverLon = getLastKnownLocValue ST.LONGITUDE lon} }
   exit $ UpdateRoute newState
@@ -1193,7 +1208,8 @@ eval (RideActiveAction activeRide mbAdvancedRide) state = do
 eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state =
-  if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
+  if (isJust state.props.missingPermission) && status /= ST.Offline then continueWithCmd state [pure $ CheckPermissionsAsync true]
+  else if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
   else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
   else if not state.props.rcActive then do
     void $ pure $ toast $ getString PLEASE_ADD_RC
@@ -1473,6 +1489,64 @@ eval (SwitchBookingStage stage) state = do
       data {activeRide = activeRideData, currentRideData = Just currentRideData},
       props {bookingStage = stage, currentStage = fetchStageFromRideStatus activeRideData}
     }
+-------------------------------------------Permissions Region -------------------------------------
+
+eval CheckPermission state = continueWithCmd state [ do
+  location <- JB.isLocationPermissionEnabled unit
+  overlay <- JB.isOverlayPermissionEnabled unit
+  battery <- JB.isBatteryPermissionEnabled unit
+  let conditionsAndTags = 
+        [ {condition: location, tag: ST.LocationPermission}
+        , {condition: overlay, tag: ST.Overlay}
+        , {condition: battery , tag: ST.Battery}
+        ]
+      permissionsNotAvailable = map _.tag (Array.filter (not _.condition) conditionsAndTags)
+      onRide = (Array.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted])
+  pure if onRide then Reload else MissingPermission (Array.length permissionsNotAvailable) -- Reload added for polylines
+]
+
+eval Reload state = exit $ UpdatedState state
+
+eval (CheckPermissionsAsync calledFromOffline) state = continueWithCmd state [ do
+  location <- JB.isLocationPermissionEnabled unit
+  overlay <- JB.isOverlayPermissionEnabled unit
+  battery <- JB.isBatteryPermissionEnabled unit
+  let onRide = (Array.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted])
+      online = state.props.driverStatusSet /= ST.Offline
+      allPermission = location && overlay && battery
+      onlyLocation = not location && overlay && battery
+      _ = printLog "Permissions" $ "location - " <> show location <> ", " <> "overlay - " <> show overlay <> ", " <> "battery - " <> show battery <> ", " <> "onRide - " <> show onRide <> ", " <> "online - " <> show online
+      conditionsAndTags = 
+        [ {condition: location, tag: ST.LocationPermission}
+        , {condition: overlay, tag: ST.Overlay}
+        , {condition: battery , tag: ST.Battery}
+        ]
+      permissionsNotAvailable = map _.tag (Array.filter (not _.condition) conditionsAndTags)
+  case allPermission, onRide, online, onlyLocation of
+    false, true, _, _ | not location -> pure $ PermissionRequiredClick [ST.LocationPermission]
+    false, false, true, true -> pure $ PermissionRequiredClick [ST.LocationPermission]
+    false, false, true, false -> pure $ PermissionRequiredClick permissionsNotAvailable
+    false, false, false, _  | calledFromOffline -> pure $ PermissionRequiredClick permissionsNotAvailable
+    false, false, false, _ -> pure $ MissingPermission (Array.length permissionsNotAvailable)
+    _,_,_,_ -> pure RemoveMissingPermission
+  ]
+eval RemoveMissingPermission state = continue state { props { missingPermission = Nothing}}
+
+eval (MissingPermission lenghtOfPermissions) state = continue state { props { onPermissionScreen = false, missingPermission = if lenghtOfPermissions > 0 then Just lenghtOfPermissions else Nothing}}
+
+eval (PermissionRequiredClick locArray) state = do
+  let online = (state.props.driverStatusSet /= ST.Offline)
+  continueWithCmd state [ do
+    void $ launchAff $ flowRunner defaultGlobalState $ do
+      push <- liftFlow $ getPushFn Nothing "HomeScreen"
+      _ <- runExceptT $ runBackT $ askPermissionScreen locArray online push CheckPermission $ not state.props.onPermissionScreen
+      pure unit
+    pure $ OnPermissionScreen true
+  ]
+
+eval (OnPermissionScreen bool) state = continue state { props { onPermissionScreen = bool}}
+
+-------------------------------------------Permissions Region End -------------------------------------
 
 eval _ state = continue state
 
@@ -1483,9 +1557,7 @@ checkPermissionAndUpdateDriverMarker state toAnimateCamera = do
   if conditionA && conditionB then do
     _ <- getCurrentPosition (showDriverMarker state "ic_vehicle_side" toAnimateCamera) constructLatLong
     pure unit
-    else do
-      _ <- requestLocation unit
-      pure unit
+    else pure unit
 
 showDriverMarker :: ST.HomeScreenState -> String -> Boolean -> ST.Location -> Effect Unit
 showDriverMarker state marker toAnimateCamera location = do
