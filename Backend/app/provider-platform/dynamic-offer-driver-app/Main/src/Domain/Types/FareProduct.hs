@@ -106,6 +106,7 @@ data FareProduct = FareProduct
     vehicleServiceTier :: DVST.ServiceTierType,
     area :: Area,
     tripCategory :: DTC.TripCategory,
-    timeBounds :: TimeBound
+    timeBounds :: TimeBound,
+    enabled :: Bool
   }
   deriving (Generic, Show, Eq, ToSchema, FromJSON, ToJSON)

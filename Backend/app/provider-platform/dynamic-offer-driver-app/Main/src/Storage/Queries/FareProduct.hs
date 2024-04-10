@@ -48,7 +48,8 @@ findAllBoundedFareProductForVariants (Id merchantOpCityId) tripCategory area =
         [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,
           Se.Is BeamFP.area $ Se.Eq area,
           Se.Is BeamFP.tripCategory $ Se.Eq tripCategory,
-          Se.Is BeamFP.timeBounds $ Se.Not $ Se.Eq Domain.Unbounded
+          Se.Is BeamFP.timeBounds $ Se.Not $ Se.Eq Domain.Unbounded,
+          Se.Is BeamFP.enabled $ Se.Eq True
         ]
     ]
 
@@ -64,7 +65,8 @@ findAllUnboundedFareProductForVariants (Id merchantOpCityId) tripCategory area =
         [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,
           Se.Is BeamFP.area $ Se.Eq area,
           Se.Is BeamFP.tripCategory $ Se.Eq tripCategory,
-          Se.Is BeamFP.timeBounds $ Se.Eq Domain.Unbounded
+          Se.Is BeamFP.timeBounds $ Se.Eq Domain.Unbounded,
+          Se.Is BeamFP.enabled $ Se.Eq True
         ]
     ]
 
@@ -82,7 +84,8 @@ findAllBoundedByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory s
           Se.Is BeamFP.area $ Se.Eq area,
           Se.Is BeamFP.vehicleVariant $ Se.Eq serviceTier,
           Se.Is BeamFP.tripCategory $ Se.Eq tripCategory,
-          Se.Is BeamFP.timeBounds $ Se.Not $ Se.Eq Domain.Unbounded
+          Se.Is BeamFP.timeBounds $ Se.Not $ Se.Eq Domain.Unbounded,
+          Se.Is BeamFP.enabled $ Se.Eq True
         ]
     ]
 
@@ -100,12 +103,19 @@ findUnboundedByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory se
           Se.Is BeamFP.area $ Se.Eq area,
           Se.Is BeamFP.vehicleVariant $ Se.Eq serviceTier,
           Se.Is BeamFP.tripCategory $ Se.Eq tripCategory,
-          Se.Is BeamFP.timeBounds $ Se.Eq Domain.Unbounded
+          Se.Is BeamFP.timeBounds $ Se.Eq Domain.Unbounded,
+          Se.Is BeamFP.enabled $ Se.Eq True
         ]
     ]
 
 findAllFareProductByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [Domain.FareProduct]
-findAllFareProductByMerchantOpCityId (Id merchantOpCityId) = findAllWithKV [Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId]
+findAllFareProductByMerchantOpCityId (Id merchantOpCityId) =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,
+          Se.Is BeamFP.enabled $ Se.Eq True
+        ]
+    ]
 
 instance ToTType' BeamFP.FareProduct FareProduct where
   toTType' FareProduct {..} = do
