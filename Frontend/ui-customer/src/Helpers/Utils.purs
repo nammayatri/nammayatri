@@ -78,9 +78,9 @@ import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo)
+import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime)
 import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..))
-import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
+import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Function.Uncurried
@@ -1005,3 +1005,14 @@ getVehicleName vaiant =
                     "SUV" -> "SUV"
                     "HATCHBACK" -> "Eco" 
                     _ -> "Non-AC Taxi"
+
+encodeBookingTimeList :: Array BookingTime -> String
+encodeBookingTimeList bookingTimeList = do
+  AC.stringify $ AE.encodeJson $ bookingTimeList
+
+decodeBookingTimeList :: LazyCheck -> (Array BookingTime)
+decodeBookingTimeList _ = 
+  fromMaybe [] $ 
+    case (AD.decodeJson =<< ADP.parseJson (getValueToLocalStore BOOKING_TIME_LIST)) of
+      Right resp -> Just resp
+      Left err   -> Nothing

@@ -174,6 +174,8 @@ initData = {
     },
     props: {
       rideRequestFlow : false
+    , scheduledRidePollingDelay : 0.0
+    , startScheduledRidePolling : false
     , maxDateBooking : 5
     , nightSafetyFlow : false
     , isHomescreenExpanded : false
