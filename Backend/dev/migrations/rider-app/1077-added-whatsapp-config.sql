@@ -1,4 +1,3 @@
-ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN whatsapp_providers_priority_list text[];
 UPDATE atlas_app.merchant_service_usage_config SET whatsapp_providers_priority_list='{"GupShup"}';
 ALTER TABLE atlas_app.merchant_service_usage_config ALTER COLUMN whatsapp_providers_priority_list SET NOT NULL;
 

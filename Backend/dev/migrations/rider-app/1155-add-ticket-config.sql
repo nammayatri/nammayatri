@@ -8,6 +8,5 @@ SELECT m.id, 'Ticket_Kapture',
     )
 FROM atlas_app.merchant m;
 
-ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN issue_ticket_service character varying(30) DEFAULT 'Kapture' NOT NULL;
 
 CREATE INDEX idx_ticket_id ON atlas_app.issue USING btree (ticket_id);

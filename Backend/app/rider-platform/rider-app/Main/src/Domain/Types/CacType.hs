@@ -13,7 +13,7 @@ import Kernel.External.Ticket.Types (IssueTicketService)
 import Kernel.External.Whatsapp.Types (WhatsappService)
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Storage.Beam.Merchant.MerchantServiceUsageConfig as MSUC
+import qualified Storage.Beam.MerchantServiceUsageConfig as MSUC
 
 checkParseCommon :: (String, A.Value) -> Bool
 checkParseCommon (key, value) = do

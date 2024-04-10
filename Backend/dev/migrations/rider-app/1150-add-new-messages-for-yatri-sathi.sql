@@ -1,4 +1,3 @@
-ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN enable_dashboard_sms Boolean;
 UPDATE atlas_app.merchant_service_usage_config SET enable_dashboard_sms=false;
 ALTER TABLE atlas_app.merchant_service_usage_config ALTER COLUMN enable_dashboard_sms SET NOT NULL;
 

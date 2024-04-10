@@ -2,6 +2,129 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   MerchantMessageDefaultDataJSON: Domain.Types.Extra.MerchantMessage
+  CallService: Kernel.External.Call.Types
+  MapsService: Kernel.External.Maps.Types
+  NotificationService: Kernel.External.Notification.Types
+  AadhaarVerificationService: Kernel.External.AadhaarVerification
+  SmsService: Kernel.External.SMS.Types
+  WhatsappService: Kernel.External.Whatsapp.Types
+  IssueTicketService: Kernel.External.Ticket.Types
+#   MapsServiceConfig: Kernel.External.Maps
+#   SmsServiceConfig: Kernel.External.SMS
+#   WhatsappServiceConfig: Kernel.External.Whatsapp.Interface
+#   AadhaarVerificationServiceConfig: Kernel.External.AadhaarVerification
+#   CallServiceConfig: Kernel.External.Call
+#   NotificationServiceConfig: Kernel.External.Notification
+#   PaymentServiceConfig: Kernel.External.Payment.Interface
+#   IssueTicketServiceConfig: Kernel.External.Ticket.Interface.Types
+
+# MerchantServiceConfig:
+#   derives: "Generic,'UsageSafety"
+
+#   type:
+#     ServiceConfig:
+#       enum: "MapsServiceConfig MapsServiceConfig,SmsServiceConfig SmsServiceConfig,WhatsappServiceConfig WhatsappServiceConfig,AadhaarVerificationServiceConfig AadhaarVerificationServiceConfig,CallServiceConfig CallServiceConfig,NotificationServiceConfig NotificationServiceConfig,PaymentServiceConfig PaymentServiceConfig,MetroPaymentServiceConfig PaymentServiceConfig,IssueTicketServiceConfig IssueTicketServiceConfig"
+#       derive': "Generic,Eq,'UsageSafety"
+#   fields:
+#     merchantId: Id Merchant
+#     merchantOperatingCityId: Id MerchantOperatingCity
+#     serviceConfig: ServiceConfigD s
+#     updatedAt: UTCTime
+#     createdAt: UTCTime
+
+#   beamFields:
+#     serviceConfig:
+#       serviceName: Domain.Types.Merchant.MerchantServiceConfig
+#       configJSON: Data.Aeson.Value
+
+#   constraints:
+#     merchantId: PrimaryKey
+#     serviceName: PrimaryKey
+
+#   fromTType:
+#     serviceConfig: getServiceConfigFromDomain|M
+
+#   toTType:
+#     serviceName: (fst $ Storage.Queries.MerchantServiceConfigExtra.getServiceNameConfigJson serviceConfig)|E
+#     configJSON: (snd $ Storage.Queries.MerchantServiceConfigExtra.getServiceNameConfigJson serviceConfig)|E
+
+#   extraOperations:
+#     - EXTRA_DOMAIN_TYPE_FILE
+#     - EXTRA_QUERY_FILE
+
+#   excludedDefaultQueries:
+#     - create
+#     - createMany
+#     - findByPrimaryKey
+#     - updateByPrimaryKey
+
+MerchantServiceUsageConfig:
+
+  derives: "Generic,Show,'UsageSafety"
+
+  fields:
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    initiateCall: CallService
+    notifyPerson: NotificationService
+    getDistances: MapsService
+    getRoutes: MapsService
+    snapToRoad: MapsService
+    getPlaceName: MapsService
+    getPickupRoutes: MapsService
+    getTripRoutes: MapsService
+    getPlaceDetails: MapsService
+    autoComplete: MapsService
+    aadhaarVerificationService: AadhaarVerificationService
+    getDistancesForCancelRide: MapsService
+    smsProvidersPriorityList: "[SmsService]"
+    whatsappProvidersPriorityList: "[WhatsappService]"
+    issueTicketService: IssueTicketService
+    useFraudDetection: Bool
+    enableDashboardSms: Bool
+    getExophone: CallService
+    updatedAt: UTCTime
+    createdAt: UTCTime
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance <MerchantServiceUsageConfigT>
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+
+  queries:
+    findByMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId
+
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  sqlType:
+    getDistances: character varying(30)
+    getRoutes: character varying(30)
+    snapToRoad: character varying(30)
+    getPlaceName: character varying(30)
+    getPlaceDetails: character varying(30)
+    autoComplete: character varying(30)
+    smsProvidersPriorityList: "text[]"
+    whatsappProvidersPriorityList: "text[]"
+    initiateCall: character varying(30)
+    issueTicketService: character varying(30)
+    getExophone: character varying (255)
+    aadhaarVerificationService: character varying(30)
+
+  default:
+    getPickupRoutes: "'Google'"
+    getTripRoutes: "'Google'"
+    useFraudDetection: "False"
+    issueTicketService: "'Kapture'"
+    getExophone: "'Exotel'"
 
 
 MerchantPaymentMethod:

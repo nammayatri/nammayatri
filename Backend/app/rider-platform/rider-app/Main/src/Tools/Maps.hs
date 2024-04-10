@@ -29,8 +29,8 @@ where
 
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
-import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity (..))
+import Domain.Types.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import Domain.Types.Person (Person)
 import Kernel.External.Maps as Reexport hiding
   ( autoComplete,

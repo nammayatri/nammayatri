@@ -17,7 +17,7 @@ SELECT m.id, 'Sms_ExotelSms',
   )
 FROM atlas_app.merchant m;
 
-ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN send_s_m_s character varying(30);
+-- ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN send_s_m_s character varying(30);
 
-UPDATE atlas_app.merchant_service_usage_config
-SET send_s_m_s = 'MyValueFirst';
+-- UPDATE atlas_app.merchant_service_usage_config
+-- SET send_s_m_s = 'MyValueFirst';

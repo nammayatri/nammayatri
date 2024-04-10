@@ -1,6 +1,4 @@
 ALTER TABLE atlas_app.person ADD COLUMN notification_token character varying(255);
-ALTER TABLE atlas_app.merchant_service_usage_config
-    ADD COLUMN notify_person character varying(30);
 UPDATE atlas_app.merchant_service_usage_config
     SET notify_person = 'FCM'; -- FCM | PayTM
 ALTER TABLE atlas_app.merchant_service_usage_config ALTER COLUMN notify_person SET NOT NULL;
