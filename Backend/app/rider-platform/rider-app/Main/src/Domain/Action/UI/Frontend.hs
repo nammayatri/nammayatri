@@ -49,6 +49,7 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Notifications as Notify
+import TransactionLogs.Types
 
 data GetPersonFlowStatusRes = GetPersonFlowStatusRes
   { oldStatus :: Maybe DPFS.FlowStatus,
@@ -99,7 +100,7 @@ getPersonFlowStatus personId merchantId mIsPolling = do
           _ <- QPFS.updateStatus personId DPFS.IDLE
           return $ GetPersonFlowStatusRes (Just personStatus) DPFS.IDLE isValueAddNp
 
-notifyEvent :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], Esq.EsqDBReplicaFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)]) => Id DP.Person -> NotifyEventReq -> m NotifyEventResp
+notifyEvent :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], Esq.EsqDBReplicaFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Id DP.Person -> NotifyEventReq -> m NotifyEventResp
 notifyEvent personId req = do
   _ <- case req.event of
     RATE_DRIVER_SKIPPED -> QPFS.updateStatus personId DPFS.IDLE

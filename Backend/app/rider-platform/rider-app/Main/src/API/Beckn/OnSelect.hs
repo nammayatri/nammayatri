@@ -50,7 +50,7 @@ onSelect _ reqV2 = withFlowHandlerBecknAPI do
         validatedOnSelectReq <- DOnSelect.validateRequest onSelectReq
         fork "on select received pushing ondc logs" do
           ondcTokenHashMap <- asks (.ondcTokenHashMap)
-          let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HM.lookup validatedOnSelectReq.searchRequest.merchantId.getId ondcTokenHashMap
+          let tokenConfig = HM.lookup (KeyConfig validatedOnSelectReq.searchRequest.merchantId.getId "MOBILITY") ondcTokenHashMap
           void $ pushLogs "on_select" (toJSON reqV2) tokenConfig
         fork "on select processing" $ do
           Redis.whenWithLockRedis (onSelectProcessingLockKey messageId) 60 $

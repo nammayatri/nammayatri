@@ -55,7 +55,7 @@ searchV2 ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     EsqDBFlow m r
   ) =>
   BaseUrl ->
@@ -85,7 +85,7 @@ selectV2 ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     EsqDBFlow m r
   ) =>
   BaseUrl ->
@@ -103,7 +103,7 @@ initV2 ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     EsqDBFlow m r
   ) =>
   BaseUrl ->
@@ -120,7 +120,7 @@ confirmV2 ::
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     CacheFlow m r,
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     EsqDBFlow m r
   ) =>
@@ -139,7 +139,7 @@ cancelV2 ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     EsqDBFlow m r
   ) =>
   Id Merchant.Merchant ->
@@ -183,7 +183,7 @@ callTrack ::
     CacheFlow m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]
   ) =>
   DB.Booking ->
   DRide.Ride ->
@@ -230,7 +230,7 @@ feedbackV2 ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     EsqDBFlow m r
   ) =>
   BaseUrl ->
@@ -246,7 +246,7 @@ callStatusV2 ::
   ( MonadFlow m,
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     EsqDBFlow m r
@@ -283,7 +283,7 @@ callBecknAPIWithSignature' ::
     ToJSON req,
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     EsqDBFlow m r
   ) =>
   Id Merchant.Merchant ->
@@ -297,7 +297,7 @@ callBecknAPIWithSignature' ::
 callBecknAPIWithSignature' merchantId a b c d e req' = do
   fork ("sending " <> show b <> ", pushing ondc logs") do
     ondcTokenHashMap <- asks (.ondcTokenHashMap)
-    let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HM.lookup merchantId.getId ondcTokenHashMap
+    let tokenConfig = HM.lookup (KeyConfig merchantId.getId "MOBILITY") ondcTokenHashMap
     void $ pushLogs b (toJSON req') tokenConfig
   callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'
 

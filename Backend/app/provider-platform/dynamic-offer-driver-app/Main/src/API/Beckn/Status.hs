@@ -59,7 +59,7 @@ status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
     dStatusRes <- DStatus.handler transporterId dStatusReq
     fork "status received pushing ondc logs" do
       ondcTokenHashMap <- asks (.ondcTokenHashMap)
-      let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup dStatusRes.booking.providerId.getId ondcTokenHashMap
+      let tokenConfig = HMS.lookup (KeyConfig dStatusRes.booking.providerId.getId "MOBILITY") ondcTokenHashMap
       void $ pushLogs "status" (toJSON reqV2) tokenConfig
     internalEndPointHashMap <- asks (.internalEndPointHashMap)
     msgId <- Utils.getMessageId context

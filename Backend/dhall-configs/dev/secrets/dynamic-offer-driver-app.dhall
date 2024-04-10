@@ -1,14 +1,17 @@
 let ondclogsUrl = "https://logs.ondc.in"
 
 let ondcTokenMap
-    : List { mapKey : Text, mapValue : { token : Text, ondcUrl : Text } }
-    = [ { mapKey = "NAMMA_YATRI"
+    : List
+        { mapKey : { merchantId : Text, domain : Text }
+        , mapValue : { token : Text, ondcUrl : Text }
+        }
+    = [ { mapKey = { merchantId = "NAMMA_YATRI", domain = "MOBILITY" }
         , mapValue = { token = "abcd123", ondcUrl = ondclogsUrl }
         }
-      , { mapKey = "YATRI"
+      , { mapKey = { merchantId = "YATRI", domain = "MOBILITY" }
         , mapValue = { token = "abcd123", ondcUrl = ondclogsUrl }
         }
-      , { mapKey = "YATRI_SATHI"
+      , { mapKey = { merchantId = "YATRI_SATHI", domain = "MOBILITY" }
         , mapValue = { token = "abcd123", ondcUrl = ondclogsUrl }
         }
       ]

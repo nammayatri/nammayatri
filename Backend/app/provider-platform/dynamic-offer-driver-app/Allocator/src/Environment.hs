@@ -99,7 +99,7 @@ data HandlerEnv = HandlerEnv
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     singleBatchProcessingTempDelay :: NominalDiffTime,
-    ondcTokenHashMap :: HMS.HashMap Text (Text, BaseUrl)
+    ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig
   }
   deriving (Generic)
 
@@ -130,8 +130,8 @@ buildHandlerEnv HandlerCfg {..} = do
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
-  let tokenMap :: (M.Map Text (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
-  let ondcTokenHashMap = HMS.fromList $ M.toList tokenMap
+  -- let tokenMap :: (M.Map KeyConfig (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
+  let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
   return HandlerEnv {..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()

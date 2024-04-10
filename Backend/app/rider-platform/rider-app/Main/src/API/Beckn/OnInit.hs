@@ -58,7 +58,7 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
             (onInitRes, booking) <- DOnInit.onInit onInitReq
             fork "on init received pushing ondc logs" do
               ondcTokenHashMap <- asks (.ondcTokenHashMap)
-              let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HM.lookup onInitRes.merchant.id.getId ondcTokenHashMap
+              let tokenConfig = HM.lookup (KeyConfig onInitRes.merchant.id.getId "MOBILITY") ondcTokenHashMap
               void $ pushLogs "on_init" (toJSON reqV2) tokenConfig
             handle (errHandler booking) . void . withShortRetry $ do
               confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes

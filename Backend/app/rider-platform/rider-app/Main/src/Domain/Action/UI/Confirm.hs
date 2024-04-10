@@ -38,13 +38,14 @@ import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Quote as QQuote
 import qualified Tools.Notifications as Notify
+import TransactionLogs.Types
 
 confirm ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "version" ::: DeploymentVersion],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CacheFlow m r,
     EventStreamFlow m r,

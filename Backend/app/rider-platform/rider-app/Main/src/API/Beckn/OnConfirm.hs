@@ -58,7 +58,7 @@ onConfirm _ reqV2 = withFlowHandlerBecknAPI do
         fork "on confirm received pushing ondc logs" do
           booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
           ondcTokenHashMap <- asks (.ondcTokenHashMap)
-          let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HM.lookup booking.merchantId.getId ondcTokenHashMap
+          let tokenConfig = HM.lookup (KeyConfig booking.merchantId.getId "MOBILITY") ondcTokenHashMap
           void $ pushLogs "on_confirm" (toJSON reqV2) tokenConfig
         fork "onConfirm request processing" $
           Redis.whenWithLockRedis (onConfirmProcessingLockKey bppBookingId.getId) 60 $

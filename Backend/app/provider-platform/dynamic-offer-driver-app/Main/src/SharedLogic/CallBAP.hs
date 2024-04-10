@@ -112,7 +112,7 @@ callOnSelectV2 ::
     EsqDBFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DM.Merchant ->
@@ -153,7 +153,7 @@ callOnUpdateV2 ::
     CacheFlow m r,
     EsqDBFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
   ) =>
   Spec.OnUpdateReq ->
   RetryCfg ->
@@ -174,7 +174,7 @@ callOnStatusV2 ::
     CacheFlow m r,
     EsqDBFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
   ) =>
   Spec.OnStatusReq ->
   RetryCfg ->
@@ -195,7 +195,7 @@ callOnCancelV2 ::
     CacheFlow m r,
     EsqDBFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
   ) =>
   Spec.OnCancelReq ->
   RetryCfg ->
@@ -210,7 +210,7 @@ callOnCancelV2 req retryConfig merchantId = do
 
 callOnConfirmV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -258,7 +258,7 @@ sendRideAssignedUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
@@ -354,7 +354,7 @@ sendRideStartedUpdateToBAP ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
@@ -388,7 +388,7 @@ sendRideCompletedUpdateToBAP ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
@@ -417,7 +417,7 @@ sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     CacheFlow m r,
     HasHttpClientOptions r c,
@@ -445,7 +445,7 @@ sendDriverOffer ::
     EsqDBFlow m r,
     CoreMetrics m,
     HasPrettyLogger m r,
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DM.Merchant ->
@@ -498,7 +498,7 @@ sendDriverArrivalUpdateToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
@@ -532,7 +532,7 @@ sendStopArrivalUpdateToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
@@ -565,7 +565,7 @@ sendNewMessageToBAP ::
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -601,7 +601,7 @@ sendSafetyAlertToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -637,7 +637,7 @@ sendEstimateRepetitionUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -672,7 +672,7 @@ callBecknAPIWithSignature' ::
     ToJSON req,
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap Text (Text, BaseUrl)],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     EsqDBFlow m r
   ) =>
   Id Merchant.Merchant ->
@@ -686,6 +686,6 @@ callBecknAPIWithSignature' ::
 callBecknAPIWithSignature' merchantId a b c d e req' = do
   fork ("sending " <> show b <> ", pushing ondc logs") do
     ondcTokenHashMap <- asks (.ondcTokenHashMap)
-    let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup merchantId.getId ondcTokenHashMap
+    let tokenConfig = HMS.lookup (KeyConfig merchantId.getId "MOBILITY") ondcTokenHashMap
     void $ pushLogs b (toJSON req') tokenConfig
   Beckn.callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'

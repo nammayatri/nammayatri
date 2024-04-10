@@ -86,7 +86,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
       booking <- QRB.findById cancelReq.bookingId >>= fromMaybeM (BookingDoesNotExist cancelReq.bookingId.getId)
       fork "cancel received pushing ondc logs" do
         ondcTokenHashMap <- asks (.ondcTokenHashMap)
-        let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup merchant.id.getId ondcTokenHashMap
+        let tokenConfig = HMS.lookup (KeyConfig merchant.id.getId "MOBILITY") ondcTokenHashMap
         void $ pushLogs "cancel" (toJSON reqV2) tokenConfig
       let onCancelBuildReq =
             OC.DBookingCancelledReqV2

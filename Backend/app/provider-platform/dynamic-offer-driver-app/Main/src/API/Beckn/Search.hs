@@ -74,7 +74,7 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
       validatedSReq <- DSearch.validateRequest transporterId dSearchReq
       fork "search received pushing ondc logs" do
         ondcTokenHashMap <- asks (.ondcTokenHashMap)
-        let tokenConfig = fmap (\(token, ondcUrl) -> TokenConfig token ondcUrl) $ HMS.lookup validatedSReq.merchant.id.getId ondcTokenHashMap
+        let tokenConfig = HMS.lookup (KeyConfig validatedSReq.merchant.id.getId "MOBILITY") ondcTokenHashMap
         void $ pushLogs "search" (toJSON reqV2) tokenConfig
       let bppId = validatedSReq.merchant.subscriberId.getShortId
       bppUri <- Utils.mkBppUri transporterId.getId

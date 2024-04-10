@@ -23,8 +23,6 @@ data BecknConfigT f = BecknConfigT
     gatewayUrl :: (B.C f Kernel.Prelude.Text),
     id :: (B.C f Kernel.Prelude.Text),
     initTTLSec :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    logsToken :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    logsUrl :: (B.C f Kernel.Prelude.Text),
     paymentParamsJson :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     ratingTTLSec :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     registryUrl :: (B.C f Kernel.Prelude.Text),
