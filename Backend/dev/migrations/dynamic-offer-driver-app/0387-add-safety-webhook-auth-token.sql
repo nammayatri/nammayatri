@@ -11,7 +11,8 @@ SELECT
   'DriverBackgroundVerification_SafetyPortal',
   json_build_object(
     'url', 'https://external.beta.beckn.uat.juspay.net/api/dev/safety/v2/',
-    'token', '0.1.0|2|lZW9sforAur/mEaV7oaguUvPo0F0Bgw32vn49Rc5yHclgoePJKPKfT/o50tJap+geLjNIXQxJr5+Qzxq+HkZmwZgnsfSJamyTbsWM8VU3vJYMMca9jm1'
+    'token', '0.1.0|1|ulhKfCaTGXPqbYx7S6mwbWS7hyS8UcaE3GnYxV3HcGeH8SUl6XdzprfqRiPZtl0ymuO+ZUhm4qcjaoPKtNpDzMrjIA7HY1rdiKP9feW+gAr1nj/zjSh+',
+    'safetyWebhookAuthToken' , '0.1.0|1|ulhKfCaTGXPqbYx7S6mwbWS7hyS8UcaE3GnYxV3HcGeH8SUl6XdzprfqRiPZtl0ymuO+ZUhm4qcjaoPKtNpDzMrjIA7HY1rdiKP9feW+gAr1nj/zjSh+'
   )
 FROM
   atlas_driver_offer_bpp.merchant m
@@ -21,7 +22,6 @@ ON
   m.id = moc.merchant_id;
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN safety_webhook_auth_token text; -- This query already ran in master
-ALTER TABLE atlas_driver_offer_bpp.onboarding_document_configs ADD COLUMN dl_number_verification bool ;
 
 
 

@@ -51,7 +51,6 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.dependencyDocumentType dependencyDocumentType,
       Se.Set Beam.description description,
       Se.Set Beam.disableWarning disableWarning,
-      Se.Set Beam.dlNumberVerification dlNumberVerification,
       Se.Set Beam.isDisabled isDisabled,
       Se.Set Beam.isHidden isHidden,
       Se.Set Beam.isMandatory isMandatory,

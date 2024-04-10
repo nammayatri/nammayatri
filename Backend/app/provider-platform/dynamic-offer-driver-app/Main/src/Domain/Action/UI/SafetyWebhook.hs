@@ -16,9 +16,12 @@ module Domain.Action.UI.SafetyWebhook where
 
 import Data.Aeson.Types as DAT
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment
 import EulerHS.Prelude
+import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
+import qualified Kernel.External.Verification as Verification
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -26,6 +29,8 @@ import Kernel.Utils.Common hiding (Error)
 import Servant hiding (throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Tools.Ticket as TT
 
@@ -59,7 +64,19 @@ safetyWebhookHandler merchantShortId mbOpCity secret val = do
   merchant <- findMerchantByShortId merchantShortId
   merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just mbOpCity)
   transporterConfig <- CQTC.findByMerchantOpCityId merchanOperatingCityId Nothing (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
-  unless (secret == transporterConfig.safetyWebhookAuthToken) $ throwError (InvalidRequest "INVALID_AUTHORIZATION_HEADER")
+  merchantServiceUsageConfig <-
+    CQMSUC.findByMerchantOpCityId merchanOperatingCityId
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchanOperatingCityId.getId)
+  logDebug $ "runWithServiceConfig: merchantServiceUsageConfig: " <> show merchantServiceUsageConfig
+  merchantServiceConfig <-
+    CQMSC.findByMerchantIdAndServiceWithCity merchant.id (DMSC.DriverBackgroundVerificationService $ (.driverBackgroundVerificationService) merchantServiceUsageConfig) merchanOperatingCityId
+      >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchanOperatingCityId.getId)
+  safetyWebhookAuthToken <- case merchantServiceConfig.serviceConfig of
+    DMSC.DriverBackgroundVerificationServiceConfig vsc -> do
+      case vsc of
+        Verification.SafetyPortalConfig cfg -> decrypt $ cfg.safetyWebhookAuthToken
+    _ -> throwError $ InternalError "Unknown Service Config"
+  unless (secret == Just safetyWebhookAuthToken) $ throwError (InvalidRequest "INVALID_AUTHORIZATION_HEADER")
   let mResp = fromJSON val
   case mResp of
     DAT.Success (resp :: SafetyWebhookReq) -> do

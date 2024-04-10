@@ -80,9 +80,9 @@ in  { esqDBCfg
     , port = +8025
     , migrationPath =
       [   env:SAFETY_DASHBOARD_MIGRATION_PATH as Text
-        ? "dev/migrations/safety-dashboard"
-      ,   env:SAFETY_DASHBOARD_MIGRATION_PATH as Text
         ? "dev/migrations-read-only/safety-dashboard"
+      ,   env:SAFETY_DASHBOARD_MIGRATION_PATH as Text
+        ? "dev/migrations/safety-dashboard"
       ]
     , autoMigrate = True
     , loggerConfig =

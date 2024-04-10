@@ -481,7 +481,6 @@ data DocumentVerificationConfigItem = DocumentVerificationConfigItem
     vehicleClassCheckType :: VehicleClassCheckType,
     rcNumberPrefixList :: Maybe [Text],
     maxRetryCount :: Int,
-    dlNumberVerification :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -570,7 +569,6 @@ data DocumentVerificationConfigUpdateReq = DocumentVerificationConfigUpdateReq
     rcNumberPrefix :: Maybe (MandatoryValue Text),
     rcNumberPrefixList :: Maybe (MandatoryValue [Text]),
     maxRetryCount :: Maybe (MandatoryValue Int),
-    dlNumberVerification :: Maybe (OptionalValue Bool),
     vehicleClassCheckType :: Maybe (MandatoryValue VehicleClassCheckType)
   }
   deriving stock (Show, Generic)
@@ -598,7 +596,6 @@ data DocumentVerificationConfigCreateReq = DocumentVerificationConfigCreateReq
     rcNumberPrefix :: Text,
     rcNumberPrefixList :: Maybe [Text],
     maxRetryCount :: Int,
-    dlNumberVerification :: Maybe Bool,
     vehicleClassCheckType :: VehicleClassCheckType
   }
   deriving stock (Show, Generic)

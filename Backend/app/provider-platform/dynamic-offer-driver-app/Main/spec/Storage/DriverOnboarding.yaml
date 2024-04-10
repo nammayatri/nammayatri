@@ -347,7 +347,6 @@ DocumentVerificationConfig:
     rcNumberPrefixList: '[Text]'
     maxRetryCount: Int
     order: Int
-    dlNumberVerification: Maybe Bool
   default:
     order: "0"
   constraints:

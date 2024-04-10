@@ -17,6 +17,7 @@ module Storage.Queries.Merchant where
 
 import Domain.Types.Merchant as Domain
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Beckn.City (City)
 import Kernel.Types.Id
@@ -61,11 +62,12 @@ findAllMerchants' limit offset = do
     (Just offset)
 
 findByAuthToken ::
-  BeamFlow m r =>
+  (BeamFlow m r, EncFlow m r) =>
   Text ->
   m (Maybe Merchant)
 findByAuthToken authToken = do
-  findOneWithKV [Se.Is BeamM.authToken $ Se.Eq $ Just authToken]
+  authTokenHash <- getDbHash authToken
+  findOneWithKV [Se.Is BeamM.authTokenHash $ Se.Eq $ Just authTokenHash]
 
 findAllByShortIds ::
   BeamFlow m r =>
@@ -91,6 +93,9 @@ instance FromTType' BeamM.Merchant Domain.Merchant where
         Domain.Merchant
           { id = Id id,
             shortId = ShortId shortId,
+            authToken = case (authTokenEncrypted, authTokenHash) of
+              (Just token, Just hash) -> Just $ EncryptedHashed (Encrypted token) hash
+              _ -> Nothing,
             ..
           }
 
@@ -99,5 +104,7 @@ instance ToTType' BeamM.Merchant Domain.Merchant where
     BeamM.MerchantT
       { id = getId id,
         shortId = getShortId shortId,
+        authTokenEncrypted = authToken <&> (unEncrypted . (.encrypted)),
+        authTokenHash = authToken <&> (.hash),
         ..
       }

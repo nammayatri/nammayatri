@@ -85,7 +85,7 @@ INSERT INTO atlas_safety_dashboard.merchant_access (id, person_id, created_at, m
 
 
 ALTER TABLE atlas_safety_dashboard.registration_token
-    ADD COLUMN merchant_id character (36) NOT NULL REFERENCES atlas_safety_dashboard.merchant (id) DEFAULT 'd92db186-39d3-48a4-ad1f-78a0c3f840fd';
+    ADD COLUMN merchant_id character (36) NOT NULL REFERENCES atlas_safety_dashboard.merchant (id) DEFAULT '94bbea0d-3c52-479b-81f5-eca4969ae797';
 
 UPDATE atlas_safety_dashboard.registration_token
     SET merchant_id = '94bbea0d-3c52-479b-81f5-eca4969ae797' WHERE server_name = 'DRIVER_OFFER_BPP';
