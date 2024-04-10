@@ -1,0 +1,66 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  MerchantMessageDefaultDataJSON: Domain.Types.Extra.MerchantMessage
+
+
+MerchantMessage:
+  tableName: merchant_message
+
+  derives: "Generic,'UsageSafety"
+
+  types:
+    MessageKey:
+      enum: "INVITE_TO_UNEXISTENT_EMERGENCY_NUMBER,SET_AS_RIDE_EMERGENCY_NUMBER,SET_AS_DEFAULT_EMERGENCY_NUMBER,SEND_OTP,SEND_BOOKING_OTP,SEND_SOS_ALERT,MARK_RIDE_AS_SAFE,FOLLOW_RIDE,ADDED_AS_EMERGENCY_CONTACT"
+
+  fields:
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    messageKey: MessageKey
+    message: Text
+    templateId: Text
+    jsonData: MerchantMessageDefaultDataJSON
+    containsUrlButton: Bool
+    updatedAt: UTCTime
+    createdAt: UTCTime
+
+  beamType:
+    templateId: Maybe Text
+    jsonData: Maybe Data.Aeson.Value
+
+  default:
+    containsUrlButton: "False"
+  sqlType:
+    templateId: character varying(255)
+    jsonData: json
+    messageKey: character varying(255)
+
+  fromTType:
+    templateId: fromMaybe "" templateId|E
+    jsonData: valueToJsonData
+  toTType:
+    templateId: (Just templateId)|E
+    jsonData: (Just $ toJSON jsonData)|E
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    messageKey: PrimaryKey
+
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findByMerchantOperatingCityIdAndMessageKey:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, messageKey]
+  excludedDefaultQueries:
+   - findByPrimaryKey
+   - updateByPrimaryKey
+
+  extraOperations:
+   - EXTRA_DOMAIN_TYPE_FILE
+
+
+
+
+

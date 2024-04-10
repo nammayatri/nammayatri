@@ -207,6 +207,7 @@ library
       Domain.Types.DriverOffer
       Domain.Types.Estimate
       Domain.Types.Extra.Booking
+      Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.PlaceNameCache
       Domain.Types.Extra.RentalDetails
       Domain.Types.FarePolicy.FareBreakup
@@ -216,7 +217,6 @@ library
       Domain.Types.HotSpot
       Domain.Types.LocationAddress
       Domain.Types.Merchant
-      Domain.Types.Merchant.MerchantMessage
       Domain.Types.Merchant.MerchantPaymentMethod
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
@@ -266,7 +266,6 @@ library
       Storage.Beam.Geometry.GeometryGeom
       Storage.Beam.IssueManagement
       Storage.Beam.Merchant
-      Storage.Beam.Merchant.MerchantMessage
       Storage.Beam.Merchant.MerchantPaymentMethod
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
@@ -329,7 +328,6 @@ library
       Storage.Queries.IssueExtra
       Storage.Queries.LocationMappingExtra
       Storage.Queries.Merchant
-      Storage.Queries.Merchant.MerchantMessage
       Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
@@ -349,6 +347,7 @@ library
       Storage.Queries.Transformers.AppInstalls
       Storage.Queries.Transformers.Booking
       Storage.Queries.Transformers.MerchantConfig
+      Storage.Queries.Transformers.MerchantMessage
       Storage.Queries.Transformers.RentalDetails
       Storage.Queries.Transformers.SearchReqLocation
       Storage.Queries.Transformers.SearchRequest
@@ -410,6 +409,7 @@ library
       Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.MerchantConfig
+      Domain.Types.MerchantMessage
       Domain.Types.MerchantOperatingCity
       Domain.Types.MerchantState
       Domain.Types.NotificationSoundsConfig
@@ -462,6 +462,7 @@ library
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.MerchantConfig
+      Storage.Beam.MerchantMessage
       Storage.Beam.MerchantOperatingCity
       Storage.Beam.MerchantState
       Storage.Beam.NotificationSoundsConfig
@@ -514,6 +515,7 @@ library
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.MerchantConfig
+      Storage.Queries.MerchantMessage
       Storage.Queries.MerchantOperatingCity
       Storage.Queries.MerchantState
       Storage.Queries.NotificationSoundsConfig
