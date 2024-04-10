@@ -199,5 +199,5 @@ mockDriverInfo =
   , sourceAddress: dummyAddress
   , destinationAddress: dummyAddress
   , status : ""
-  , serviceTierName : ""
+  , serviceTierName : Nothing
   }

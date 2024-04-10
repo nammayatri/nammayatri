@@ -164,7 +164,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
                          else
                             fromMaybe "" vehicleVariant
       , status : rideList.status
-      , serviceTierName : fromMaybe "" resp.serviceTierName
+      , serviceTierName : resp.serviceTierName
       }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -533,7 +533,11 @@ getEstimatesInfo estimates vehicleVariant state =
     estimatedPrice = maybe 0 (view _estimatedFare) (head estimatedVariant)
     quoteList = getEstimateList estimates state.data.config.estimateAndQuoteConfig
     defaultQuote = fromMaybe ChooseVehicle.config $ if state.props.isRepeatRide 
-                    then find (\item -> (item.serviceTierName) == Just state.props.repeatRideServiceTierName) quoteList
+                    then do 
+                      let defaultQuote_ = find (\item -> isJust item.serviceTierName && item.serviceTierName == state.props.repeatRideServiceTierName) quoteList
+                      if isJust defaultQuote_ 
+                        then defaultQuote_
+                        else (head quoteList)
                     else (head quoteList)
     estimateId = maybe "" (view _estimateId) (head estimatedVariant)
     estimateFareBreakup = maybe [] identity (head estimatedVariant >>= view _estimateFareBreakup)
@@ -623,7 +627,7 @@ getTripFromRideHistory state = {
   , frequencyCount : Nothing
   , recencyDate : Nothing
   , locationScore : Nothing
-  , vehicleVariant : show state.data.selectedItem.vehicleVariant
+  , vehicleVariant : Just $ show state.data.selectedItem.vehicleVariant
   , serviceTierName : state.data.selectedItem.serviceTierName
   }
 

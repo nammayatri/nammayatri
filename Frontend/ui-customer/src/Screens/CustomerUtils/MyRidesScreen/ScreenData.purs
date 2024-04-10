@@ -108,5 +108,5 @@ dummyIndividualCard = {
   , isSrcServiceable : true
   , optionsVisibility : false
   , merchantExoPhone : ""
-  , serviceTierName : ""
+  , serviceTierName : Nothing
 }

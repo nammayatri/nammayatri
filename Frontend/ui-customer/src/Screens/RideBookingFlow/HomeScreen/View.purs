@@ -200,7 +200,7 @@ screen initialState =
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
               SettingPrice -> do
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                let isRepeatRideEstimate = checkRecentRideVariant initialState
+                let isRepeatRideEstimate = (initialState.props.isRepeatRide && isNothing initialState.props.repeatRideServiceTierName) || checkRecentRideVariant initialState
                 if (initialState.props.isRepeatRide && isRepeatRideEstimate) 
                     then startTimer initialState.data.config.suggestedTripsAndLocationConfig.repeatRideTime "repeatRide" "1" push RepeatRideCountDown
                 else if (initialState.props.isRepeatRide && not isRepeatRideEstimate) then do 
@@ -1383,7 +1383,7 @@ rideRequestFlowView push state =
       getViewBasedOnStage :: (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
       getViewBasedOnStage push state = do
         if state.props.currentStage == SettingPrice then
-          if state.props.isRepeatRide && checkRecentRideVariant state
+          if state.props.isRepeatRide && (isNothing state.props.repeatRideServiceTierName || checkRecentRideVariant state)
             then estimatedFareView push state
           else
             ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
@@ -3211,7 +3211,9 @@ footerView push state =
   let headerBounds = (runFn1 getLayoutBounds (getNewIDWithTag "homescreenHeader"))
       contentBounds = (runFn1 getLayoutBounds (getNewIDWithTag "homescreenContent")) 
       contentHeight = contentBounds.height
-      marginTop = screenHeight unit - getDefaultPixelSize (headerBounds.height + contentHeight + if state.props.suggestionsListExpanded then 200 else 0 )
+      marginTop = if state.props.suggestionsListExpanded 
+                      then 150 
+                      else screenHeight unit - getDefaultPixelSize (headerBounds.height + contentHeight ) 
   in
   linearLayout  
     [ width MATCH_PARENT
@@ -3427,7 +3429,7 @@ mapView push state idTag =
   in
   PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
   relativeLayout
-    [ height if (isHomeScreenView state && not (null banners)) || (state.props.showShimmer) then V 0 else mapDimensions.height
+    [ height if (isHomeScreenView state && not (null banners)) || (isHomeScreenView state && state.props.showShimmer) then V 0 else mapDimensions.height
     , width mapDimensions.width 
     -- , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
     , margin $ if isHomeScreenView state && null banners then MarginTop 16 else MarginTop 0
@@ -3452,20 +3454,15 @@ mapView push state idTag =
                 pure unit
             )
             (const MapReadyAction)
-    ]$[ linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , cornerRadius 16.0
-        ][ linearLayout
-            [ height  $ if isHomeScreenView state && (not (null banners)) then V 0 else mapDimensions.height
-            , width $ mapDimensions.width 
-            , accessibility DISABLE_DESCENDANT
-            , id (getNewIDWithTag idTag)
-            , visibility if state.props.isSrcServiceable then VISIBLE else GONE
-            , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
-            , clickable $ not isHomeScreenView state 
-            ][]
-        ]
+    ]$[  linearLayout
+          [ height  $ if isHomeScreenView state && (not (null banners)) then V 0 else mapDimensions.height
+          , width $ mapDimensions.width 
+          , accessibility DISABLE_DESCENDANT
+          , id (getNewIDWithTag idTag)
+          , visibility if state.props.isSrcServiceable then VISIBLE else GONE
+          , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
+          , clickable $ not isHomeScreenView state 
+          ][]
     --  , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][] -- TODO :: Mercy Once rentals is enabled.
      , linearLayout 
         [ height WRAP_CONTENT
@@ -3794,7 +3791,7 @@ repeatRideCard push state index trip =
         , padding (Padding 3 3 3 3)
         , margin $ MarginRight 4
         ][ imageView
-            [ imageWithFallback $ fetchImage FF_ASSET $ getVehicleVariantImage trip.vehicleVariant
+            [ imageWithFallback $ fetchImage FF_ASSET imageName
             , height $ V 30
             , width $ V 50
             ]
@@ -3840,6 +3837,10 @@ repeatRideCard push state index trip =
     getTripSubTitle :: String -> String
     getTripSubTitle destination = 
       (DS.drop ((fromMaybe 0 (DS.indexOf (DS.Pattern ",") (destination))) + 2) (destination))
+
+    imageName = case trip.vehicleVariant of
+                  Just variant -> getVehicleVariantImage variant
+                  Nothing -> "ny_ic_repeat_trip"
 
 pillTagView :: forall w. {text :: String, image :: String} -> PrestoDOM (Effect Unit) w
 pillTagView config = 

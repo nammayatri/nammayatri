@@ -278,7 +278,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , isSrcServiceable: state.data.isSrcServiceable
   , optionsVisibility : false
   , merchantExoPhone : ride.merchantExoPhone
-  , serviceTierName : fromMaybe "" ride.serviceTierName
+  , serviceTierName : ride.serviceTierName
 }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
 dummyFareBreakUp :: FareBreakupAPIEntity

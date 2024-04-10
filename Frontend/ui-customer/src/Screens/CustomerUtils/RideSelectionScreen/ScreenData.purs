@@ -144,5 +144,5 @@ dummyIndividualCard = {
   , optionsVisibility : false
   , vehicleVariant : Nothing
   , merchantExoPhone : ""
-  , serviceTierName : ""
+  , serviceTierName : Nothing
 }

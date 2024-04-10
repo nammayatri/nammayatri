@@ -992,7 +992,7 @@ homeScreenFlow = do
                                                         recencyDate : Nothing,
                                                         frequencyCount : Just 1,
                                                         isSpecialZone : state.props.isSpecialZone,
-                                                        vehicleVariant : state.data.driverInfoCardState.vehicleVariant,
+                                                        vehicleVariant : Just state.data.driverInfoCardState.vehicleVariant,
                                                         serviceTierName : state.data.driverInfoCardState.serviceTierName
                                                         }
                                             currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
@@ -2587,11 +2587,11 @@ fetchAndModifyLocationLists savedLocationResp = do
             geohashNeighbors = Arr.cons currentGeoHash $ geohashNeighbours currentGeoHash
             currentGeoHashDestinations = fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations currentGeoHash suggestionsMap suggestionsConfig.geohashLimitForMap)
             arrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).destinationSuggestions) geohashNeighbors)
-            tripArrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).variantBasedTripSuggestions) geohashNeighbors)
+            tripArrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).tripSuggestions) geohashNeighbors)
             sortedDestinationsList = Arr.take 30 (Arr.reverse (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) arrWithNeighbors))
             suggestedDestinationsArr = differenceOfLocationLists sortedDestinationsList savedLocationWithHomeOrWorkTag
 
-            allValuesFromMap = concat $ map (\item -> item.variantBasedTripSuggestions)(getMapValuesArray suggestionsMap)
+            allValuesFromMap = concat $ map (\item -> item.tripSuggestions)(getMapValuesArray suggestionsMap)
             sortedValues = Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) allValuesFromMap
             reversedValues = Arr.reverse sortedValues
             topValues = Arr.take 30 reversedValues

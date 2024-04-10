@@ -315,7 +315,7 @@ initData = {
     , showSpecialZoneInfoPopup : false
     , hotSpot : { selectedSpot : Nothing, centroidPoint : Nothing }
     , isBannerDataComputed : false
-    , repeatRideServiceTierName : ""
+    , repeatRideServiceTierName : Nothing
   }
 }
 
@@ -418,7 +418,7 @@ dummyDriverInfo =
   , sourceAddress : dummyAddress
   , destinationAddress : dummyAddress
   , status : ""
-  , serviceTierName : ""
+  , serviceTierName : Nothing
   }
 
 dummySettingBar :: SettingSideBarState
@@ -566,6 +566,6 @@ dummyTrip = {
     recencyDate: Nothing,  
     locationScore: Nothing,  
     isSpecialZone: true,
-    vehicleVariant: "",
-    serviceTierName : ""
+    vehicleVariant: Nothing,
+    serviceTierName : Nothing
 }

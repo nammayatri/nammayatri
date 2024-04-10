@@ -2999,7 +2999,7 @@ specialZoneFlow estimatedQuotes state = do
 
 estimatesListFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 estimatesListFlow estimates state = do
-  let newState = if state.props.isRepeatRide && not checkRecentRideVariantInEstimates estimates state.props.repeatRideServiceTierName
+  let newState = if state.props.isRepeatRide && isJust state.props.repeatRideServiceTierName && not checkRecentRideVariantInEstimates estimates state.props.repeatRideServiceTierName
                          then state { props {isRepeatRide = false}}
                          else state
       estimatesInfo = getEstimatesInfo estimates "" newState
@@ -3158,8 +3158,8 @@ getPeekHeight state =
           in (screenHeight unit) - ( ceil(((toNumber homescreenHeader)/androidPixels) *androidDensity))
 
 checkRecentRideVariant :: HomeScreenState -> Boolean
-checkRecentRideVariant state = any (\item -> (fromMaybe "" item.serviceTierName) == state.props.repeatRideServiceTierName) state.data.specialZoneQuoteList
+checkRecentRideVariant state = any (\item -> isJust item.serviceTierName && item.serviceTierName == state.props.repeatRideServiceTierName) state.data.specialZoneQuoteList --check
 
-checkRecentRideVariantInEstimates :: Array EstimateAPIEntity -> String -> Boolean
+checkRecentRideVariantInEstimates :: Array EstimateAPIEntity -> Maybe String -> Boolean
 checkRecentRideVariantInEstimates estimates repeatRideServiceName = 
-  any (\(EstimateAPIEntity item) -> (fromMaybe "" item.serviceTierName) == repeatRideServiceName) estimates
+  any (\(EstimateAPIEntity item) -> isJust item.serviceTierName && item.serviceTierName == repeatRideServiceName) estimates --check
