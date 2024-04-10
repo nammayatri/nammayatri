@@ -26,3 +26,8 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD PRIMARY KEY 
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN "order" integer NOT NULL default 0;
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN dl_number_verification boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config DROP COLUMN dl_number_verification;

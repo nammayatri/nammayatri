@@ -17,6 +17,7 @@ module Tools.Auth.Webhook where
 import Data.Singletons.TH
 import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Role as DRole
+import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -65,12 +66,12 @@ instance
   toPayloadType _ = fromSing (sing @at)
 
 verifyDashboardAction ::
-  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
+  (Common.AuthFlow m r, Redis.HedisFlow m r, EncFlow m r) =>
   VerificationActionWithPayload VerifyWebhook m
 verifyDashboardAction = VerificationActionWithPayload verifyWebhook
 
 verifyWebhook ::
-  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
+  (Common.AuthFlow m r, Redis.HedisFlow m r, EncFlow m r) =>
   DRole.DashboardAccessType ->
   RegToken ->
   m AuthToken
@@ -79,7 +80,7 @@ verifyWebhook _ token = do
   pure AuthToken {merchantId, authToken}
 
 verifyToken ::
-  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
+  (Common.AuthFlow m r, Redis.HedisFlow m r, EncFlow m r) =>
   RegToken ->
   m (Maybe Text, Id DMerchant.Merchant)
 verifyToken token = do
@@ -89,10 +90,11 @@ verifyToken token = do
   case mbTuple of
     Just (authToken, merchantId) -> return (authToken, merchantId)
     Nothing -> do
-      sr <- SQM.findByAuthToken token >>= fromMaybeM (TokenNotFound token)
-      when (sr.enabled == Just False) $ throwError MerchantDisabled
-      let authToken = sr.authToken
-      let merchantId = sr.id
+      merchant <- SQM.findByAuthToken token >>= fromMaybeM (TokenNotFound token)
+      decryptedMerchant <- decrypt merchant
+      when (merchant.enabled == Just False) $ throwError MerchantDisabled
+      let authToken = decryptedMerchant.authToken
+      let merchantId = decryptedMerchant.id
       setExRedis key (authToken, merchantId) authTokenCacheExpiry
       return (authToken, merchantId)
   where

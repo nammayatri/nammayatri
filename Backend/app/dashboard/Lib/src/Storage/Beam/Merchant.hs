@@ -20,6 +20,7 @@ import qualified Data.Time as Time
 import qualified Database.Beam as B
 import qualified Domain.Types.ServerName as Domain
 import Kernel.Beam.Lib.UtilsTH
+import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
 import Kernel.Types.Beckn.City (City)
 
@@ -32,7 +33,8 @@ data MerchantT f = MerchantT
     supportedOperatingCities :: B.C f [City],
     domain :: B.C f (Maybe Text),
     website :: B.C f (Maybe Text),
-    authToken :: B.C f (Maybe Text),
+    authTokenEncrypted :: B.C f (Maybe Text),
+    authTokenHash :: B.C f (Maybe DbHash),
     enabled :: B.C f (Maybe Bool),
     createdAt :: B.C f Time.UTCTime
   }

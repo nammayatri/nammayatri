@@ -17,7 +17,6 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     dependencyDocumentType :: [Domain.Types.DocumentVerificationConfig.DocumentType],
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    dlNumberVerification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,
@@ -68,10 +67,10 @@ data VehicleClassVariantMap = VehicleClassVariantMap
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.Vehicle.Variant
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, (Ord), (Read))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentType))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SupportedVehicleClasses)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SupportedVehicleClasses))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleClassCheckType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VehicleClassCheckType))

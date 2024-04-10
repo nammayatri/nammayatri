@@ -124,7 +124,7 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
           Nothing -> throwImageError imageId1 ImageExtractionFailed
       else return Nothing
   mdriverLicense <- Query.findByDLNumber driverLicenseNumber
-  whenJust documentVerificationConfig.dlNumberVerification $ \dlNumberVerification -> do
+  whenJust transporterConfig.dlNumberVerification $ \dlNumberVerification -> do
     when dlNumberVerification $ do
       fork "driver license verification in safety portal" $ do
         dlVerificationRes <-

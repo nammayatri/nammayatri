@@ -20,7 +20,6 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
     dependencyDocumentType :: B.C f [Domain.Types.DocumentVerificationConfig.DocumentType],
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     disableWarning :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    dlNumberVerification :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     documentType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
     isDisabled :: B.C f Kernel.Prelude.Bool,
     isHidden :: B.C f Kernel.Prelude.Bool,

@@ -17,11 +17,12 @@
 module Domain.Types.Merchant where
 
 import qualified Domain.Types.ServerName as DSN
+import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 
-data Merchant = Merchant
+data MerchantE e = Merchant
   { id :: Id Merchant,
     shortId :: ShortId Merchant,
     serverNames :: [DSN.ServerName],
@@ -30,11 +31,30 @@ data Merchant = Merchant
     supportedOperatingCities :: [City.City],
     domain :: Maybe Text,
     website :: Maybe Text,
-    authToken :: Maybe Text,
+    authToken :: Maybe (EncryptedHashedField e Text),
     createdAt :: UTCTime,
     enabled :: Maybe Bool
   }
   deriving (Generic)
+
+type Merchant = MerchantE 'AsEncrypted
+
+type DecryptedMerchant = MerchantE 'AsUnencrypted
+
+instance EncryptedItem Merchant where
+  type Unencrypted Merchant = (DecryptedMerchant, HashSalt)
+  encryptItem (Merchant {..}, salt) = do
+    authToken_ <- encryptItem $ (,salt) <$> authToken
+    return Merchant {authToken = authToken_, ..}
+
+  decryptItem Merchant {..} = do
+    authToken_ <- fmap fst <$> decryptItem authToken
+    return (Merchant {authToken = authToken_, ..}, "")
+
+instance EncryptedItem' Merchant where
+  type UnencryptedItem Merchant = DecryptedMerchant
+  toUnencrypted a salt = (a, salt)
+  fromUnencrypted = fst
 
 data MerchantAPIEntity = MerchantAPIEntity
   { id :: Id Merchant,
@@ -49,7 +69,7 @@ data MerchantAPIEntity = MerchantAPIEntity
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
-mkMerchantAPIEntity :: Merchant -> [(Text, Text)] -> MerchantAPIEntity
+mkMerchantAPIEntity :: DecryptedMerchant -> [(Text, Text)] -> MerchantAPIEntity
 mkMerchantAPIEntity merchant adminList = do
   MerchantAPIEntity
     { id = merchant.id,

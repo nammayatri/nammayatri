@@ -112,8 +112,9 @@ createMerchant _ req = do
   mbExistingMerchant <- QMerchant.findByShortId shortId
   whenJust mbExistingMerchant $ \_ -> throwError (MerchantAlreadyExist req.shortId)
   merchant <- buildMerchant req
+  decMerchant <- decrypt merchant
   QMerchant.create merchant
-  pure $ DMerchant.mkMerchantAPIEntity merchant []
+  pure $ DMerchant.mkMerchantAPIEntity decMerchant []
 
 buildMerchant ::
   (BeamFlow m r, EncFlow m r) =>
@@ -123,6 +124,7 @@ buildMerchant req = do
   uid <- generateGUID
   now <- getCurrentTime
   authToken <- generateGUID
+  encryptedAuthToken <- encrypt authToken
   pure
     DMerchant.Merchant
       { id = uid,
@@ -133,7 +135,7 @@ buildMerchant req = do
         supportedOperatingCities = req.supportedOperatingCities,
         domain = Just req.domain,
         website = Just req.website,
-        authToken = Just authToken,
+        authToken = Just encryptedAuthToken,
         enabled = Just True,
         createdAt = now
       }
@@ -173,12 +175,13 @@ listMerchants _ mbLimit mbOffset mbShortId = do
     Nothing -> QMerchant.findAllMerchants' limit offset
   list <-
     forM merchantList $ \merchant -> do
-      allMerchantUsers <- QMerchantAccess.findAllUserAccountForMerchant merchant.id
+      decryptedMerchant <- decrypt merchant
+      allMerchantUsers <- QMerchantAccess.findAllUserAccountForMerchant decryptedMerchant.id
       let personIds = map (\x -> x.personId) allMerchantUsers
       allPersons <- QP.findAllByIds personIds
       decryptedPersons <- mapM (\person -> decrypt person) allPersons
       let emailList = map (\person -> (fromMaybe person.mobileNumber person.email, person.id.getId)) decryptedPersons
-      pure $ DMerchant.mkMerchantAPIEntity merchant emailList
+      pure $ DMerchant.mkMerchantAPIEntity decryptedMerchant emailList
   pure ListMerchantResp {list = list, summary = Summary {totalCount = 10000, count = length list}}
 
 createUserForMerchant ::
