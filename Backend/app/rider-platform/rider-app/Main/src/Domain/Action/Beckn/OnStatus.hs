@@ -203,7 +203,7 @@ onStatus req = do
       let rideId = case rideEntity of
             UpdatedRide (DUpdatedRide {ride}) -> ride.id
             RenewedRide ride -> ride.id
-      let bookingCancellationReason = mkBookingCancellationReason booking.id (Just rideId) reallocationSource booking.merchantId
+      bookingCancellationReason <- mkBookingCancellationReason booking.id (Just rideId) reallocationSource booking.merchantId
       rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity
       when (isStatusChanged booking.status bookingNewStatus rideEntity) $ do
         QBCR.upsert bookingCancellationReason
@@ -311,20 +311,25 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::
+  (MonadFlow m) =>
   Id DB.Booking ->
   Maybe (Id DRide.Ride) ->
   DBCR.CancellationSource ->
   Id DM.Merchant ->
-  DBCR.BookingCancellationReason
+  m DBCR.BookingCancellationReason
 mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId = do
-  DBCR.BookingCancellationReason
-    { bookingId = bookingId,
-      rideId = mbRideId,
-      merchantId = Just merchantId,
-      source = cancellationSource,
-      reasonCode = Nothing,
-      reasonStage = Nothing,
-      additionalInfo = Nothing,
-      driverCancellationLocation = Nothing,
-      driverDistToPickup = Nothing
-    }
+  now <- getCurrentTime
+  return $
+    DBCR.BookingCancellationReason
+      { bookingId = bookingId,
+        rideId = mbRideId,
+        merchantId = Just merchantId,
+        source = cancellationSource,
+        reasonCode = Nothing,
+        reasonStage = Nothing,
+        additionalInfo = Nothing,
+        driverCancellationLocation = Nothing,
+        driverDistToPickup = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }

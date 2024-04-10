@@ -427,7 +427,7 @@ bookingCancelledReqHandler ::
   m ()
 bookingCancelledReqHandler ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason:-" <> show cancellationSource)
-  let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
+  bookingCancellationReason <- mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   fork "incrementing fraud counters" $ do
     case mbRide of
@@ -456,23 +456,28 @@ bookingCancelledReqHandler ValidatedBookingCancelledReq {..} = do
   Notify.notifyOnBookingCancelled booking cancellationSource bppDetails
 
 mkBookingCancellationReason ::
+  (MonadFlow m) =>
   Id DRB.Booking ->
   Maybe (Id DRide.Ride) ->
   DBCR.CancellationSource ->
   Id DMerchant.Merchant ->
-  DBCR.BookingCancellationReason
-mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId =
-  DBCR.BookingCancellationReason
-    { bookingId = bookingId,
-      rideId = mbRideId,
-      merchantId = Just merchantId,
-      source = cancellationSource,
-      reasonCode = Nothing,
-      reasonStage = Nothing,
-      additionalInfo = Nothing,
-      driverCancellationLocation = Nothing,
-      driverDistToPickup = Nothing
-    }
+  m DBCR.BookingCancellationReason
+mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId = do
+  now <- getCurrentTime
+  return $
+    DBCR.BookingCancellationReason
+      { bookingId = bookingId,
+        rideId = mbRideId,
+        merchantId = Just merchantId,
+        source = cancellationSource,
+        reasonCode = Nothing,
+        reasonStage = Nothing,
+        additionalInfo = Nothing,
+        driverCancellationLocation = Nothing,
+        driverDistToPickup = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }
 
 validateRideAssignedReq ::
   ( CacheFlow m r,
