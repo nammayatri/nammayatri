@@ -716,6 +716,7 @@ variantListView push state =
                   case item of
                     ST.AutoCategory -> "ny_ic_auto_side"
                     ST.CarCategory -> "ny_ic_sedan_side"
+                    ST.UnKnown -> "ny_ic_silhouette"
               ]
             , textView $
               [ width WRAP_CONTENT
@@ -723,6 +724,7 @@ variantListView push state =
               , text case item of
                         ST.AutoCategory -> getString AUTO_RICKSHAW
                         ST.CarCategory -> getString CAR
+                        ST.UnKnown -> "Unknown"
               , color Color.black800
               , margin $ MarginLeft 20
               ] <> FontStyle.subHeading1 TypoGraphy

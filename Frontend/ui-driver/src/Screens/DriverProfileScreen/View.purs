@@ -59,7 +59,7 @@ import MerchantConfig.Utils as MU
 import Mobility.Prelude as MP
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback, onAnimationEnd, rippleColor)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback, onAnimationEnd, rippleColor, fillViewport)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, scrollBarY)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -449,28 +449,29 @@ profileView push state =
             ]
             []
         , scrollView
-            [ height WRAP_CONTENT
+            [ height MATCH_PARENT
             , width MATCH_PARENT
             , background if state.props.screenType == ST.DRIVER_DETAILS then Color.white900 else Color.blue600
             , orientation VERTICAL
             , weight 1.0
+            , fillViewport true
             , scrollBarY false
             ]
             [ linearLayout
-                [ height WRAP_CONTENT
+                [ height MATCH_PARENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
                 ]
                 [ linearLayout
-                    [ height WRAP_CONTENT
+                    [ height MATCH_PARENT
                     , width MATCH_PARENT
                     , orientation VERTICAL
                     , background Color.blue600
-                    , padding $ PaddingVertical 16 24
+                    , padding $ if state.props.screenType == ST.DRIVER_DETAILS then (PaddingVertical 16 24) else (PaddingTop 16)
                     ]
                     [ tabView state push
                     , tabImageView state push
-                    -- , vehicleListItem state push "#FFFFFF"
+                    , infoView state push
                     , verifiedVehiclesView state push
                     , pendingVehiclesVerificationList state push
                     ]
@@ -704,29 +705,38 @@ tabImageView state push =
               , alpha if (state.props.screenType == ST.VEHICLE_DETAILS) then 1.0 else 0.4
               ]
               [ imageView
-                  [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage state
+                  [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage $ getVehicleCategory state.data.vehicleDetails
                   , height $ V 68
                   , width $ V 68
                   ]
               ]
       ]
   where
-  getVehicleImage :: ST.DriverProfileScreenState -> String
-  getVehicleImage state = mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    getVehicleCategory :: Array ST.DriverVehicleDetails -> ST.VehicleCategory
+    getVehicleCategory vehicles = 
+      let mbVehicle = find (\item -> item.isActive == item.isVerified) vehicles
+      in case mbVehicle of
+        Just vehicle -> fromMaybe ST.AutoCategory vehicle.verifiedVehicleCategory
+        Nothing -> ST.AutoCategory
 
-  mkAsset :: CityConfig -> String
-  mkAsset cityConfig =
-    if state.data.driverVehicleType == "AUTO_RICKSHAW" then
-      (getAutoImage cityConfig)
-    else
-      "ny_ic_silhouette"
+    getVehicleImage :: ST.VehicleCategory -> String
+    getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
 
-  getAutoImage :: CityConfig -> String
-  getAutoImage cityConfig =
-    if cityConfig.cityCode == "std:040" then
-      "ny_ic_black_yellow_auto_side_view"
-    else
-      "ny_ic_auto_side_view"
+    mkAsset :: ST.VehicleCategory -> CityConfig -> String
+    mkAsset category cityConfig =
+      if category == ST.AutoCategory then
+        (getAutoImage cityConfig)
+      else if category == ST.CarCategory then
+        "ny_ic_sedan"
+      else
+        "ny_ic_silhouette"
+
+    getAutoImage :: CityConfig -> String
+    getAutoImage cityConfig =
+      if cityConfig.cityCode == "std:040" then
+        "ny_ic_black_yellow_auto_side_view"
+      else
+        "ny_ic_auto_side_view"
 
 ---------------------------------------------- DRIVER DETAILS VIEW ------------------------------------------------------------
 driverDetailsView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
@@ -1211,6 +1221,22 @@ alternateNumberLayoutView state push =
               (const AfterRender)
           ]
           [ PrimaryEditText.view (push <<< PrimaryEditTextActionController) (alternatePrimaryEditTextConfig state) ]
+    ]
+
+infoView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+infoView state push =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , visibility $ MP.boolToVisibility $ state.props.screenType == ST.DRIVER_DETAILS 
+  , orientation VERTICAL
+  , margin $ MarginHorizontal 16 16
+  ][ detailsListViewComponent state push {
+                              backgroundColor : Color.white900
+                            , separatorColor : Color.grey700
+                            , isLeftKeyClickable : false
+                            , arrayList : driverDetailsArray state
+                            }
     ]
 
 ------------------------------ ENTER OTP MODAL -------------------------------------------------------

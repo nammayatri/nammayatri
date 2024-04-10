@@ -560,8 +560,8 @@ getVehicleVariantImage variant =
                         _           -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         NAMMAYATRI -> case variant of
                         "SEDAN"     -> "ny_ic_sedan," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ny_ic_sedan.png"
-                        "SUV"       -> "ny_ic_sedan," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ny_ic_sedan.png"
-                        "HATCHBACK" -> "ny_ic_sedan," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ny_ic_sedan.png"
+                        "SUV"       -> "ny_ic_suv," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ny_ic_suv.png"
+                        "HATCHBACK" -> "ny_ic_hatchback," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ny_ic_hatchback.png"
                         "RENTALS"   -> "ic_rentals," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ic_rentals.png"
                         "INTERCITY" -> "ic_intercity," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ic_intercity.png"
                         "AUTO_RICKSHAW" -> 
