@@ -11,6 +11,7 @@ import qualified Data.Maybe
 import qualified Data.Text
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch
+import qualified Domain.Types.VehicleVariant as DVeh
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App

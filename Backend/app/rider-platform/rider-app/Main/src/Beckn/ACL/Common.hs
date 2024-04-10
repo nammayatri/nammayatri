@@ -17,8 +17,6 @@ module Beckn.ACL.Common where
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Common
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
-import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
-import qualified Beckn.Types.Core.Taxi.Common.Vehicle as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
@@ -28,7 +26,6 @@ import Domain.Action.Beckn.Common as Common
 import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.VehicleVariant as Variant
 import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -95,24 +92,6 @@ mkLocation info =
               ward = info.address.ward
             }
     }
-
-castVariant :: Variant.VehicleVariant -> Common.VehicleVariant
-castVariant Variant.SEDAN = Common.SEDAN
-castVariant Variant.HATCHBACK = Common.HATCHBACK
-castVariant Variant.SUV = Common.SUV
-castVariant Variant.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
-castVariant Variant.TAXI = Common.TAXI
-castVariant Variant.TAXI_PLUS = Common.TAXI_PLUS
-
-type TagGroupCode = Text
-
-type TagCode = Text
-
-getTag :: TagGroupCode -> TagCode -> Tags.TagGroups -> Maybe Text
-getTag tagGroupCode tagCode (Tags.TG tagGroups) = do
-  tagGroup <- find (\tagGroup -> tagGroup.code == tagGroupCode) tagGroups
-  tag <- find (\tag -> tag.code == Just tagCode) tagGroup.list
-  tag.value
 
 castCancellationSource :: Common.CancellationSource -> SBCR.CancellationSource
 castCancellationSource = \case
