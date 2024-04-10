@@ -207,6 +207,7 @@ library
       Domain.Types.DriverOffer
       Domain.Types.Estimate
       Domain.Types.Extra.Booking
+      Domain.Types.Extra.PlaceNameCache
       Domain.Types.Extra.RentalDetails
       Domain.Types.FarePolicy.FareBreakup
       Domain.Types.FarePolicy.FareProductType
@@ -214,7 +215,6 @@ library
       Domain.Types.Geometry
       Domain.Types.HotSpot
       Domain.Types.LocationAddress
-      Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
       Domain.Types.Merchant.MerchantMessage
       Domain.Types.Merchant.MerchantPaymentMethod
@@ -265,7 +265,6 @@ library
       Storage.Beam.Geometry.Geometry
       Storage.Beam.Geometry.GeometryGeom
       Storage.Beam.IssueManagement
-      Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
       Storage.Beam.Merchant.MerchantMessage
       Storage.Beam.Merchant.MerchantPaymentMethod
@@ -329,7 +328,6 @@ library
       Storage.Queries.Geometry
       Storage.Queries.IssueExtra
       Storage.Queries.LocationMappingExtra
-      Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
       Storage.Queries.Merchant.MerchantMessage
       Storage.Queries.Merchant.MerchantPaymentMethod
@@ -418,6 +416,7 @@ library
       Domain.Types.OnSearchEvent
       Domain.Types.PersonStats
       Domain.Types.PlaceBasedServiceConfig
+      Domain.Types.PlaceNameCache
       Domain.Types.Rating
       Domain.Types.RegistrationToken
       Domain.Types.RentalDetails
@@ -469,6 +468,7 @@ library
       Storage.Beam.OnSearchEvent
       Storage.Beam.PersonStats
       Storage.Beam.PlaceBasedServiceConfig
+      Storage.Beam.PlaceNameCache
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
       Storage.Beam.RentalDetails
@@ -532,6 +532,7 @@ library
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.PersonStats
       Storage.Queries.PlaceBasedServiceConfig
+      Storage.Queries.PlaceNameCache
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
       Storage.Queries.RentalDetails
