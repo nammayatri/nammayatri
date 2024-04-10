@@ -60,6 +60,9 @@ import Types.App (GlobalState, defaultGlobalState)
 import Mobility.Prelude (boolToVisibility)
 import Locale.Utils
 import Screens.HelpAndSupportScreen.ScreenData (HelpAndSupportScreenState)
+import Data.Function.Uncurried (runFn3)
+import Data.Maybe (Maybe(..), isJust, isNothing)
+import DecodeUtil (getAnyFromWindow)
 
 screen :: HelpAndSupportScreenState -> Screen Action HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -459,7 +462,9 @@ getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (acti
 getPastRides action push state = do
   void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   void $ EHU.toggleLoader true
-  (rideBookingListResponse) <- Remote.rideBookingListWithStatus "1" "0" "COMPLETED"
+
+  let clientId = runFn3 getAnyFromWindow "clientId" Nothing Just
+  (rideBookingListResponse) <- Remote.rideBookingListWithStatus "1" "0" "COMPLETED" clientId
   void $ EHU.toggleLoader false
   case rideBookingListResponse of
       Right (RideBookingListRes  listResp) -> doAff do liftEffect $ push $ action (RideBookingListRes listResp) "success"

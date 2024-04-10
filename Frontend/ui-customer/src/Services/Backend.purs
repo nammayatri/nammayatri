@@ -70,6 +70,7 @@ getHeaders val isGzipCompressionEnabled = do
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                        
                     ] <> case regToken of
                         Nothing -> []
                         Just token -> [Header "token" token]
@@ -84,6 +85,7 @@ getHeaders' val isGzipCompressionEnabled = do
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+
                     ] <> case regToken of
                         Nothing -> []
                         Just token -> [Header "token" token]
@@ -478,14 +480,14 @@ rideBookingBT bookingId = do
 
 rideBookingList limit offset onlyActive = do
         headers <- getHeaders "" true
-        withAPIResult (EP.rideBookingList limit offset onlyActive Nothing)  unwrapResponse $ callAPI headers (RideBookingListReq limit offset onlyActive Nothing)
+        withAPIResult (EP.rideBookingList limit offset onlyActive Nothing Nothing)  unwrapResponse $ callAPI headers (RideBookingListReq limit offset onlyActive Nothing Nothing)
     where
         unwrapResponse (x) = x
 
 
-rideBookingListWithStatus limit offset status = do
+rideBookingListWithStatus limit offset status clientId = do
         headers <- getHeaders "" true
-        withAPIResult (EP.rideBookingList limit offset "false" (Just status))  unwrapResponse $ callAPI headers (RideBookingListReq limit offset "false" (Just status))
+        withAPIResult (EP.rideBookingList limit offset "false" (Just status) clientId )  unwrapResponse $ callAPI headers (RideBookingListReq limit offset "false" (Just status) clientId)
     where
         unwrapResponse (x) = x
 

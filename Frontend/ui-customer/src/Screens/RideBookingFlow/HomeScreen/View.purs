@@ -187,7 +187,7 @@ screen initialState =
               HomeScreen -> do
                 let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
                 if (getValueToLocalStore UPDATE_REPEAT_TRIPS == "true" && Map.isEmpty suggestionsMap) then do
-                  void $ launchAff $ flowRunner defaultGlobalState $ updateRecentTrips UpdateRepeatTrips push Nothing
+                  void $ launchAff $ flowRunner defaultGlobalState $ updateRecentTrips UpdateRepeatTrips push Nothing initialState
                 else do 
                   push RemoveShimmer 
                   pure unit
@@ -2639,8 +2639,8 @@ getQuotesPolling pollingId action retryAction count duration push state = do
         _ <- pure $ updateLocalStage QuoteList
         doAff do liftEffect $ push $ action response
 
-updateRecentTrips :: forall action. (RideBookingListRes -> action) -> (action -> Effect Unit) -> Maybe RideBookingListRes -> Flow GlobalState Unit
-updateRecentTrips action push response = do
+updateRecentTrips :: forall action. (RideBookingListRes -> action) -> (action -> Effect Unit) -> Maybe RideBookingListRes -> HomeScreenState -> Flow GlobalState Unit
+updateRecentTrips action push response state = do
   case response of 
     Just resp -> handleResponse resp
     Nothing -> fetchAndHandleResponse
@@ -2653,10 +2653,11 @@ updateRecentTrips action push response = do
 
     retryAfterDelay resp = do
       void $ delay $ Milliseconds 1000.0
-      updateRecentTrips action push (Just resp)
+      updateRecentTrips action push (Just resp) state
 
     fetchAndHandleResponse = do
-      rideBookingListResponse <- Remote.rideBookingListWithStatus "30" "0" "COMPLETED"
+      let clientId = runFn3 getAnyFromWindow "clientId" Nothing Just
+      rideBookingListResponse <- Remote.rideBookingListWithStatus "30" "0" "COMPLETED" (Just state.data.config.appData.name)
       void $ pure $ setValueToLocalStore UPDATE_REPEAT_TRIPS "false"
       case rideBookingListResponse of
         Right listResp -> do

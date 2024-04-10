@@ -1030,6 +1030,16 @@ homeScreenFlow = do
                                         setValueToLocalStore PICKUP_DISTANCE "0"
                                         liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_ride_completed" (rideCompletedDetails (RideBookingRes resp))
                                         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A", startedAtUTC = fromMaybe "" resp.rideStartTime ,endedAt = convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A", finalAmount = finalAmount, rideRatingState {driverName = ride.driverName, rideId = ride.id , distanceDifference = differenceOfDistance} , ratingViewState { rideBookingRes = (RideBookingRes resp), issueFacedView = nightSafetyFlow}, driverInfoCardState {initDistance = Nothing}, vehicleVariant = ride.vehicleVariant},props{currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance, nightSafetyFlow = nightSafetyFlow, showOfferedAssistancePopUp = (resp.hasDisability == Just true)}})
+
+                                        -- let clientId = runFn3 getAnyFromWindow "clientId" Nothing Just
+                                        let clientId = state.data.config.appData.name
+                                        (rideBookingListResponse) <- lift $ lift $ Remote.rideBookingListWithStatus "2" "0" "COMPLETED" (Just clientId)
+                                        case rideBookingListResponse of
+                                            Right (RideBookingListRes  listResp) -> do
+                                              if ((Arr.length listResp.list) == 1) then do
+                                                void $ liftFlowBT $ logEvent logField_ $ clientId <> "_user_first_ride_completed"
+                                              else pure unit
+                                            Left (err) -> pure unit
                                         homeScreenFlow
                                         else homeScreenFlow
             "CANCELLED_PRODUCT"   -> do -- REMOVE POLYLINES

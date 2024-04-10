@@ -68,11 +68,11 @@ selectEstimate estimateId = (getBaseUrl "15") <> "/estimate/"<> estimateId <> "/
 selectList :: String -> String
 selectList estimateId = (getBaseUrl "15") <> "/estimate/"<> estimateId <> "/results"
 
-rideBookingList :: String -> String -> String -> Maybe String -> String
-rideBookingList limit offset isActive status = 
+rideBookingList :: String -> String -> String -> Maybe String -> Maybe String -> String
+rideBookingList limit offset isActive status clientId = 
   maybe 
     ((getBaseUrl "16") <> "/rideBooking/list?limit="<> limit <>"&offset="<> offset <>"&onlyActive=" <> isActive)
-    (\rideStatus -> ((getBaseUrl "41") <> "/rideBooking/list?limit="<> limit <>"&offset="<> offset <>"&onlyActive=false" <>"&status=" <> show rideStatus))
+    (\rideStatus -> ((getBaseUrl "41") <> "/rideBooking/list?limit="<> limit <>"&offset="<> offset <>"&onlyActive=false" <>"&status=" <> show rideStatus <> show clientId))
     status
 
 ridebooking :: String ->  String

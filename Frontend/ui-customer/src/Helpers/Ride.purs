@@ -43,6 +43,8 @@ import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Common.Types.App as Common
+import Data.Function.Uncurried (Fn3(..), runFn3)
+import DecodeUtil (getAnyFromWindow)
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -104,7 +106,8 @@ checkRideStatus rideAssigned = do
                 pure unit
       else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
         updateLocalStage HomeScreen
-        rideBookingListResponse <- lift $ lift $ Remote.rideBookingListWithStatus "1" "0" "COMPLETED"
+        let clientId = runFn3 getAnyFromWindow "clientId" Nothing Just
+        rideBookingListResponse <- lift $ lift $ Remote.rideBookingListWithStatus "1" "0" "COMPLETED" clientId
         case rideBookingListResponse of
           Right (RideBookingListRes listResp) -> do
             let (RideBookingRes resp) = fromMaybe HSD.dummyRideBooking $ head listResp.list
