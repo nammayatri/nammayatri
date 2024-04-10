@@ -299,7 +299,7 @@ view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effec
 view push state =
   let 
     showLabel = not $ DS.null state.props.defaultPickUpPoint
-    extraPadding = if state.props.currentStage == ConfirmingLocation then 112 else 0
+    extraPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize 112 else 0
   in
   frameLayout
     [ height MATCH_PARENT
@@ -1150,6 +1150,7 @@ savedLocationsView state push =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , clickable state.props.isSrcServiceable
+    , visibility $ boolToVisibility $ not $ state.props.showShimmer
     , padding $ PaddingHorizontal 16 16
     ]
     [ PrestoAnim.animationSet [ fadeIn true ] $
@@ -3161,7 +3162,7 @@ homeScreenViewV2 push state =
                         ((if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
                           [locationUnserviceableView push state]
                         else 
-                          [])
+                          []
                           <> (if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else [])
                           <> (if isHomeScreenView state then contentView state else [])
                           -- <> if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else []
@@ -3170,7 +3171,7 @@ homeScreenViewV2 push state =
                           , suggestionsView push state
                           , emptySuggestionsBanner state push
                           , footerView push state
-                          ]
+                          ])
                           )
                   ]
               ]
@@ -3179,22 +3180,11 @@ homeScreenViewV2 push state =
   where 
     contentView state = if state.props.showShimmer then [
       PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
-        shimmerFrameLayout
-        [ height $ V 100
+        linearLayout
+        [ height WRAP_CONTENT
         , width MATCH_PARENT 
-        , background Color.greyDark
-        , margin $ Margin 16 24 16 0
-        , cornerRadius 8.0
-        , onAnimationEnd
-            ( \action -> do
-                _ <- push action
-                _ <- getCurrentPosition push CurrentLocation
-                case state.props.currentStage of
-                  HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
-                  _ -> pure unit
-                pure unit
-            )(const MapReadyAction)
-        ][]] 
+        , onAnimationEnd push (const MapReadyAction)
+        ][tagShimmerView state]] 
       else
       (maybe 
         ([]) 
@@ -3384,6 +3374,8 @@ pickupLocationView push state =
                 , padding $ Padding 14 16 14 16 
                 , stroke $ "1," <> Color.mountainFig
                 , onClick push $ const WhereToClick
+                , clickable $ state.props.isSrcServiceable
+                , alpha $ if state.props.isSrcServiceable then 1.0 else 0.5
                 , gravity CENTER_VERTICAL
                 , background Color.black900
                 , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.black 0.2 
@@ -3413,13 +3405,13 @@ mapView push state idTag =
   let mapDimensions = getMapDimensions state
       bottomPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize 112 else 0
       banners = getBannerConfigs state BannerCarousel
-      isVisible = if isHomeScreenView state then null banners
+      isVisible = if isHomeScreenView state then (null banners) && (not state.props.showShimmer)
                       else (not (state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == SearchLocation ))
     
   in
   PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
   relativeLayout
-    [ height if isHomeScreenView state && (not (null banners)) then V 0 else mapDimensions.height
+    [ height if (isHomeScreenView state && not (null banners)) || (state.props.showShimmer) then V 0 else mapDimensions.height
     , width mapDimensions.width 
     -- , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
     , margin $ if isHomeScreenView state && null banners then MarginTop 16 else MarginTop 0
@@ -3441,6 +3433,7 @@ mapView push state idTag =
                 case state.props.currentStage of
                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
                   _ -> pure unit
+                pure unit
             )
             (const MapReadyAction)
     ]$[ linearLayout
@@ -3602,36 +3595,59 @@ suggestionsView push state =
 
 shimmerView :: forall w. HomeScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state =
-  shimmerFrameLayout
+  linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
     , background Color.transparent
     , visibility $ boolToVisibility $ state.props.showShimmer && null state.data.tripSuggestions
     ] 
-    [ linearLayout
+    [ shimmerFrameLayout
         [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation VERTICAL
+        , height $ V 80
+        , margin $ Margin 16 16 16 10
+        , cornerRadius 8.0
+        , background Color.greyDark
         ]
-        [ linearLayout
-            [ width MATCH_PARENT
-            , height $ V 80
-            , margin $ Margin 16 16 16 10
-            , cornerRadius 8.0
-            , background Color.greyDark
-            ]
-            []
-        , linearLayout
-            [ width MATCH_PARENT
-            , height $ V 80
-            , margin $ MarginHorizontal 16 16 
-            , cornerRadius 8.0
-            , background Color.greyDark
-            ]
-            []
+        []
+    , shimmerFrameLayout
+        [ width MATCH_PARENT
+        , height $ V 80
+        , margin $ Margin 16 16 16 10
+        , cornerRadius 8.0
+        , background Color.greyDark
         ]
+        []
+    , shimmerFrameLayout
+        [ width MATCH_PARENT
+        , height $ V 80
+        , margin $ MarginHorizontal 16 16 
+        , cornerRadius 8.0
+        , background Color.greyDark
+        ]
+        []
     ]
+
+tagShimmerView state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ Margin 8 8 8 0
+    ](map (\_ -> 
+      shimmerFrameLayout
+      [ height WRAP_CONTENT
+      , weight 1.0 
+      , cornerRadius 24.0
+      , padding $ Padding 12 8 12 8
+      , stroke $"1,"<> Color.grey900
+      , margin $ MarginHorizontal 8 8
+
+      ][textView
+        [ cornerRadius 16.0 
+        , height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.greyDark
+        ]]) [1,2,3])
 
 movingRightArrowView :: forall w. String -> PrestoDOM (Effect Unit) w
 movingRightArrowView viewId =

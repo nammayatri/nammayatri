@@ -84,11 +84,23 @@ cardView push config =
               , width MATCH_PARENT
               ][ linearLayout
                   [ height WRAP_CONTENT
-                  , width WRAP_CONTENT
+                  , width MATCH_PARENT
                   , orientation VERTICAL
                   , gravity CENTER_VERTICAL
                   , padding $ PaddingLeft 8
-                  ][ vehicleDetailsView push config
+                  ][ linearLayout
+                      [ width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , gravity CENTER_VERTICAL
+                      ][ vehicleDetailsView push config
+                       , linearLayout [weight 1.0][]
+                       , linearLayout
+                         [ width WRAP_CONTENT
+                         , height WRAP_CONTENT
+                         , gravity RIGHT
+                         , afterRender push (const NoAction)
+                         ][priceDetailsView push config]
+                      ]
                   , linearLayout
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
@@ -98,13 +110,8 @@ cardView push config =
                      , descriptionView config.serviceTierShortDesc config.vehicleVariant
                     ]
                   ]
-                  , linearLayout [weight 1.0][]
-                  , linearLayout
-                    [ width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , gravity RIGHT
-                    , afterRender push (const NoAction)
-                    ][priceDetailsView push config]
+                  
+                  
               ]
         ]
       ]
