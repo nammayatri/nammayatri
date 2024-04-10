@@ -62,14 +62,23 @@ getVehicleVariant provider item = do
           >>= (.fulfillmentVehicle)
           >>= (.vehicleCategory)
   let variant = map T.toUpper variant'
-  case (category, variant) of
-    (Just "CAB", Just "SEDAN") -> return VehicleVariant.SEDAN
-    (Just "CAB", Just "SUV") -> return VehicleVariant.SUV
-    (Just "CAB", Just "HATCHBACK") -> return VehicleVariant.HATCHBACK
-    (Just "AUTO_RICKSHAW", _) -> return VehicleVariant.AUTO_RICKSHAW
-    (Just "CAB", Just "TAXI") -> return VehicleVariant.TAXI
-    (Just "CAB", Just "TAXI_PLUS") -> return VehicleVariant.TAXI_PLUS
-    _ -> throwError (InvalidRequest $ "Unable to parse vehicle category:-" <> show category <> ",vehicle variant:-" <> show variant)
+      mbDVehVariant = Common.parseVehicleVariant category variant
+  mbDVehVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicle category:-" <> show category <> ",vehicle variant:-" <> show variant)
+
+isValidVehVariant :: MonadFlow m => Spec.Fulfillment -> m Bool
+isValidVehVariant fulfillment = do
+  let variant' = fulfillment.fulfillmentVehicle >>= (.vehicleVariant)
+      variant = map T.toUpper variant'
+      category = fulfillment.fulfillmentVehicle >>= (.vehicleCategory)
+      mbDVehVariant = Common.parseVehicleVariant category variant
+  unless (isJust mbDVehVariant) $ do
+    logWarning $ "Unable to parse vehicle category:-" <> show category <> ",vehicle variant:-" <> show variant
+  return $ isJust mbDVehVariant
+
+isValidItem :: [Spec.Fulfillment] -> Spec.Item -> Bool
+isValidItem fulfillments item =
+  let fulfId = item.itemFulfillmentIds >>= listToMaybe
+   in any (\f -> f.fulfillmentId == fulfId) fulfillments
 
 getServiceTierType :: Spec.Item -> Maybe DVST.VehicleServiceTierType
 getServiceTierType item = item.itemDescriptor >>= (.descriptorCode) >>= (readMaybe . T.unpack)

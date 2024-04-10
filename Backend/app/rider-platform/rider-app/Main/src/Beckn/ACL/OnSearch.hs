@@ -16,6 +16,7 @@ module Beckn.ACL.OnSearch where
 
 import qualified Beckn.OnDemand.Transformer.OnSearch as TOnSearch
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified Beckn.OnDemand.Utils.OnSearch as OnSearchUtils
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextUtils
@@ -44,9 +45,12 @@ buildOnSearchReqV2 req = do
       message <- req.onSearchReqMessage & fromMaybeM (InvalidRequest "Missing message")
       let catalog = message.onSearchReqMessageCatalog
       providers <- catalog.catalogProviders & fromMaybeM (InvalidRequest "Missing Providers")
-      provider <- safeHead providers & fromMaybeM (InvalidRequest "Missing Provider")
-      fulfillments <- provider.providerFulfillments & fromMaybeM (InvalidRequest "Missing Fulfillments")
-      items <- provider.providerItems & fromMaybeM (InvalidRequest "Missing Items")
+      _provider <- safeHead providers & fromMaybeM (InvalidRequest "Missing Provider")
+      _fulfillments <- _provider.providerFulfillments & fromMaybeM (InvalidRequest "Missing Fulfillments")
+      _items <- _provider.providerItems & fromMaybeM (InvalidRequest "Missing Items")
+      fulfillments <- filterM OnSearchUtils.isValidVehVariant _fulfillments
+      let items = filter (OnSearchUtils.isValidItem fulfillments) _items
+          provider = _provider {Spec.providerFulfillments = Just fulfillments, Spec.providerItems = Just items}
       Just <$> TOnSearch.buildOnSearchReq req provider items fulfillments validTill
     Just err -> do
       logTagError "on_search req" $ "on_search error: " <> show err
