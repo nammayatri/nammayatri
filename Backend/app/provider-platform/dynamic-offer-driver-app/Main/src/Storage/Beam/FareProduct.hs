@@ -30,7 +30,8 @@ data FareProductT f = FareProductT
     vehicleVariant :: B.C f DVST.ServiceTierType,
     area :: B.C f Domain.Area,
     tripCategory :: B.C f TripCategory,
-    timeBounds :: B.C f Domain.TimeBound
+    timeBounds :: B.C f Domain.TimeBound,
+    enabled :: B.C f Bool
   }
   deriving (Generic, B.Beamable)
 

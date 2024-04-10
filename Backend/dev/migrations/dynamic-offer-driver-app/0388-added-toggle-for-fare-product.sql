@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.fare_product ADD COLUMN enabled boolean NOT NULL DEFAULT true;
