@@ -81,10 +81,10 @@ data DSelectReq = DSelectReq
 validateDSelectReq :: Validate DSelectReq
 validateDSelectReq DSelectReq {..} =
   sequenceA_
-    [ validateField "customerExtraFee" customerExtraFee $ InMaybe $ InRange @Money 1 100,
+    [ validateField "customerExtraFee" customerExtraFee $ InMaybe $ InRange @Money 1 100000,
       whenJust customerExtraFeeWithCurrency $ \obj ->
         validateObject "customerExtraFeeWithCurrency" obj $ \obj' ->
-          validateField "amount" obj'.amount $ InRange @HighPrecMoney 1.0 100.0
+          validateField "amount" obj'.amount $ InRange @HighPrecMoney 1.0 100000.0
     ]
 
 data DSelectRes = DSelectRes
