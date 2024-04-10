@@ -76,7 +76,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, showDateTimePicker, enableMyLocation)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, compareDate, getCurrentDatev2, getDateAfterNDaysv2, zoneLabelIcon)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, compareDate, getCurrentDatev2, getDateAfterNDaysv2, zoneLabelIcon, decodeBookingTimeList, encodeBookingTimeList)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo)
@@ -904,10 +904,13 @@ data Action = NoAction
             | ShowEndOTP
             | RentalInfoAction PopUpModal.Action
             | IntercitySpecialZone PopUpModal.Action
+            | StartScheduledRidePolling 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
 eval (IntercitySpecialZone PopUpModal.DismissPopup) state = continue state
+
+eval StartScheduledRidePolling state = continue state{props{startScheduledRidePolling = true}}
 
 eval (IntercitySpecialZone PopUpModal.OnButton1Click) state = updateAndExit state { props { showIntercityUnserviceablePopUp = false, showNormalRideNotSchedulablePopUp = false}} $ StayInHomeScreenSO state { props { showIntercityUnserviceablePopUp = false, showNormalRideNotSchedulablePopUp = false}}
 
@@ -2445,6 +2448,7 @@ eval (ContinueWithoutOffers (SelectListRes resp)) state = do
         else continue state
 
 eval (GetRideConfirmation resp) state = do
+  void $ pure $ setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ filter (\item -> item.bookingId /= state.props.bookingId) $ decodeBookingTimeList FunctionCall
   case state.props.isSpecialZone of
     false -> normalRideFlow resp state
     true -> specialZoneRideFlow resp state

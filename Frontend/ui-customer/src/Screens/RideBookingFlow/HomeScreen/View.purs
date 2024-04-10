@@ -138,6 +138,7 @@ import Types.App
 import Mobility.Prelude
 import Effect.Unsafe (unsafePerformEffect)
 import Screens.Types (FareProductType(..)) as FPT
+import Helpers.Utils (decodeBookingTimeList)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -186,12 +187,15 @@ screen initialState =
                   void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))
                   void $ launchAff $ flowRunner defaultGlobalState $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
-              ConfirmingRide -> void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation CheckFlowStatusAction 5 3000.0 push initialState
+              ConfirmingRide -> do
+                void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+                void $ launchAff $ flowRunner defaultGlobalState $ confirmRide (getValueToLocalStore TRACKING_ID) GetRideConfirmation CheckFlowStatusAction 5 3000.0 push initialState
               ConfirmingQuotes -> do
                 when ((getValueToLocalStore CONFIRM_QUOTES_POLLING) == "false") $ do
                   void $ pure $ setValueToLocalStore CONFIRM_QUOTES_POLLING "true"
                   let pollingCount = ceil ((toNumber $ findingQuotesSearchExpired false false)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore CONFIRM_QUOTES_POLLING_COUNT))) / 1000.0))
-                  void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation CheckFlowStatusAction pollingCount 3000.0 push initialState
+                  void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+                  void $ launchAff $ flowRunner defaultGlobalState $ confirmRide (getValueToLocalStore TRACKING_ID) GetRideConfirmation CheckFlowStatusAction pollingCount 3000.0 push initialState
               HomeScreen -> do
                 let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
                 if (getValueToLocalStore UPDATE_REPEAT_TRIPS == "true" && Map.isEmpty suggestionsMap) then do
@@ -206,13 +210,14 @@ screen initialState =
                 _ <- pure $ enableMyLocation true
                 _ <- pure $ setValueToLocalStore NOTIFIED_CUSTOMER "false"
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
-                -- case initialState.data.rentalsInfo of
-                  -- Just rentalsInfo -> do
-                    -- when ((fromMaybe 180001 $ fromString (unsafePerformEffect $ compareUTCDate rentalsInfo.rideScheduledAtUTC (getCurrentUTC ""))) < 900) do
-                      -- let _ = spy "whenCase-codex" rentalsInfo.rideScheduledAtUTC
-                      -- _ <- pure $ updateLocalStage ConfirmingQuotes
-                      -- void $ launchAff $ flowRunner defaultGlobalState $ rentalAndIntercityConfirmRide GetRideConfirmation 15 3000.0 push initialState {props {bookingId = rentalsInfo.bookingId }}
-                  -- _ -> pure unit
+                when (initialState.props.scheduledRidePollingDelay < 1800.0 && initialState.props.scheduledRidePollingDelay > 0.0) do
+                  _ <- launchAff $ flowRunner defaultGlobalState $ do
+                        doAff do liftEffect $ push $ StartScheduledRidePolling
+                  pure unit
+                when (initialState.props.startScheduledRidePolling) do
+                  void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+                  let polling_count = ceil $ initialState.props.scheduledRidePollingDelay/(120.0)
+                  void $ launchAff $ flowRunner defaultGlobalState $ confirmRide (getValueToLocalStore TRACKING_ID) GetRideConfirmation CheckFlowStatusAction polling_count 120000.0 push initialState
               SettingPrice -> do
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 let isRepeatRideEstimate = checkRecentRideVariant initialState
@@ -2859,10 +2864,11 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
         metersToKm distance (state.props.currentStage == RideStarted)
 
 
-confirmRide :: forall action. (RideBookingRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
-confirmRide action checkFlowStatusAction count duration push state = do
-  if (count /= 0) && (isLocalStageOn ConfirmingRide || isLocalStageOn ConfirmingQuotes) && (state.props.bookingId /= "")then do
-    resp <- rideBooking (state.props.bookingId)
+confirmRide :: forall action. String -> (RideBookingRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+confirmRide trackingId action checkFlowStatusAction count duration push state = do
+  let bookingId = if (DS.null state.props.bookingId) then maybe "" (\bookingTime -> bookingTime.bookingId) $ head $ decodeBookingTimeList FunctionCall else state.props.bookingId
+  if (count /= 0) && (isLocalStageOn ConfirmingRide || isLocalStageOn ConfirmingQuotes || state.props.startScheduledRidePolling) && bookingId /= "" && trackingId == (getValueToLocalStore TRACKING_ID) then do
+    resp <- rideBooking bookingId
     _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
     case resp of
       Right response -> do
@@ -2879,11 +2885,11 @@ confirmRide action checkFlowStatusAction count duration push state = do
           pure unit
         else do
           void $ delay $ Milliseconds duration
-          confirmRide action checkFlowStatusAction (count - 1) duration push state
+          confirmRide trackingId action checkFlowStatusAction (count - 1) duration push state
       Left err -> do
         _ <- pure $ printLog "api error " err
         void $ delay $ Milliseconds duration
-        confirmRide action checkFlowStatusAction (count - 1) duration push state
+        confirmRide trackingId action checkFlowStatusAction (count - 1) duration push state
   else do
     pure unit
 
