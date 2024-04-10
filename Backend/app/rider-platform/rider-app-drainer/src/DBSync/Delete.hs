@@ -40,6 +40,8 @@ runDeleteQuery deleteEntries dbDeleteObject = do
       case result of
         Left (QueryError errorMsg) -> do
           EL.logError ("QUERY DELETE FAILED" :: Text) (errorMsg <> " for query :: " <> query)
+          EL.logError ("QUERY DELETE FAILED : BYTE STRING" :: Text) (TE.decodeUtf8 byteString)
+          EL.logError ("QUERY DELETE FAILED : DB OBJECT" :: Text) (show dbDeleteObject)
           void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Delete" dbModel.getDBModel
           return $ Left entryId
         Right _ -> do

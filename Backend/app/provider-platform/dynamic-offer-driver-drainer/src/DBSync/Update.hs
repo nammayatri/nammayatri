@@ -62,6 +62,8 @@ runUpdateQuery updateDataEntries dbUpdateObject = do
           case result of
             Left (QueryError errorMsg) -> do
               EL.logError ("QUERY UPDATE FAILED" :: Text) (errorMsg <> " for query :: " <> query)
+              EL.logError ("QUERY UPDATE FAILED : BYTE STRING" :: Text) (TE.decodeUtf8 byteString)
+              EL.logError ("QUERY UPDATE FAILED : DB OBJECT" :: Text) (show dbUpdateObject)
               void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Update" dbModel.getDBModel
               return $ Left entryId
             Right _ -> do

@@ -63,6 +63,8 @@ runCreateQuery createDataEntry dbCreateObject = do
           case result of
             Left (QueryError errorMsg) -> do
               EL.logError ("QUERY INSERT FAILED" :: Text) (errorMsg <> " for query :: " <> query)
+              EL.logError ("QUERY INSERT FAILED: BYTE STRING" :: Text) (show byteString)
+              EL.logError ("QUERY INSERT FAILED: DB OBJECT" :: Text) (show dbCreateObject)
               void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" dbModel.getDBModel
               return $ Left entryId
             Right _ -> do
