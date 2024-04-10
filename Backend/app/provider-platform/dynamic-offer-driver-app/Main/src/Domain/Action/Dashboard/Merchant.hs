@@ -611,6 +611,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         isMandatory = False,
         title = "Empty title",
         vehicleCategory = DVeh.AUTO_CATEGORY,
+        order = 0,
         updatedAt = now,
         createdAt = now,
         ..
