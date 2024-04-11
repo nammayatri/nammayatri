@@ -232,7 +232,7 @@ mkRideInterpolationHandler ::
   (Id person -> HighPrecMeters -> Int -> Int -> m ()) ->
   (Id person -> HighPrecMoney -> m ()) ->
   (Id person -> [LatLong] -> m Bool) ->
-  (Id person -> RoutePoints -> m (Maybe HighPrecMoney)) ->
+  (Maybe (Id person) -> RoutePoints -> m (Maybe HighPrecMoney)) ->
   (Id person -> Meters -> m Meters) ->
   Bool ->
   (Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
@@ -324,7 +324,7 @@ interpolatePointsAndCalculateDistanceImplementationAndToll ::
   ) =>
   Bool ->
   (Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
-  (Id person -> RoutePoints -> m (Maybe HighPrecMoney)) ->
+  (Maybe (Id person) -> RoutePoints -> m (Maybe HighPrecMoney)) ->
   Id person ->
   [LatLong] ->
   m (HighPrecMeters, [LatLong], [Maps.MapsService], Bool, Maybe HighPrecMoney)
@@ -336,7 +336,7 @@ interpolatePointsAndCalculateDistanceImplementationAndToll isEndRide snapToRoadC
       case res of
         Left _ -> pure (0, [], [], True, Nothing)
         Right response -> do
-          tollCharges <- getTollChargesOnTheRoute driverId response.snappedPoints
+          tollCharges <- getTollChargesOnTheRoute (Just driverId) response.snappedPoints
           pure (response.distance, response.snappedPoints, servicesUsed, False, tollCharges)
 
 isAllPointsEqual :: [LatLong] -> Bool
