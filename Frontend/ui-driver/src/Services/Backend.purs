@@ -410,14 +410,15 @@ getAllRcData payload = do
 dummyVehicleObject :: Vehicle
 dummyVehicleObject = Vehicle
    {
-      "variant":"",
-      "createdAt":"",
-      "color":"",
-      "category": Nothing,
-      "driverId":"",
-      "capacity": Nothing,
-      "model":"",
-      "registrationNo":""
+      variant:"",
+      createdAt:"",
+      color:"",
+      category: Nothing,
+      driverId:"",
+      capacity: Nothing,
+      model:"",
+      registrationNo:"",
+      serviceTierType : Nothing
    }
 --------------------------------- offerRideBT ---------------------------------------------------------------------------------------------------------------------------------
 offerRideBT :: OfferRideReq -> FlowBT String OfferRideResp

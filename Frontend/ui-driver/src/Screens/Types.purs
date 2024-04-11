@@ -974,7 +974,8 @@ type HomeScreenData =  {
   bannerData :: BannerCarousalData,
   prevLatLon :: Maybe Location,
   noOfLocations :: Int,
-  isVehicleSupported :: Boolean
+  isVehicleSupported :: Boolean,
+  linkedVehicleCategory :: String
 }
 
 type BannerCarousalData = {
