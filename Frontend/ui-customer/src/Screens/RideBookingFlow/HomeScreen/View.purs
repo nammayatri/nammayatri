@@ -299,7 +299,7 @@ view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effec
 view push state =
   let 
     showLabel = not $ DS.null state.props.defaultPickUpPoint
-    extraPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize 112 else 0
+    extraPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize (if os == "IOS" then 10 else 112) else 0
   in
   frameLayout
     [ height MATCH_PARENT
@@ -2559,7 +2559,7 @@ waitTimeInfoPopUp push state =
   ][ RequestInfoCard.view (push <<< RequestInfoCardAction) (waitTimeInfoCardConfig state) ]
 
 lottieLoaderView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-lottieLoaderView state push =
+lottieLoaderView state push = 
   lottieAnimationView
     [ id (getNewIDWithTag "lottieLoader")
     , afterRender
@@ -3211,9 +3211,12 @@ footerView push state =
   let headerBounds = (runFn1 getLayoutBounds (getNewIDWithTag "homescreenHeader"))
       contentBounds = (runFn1 getLayoutBounds (getNewIDWithTag "homescreenContent")) 
       contentHeight = contentBounds.height
+      dynamicMargin = screenHeight unit - getDefaultPixelSize (headerBounds.height + contentHeight ) 
       marginTop = if state.props.suggestionsListExpanded 
-                      then 150 
-                      else screenHeight unit - getDefaultPixelSize (headerBounds.height + contentHeight ) 
+                      then getDefaultPixelSize 150 
+                  else if dynamicMargin > 150 
+                      then dynamicMargin 
+                  else getDefaultPixelSize 150
   in
   linearLayout  
     [ width MATCH_PARENT
@@ -3421,7 +3424,7 @@ pickupLocationView push state =
 mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> PrestoDOM (Effect Unit) w
 mapView push state idTag = 
   let mapDimensions = getMapDimensions state
-      bottomPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize 112 else 0
+      bottomPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize extraBottomPadding else 0
       banners = getBannerConfigs state BannerCarousel
       isVisible = if isHomeScreenView state then (null banners) && (not state.props.showShimmer)
                       else (not (state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == SearchLocation ))
@@ -4146,3 +4149,6 @@ newView push state =
     , margin $ MarginLeft 8
     , visibility $ boolToVisibility $ state.data.config.homeScreen.showAdditionalServicesNew
     ] <> FontStyle.tags TypoGraphy
+
+extraBottomPadding :: Int 
+extraBottomPadding =  if os == "IOS" then 80 else 112

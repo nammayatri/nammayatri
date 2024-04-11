@@ -40,6 +40,7 @@ data BannerType = AutoPay
   | ZooTicket
   | Safety
   | MetroTicket
+  | CabLaunch
 
 type CarouselConfig a = {
     item :: ListItem

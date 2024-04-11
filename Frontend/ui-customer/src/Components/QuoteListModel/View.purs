@@ -355,6 +355,24 @@ addTipView state push =
           ]
           [ PrimaryButton.view (push <<< TipViewPrimaryButtonClick) (continueWithTipButtonConfig state)
           ]
+      , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , visibility $ boolToVisibility $ state.tipViewProps.secondaryButtonVisibility
+          , onClick push $ const SecondaryBtnClick
+          ]
+          [ textView
+            $ [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , text state.tipViewProps.secondaryButtonText
+              , color Color.black650
+              , gravity CENTER
+              , padding $ Padding 6 6 6 6
+              , margin $ MarginTop 8
+              , accessibility ENABLE
+              , accessibilityHint state.tipViewProps.secondaryButtonText
+              ] <> FontStyle.subHeading1 TypoGraphy
+          ]
       ]
   ]
 
@@ -363,7 +381,7 @@ tipsView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , visibility $ boolToVisibility $ not state.tipViewProps.onlyPrimaryText
+  , visibility $ boolToVisibility $ state.tipViewProps.showTipsList && not state.tipViewProps.onlyPrimaryText
   ][TipsView.view (push <<< TipsViewActionController) $ tipsViewConfig state]
 
 selectRideAndConfirmView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w

@@ -214,3 +214,6 @@ homeScreen = do
     GoToSafetyEducation updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_SAFETY_EDUCATION)
+    RepeatSearch updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ REPEAT_SEARCH updatedState)

@@ -901,7 +901,7 @@ instance eqSheetState :: Eq SheetState where eq = genericEq
 instance encodeSheetState :: Encode SheetState where encode = defaultEnumEncode
 instance decodeSheetState :: Decode SheetState where decode = defaultEnumDecode
 
-data TipViewStage = DEFAULT | TIP_AMOUNT_SELECTED | TIP_ADDED_TO_SEARCH | RETRY_SEARCH_WITH_TIP
+data TipViewStage = DEFAULT | TIP_AMOUNT_SELECTED | TIP_ADDED_TO_SEARCH | RETRY_SEARCH_WITH_TIP | ADD_TIP_OR_CHANGE_RIDE_TYPE | UPDATE_TIP
 
 derive instance genericTipViewStage :: Generic TipViewStage _
 instance showTipViewStage :: Show TipViewStage where show = genericShow
@@ -920,6 +920,9 @@ type TipViewProps = {
   , customerTipArrayWithValues :: Array Int
   , activeIndex :: Int
   , primaryButtonText :: String
+  , secondaryButtonText :: String
+  , secondaryButtonVisibility :: Boolean
+  , showTipsList :: Boolean
 }
 
 type Contact = {
@@ -1040,7 +1043,8 @@ type EmergencyContactsScreenData = {
 type EmergencyContactsScreenProps = {
   showContactList :: Boolean,
   showInfoPopUp :: Boolean,
-  fromSosFlow :: Boolean
+  fromSosFlow :: Boolean,
+  appName :: String
 }
 
 type ContactDetail = {
@@ -2036,7 +2040,8 @@ type NammaSafetyScreenProps =  {
   fromBannerLink :: Boolean,
   showPastRidePopUp :: Boolean,
   checkPastRide :: Boolean,
-  reportPastRide :: Boolean
+  reportPastRide :: Boolean,
+  appName :: String
 }
 data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
 

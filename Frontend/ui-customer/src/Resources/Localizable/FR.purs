@@ -1080,3 +1080,8 @@ getFR stringKey =
         TAP_WHERE_TO_TO_BOOK_RIDE -> "Appuyez sur 'Où aller ?' pour réserver votre trajet !"
         NAMMA_SERVICES -> "Services pour les voyageurs"
         LAST_CHOSEN_VARIANT_NOT_AVAILABLE -> "Le dernier type de trajet choisi n'est pas disponible. Veuillez choisir une autre option de trajet."
+        ADD_TIP -> "Ajouter un pourboire"
+        CHANGE_RIDE_TYPE -> "Changer le type de trajet"
+        TRY_ADDING_TIP_OR_CHANGE_RIDE_TYPE -> "Essayez d'ajouter un pourboire ou de changer le type de trajet"
+        APPLICABLE_TOLL_CHARGES -> "Les frais de péage applicables sont inclus dans les tarifs"
+        UPDATE_TIP_STR -> "Mettre à jour le pourboire"

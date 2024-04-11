@@ -50,8 +50,8 @@ baseAppStorage = do
     setValueToLocalStore RELOAD_SAVED_LOCATION "true"
     setValueToLocalStore UPDATE_REPEAT_TRIPS (show appConfig.feature.enableRepeatTripBackfilling)
     setValueToLocalStore TEST_MINIMUM_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "4" else "17"
-    setValueToLocalStore TEST_POLLING_INTERVAL if (flowWithoutOffers WithoutOffers) then "8000.0" else "1500.0"
-    setValueToLocalStore TEST_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "22" else "117"
+    setValueToLocalStore TEST_POLLING_INTERVAL if (flowWithoutOffers WithoutOffers) then "100.0" else "100.0"
+    setValueToLocalStore TEST_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "2" else "2"
     setValueToLocalStore BASE_URL (getBaseUrl "dummy")
     setValueToLocalStore RATING_SKIPPED "false"
     setValueToLocalStore POINTS_FACTOR "3"

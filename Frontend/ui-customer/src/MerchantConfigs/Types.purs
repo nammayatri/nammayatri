@@ -409,7 +409,8 @@ type DriverLocationPollingConfig = {
 }
 
 type Banners = {
-  homeScreenSafety :: Boolean
+  homeScreenSafety :: Boolean,
+  homeScreenCabLaunch :: Boolean
 }
 
 type Safety = {

@@ -628,14 +628,28 @@ logOutPopUpModelConfig state =
           , padding = (Padding 0 10 0 10)
           },
           option2 {
-            text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
+            text = getString CHANGE_RIDE_TYPE
           , width = MATCH_PARENT
           , background = Color.white900
           , strokeColor = Color.white900
           , margin = MarginTop 14
-          , padding = PaddingBottom $ getBottomMargin
           , color = Color.black650
           , height = WRAP_CONTENT
+          },
+          optionWithHtml  {
+            textOpt1 {
+              text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
+            , visibility = VISIBLE
+            , textStyle = FontStyle.SubHeading1
+            , color = Color.black650
+            } 
+            , width = MATCH_PARENT
+            , height = WRAP_CONTENT
+            , margin = MarginVertical 14 14
+            , padding = PaddingBottom $ getBottomMargin
+            , visibility = true
+            , background = Color.white900
+            , strokeColor = Color.white900
           },
           cornerRadius = (Corners 15.0 true true false false)
       }
@@ -1508,8 +1522,8 @@ getTipViewProps state = do
                             , isprimaryButtonVisible = false
                             , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
                             , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
-                            -- , secondaryButtonText = getString GO_BACK_
-                            -- , secondaryButtonVisibility = true
+                            , secondaryButtonText = getString GO_BACK_
+                            , secondaryButtonVisibility = true
                             }
     TIP_AMOUNT_SELECTED -> tipViewProps{ stage = TIP_AMOUNT_SELECTED
                                        , onlyPrimaryText = false
@@ -1517,19 +1531,28 @@ getTipViewProps state = do
                                        , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
                                        , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
                                        , primaryButtonText = getTipViewText tipViewProps state (getString CONTINUE_SEARCH_WITH)
-                                      --  , secondaryButtonText = getString GO_BACK_
-                                      --  , secondaryButtonVisibility = true
+                                       , secondaryButtonText = getString GO_BACK_
+                                       , secondaryButtonVisibility = true
                                        }
     TIP_ADDED_TO_SEARCH -> tipViewProps{ onlyPrimaryText = true, isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "." }
     RETRY_SEARCH_WITH_TIP -> tipViewProps{ onlyPrimaryText = true , isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "." }
-    -- ADD_TIP_OR_CHANGE_RIDE_TYPE -> tipViewProps{ showTipsList = false
-    --                                           , isprimaryButtonVisible = true
-    --                                           , primaryText = getString TRY_ADDING_TIP_OR_CHANGE_RIDE_TYPE
-    --                                           , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
-    --                                           , primaryButtonText = getString ADD_TIP
-    --                                           , secondaryButtonText = getString CHANGE_RIDE_TYPE
-    --                                           , secondaryButtonVisibility = true
-    --                                           }
+    ADD_TIP_OR_CHANGE_RIDE_TYPE -> tipViewProps{ showTipsList = false
+                                              , isprimaryButtonVisible = true
+                                              , primaryText = getString TRY_ADDING_TIP_OR_CHANGE_RIDE_TYPE
+                                              , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
+                                              , primaryButtonText = getString ADD_TIP
+                                              , secondaryButtonText = getString CHANGE_RIDE_TYPE
+                                              , secondaryButtonVisibility = true
+                                              }
+    UPDATE_TIP -> tipViewProps
+                    { showTipsList = false
+                    , isprimaryButtonVisible = true
+                    , primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "."
+                    , primaryButtonText = getString UPDATE_TIP_STR
+                    , secondaryButtonText = getString CHANGE_RIDE_TYPE
+                    , secondaryButtonVisibility = true
+                    , onlyPrimaryText = false
+                    }
 
 getTipViewText :: TipViewProps -> ST.HomeScreenState -> String -> String
 getTipViewText tipViewProps state prefixString = do
@@ -1968,9 +1991,10 @@ getSafetyAlertData state = case state.props.safetyAlertType of
 shareRideConfig :: ST.HomeScreenState -> PopupWithCheckboxController.Config
 shareRideConfig state = let
   config = PopupWithCheckboxController.config
+  appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
   shareRideConfig' = config{
     title = getString SHARE_RIDE,
-    description = getString $ SHARE_RIDE_DESCRIPTION "SHARE_RIDE_DESCRIPTION",
+    description = getString $ SHARE_RIDE_DESCRIPTION appName,
     secondaryButtonText = getString SHARE_LINK,
     secondaryButtonImage = HU.fetchImage HU.FF_ASSET "ny_ic_share",
     secondaryButtonVisibliity = true, 
@@ -1995,7 +2019,7 @@ shareRideButtonConfig state =
     }
   where
   numberOfSelectedContacts = DA.length $ DA.filter (\contact -> contact.isSelected) $ fromMaybe [] state.data.contactList
-    
+
 referralPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config 
 referralPopUpConfig state = 
   let status = state.props.referral.referralStatus
