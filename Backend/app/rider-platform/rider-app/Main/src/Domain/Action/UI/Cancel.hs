@@ -248,11 +248,11 @@ cancelSearch personId dcr = do
       then -- then Esq.runTransaction $ do
       do
         _ <- QPFS.updateStatus personId DPFS.IDLE
-        void $ QEstimate.updateStatus dcr.estimateId DEstimate.DRIVER_QUOTE_CANCELLED
+        void $ QEstimate.updateStatus DEstimate.DRIVER_QUOTE_CANCELLED dcr.estimateId
         QDOffer.updateStatus DDO.INACTIVE dcr.estimateId
       else do
         _ <- QPFS.updateStatus personId DPFS.IDLE
-        void $ QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
+        void $ QEstimate.updateStatus DEstimate.CANCELLED dcr.estimateId
         QDOffer.updateStatus DDO.INACTIVE dcr.estimateId
   QPFS.clearCache personId
 

@@ -30,13 +30,9 @@ import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.Cancel as DCancel
-import qualified Domain.Action.UI.SpecialZoneQuote as USpecialZoneQuote
-import Domain.Types.Booking as DBooking
-import qualified Domain.Types.BppDetails as DBppDetails
+import qualified Domain.Action.UI.Estimate as UEstimate
+import Domain.Types.Booking
 import Domain.Types.CancellationReason
-import qualified Domain.Types.DriverOffer as DDriverOffer
-import Domain.Types.Estimate (EstimateAPIEntity)
-import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Quote as DQuote
@@ -151,7 +147,7 @@ data GetQuotesRes = GetQuotesRes
   { fromLocation :: DL.LocationAPIEntity,
     toLocation :: Maybe DL.LocationAPIEntity,
     quotes :: [OfferRes],
-    estimates :: [EstimateAPIEntity],
+    estimates :: [UEstimate.EstimateAPIEntity],
     paymentMethods :: [DMPM.PaymentMethodAPIEntity]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -259,10 +255,10 @@ getOffers searchRequest = do
     creationTime (OnRentalCab QuoteAPIEntity {createdAt}) = createdAt
     creationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
 
-getEstimates :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]
+getEstimates :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m [UEstimate.EstimateAPIEntity]
 getEstimates searchRequestId = do
   estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
-  estimates <- mapM DEstimate.mkEstimateAPIEntity (sortByEstimatedFare estimateList)
+  estimates <- mapM UEstimate.mkEstimateAPIEntity (sortByEstimatedFare estimateList)
   return . sortBy (compare `on` (.createdAt)) $ estimates
 
 sortByEstimatedFare :: (HasField "estimatedFare" r Price) => [r] -> [r]

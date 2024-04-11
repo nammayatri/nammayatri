@@ -15,6 +15,7 @@
 module SharedLogic.Confirm where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Quote as DQuote
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.CancellationReason
@@ -114,7 +115,7 @@ confirm DConfirmReq {..} = do
       DQuote.RentalDetails rentalDetails -> return $ Just rentalDetails.id.getId
       DQuote.DriverOfferDetails driverOffer -> do
         estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
-        when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
+        when (UEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
         when (driverOffer.validTill < now) $
           throwError $ QuoteExpired quote.id.getId
         pure (Just driverOffer.bppQuoteId)
@@ -161,7 +162,7 @@ confirm DConfirmReq {..} = do
   -- DB.runTransaction $ do
   _ <- QRideB.createBooking booking
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
-  _ <- QEstimate.updateStatusByRequestId quote.requestId DEstimate.COMPLETED
+  _ <- QEstimate.updateStatusByRequestId DEstimate.COMPLETED quote.requestId
   QPFS.clearCache searchRequest.riderId
   return $
     DConfirmRes

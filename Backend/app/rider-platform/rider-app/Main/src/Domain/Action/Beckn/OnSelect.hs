@@ -105,7 +105,7 @@ onSelect OnSelectValidatedReq {..} = do
     triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
   _ <- QQuote.createMany quotes
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
-  void $ QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
+  void $ QEstimate.updateStatus DEstimate.GOT_DRIVER_QUOTE estimate.id
   QPFS.clearCache searchRequest.riderId
   if searchRequest.autoAssignEnabledV2 == Just True
     then do
