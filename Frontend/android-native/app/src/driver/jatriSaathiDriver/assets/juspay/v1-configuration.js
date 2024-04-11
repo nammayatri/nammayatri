@@ -293,12 +293,12 @@ window.getMerchantConfig = function () {
       "vehicleNSImg" : "",
       "registration" : {
           "supportWAN" : "",
-          "callSupport" : false,
+          "callSupport" : true,
           "whatsappSupport" : false
       },
       "variantSubscriptionConfig" : {
-        "enableVariantBasedSubscription" : true,
-        "variantList" : ["BikeCategory", "CarCategory"]
+        "enableVariantBasedSubscription" : false,
+        "variantList" : []
       }
     }
   ]
