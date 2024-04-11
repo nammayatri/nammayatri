@@ -17,7 +17,7 @@ import Helpers.Utils as HU
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
-import JBridge (getLayoutBounds)
+import JBridge (getLayoutBounds, getMilesFromText)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), const, pure, unit, not, show, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-), (/=))
@@ -520,7 +520,7 @@ estimatedTimeAndDistanceView push config =
     [ textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text config.rideDistance
+        , text $ getMilesFromText (config.rideDistance)
         , color Color.black650
         ]
         <> FontStyle.paragraphText TypoGraphy

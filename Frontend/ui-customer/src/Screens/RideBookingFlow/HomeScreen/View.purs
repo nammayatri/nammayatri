@@ -1880,7 +1880,7 @@ bookingPreferenceButton push state =
   , width WRAP_CONTENT
   , onClick push $ const $ ShowBookingPreference
   , clickable true
-  , visibility $ boolToVisibility $ state.data.config.estimateAndQuoteConfig.enableBookingPreference  && not state.props.isRepeatRide && state.props.city == Bangalore && state.props.currentStage == SettingPrice
+  , visibility $ boolToVisibility $ state.data.config.estimateAndQuoteConfig.enableBookingPreference && not state.props.isRepeatRide && state.props.currentStage == SettingPrice
   , clipChildren false
   , accessibility DISABLE_DESCENDANT
   , accessibility DISABLE

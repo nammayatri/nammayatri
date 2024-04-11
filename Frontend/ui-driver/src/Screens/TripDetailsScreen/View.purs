@@ -41,6 +41,7 @@ import Styles.Colors as Color
 import Common.Styles.Colors as Colors
 import Storage(getValueToLocalStore , KeyStore(..))
 import ConfigProvider
+import JBridge
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -194,7 +195,7 @@ tagView state config =
 
 tagList :: ST.TripDetailsScreenState -> Array ST.Tag
 tagList state = [
-  {background : Colors.yellow200, image : "ny_ic_tip_icon", visibility : isJust state.data.customerExtraFee, text : "₹" <> (show (fromMaybe 0 state.data.customerExtraFee)) <> " Tip" , textColor : Color.black900},
+  {background : Colors.yellow200, image : "ny_ic_tip_icon", visibility : isJust state.data.customerExtraFee, text : "$" <> (getDollars (show (fromMaybe 0 state.data.customerExtraFee))) <> " Tip" , textColor : Color.black900},
   {background : Colors.black200, image : "ny_ic_loc_black", visibility : state.data.gotoTagVisibility, text : getString GO_TO, textColor : Color.black900},
   {background : Colors.purple100, image : "ny_ic_disability_purple", visibility : state.data.purpleTagVisibility, text : getString PURPLE_RIDE, textColor : Color.purple},
   {background : Colors.blue100, image : "ny_ic_star", visibility : state.data.spLocTagVisibility, text : state.data.specialZoneText, textColor : Color.blue800},
@@ -255,7 +256,7 @@ tripDetailsView state =
       , gravity RIGHT
       , orientation VERTICAL
       ][  textView $
-          [ text $ (getCurrency appConfig) <> ( show state.data.totalAmount)
+          [ text $ (getCurrency appConfig) <> (getDollars (show state.data.totalAmount))
           , color Color.black
           ] <> FontStyle.body14 TypoGraphy
         , textView $
@@ -352,7 +353,7 @@ tripDataView push state =
                 , margin (MarginBottom 4) 
                 ] <> FontStyle.body5 TypoGraphy
               , textView $
-                [ text (state.data.distance <> " km")
+                [ text $ getMilesFromText ((state.data.distance <> " km"))
                 , color Color.black900
                 ] <> FontStyle.body14 TypoGraphy
             ]

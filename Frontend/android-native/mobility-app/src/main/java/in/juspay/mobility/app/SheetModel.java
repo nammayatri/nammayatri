@@ -20,13 +20,13 @@ public class SheetModel {
     private double offeredPrice;
     private int customerExtraFee;
     private final int airConditioned;
-    private final int baseFare;
+    private final double baseFare;
     private final int reqExpiryTime;
     private final int driverMinExtraFee;
-    private final int driverPickUpCharges;
-    private final int driverMaxExtraFee;
+    private final double driverPickUpCharges;
+    private final double driverMaxExtraFee;
     private final int rideRequestPopupDelayDuration;
-    private final int negotiationUnit;
+    private final double negotiationUnit;
 
     private final Boolean disabilityTag;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha, distanceToBeCovered;
@@ -38,7 +38,7 @@ public class SheetModel {
                       String durationToPickup,
                       String sourceAddress,
                       String destinationAddress,
-                      int baseFare,
+                      double baseFare,
                       int reqExpiryTime,
                       String searchRequestId,
                       String destinationArea,
@@ -46,9 +46,9 @@ public class SheetModel {
                       String currency,
                       int startTime,
                       int driverMinExtraFee,
-                      int driverMaxExtraFee,
+                      double driverMaxExtraFee,
                       int rideRequestPopupDelayDuration,
-                      int negotiationUnit,
+                      double negotiationUnit,
                       int customerExtraFee,
                       String specialLocationTag,
                       String sourcePinCode,
@@ -57,7 +57,7 @@ public class SheetModel {
                       Boolean disabilityTag,
                       Boolean isTranslated,
                       Boolean gotoTag,
-                      int driverPickUpCharges,
+                      double driverPickUpCharges,
                       double srcLat,
                       double srcLng,
                       double destLat,
@@ -198,7 +198,7 @@ public class SheetModel {
     public String getDistanceToBeCovered() {
         DecimalFormat df = new DecimalFormat("###.##", new DecimalFormatSymbols(new Locale("en", "us")));
         df.setMaximumFractionDigits(2);
-        return df.format(distanceToBeCovered / 1000);
+        return df.format((distanceToBeCovered / 1000) * 0.62137119);
     }
 
     public float getDistanceToBeCovFloat() {
@@ -221,7 +221,7 @@ public class SheetModel {
         return destinationAddress;
     }
 
-    public int getBaseFare() {
+    public double getBaseFare() {
         return baseFare;
     }
 
@@ -257,7 +257,7 @@ public class SheetModel {
         this.updatedAmount = updatedAmount;
     }
 
-    public int getDriverMaxExtraFee() {
+    public double getDriverMaxExtraFee() {
         return driverMaxExtraFee;
     }
 
@@ -265,7 +265,7 @@ public class SheetModel {
         return rideRequestPopupDelayDuration;
     }
 
-    public int getNegotiationUnit() {
+    public double getNegotiationUnit() {
         return negotiationUnit;
     }
 
@@ -321,7 +321,7 @@ public class SheetModel {
         return durationToPickup;
     }
 
-    public int getDriverPickUpCharges() { 
+    public double getDriverPickUpCharges() {
         return driverPickUpCharges;
     }
     

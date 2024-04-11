@@ -80,7 +80,7 @@ instance decodeTheme :: Decode Theme where decode = defaultEnumDecode
 instance encodeTheme :: Encode Theme where encode = defaultEnumEncode
 instance eqTheme :: Eq Theme where eq = genericEq
 
-data RideCompletedElements = BANNER | QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVER_BOTTOM_VIEW | RENTAL_RIDE_VIEW
+data RideCompletedElements = QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVER_BOTTOM_VIEW | RENTAL_RIDE_VIEW
 
 derive instance genericRideCompletedElements :: Generic RideCompletedElements _
 instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericEq
@@ -263,7 +263,7 @@ type DriverBottomCard = {
 }
 
 type SavedMoney = {
-  amount :: Int
+  amount :: String
 , reason :: String 
 }
 

@@ -92,6 +92,7 @@ import Components.BannerCarousel as BannerCarousel
 import CarouselHolder as CarouselHolder
 import PrestoDOM.List
 import Mobility.Prelude
+import JBridge(getDollars)
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -412,7 +413,7 @@ driverMapsHeaderView push state =
         , bottomNavBar push state
   ]
   where
-    getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || visible then [] else [bannersCarousal item bottomMargin state push]) state.data.bannerData.bannerItem
+    getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || visible then [] else []) state.data.bannerData.bannerItem
 
 specialPickupZone :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 specialPickupZone push state = 
@@ -477,13 +478,13 @@ specialPickupZone push state =
       ]  
     ]
 
-bannersCarousal :: forall w. ListItem -> Boolean -> HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-bannersCarousal view bottomMargin state push =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , margin if bottomMargin then MarginVertical 12 12 else MarginTop 12
-  ][CarouselHolder.carouselView push $ getCarouselConfig view state]
+-- bannersCarousal :: forall w. ListItem -> Boolean -> HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+-- bannersCarousal view bottomMargin state push =
+--   linearLayout
+--   [ height WRAP_CONTENT
+--   , width MATCH_PARENT
+--   , margin if bottomMargin then MarginVertical 12 12 else MarginTop 12
+--   ][CarouselHolder.carouselView push $ getCarouselConfig view state]
 
 getCarouselConfig ∷ forall a. ListItem → HomeScreenState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
 getCarouselConfig view state = {
@@ -982,7 +983,7 @@ statsModel push state =
            ][ textView $
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text $ "₹" <> formatCurrencyWithCommas (show state.data.totalEarningsOfDay)
+              , text $ "$" <> formatCurrencyWithCommas (getDollars $ show state.data.totalEarningsOfDay)
               , color Color.black800
               , visibility $ boolToVisibility state.data.driverStats
               ] <> FontStyle.h2 TypoGraphy
@@ -1055,7 +1056,7 @@ expandedStatsModel push state =
       , height WRAP_CONTENT
       , gravity CENTER_VERTICAL
       ][ commonTV push (getString TODAYS_EARNINGS_STR) Color.black700 FontStyle.tags LEFT 0 ToggleStatsModel true true
-      , commonTV push ("₹" <> formatCurrencyWithCommas (show state.data.totalEarningsOfDay)) Color.black800 FontStyle.h2 RIGHT 0 ToggleStatsModel false state.data.driverStats
+      , commonTV push ("$" <> formatCurrencyWithCommas ( getDollars $ show state.data.totalEarningsOfDay)) Color.black800 FontStyle.h2 RIGHT 0 ToggleStatsModel false state.data.driverStats
       , imageView 
         [ width $ V 12
         , height $ V 12
@@ -1071,7 +1072,7 @@ expandedStatsModel push state =
       , margin $ MarginTop 10
       , gravity CENTER_VERTICAL
       ][ commonTV push (getString TRIP_EARNINGS) Color.black700 FontStyle.body3 LEFT 0 NoAction true true
-        , commonTV push ("₹" <> formatCurrencyWithCommas (show (state.data.totalEarningsOfDay - state.data.bonusEarned))) Color.black800 FontStyle.subHeading1 RIGHT 0 NoAction false state.data.driverStats
+        , commonTV push ("$" <> formatCurrencyWithCommas (getDollars $ show (state.data.totalEarningsOfDay - state.data.bonusEarned))) Color.black800 FontStyle.subHeading1 RIGHT 0 NoAction false state.data.driverStats
       ]
     , linearLayout
       [ width MATCH_PARENT
@@ -1086,7 +1087,7 @@ expandedStatsModel push state =
           , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_info_grey"
           , onClick push $ const $ ToggleBonusPopup
           ]
-        , commonTV push ("₹" <> formatCurrencyWithCommas (show state.data.bonusEarned)) Color.green900 FontStyle.subHeading1 RIGHT 0 NoAction true state.data.driverStats
+        , commonTV push ("$" <> formatCurrencyWithCommas (getDollars $ show state.data.bonusEarned)) Color.green900 FontStyle.subHeading1 RIGHT 0 NoAction true state.data.driverStats
       ]
     , separatorView 10
     , linearLayout

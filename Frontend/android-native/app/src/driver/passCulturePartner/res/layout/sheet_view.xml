@@ -423,7 +423,7 @@
                                             android:layout_height="wrap_content"
                                             android:fontFamily="@font/saira_semi_condensed_semi_bold"
                                             android:paddingBottom="0.5dp"
-                                            android:text="₹"
+                                            android:text="$"
                                             android:textColor="#2C2F3A"
                                             android:textFontWeight="500"
                                             android:textSize="25dp" />

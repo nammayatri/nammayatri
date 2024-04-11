@@ -80,6 +80,7 @@ import Resource.Constants as Const
 import Data.Either (Either(..))
 import Data.Enum (enumFromThenTo)
 import Data.String as DS
+import JBridge(getMilesFromText, getDollars)
 
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
@@ -780,7 +781,7 @@ missedOppArray :: ST.AnalyticsData -> Array MissedOpportunity
 missedOppArray analyticsData =
   [ { key: (getString CANCELLATION_RATE), value: (show analyticsData.cancellationRate <> "%"), value1: "", infoImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage: fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
   , { key: (getString RIDES_CANCELLED), value: show analyticsData.ridesCancelled, value1: show analyticsData.totalRidesAssigned, infoImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage: fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
-  , { key: (getString EARNINGS_MISSED), value: "₹" <> EHC.formatCurrencyWithCommas (show analyticsData.missedEarnings), value1: "", infoImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage: fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
+  , { key: (getString EARNINGS_MISSED), value: "$" <> EHC.formatCurrencyWithCommas (getDollars $ show analyticsData.missedEarnings), value1: "", infoImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage: fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
   ]
 
 ------------------------------------------- DRIVER ANALYTICS VIEW  ----------------------------------------------------------
@@ -818,7 +819,7 @@ driverAnalyticsView state push =
                   [ height WRAP_CONTENT
                   , width MATCH_PARENT
                   ]
-                  [ infoTileView state { primaryText: "₹ " <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings), subText: (getString $ EARNED_ON_APP "EARNED_ON_APP"), postImgVisibility: false, seperatorView: false, margin: Margin 0 0 0 0 }
+                  [ infoTileView state { primaryText: "$ " <> (EHC.formatCurrencyWithCommas (getDollars $ analyticsData.totalEarnings)), subText: (getString $ EARNED_ON_APP "EARNED_ON_APP"), postImgVisibility: false, seperatorView: false, margin: Margin 0 0 0 0 }
                   , linearLayout
                       [ height MATCH_PARENT
                       , width (V 1)
@@ -826,10 +827,10 @@ driverAnalyticsView state push =
                       , background Color.lightGreyShade
                       ]
                       []
-                  , infoTileView state { primaryText: "₹ " <> EHC.formatCurrencyWithCommas analyticsData.bonusEarned, subText: (getString $ NAMMA_BONUS "NAMMA_BONUS"), postImgVisibility: false, seperatorView: false, margin: Margin 0 0 0 0 }
+                  , infoTileView state { primaryText: "$ " <> EHC.formatCurrencyWithCommas (getDollars analyticsData.bonusEarned), subText: (getString $ NAMMA_BONUS "NAMMA_BONUS"), postImgVisibility: false, seperatorView: false, margin: Margin 0 0 0 0 }
                   ]
               else
-                infoCard state push { key: (getString $ EARNED_ON_APP "EARNED_ON_APP"), value: "₹" <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings), value1: "", infoImageUrl: "", postfixImage: "", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
+                infoCard state push { key: (getString $ EARNED_ON_APP "EARNED_ON_APP"), value: "$" <> (EHC.formatCurrencyWithCommas (getDollars analyticsData.totalEarnings)), value1: "", infoImageUrl: "", postfixImage: "", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
             ]
       , linearLayout
           [ width MATCH_PARENT
@@ -1936,7 +1937,7 @@ genderOptionsArray _ =
   ]
 
 vehicleSummaryArray :: ST.DriverProfileScreenState -> Array { key :: String, value :: String, value1 :: String, infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean, showPostfixImage :: Boolean, action :: Action, valueColor :: String }
-vehicleSummaryArray state = [ { key: (getString $ TRAVELLED_ON_APP "TRAVELLED_ON_APP"), value: (state.data.analyticsData.totalDistanceTravelled), value1: "", infoImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage: fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction } ]
+vehicleSummaryArray state = [ { key: (getString $ TRAVELLED_ON_APP "TRAVELLED_ON_APP"), value: (getMilesFromText (state.data.analyticsData.totalDistanceTravelled)), value1: "", infoImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage: fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction } ]
 
 vehicleAboutMeArray :: ST.DriverProfileScreenState -> Array { key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean, keyInfo :: Boolean, isRightInfo :: Boolean }
 vehicleAboutMeArray state =

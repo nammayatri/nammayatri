@@ -88,6 +88,7 @@ import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDri
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController 
 import LocalStorage.Cache (getValueFromCache)
 import ConfigProvider
+import JBridge(getDollars, getMiles, getMilesFromMeters)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -594,7 +595,7 @@ logOutPopUpModelConfig state =
           , fareEstimateText = getString FARE_ESTIMATE
           , tipSelectedText = getString TIP_SELECTED
           , fareEstimate = getValueToLocalStore FARE_ESTIMATE_DATA
-          , tipSelected = if state.props.customerTip.tipActiveIndex == 0 then "-" else " ₹"<> (show (fromMaybe 0 (customerTipArrayWithValues DA.!! state.props.customerTip.tipActiveIndex)))
+          , tipSelected = if state.props.customerTip.tipActiveIndex == 0 then "-" else " $"<> (show (fromMaybe 0 (customerTipArrayWithValues DA.!! state.props.customerTip.tipActiveIndex)))
           , dismissPopup = true
           , customerTipArray = customerTipArray
           , customerTipArrayWithValues = customerTipArrayWithValues
@@ -674,8 +675,8 @@ logOutPopUpModelConfig state =
         getTipString state customerTipArrayWithValues = do
           let tip = show (fromMaybe 0 (customerTipArrayWithValues DA.!! state.props.customerTip.tipActiveIndex))
           case (getLanguageLocale languageKey) of
-            "EN_US" -> getString SEARCH_AGAIN_WITH  <> " +₹"<> tip <>" "<> getString TIP
-            _ -> "+₹"<> tip <>" "<>(getString TIP) <> " " <> getString SEARCH_AGAIN_WITH
+            "EN_US" -> getString SEARCH_AGAIN_WITH  <> " +$"<> tip <>" "<> getString TIP
+            _ -> "+$"<> tip <>" "<>(getString TIP) <> " " <> getString SEARCH_AGAIN_WITH
 
 
 getBottomMargin :: Int
@@ -748,7 +749,7 @@ shortDistanceConfig state =
       config'
         { backgroundClickable = false
         , primaryText
-          { text = (getString YOUR_TRIP_IS_TOO_SHORT_YOU_ARE_JUST) <> HU.toStringJSON (state.props.distance) <> (getString METERS_AWAY_FROM_YOUR_DESTINATION)
+          { text = (getString YOUR_TRIP_IS_TOO_SHORT_YOU_ARE_JUST) <> (getMilesFromMeters $ show (state.props.distance)) <> (getString METERS_AWAY_FROM_YOUR_DESTINATION)
           , margin = (Margin 16 20 16 0)
           }
         , secondaryText
@@ -865,7 +866,7 @@ rateCardConfig state =
     dayChargeFrom = "5 AM"
     dayChargeTill = if city == Delhi then "11 PM" else "10 PM"
     freeWaitingTime = " 3 "
-    waitingChargesPerMin = cityBasedWaitingCharge city
+    waitingChargesPerMin = "$0.01"-- cityBasedWaitingCharge city
     rateCardConfig' =
       config'
         { nightCharges = state.data.rateCard.nightCharges
@@ -1062,9 +1063,9 @@ getVehicleTitle vehicle =
 
 nyRateCardList :: ST.HomeScreenState -> Array FareList
 nyRateCardList state =
-  ([{key : ((getString MIN_FARE_UPTO) <> " 2.0 km" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.baseFare))},
-    {key : ((getString RATE_ABOVE_MIN_FARE) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.extraFare) <> "/ km")},
-    {key : (getString $ DRIVER_PICKUP_CHARGES "DRIVER_PICKUP_CHARGES"), val : ("₹" <> HU.toStringJSON (state.data.rateCard.pickUpCharges))}
+  ([{key : ((getString MIN_FARE_UPTO) <> " 2.0 mi" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("$" <> (getDollars $ show (state.data.rateCard.baseFare)))},
+    {key : ((getString RATE_ABOVE_MIN_FARE) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("$" <> (getDollars $ show (state.data.rateCard.extraFare)) <> "/ mi")},
+    {key : (getString $ DRIVER_PICKUP_CHARGES "DRIVER_PICKUP_CHARGES"), val : ("$" <> (getDollars $ show (state.data.rateCard.pickUpCharges)))}
     ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then
     [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
 
@@ -1171,7 +1172,7 @@ metersToKm :: Int -> Boolean -> String
 metersToKm distance towardsDrop =
   if (distance <= 10) then
     (if towardsDrop then (getString AT_DROP) else (getString AT_PICKUP))
-  else if (distance < 1000) then (HU.toStringJSON distance <> " m " <> (getString AWAY_C)) else (HU.parseFloat ((INT.toNumber distance) / 1000.0)) 2 <> " km " <> (getString AWAY_C)
+  else if (distance < 1000) then ((getMilesFromMeters $ show distance) <> " mi " <> (getString AWAY_C)) else (getMiles $ show ((INT.toNumber distance) / 1000.0)) <> " mi " <> (getString AWAY_C)
 
 
 driverInfoTransformer :: ST.HomeScreenState -> DriverInfoCardData
@@ -1530,8 +1531,8 @@ getTipViewText tipViewProps state prefixString = do
       _ -> getString SEARCHING_WITH_NO_TIP
   else  
     case (getLanguageLocale languageKey) of
-      "EN_US" -> prefixString <> (if tipViewProps.stage == TIP_AMOUNT_SELECTED then " +₹" else " ₹")<>tip<>" "<> (getString TIP)
-      _ -> "+₹"<>tip<>" "<>(getString TIP) <> " " <> prefixString
+      "EN_US" -> prefixString <> (if tipViewProps.stage == TIP_AMOUNT_SELECTED then " +$" else " $")<>tip<>" "<> (getString TIP)
+      _ -> "+$"<>tip<>" "<>(getString TIP) <> " " <> prefixString
 
 reportIssueOptions :: ST.HomeScreenState -> Array OptionButtonList -- need to modify
 reportIssueOptions state =
@@ -1719,7 +1720,7 @@ getFareUpdatedStr :: Int -> Boolean -> String
 getFareUpdatedStr diffInDist waitingChargeApplied = do
   let shorter = diffInDist > 0
       positiveDist = if shorter then diffInDist else -diffInDist
-      distInKm = parseFloat (toNumber positiveDist / 1000.0) 2
+      distInKm = getMiles $ show (toNumber positiveDist / 1000.0)
       distanceChanged = diffInDist/= 0
   case waitingChargeApplied, distanceChanged of
     true, false -> getString FARE_UPDATED_WITH_CHARGES
@@ -2073,42 +2074,42 @@ mkTipConfig customerTipArrayWithValues = {
 
 getTips :: Array Int -> Array String
 getTips arr = mapWithIndex (\index item -> if item == 0 then (getString NO_TIP) 
-                                           else "₹" <> show item <> " " <> fromMaybe "🤩" (emoji !! index)) arr
+                                           else "$" <> show item <> " " <> fromMaybe "🤩" (emoji !! index)) arr
   where
     emoji = [(getString NO_TIP), "🙂", "😀", "😃", "😁", "🤩"]
       
 bangaloreConfig :: String -> TipConfig
 bangaloreConfig variant = 
   case variant of
-    "SEDAN" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "SUV" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "HATCHBACK" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI_PLUS" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    _ -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "SEDAN" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    "SUV" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    "HATCHBACK" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    "TAXI" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    "TAXI_PLUS" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    _ -> mkTipConfig [0, 1, 2, 3, 4, 5]
 
 hyderabadConfig :: String -> TipConfig
 hyderabadConfig variant = 
   case variant of
-    "SEDAN" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "SUV" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "HATCHBACK" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "AUTO_RICKSHAW" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "TAXI" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "TAXI_PLUS" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    _ -> mkTipConfig [0, 20, 30, 40, 50, 60]
+    "SEDAN" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    "SUV" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    "HATCHBACK" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    "TAXI" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    "TAXI_PLUS" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    _ -> mkTipConfig [0, 1, 2, 3, 4, 5]
 
 defaultTipConfig :: String -> TipConfig
 defaultTipConfig variant = 
   case variant of
-    "SEDAN" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "SUV" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "HATCHBACK" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI_PLUS" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    _ -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "SEDAN" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    "SUV" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    "HATCHBACK" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    "TAXI" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    "TAXI_PLUS" -> mkTipConfig [0, 1, 2, 3, 4, 5]
+    _ -> mkTipConfig [0, 1, 2, 3, 4, 5]
 
 specialZoneInfoPopupConfig :: HU.SpecialZoneInfoPopUp -> RequestInfoCard.Config
 specialZoneInfoPopupConfig infoConfig = let

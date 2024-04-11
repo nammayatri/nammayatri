@@ -57,6 +57,7 @@ import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
 import Timers as ET
 import Types.App (defaultGlobalState)
+import JBridge(getDollars, getMilesFromText)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -389,7 +390,7 @@ totalDistanceView push config =
       , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text config.totalDistance
+        , text $ getMilesFromText (config.totalDistance)
         , color Color.black900
         , ellipsize true
         , singleLine true
@@ -657,7 +658,7 @@ estimatedFareView push config =
         ][  textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , text $ currency <> (show config.estimatedRideFare)
+            , text $ currency <> (getDollars $ show config.estimatedRideFare)
             , color Color.black900
             , ellipsize true
             , singleLine true

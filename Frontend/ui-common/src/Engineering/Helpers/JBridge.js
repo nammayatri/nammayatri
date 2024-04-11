@@ -1838,6 +1838,19 @@ export const locateOnMap = (configObj) => {
   }
 };
 
+export const getMilesFromText = function(text){
+  try {
+    let arr = text.split(" ")
+    if(arr[1] === "m" || arr[1] === "meters"){
+      return (parseFloat(arr[0]) * 0.00062).toFixed(2).toString() + " mi"
+    }else{
+      return (parseFloat(arr[0]) * 0.62137119).toFixed(2).toString() + " mi"
+    }
+  }catch(e){
+    return 0.0;
+  }
+}
+
 export const exitLocateOnMap = function (str) {
   JBridge.exitLocateOnMap(str);
 }

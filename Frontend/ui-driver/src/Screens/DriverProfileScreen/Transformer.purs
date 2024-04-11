@@ -31,7 +31,7 @@ getAnalyticsData (DriverProfileSummaryRes response) =
     , ridesCancelled: missedOpp.ridesCancelled
     , cancellationRate: missedOpp.cancellationRate
     , totalRidesAssigned: response.totalRidesAssigned
-    , totalDistanceTravelled: (parseFloat (toNumber response.totalDistanceTravelled / 1000.0) 2) <> "km"
+    , totalDistanceTravelled: show (toNumber response.totalDistanceTravelled / 1000.0) <> " km"
     }
 
 transformSelectedVehicles :: Array ChooseVehicle.Config -> Array VehicleP

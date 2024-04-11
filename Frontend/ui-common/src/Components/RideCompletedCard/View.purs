@@ -36,6 +36,7 @@ import JBridge(renderBase64Image)
 import Storage (getValueToLocalStore, KeyStore(..))
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
+import JBridge(getDollars)
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -171,7 +172,7 @@ priceAndDistanceUpdateView config push =
           , height WRAP_CONTENT
           , gravity CENTER
           ][ textView $ 
-              [ text if config.isFreeRide then "₹0" else "₹" <> (show config.topCard.finalAmount)
+              [ text if config.isFreeRide then "₹0" else "$" <> getDollars (show config.topCard.finalAmount)
               , accessibilityHint $ "Ride Complete: Final Fare ₹"  <> (show config.topCard.finalAmount)
               , accessibility config.accessibility
               , color $ if config.theme == LIGHT then Color.black800 else Color.white900
@@ -179,7 +180,7 @@ priceAndDistanceUpdateView config push =
               , height WRAP_CONTENT
               ] <> (FontStyle.title0 TypoGraphy)
           , textView $
-              [ textFromHtml $ "<strike> ₹" <> (show config.topCard.initalAmount) <> "</strike>"
+              [ textFromHtml $ "<strike> $" <> (getDollars (show config.topCard.initalAmount)) <> "</strike>"
               , accessibilityHint $ "Your Fare Has Been Updated From ₹"  <> (show config.topCard.initalAmount) <> " To ₹" <> (show config.topCard.finalAmount)
               , accessibility config.accessibility
               , margin $ Margin 8 5 0 0
@@ -472,7 +473,6 @@ driverSideBottomCardsView config push =
 getViewsByOrder :: forall w. Config -> RideCompletedElements -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 getViewsByOrder config item push = 
   case item of 
-    BANNER -> rideEndBannerView config.bannerConfig push
     QR_VIEW -> driverUpiQrCodeView config push
     NO_VPA_VIEW -> noVpaView config
     BADGE_CARD -> badgeCardView config push
@@ -654,7 +654,7 @@ driverFareBreakUpView config push =
               , padding $ PaddingHorizontal 8 8
               ][
                 textView $ [
-                  text $ currency <> (show item.amount)
+                  text $ currency <> (item.amount)
                 , color Color.pigmentGreen
                 , margin $ MarginRight 8
                 ] <> FontStyle.h0 LanguageStyle

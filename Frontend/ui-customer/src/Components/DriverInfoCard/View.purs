@@ -64,6 +64,7 @@ import Data.Function.Uncurried (runFn1)
 import CarouselHolder as CarouselHolder
 import Components.BannerCarousel as BannerCarousel
 import PrestoDOM.List as PrestoList
+import JBridge(getDollars)
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -881,7 +882,7 @@ paymentMethodView push state title shouldShowIcon uid =
           , color Color.black700
           ] <> FontStyle.body3 TypoGraphy
         , textView $
-          [ text $ state.data.config.currency <> show state.data.price
+          [ text $ state.data.config.currency <> getDollars (show state.data.price)
           , color Color.black800
           ] <> FontStyle.h2 TypoGraphy
       ]

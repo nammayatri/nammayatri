@@ -48,6 +48,7 @@ import Locale.Utils
 import Storage (KeyStore(..))
 import LocalStorage.Cache (getValueFromCache)
 import Engineering.Helpers.Utils(getFlexBoxCompatibleVersion)
+import JBridge(getDollars)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -226,7 +227,7 @@ vehicleAndOTPAndPriceView config =
         , accessibility ENABLE
         , accessibilityHint $ "Fare : " <> config.config.currency <> config.fareAmount
         ][ textView $
-          [ text $ "Fare: " <> config.config.currency <> config.fareAmount
+          [ text $ "Fare: " <> config.config.currency <> (getDollars (config.fareAmount))
           , color Color.black700
           , accessibility DISABLE
           ] <> FontStyle.tags TypoGraphy

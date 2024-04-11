@@ -583,11 +583,11 @@ public class RideRequestUtils {
 
     @SuppressLint("SetTextI18n")
     public static void updateRateView(SheetAdapter.SheetViewHolder holder, SheetModel model) {
-        double baseFare = model.getBaseFare() + model.getOfferedPrice();
-        float dist = model.getDistanceToBeCovFloat()/1000;
+        double baseFare = model.getBaseFare() + (model.getOfferedPrice() / 83.20);
+        double dist = (model.getDistanceToBeCovFloat()/1000) * 0.62137119;
         String rate = RideRequestUtils.getUptoDecStr((float) (baseFare/dist), 1);
         String currency = model.getCurrency();;
-        holder.rateText.setText("Rate: " + currency + rate +"/km");
+        holder.rateText.setText("Rate: " + currency + rate +"/mi");
     }
 
     public static void updateRentalView(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {

@@ -46,6 +46,7 @@ import Debug
 import Engineering.Helpers.Commons (liftFlow)
 import Screens.Types (QuoteListItemState(..), City(..))
 import Locale.Utils
+import JBridge(getDollars)
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -167,7 +168,7 @@ priceView state push =
     ][  textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ state.appConfig.currency <> " " <> state.price
+        , text $ state.appConfig.currency <> " " <> getDollars (state.price)
         , color Color.black800
         , lineHeight "28"
         ] <> FontStyle.body10 TypoGraphy

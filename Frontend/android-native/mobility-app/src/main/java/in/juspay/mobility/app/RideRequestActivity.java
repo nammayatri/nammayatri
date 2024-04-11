@@ -119,13 +119,15 @@ public class RideRequestActivity extends AppCompatActivity {
             String rideStartDate = rideRequestBundle.getString("rideStartDate");
             String rideDuration = String.format("%02d:%02d Hr", rideRequestBundle.getInt("rideDuration") / 3600 ,( rideRequestBundle.getInt("rideDuration") % 3600 ) / 60);
             String rideDistance = String.format("%d km", rideRequestBundle.getInt("rideDistance") / 1000);
-                    
+            df.setMaximumFractionDigits(2);
+            double pickup = Double.parseDouble(df.format((rideRequestBundle.getInt("driverPickUpCharges") / 83.20)));
+
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                     distanceTobeCovered,
                     RideRequestUtils.calculateDp(durationToPickup, df),
                     rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_PICKUP)),
                     rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_DROP)),
-                    rideRequestBundle.getInt(getResources().getString(R.string.BASE_FARE)),
+                    rideRequestBundle.getDouble(getResources().getString(R.string.BASE_FARE)),
                     Math.min(calculatedTime, 25),
                     rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)),
                     rideRequestBundle.getString("destinationArea"),
@@ -144,7 +146,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getBoolean("disabilityTag"),
                     rideRequestBundle.getBoolean("isTranslated"),
                     rideRequestBundle.getBoolean("gotoTag"),
-                    rideRequestBundle.getInt("driverPickUpCharges"),
+                    pickup,
                     srcLat,
                     srcLng,
                     destLat,
@@ -173,7 +175,7 @@ public class RideRequestActivity extends AppCompatActivity {
         mainLooper.post(() -> {
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String variant = model.getRequestedVehicleVariant();
-            String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
+            String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Double.toString(model.getDriverPickUpCharges()));
             String pickupChargesText = formattedPickupChargesText;
             String searchRequestId = model.getSearchRequestId();
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
@@ -427,7 +429,7 @@ public class RideRequestActivity extends AppCompatActivity {
     
     private void updateExtraChargesString(SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
-            String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
+            String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Double.toString(model.getDriverPickUpCharges()));
             if (model.getSpecialZoneExtraTip() > 0) {
                 String pickUpChargesWithZone = formattedPickupChargesText + " " + getString(R.string.and) + " " + sharedPref.getString("CURRENCY", "₹") + " " + model.getSpecialZoneExtraTip() + " " + getString(R.string.zone_pickup_extra);
                 holder.textIncludesCharges.setText(pickUpChargesWithZone);
@@ -570,9 +572,11 @@ public class RideRequestActivity extends AppCompatActivity {
             for (int i = 0; i < 3; i++) {
                 if (i < sheetArrayList.size()) {
                     updateTopBarBackground(i);
+                    DecimalFormat df = new DecimalFormat();
+                    df.setMaximumFractionDigits(2);
+                    double fare = Double.parseDouble(df.format((sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()) / 83.20));
                     indicatorTextList.get(i).setText(
-                            (sharedPref.getString("CURRENCY", "₹")) +
-                            (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
+                            (sharedPref.getString("CURRENCY", "₹")) + fare);
 
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
 

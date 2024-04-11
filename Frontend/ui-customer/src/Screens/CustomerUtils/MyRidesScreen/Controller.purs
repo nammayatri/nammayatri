@@ -49,6 +49,7 @@ import Engineering.Helpers.LogEvent (logEvent)
 import ConfigProvider
 import PrestoDOM.List as PrestoList
 import JBridge (toast)
+import JBridge
 
 instance showAction :: Show Action where
   show _ = ""
@@ -201,7 +202,7 @@ myRideListTransformerProp listRes =  filter (\item -> (any (_ == item.status) [(
     time : toPropValue (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
     source : toPropValue (decodeAddress (Booking ride.fromLocation)),
     destination : toPropValue (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
-    totalAmount : toPropValue ((getCurrency appConfig) <> " " <> show (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
+    totalAmount : toPropValue ((getCurrency appConfig) <> " " <> (getDollars $ show (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice)))),
     cardVisibility : toPropValue "visible",
     shimmerVisibility : toPropValue "gone",
     driverImage : toPropValue $ fetchImage FF_ASSET "ny_ic_user",

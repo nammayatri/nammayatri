@@ -144,7 +144,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         mainLooper.post(() -> {
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String variant = model.getRequestedVehicleVariant();
-            String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
+            String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Double.toString(model.getDriverPickUpCharges()));
             String pickupChargesText = formattedPickupChargesText;
             String searchRequestId = model.getSearchRequestId();
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
@@ -228,10 +228,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     return;
             }
 
-            holder.pickUpDistance.setText(model.getPickUpDistance() + " km ");
+            holder.pickUpDistance.setText(model.getPickUpDistance() + " mi ");
             holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount() + model.getSpecialZoneExtraTip()));
             holder.currency.setText(String.valueOf(model.getCurrency()));
-            holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
+            holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " mi");
 
             if( key.equals("yatrisathiprovider") && !model.getDurationToPickup().isEmpty()){
                 holder.durationToPickup.setVisibility(View.VISIBLE);
@@ -246,8 +246,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             holder.sourceAddress.setText(model.getSourceAddress());
             holder.destinationArea.setText(model.getDestinationArea());
             holder.destinationAddress.setText(model.getDestinationAddress());
-            holder.textIncPrice.setText(String.valueOf(model.getNegotiationUnit()));
-            holder.textDecPrice.setText(String.valueOf(model.getNegotiationUnit()));
+            holder.textIncPrice.setText(String.valueOf((model.getNegotiationUnit()) / 83.20));
+            holder.textDecPrice.setText(String.valueOf(model.getNegotiationUnit()/ 83.20));
             if (model.getSourcePinCode() != null && model.getSourcePinCode().trim().length() > 0) {
                 holder.sourcePinCode.setText(model.getSourcePinCode().trim());
                 holder.sourcePinCode.setVisibility(View.VISIBLE);
@@ -327,6 +327,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 executor.execute(() -> {
                     try {
                         Boolean isApiSuccess = driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), true, sheetArrayList.indexOf(model));
+                        System.out.println("Batman -> " + isApiSuccess);
                         if (isApiSuccess) {
                             holder.reqButton.setClickable(false);
                             updateSharedPreferences();
@@ -393,13 +394,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             });
 
             holder.buttonIncreasePrice.setOnClickListener(view -> {
-                if (model.getOfferedPrice() <= model.getDriverMaxExtraFee() - model.getNegotiationUnit()) {
-                    model.setUpdatedAmount(model.getUpdatedAmount() + model.getNegotiationUnit());
+                if ((model.getOfferedPrice()) <= model.getDriverMaxExtraFee() - (model.getNegotiationUnit())) {
+                    model.setUpdatedAmount(model.getUpdatedAmount() + (model.getNegotiationUnit() / 83.20));
                     firebaseLogEvent("price_is_increased");
-                    model.setOfferedPrice(model.getOfferedPrice() + model.getNegotiationUnit());
+                    model.setOfferedPrice((model.getOfferedPrice()) + (model.getNegotiationUnit()));
                     sheetAdapter.notifyItemChanged(position, "inc");
                     Handler handler = new Handler(Looper.getMainLooper());
-                    if (model.getOfferedPrice() == model.getDriverMaxExtraFee()) {
+                    if ((model.getOfferedPrice()) == model.getDriverMaxExtraFee()) {
                         handler.post(() -> {
                             model.setButtonIncreasePriceAlpha(0.5f);
                             model.setButtonIncreasePriceClickable(false);
@@ -425,7 +426,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         holder.specialLocExtraTip.setVisibility(View.GONE);
                     }
                     else {
-                        model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
+                        model.setUpdatedAmount(model.getUpdatedAmount() - (model.getNegotiationUnit() / 83.20));
                         firebaseLogEvent("price_is_decreased");
                         model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
                     }
@@ -501,7 +502,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     
     private void updateExtraChargesString(SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
-            String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
+            String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Double.toString(model.getDriverPickUpCharges()));
             if (model.getSpecialZoneExtraTip() > 0) {
                 String pickUpChargesWithZone = formattedPickupChargesText + " " + getString(R.string.and) + " " + sharedPref.getString("CURRENCY", "₹") + " " + model.getSpecialZoneExtraTip() + " " + getString(R.string.zone_pickup_extra);
                 holder.textIncludesCharges.setText(pickUpChargesWithZone);
@@ -633,12 +634,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     int baseFare = rideRequestBundle.getInt(getResources().getString(R.string.BASE_FARE));
                     String currency = rideRequestBundle.getString("currency");
                     float distanceToPickup = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_PICKUP));
-                    float distanceTobeCovered = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_BE_COVERED));
+                    float distanceTobeCovered = (float) (rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_BE_COVERED)));
                     String addressPickUp = rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_PICKUP));
                     String addressDrop = rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_DROP));
                     String sourceArea = rideRequestBundle.getString("sourceArea");
                     String destinationArea = rideRequestBundle.getString("destinationArea");
-                    int driverMaxExtraFee = rideRequestBundle.getInt("driverMaxExtraFee");
+                    double driverMaxExtraFee = 499.2; //rideRequestBundle.getInt("driverMaxExtraFee");
                     String durationToPickup = rideRequestBundle.getString("durationToPickup");
                     int driverMinExtraFee = rideRequestBundle.getInt("driverMinExtraFee");
                     int rideRequestPopupDelayDuration = rideRequestBundle.getInt("rideRequestPopupDelayDuration");
@@ -661,7 +662,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                     int negotiationUnit = Integer.parseInt(sharedPref.getString( "NEGOTIATION_UNIT", "10"));
                     int rideRequestedBuffer = Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
-                    int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
                     boolean gotoTag = rideRequestBundle.getBoolean("gotoTag");
                     double srcLat = rideRequestBundle.getDouble("srcLat");
                     double srcLng = rideRequestBundle.getDouble("srcLng");
@@ -672,20 +672,25 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String vehicleServiceTier = rideRequestBundle.getString("vehicleServiceTier", null);
                     String rideProductType = rideRequestBundle.getString("rideProductType");
                     String rideDuration = String.format("%02d:%02d hr", rideRequestBundle.getInt("rideDuration") / 3600 ,( rideRequestBundle.getInt("rideDuration") % 3600 ) / 60);
-                    String rideDistance = String.format("%d km", rideRequestBundle.getInt("rideDistance") / 1000);
+                    String rideDistance = String.format("%f mi", ((rideRequestBundle.getInt("rideDistance") / 1000) * 0.62137119));
                     String rideStartTime = rideRequestBundle.getString("rideStartTime");
                     String rideStartDate= rideRequestBundle.getString("rideStartDate");
+                    df.setMaximumFractionDigits(2);
+                    double base = Double.parseDouble(df.format( (rideRequestBundle.getInt(getResources().getString(R.string.BASE_FARE))) / 83.20));
+                    double pickup = Double.parseDouble(df.format((rideRequestBundle.getInt("driverPickUpCharges") / 83.20)));
+                    int customerExtraFee = (rideRequestBundle.getInt("customerExtraFee") / 83);
                    
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
 
                     }
-                    SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
+                    SheetModel sheetModel = new SheetModel(
+                            df.format((distanceToPickup / 1000) * 0.62137119),
                             distanceTobeCovered,
                             RideRequestUtils.calculateDp(durationToPickup, df),
                             addressPickUp,
                             addressDrop,
-                            baseFare,
+                            base,
                             calculatedTime,
                             searchRequestId,
                             destinationArea,
@@ -695,7 +700,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             driverMinExtraFee,
                             driverMaxExtraFee,
                             rideRequestPopupDelayDuration,
-                            negotiationUnit,
+                            249.6,
                             customerExtraFee,
                             specialLocationTag,
                             sourcePinCode,
@@ -704,7 +709,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             disabilityTag,
                             isTranslated,
                             gotoTag,
-                            driverPickUpCharges,
+                            pickup,
                             srcLat,
                             srcLng,
                             destLat,
@@ -907,7 +912,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             if (!isAccept || offeredPrice == 0) {
                 payload.put(getResources().getString(R.string.OFFERED_FARE), null);
             } else {
-                payload.put(getResources().getString(R.string.OFFERED_FARE), offeredPrice);
+                payload.put(getResources().getString(R.string.OFFERED_FARE), (int) offeredPrice);
             }
             payload.put(getResources().getString(R.string.SEARCH_REQUEST_ID), searchRequestId);
             if (isAccept) payload.put("response", "Accept");

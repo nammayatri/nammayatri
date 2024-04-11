@@ -48,6 +48,7 @@ import Effect (Effect)
 import Helpers.Utils (getPeriod, fetchImage, FetchImageFrom(..))
 import Font.Style (Style(..))
 import ConfigProvider
+import JBridge(getMilesFromText)
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let
@@ -535,7 +536,7 @@ getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
             []
     )<>
     (
-      [ { mainTxt: totalDistanceTravelled
+      [ { mainTxt: getMilesFromText totalDistanceTravelled
         , subTxt: getString $ TRAVELLED_ON_APP "TRAVELLED_ON_APP"
         }
       ]

@@ -45,6 +45,7 @@ import Styles.Colors as Color
 import Debug (spy)
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
+import JBridge
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput
 screen initialState =
@@ -261,7 +262,7 @@ tripDetailsView state =
       , gravity RIGHT
       , orientation VERTICAL
       ][  textView $
-          [ text state.data.totalAmount
+          [ text $ "$ " <> (getDollars (DS.replaceAll (DS.Pattern "$") (DS.Replacement "") (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount)))
           , accessibilityHint $  ( DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount) <> "Rupees"
           , accessibility ENABLE
           , color Color.black

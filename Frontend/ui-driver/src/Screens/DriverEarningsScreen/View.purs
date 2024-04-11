@@ -456,7 +456,7 @@ totalEarningsView push state =
             , textView
                 $ [ height WRAP_CONTENT
                   , width WRAP_CONTENT
-                  , text $ "₹" <> (formatCurrencyWithCommas (show state.props.totalEarningsData.totalEarnings))
+                  , text $ "$" <> (formatCurrencyWithCommas (getDollars (show state.props.totalEarningsData.totalEarnings)))
                   , color Color.black900
                   ]
                 <> FontStyle.priceFont TypoGraphy
@@ -531,7 +531,7 @@ totalEarningsView push state =
             , textView
                 $ [ height WRAP_CONTENT
                   , width WRAP_CONTENT
-                  , text $ show (state.props.totalEarningsData.totalDistanceTravelled / 1000) <> " km"
+                  , text $ getMilesFromText (show (state.props.totalEarningsData.totalDistanceTravelled / 1000) <> " km")
                   ]
                 <> FontStyle.h2 TypoGraphy
             ]
@@ -1215,7 +1215,7 @@ historyView push state =
             , gravity CENTER_VERTICAL
             ]
             [ textView
-                $ [ text $ "₹" <> formatCurrencyWithCommas (getFixedTwoDecimals state.data.totalCoinConvertedToCash)
+                $ [ text $ "$" <> formatCurrencyWithCommas (getDollars $ show state.data.totalCoinConvertedToCash)
                   , color Color.black800
                   , visibility $ boolToVisibility (state.props.subView == ST.USE_COINS_VIEW)
                   , margin $ MarginRight 8
@@ -1291,7 +1291,7 @@ historyViewItem item isLast subView =
                   , width WRAP_CONTENT
                   ]
                   [ textView
-                      $ [ text $ if subView == ST.YATRI_COINS_VIEW then item.event else "₹" <> formatCurrencyWithCommas (show item.cash) <> " " <> getString CONVERTED_FROM_COINS
+                      $ [ text $ if subView == ST.YATRI_COINS_VIEW then item.event else "$" <> formatCurrencyWithCommas (getDollars (show item.cash)) <> " " <> getString CONVERTED_FROM_COINS
                         , color Color.black900
                         ]
                       <> FontStyle.tags TypoGraphy
@@ -1707,7 +1707,7 @@ historyViewForEarnings push state =
                   ]
                 <> FontStyle.paragraphText TypoGraphy
             , textView
-                $ [ text $ "₹" <> formatCurrencyWithCommas (show $ getDailyEarnings state.data.earningHistoryItems)
+                $ [ text $ "$" <> formatCurrencyWithCommas (getDollars (show $ getDailyEarnings state.data.earningHistoryItems))
                   , color Color.black800
                   ]
                 <> FontStyle.h2 TypoGraphy
@@ -1738,7 +1738,7 @@ dottedLineView push margintop earnings =
         $ [ height $ WRAP_CONTENT
           , width $ WRAP_CONTENT
           , gravity RIGHT
-          , text $ "₹" <> formatCurrencyWithCommas (show earnings)
+          , text $ "$" <> formatCurrencyWithCommas (getDollars (show earnings))
           ]
         <> FontStyle.paragraphText TypoGraphy
     ]
@@ -1892,7 +1892,7 @@ historyViewItemForEarnings push item state index =
               , padding $ Padding 11 3 11 6
               ]
               [ textView
-                  $ [ text $ if rideStatus /= "CANCELLED" then "₹" <> formatCurrencyWithCommas (show earnings) else getString CANCELLED_
+                  $ [ text $ if rideStatus /= "CANCELLED" then "$" <> formatCurrencyWithCommas (getDollars (show earnings)) else getString CANCELLED_
                     , height WRAP_CONTENT
                     , width WRAP_CONTENT
                     , color color'

@@ -58,6 +58,7 @@ import ConfigProvider
 import Locale.Utils
 import Data.Either (Either(..))
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
+import JBridge(getDollars)
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -415,9 +416,9 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
         vehicleImage = getVehicleVariantImage estimate.vehicleVariant
       , vehicleVariant = estimate.vehicleVariant
       , price = case estimate.totalFareRange of
-                Nothing -> currency <> (show estimate.estimatedTotalFare)
-                Just (FareRange fareRange) -> if fareRange.minFare == fareRange.maxFare then currency <> (show estimate.estimatedTotalFare)
-                                              else  currency <> (show fareRange.minFare) <> " - " <> currency <> (show fareRange.maxFare)
+                Nothing -> currency <> (getDollars $ show estimate.estimatedTotalFare)
+                Just (FareRange fareRange) -> if fareRange.minFare == fareRange.maxFare then currency <> (getDollars $ show estimate.estimatedTotalFare)
+                                              else  currency <> (getDollars ((show fareRange.minFare))) <> " - " <> currency <> (getDollars ((show fareRange.maxFare)))
       , activeIndex = 0
       , index = index
       , id = trim estimate.id

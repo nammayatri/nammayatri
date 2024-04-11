@@ -52,6 +52,8 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 
 import org.json.JSONObject;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -258,7 +260,10 @@ public class WidgetService extends Service {
                 if (mediaPlayer != null)
                     mediaPlayer.start();
                 // Fetch data from entity_payload
-                int fare = entity_payload.getInt("baseFare");
+                DecimalFormat df = new DecimalFormat();
+                df.setMaximumFractionDigits(2);
+                double fare = Double.parseDouble(df.format(entity_payload.getInt("baseFare") / 83.20));
+
                 int distanceToPickup = entity_payload.getInt("distanceToPickup");
 
                 String searchRequestValidTill = entity_payload.getString("searchRequestValidTill");
@@ -267,7 +272,6 @@ public class WidgetService extends Service {
                 calculatedTime = calculateExpireTimer(searchRequestValidTill, getCurrTime);
                 calculatedTime = Math.min(calculatedTime, 30);
                 calculatedTime = calculatedTime < 0 ? 20 : calculatedTime;
-                DecimalFormat df = new DecimalFormat();
                 df.setMaximumFractionDigits(2);
 
                 // Update text for fare and distanceToPickup
@@ -277,9 +281,9 @@ public class WidgetService extends Service {
                 fareTextView.setTextSize(20);
                 String distanceText;
                 if (distanceToPickup > 1000) {
-                    distanceText = (df.format(distanceToPickup / 1000)) + " km pickup";
+                    distanceText = (df.format((distanceToPickup / 1000) * 0.62137119)) + " mi pickup";
                 } else {
-                    distanceText = distanceToPickup + " m pickup";
+                    distanceText = (df.format(distanceToPickup * 0.00062)) + " mi pickup";
                 }
                 distanceTextView.setText(distanceText);
                 distanceTextView.setVisibility(View.VISIBLE);

@@ -21,7 +21,7 @@ import Prelude
 import Effect (Effect)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Common.Types.App
 -- import Types.APIv2 (Address)
 import Foreign (Foreign)
@@ -53,6 +53,7 @@ import Effect.Aff (makeAff, nonCanceler, Fiber,  launchAff)
 import Prelude((<<<))
 import Effect.Class (liftEffect)
 import Common.Resources.Constants as Constant
+import Data.Number(fromString)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -287,6 +288,7 @@ foreign import pauseAudioPlayer :: String -> Unit
 foreign import startAudioPlayer :: forall action. Fn3 String (action -> Effect Unit) (String -> action) Unit
 foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
 foreign import jBridgeMethodExists :: String -> Boolean
+foreign import getMilesFromText :: String -> String
 
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl
@@ -635,8 +637,8 @@ getWidthFromPercent percent =
 
 fromMetersToKm :: Int -> String
 fromMetersToKm distanceInMeters
-  | distanceInMeters >= 1000 = parseFloat (toNumber distanceInMeters / 1000.0) 1 <> " km"
-  | otherwise = show distanceInMeters <> " m"
+  | distanceInMeters >= 1000 = (getMiles $ show (toNumber distanceInMeters / 1000.0)) <> " mi"
+  | otherwise = (getMilesFromMeters (show distanceInMeters)) <> " mi"
 
 getArray :: Int ->Array Int
 getArray count = if count <= 0 then [] else [count] <> (getArray (count - 1))
@@ -661,4 +663,18 @@ showDatePicker push action= do
   timePicker <- makeAff \cb -> timePickerWithoutTimeout (cb <<< Right) TimePicker $> nonCanceler
   let (TimePicker timeResp hour minute) = timePicker
   liftEffect $ push $ action dateResp year month day timeResp hour minute
-  
+
+getDollars :: String -> String
+getDollars price = do
+  let priceNum = fromMaybe 0.0 (fromString price)
+  parseFloat (priceNum / 83.20) 2
+
+getMiles :: String -> String
+getMiles kilometers = do 
+  let kilometersNum = fromMaybe 0.0 (fromString kilometers)
+  parseFloat (kilometersNum * 0.62137119) 2
+
+getMilesFromMeters :: String -> String
+getMilesFromMeters meters = do 
+  let milesNum = fromMaybe 0.0 (fromString meters)
+  parseFloat (milesNum * 0.00062) 2

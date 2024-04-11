@@ -74,6 +74,7 @@ import RemoteConfig (RCCarousel(..))
 import Mobility.Prelude (boolToVisibility)
 import Constants 
 import LocalStorage.Cache (getValueFromCache)
+import JBridge(getDollars)
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -975,7 +976,7 @@ autopayBannerConfig state configureImage =
   let
     config = Banner.config
     bannerType = state.props.autoPayBanner
-    dues = HU.getFixedTwoDecimals state.data.paymentState.totalPendingManualDues
+    dues = getDollars $ show state.data.paymentState.totalPendingManualDues
     config' = config
       {
         backgroundColor = case bannerType of
@@ -1298,10 +1299,8 @@ getRideCompletedConfig state = let
   specialZonePickup = isJust $ state.data.endRideData.specialZonePickup
   topPillConfig = constructTopPillConfig disability specialZonePickup
   showDriverBottomCard = state.data.config.rideCompletedCardConfig.showSavedCommission || isJust state.data.endRideData.tip
-  viewOrderConfig = [ {condition : (not isRentalRide) && (autoPayBanner == DUE_LIMIT_WARNING_BANNER), elementView :  RideCompletedCard.BANNER },
-                      {condition : (not isRentalRide) && (autoPayStatus == ACTIVE_AUTOPAY && payerVpa /= ""), elementView :  RideCompletedCard.QR_VIEW },
+  viewOrderConfig = [ {condition : (not isRentalRide) && (autoPayStatus == ACTIVE_AUTOPAY && payerVpa /= ""), elementView :  RideCompletedCard.QR_VIEW },
                       {condition : (not isRentalRide) && not (autoPayStatus == ACTIVE_AUTOPAY) && state.data.config.subscriptionConfig.enableSubscriptionPopups && (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true"), elementView :  RideCompletedCard.NO_VPA_VIEW },
-                      {condition : (not isRentalRide) &&  (autoPayBanner /= DUE_LIMIT_WARNING_BANNER), elementView :  RideCompletedCard.BANNER },
                       {condition : disability, elementView :  RideCompletedCard.BADGE_CARD },
                       {condition : showDriverBottomCard, elementView :  RideCompletedCard.DRIVER_BOTTOM_VIEW},
                       {condition : isRentalRide, elementView : RideCompletedCard.RENTAL_RIDE_VIEW}
@@ -1341,8 +1340,8 @@ getRideCompletedConfig state = let
     },
     driverBottomCard {
       visible = showDriverBottomCard,
-      savedMoney = (if state.data.config.rideCompletedCardConfig.showSavedCommission then [{amount  : (state.data.endRideData.finalAmount * 18) / 100 , reason : getString SAVED_DUE_TO_ZERO_COMMISSION}] else []) <> (case state.data.endRideData.tip of 
-                            Just val -> [{amount : val, reason : getString TIP_EARNED_FROM_CUSTOMER}]
+      savedMoney = (if state.data.config.rideCompletedCardConfig.showSavedCommission then [{amount  : show ((state.data.endRideData.finalAmount * 18) / 100) , reason : getString SAVED_DUE_TO_ZERO_COMMISSION}] else []) <> (case state.data.endRideData.tip of 
+                            Just val -> [{amount : (getDollars $ show val), reason : getString TIP_EARNED_FROM_CUSTOMER}]
                             Nothing -> [])
     },
     contactSupportPopUpConfig{

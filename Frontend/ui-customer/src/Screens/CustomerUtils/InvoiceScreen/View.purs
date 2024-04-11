@@ -36,6 +36,8 @@ import Helpers.Utils (isHaveFare, getCityFromString, formatFareType)
 import MerchantConfig.Utils (getMerchant, Merchant (..))
 import Mobility.Prelude
 import Storage
+import JBridge
+import Debug
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
 screen initialState =
@@ -147,7 +149,7 @@ amountBreakupView state =
                   , orientation HORIZONTAL
                   ]
                   [ textView $
-                      [ text item.price
+                      [ text $ "$ " <> (getDollars $ (DS.replaceAll (DS.Pattern "$") (DS.Replacement "") item.price))
                       , alignParentRight "true,-1"
                       , color Color.black800
                       , accessibility DISABLE
@@ -184,7 +186,7 @@ totalAmountView state =
         ]
         []
     , textView $
-        [ text state.data.totalAmount
+        [ text $ "$ " <> getDollars (DS.replaceAll (DS.Pattern "$") (DS.Replacement "") (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount))
         , color Color.black800
         , accessibility DISABLE
         ] <> FontStyle.h1 LanguageStyle
