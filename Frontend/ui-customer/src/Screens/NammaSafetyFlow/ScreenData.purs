@@ -19,11 +19,16 @@ import Screens.Types
 import Engineering.Helpers.Commons as EHC
 import MerchantConfig.DefaultConfig as DC
 import Services.API as API
-import Prelude ((==))
+import Prelude ((==), ($))
 import ConfigProvider (getAppConfig, appConfig)
+import Data.Maybe (fromMaybe, Maybe(..))
+import Data.Function.Uncurried (runFn3)
+import DecodeUtil (getAnyFromWindow)
 
 initData :: NammaSafetyScreenState
-initData =
+initData = let 
+  config = getAppConfig appConfig
+  in
   { data:
       { shareToEmergencyContacts: false
       , nightSafetyChecks: false
@@ -49,7 +54,7 @@ initData =
       , vehicleDetails : "Loading..."
       , videoList : []
       , sosType : Nothing
-      , config : getAppConfig appConfig
+      , config : config
       , lastRideDetails : Nothing
       }
   , props:
@@ -76,6 +81,7 @@ initData =
       , fromBannerLink : false
       , checkPastRide : false
       , reportPastRide : false
+      , appName : fromMaybe config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
       }
   }
 

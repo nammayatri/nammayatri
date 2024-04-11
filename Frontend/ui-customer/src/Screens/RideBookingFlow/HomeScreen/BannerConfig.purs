@@ -26,6 +26,7 @@ getBannerConfigs state action =
   (if state.props.city == ST.Chennai || state.props.city == ST.Kochi
   then [metroBannerConfig state action]
   else [])
+  <> (if state.data.config.banners.homeScreenCabLaunch && state.props.city == ST.Bangalore then [cabLaunchBannerConfig state action] else [])
   <>
   (if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
     then [disabilityBannerConfig state action] 
@@ -98,7 +99,29 @@ sosSetupBannerConfig state action =
   in
     config'
 
-
+cabLaunchBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
+cabLaunchBannerConfig state action =
+  let
+    config = BannerCarousel.config action
+    config' =
+      config
+        { backgroundColor = Color.lightCyan
+        , title = "We have a cab-ulous surprise for you! 🚖"
+        , titleColor = Color.azureine
+        , actionText = "Book a cab"
+        , actionTextBackgroundColour = Color.azureine
+        , actionTextColor = Color.white900
+        , imageUrl = (getAssetLink FunctionCall) <> "ny_ic_cab_launch.png"
+        , margin = MarginTop 0
+        , imageHeight = V 100
+        , imageWidth = V 120
+        , padding = Padding 0 2 5 5
+        , imagePadding = PaddingLeft 24
+        , type = BannerCarousel.CabLaunch
+        , actionArrowIconVisibility = false
+        }
+  in
+    config'
 
 metroBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
 metroBannerConfig state action =

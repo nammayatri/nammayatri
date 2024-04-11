@@ -721,6 +721,7 @@ data ScreenOutput = LogoutUser
                   | GoToMyMetroTickets HomeScreenState
                   | GoToMetroTicketBookingFlow HomeScreenState
                   | GoToSafetyEducation HomeScreenState
+                  | RepeatSearch HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -888,7 +889,7 @@ data Action = NoAction
             | ShareRideAction PopupWithCheckboxController.Action
             | AllChatsLoaded
             | GoToSafetyEducationScreen
-            | SpecialZoneInfoTag 
+            | SpecialZoneInfoTag
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -907,7 +908,7 @@ eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) s
 
 eval ShowMoreSuggestions state = do
   void $ pure $ map (\item -> startLottieProcess lottieAnimationConfig{ rawJson =  (getAssetsBaseUrl FunctionCall) <> "lottie/right_arrow.json" , speed = 1.0,lottieId = (getNewIDWithTag $ "movingArrowView" <> show item), minProgress = 0.0 }) [0,1]
-  continue state { props {suggestionsListExpanded = not state.props.suggestionsListExpanded} }
+  continueWithCmd state { props {suggestionsListExpanded = not state.props.suggestionsListExpanded} } [pure NoAction]
 
 eval RemoveShimmer state = continue state{props{showShimmer = false}}
 
@@ -988,6 +989,7 @@ eval (BannerCarousel (BannerCarousel.OnClick idx)) state =
           BannerCarousel.ZooTicket -> pure $ TicketBookingFlowBannerAC $ Banner.OnClick
           BannerCarousel.MetroTicket -> pure $ MetroTicketBannerClickAC $ Banner.OnClick
           BannerCarousel.Safety -> pure $ SafetyBannerAction $ Banner.OnClick
+          BannerCarousel.CabLaunch -> pure $ WhereToClick
           BannerCarousel.Remote link -> do
             if os == "IOS" && STR.contains (STR.Pattern "vp=sedu&option=video") link  -- To be removed after deep links are added in iOS
               then pure GoToSafetyEducationScreen
@@ -2083,15 +2085,20 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
 
 
 eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryButtonClick PrimaryButtonController.OnClick)) state = do
-  let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".Tip") "true"
-  let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
-      customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
-  _ <- pure $ clearTimerWithId state.props.timerId
-  void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), scaleType="CENTER_CROP"}
-  let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH, onlyPrimaryText = true}
-  let newState = state{ props{rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }, findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex, isTipSelected = true } }, data{nearByDrivers = Nothing}}
-  _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
-  updateAndExit newState $ RetryFindingQuotes false newState
+  case state.props.tipViewProps.stage of
+    ADD_TIP_OR_CHANGE_RIDE_TYPE -> 
+      continue state { props {tipViewProps {stage = DEFAULT} } }
+    UPDATE_TIP -> continue state { props {tipViewProps {stage = TIP_AMOUNT_SELECTED} } }
+    _ -> do
+      let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".Tip") "true"
+      let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+          customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+      _ <- pure $ clearTimerWithId state.props.timerId
+      void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), scaleType="CENTER_CROP"}
+      let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH, onlyPrimaryText = true}
+      let newState = state{ props{rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }, findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex, isTipSelected = true } }, data{nearByDrivers = Nothing}}
+      _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
+      updateAndExit newState $ RetryFindingQuotes false newState
 
 eval (QuoteListModelActionController (QuoteListModelController.TipsViewActionController (TipsView.TipBtnClick index value))) state = do
   let check = index == state.props.tipViewProps.activeIndex
@@ -2101,6 +2108,20 @@ eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActi
   _ <- pure $ performHapticFeedback unit
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote_confirm"
   exit $ ConfirmRide state
+
+eval (QuoteListModelActionController (QuoteListModelController.SecondaryBtnClick)) state = 
+  case state.props.tipViewProps.stage of
+    ADD_TIP_OR_CHANGE_RIDE_TYPE -> exit $ RepeatSearch state 
+    UPDATE_TIP -> exit $ RepeatSearch state { props {tipViewProps {stage = ADD_TIP_OR_CHANGE_RIDE_TYPE, activeIndex = -1} } }
+    TIP_AMOUNT_SELECTED -> do
+      case (getTipViewData "LazyCheck") of
+          Just (TipViewData tipView) -> do
+            if tipView.activeIndex == -1 then
+              continue state { props {tipViewProps {stage = ADD_TIP_OR_CHANGE_RIDE_TYPE, activeIndex = -1} } }
+            else
+              continue state { props {tipViewProps {stage = TIP_ADDED_TO_SEARCH, activeIndex = tipView.activeIndex} } }
+          Nothing -> continue state { props {tipViewProps {stage = ADD_TIP_OR_CHANGE_RIDE_TYPE, activeIndex = -1} } }
+    _ -> continue state { props {tipViewProps {stage = ADD_TIP_OR_CHANGE_RIDE_TYPE, activeIndex = -1} } }
 
 eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController (QuoteListItemController.CountDown seconds status id))) state = do
   if status == "EXPIRED" then do
@@ -2139,8 +2160,8 @@ eval (QuoteListModelActionController (QuoteListModelController.HomeButtonActionC
   _ <- pure $ performHapticFeedback unit
   updateAndExit state CheckCurrentStatus
 
-eval (QuoteListModelActionController (QuoteListModelController.ChangeTip)) state = do
-  continue state {props { tipViewProps {stage = DEFAULT}}}
+eval (QuoteListModelActionController (QuoteListModelController.ChangeTip)) state = 
+    continue state {props { tipViewProps {stage = UPDATE_TIP}}}
 
 eval (Restart err) state = exit $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state
 
@@ -2168,14 +2189,7 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
       updateAndExit newState $ RetryFindingQuotes true newState
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
-    TipsPopUp -> case state.props.currentStage of
-      QuoteList -> do
-        _ <- pure $ performHapticFeedback unit
-        updateAndExit state CheckCurrentStatus
-      FindingQuotes -> do
-        _ <- pure $ performHapticFeedback unit
-        exit $ CheckCurrentStatus
-      _ -> continue state
+    TipsPopUp -> exit $ RepeatSearch state { props { isPopUp = NoPopUp, tipViewProps {stage = ADD_TIP_OR_CHANGE_RIDE_TYPE, activeIndex = -1}} }
     Logout -> exit LogoutUser
     ConfirmBack -> do
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_no_retry"
@@ -2191,6 +2205,17 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isP
     ActiveQuotePopUp -> do
       _ <- pure $ performHapticFeedback unit
       exit $ CheckCurrentStatus
+  
+eval (PopUpModalAction (PopUpModal.OptionWithHtmlClick)) state = case state.props.isPopUp of
+    TipsPopUp -> case state.props.currentStage of
+      QuoteList -> do
+        _ <- pure $ performHapticFeedback unit
+        updateAndExit state CheckCurrentStatus
+      FindingQuotes -> do
+        _ <- pure $ performHapticFeedback unit
+        exit $ CheckCurrentStatus
+      _ -> continue state
+    _ -> continue state
 
 eval (PopUpModalAction (PopUpModal.TipsViewActionController (TipsView.TipBtnClick index value))) state = do
   _ <- pure $ performHapticFeedback unit
@@ -3162,4 +3187,4 @@ checkRecentRideVariant state = any (\item -> isJust item.serviceTierName && item
 
 checkRecentRideVariantInEstimates :: Array EstimateAPIEntity -> Maybe String -> Boolean
 checkRecentRideVariantInEstimates estimates repeatRideServiceName = 
-  any (\(EstimateAPIEntity item) -> isJust item.serviceTierName && item.serviceTierName == repeatRideServiceName) estimates --check
+  any (\(EstimateAPIEntity item) -> isJust item.serviceTierName && item.serviceTierName == repeatRideServiceName) estimates 
