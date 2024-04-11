@@ -176,6 +176,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
@@ -625,8 +626,14 @@ buildDriverEntityRes (person, driverInfo) = do
           then SP.roundToOneDecimal <$> person.rating
           else person.rating <&> (\(Centesimal x) -> Centesimal (fromInteger (round x)))
   fareProductConfig <- CQFP.findAllFareProductByMerchantOpCityId person.merchantOperatingCityId
-  let supportedVehicles = nub $ map (.vehicleServiceTier) fareProductConfig
-  let isVehicleSupported = maybe False (\vehicle -> (castVariantToServiceTier vehicle.variant) `elem` supportedVehicles) vehicleMB
+  let supportedServiceTiers = nub $ map (.vehicleServiceTier) fareProductConfig
+  mbDefaultServiceTier <-
+    case vehicleMB of
+      Nothing -> return Nothing
+      Just vehicle -> do
+        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
+        return ((.serviceTierType) <$> (find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers))
+  let isVehicleSupported = maybe False (\d -> d `elem` supportedServiceTiers) mbDefaultServiceTier
   return $
     DriverEntityRes
       { id = person.id,
@@ -635,7 +642,7 @@ buildDriverEntityRes (person, driverInfo) = do
         lastName = person.lastName,
         mobileNumber = decMobNum,
         rating,
-        linkedVehicle = makeVehicleAPIEntity <$> vehicleMB,
+        linkedVehicle = makeVehicleAPIEntity mbDefaultServiceTier <$> vehicleMB,
         active = driverInfo.active,
         onRide = driverInfo.onRide,
         enabled = driverInfo.enabled,

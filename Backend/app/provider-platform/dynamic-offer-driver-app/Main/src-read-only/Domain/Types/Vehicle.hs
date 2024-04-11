@@ -53,6 +53,7 @@ data VehicleAPIEntity = VehicleAPIEntity
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     model :: Kernel.Prelude.Text,
     registrationNo :: Kernel.Prelude.Text,
+    serviceTierType :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType,
     variant :: Domain.Types.Vehicle.Variant,
     vehicleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
