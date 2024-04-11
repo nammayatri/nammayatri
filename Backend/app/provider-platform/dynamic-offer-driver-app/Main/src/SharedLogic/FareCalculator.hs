@@ -147,6 +147,7 @@ pureFareSum fareParams = do
     + fromMaybe 0 fareParams.govtCharges
     + fromMaybe 0 fareParams.nightShiftCharge
     + fromMaybe 0 fareParams.rideExtraTimeFare
+    + fromMaybe 0 fareParams.congestionCharge
     + maybe 0 round fareParams.customerCancellationDues
     + maybe 0 round fareParams.tollCharges
     + partOfNightShiftCharge

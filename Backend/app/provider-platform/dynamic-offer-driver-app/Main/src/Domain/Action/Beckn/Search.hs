@@ -162,7 +162,7 @@ handler ValidatedDSearchReq {..} sReq = do
                       Redis.setExp (multipleRouteKey transactionId) multipleRoutesInfo 3600
                     Nothing -> logInfo "No multiple routes found"
               )
-        mbTollCharges <- join <$> mapM (getTollChargesOnRoute merchantOpCityId) sReq.routePoints
+        mbTollCharges <- join <$> mapM (getTollChargesOnRoute merchantOpCityId Nothing) sReq.routePoints
         return (Just setRouteInfo, Just toLocation, Just estimatedDistance, Just estimatedDuration, mbTollCharges)
       _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration, Nothing) -- estimate distance and durations by user
   allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.pickupLocation sReq.dropLocation (Just sReq.transactionId) (Just "transactionId")) `mapM` possibleTripOption.tripCategories)
