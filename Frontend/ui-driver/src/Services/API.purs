@@ -504,7 +504,8 @@ newtype Vehicle = Vehicle
         color            :: String,
         registrationNo   :: String,
         capacity         :: Maybe Int,
-        createdAt        :: String
+        createdAt        :: String,
+        serviceTierType  :: Maybe String
     }
 
 instance makeGetDriverInfoReq :: RestEndpoint GetDriverInfoReq GetDriverInfoResp where

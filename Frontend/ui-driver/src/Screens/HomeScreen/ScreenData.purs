@@ -12,11 +12,10 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.HomeScreen.ScreenData where
 
 import Screens.Types
-import Prelude(negate)
+import Prelude (negate)
 import Services.API (DriverProfileStatsResp(..), Status(..))
 import Data.Maybe
 import Foreign.Object (empty)
@@ -24,236 +23,237 @@ import Domain.Payments as PP
 import ConfigProvider
 import Screens.Types as ST
 import RemoteConfig.Utils as RU
+
 initData :: HomeScreenState
-initData = {
-    data: {
-        snappedOrigin : Nothing,
-        config : getAppConfig appConfig,
-        driverName : "",
-        vehicleType : "",
-        profileImg : Nothing,
-        driverAlternateMobile : Nothing,
-        gender : "UNKNOWN",
-        subsRemoteConfig : RU.subscriptionConfig "subscription_configs",
-        driverStats: false,
-        activeRide : {
-          id : "",
-          source : "",
-          destination : Nothing,
-          src_lat : 0.0,
-          src_lon : 0.0,
-          dest_lat : 0.0,
-          dest_lon : 0.0,
-          actualRideDistance : 0.0,
-          tripActualDistance : Nothing,
-          status : NOTHING,
-          distance : 0.0,
-          duration : 0,
-          riderName : "",
-          estimatedFare : 0,
-          waitTimerId : "",
-          notifiedCustomer : false,
-          exoPhone : "",
-          specialLocationTag : Nothing,
-          waitTimeSeconds : -1,
-          waitTimeInfo : false,
-          tripDuration : Nothing,
-          rideCreatedAt : "",
-          requestedVehicleVariant : Nothing,
-          disabilityTag : Nothing,
-          enableFrequentLocationUpdates : false,
-          tripScheduledAt : Nothing,
-          tripType : ST.OneWay,
-          tripStartTime: Nothing,
-          tripEndTime: Nothing,
-          nextStopAddress : Nothing,
-          lastStopAddress : Nothing,
-          nextStopLat : Nothing,
-          nextStopLon : Nothing,
-          lastStopLat : Nothing,
-          lastStopLon : Nothing,
-          actualRideDuration : Nothing,
-          startOdometerReading : Nothing,
-          endOdometerReading : Nothing
-        },
-        cancelRideModal : {
-          selectionOptions : [],
-          activeIndex : Nothing,
-          selectedReasonCode : "",
-          selectedReasonDescription : "",
-          isMandatoryTextHidden : false,
-          isSelectButtonActive : false
-        },
-        currentDriverLat : 0.0,
-        currentDriverLon : 0.0,
-        locationLastUpdatedTime : "",
-        totalRidesOfDay : 0,
-        totalEarningsOfDay : 0,
-        bonusEarned : 0,
-        route : [],
-        cancelRideConfirmationPopUp : {
-          delayInSeconds : 5,
-          timerID : "",
-          continueEnabled : false,
-          enableTimer : true
-        },
-        messages : [],
-        messagesSize : "-1",
-        chatSuggestionsList : [],
-        messageToBeSent : "",
-        logField : empty, 
-        paymentState : {
-          rideCount : 0,
-          totalMoneyCollected : 0,
-          payableAndGST : 0,
-          platFromFee : 0,
-          date : "",
-          dateObj : "",
-          makePaymentModal : false,
-          showRateCard : false,
-          paymentStatusBanner : false,
-          paymentStatus : PP.Success,
-          invoiceId : "",
-          bannerBG : "",
-          bannerTitle : "",
-          bannerTitleColor : "",
-          banneActionText : "",
-          actionTextColor : "",
-          totalPendingManualDues : 0.0,
-          bannerImage : "",
-          showBannerImage : false,
-          chargesBreakup : [],
-          blockedDueToPayment : false,
-          laterButtonVisibility : false,
-          orderId : "",   
-          subscribed : true,
-          showShimmer : false,
-          driverBlocked : false,
-          showBlockingPopup : false,
-          autoPayStatus : NO_AUTOPAY
-        },
-        triggerPatchCounter : 0,
-        peekHeight : 0,
-        endRideData : {
-          actualRideDuration : Nothing,
-          actualRideDistance : Nothing,
-          rideId : "",
-          zeroCommision : 0,
-          tip : Nothing,
-          finalAmount : 0, 
-          riderName : "",
-          rating : 0,
-          feedback : "",
-          disability : Nothing,
-          payerVpa : "",
-          specialZonePickup : Nothing
-        },
-        driverGotoState : {
-          gotoCount : 0,
-          goToInfo : false,
-          selectedGoTo : "",
-          savedLocationsArray : [],
-          showGoto : false,
-          gotoValidTill : "-",
-          timerInMinutes : "-",
-          isGotoEnabled : false,
-          timerId : "",
-          gotoReducedCount : Nothing,
-          gotoLocInRange : false,
-          goToPopUpType : NO_POPUP_VIEW,
-          gotoEnabledForMerchant : false,
-          confirmGotoCancel : false,
-          savedLocationCount : 0
-        },
-        coinBalance : 0
-      , bannerData : {
-          bannerItem : Nothing
-        , currentBanner : 0
-        , bannerScrollState: "0"
-        , currentPage : 0
-        },
-      prevLatLon : Nothing,
-      noOfLocations : 0,
-      isVehicleSupported : true
-    },
-    props: {
-        isFreeRide : false,
-        arrivedAtStop : false,
-        statusOnline : true,
-        driverStatusSet : Online,
-        goOfflineModal : false,
-        screenName : "Home",
-        rideActionModal : false,
-        updatedArrivalInChat : false,
-        enterOtpModal : false,
-        endRideOtpModal : false,
-        odometerValue : "",
-        startRideOdometerImage : Nothing,
-        endRideOdometerImage : Nothing,
-        enterOdometerReadingModal : false,
-        endRideOdometerReadingModal : false,
-        isInvalidOdometer : false,
-        rideOtp : "",
-        enterOtpFocusIndex : 0,
-        enterOdometerFocusIndex : 0,
-        time : 0,
-        otpIncorrect : false,
-        wrongVehicleVariant : false,
-        endRidePopUp : false,
-        cancelRideModalShow : false,
-        routeVisible : false,
-        otpAttemptsExceeded : false,
-        refreshAnimation : false,
-        showDottedRoute : false,
-        currentStage : HomeScreen,
-        mapRendered : false,
-        cancelConfirmationPopup : false,
-        chatcallbackInitiated : false,
-        sendMessageActive : false,
-        unReadMessages : false,
-        openChatScreen : false,
-        silentPopUpView : false,
-        zoneRideBooking : true,
-        showGenderBanner : false,
-        notRemoveBanner : true,
-        showBonusInfo : false,
-        showlinkAadhaarPopup : false,
-        showAadharPopUp : true,
-        canSendSuggestion : true,
-        showOffer : false,
-        rcActive : false, 
-        rcDeactivePopup : false,
-        autoPayBanner : NO_SUBSCRIPTION_BANNER,
-        showAccessbilityPopup : false,
-        showRideCompleted : false,
-        showRideRating : false,
-        showContactSupportPopUp : false,
-        showChatBlockerPopUp : false,
-        subscriptionPopupType : NO_SUBSCRIPTION_POPUP,
-        showGenericAccessibilityPopUp : false,
-        waitTimeStatus : NoStatus,
-        isMockLocation : false,
-        accountBlockedPopup : false,
-        showCoinsPopup : false,
-        isStatsModelExpanded : false,
-        tobeLogged : false,
-        safetyAudioAutoPlay : false,
-        vehicleNSPopup : false,
-        bgLocationPopup : false,
-        specialZoneProps : { specialZonePopup : false, nearBySpecialZone : false, currentGeoHash : "" },
-        rideStartTimer : 0,
-        odometerFileId : Nothing,
-        odometerUploadAttempts : 0,
-        odometerImageUploading : false
-    }
-}
+initData =
+  { data:
+      { linkedVehicleCategory: ""
+      , snappedOrigin: Nothing
+      , config: getAppConfig appConfig
+      , driverName: ""
+      , vehicleType: ""
+      , profileImg: Nothing
+      , driverAlternateMobile: Nothing
+      , gender: "UNKNOWN"
+      , subsRemoteConfig: RU.subscriptionConfig "subscription_configs"
+      , driverStats: false
+      , activeRide:
+          { id: ""
+          , source: ""
+          , destination: Nothing
+          , src_lat: 0.0
+          , src_lon: 0.0
+          , dest_lat: 0.0
+          , dest_lon: 0.0
+          , actualRideDistance: 0.0
+          , tripActualDistance: Nothing
+          , status: NOTHING
+          , distance: 0.0
+          , duration: 0
+          , riderName: ""
+          , estimatedFare: 0
+          , waitTimerId: ""
+          , notifiedCustomer: false
+          , exoPhone: ""
+          , specialLocationTag: Nothing
+          , waitTimeSeconds: -1
+          , waitTimeInfo: false
+          , tripDuration: Nothing
+          , rideCreatedAt: ""
+          , requestedVehicleVariant: Nothing
+          , disabilityTag: Nothing
+          , enableFrequentLocationUpdates: false
+          , tripScheduledAt: Nothing
+          , tripType: ST.OneWay
+          , tripStartTime: Nothing
+          , tripEndTime: Nothing
+          , nextStopAddress: Nothing
+          , lastStopAddress: Nothing
+          , nextStopLat: Nothing
+          , nextStopLon: Nothing
+          , lastStopLat: Nothing
+          , lastStopLon: Nothing
+          , actualRideDuration: Nothing
+          , startOdometerReading: Nothing
+          , endOdometerReading: Nothing
+          }
+      , cancelRideModal:
+          { selectionOptions: []
+          , activeIndex: Nothing
+          , selectedReasonCode: ""
+          , selectedReasonDescription: ""
+          , isMandatoryTextHidden: false
+          , isSelectButtonActive: false
+          }
+      , currentDriverLat: 0.0
+      , currentDriverLon: 0.0
+      , locationLastUpdatedTime: ""
+      , totalRidesOfDay: 0
+      , totalEarningsOfDay: 0
+      , bonusEarned: 0
+      , route: []
+      , cancelRideConfirmationPopUp:
+          { delayInSeconds: 5
+          , timerID: ""
+          , continueEnabled: false
+          , enableTimer: true
+          }
+      , messages: []
+      , messagesSize: "-1"
+      , chatSuggestionsList: []
+      , messageToBeSent: ""
+      , logField: empty
+      , paymentState:
+          { rideCount: 0
+          , totalMoneyCollected: 0
+          , payableAndGST: 0
+          , platFromFee: 0
+          , date: ""
+          , dateObj: ""
+          , makePaymentModal: false
+          , showRateCard: false
+          , paymentStatusBanner: false
+          , paymentStatus: PP.Success
+          , invoiceId: ""
+          , bannerBG: ""
+          , bannerTitle: ""
+          , bannerTitleColor: ""
+          , banneActionText: ""
+          , actionTextColor: ""
+          , totalPendingManualDues: 0.0
+          , bannerImage: ""
+          , showBannerImage: false
+          , chargesBreakup: []
+          , blockedDueToPayment: false
+          , laterButtonVisibility: false
+          , orderId: ""
+          , subscribed: true
+          , showShimmer: false
+          , driverBlocked: false
+          , showBlockingPopup: false
+          , autoPayStatus: NO_AUTOPAY
+          }
+      , triggerPatchCounter: 0
+      , peekHeight: 0
+      , endRideData:
+          { actualRideDuration: Nothing
+          , actualRideDistance: Nothing
+          , rideId: ""
+          , zeroCommision: 0
+          , tip: Nothing
+          , finalAmount: 0
+          , riderName: ""
+          , rating: 0
+          , feedback: ""
+          , disability: Nothing
+          , payerVpa: ""
+          , specialZonePickup: Nothing
+          }
+      , driverGotoState:
+          { gotoCount: 0
+          , goToInfo: false
+          , selectedGoTo: ""
+          , savedLocationsArray: []
+          , showGoto: false
+          , gotoValidTill: "-"
+          , timerInMinutes: "-"
+          , isGotoEnabled: false
+          , timerId: ""
+          , gotoReducedCount: Nothing
+          , gotoLocInRange: false
+          , goToPopUpType: NO_POPUP_VIEW
+          , gotoEnabledForMerchant: false
+          , confirmGotoCancel: false
+          , savedLocationCount: 0
+          }
+      , coinBalance: 0
+      , bannerData:
+          { bannerItem: Nothing
+          , currentBanner: 0
+          , bannerScrollState: "0"
+          , currentPage: 0
+          }
+      , prevLatLon: Nothing
+      , noOfLocations: 0
+      , isVehicleSupported: true
+      }
+  , props:
+      { isFreeRide: false
+      , arrivedAtStop: false
+      , statusOnline: true
+      , driverStatusSet: Online
+      , goOfflineModal: false
+      , screenName: "Home"
+      , rideActionModal: false
+      , updatedArrivalInChat: false
+      , enterOtpModal: false
+      , endRideOtpModal: false
+      , odometerValue: ""
+      , startRideOdometerImage: Nothing
+      , endRideOdometerImage: Nothing
+      , enterOdometerReadingModal: false
+      , endRideOdometerReadingModal: false
+      , isInvalidOdometer: false
+      , rideOtp: ""
+      , enterOtpFocusIndex: 0
+      , enterOdometerFocusIndex: 0
+      , time: 0
+      , otpIncorrect: false
+      , wrongVehicleVariant: false
+      , endRidePopUp: false
+      , cancelRideModalShow: false
+      , routeVisible: false
+      , otpAttemptsExceeded: false
+      , refreshAnimation: false
+      , showDottedRoute: false
+      , currentStage: HomeScreen
+      , mapRendered: false
+      , cancelConfirmationPopup: false
+      , chatcallbackInitiated: false
+      , sendMessageActive: false
+      , unReadMessages: false
+      , openChatScreen: false
+      , silentPopUpView: false
+      , zoneRideBooking: true
+      , showGenderBanner: false
+      , notRemoveBanner: true
+      , showBonusInfo: false
+      , showlinkAadhaarPopup: false
+      , showAadharPopUp: true
+      , canSendSuggestion: true
+      , showOffer: false
+      , rcActive: false
+      , rcDeactivePopup: false
+      , autoPayBanner: NO_SUBSCRIPTION_BANNER
+      , showAccessbilityPopup: false
+      , showRideCompleted: false
+      , showRideRating: false
+      , showContactSupportPopUp: false
+      , showChatBlockerPopUp: false
+      , subscriptionPopupType: NO_SUBSCRIPTION_POPUP
+      , showGenericAccessibilityPopUp: false
+      , waitTimeStatus: NoStatus
+      , isMockLocation: false
+      , accountBlockedPopup: false
+      , showCoinsPopup: false
+      , isStatsModelExpanded: false
+      , tobeLogged: false
+      , safetyAudioAutoPlay: false
+      , vehicleNSPopup: false
+      , bgLocationPopup: false
+      , specialZoneProps: { specialZonePopup: false, nearBySpecialZone: false, currentGeoHash: "" }
+      , rideStartTimer: 0
+      , odometerFileId: Nothing
+      , odometerUploadAttempts: 0
+      , odometerImageUploading: false
+      }
+  }
 
 dummyDriverRideStats :: DriverProfileStatsResp
-dummyDriverRideStats = DriverProfileStatsResp
-    {
-      totalRidesOfDay : 0
-    , totalEarningsOfDay : 0
-    , bonusEarning : 0
-    , coinBalance : 0
+dummyDriverRideStats =
+  DriverProfileStatsResp
+    { totalRidesOfDay: 0
+    , totalEarningsOfDay: 0
+    , bonusEarning: 0
+    , coinBalance: 0
     }
-
