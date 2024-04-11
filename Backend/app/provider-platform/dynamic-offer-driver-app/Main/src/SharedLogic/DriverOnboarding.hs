@@ -238,8 +238,8 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       updatedAt = now
     }
 
-makeVehicleAPIEntity :: Vehicle -> VehicleAPIEntity
-makeVehicleAPIEntity Vehicle {..} = VehicleAPIEntity {..}
+makeVehicleAPIEntity :: Maybe DVST.ServiceTierType -> Vehicle -> VehicleAPIEntity
+makeVehicleAPIEntity serviceTierType Vehicle {..} = VehicleAPIEntity {..}
 
 data CreateRCInput = CreateRCInput
   { registrationNumber :: Maybe Text,

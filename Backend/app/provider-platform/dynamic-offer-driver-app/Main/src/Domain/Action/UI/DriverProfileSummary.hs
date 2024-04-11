@@ -30,6 +30,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding as SD
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as BQ
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import Storage.Queries.DriverStats
@@ -105,6 +106,12 @@ getDriverProfileSummary (driverId, _, _) = do
             totalRides = driverStats.totalRides,
             missedEarnings = driverStats.earningsMissed
           }
+  mbDefaultServiceTier <-
+    case vehicleMB of
+      Nothing -> return Nothing
+      Just vehicle -> do
+        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
+        return ((.serviceTierType) <$> (find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers))
   return $
     DriverProfleSummaryRes
       { id = person.id,
@@ -114,7 +121,7 @@ getDriverProfileSummary (driverId, _, _) = do
         totalRidesAssigned = fromMaybe 0 driverStats.totalRidesAssigned,
         mobileNumber = decMobNum,
         rating = SP.roundToOneDecimal <$> person.rating,
-        linkedVehicle = SD.makeVehicleAPIEntity <$> vehicleMB,
+        linkedVehicle = SD.makeVehicleAPIEntity mbDefaultServiceTier <$> vehicleMB,
         totalDistanceTravelled = driverStats.totalDistance,
         language = person.language,
         alternateNumber = decaltMobNum,

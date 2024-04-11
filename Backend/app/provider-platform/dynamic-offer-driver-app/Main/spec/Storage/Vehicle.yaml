@@ -21,6 +21,7 @@ Vehicle:
     VehicleAPIEntity:
       driverId: Id Person
       variant: Variant
+      serviceTierType: Maybe ServiceTierType
       model: Text
       color: Text
       vehicleName: Maybe Text
