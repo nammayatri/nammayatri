@@ -235,7 +235,7 @@ onUpdate = \case
     bookingCancellationReason <- mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
     logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
 
-    _ <- QEstimate.updateStatus estimate.id DEstimate.DRIVER_QUOTE_REQUESTED
+    _ <- QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimate.id
     _ <- QRB.updateStatus booking.id DRB.REALLOCATED
     _ <- QRide.updateStatus ride.id DRide.CANCELLED
     _ <- QBCR.upsert bookingCancellationReason

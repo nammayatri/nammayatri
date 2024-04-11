@@ -11,18 +11,13 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 
-module Domain.Types.Estimate where
+module Domain.Action.UI.Estimate where
 
 import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson
 import Domain.Types.BppDetails
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.SearchRequest as DSearchRequest
-import qualified Domain.Types.TripTerms as DTripTerms
+import Domain.Types.Estimate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as Vehicle
 import Kernel.External.Maps
@@ -32,132 +27,9 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
-import Kernel.Utils.GenericPretty
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.ValueAddNP as QNP
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 import Tools.Error
-
-data Estimate = Estimate
-  { id :: Id Estimate,
-    requestId :: Id DSearchRequest.SearchRequest,
-    merchantId :: Maybe (Id DM.Merchant),
-    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
-    bppEstimateId :: Id BPPEstimate,
-    estimatedFare :: Price,
-    discount :: Maybe Price,
-    estimatedTotalFare :: Price,
-    totalFareRange :: FareRange,
-    estimatedDuration :: Maybe Seconds,
-    estimatedDistance :: Maybe Distance,
-    device :: Maybe Text,
-    providerId :: Text,
-    providerUrl :: BaseUrl,
-    providerName :: Text,
-    providerMobileNumber :: Text,
-    providerCompletedRidesCount :: Int,
-    vehicleServiceTierType :: DVST.VehicleServiceTierType,
-    itemId :: Text,
-    tripTerms :: Maybe DTripTerms.TripTerms,
-    estimateBreakupList :: [EstimateBreakup],
-    nightShiftInfo :: Maybe NightShiftInfo,
-    status :: EstimateStatus,
-    waitingCharges :: WaitingCharges,
-    driversLocation :: [LatLong],
-    specialLocationTag :: Maybe Text,
-    serviceTierName :: Maybe Text,
-    serviceTierShortDesc :: Maybe Text,
-    updatedAt :: UTCTime,
-    createdAt :: UTCTime,
-    clientBundleVersion :: Maybe Version,
-    clientSdkVersion :: Maybe Version,
-    clientConfigVersion :: Maybe Version,
-    clientDevice :: Maybe Device,
-    backendConfigVersion :: Maybe Version,
-    backendAppVersion :: Maybe Text,
-    validTill :: UTCTime
-  }
-  deriving (Generic, Show)
-
-data BPPEstimate
-
-data NightShiftInfo = NightShiftInfo
-  { nightShiftCharge :: Price,
-    oldNightShiftCharge :: Maybe Centesimal, -- TODO: this field works wrong, value in it not always make sense, it have to be removed later
-    nightShiftStart :: TimeOfDay,
-    nightShiftEnd :: TimeOfDay
-  }
-  deriving (Generic, Show)
-
-data NightShiftInfoAPIEntity = NightShiftInfoAPIEntity
-  { nightShiftCharge :: Money,
-    nightShiftChargeWithCurrency :: PriceAPIEntity,
-    oldNightShiftCharge :: Maybe Centesimal, -- TODO: this field works wrong, value in it not always make sense, it have to be removed later
-    nightShiftStart :: TimeOfDay,
-    nightShiftEnd :: TimeOfDay
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data EstimateBreakup = EstimateBreakup
-  { id :: Id EstimateBreakup,
-    estimateId :: Id Estimate,
-    title :: Text,
-    price :: EstimateBreakupPrice
-  }
-  deriving (Generic, Show, PrettyShow)
-
-newtype EstimateBreakupPrice = EstimateBreakupPrice
-  { value :: Price
-  }
-  deriving (Generic, Show, PrettyShow)
-
-data EstimateBreakupPriceAPIEntity = EstimateBreakupPriceAPIEntity
-  { currency :: Currency,
-    value :: Money
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, PrettyShow, ToSchema)
-
-data FareRange = FareRange
-  { minFare :: Price,
-    maxFare :: Price
-  }
-  deriving (Generic, Show, PrettyShow)
-
-data FareRangeAPIEntity = FareRangeAPIEntity
-  { minFare :: Money,
-    maxFare :: Money,
-    minFareWithCurrency :: PriceAPIEntity,
-    maxFareWithCurrency :: PriceAPIEntity
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-mkFareRangeAPIEntity :: FareRange -> FareRangeAPIEntity
-mkFareRangeAPIEntity FareRange {..} =
-  FareRangeAPIEntity
-    { minFare = minFare.amountInt,
-      maxFare = maxFare.amountInt,
-      minFareWithCurrency = mkPriceAPIEntity minFare,
-      maxFareWithCurrency = mkPriceAPIEntity maxFare
-    }
-
-newtype WaitingCharges = WaitingCharges
-  { waitingChargePerMin :: Maybe Price
-  }
-  deriving (Generic, Show)
-
-data WaitingChargesAPIEntity = WaitingChargesAPIEntity
-  { waitingChargePerMin :: Maybe Money,
-    waitingChargePerMinWithCurrency :: Maybe PriceAPIEntity
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-mkWaitingChargesAPIEntity :: WaitingCharges -> WaitingChargesAPIEntity
-mkWaitingChargesAPIEntity WaitingCharges {waitingChargePerMin} =
-  WaitingChargesAPIEntity
-    { waitingChargePerMin = waitingChargePerMin <&> (.amountInt),
-      waitingChargePerMinWithCurrency = mkPriceAPIEntity <$> waitingChargePerMin
-    }
 
 data EstimateAPIEntity = EstimateAPIEntity
   { id :: Id Estimate,
@@ -204,11 +76,6 @@ data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
     priceWithCurrency :: PriceAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-mkNightShiftInfoAPIEntity :: NightShiftInfo -> NightShiftInfoAPIEntity
-mkNightShiftInfoAPIEntity NightShiftInfo {..} = do
-  let nightShiftChargeWithCurrency = mkPriceAPIEntity nightShiftCharge
-  NightShiftInfoAPIEntity {nightShiftCharge = nightShiftCharge.amountInt, ..}
 
 mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Estimate -> m EstimateAPIEntity
 mkEstimateAPIEntity Estimate {..} = do
@@ -261,12 +128,49 @@ mkEstimateBreakupAPIEntity EstimateBreakup {..} = do
       priceWithCurrency = mkPriceAPIEntity price.value
     }
 
-data EstimateStatus = NEW | DRIVER_QUOTE_REQUESTED | CANCELLED | GOT_DRIVER_QUOTE | DRIVER_QUOTE_CANCELLED | COMPLETED
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data NightShiftInfoAPIEntity = NightShiftInfoAPIEntity
+  { nightShiftCharge :: Money,
+    nightShiftChargeWithCurrency :: PriceAPIEntity,
+    oldNightShiftCharge :: Maybe Centesimal, -- TODO: this field works wrong, value in it not always make sense, it have to be removed later
+    nightShiftStart :: TimeOfDay,
+    nightShiftEnd :: TimeOfDay
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''EstimateStatus)
+mkNightShiftInfoAPIEntity :: NightShiftInfo -> NightShiftInfoAPIEntity
+mkNightShiftInfoAPIEntity NightShiftInfo {..} = do
+  let nightShiftChargeWithCurrency = mkPriceAPIEntity nightShiftCharge
+  NightShiftInfoAPIEntity {nightShiftCharge = nightShiftCharge.amountInt, ..}
 
-$(mkHttpInstancesForEnum ''EstimateStatus)
+data WaitingChargesAPIEntity = WaitingChargesAPIEntity
+  { waitingChargePerMin :: Maybe Money,
+    waitingChargePerMinWithCurrency :: Maybe PriceAPIEntity
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+mkWaitingChargesAPIEntity :: WaitingCharges -> WaitingChargesAPIEntity
+mkWaitingChargesAPIEntity WaitingCharges {waitingChargePerMin} =
+  WaitingChargesAPIEntity
+    { waitingChargePerMin = waitingChargePerMin <&> (.amountInt),
+      waitingChargePerMinWithCurrency = mkPriceAPIEntity <$> waitingChargePerMin
+    }
+
+data FareRangeAPIEntity = FareRangeAPIEntity
+  { minFare :: Money,
+    maxFare :: Money,
+    minFareWithCurrency :: PriceAPIEntity,
+    maxFareWithCurrency :: PriceAPIEntity
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+mkFareRangeAPIEntity :: FareRange -> FareRangeAPIEntity
+mkFareRangeAPIEntity FareRange {..} =
+  FareRangeAPIEntity
+    { minFare = minFare.amountInt,
+      maxFare = maxFare.amountInt,
+      minFareWithCurrency = mkPriceAPIEntity minFare,
+      maxFareWithCurrency = mkPriceAPIEntity maxFare
+    }
 
 isCancelled ::
   EstimateStatus ->
