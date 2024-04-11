@@ -30,6 +30,7 @@ import Data.Int(fromString)
 data KeyStore = USER_NAME
                 | FCM_TOKEN
                 | REGISTERATION_TOKEN
+                | REGISTERATION_TOKEN_FALLBACK
                 | VERSION_NAME
                 | BASE_URL
                 | TEST_FLOW_FOR_REGISTRATOION

@@ -151,7 +151,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
     liftFlowBT $ markPerformance "BASE_APP_FLOW_START"
     liftFlowBT $ Events.endMeasuringDuration "Flow.mainFlow"
     liftFlowBT $ Events.initMeasuringDuration "Flow.baseAppFlow"
-    liftFlowBT $ setEventTimestamp "baseAppFlow"    
+    liftFlowBT $ setEventTimestamp "baseAppFlow"
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     liftFlowBT $ runEffectFn1 EHC.resetIdMap ""
     liftFlowBT $ resetAllTimers
@@ -225,10 +225,15 @@ baseAppFlow baseFlow event driverInfoResponse = do
       liftFlowBT $ Events.initMeasuringDuration "Flow.initialFlow"
       config <- getAppConfigFlowBT Constants.appConfig
       let regToken = getValueToLocalStore REGISTERATION_TOKEN
+          tempToken = getValueToLocalStore REGISTERATION_TOKEN_FALLBACK
+      if (regToken == "__failed" && tempToken /= "__failed") then do
+        setValueToLocalStore REGISTERATION_TOKEN $ tempToken
+      else do
+        pure unit
       isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
       liftFlowBT $ Events.endMeasuringDuration "Flow.initialFlow"
       liftFlowBT $ markPerformance "INITIAL_FLOW_END"
-      if isTokenValid regToken then do
+      if isTokenValid (getValueToLocalStore REGISTERATION_TOKEN) then do
         -- setValueToLocalNativeStore REGISTERATION_TOKEN regToken -- Redundant, Can be removed as 201 already gets what we set again.
         checkRideAndInitiate event driverInfoResponse
       else if not config.flowConfig.chooseCity.runFlow then
@@ -388,7 +393,8 @@ enterOTPFlow = do
           pure unit
       setValueToLocalStore DRIVER_ID driverId
       void $ liftFlowBT $ setCleverTapUserData "Identity" (getValueToLocalStore DRIVER_ID)
-      setValueToLocalStore REGISTERATION_TOKEN resp.token -- add from response
+      setValueToLocalStore REGISTERATION_TOKEN resp.token
+      setValueToLocalStore REGISTERATION_TOKEN_FALLBACK resp.token
       if (getValueToLocalStore REFERRER_URL) == "__failed" then
         void $ pure $ JB.extractReferrerUrl unit
       else pure unit
