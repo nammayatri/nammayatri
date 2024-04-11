@@ -6,6 +6,4 @@ ALTER TABLE atlas_app.estimate ADD COLUMN waiting_charge_per_min_amount double p
 
 ALTER TABLE atlas_app.estimate_breakup ADD COLUMN currency character varying(255);
 
-ALTER TABLE atlas_app.fare_breakup ADD COLUMN currency character varying(255);
-
 ALTER TABLE atlas_app.quote ADD COLUMN currency character varying(255);

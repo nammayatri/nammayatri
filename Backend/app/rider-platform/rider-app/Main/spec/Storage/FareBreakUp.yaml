@@ -1,0 +1,56 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Booking: Domain.Types.Booking
+  Price: Kernel.Types.Common
+  PriceAPIEntity: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+
+FareBreakup:
+  derives: "Show"
+
+  fields:
+    id: Id FareBreakup
+    bookingId: Id Booking
+    description: Text
+    amount: Price
+
+  excludedFields:
+    - updatedAt
+    - createdAt
+    - merchantId
+    - merchantOperatingCityId
+
+  beamFields:
+    amount:
+      amount: HighPrecMoney
+      currency: Maybe Currency
+
+  toTType:
+    amount: ((.amount) amount)|E
+    currency: (Just $ (.currency) amount)|E
+
+  fromTType:
+    amount: Kernel.Types.Common.mkPrice currency amount|E
+
+  types:
+    FareBreakupAPIEntity:
+      description: Text
+      amount: HighPrecMoney
+      amountWithCurrency: PriceAPIEntity
+      derive': "Generic, Show, FromJSON, ToJSON, ToSchema"
+
+  constraints:
+    bookingId: SecondaryKey
+
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  sqlType:
+    currency: character varying(255)
+
+  default: {}

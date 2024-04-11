@@ -74,13 +74,6 @@ WHERE
 
 DROP TABLE atlas_app.quote_terms;
 
-CREATE TABLE atlas_app.fare_breakup (
-    id character(36) NOT NULL PRIMARY KEY,
-    ride_booking_id character(36) NOT NULL REFERENCES atlas_app.ride_booking (id),
-    description text NOT NULL,
-    amount double precision NOT NULL
-);
-
 ALTER TABLE
     atlas_app.quote
 ADD
