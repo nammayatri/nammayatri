@@ -1,33 +1,18 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.Merchant.MerchantServiceConfig
-  {-# WARNING
-    "This module contains direct calls to the table. \
-  \ But most likely you need a version from CachedQueries with caching results feature."
-    #-}
-where
+module Storage.Queries.Transformers.MerchantServiceConfig where
 
+import qualified Data.Aeson
 import qualified Data.Aeson as A
-import Domain.Types.Merchant as DOrg
-import Domain.Types.Merchant.MerchantServiceConfig
-import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
-import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Extra.MerchantServiceConfig
+import qualified Domain.Types.Merchant
+import Domain.Types.MerchantServiceConfig
+import qualified Domain.Types.MerchantServiceConfig as Domain
 import Kernel.Beam.Functions
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
+import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
@@ -36,68 +21,12 @@ import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
-import Kernel.Prelude as P
-import Kernel.Types.Common
+import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Sequelize as Se
-import qualified Storage.Beam.Merchant.MerchantServiceConfig as BeamMSC
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import Tools.Error
-
--- create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantServiceConfig -> m ()
--- create = createWithKV
-
--- findAllMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [MerchantServiceConfig]
--- findAllMerchantOpCityId (Id merchantOperatingCityId) = findAllWithKV [Se.Is BeamMSC.merchantOperatingCityId $ Se.Eq $ Just merchantOperatingCityId]
-
-findByMerchantOpCityIdAndService ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
-  Id Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  ServiceName ->
-  m (Maybe MerchantServiceConfig)
-findByMerchantOpCityIdAndService (Id merchantId) (Id merchantOperatingCity) serviceName = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is BeamMSC.merchantId $ Se.Eq merchantId,
-          Se.Is BeamMSC.merchantOperatingCityId $ Se.Eq merchantOperatingCity,
-          Se.Is BeamMSC.serviceName $ Se.Eq serviceName
-        ]
-    ]
-
-upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
-upsertMerchantServiceConfig merchantServiceConfig = do
-  now <- getCurrentTime
-  let (_serviceName, configJSON) = BeamMSC.getServiceNameConfigJSON merchantServiceConfig.serviceConfig
-  res <- findByMerchantOpCityIdAndService merchantServiceConfig.merchantId merchantServiceConfig.merchantOperatingCityId _serviceName
-  if isJust res
-    then
-      updateWithKV
-        [Se.Set BeamMSC.configJSON configJSON, Se.Set BeamMSC.updatedAt now]
-        [ Se.And
-            [ Se.Is BeamMSC.merchantId $ Se.Eq $ getId merchantServiceConfig.merchantId,
-              Se.Is BeamMSC.merchantOperatingCityId $ Se.Eq $ getId merchantServiceConfig.merchantOperatingCityId
-            ]
-        ]
-    else createWithKV merchantServiceConfig
-
-instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
-  fromTType' BeamMSC.MerchantServiceConfigT {..} = do
-    serviceConfig <- getServiceConfigFromDomain serviceName configJSON
-    pure $
-      Just
-        MerchantServiceConfig
-          { merchantId = Id merchantId,
-            merchantOperatingCityId = Id merchantOperatingCityId,
-            serviceConfig = serviceConfig,
-            updatedAt = updatedAt,
-            createdAt = createdAt
-          }
-
-valueToMaybe :: FromJSON a => A.Value -> Maybe a
-valueToMaybe value = case A.fromJSON value of
-  A.Success a -> Just a
-  _ -> Nothing
 
 getServiceConfigFromDomain :: (MonadFlow m) => Domain.ServiceName -> A.Value -> m Domain.ServiceConfig
 getServiceConfigFromDomain serviceName configJSON = do
@@ -120,16 +49,10 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.MetroPaymentService Payment.Juspay -> Domain.MetroPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
     Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
 
-instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
-  toTType' MerchantServiceConfig {..} =
-    BeamMSC.MerchantServiceConfigT
-      { BeamMSC.merchantId = getId merchantId,
-        BeamMSC.merchantOperatingCityId = getId merchantOperatingCityId,
-        BeamMSC.serviceName = fst $ getServiceNameConfigJson serviceConfig,
-        BeamMSC.configJSON = snd $ getServiceNameConfigJson serviceConfig,
-        BeamMSC.updatedAt = updatedAt,
-        BeamMSC.createdAt = createdAt
-      }
+valueToMaybe :: FromJSON a => A.Value -> Maybe a
+valueToMaybe value = case A.fromJSON value of
+  A.Success a -> Just a
+  _ -> Nothing
 
 getServiceNameConfigJson :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
 getServiceNameConfigJson = \case

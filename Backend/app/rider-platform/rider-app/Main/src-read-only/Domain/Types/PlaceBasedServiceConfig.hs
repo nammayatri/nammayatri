@@ -6,8 +6,8 @@ module Domain.Types.PlaceBasedServiceConfig where
 
 import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantServiceConfig
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.TicketPlace
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -17,7 +17,7 @@ data PlaceBasedServiceConfigD (s :: UsageSafety) = PlaceBasedServiceConfig
   { merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     placeId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
-    serviceConfig :: Domain.Types.Merchant.MerchantServiceConfig.ServiceConfigD s,
+    serviceConfig :: Domain.Types.MerchantServiceConfig.ServiceConfigD s,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

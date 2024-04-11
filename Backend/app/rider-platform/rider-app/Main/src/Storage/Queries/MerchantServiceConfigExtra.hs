@@ -1,26 +1,17 @@
-{-
-  Copyright 2022-23, Juspay India Pvt Ltd
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
-  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
-  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
-  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
-  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
-  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
-
-module Storage.Beam.Merchant.MerchantServiceConfig where
+module Storage.Queries.MerchantServiceConfigExtra where
 
 import qualified Data.Aeson as A
-import qualified Database.Beam as B
-import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
+import Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.MerchantServiceConfig
+import qualified Domain.Types.MerchantServiceConfig as Domain
+import Kernel.Beam.Functions
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import qualified Kernel.External.Call as Call
+import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
@@ -30,25 +21,44 @@ import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Sequelize as Se
+import qualified Storage.Beam.MerchantServiceConfig as BeamMSC
+import Storage.Queries.OrphanInstances.MerchantServiceConfig
 
-data MerchantServiceConfigT f = MerchantServiceConfigT
-  { merchantId :: B.C f Text,
-    merchantOperatingCityId :: B.C f Text,
-    serviceName :: B.C f Domain.ServiceName,
-    configJSON :: B.C f A.Value,
-    updatedAt :: B.C f UTCTime,
-    createdAt :: B.C f UTCTime
-  }
-  deriving (Generic, B.Beamable)
+-- Extra code goes here --
+findByMerchantOpCityIdAndService ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  ServiceName ->
+  m (Maybe MerchantServiceConfig)
+findByMerchantOpCityIdAndService (Id merchantId) (Id merchantOperatingCity) serviceName = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamMSC.merchantId $ Se.Eq merchantId,
+          Se.Is BeamMSC.merchantOperatingCityId $ Se.Eq merchantOperatingCity,
+          Se.Is BeamMSC.serviceName $ Se.Eq serviceName
+        ]
+    ]
 
-instance B.Table MerchantServiceConfigT where
-  data PrimaryKey MerchantServiceConfigT f
-    = Id (B.C f Text)
-    deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantId
-
-type MerchantServiceConfig = MerchantServiceConfigT Identity
+upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
+upsertMerchantServiceConfig merchantServiceConfig = do
+  now <- getCurrentTime
+  let (_serviceName, configJSON) = getServiceNameConfigJSON merchantServiceConfig.serviceConfig
+  res <- findByMerchantOpCityIdAndService merchantServiceConfig.merchantId merchantServiceConfig.merchantOperatingCityId _serviceName
+  if isJust res
+    then
+      updateWithKV
+        [Se.Set BeamMSC.configJSON configJSON, Se.Set BeamMSC.updatedAt now]
+        [ Se.And
+            [ Se.Is BeamMSC.merchantId $ Se.Eq $ getId merchantServiceConfig.merchantId,
+              Se.Is BeamMSC.merchantOperatingCityId $ Se.Eq $ getId merchantServiceConfig.merchantOperatingCityId
+            ]
+        ]
+    else createWithKV merchantServiceConfig
 
 getServiceNameConfigJSON :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
 getServiceNameConfigJSON = \case
@@ -77,7 +87,3 @@ getServiceNameConfigJSON = \case
     Payment.JuspayConfig cfg -> (Domain.MetroPaymentService Payment.Juspay, toJSON cfg)
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
-
-$(enableKVPG ''MerchantServiceConfigT ['merchantId, 'serviceName] [])
-
-$(mkTableInstances ''MerchantServiceConfigT "merchant_service_config")

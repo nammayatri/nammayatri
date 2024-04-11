@@ -211,6 +211,7 @@ library
       Domain.Types.Extra.Booking
       Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.MerchantPaymentMethod
+      Domain.Types.Extra.MerchantServiceConfig
       Domain.Types.Extra.PlaceNameCache
       Domain.Types.Extra.RentalDetails
       Domain.Types.FarePolicy.FareProductType
@@ -219,7 +220,6 @@ library
       Domain.Types.HotSpot
       Domain.Types.LocationAddress
       Domain.Types.Merchant
-      Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
       Domain.Types.Person.PersonDisability
@@ -265,7 +265,6 @@ library
       Storage.Beam.Geometry.GeometryGeom
       Storage.Beam.IssueManagement
       Storage.Beam.Merchant
-      Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Payment
       Storage.Beam.Person
       Storage.Beam.Person.PersonDefaultEmergencyNumber
@@ -325,8 +324,8 @@ library
       Storage.Queries.IssueExtra
       Storage.Queries.LocationMappingExtra
       Storage.Queries.Merchant
-      Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.MerchantPaymentMethodExtra
+      Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.MerchantServiceUsageConfigExtra
       Storage.Queries.Person
       Storage.Queries.Person.PersonDefaultEmergencyNumber
@@ -346,6 +345,7 @@ library
       Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.Transformers.MerchantMessage
       Storage.Queries.Transformers.MerchantPaymentMethod
+      Storage.Queries.Transformers.MerchantServiceConfig
       Storage.Queries.Transformers.RentalDetails
       Storage.Queries.Transformers.SearchReqLocation
       Storage.Queries.Transformers.SearchRequest
@@ -411,6 +411,7 @@ library
       Domain.Types.MerchantMessage
       Domain.Types.MerchantOperatingCity
       Domain.Types.MerchantPaymentMethod
+      Domain.Types.MerchantServiceConfig
       Domain.Types.MerchantServiceUsageConfig
       Domain.Types.MerchantState
       Domain.Types.NotificationSoundsConfig
@@ -467,6 +468,7 @@ library
       Storage.Beam.MerchantMessage
       Storage.Beam.MerchantOperatingCity
       Storage.Beam.MerchantPaymentMethod
+      Storage.Beam.MerchantServiceConfig
       Storage.Beam.MerchantServiceUsageConfig
       Storage.Beam.MerchantState
       Storage.Beam.NotificationSoundsConfig
@@ -523,6 +525,7 @@ library
       Storage.Queries.MerchantMessage
       Storage.Queries.MerchantOperatingCity
       Storage.Queries.MerchantPaymentMethod
+      Storage.Queries.MerchantServiceConfig
       Storage.Queries.MerchantServiceUsageConfig
       Storage.Queries.MerchantState
       Storage.Queries.NotificationSoundsConfig
@@ -535,6 +538,7 @@ library
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.LocationMapping
       Storage.Queries.OrphanInstances.MerchantPaymentMethod
+      Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.MerchantServiceUsageConfig
       Storage.Queries.OrphanInstances.PersonStats
       Storage.Queries.OrphanInstances.PlaceBasedServiceConfig

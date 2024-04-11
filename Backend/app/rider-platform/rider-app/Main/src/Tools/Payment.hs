@@ -25,8 +25,8 @@ where
 import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.TicketPlace
 import Kernel.External.Payment.Interface as Reexport hiding
   ( createOrder,

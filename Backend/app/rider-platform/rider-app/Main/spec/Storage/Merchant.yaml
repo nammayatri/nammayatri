@@ -9,54 +9,44 @@ imports:
   SmsService: Kernel.External.SMS.Types
   WhatsappService: Kernel.External.Whatsapp.Types
   IssueTicketService: Kernel.External.Ticket.Types
-#   MapsServiceConfig: Kernel.External.Maps
-#   SmsServiceConfig: Kernel.External.SMS
-#   WhatsappServiceConfig: Kernel.External.Whatsapp.Interface
-#   AadhaarVerificationServiceConfig: Kernel.External.AadhaarVerification
-#   CallServiceConfig: Kernel.External.Call
-#   NotificationServiceConfig: Kernel.External.Notification
-#   PaymentServiceConfig: Kernel.External.Payment.Interface
-#   IssueTicketServiceConfig: Kernel.External.Ticket.Interface.Types
 
-# MerchantServiceConfig:
-#   derives: "Generic,'UsageSafety"
+MerchantServiceConfig:
+  derives: "Generic,'UsageSafety"
 
-#   type:
-#     ServiceConfig:
-#       enum: "MapsServiceConfig MapsServiceConfig,SmsServiceConfig SmsServiceConfig,WhatsappServiceConfig WhatsappServiceConfig,AadhaarVerificationServiceConfig AadhaarVerificationServiceConfig,CallServiceConfig CallServiceConfig,NotificationServiceConfig NotificationServiceConfig,PaymentServiceConfig PaymentServiceConfig,MetroPaymentServiceConfig PaymentServiceConfig,IssueTicketServiceConfig IssueTicketServiceConfig"
-#       derive': "Generic,Eq,'UsageSafety"
-#   fields:
-#     merchantId: Id Merchant
-#     merchantOperatingCityId: Id MerchantOperatingCity
-#     serviceConfig: ServiceConfigD s
-#     updatedAt: UTCTime
-#     createdAt: UTCTime
+  fields:
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    serviceConfig: Domain.Types.Extra.MerchantServiceConfig.ServiceConfigD s
+    updatedAt: UTCTime
+    createdAt: UTCTime
 
-#   beamFields:
-#     serviceConfig:
-#       serviceName: Domain.Types.Merchant.MerchantServiceConfig
-#       configJSON: Data.Aeson.Value
+  beamFields:
+    serviceConfig:
+      serviceName: Domain.Types.MerchantServiceConfig.ServiceName
+      configJSON: Data.Aeson.Value
+  sqlType:
+    serviceName: character varying(30)
+    configJSON: json
+  constraints:
+    merchantId: PrimaryKey
+    serviceName: PrimaryKey
 
-#   constraints:
-#     merchantId: PrimaryKey
-#     serviceName: PrimaryKey
+  fromTType:
+    serviceConfig: Storage.Queries.Transformers.MerchantServiceConfig.getServiceConfigFromDomain serviceName configJSON|EM
 
-#   fromTType:
-#     serviceConfig: getServiceConfigFromDomain|M
+  toTType:
+    serviceName: (fst $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig)|E
+    configJSON: (snd $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig)|E
 
-#   toTType:
-#     serviceName: (fst $ Storage.Queries.MerchantServiceConfigExtra.getServiceNameConfigJson serviceConfig)|E
-#     configJSON: (snd $ Storage.Queries.MerchantServiceConfigExtra.getServiceNameConfigJson serviceConfig)|E
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE
 
-#   extraOperations:
-#     - EXTRA_DOMAIN_TYPE_FILE
-#     - EXTRA_QUERY_FILE
-
-#   excludedDefaultQueries:
-#     - create
-#     - createMany
-#     - findByPrimaryKey
-#     - updateByPrimaryKey
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - findByPrimaryKey
+    - updateByPrimaryKey
 
 MerchantServiceUsageConfig:
 

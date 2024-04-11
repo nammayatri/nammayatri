@@ -1,20 +1,9 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.Merchant.MerchantServiceConfig where
+module Domain.Types.Extra.MerchantServiceConfig where
 
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
@@ -38,6 +27,7 @@ import Kernel.Types.Id
 import qualified Text.Show as Show
 import Tools.Beam.UtilsTH
 
+-- Extra code goes here --
 data ServiceName
   = MapsService Maps.MapsService
   | SmsService Sms.SmsService
@@ -127,63 +117,3 @@ type ServiceConfig = ServiceConfigD 'Safe
 instance FromJSON (ServiceConfigD 'Unsafe)
 
 instance ToJSON (ServiceConfigD 'Unsafe)
-
-data MerchantServiceConfigD (s :: UsageSafety) = MerchantServiceConfig
-  { merchantId :: Id Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    serviceConfig :: ServiceConfigD s,
-    updatedAt :: UTCTime,
-    createdAt :: UTCTime
-  }
-  deriving (Generic)
-
-type MerchantServiceConfig = MerchantServiceConfigD 'Safe
-
-instance FromJSON (MerchantServiceConfigD 'Unsafe)
-
-instance ToJSON (MerchantServiceConfigD 'Unsafe)
-
-getServiceName :: MerchantServiceConfig -> ServiceName
-getServiceName msc = case msc.serviceConfig of
-  MapsServiceConfig mapsCfg -> case mapsCfg of
-    Maps.GoogleConfig _ -> MapsService Maps.Google
-    Maps.OSRMConfig _ -> MapsService Maps.OSRM
-    Maps.MMIConfig _ -> MapsService Maps.MMI
-    Maps.NextBillionConfig _ -> MapsService Maps.NextBillion
-  SmsServiceConfig smsCfg -> case smsCfg of
-    Sms.ExotelSmsConfig _ -> SmsService Sms.ExotelSms
-    Sms.MyValueFirstConfig _ -> SmsService Sms.MyValueFirst
-    Sms.GupShupConfig _ -> SmsService Sms.GupShup
-  WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
-    Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
-  AadhaarVerificationServiceConfig aadhaarVerifictaionCfg -> case aadhaarVerifictaionCfg of
-    AadhaarVerification.GridlineConfig _ -> AadhaarVerificationService AadhaarVerification.Gridline
-  CallServiceConfig callCfg -> case callCfg of
-    Call.ExotelConfig _ -> CallService Call.Exotel
-  NotificationServiceConfig notificationCfg -> case notificationCfg of
-    Notification.FCMConfig _ -> NotificationService Notification.FCM
-    Notification.PayTMConfig _ -> NotificationService Notification.PayTM
-    Notification.GRPCConfig _ -> NotificationService Notification.GRPC
-  PaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig _ -> PaymentService Payment.Juspay
-  MetroPaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig _ -> MetroPaymentService Payment.Juspay
-  IssueTicketServiceConfig ticketCfg -> case ticketCfg of
-    Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
-
-buildMerchantServiceConfig ::
-  MonadTime m =>
-  Id Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  ServiceConfig ->
-  m MerchantServiceConfig
-buildMerchantServiceConfig merchantId merchantOperatingCityId serviceConfig = do
-  now <- getCurrentTime
-  pure
-    MerchantServiceConfig
-      { merchantId,
-        serviceConfig,
-        merchantOperatingCityId,
-        updatedAt = now,
-        createdAt = now
-      }

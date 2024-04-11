@@ -7,8 +7,7 @@ module Storage.Beam.PlaceBasedServiceConfig where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantServiceConfig
+import qualified Domain.Types.MerchantServiceConfig
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -19,7 +18,7 @@ data PlaceBasedServiceConfigT f = PlaceBasedServiceConfigT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     placeId :: B.C f Kernel.Prelude.Text,
     configValue :: B.C f Data.Aeson.Value,
-    serviceName :: B.C f Domain.Types.Merchant.MerchantServiceConfig.ServiceName,
+    serviceName :: B.C f Domain.Types.MerchantServiceConfig.ServiceName,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

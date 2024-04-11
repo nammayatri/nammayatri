@@ -3,7 +3,7 @@
 
 module Storage.Queries.PlaceBasedServiceConfigExtra where
 
-import qualified Domain.Types.Merchant.MerchantServiceConfig
+import qualified Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.PlaceBasedServiceConfig
 import qualified Domain.Types.TicketPlace
 import Kernel.Beam.Functions
@@ -16,7 +16,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.PlaceBasedServiceConfig as Beam
 import Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
 
-findByPlaceIdAndServiceName :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Domain.Types.Merchant.MerchantServiceConfig.ServiceName -> m (Maybe (Domain.Types.PlaceBasedServiceConfig.PlaceBasedServiceConfig))
+findByPlaceIdAndServiceName :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Domain.Types.MerchantServiceConfig.ServiceName -> m (Maybe (Domain.Types.PlaceBasedServiceConfig.PlaceBasedServiceConfig))
 findByPlaceIdAndServiceName (Kernel.Types.Id.Id placeId) serviceName = do
   findOneWithKV
     [ Se.And

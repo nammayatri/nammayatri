@@ -1,10 +1,10 @@
 imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  ServiceConfigD: Domain.Types.Merchant.MerchantServiceConfig
+  ServiceConfigD: Domain.Types.MerchantServiceConfig
   TicketPlace: Domain.Types.TicketPlace
   Value: Data.Aeson
-  ServiceName: Domain.Types.Merchant.MerchantServiceConfig
+  ServiceName: Domain.Types.MerchantServiceConfig
 
 PlaceBasedServiceConfig:
   tableName: place_based_service_config
@@ -29,11 +29,11 @@ PlaceBasedServiceConfig:
     configValue: json
 
   toTType:
-    serviceName: fst $ Storage.Queries.Merchant.MerchantServiceConfig.getServiceNameConfigJson serviceConfig|E
-    configValue: snd $ Storage.Queries.Merchant.MerchantServiceConfig.getServiceNameConfigJson serviceConfig|E
+    serviceName: fst $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig|E
+    configValue: snd $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig|E
 
   fromTType:
-    serviceConfig: Storage.Queries.Merchant.MerchantServiceConfig.getServiceConfigFromDomain serviceName configValue|EM
+    serviceConfig: Storage.Queries.Transformers.MerchantServiceConfig.getServiceConfigFromDomain serviceName configValue|EM
 
   excludedDefaultQueries:
     - updateByPrimaryKey
