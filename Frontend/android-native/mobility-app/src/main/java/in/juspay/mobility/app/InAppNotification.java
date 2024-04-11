@@ -50,7 +50,7 @@ public class InAppNotification extends AppCompatActivity {
     public void generateNotification(String title, String message, String onTapAction, String action1Text, String action2Text, String action1Image, String action2Image, String channelId, int durationInMilliSeconds) throws JSONException {
         Notification notification;
         // if channel id is not in our channels then we will create new channelId and attach layout for this channelId
-        if (!notificationChannels.has(channelId)) {
+        if (!notificationChannels.has(channelId) && mainLayout != null) {
             notification = new Notification(channelId);
             notification.attachEventListenerToNotification(onTapAction);
 
@@ -61,7 +61,9 @@ public class InAppNotification extends AppCompatActivity {
             notification = (Notification) notificationChannels.get(channelId);
         }
 
-        notification.bringToFront();
+        if (mainLayout != null)
+            mainLayout.bringToFront();
+
         // if stack of notification is empty or the notification ( channelId ) which is visible on the front is not equals to new channelId then we will start animation else we will just change the content .
         if (notificationStack.isEmpty() || !notificationStack.get(notificationStack.size() - 1).equals(channelId)) {
             notification.view.startAnimation(AnimationUtils.loadAnimation(context, R.anim.top_to_bottom));

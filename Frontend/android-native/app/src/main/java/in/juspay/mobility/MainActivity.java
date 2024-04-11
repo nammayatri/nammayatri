@@ -428,17 +428,19 @@ public class MainActivity extends AppCompatActivity {
             }
             View splash = findViewById(R.id.splash);
             LottieAnimationView splashLottie = splash.findViewById(R.id.splash_lottie);
-            if (!city.equals("__failed")) {
-                skipDefaultSplash = setSplashAnimAndStart(splashLottie,city.toLowerCase());
-            }
-            if (!skipDefaultSplash) {
-                if ((splashLottie.getTag() != null) && splashLottie.getTag().equals("autoStart")) {
-                    splashLottie.setVisibility(View.VISIBLE);
-                    splashLottie.setRepeatCount(ValueAnimator.INFINITE);
-                    splashLottie.playAnimation();
+            if (splashLottie != null) {
+                if (!city.equals("__failed")) {
+                    skipDefaultSplash = setSplashAnimAndStart(splashLottie, city.toLowerCase());
                 }
+                if (!skipDefaultSplash) {
+                    if ((splashLottie.getTag() != null) && splashLottie.getTag().equals("autoStart")) {
+                        splashLottie.setVisibility(View.VISIBLE);
+                        splashLottie.setRepeatCount(ValueAnimator.INFINITE);
+                        splashLottie.playAnimation();
+                    }
+                }
+                splash.setVisibility(View.VISIBLE);
             }
-            splash.setVisibility(View.VISIBLE);
         } catch (Exception e){
             Bundle bundle = new Bundle();
             bundle.putString("Exception",e.toString());
