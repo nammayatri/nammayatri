@@ -360,7 +360,7 @@ listItem push item state =
     , orientation HORIZONTAL
     , padding $ Padding 12 12 12 12
     , cornerRadius 8.0
-    , visibility $ boolToVisibility $ cardVisibility item state
+    , visibility $ boolToVisibility $ not item.isHidden
     , stroke $ componentStroke state item
     , background $ compBg state item
     , clickable $ compClickable state item
@@ -454,7 +454,6 @@ listItem push item state =
         case item.stage of
           ST.DRIVING_LICENSE_OPTION -> state.props.limitReachedFor == Just "DL" || any (_ == state.data.drivingLicenseStatus) [COMPLETED, IN_PROGRESS]
           ST.GRANT_PERMISSION -> state.data.permissionsStatus == COMPLETED
-          ST.SUBSCRIPTION_PLAN -> state.data.subscriptionStatus == COMPLETED
           _ -> (getStatus item.stage state) == ST.COMPLETED
 
       compAlpha :: ST.RegistrationScreenState -> ST.StepProgress -> Number
@@ -476,12 +475,6 @@ listItem push item state =
                 in case currentDoc of
                     Just doc -> doc.verificationMessage
                     _ -> Nothing
-
-      cardVisibility :: ST.StepProgress -> ST.RegistrationScreenState -> Boolean
-      cardVisibility item state = 
-        case item.stage of
-          SUBSCRIPTION_PLAN -> not item.isHidden && (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true") && state.data.config.bottomNavConfig.subscription.isVisible
-          _ -> not item.isHidden
 
 
 popupModal :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w

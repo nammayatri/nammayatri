@@ -612,15 +612,15 @@ onBoardingFlow = do
   logField_ <- lift $ lift $ getLogFields
   void $ pure $ hideKeyboardOnNavigation true
   config <- getAppConfigFlowBT Constants.appConfig
+  GlobalState allState <- getState
+  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq { }
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-  (GlobalState allState) <- getState
-  let registrationState = allState.registrationScreen
+      registrationState = allState.registrationScreen
+      driverEnabled = fromMaybe false driverRegistrationResp.enabled
   permissions <- checkAllPermissions false config.permissions.locationPermission
-  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState allState) false
-  (DriverRegistrationStatusResp driverRegistrationResp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
   if isNothing allState.globalProps.onBoardingDocs then updateOnboardingDocs registrationState.props.manageVehicle else pure unit
-  (GlobalState updatedGs) <- getState
-  if DA.all (_ == ST.COMPLETED) [ registrationState.data.vehicleDetailsStatus, registrationState.data.drivingLicenseStatus, registrationState.data.permissionsStatus ] && config.feature.enableAutoReferral && (cityConfig.showDriverReferral || config.enableDriverReferral) 
+  GlobalState updatedGs <- getState
+  if driverEnabled && config.feature.enableAutoReferral && (cityConfig.showDriverReferral || config.enableDriverReferral) 
     then do
       let referralCode = getReferralCode (getValueToLocalStore REFERRER_URL)
       if getValueToLocalStore REFERRAL_CODE_ADDED /= "true" && isJust referralCode 
@@ -665,15 +665,10 @@ onBoardingFlow = do
                       variantList = variantList,
                       linkedRc = rcNo,
                       vehicleTypeMismatch = vehicleTypeMismatch,
-                      permissionsStatus = case permissions of
-                        true -> ST.COMPLETED
-                        false -> ST.NOT_STARTED,
-                      subscriptionStatus = case getDriverInfoResp.autoPayStatus of
-                        Just status -> if status == "ACTIVE" then ST.COMPLETED else ST.IN_PROGRESS
-                        Nothing -> ST.NOT_STARTED,
+                      permissionsStatus = if permissions then ST.COMPLETED else ST.NOT_STARTED,
                       cityConfig = cityConfig,
                       vehicleCategory = uiCurrentCategory
-                  }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = fromMaybe false driverRegistrationResp.enabled}})
+                  }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = driverEnabled}})
   liftFlowBT hideSplash
   flow <- UI.registration
   case flow of
@@ -2746,18 +2741,6 @@ nyPaymentFlow planCardConfig fromScreen = do
             _ -> setSubscriptionStatus Pending statusResp.status planCardConfig
         Left err -> setSubscriptionStatus Pending PS.PENDING_VBV planCardConfig
     Left (errorPayload) -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
-  getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
-  case getDriverInfoApiResp of
-    Right resp -> do
-      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
-      let (GetDriverInfoResp getDriverInfoResp) = resp
-      if fromScreen == "ONBOARDING" then
-        modifyScreenState $ RegisterScreenStateType (\registerScreen -> registerScreen { data {subscriptionStatus = case getDriverInfoResp.autoPayStatus of
-                                                                                                                  Nothing -> ST.NOT_STARTED
-                                                                                                                  Just status -> if status == "ACTIVE" then ST.COMPLETED else ST.IN_PROGRESS }})
-      else pure unit
-    Left _ -> pure unit
-  updateDriverDataToStates
   if fromScreen == "ONBOARDING" then
     onBoardingFlow
   else

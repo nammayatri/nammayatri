@@ -350,7 +350,7 @@ window.getMerchantConfig = function () {
       "showEarningSection" : true,
       "registration" : {
           "supportWAN" : "",
-          "callSupport" : false,
+          "callSupport" : true,
           "whatsappSupport" : false
       },
       "variantSubscriptionConfig" : {

@@ -43,7 +43,6 @@ initData = {
         drivingLicenseStatus : NOT_STARTED,
         vehicleDetailsStatus : NOT_STARTED,
         permissionsStatus : NOT_STARTED,
-        subscriptionStatus : NOT_STARTED,
         vehicleTypeMismatch : false,
         documentStatusList : [],
         variantList : [],

@@ -268,7 +268,6 @@ type RegistrationScreenData = {
   drivingLicenseStatus :: StageStatus,
   vehicleDetailsStatus :: StageStatus,
   permissionsStatus :: StageStatus,
-  subscriptionStatus :: StageStatus,
   documentStatusList :: Array DocumentStatus,
   variantList :: Array VehicleCategory,
   lastUpdateTime :: String,
