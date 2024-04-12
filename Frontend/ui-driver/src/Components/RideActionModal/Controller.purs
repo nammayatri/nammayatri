@@ -17,10 +17,13 @@ module Components.RideActionModal.Controller where
 
 import ConfigProvider
 
+import Common.Types.Config as CTC
 import Data.Maybe as Mb
 import MerchantConfig.Types (AppConfig)
-import Prelude (negate)
 import Screens.Types as ST
+import Helpers.Utils as HU
+import Prelude (negate, ($))
+import Storage (KeyStore(..), getValueToLocalStore)
 
 data Action = StartRide 
             | EndRide 
@@ -60,7 +63,6 @@ type Config = {
   gotoTag :: Boolean,
   waitTimeStatus :: ST.TimerStatus,
   waitTimeSeconds :: Int,
-  thresholdTime :: Int,
   rideType :: ST.TripType,
   rideScheduledTime :: Mb.Maybe String,
   rideStartTime :: Mb.Maybe String,
@@ -68,7 +70,9 @@ type Config = {
   tripDuration :: Mb.Maybe String,
   durationTravelled :: String,
   rideStartTimer :: Int,
-  tollText :: Boolean
+  tollText :: Boolean,
+  driverVehicle :: String,
+  cityConfig :: CTC.CityConfig
   }
 
 type AddressConfig = {
@@ -80,6 +84,8 @@ config :: Config
 config = {
   startRideActive : false,
   arrivedStopActive : false,
+  cityConfig : HU.getCityConfig (getAppConfig appConfig).cityConfig (getValueToLocalStore DRIVER_LOCATION),
+  driverVehicle : "",
   totalDistance : "",
   customerName : "",
   sourceAddress : {
@@ -105,7 +111,6 @@ config = {
   gotoTag : false,
   waitTimeStatus : ST.NoStatus,
   waitTimeSeconds : -1,
-  thresholdTime : 0,
   rideType: ST.OneWay,
   rideScheduledTime : Mb.Nothing,
   startODOReading : "0",

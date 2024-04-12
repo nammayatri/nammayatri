@@ -111,5 +111,15 @@ dummyCityConfig = {
                       , customerAppId : ""
                       , driverAppId : ""
                     },
-                    waitingCharges : 1.50
+                    waitingCharges : 1.50,
+                    waitingChargesConfig : {
+                      cab : {
+                        freeSeconds : 5,
+                        perMinCharges : 1.0
+                      },
+                      auto : {
+                        freeSeconds : 3,
+                        perMinCharges : 1.50
+                      }
+                    }
                   }

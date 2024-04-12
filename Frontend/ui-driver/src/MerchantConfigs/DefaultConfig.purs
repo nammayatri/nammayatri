@@ -153,7 +153,8 @@ config =
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
               },
-              waitingCharges : 1.50
+              waitingCharges : 1.50,
+              waitingChargesConfig : defWaitingChargesConfig
             },
             {
               cityName : "Hyderabad",
@@ -182,7 +183,8 @@ config =
                 , customerAppId : "in.mobility.manayatri"
                 , driverAppId : "in.mobility.manayatripartner"
               },
-              waitingCharges : 2.00
+              waitingCharges : 2.00,
+              waitingChargesConfig : defWaitingChargesConfig
             },
             {
               cityName : "Mysore",
@@ -211,7 +213,8 @@ config =
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
               },
-              waitingCharges : 1.50
+              waitingCharges : 1.50,
+              waitingChargesConfig : defWaitingChargesConfig
             },
             {
               cityName : "Delhi",
@@ -240,7 +243,8 @@ config =
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
               },
-              waitingCharges : 0.75
+              waitingCharges : 0.75,
+              waitingChargesConfig : defWaitingChargesConfig
             },
             {
               cityName : "Chennai",
@@ -269,7 +273,8 @@ config =
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
               },
-              waitingCharges : 1.00
+              waitingCharges : 1.00,
+              waitingChargesConfig : defWaitingChargesConfig
             },
             {
               cityName : "Coimbatore",
@@ -298,7 +303,8 @@ config =
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
               },
-              waitingCharges : 1.50
+              waitingCharges : 1.50,
+              waitingChargesConfig : defWaitingChargesConfig
             },
             {
               cityName : "Puducherry",
@@ -327,7 +333,8 @@ config =
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
               },
-              waitingCharges : 1.50
+              waitingCharges : 1.50,
+              waitingChargesConfig : defWaitingChargesConfig
             },
             {
               cityName : "Gurugram",
@@ -356,7 +363,8 @@ config =
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
               },
-              waitingCharges : 1.50
+              waitingCharges : 1.50,
+              waitingChargesConfig : defWaitingChargesConfig
             },
             {             
               cityName : "Noida",
@@ -385,7 +393,8 @@ config =
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
               },
-              waitingCharges : 1.50
+              waitingCharges : 1.50,
+              waitingChargesConfig : defWaitingChargesConfig
             },
             {
               cityName : "TamilNaduCities",
@@ -414,7 +423,8 @@ config =
                 , customerAppId : "in.juspay.nammayatri"
                 , driverAppId : "in.juspay.nammayatripartner"
               },
-              waitingCharges : 1.50
+              waitingCharges : 1.50,
+              waitingChargesConfig : defWaitingChargesConfig
             },
             {
               cityName : "Kolkata",
@@ -447,7 +457,8 @@ config =
                 , customerAppId : "in.juspay.jatrisaathi"
                 , driverAppId : "in.juspay.jatrisaathidriver"
               },
-              waitingCharges : 1.50
+              waitingCharges : 1.50,
+              waitingChargesConfig : defWaitingChargesConfig
             }
             --, For future use
             -- {
@@ -577,3 +588,15 @@ getStaticViewPlans = [
   {price : 9.0, frequency : "PER_RIDE", variantCategory : "CarCategory", name : "DAILY_PER_RIDE", introductoryOffer : "", showSelected : false, planDesc : "CAB_DAILY_PER_RIDE_OFFER"},
   {price : 25.0, frequency : "PER_DAY", variantCategory : "AutoCategory", name : "DAILY_UNLIMITED", introductoryOffer : "NO_CHARGES_TILL", showSelected : true, planDesc : ""}
 ]
+
+defWaitingChargesConfig :: CTC.WaitingChargesConfig
+defWaitingChargesConfig = {
+  cab : {
+    freeSeconds : 300,
+    perMinCharges : 1.0
+  },
+  auto : {
+    freeSeconds : 180,
+    perMinCharges : 1.50
+  }
+}

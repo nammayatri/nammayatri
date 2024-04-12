@@ -114,14 +114,15 @@ rideActionModalConfig state =
     appConfig = state.data.config,
     waitTimeStatus = state.props.waitTimeStatus,
     waitTimeSeconds = state.data.activeRide.waitTimeSeconds,
-    thresholdTime = state.data.config.waitTimeConfig.thresholdTime,
     rideScheduledTime = state.data.activeRide.tripScheduledAt,
     rideType = state.data.activeRide.tripType,
     rideStartTimer = state.props.rideStartTimer,
     tripDuration = (\tripDuration -> (if ( tripDuration / 3600) < 10 then "0" else "") <> (show ( tripDuration / 3600) <> ":") <> (if (tripDuration `mod` 3600) / 60 < 10 then "0" else "") <> show ( (tripDuration `mod` 3600) / 60)  <> " Hr") <$> state.data.activeRide.tripDuration,
     rideStartTime = state.data.activeRide.tripStartTime,
     startODOReading = fromMaybe "--" $ show <$> state.data.activeRide.startOdometerReading,
-    tollText = state.props.hasToll
+    tollText = state.props.hasToll,
+    driverVehicle = state.data.activeRide.driverVehicle,
+    cityConfig = state.data.cityConfig
     }
     in rideActionModalConfig'
 
@@ -867,7 +868,7 @@ requestInfoCardConfig _ = let
 
 waitTimeInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
 waitTimeInfoCardConfig state = 
-  let cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  let cityConfig = state.data.cityConfig
   in
     RequestInfoCard.config {
       title {
@@ -879,12 +880,12 @@ waitTimeInfoCardConfig state =
         padding = Padding 16 16 0 0
       }
     , secondaryText {
-        text = getString $ CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ("₹" <> (show cityConfig.waitingCharges)) (show maxWaitTimeInMinutes),
+        text = getString $ CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ("₹" <> (show chargesOb.perMinCharges)) (show maxWaitTimeInMinutes),
         visibility = if rideInProgress then GONE else VISIBLE,
         padding = PaddingLeft 16
       }
     , imageConfig {
-        imageUrl = fetchImage FF_ASSET "ny_ic_waiting_auto",
+        imageUrl = fetchImage FF_ASSET "ny_ic_waiting_info",
         height = V 130,
         width = V 130,
         padding = Padding 0 4 1 0
@@ -895,7 +896,8 @@ waitTimeInfoCardConfig state =
       }
     }
     where rideInProgress = state.data.activeRide.status == SA.INPROGRESS
-          maxWaitTimeInMinutes = Int.floor $ Int.toNumber state.data.config.waitTimeConfig.thresholdTime / 60.0
+          chargesOb = HU.getChargesOb state.data.cityConfig state.data.activeRide.driverVehicle
+          maxWaitTimeInMinutes = Int.floor $ Int.toNumber chargesOb.freeSeconds / 60.0
 
 makePaymentState :: ST.HomeScreenState -> MakePaymentModal.MakePaymentModalState
 makePaymentState state = 
@@ -1166,7 +1168,7 @@ accessibilityConfig dummy = { title : "", coverMediaText : "", primaryText : get
 getAccessibilityPopupData :: ST.HomeScreenState -> Maybe ST.DisabilityType -> Boolean -> ContentConfig
 getAccessibilityPopupData state pwdtype isDriverArrived = 
   let accessibilityConfig' = accessibilityConfig Config
-      city = (HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION))
+      city = state.data.cityConfig
       driverLocation = DS.toLower $ getValueToLocalStore DRIVER_LOCATION
       language = getLanguage $ getLanguageLocale languageKey
       videoUrl' = "https://assets.juspay.in/beckn/audios/ny_audio_safety" <> language <> ".mp3"
@@ -1873,7 +1875,7 @@ accountBlockedPopup state = PopUpModal.config {
 
 vehicleNotSupportedPopup :: ST.HomeScreenState -> PopUpModal.Config
 vehicleNotSupportedPopup state = 
-  let cityConfig = HU.getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
+  let cityConfig = state.data.cityConfig
   in PopUpModal.config {
       gravity = CENTER,
       backgroundClickable = false,

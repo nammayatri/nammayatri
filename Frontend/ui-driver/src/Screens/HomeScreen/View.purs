@@ -947,7 +947,7 @@ driverStatusPill pillConfig push state index =
 
 statsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 statsModel push state =
-  let cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  let cityConfig = state.data.cityConfig
   in
     frameLayout
     [ width MATCH_PARENT
@@ -1037,7 +1037,7 @@ statsModel push state =
 
 expandedStatsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 expandedStatsModel push state =
-  let cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  let cityConfig = state.data.cityConfig
   in
   linearLayout
   [ width MATCH_PARENT

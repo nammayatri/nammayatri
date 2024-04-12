@@ -105,6 +105,7 @@ import Data.Argonaut.Decode.Class as AD
 import Data.Argonaut.Encode.Class as AE
 import Data.Argonaut.Core as AC
 import Data.Argonaut.Decode.Parser as ADP
+import Common.Types.Config as CTC
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -665,7 +666,17 @@ getCityConfig cityConfig cityName = do
                             , customerAppId : ""
                             , driverAppId : ""
                           },
-                          waitingCharges : 1.50
+                          waitingCharges : 1.50,
+                          waitingChargesConfig : {
+                            cab : {
+                              freeSeconds : 5,
+                              perMinCharges : 1.0
+                            },
+                            auto : {
+                              freeSeconds : 3,
+                              perMinCharges : 1.50
+                            }
+                          }
                         }
   fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
   
@@ -865,3 +876,9 @@ checkSpecialPickupZone maybeLabel =
                       specialPickupZone = fromMaybe "" (arr DA.!! 3)
                   in specialPickupZone == "PickupZone"
     Nothing    -> false
+
+getChargesOb :: CTC.CityConfig -> String -> CTC.ChargesEntity
+getChargesOb cityConfig driverVehicle = 
+  case driverVehicle of
+    "AUTO_RICKSHAW" -> cityConfig.waitingChargesConfig.auto
+    _ -> cityConfig.waitingChargesConfig.cab

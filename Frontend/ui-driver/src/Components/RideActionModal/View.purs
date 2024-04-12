@@ -58,6 +58,7 @@ import Styles.Colors as Color
 import Timers as ET
 import Types.App (defaultGlobalState)
 import Mobility.Prelude
+import Common.Types.Config as CTC
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -663,17 +664,18 @@ estimatedFareView push config =
             , ellipsize true
             , singleLine true
             ] <> FontStyle.body10 TypoGraphy
-          , if config.waitTimeSeconds > (config.thresholdTime + 60) then yellowPill push pillText (not config.startRideActive) else linearLayout[visibility GONE][]
+          , if config.waitTimeSeconds > (chargesOb.freeSeconds + 60) then yellowPill push pillText (not config.startRideActive) else linearLayout[visibility GONE][]
         ]
     ]
     where currency = getCurrency appConfig
-          pillText = "+" <> currency <> " " <> show (calculateCharges (config.waitTimeSeconds - config.thresholdTime))
+          pillText = "+" <> currency <> " " <> show (calculateCharges (config.waitTimeSeconds - chargesOb.freeSeconds))
+          chargesOb = HU.getChargesOb config.cityConfig config.driverVehicle
 
           calculateCharges :: Int -> Number
           calculateCharges sec =
             let min = Int.floor $ Int.toNumber sec / 60.0
-                cityConfig = HU.getCityConfig config.appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-            in cityConfig.waitingCharges * Int.toNumber min
+                waitingCharges = chargesOb.perMinCharges
+            in waitingCharges * Int.toNumber min
 
 waitTimeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 waitTimeView push config =
@@ -715,18 +717,20 @@ waitTimeView push config =
         ][ textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , text if config.waitTimeSeconds > config.thresholdTime then HU.formatSecIntoMinSecs config.thresholdTime else HU.formatSecIntoMinSecs config.waitTimeSeconds
+            , text if config.waitTimeSeconds > chargesOb.freeSeconds then HU.formatSecIntoMinSecs chargesOb.freeSeconds else HU.formatSecIntoMinSecs config.waitTimeSeconds
             , color Color.black900
             , ellipsize true
             , textSize FontSize.a_20
             , singleLine true
             , fontStyle $ FontStyle.semiBold TypoGraphy
             ]
-            , if config.waitTimeSeconds > config.thresholdTime then 
-                yellowPill push ("+ " <> HU.formatSecIntoMinSecs (config.waitTimeSeconds - config.thresholdTime)) false 
+            , if config.waitTimeSeconds > chargesOb.freeSeconds then 
+                yellowPill push ("+ " <> HU.formatSecIntoMinSecs (config.waitTimeSeconds - chargesOb.freeSeconds)) false 
               else linearLayout[visibility GONE][]
         ]
      ]
+     where 
+      chargesOb = HU.getChargesOb config.cityConfig config.driverVehicle
 
 yellowPill :: forall w. (Action -> Effect Unit) -> String -> Boolean -> PrestoDOM (Effect Unit) w
 yellowPill push text' showInfo = 
