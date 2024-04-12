@@ -83,7 +83,7 @@ import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, 
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, modifyState, getState)
 import Helpers.Pooling (delay)
-import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), scrollBarY,adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, scaleType, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd, clipChildren, enableShift,horizontalScrollView, shadow,onStateChanged,scrollBarX, clipToPadding, onSlide, rotation, rippleColor, shimmerFrameLayout)
+import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), scrollBarY,adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, scaleType, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd, clipChildren, enableShift,horizontalScrollView, shadow,onStateChanged,scrollBarX, clipToPadding, onSlide, rotation, rippleColor, shimmerFrameLayout, imageUrl)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
@@ -135,6 +135,7 @@ import Engineering.Helpers.BackTrack
 import Engineering.Helpers.Events as Events
 import Types.App
 import Mobility.Prelude
+import Screens.Types as ST
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -3204,11 +3205,20 @@ homeScreenViewV2 push state =
         , width MATCH_PARENT 
         , onAnimationEnd push (const MapReadyAction)
         ][tagShimmerView state]] 
-      else
-      (maybe 
-        ([]) 
-        (\item -> [bannersCarousal item state push]) 
-        state.data.bannerData.bannerItem)
+      else if state.data.config.banners.homeScreenCabLaunch && state.props.city == ST.Bangalore then ([
+        imageView
+          [ imageWithFallback "ic_banner_cabs,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_banner_cabs.png"
+          , height $ V 120
+          , width MATCH_PARENT
+          , gravity CENTER_VERTICAL
+          , margin $ Margin 16 0 16 16
+          , accessibility DISABLE
+          ]
+      ])else
+        (maybe -- TEMP disabling banners in Bangalore
+          ([]) 
+          (\item -> [bannersCarousal item state push]) 
+          state.data.bannerData.bannerItem)
 
 showMapOnHomeScreen :: HomeScreenState -> Boolean
 showMapOnHomeScreen state = isHomeScreenView state && isNothing state.data.bannerData.bannerItem
