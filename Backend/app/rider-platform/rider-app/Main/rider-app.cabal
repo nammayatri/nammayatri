@@ -197,7 +197,6 @@ library
       Domain.Action.UI.Support
       Domain.Action.UI.TicketService
       Domain.Action.UI.Whatsapp
-      Domain.Types.BlackListOrg
       Domain.Types.Booking
       Domain.Types.Booking.API
       Domain.Types.Booking.BookingLocation
@@ -255,7 +254,6 @@ library
       SharedLogic.PublicTransport
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       Storage.Beam.BecknRequest
-      Storage.Beam.BlackListOrg
       Storage.Beam.Booking
       Storage.Beam.Booking.BookingLocation
       Storage.Beam.BookingCancellationReason
@@ -323,7 +321,6 @@ library
       Storage.Clickhouse.Location
       Storage.Clickhouse.Ride
       Storage.Queries.AppInstallsExtra
-      Storage.Queries.BlackListOrg
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
@@ -362,6 +359,7 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.Transformers.AppInstalls
+      Storage.Queries.Transformers.BlackListOrg
       Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.Transformers.SearchReqLocation
       Storage.Queries.TripTerms
@@ -404,6 +402,7 @@ library
       Domain.Types.AadhaarVerification
       Domain.Types.AppInstalls
       Domain.Types.BecknConfig
+      Domain.Types.BlackListOrg
       Domain.Types.BppDetails
       Domain.Types.BusinessHour
       Domain.Types.CallbackRequest
@@ -449,6 +448,7 @@ library
       Storage.Beam.AadhaarVerification
       Storage.Beam.AppInstalls
       Storage.Beam.BecknConfig
+      Storage.Beam.BlackListOrg
       Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
       Storage.Beam.CallbackRequest
@@ -494,6 +494,7 @@ library
       Storage.Queries.AadhaarVerification
       Storage.Queries.AppInstalls
       Storage.Queries.BecknConfig
+      Storage.Queries.BlackListOrg
       Storage.Queries.BppDetails
       Storage.Queries.BusinessHour
       Storage.Queries.CallbackRequest
