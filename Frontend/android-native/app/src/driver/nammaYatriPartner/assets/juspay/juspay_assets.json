@@ -632,7 +632,7 @@
       "ny_ic_vehicle_registration_card" : true,
       "ny_ic_vehicle_unfilled_white" : true,
       "ny_ic_vertical_line" : true,
-      "ny_ic_waiting_auto" : true,
+      "ny_ic_waiting_info" : true,
       "ny_ic_wallet_with_coin" : true,
       "ny_ic_warning_blue" : true,
       "ny_ic_warning_filled_red" : true,

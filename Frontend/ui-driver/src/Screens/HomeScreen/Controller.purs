@@ -1472,7 +1472,8 @@ activeRideDetail state (RidesInfo ride) =
   lastStopLat : (\a -> ( a ^. _lat)) <$> ride.lastStopLocation,
   lastStopLon : (\a -> ( a ^. _lon)) <$> ride.lastStopLocation,
   startOdometerReading : (\(API.OdometerReading {value}) -> value) <$> ride.startOdometerReading,
-  endOdometerReading : (\(API.OdometerReading {value}) -> value) <$> ride.endOdometerReading
+  endOdometerReading : (\(API.OdometerReading {value}) -> value) <$> ride.endOdometerReading,
+  driverVehicle : ride.vehicleVariant
 }
   where 
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String

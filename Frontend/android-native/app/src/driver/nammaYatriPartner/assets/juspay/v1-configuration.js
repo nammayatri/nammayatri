@@ -203,7 +203,8 @@ window.getMerchantConfig = function () {
           , "customerAppId" : "in.juspay.nammayatri"
           , "driverAppId" : "in.juspay.nammayatripartner"
         },
-        "waitingCharges" : 1.50
+        "waitingCharges" : 1.50,
+        "waitingChargesConfig" : defWaitingChargesConfig
       },
       {
         "cityName" : "Hyderabad",
@@ -236,7 +237,17 @@ window.getMerchantConfig = function () {
           , "customerAppId" : "in.mobility.manayatri"
           , "driverAppId" : "in.mobility.manayatripartner"
         },
-        "waitingCharges" : 2.00
+        "waitingCharges" : 2.00,
+        "waitingChargesConfig" : {
+          "cab" : {
+            "freeSeconds" : 300,
+            "perMinCharges" : 1.0
+          },
+          "auto" : {
+            "freeSeconds" : 180,
+            "perMinCharges" : 2.00
+          }
+        }
       },
       {
         "cityName" : "Mysore",
@@ -269,7 +280,8 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : defWaitingChargesConfig
       },
       {
         "cityName" : "Delhi",
@@ -302,7 +314,17 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 0.75
+      "waitingCharges" : 0.75,
+      "waitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 0.75
+        }
+      }
       },
       {
         "cityName" : "Chennai",
@@ -335,7 +357,17 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.00
+      "waitingCharges" : 1.00,
+      "waitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 1.0
+        }
+      }
       },
       {
         "cityName" : "Coimbatore",
@@ -368,7 +400,8 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : defWaitingChargesConfig
       },
       {
         "cityName" : "Puducherry",
@@ -401,7 +434,8 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : defWaitingChargesConfig
       },
       {
         "cityName" : "Tumakuru",
@@ -433,7 +467,8 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : defWaitingChargesConfig
       },
       {
         "cityName" : "Gurugram",
@@ -466,7 +501,8 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : defWaitingChargesConfig
       },
       {
         "cityName" : "Noida",
@@ -498,7 +534,8 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : defWaitingChargesConfig
       },
       {
         "cityName" : "TamilNaduCities",
@@ -531,7 +568,8 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : defWaitingChargesConfig
       },
       {
         "cityName" : "Minneapolis",
@@ -563,7 +601,8 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : defWaitingChargesConfig
       }
   ]
   , "coinsConfig" : {
@@ -606,3 +645,14 @@ let staticSubscriptionConfig = [
   {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of ₹99 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹99-*$*-प्रति दिन अधिकतम ₹99 तक-*$*-প্রতিদিন সর্বোচ্চ ₹99 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹99 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹99 வரை-*$*-రోజుకు గరిష్టంగా ₹99 వరకు"},
   {"price" : 25.0, "frequency" : "PER_DAY", "variantCategory" : "AutoCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" : "NO_CHARGES_TILL", "showSelected" : true, "planDesc" : ""}
 ]
+
+let defWaitingChargesConfig = {
+    "cab" : {
+      "freeSeconds" : 300,
+      "perMinCharges" : 1.0
+    },
+    "auto" : {
+      "freeSeconds" : 180,
+      "perMinCharges" : 1.50
+    }
+  }

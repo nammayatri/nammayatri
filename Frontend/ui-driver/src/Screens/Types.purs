@@ -976,7 +976,8 @@ type HomeScreenData =  {
   prevLatLon :: Maybe Location,
   noOfLocations :: Int,
   isVehicleSupported :: Boolean,
-  linkedVehicleCategory :: String
+  linkedVehicleCategory :: String,
+  cityConfig :: CityConfig
 }
 
 type BannerCarousalData = {
@@ -1129,7 +1130,8 @@ type ActiveRide = {
   lastStopLat :: Maybe Number,
   lastStopLon :: Maybe Number,
   startOdometerReading :: Maybe Number,
-  endOdometerReading :: Maybe Number
+  endOdometerReading :: Maybe Number,
+  driverVehicle :: String
 }
 
 type HomeScreenProps =  {

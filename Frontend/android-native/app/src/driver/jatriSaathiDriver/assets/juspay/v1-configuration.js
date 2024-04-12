@@ -363,7 +363,18 @@ window.getMerchantConfig = function () {
           "domain" : "https://www.yatrisathi.in"
         , "customerAppId" : "in.juspay.jatrisaathi"
         , "driverAppId" : "in.juspay.jatrisaathidriver"
-      }
+      },
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : {
+           "cab" : {
+             "freeSeconds" : 300,
+             "perMinCharges" : 1.0
+           },
+           "auto" : {
+             "freeSeconds" : 180,
+             "perMinCharges" : 1.50
+           }
+         }
     }
   ]
   })

@@ -2201,6 +2201,7 @@ homeScreenFlow = do
       startRideResp <- lift $ lift $ Remote.startRide id (Remote.makeStartRideReq otp startOdometerReading (updatedState.props.odometerFileId) (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) ts) -- driver's lat long during starting ride
       case startRideResp of
         Right startRideResp -> do
+          let chargesOb = HU.getChargesOb updatedState.data.cityConfig updatedState.data.activeRide.driverVehicle
           void $ pure $ setValueToLocalNativeStore RIDE_ID id
           _ <- pure $ hideKeyboardOnNavigation true
           liftFlowBT $ logEvent logField_ "ny_driver_ride_start"
@@ -2211,7 +2212,7 @@ homeScreenFlow = do
           void $ pure $ setValueToLocalStore TRIGGER_MAPS "true"
           void $ pure $ setValueToLocalStore TRIP_STATUS "started"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
-          void $ pure $ setValueToLocalStore TOTAL_WAITED if updatedState.data.activeRide.waitTimeSeconds > updatedState.data.config.waitTimeConfig.thresholdTime then (updatedState.data.activeRide.id <> "<$>" <> show updatedState.data.activeRide.waitTimeSeconds) else "-1"
+          void $ pure $ setValueToLocalStore TOTAL_WAITED if updatedState.data.activeRide.waitTimeSeconds > chargesOb.freeSeconds then (updatedState.data.activeRide.id <> "<$>" <> show updatedState.data.activeRide.waitTimeSeconds) else "-1"
           void $ pure $ setValueToLocalStore RIDE_START_TIME (getCurrentUTC "")
           void $ pure $ clearTimerWithId updatedState.data.activeRide.waitTimerId
           void $ lift $ lift $ toggleLoader false
@@ -3385,6 +3386,7 @@ updateBannerAndPopupFlags = do
                   }
                 , config = appConfig
                 , isVehicleSupported = fromMaybe true getDriverInfoResp.isVehicleSupported
+                , cityConfig = cityConfig
                 }
               , props
                 { autoPayBanner = autopayBannerType

@@ -106,13 +106,24 @@ type CityConfig = {
   variantSubscriptionConfig :: VariantSubscriptionConfig,
   showEarningSection :: Boolean,
   referral :: Referral,
-  waitingCharges :: Number
+  waitingCharges :: Number,
+  waitingChargesConfig :: WaitingChargesConfig
 }
 
 type Referral = {
     domain :: String
   , customerAppId :: String
   , driverAppId :: String
+}
+
+type WaitingChargesConfig = {
+  cab :: ChargesEntity,
+  auto :: ChargesEntity
+}
+
+type ChargesEntity = {
+  freeSeconds :: Int,
+  perMinCharges :: Number
 }
 
 type DashboardConfig = {

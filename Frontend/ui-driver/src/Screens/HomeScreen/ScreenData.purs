@@ -23,6 +23,7 @@ import Domain.Payments as PP
 import ConfigProvider
 import Screens.Types as ST
 import RemoteConfig.Utils as RU
+import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
 
 initData :: HomeScreenState
 initData =
@@ -37,6 +38,7 @@ initData =
       , gender: "UNKNOWN"
       , subsRemoteConfig: RU.subscriptionConfig "subscription_configs"
       , driverStats: false
+      , cityConfig : dummyCityConfig
       , activeRide:
           { id: ""
           , source: ""
@@ -60,6 +62,7 @@ initData =
           , waitTimeInfo: false
           , tripDuration: Nothing
           , rideCreatedAt: ""
+          , driverVehicle : ""
           , requestedVehicleVariant: Nothing
           , disabilityTag: Nothing
           , enableFrequentLocationUpdates: false
