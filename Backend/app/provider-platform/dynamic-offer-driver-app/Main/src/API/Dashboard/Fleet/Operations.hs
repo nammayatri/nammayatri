@@ -40,8 +40,6 @@ type API =
            :<|> GetFleetDriverVehicleAssociationAPI
            :<|> GetFleetDriverAssociationAPI
            :<|> GetFleetVehicleAssociationAPI
-           :<|> GetFleetDriverAssociationAPIBySearch
-           :<|> GetFleetVehicleAssociationAPIBySearch
            :<|> SetVehicleDriverRcStatusForFleetAPI
        )
 
@@ -135,6 +133,9 @@ type GetFleetDriverVehicleAssociationAPI =
     :> "getFleetDriverVehicleAssociation"
     :> QueryParam "limit" Int
     :> QueryParam "offset" Int
+    :> QueryParam "countryCode" Text
+    :> QueryParam "phoneNo" Text
+    :> QueryParam "vehicleNo" Text
     :> Get '[JSON] Common.DrivertoVehicleAssociationRes
 
 type GetFleetDriverAssociationAPI =
@@ -144,6 +145,8 @@ type GetFleetDriverAssociationAPI =
     :> QueryParam "isActive" Bool
     :> QueryParam "limit" Int
     :> QueryParam "offset" Int
+    :> QueryParam "countryCode" Text
+    :> QueryParam "phoneNo" Text
     :> Get '[JSON] Common.DrivertoVehicleAssociationRes
 
 type GetFleetVehicleAssociationAPI =
@@ -152,28 +155,7 @@ type GetFleetVehicleAssociationAPI =
     :> "getFleetVehicleAssociation"
     :> QueryParam "limit" Int
     :> QueryParam "offset" Int
-    :> Get '[JSON] Common.DrivertoVehicleAssociationRes
-
-type GetFleetDriverAssociationAPIBySearch =
-  Capture "fleetOwnerId" Text
-    :> "fleet"
-    :> "getFleetDriverAssociation"
-    :> "search"
-    :> QueryParam "limit" Int
-    :> QueryParam "offset" Int
-    :> QueryParam "driverName" Text
-    :> QueryParam "driverPhoneNo" Text
-    :> Get '[JSON] Common.DrivertoVehicleAssociationRes
-
-type GetFleetVehicleAssociationAPIBySearch =
-  Capture "fleetOwnerId" Text
-    :> "fleet"
-    :> "getFleetVehicleAssociation"
-    :> "search"
-    :> QueryParam "limit" Int
-    :> QueryParam "offset" Int
     :> QueryParam "vehicleNo" Text
-    :> QueryParam "driverPhoneNo" Text
     :> Get '[JSON] Common.DrivertoVehicleAssociationRes
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -190,8 +172,6 @@ handler merchantId city =
     :<|> getFleetDriverVehicleAssociation merchantId city
     :<|> getFleetDriverAssociation merchantId city
     :<|> getFleetVehicleAssociation merchantId city
-    :<|> getFleetDriverAssociationBySearch merchantId city
-    :<|> getFleetVehicleAssociationBySearch merchantId city
     :<|> setVehicleDriverRcStatusForFleet merchantId city
 
 addVehicleForFleet :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Text -> Common.AddVehicleReq -> FlowHandler APISuccess
@@ -224,17 +204,11 @@ fleetDriverEarning merchantShortId opCity fleetOwnerId driverId = withFlowHandle
 setVehicleDriverRcStatusForFleet :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.RCStatusReq -> FlowHandler APISuccess
 setVehicleDriverRcStatusForFleet merchantShortId opCity driverId fleetOwnerId req = withFlowHandlerAPI $ DDriver.setVehicleDriverRcStatusForFleet merchantShortId opCity driverId fleetOwnerId req
 
-getFleetDriverVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
-getFleetDriverVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getFleetDriverVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset
+getFleetDriverVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.DrivertoVehicleAssociationRes
+getFleetDriverVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset mbCountryCode mbPhoneNo mbVehicleNo = withFlowHandlerAPI $ DDriver.getFleetDriverVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset mbCountryCode mbPhoneNo mbVehicleNo
 
-getFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Bool -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
-getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbIsActive mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset Nothing Nothing mbIsActive False
+getFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> FlowHandler Common.DrivertoVehicleAssociationRes
+getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbIsActive mbLimit mbOffset mbCountryCode mbPhoneNo = withFlowHandlerAPI $ DDriver.getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset mbCountryCode mbPhoneNo mbIsActive
 
-getFleetVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
-getFleetVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getFleetVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset Nothing Nothing False
-
-getFleetDriverAssociationBySearch :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> FlowHandler Common.DrivertoVehicleAssociationRes
-getFleetDriverAssociationBySearch merchantShortId opCity fleetOwnerId mbLimit mbOffset mbDriverName mbDriverPhNo = withFlowHandlerAPI $ DDriver.getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset mbDriverName mbDriverPhNo Nothing True
-
-getFleetVehicleAssociationBySearch :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> FlowHandler Common.DrivertoVehicleAssociationRes
-getFleetVehicleAssociationBySearch merchantShortId opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbDriverPhNo = withFlowHandlerAPI $ DDriver.getFleetVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbDriverPhNo True
+getFleetVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> FlowHandler Common.DrivertoVehicleAssociationRes
+getFleetVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset mbVehicleNo = withFlowHandlerAPI $ DDriver.getFleetVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset mbVehicleNo

@@ -79,7 +79,6 @@ import Control.Applicative ((<|>))
 import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import Data.Coerce
-import Data.List (nubBy)
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -883,6 +882,11 @@ addVehicleForFleet merchantShortId opCity reqDriverPhoneNo mbMobileCountryCode f
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist driver.id.getId)
   vehicle <- RCQuery.findLastVehicleRCWrapper req.registrationNo
   whenJust vehicle $ \veh -> when (isJust veh.fleetOwnerId && veh.fleetOwnerId /= Just fleetOwnerId) $ throwError VehicleBelongsToAnotherFleet
+  isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId
+  case isFleetDriver of
+    Nothing -> throwError (InvalidRequest "Driver is not part of this fleet, add this driver to the fleet before adding a vehicle with them")
+    Just fleetDriver -> do
+      unless fleetDriver.isActive $ throwError (InvalidRequest "Driver is not active with this fleet, add this driver to the fleet before adding a vehicle with them")
   Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
   void $ runVerifyRCFlow driver.id merchant merchantOpCityId req
   logTagInfo "dashboard -> addVehicle : " (show driver.id)
@@ -936,12 +940,11 @@ setVehicleDriverRcStatusForFleet merchantShortId opCity reqDriverId fleetOwnerId
 
 ---------------------------------------------------------------------
 
-getFleetDriverVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Flow Common.DrivertoVehicleAssociationRes
-getFleetDriverVehicleAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffset = do
-  let limit = min 25 $ fromMaybe 10 mbLimit -- TODO: we have to make this query more efficient
-      offset = fromMaybe 0 mbOffset
-  listOfAllDrivers <- FDV.findAllDriverByFleetOwnerIdAndMbIsActive fleetOwnerId Nothing limit offset
-  listOfAllVehicle <- RCQuery.findAllByFleetOwnerId Nothing Nothing (Just fleetOwnerId)
+getFleetDriverVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DrivertoVehicleAssociationRes
+getFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbCountryCode mbPhoneNo mbVehicleNo = do
+  merchant <- findMerchantByShortId merchantShortId
+  listOfAllDrivers <- getListOfDrivers mbCountryCode mbPhoneNo fleetOwnerId merchant.id Nothing mbLimit mbOffset
+  listOfAllVehicle <- getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset
   listItems <- createDriverVehicleAssociationListItem listOfAllDrivers listOfAllVehicle
   let filteredItems = filter (.isRcAssociated) listItems
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = filteredItems}
@@ -982,24 +985,13 @@ getFleetDriverAssociation ::
   Maybe Text ->
   Maybe Text ->
   Maybe Bool ->
-  Bool ->
   Flow Common.DrivertoVehicleAssociationRes
-getFleetDriverAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbDriverName mbDriverPhNo mbIsActive _isSearch = do
-  let limit = min 5 $ fromMaybe 10 mbLimit
-      offset = fromMaybe 0 mbOffset
-  listOfAllDrivers <- FDV.findAllDriverByFleetOwnerIdAndMbIsActive fleetOwnerId mbIsActive limit offset
-  listItems <- filterForSearch <$> createFleetDriverAssociationListItem listOfAllDrivers
+getFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbCountryCode mbDriverPhNo mbIsActive = do
+  merchant <- findMerchantByShortId merchantShortId
+  listOfAllDrivers <- getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchant.id mbIsActive mbLimit mbOffset
+  listItems <- createFleetDriverAssociationListItem listOfAllDrivers
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems}
   where
-    filterForSearch list = do
-      let filterOnDriverPhNo driverPhNoToSearch = filter (\x -> maybe False (T.isInfixOf driverPhNoToSearch) x.driverPhoneNo)
-      let filterOnDriverName driverNameToSearch = filter (\x -> maybe False (T.isInfixOf driverNameToSearch) x.driverName)
-      let filterOnBoth driverPhNoToSearch driverNameToSearch = nubBy (\x y -> x.vehicleNo == y.vehicleNo && x.driverId == y.driverId) . filter (\x -> maybe False (T.isInfixOf driverPhNoToSearch) x.driverPhoneNo || maybe False (T.isInfixOf driverNameToSearch) x.driverName)
-      case (mbDriverName, mbDriverPhNo) of
-        (Just driverName, Just driverPhNo) -> filterOnBoth driverPhNo driverName list
-        (Just driverName, Nothing) -> filterOnDriverName driverName list
-        (Nothing, Just driverPhNo) -> filterOnDriverPhNo driverPhNo list
-        (Nothing, Nothing) -> list
     createFleetDriverAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [FleetDriverAssociation] -> m [Common.DriveVehicleAssociationListItem]
     createFleetDriverAssociationListItem fdaList = do
       forM fdaList $ \fda -> do
@@ -1040,28 +1032,14 @@ getFleetVehicleAssociation ::
   Maybe Int ->
   Maybe Int ->
   Maybe Text ->
-  Maybe Text ->
-  Bool ->
   Flow Common.DrivertoVehicleAssociationRes
-getFleetVehicleAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbDriverPhNo _isSearch = do
-  let limit = min 5 $ fromMaybe 10 mbLimit
-      offset = fromMaybe 0 mbOffset
-  listOfAllVehicle <- RCQuery.findAllByFleetOwnerId (Just limit) (Just offset) (Just fleetOwnerId)
-  listItems <- filterForSearch <$> createFleetVehicleAssociationListItem listOfAllVehicle
+getFleetVehicleAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber = do
+  listOfAllVehicle <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset
+  listItems <- createFleetVehicleAssociationListItem listOfAllVehicle
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems}
   where
-    filterForSearch list = do
-      let filterOnDriverPhNo driverPhNoToSearch = filter (\x -> maybe False (T.isInfixOf driverPhNoToSearch) x.driverPhoneNo)
-      let filterOnVehiclehNo vehicleNoToSearch = filter (\x -> maybe False (T.isInfixOf vehicleNoToSearch) x.vehicleNo)
-      let filterOnBoth driverPhNoToSearch vehicleNoToSearch = nubBy (\x y -> x.vehicleNo == y.vehicleNo && x.driverId == y.driverId) . filter (\x -> maybe False (T.isInfixOf driverPhNoToSearch) x.driverPhoneNo || maybe False (T.isInfixOf vehicleNoToSearch) x.vehicleNo)
-      case (mbVehicleNumber, mbDriverPhNo) of
-        (Just vehicleNo, Just driverPhNo) -> filterOnBoth driverPhNo vehicleNo list
-        (Just vehicleNo, Nothing) -> filterOnVehiclehNo vehicleNo list
-        (Nothing, Just driverPhNo) -> filterOnDriverPhNo driverPhNo list
-        (Nothing, Nothing) -> list
     createFleetVehicleAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [VehicleRegistrationCertificate] -> m [Common.DriveVehicleAssociationListItem]
     createFleetVehicleAssociationListItem vrcList = do
-      now <- getCurrentTime
       forM vrcList $ \vrc -> do
         decryptedVehicleRC <- decrypt vrc.certificateNumber
         completedRides <- QRD.totalRidesByFleetOwnerPerVehicle (Just fleetOwnerId) decryptedVehicleRC
@@ -1080,18 +1058,9 @@ getFleetVehicleAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffse
                   Nothing -> pure (Nothing, Nothing)
               Nothing -> pure (Nothing, Nothing)
           Nothing -> pure (Nothing, Nothing)
-
         (driverName, driverId, driverPhoneNo) <- case currentActiveDriver of
           Just driver -> pure (Just driver.firstName, Just driver.id.getId, driver.unencryptedMobileNumber)
-          Nothing -> do
-            latestAssociation <- QRCAssociation.findLatestLinkedByRCId vrc.id now
-            case latestAssociation of
-              Just latestAssociation' -> do
-                driver <- QPerson.findById latestAssociation'.driverId
-                case driver of
-                  Just driver' -> pure (Just driver'.firstName, Just driver'.id.getId, driver'.unencryptedMobileNumber)
-                  Nothing -> pure (Nothing, Nothing, Nothing)
-              Nothing -> pure (Nothing, Nothing, Nothing)
+          Nothing -> pure (Nothing, Nothing, Nothing) --- No need to pass driver info if it is not associated with any driver of fleet
         let vehicleType = castVehicleVariantDashboard vrc.vehicleVariant
         let isDriverActive = isJust currentActiveDriver -- Check if there is a current active driver
         let isRcAssociated = isJust currentActiveAssociation
@@ -1113,6 +1082,31 @@ castDriverStatus = \case
   Just DrInfo.OFFLINE -> Common.OFFLINE
   Just DrInfo.SILENT -> Common.SILENT
   Nothing -> Common.OFFLINE
+
+getListOfDrivers :: Maybe Text -> Maybe Text -> Text -> Id DM.Merchant -> Maybe Bool -> Maybe Int -> Maybe Int -> Flow [FleetDriverAssociation]
+getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchantId mbIsActive mbLimit mbOffset = do
+  case mbDriverPhNo of
+    Just driverPhNo -> do
+      mobileNumberHash <- getDbHash driverPhNo
+      let countryCode = fromMaybe "+91" mbCountryCode
+      driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchant countryCode mobileNumberHash merchantId >>= fromMaybeM (InvalidRequest "Person not found")
+      fleetDriverAssociation <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId
+      pure $ maybeToList fleetDriverAssociation
+    Nothing -> do
+      let limit = min 5 $ fromMaybe 5 mbLimit
+          offset = fromMaybe 0 mbOffset
+      FDV.findAllDriverByFleetOwnerIdAndMbIsActive fleetOwnerId mbIsActive limit offset
+
+getListOfVehicles :: Maybe Text -> Text -> Maybe Int -> Maybe Int -> Flow [VehicleRegistrationCertificate]
+getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset = do
+  case mbVehicleNo of
+    Just vehicleNo -> do
+      vehicleInfo <- RCQuery.findLastVehicleRCFleet' vehicleNo fleetOwnerId
+      pure $ maybeToList vehicleInfo
+    Nothing -> do
+      let limit = min 5 $ fromMaybe 5 mbLimit
+          offset = fromMaybe 0 mbOffset
+      RCQuery.findAllByFleetOwnerId (Just limit) (Just offset) (Just fleetOwnerId)
 
 ---------------------------------------------------------------------
 
