@@ -244,7 +244,10 @@ onVerifyRC person mbVerificationReq output = do
           mbVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
           whenJust mbVehicle $ \vehicle -> do
             when (rc.verificationStatus == Domain.VALID && isJust rc.vehicleVariant) $ do
-              let updatedVehicle = makeVehicleFromRC vehicle.driverId person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now
+              driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
+              driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
+              vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
+              let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now
               VQuery.upsert updatedVehicle
           whenJust output.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey num
           return Ack
