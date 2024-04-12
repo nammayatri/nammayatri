@@ -46,3 +46,14 @@ getEventName state event bulkUploadTitle = case event of
                        "BN_IN" -> title.bn
                        _       -> title.en
     Nothing -> getString BONUS_COINS
+  API.BulkUploadFunctionV2 _ -> case bulkUploadTitle of
+    Just (API.BulkCoinTitleTranslations title) -> case getLanguageLocale languageKey of
+                       "HI_IN" -> title.hi
+                       "KN_IN" -> title.kn
+                       "TA_IN" -> title.ta
+                       "TE_IN" -> title.te
+                       "FR_FR" -> title.fr
+                       "ML_IN" -> title.ml
+                       "BN_IN" -> title.bn
+                       _       -> title.en
+    Nothing -> getString BONUS_COINS
