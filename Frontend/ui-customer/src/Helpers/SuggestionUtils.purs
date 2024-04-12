@@ -150,22 +150,18 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config =
           updateExisting existingTrip = do
             if (getDistanceBwCordinates trip.sourceLat trip.sourceLong existingTrip.sourceLat existingTrip.sourceLong) < config.tripDistanceThreshold
             && (getDistanceBwCordinates trip.destLat trip.destLong existingTrip.destLat existingTrip.destLong) < config.tripDistanceThreshold
-            && (existingTrip.serviceTierName == trip.serviceTierName || isNothing existingTrip.serviceTierName)
+            && (existingTrip.serviceTierNameV2 == trip.serviceTierNameV2)
             then existingTrip
                   { frequencyCount = Just $ (fromMaybe 0 existingTrip.frequencyCount) +  1
                   , recencyDate = if isPastTrip then existingTrip.recencyDate else Just $ getCurrentUTC ""
                   , locationScore = Just $ calculateScore (toNumber ((fromMaybe 0 existingTrip.frequencyCount) +  1)) (getCurrentUTC "") config.frequencyWeight
-                  , serviceTierName = if isJust existingTrip.serviceTierName then existingTrip.serviceTierName else trip.serviceTierName
-                  , vehicleVariant = if isJust existingTrip.vehicleVariant then existingTrip.vehicleVariant else trip.vehicleVariant
                   }
             else existingTrip
                   { locationScore = Just $ calculateScore (toNumber (fromMaybe 0 existingTrip.frequencyCount)) (fromMaybe (getCurrentUTC "") existingTrip.recencyDate) config.frequencyWeight
-                  , serviceTierName = if isJust existingTrip.serviceTierName then existingTrip.serviceTierName else trip.serviceTierName
-                  , vehicleVariant = if isJust existingTrip.vehicleVariant then existingTrip.vehicleVariant else trip.vehicleVariant
                   }
           updatedTrips = map updateExisting trips
           tripExists = any (\tripItem -> (getDistanceBwCordinates tripItem.sourceLat tripItem.sourceLong trip.sourceLat trip.sourceLong) < config.tripDistanceThreshold
-            && (getDistanceBwCordinates tripItem.destLat tripItem.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold && tripItem.serviceTierName == trip.serviceTierName) updatedTrips
+            && (getDistanceBwCordinates tripItem.destLat tripItem.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold && tripItem.serviceTierNameV2 == trip.serviceTierNameV2) updatedTrips
           sortedTrips = sortTripsByScore updatedTrips
         in
           if tripExists
@@ -289,7 +285,7 @@ rideListToTripsTransformer listRes =
              vehicleVariant : case (head ride.rideList) of
                                 Just rideEntity -> Just $ rideEntity^._vehicleVariant
                                 Nothing -> Nothing,
-             serviceTierName : ride.serviceTierName
+             serviceTierNameV2 : ride.serviceTierName
          }
 
 updateMapWithPastTrips :: Array Trip -> HomeScreenState -> SuggestionsMap

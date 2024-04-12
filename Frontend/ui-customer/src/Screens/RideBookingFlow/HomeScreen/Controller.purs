@@ -2512,7 +2512,7 @@ eval (RepeatRide index item) state = do
   void $ pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ "4" 
   void $ pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ "8000.0" 
   void $ pure $ setValueToLocalStore TEST_POLLING_COUNT $ "22" 
-  updateAndExit state{props{currentStage = LoadMap, suggestedRideFlow = true}, data{settingSideBar { opened = SettingSideBarController.CLOSED }}} $ RepeatTrip state{props{isRepeatRide = true, suggestedRideFlow = true, repeatRideServiceTierName = item.serviceTierName}} item
+  updateAndExit state{props{currentStage = LoadMap, suggestedRideFlow = true}, data{settingSideBar { opened = SettingSideBarController.CLOSED }}} $ RepeatTrip state{props{isRepeatRide = true, suggestedRideFlow = true, repeatRideServiceTierName = item.serviceTierNameV2}} item
 
 eval (ReferralFlowAction) state = exit $ GoToReferral state
 eval NewUser state = continueWithCmd state [ do

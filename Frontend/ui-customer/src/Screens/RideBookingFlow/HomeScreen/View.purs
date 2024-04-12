@@ -3859,17 +3859,19 @@ repeatRideCard push state index trip =
     getTripSubTitle destination = 
       (DS.drop ((fromMaybe 0 (DS.indexOf (DS.Pattern ",") (destination))) + 2) (destination))
 
-    imageName = case trip.vehicleVariant of
-                  Just variant -> getVehicleVariantImage variant
-                  Nothing -> fetchImage FF_ASSET "ny_ic_green_loc_tag"
+    imageName = case trip.vehicleVariant, isJust trip.serviceTierNameV2 of
+                  Just variant, true -> getVehicleVariantImage variant
+                  _,_ -> fetchImage FF_ASSET "ny_ic_green_loc_tag"
     
-    imageDimensions = case trip.vehicleVariant of
-                        Just variant -> {height : V 40, width : V 60} 
-                        Nothing -> {height : V 20, width : V 20}
+    imageDimensions = if isVariantStored
+                        then {height : V 40, width : V 60} 
+                        else {height : V 20, width : V 20}
     
-    paddingLeft = if isNothing trip.vehicleVariant then 25 else 0
+    isVariantStored = isJust trip.serviceTierNameV2 && isJust trip.vehicleVariant
 
-    margin' = if isNothing trip.vehicleVariant then MarginRight 25 else MarginHorizontal 5 5
+    paddingLeft = if not isVariantStored then 25 else 0
+
+    margin' = if not isVariantStored then MarginRight 25 else MarginHorizontal 5 5
 
 pillTagView :: forall w. {text :: String, image :: String} -> PrestoDOM (Effect Unit) w
 pillTagView config = 
