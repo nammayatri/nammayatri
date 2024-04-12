@@ -68,6 +68,9 @@ config =
     , customerTipArrayWithValues : []
     , activeIndex : -1
     , primaryButtonText : ""
+    , secondaryButtonText : ""
+    , secondaryButtonVisibility : false
+    , showTipsList : true
     }
   , tipForDriver : 0
   , enableTips : true

@@ -137,9 +137,9 @@ config =
         geohashLimitForMap : 60,
         geohashPrecision : 7,
         maxLocationsToBeShown : 10,
-        minLocationsToBeShown : 2,
+        minLocationsToBeShown : 3,
         maxTripsToBeShown : 10,
-        minTripsToBeShown : 2,
+        minTripsToBeShown : 3,
         locationsToBeStored : 30,
         tripsToBeStored : 30,
         frequencyWeight : 0.85,
@@ -204,7 +204,7 @@ config =
       , enableBookingPreference: false
       , textColor: "#6D7280"
       , showInfoIcon : true 
-      , genericLoaderLottie : "ny_ic_generic_loader,https://assets.juspay.in/beckn/nammayatri/user/lottie/ny_ic_generic_loader.json"
+      , genericLoaderLottie : "https://assets.juspay.in/beckn/nammayatri/user/lottie/ny_ic_generic_loader.json"
       }
   , customerTip : {
       auto : true,
@@ -315,12 +315,12 @@ config =
           bottom : 16
         },
         shadow : {
-          color : "#2C2F3A",
+          color : "#000000",
           x: 0.0,
-          y: 0.9,
-          blur: 10.0,
-          spread: 24.0,
-          opacity : 0.14
+          y: 0.8,
+          blur: 4.0,
+          spread: 2.0,
+          opacity : 0.3
         }
       },
       showAdditionalServicesNew : true
@@ -373,6 +373,10 @@ config =
         , estimateAndQuoteConfig : {
           showInfoIcon : true
           }
+        , featureConfig : {
+            enableCabBanner : true,
+            enableChangeRideVariant : true
+          }
         }
       , { cityCode : "std:044"
         , cityName : "Chennai"
@@ -384,6 +388,10 @@ config =
         , estimateAndQuoteConfig : {
           showInfoIcon : false
           }
+        , featureConfig : {
+            enableCabBanner : false,
+            enableChangeRideVariant : false
+          }
         }
       ]
   , bannerCarousel : defaultBannerCarousel
@@ -392,13 +400,14 @@ config =
     retryExpFactor : 3
   },
   banners : {
-    homeScreenSafety : false
+    homeScreenSafety : false,
+    homeScreenCabLaunch : true
   }
   , tipDisplayDuration : 10
   , tipsEnabled : true
   , tipEnabledCities : []
   , referral : {
-          domain : "https://nammayatri.in"
+          domain : "https://nammayatri.in/"
         , customerAppId : "in.juspay.nammayatri"
       }
   , safety : {
@@ -417,5 +426,9 @@ defaultCityConfig =
       { radius : 100000
       , strictBounds : false
       },
-    enableCabs : false
+    enableCabs : false,
+    featureConfig : {
+      enableCabBanner : false,
+      enableChangeRideVariant : false
+    }
   }

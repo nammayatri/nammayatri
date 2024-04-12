@@ -209,7 +209,7 @@ settingUpContentView config state push =
                       , height WRAP_CONTENT
                       , visibility $ boolToVisibility $ state.props.setupStage == ST.SetDefaultEmergencyContacts && (not $ null state.data.emergencyContactsList)
                       ]
-                      [ recommendContactsToInstallView Language
+                      [ recommendContactsToInstallView state.props.appName
                       ]
                   ]
                 ]

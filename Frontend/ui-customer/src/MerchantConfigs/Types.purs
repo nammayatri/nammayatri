@@ -392,7 +392,13 @@ type CityConfig = {
   cityCode :: String,
   geoCodeConfig :: GeoCodeConfig,
   enableCabs :: Boolean,
-  estimateAndQuoteConfig :: EstimateConfig
+  estimateAndQuoteConfig :: EstimateConfig,
+  featureConfig :: CityBasedFeatures
+}
+
+type CityBasedFeatures = {
+  enableCabBanner :: Boolean,
+  enableChangeRideVariant :: Boolean
 }
 
 type EstimateConfig = {
@@ -409,7 +415,8 @@ type DriverLocationPollingConfig = {
 }
 
 type Banners = {
-  homeScreenSafety :: Boolean
+  homeScreenSafety :: Boolean,
+  homeScreenCabLaunch :: Boolean
 }
 
 type Safety = {

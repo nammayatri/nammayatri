@@ -177,7 +177,7 @@ sosDescriptionView state push =
       $ if state.props.showTestDrill then
           TEST_SOS_TRIGGERED_DESC
         else if null state.data.emergencyContactsList then
-          PLEASE_STAY_CALM_TEAM_ALERTED "PLEASE_STAY_CALM_TEAM_ALERTED"
+          PLEASE_STAY_CALM_TEAM_ALERTED state.props.appName
         else
           SOS_TRIGGERED_DESC
 

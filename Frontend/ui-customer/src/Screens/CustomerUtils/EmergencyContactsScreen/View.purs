@@ -86,7 +86,7 @@ view listItemm push state =
                   , visibility if state.props.showContactList then GONE else VISIBLE
                   ]
                   [ emergencyContactsView push state
-                  , HelperViews.recommendContactsToInstallView Language
+                  , HelperViews.recommendContactsToInstallView state.props.appName
                   , PrimaryButton.view (push <<< PrimaryButtonActionControll) (primaryButtonConfig state)
                   ]
               ]

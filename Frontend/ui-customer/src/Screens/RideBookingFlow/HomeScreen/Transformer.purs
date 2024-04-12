@@ -164,6 +164,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
                          else
                             fromMaybe "" vehicleVariant
       , status : rideList.status
+      , serviceTierName : resp.serviceTierName
       }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -332,6 +333,9 @@ getSpecialZoneQuote quote index =
       , showInfo = estimatesConfig.showInfoIcon
       , searchResultType = ChooseVehicle.QUOTES
       , pickUpCharges = 0
+      , serviceTierName = quoteEntity.serviceTierName
+      , serviceTierShortDesc = quoteEntity.serviceTierShortDesc
+      , airConditioned = Nothing
       }
     Metro body -> ChooseVehicle.config
     Public body -> ChooseVehicle.config
@@ -411,6 +415,22 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
       config = getCityConfig (getAppConfig appConfig).cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
       estimateFareBreakup = fromMaybe [] estimate.estimateFareBreakup
       pickUpCharges = fetchPickupCharges estimateFareBreakup
+      extraFare = maybe 0 calculateExtraFare (find hasExtraPerKmFare estimateFareBreakup)
+      hasExtraPerKmFare item = item ^. _title == "EXTRA_PER_KM_FARE"
+      calculateExtraFare extraPerKmFare = round $ (toNumber $ extraPerKmFare ^. _price) * fareMultiplier
+      fareMultiplier = if nightCharges then nightShiftMultiplier else 1.0
+      additionalFare = maybe 20 calculateFareRangeDifference (estimate.totalFareRange)
+      calculateFareRangeDifference fareRange = fareRange ^. _maxFare - fareRange ^. _minFare
+      nightShiftRate = estimate.nightShiftRate
+      nightShiftStart = maybe "" (view _nightShiftStart >>> fromMaybe "") nightShiftRate
+      nightShiftEnd = maybe "" (view _nightShiftEnd >>> fromMaybe "") nightShiftRate
+      nightShiftMultiplier = maybe 0.0 (view _nightShiftMultiplier >>> fromMaybe 0.0) nightShiftRate
+      nightCharges = if isJust nightShiftRate 
+                      then withinTimeRange nightShiftStart nightShiftEnd (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss")
+                      else false
+      baseFare = maybe 0 calculateBaseFare (find hasBaseDistanceFare estimateFareBreakup)
+      hasBaseDistanceFare item = item ^. _title == "BASE_DISTANCE_FARE"
+      calculateBaseFare baseDistFare = round $ (toNumber $ baseDistFare ^. _price) * fareMultiplier
   in ChooseVehicle.config {
         vehicleImage = getVehicleVariantImage estimate.vehicleVariant
       , vehicleVariant = estimate.vehicleVariant
@@ -427,6 +447,13 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
       , searchResultType = if isFareRange then ChooseVehicle.ESTIMATES else ChooseVehicle.QUOTES
       , pickUpCharges = pickUpCharges
       , tollCharge = fetchTollCharge estimateFareBreakup
+      , serviceTierName = estimate.serviceTierName
+      , serviceTierShortDesc = estimate.serviceTierShortDesc
+      , extraFare = extraFare
+      , additionalFare = additionalFare
+      , nightShiftMultiplier = nightShiftMultiplier
+      , nightCharges = nightCharges
+      , baseFare = baseFare
       }
 
 dummyFareRange :: FareRange
@@ -511,12 +538,7 @@ getEstimatesInfo estimates vehicleVariant state =
   , quoteList: quoteList
   , defaultQuote: defaultQuote
   , estimateId: estimateId
-  , pickUpCharges: pickUpCharges
   , estimatedVarient: estimatedVariant
-  , nightShiftMultiplier: nightShiftMultiplier
-  , nightCharges: nightCharges
-  , baseFare: baseFare
-  , extraFare: extraFare
   , showRateCardIcon: showRateCardIcon
   , zoneType: zoneType
   , createdTime : createdTime
@@ -531,7 +553,11 @@ getEstimatesInfo estimates vehicleVariant state =
     estimatedPrice = maybe 0 (view _estimatedFare) (head estimatedVariant)
     quoteList = getEstimateList estimates state.data.config.estimateAndQuoteConfig
     defaultQuote = fromMaybe ChooseVehicle.config $ if state.props.isRepeatRide 
-                    then find (\item -> (item.vehicleVariant) == state.props.repeatRideVariant) quoteList
+                    then do 
+                      let defaultQuote_ = find (\item -> isJust item.serviceTierName && item.serviceTierName == state.props.repeatRideServiceTierName) quoteList
+                      if isJust defaultQuote_ 
+                        then defaultQuote_
+                        else (head quoteList)
                     else (head quoteList)
     estimateId = maybe "" (view _estimateId) (head estimatedVariant)
     estimateFareBreakup = maybe [] identity (head estimatedVariant >>= view _estimateFareBreakup)
@@ -587,6 +613,9 @@ dummyEstimateEntity =
     , nightShiftRate: Nothing
     , specialLocationTag: Nothing
     , driversLatLong : []
+    , serviceTierShortDesc: Nothing
+    , serviceTierName : Nothing
+    , airConditioned : Nothing
     }
 
 getSpecialTag :: Maybe String -> SpecialTags
@@ -624,7 +653,8 @@ getTripFromRideHistory state = {
   , frequencyCount : Nothing
   , recencyDate : Nothing
   , locationScore : Nothing
-  , vehicleVariant : show state.data.selectedItem.vehicleVariant
+  , vehicleVariant : Just $ show state.data.selectedItem.vehicleVariant
+  , serviceTierName : state.data.selectedItem.serviceTierName
   }
 
 fetchPickupCharges :: Array EstimateFares -> Int 

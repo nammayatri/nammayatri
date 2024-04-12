@@ -22,7 +22,7 @@ import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (elem, mapWithIndex, null, length)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
@@ -330,7 +330,7 @@ emergencyContactsView state push =
             <> FontStyle.body1 TypoGraphy
         ]
     , textView
-        $ [ text $ getString $ EMERGENCY_CONTACTS_CAN_TAKE_ACTION "EMERGENCY_CONTACTS_CAN_TAKE_ACTION"
+        $ [ text $ getString $ EMERGENCY_CONTACTS_CAN_TAKE_ACTION state.props.appName
           , color Color.white900
           , visibility $ boolToVisibility $ state.props.showTestDrill && not (null state.data.emergencyContactsList)
           , gravity CENTER
@@ -388,7 +388,7 @@ emergencyContactsView state push =
     ]
   where
   configDescOne =
-    { text': getString $ SAFETY_TEAM_WILL_BE_ALERTED "SAFETY_TEAM_WILL_BE_ALERTED"
+    { text': getString $ SAFETY_TEAM_WILL_BE_ALERTED state.props.appName
     , isActive: state.data.shareToEmergencyContacts && (not $ null state.data.emergencyContactsList)
     , textColor: Color.white900
     , useMargin: false
@@ -400,7 +400,7 @@ emergencyContactsView state push =
     }
 
   configDescTwo =
-    { text': getString $ EMERGENCY_CONTACTS_CAN_TAKE_ACTION "EMERGENCY_CONTACTS_CAN_TAKE_ACTION"
+    { text': getString $ EMERGENCY_CONTACTS_CAN_TAKE_ACTION state.props.appName
     , isActive: true
     , textColor: Color.white900
     , useMargin: true
@@ -622,7 +622,7 @@ dismissSoSButtonView state push =
         true -> emptyTextView
         false -> separatorView Color.black700 $ MarginVertical 10 16
     , textView
-        $ [ text $ getString $ INDICATION_TO_EMERGENCY_CONTACTS "INDICATION_TO_EMERGENCY_CONTACTS"
+        $ [ text $ getString $ INDICATION_TO_EMERGENCY_CONTACTS state.props.appName
           , color Color.black500
           , gravity CENTER
           , margin $ Margin 16 16 16 0
@@ -819,7 +819,7 @@ driverRatingView ride =
 
 actionListView :: forall w . (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 actionListView push state =
-  let list = getPostRieSafetyAction FunctionCall
+  let list = getPostRieSafetyAction state
       len = length list
   in
   linearLayout
@@ -850,10 +850,10 @@ actionsListViewItem push mbAction textConfig showDivider =
           ]
       ]] <> if showDivider then [separatorView Color.black700 $ MarginTop 16 ] else []
   
-getPostRieSafetyAction :: LazyCheck -> Array {action :: Maybe Action, textConfig :: ImageTextViewConfig}
+getPostRieSafetyAction :: NammaSafetyScreenState -> Array {action :: Maybe Action, textConfig :: ImageTextViewConfig}
 getPostRieSafetyAction state = [
   {action : Just AlertSafetyTeam
-  , textConfig :  defaultTextConfig { text' = getString $  ALERT_SAFETY_TEAM "ALERT_SAFETY_TEAM"
+  , textConfig :  defaultTextConfig { text' = getString $  ALERT_SAFETY_TEAM state.props.appName
     , image = Just "ny_ic_notify_safety_bell"
     } 
   },
@@ -901,25 +901,25 @@ confirmSafetyDrillView state push =
             , width $ V 24
             ]
         ]
-    , relativeLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , padding $ Padding 0 16 16 0
-        , onClick push $ const BackPressed
-        ]
-        [ imageView
-          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_start_test_drill"
-          , width MATCH_PARENT
-          , height $ V 200
-          ]
+    , imageView
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_start_test_drill"
+        , width MATCH_PARENT
+        , height $ V 200
         ]
     , textView $
       [ text $ getString PREPARE_EMERGENCY_CONTACTS
       , color Color.white900
       , margin $ MarginTop 16
       ] <> FontStyle.h2 TypoGraphy
-    , imageWithTextView configActionOne
-    , imageWithTextView configActionTwo
+      
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        ]
+        [ imageWithTextView configActionOne
+        , imageWithTextView configActionTwo
+        ]
     , layoutWithWeight
     , PrimaryButton.view (push <<< StartTestDrill) $ startTestDrillButtonConfig state
     ]
@@ -930,7 +930,7 @@ confirmSafetyDrillView state push =
       , textColor: Color.white900
       , useMargin: true
       , usePadding: false
-      , useFullWidth: false
+      , useFullWidth: true
       , image: Nothing
       , visibility: true
       , textStyle: FontStyle.Body1
@@ -942,7 +942,7 @@ confirmSafetyDrillView state push =
       , textColor: Color.white900
       , useMargin: true
       , usePadding: false
-      , useFullWidth: false
+      , useFullWidth: true
       , image: Nothing
       , visibility: true
       , textStyle: FontStyle.Body1

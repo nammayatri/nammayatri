@@ -178,7 +178,7 @@ followingRideView globalState push state =
   where
   getPush =
     ( \action -> do
-        void $ showMap (getNewIDWithTag "FollowRideMap") true "satellite" pickupZoomLevel getMapReadyPush MapReady
+        void $ showMap (getNewIDWithTag "FollowRideMap") true "satellite" pickupZoomLevel 0.0 0.0 getMapReadyPush MapReady
         push action
     )
   getMapReadyPush = (\action -> do
