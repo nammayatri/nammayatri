@@ -43,7 +43,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState, GlobalState(..))
 import Engineering.Helpers.Commons (liftFlow)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Either (Either(..))
 import Helpers.Pooling (delay)
 import Data.Time.Duration (Milliseconds(..))
@@ -217,9 +217,9 @@ featuresView state push =
             , orientation VERTICAL
             ]
             [ imageWithTextView (getString AUTOMATIC_CALL_PLACED_TO_EMERGENCY_CONTACTS) true
-            , imageWithTextView (getString $ EMERGENCY_CONTACTS_CAN_FOLLOW "EMERGENCY_CONTACTS_CAN_FOLLOW") true
+            , imageWithTextView (getString $ EMERGENCY_CONTACTS_CAN_FOLLOW state.props.appName) true
             , imageWithTextView (getString GET_OPTIONS_TO_DIRECTLY_CALL_POLICE) true
-            , imageWithTextView (getString $ ALERT_SAFETY_TEAM "ALERT_SAFETY_TEAM") true
+            , imageWithTextView (getString $ ALERT_SAFETY_TEAM state.props.appName) true
             , imageWithTextView (getString OPTION_TO_REPORT_A_SAFETY_ISSUE) true
             ]
         , linearLayout
@@ -340,7 +340,7 @@ userSettingsView state push visibility' =
                     <> FontStyle.body2 TypoGraphy
                 ]
             , textView
-                $ [ text $ getString $ WHO_CAN_TRACK_YOUR_RIDE "WHO_CAN_TRACK_YOUR_RIDE"
+                $ [ text $ getString $ WHO_CAN_TRACK_YOUR_RIDE state.props.appName
                   , color Color.black700
                   , margin $ Margin 16 16 16 16
                   , visibility $ boolToVisibility $ (not $ null state.data.emergencyContactsList) && state.data.shareTripWithEmergencyContactOption /= NEVER_SHARE
@@ -380,7 +380,7 @@ userSettingsView state push visibility' =
     ALWAYS_SHARE -> getString ALWAYS_SHARE_DESC
     SHARE_WITH_TIME_CONSTRAINTS -> getString NIGHT_RIDES_DESC
     NEVER_SHARE -> getString NEVER_SHARE_DESC
-
+  
 toggleSwitchViewLayout :: Action -> Boolean -> String -> (Action -> Effect Unit) -> Boolean -> Int -> forall w. PrestoDOM (Effect Unit) w
 toggleSwitchViewLayout action isActive text' push visibility' marginLeft =
   linearLayout

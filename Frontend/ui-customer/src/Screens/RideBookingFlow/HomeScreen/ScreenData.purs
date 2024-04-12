@@ -118,10 +118,17 @@ initData = {
       , layoutMargin : Margin 0 0 0 0
       , isSingleEstimate : false
       , tollCharge : 0
+      , serviceTierName : Nothing
+      , serviceTierShortDesc : Nothing
+      , extraFare: 0
+      , additionalFare: 0
+      , nightShiftMultiplier: 0.0
+      , nightCharges: false
+      , baseFare : 0
+      , airConditioned : Nothing
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
-    , pickUpCharges : 0
     , ratingViewState : {
         selectedYesNoButton : -1,
         selectedRating : -1,
@@ -233,7 +240,7 @@ initData = {
     , cancelRideConfirmationPopup : false
     , searchAfterEstimate : false
     , tipViewProps : {
-        stage : DEFAULT
+        stage : ADD_TIP_OR_CHANGE_RIDE_TYPE
       , isVisible : false
       , onlyPrimaryText : false
       , isprimaryButtonVisible : false
@@ -243,6 +250,9 @@ initData = {
       , customerTipArrayWithValues : []
       , activeIndex : -1
       , primaryButtonText : ""
+      , secondaryButtonText : ""
+      , secondaryButtonVisibility : false
+      , showTipsList : true
       }
     , focussedBottomIcon : MOBILITY
     , timerId : ""
@@ -284,7 +294,7 @@ initData = {
     , reAllocation : {
         showPopUp : false
       }
-    , showShimmer : false
+    , showShimmer : true
     , homeScreenSheetState : COLLAPSED
     , autoScrollTimer : ""
     , autoScrollTimerId : ""
@@ -317,6 +327,7 @@ initData = {
     , isBannerDataComputed : false
     , repeatRideVariant : ""
     , hasToll : false
+    , repeatRideServiceTierName : Nothing
   }
 }
 
@@ -325,7 +336,6 @@ dummySearchLocationModelProps = {
   , showLoader : false
   , crossBtnSrcVisibility : false
   , crossBtnDestVisibility : false
-  , findPlaceIllustration : true
 }
 
 dummySearchLocationModelData = {
@@ -420,6 +430,7 @@ dummyDriverInfo =
   , sourceAddress : dummyAddress
   , destinationAddress : dummyAddress
   , status : ""
+  , serviceTierName : Nothing
   }
 
 dummySettingBar :: SettingSideBarState
@@ -459,7 +470,11 @@ dummyQuoteAPIEntity = QuoteAPIEntity {
   tripTerms : [],
   id : "",
   agencyCompletedRidesCount : Nothing,
-  quoteDetails : QuoteAPIDetails {fareProductType : "", contents : dummyDriverOfferAPIEntity}
+  quoteDetails : QuoteAPIDetails {fareProductType : "", contents : dummyDriverOfferAPIEntity},
+  serviceTierShortDesc : Nothing,
+  serviceTierName : Nothing, 
+  airConditioned : Nothing
+  
 }
 
 dummyDriverOfferAPIEntity :: QuoteAPIContents
@@ -528,7 +543,9 @@ dummyRideBooking = RideBookingRes
   merchantExoPhone : "",
   specialLocationTag : Nothing,
   hasDisability : Nothing,
-  sosStatus: Nothing
+  sosStatus: Nothing,
+  serviceTierName : Nothing, 
+  airConditioned : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails
@@ -564,5 +581,6 @@ dummyTrip = {
     recencyDate: Nothing,  
     locationScore: Nothing,  
     isSpecialZone: true,
-    vehicleVariant: ""
+    vehicleVariant: Nothing,
+    serviceTierName : Nothing
 }

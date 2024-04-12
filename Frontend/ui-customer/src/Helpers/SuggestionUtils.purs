@@ -75,7 +75,7 @@ addOrUpdateSuggestedDestination sourceGeohash destination suggestionsMap config 
                     prefixImageUrl = fetchImage FF_ASSET "ny_ic_recent_search",
                     locationItemType = Just SUGGESTED_DESTINATIONS
                   }),
-            variantBasedTripSuggestions : []
+            tripSuggestions : []
           } 
           suggestionsMap 
           config.geohashLimitForMap
@@ -126,7 +126,7 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config =
     else insertSuggestionInMap 
           sourceGeohash 
           { destinationSuggestions:[],
-            variantBasedTripSuggestions : 
+            tripSuggestions : 
               (singleton 
                 trip { 
                   recencyDate = Just $ getCurrentUTC "",
@@ -138,7 +138,7 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config =
           config.geohashLimitForMap
     where
       updateSuggestions :: Suggestions -> Maybe Suggestions
-      updateSuggestions suggestion = Just $ suggestion {variantBasedTripSuggestions = updateTrips suggestion.variantBasedTripSuggestions} 
+      updateSuggestions suggestion = Just $ suggestion {tripSuggestions = updateTrips suggestion.tripSuggestions} 
 
       updateTrips ::  Array Trip -> Array Trip
       updateTrips trips = updateTrip trips
@@ -147,20 +147,25 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config =
       updateTrip trips =
         let
           updateExisting :: Trip -> Trip
-          updateExisting existingTrip =
+          updateExisting existingTrip = do
             if (getDistanceBwCordinates trip.sourceLat trip.sourceLong existingTrip.sourceLat existingTrip.sourceLong) < config.tripDistanceThreshold
             && (getDistanceBwCordinates trip.destLat trip.destLong existingTrip.destLat existingTrip.destLong) < config.tripDistanceThreshold
+            && (existingTrip.serviceTierName == trip.serviceTierName || isNothing existingTrip.serviceTierName)
             then existingTrip
                   { frequencyCount = Just $ (fromMaybe 0 existingTrip.frequencyCount) +  1
                   , recencyDate = if isPastTrip then existingTrip.recencyDate else Just $ getCurrentUTC ""
                   , locationScore = Just $ calculateScore (toNumber ((fromMaybe 0 existingTrip.frequencyCount) +  1)) (getCurrentUTC "") config.frequencyWeight
+                  , serviceTierName = if isJust existingTrip.serviceTierName then existingTrip.serviceTierName else trip.serviceTierName
+                  , vehicleVariant = if isJust existingTrip.vehicleVariant then existingTrip.vehicleVariant else trip.vehicleVariant
                   }
             else existingTrip
-                  { locationScore = Just $ calculateScore (toNumber (fromMaybe 0 existingTrip.frequencyCount)) (fromMaybe (getCurrentUTC "") existingTrip.recencyDate) config.frequencyWeight }
-
+                  { locationScore = Just $ calculateScore (toNumber (fromMaybe 0 existingTrip.frequencyCount)) (fromMaybe (getCurrentUTC "") existingTrip.recencyDate) config.frequencyWeight
+                  , serviceTierName = if isJust existingTrip.serviceTierName then existingTrip.serviceTierName else trip.serviceTierName
+                  , vehicleVariant = if isJust existingTrip.vehicleVariant then existingTrip.vehicleVariant else trip.vehicleVariant
+                  }
           updatedTrips = map updateExisting trips
           tripExists = any (\tripItem -> (getDistanceBwCordinates tripItem.sourceLat tripItem.sourceLong trip.sourceLat trip.sourceLong) < config.tripDistanceThreshold
-            && (getDistanceBwCordinates tripItem.destLat tripItem.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold && tripItem.vehicleVariant == trip.vehicleVariant) trips
+            && (getDistanceBwCordinates tripItem.destLat tripItem.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold && tripItem.serviceTierName == trip.serviceTierName) updatedTrips
           sortedTrips = sortTripsByScore updatedTrips
         in
           if tripExists
@@ -217,7 +222,7 @@ getTripsFromCurrLatLng :: Number -> Number -> SuggestedDestinationAndTripsConfig
 getTripsFromCurrLatLng srcLat srcLng suggestionsConfig suggestionsMap = 
   let encodedSourceHash = runFn3 encodeGeohash srcLat srcLng suggestionsConfig.geohashPrecision
       geohashNeighbors = cons encodedSourceHash $ geohashNeighbours encodedSourceHash
-      tripArrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).variantBasedTripSuggestions) geohashNeighbors)
+      tripArrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).tripSuggestions) geohashNeighbors)
       sortedTripList = take 30 (reverse (sortWith (\trip -> fromMaybe 0.0 trip.locationScore) tripArrWithNeighbors))
   in sortedTripList
 
@@ -245,7 +250,7 @@ getSuggestionsMapFromLocal lazycheck =
 dummySuggestionsObject :: Suggestions
 dummySuggestionsObject = {
   destinationSuggestions : [],
-  variantBasedTripSuggestions : []
+  tripSuggestions : []
 }
 
 getGeoHash :: Number -> Number -> Int -> String
@@ -281,7 +286,10 @@ rideListToTripsTransformer listRes =
              isSpecialZone : (null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode)),
              locationScore : Nothing,
              frequencyCount : Nothing,
-             vehicleVariant : (fromMaybe dummyRideAPIEntity (head ride.rideList))^._vehicleVariant
+             vehicleVariant : case (head ride.rideList) of
+                                Just rideEntity -> Just $ rideEntity^._vehicleVariant
+                                Nothing -> Nothing,
+             serviceTierName : ride.serviceTierName
          }
 
 updateMapWithPastTrips :: Array Trip -> HomeScreenState -> SuggestionsMap

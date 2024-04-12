@@ -31,5 +31,6 @@ initData = {
         showContactList : false
       , showInfoPopUp : false  
       , fromSosFlow : false
+      , appName : ""
     }
 }

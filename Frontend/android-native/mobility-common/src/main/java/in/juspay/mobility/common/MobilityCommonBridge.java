@@ -1547,7 +1547,6 @@ public class MobilityCommonBridge extends HyperBridge {
                     double longitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lng);
                     LatLng latLngObj = new LatLng(latitude, longitude);
                     Marker markerObject;
-
                     if (markers.has(title)) {
                         markerObject = (Marker) markers.get(title);
                         markerObject.setPosition(latLngObj);

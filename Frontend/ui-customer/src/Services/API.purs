@@ -590,7 +590,10 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   totalFareRange :: Maybe FareRange,
   nightShiftRate :: Maybe NightShiftRate,
   specialLocationTag :: Maybe String,
-  driversLatLong :: Array LatLong
+  driversLatLong :: Array LatLong,
+  serviceTierName :: Maybe String,
+  serviceTierShortDesc :: Maybe String,
+  airConditioned :: Maybe Boolean
 }
 
 newtype NightShiftRate = NightShiftRate {
@@ -630,7 +633,10 @@ newtype QuoteAPIEntity = QuoteAPIEntity {
   estimatedFare :: Int,
   tripTerms :: Array String,
   id :: String,
-  agencyCompletedRidesCount :: Maybe Int
+  agencyCompletedRidesCount :: Maybe Int,
+  serviceTierName :: Maybe String,
+  serviceTierShortDesc :: Maybe String,
+  airConditioned :: Maybe Boolean
 }
 
 newtype QuoteAPIDetails = QuoteAPIDetails {
@@ -917,7 +923,9 @@ newtype RideBookingRes = RideBookingRes {
   specialLocationTag :: Maybe String,
   hasDisability :: Maybe Boolean,
   hasNightIssue :: Maybe Boolean,
-  sosStatus :: Maybe CTA.SosStatus
+  sosStatus :: Maybe CTA.SosStatus,
+  serviceTierName :: Maybe String,
+  airConditioned :: Maybe Boolean
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {

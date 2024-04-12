@@ -82,7 +82,7 @@ view push state =
             , text case item of
                     WORK_TAG -> getString WORK
                     HOME_TAG -> getString HOME
-                    _        -> getString ALL_FAVOURITES
+                    _        -> getString FAVOURITES
             ] <> FontStyle.body2 LanguageStyle
             ]) [HOME_TAG, WORK_TAG, OTHER_TAG] )
     ]

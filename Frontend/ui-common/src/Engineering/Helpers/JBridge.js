@@ -615,6 +615,16 @@ export const parseAddress = function (json) {
   return JSON.parse(json);
 };
 
+export const methodArgumentCount = function (functionName) {
+  try {
+    return window.JBridge.methodArgumentCount(functionName);
+  } catch (error) {
+    console.log("error inside argumentCount : " + error)
+    return 0;
+  }
+}
+
+
 export const drawRoute = function (data, style, trackColor, isActual, sourceMarkerConfig, destMarkerConfig, polylineWidth, type, mapRouteConfig) {
   console.log("I AM HERE ------------------ IN DRAW ROUTE");
   try {
@@ -636,14 +646,6 @@ export const updateMarker = function (markerConfig) {
   }
 }
 
-export const methodArgumentCount = function (functionName) {
-  try {
-    return window.JBridge.methodArgumentCount(functionName);
-  } catch (error) {
-    console.log("error inside argumentCount : " + error)
-    return 0;
-  }
-}
 
 
 export const updateRoute = (configObj) => {
@@ -1051,29 +1053,52 @@ export const requestAutoStartPermission = function (str) {
   };
 };
 
+export const animateCamera = function (lat) {
+  return function (lng) {
+    return function (zoom) {
+      return function (zoomType) {
+        return function () {
+          try {
+            window.JBridge.animateCamera(lat, lng, zoom, zoomType);
+          } catch (err) {
+            window.JBridge.animateCamera(lat, lng, zoom);
+          }
+        };
+      };
+    };
+  };
+};
+
 export const showMapImpl = function (id) {
   return function (isEnableCurrentLocation) {
     return function (type) {
       return function (zoom) {
-        return function (cb) {
-          return function (action) {
-            return function () {
-              const callback = callbackMapper.map(function (key, lat, lon) {
-                console.log("in show map", action);
-                window.x = cb;
-                window.y = action;
-                cb(action(key)(lat)(lon))();
-              });
-              const mapConfig = window && window.appConfig && window.appConfig.mapConfig ? JSON.stringify(window.appConfig.mapConfig) : "{}";
-              try {
-                window.JBridge.showMap(id, isEnableCurrentLocation, type, zoom, callback, mapConfig);
-              } catch (err) {
-                window.JBridge.showMap(id, isEnableCurrentLocation, type, zoom, callback);
-              }
-              return true;
+        return function(sourceLat){
+          return function(sourceLon){
+            return function (cb) {
+              return function (action) {
+                return function () {
+                  const callback = callbackMapper.map(function (key, lat, lon) {
+                    console.log("Lat long ::" , lat, lon);
+                    if(lat != 0.0 && lon != 0.0){
+                      animateCamera(sourceLat)(sourceLon)(zoom)("ZOOM")();
+                    }
+                    window.x = cb;
+                    window.y = action;
+                    cb(action(key)(lat)(lon))();
+                  });
+                  const mapConfig = window && window.appConfig && window.appConfig.mapConfig ? JSON.stringify(window.appConfig.mapConfig) : "{}";
+                  try {
+                    window.JBridge.showMap(id, isEnableCurrentLocation, type, zoom, callback, mapConfig);
+                  } catch (err) {
+                    window.JBridge.showMap(id, isEnableCurrentLocation, type, zoom, callback);
+                  }
+                  return true;
+                };
+              };
             };
           };
-        }
+        };
       };
     };
   };
@@ -1220,21 +1245,6 @@ export const openNavigation = function (dlat) {
 };
 
 
-export const animateCamera = function (lat) {
-  return function (lng) {
-    return function (zoom) {
-      return function (zoomType) {
-        return function () {
-          try {
-            window.JBridge.animateCamera(lat, lng, zoom, zoomType);
-          } catch (err) {
-            window.JBridge.animateCamera(lat, lng, zoom);
-          }
-        };
-      };
-    };
-  };
-};
 
 
 export const moveCamera = function (lat1) {
