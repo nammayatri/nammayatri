@@ -983,6 +983,9 @@ type GetFleetDriverVehicleAssociationAPI =
     :> "driverVehicleAssociation"
     :> QueryParam "Limit" Int
     :> QueryParam "Offset" Int
+    :> QueryParam "countryCode" Text
+    :> QueryParam "phoneNo" Text
+    :> QueryParam "vehicleNo" Text
     :> Get '[JSON] DrivertoVehicleAssociationRes
 
 data DriveVehicleAssociationListItem = DriveVehicleAssociationListItem
@@ -1011,6 +1014,8 @@ type GetFleetDriverAssociationAPI =
     :> QueryParam "isActive" Bool
     :> QueryParam "Limit" Int
     :> QueryParam "Offset" Int
+    :> QueryParam "countryCode" Text
+    :> QueryParam "phoneNo" Text
     :> Get '[JSON] DrivertoVehicleAssociationRes
 
 type GetFleetVehicleAssociationAPI =
@@ -1018,26 +1023,7 @@ type GetFleetVehicleAssociationAPI =
     :> "vehicleAssociation"
     :> QueryParam "Limit" Int
     :> QueryParam "Offset" Int
-    :> Get '[JSON] DrivertoVehicleAssociationRes
-
-type GetFleetDriverAssociationBySearchAPI =
-  "fleet"
-    :> "driverAssociation"
-    :> "search"
-    :> QueryParam "Limit" Int
-    :> QueryParam "Offset" Int
-    :> QueryParam "driverName" Text
-    :> QueryParam "driverPhoneNo" Text
-    :> Get '[JSON] DrivertoVehicleAssociationRes
-
-type GetFleetVehicleAssociationBySearchAPI =
-  "fleet"
-    :> "vehicleAssociation"
-    :> "search"
-    :> QueryParam "Limit" Int
-    :> QueryParam "Offset" Int
     :> QueryParam "vehicleNo" Text
-    :> QueryParam "driverPhoneNo" Text
     :> Get '[JSON] DrivertoVehicleAssociationRes
 
 -- data DriverMode

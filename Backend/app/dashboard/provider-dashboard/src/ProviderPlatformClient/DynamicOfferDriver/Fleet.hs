@@ -44,11 +44,9 @@ data FleetOperationsAPIs = FleetOperationsAPIs
     fleetTotalEarning :: Text -> Euler.EulerClient Driver.FleetTotalEarningResponse,
     fleetVehicleEarning :: Text -> Text -> Maybe (Id Driver.Driver) -> Euler.EulerClient Driver.FleetEarningRes,
     fleetDriverEarning :: Text -> Id Driver.Driver -> Euler.EulerClient Driver.FleetEarningRes,
-    getFleetDriverVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
-    getFleetDriverAssociation :: Text -> Maybe Bool -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
-    getFleetVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
-    getFleetDriverAssociationBySearch :: Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
-    getFleetVehicleAssociationBySearch :: Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
+    getFleetDriverVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
+    getFleetDriverAssociation :: Text -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
+    getFleetVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Maybe Text -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
     setVehicleDriverRcStatusForFleet :: Id Driver.Driver -> Text -> Driver.RCStatusReq -> Euler.EulerClient APISuccess
   }
 
@@ -83,8 +81,6 @@ mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
       :<|> getFleetDriverVehicleAssociation
       :<|> getFleetDriverAssociation
       :<|> getFleetVehicleAssociation
-      :<|> getFleetDriverAssociationBySearch
-      :<|> getFleetVehicleAssociationBySearch
       :<|> setVehicleDriverRcStatusForFleet = fleetOperationsClient
 
     fleetOwnerLogin
