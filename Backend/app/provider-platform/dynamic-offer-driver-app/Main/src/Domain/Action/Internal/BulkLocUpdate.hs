@@ -15,6 +15,7 @@
 module Domain.Action.Internal.BulkLocUpdate where
 
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.Common as DC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
@@ -26,6 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.LocationUpdates
 import qualified Lib.LocationUpdates as LocUpd
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 
 data BulkLocUpdateReq = BulkLocUpdateReq
@@ -41,7 +43,8 @@ bulkLocUpdate req = do
       rideId = req.rideId
       loc = req.loc
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchantId <- fromMaybeM (InternalError "Ride does not have a merchantId") $ ride.merchantId
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId ride.merchantOperatingCityId False
-  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId loc
+  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler (DC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory) rideId driverId loc
   pure Success

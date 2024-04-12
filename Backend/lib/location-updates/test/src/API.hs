@@ -83,8 +83,8 @@ successFlow appEnv config eps expectedDistance rideId route = runFlow "" appEnv 
   let ih = buildTestInterpolationHandler config
   initializeDistanceCalculation ih rideId testDriverId origin
   forM_ (NE.toList route) $ \updatesBatch ->
-    addIntermediateRoutePoints ih rideId testDriverId updatesBatch
-  finalDistanceCalculation ih rideId testDriverId destination 0 Nothing True
+    addIntermediateRoutePoints ih True rideId testDriverId updatesBatch
+  finalDistanceCalculation ih True rideId testDriverId destination 0 Nothing True
   failed <- API.isDistanceCalculationFailed ih testDriverId
   liftIO $ failed `shouldBe` False
   totalDistance <- checkTraveledDistance testDriverId
@@ -105,9 +105,9 @@ failFlow appEnv config rideId route = runFlow "" appEnv $ do
   liftIO $ failed0 `shouldBe` False
 
   forM_ (NE.toList route) $ \updatesBatch -> do
-    addIntermediateRoutePoints ih rideId testDriverId updatesBatch
+    addIntermediateRoutePoints ih True rideId testDriverId updatesBatch
     failed1 <- API.isDistanceCalculationFailed ih testDriverId
     liftIO $ failed1 `shouldBe` True
-  finalDistanceCalculation ih rideId testDriverId destination 0 Nothing True
+  finalDistanceCalculation ih True rideId testDriverId destination 0 Nothing True
   failed2 <- API.isDistanceCalculationFailed ih testDriverId
   liftIO $ failed2 `shouldBe` True

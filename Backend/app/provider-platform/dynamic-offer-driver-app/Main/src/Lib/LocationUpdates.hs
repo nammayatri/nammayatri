@@ -211,9 +211,9 @@ buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity
 buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
   transportConfig <- MTC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transportConfig.timeDiffFromUtc
-  let snapToRoad' =
+  let snapToRoad' shouldRectifyDistantPointsFailure =
         if transportConfig.useWithSnapToRoadFallback
-          then TMaps.snapToRoadWithFallback merchantId merchantOpCityId
+          then TMaps.snapToRoadWithFallback shouldRectifyDistantPointsFailure merchantId merchantOpCityId
           else snapToRoadWithService
       enableNightSafety = (not isEndRide) && (checkNightSafetyTimeConstraint transportConfig now)
   return $
