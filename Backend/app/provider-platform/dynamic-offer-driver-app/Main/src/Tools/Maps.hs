@@ -136,11 +136,15 @@ snapToRoadWithFallback ::
     HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters],
     HasFlowEnv m r '["osrmMatchThreshold" ::: HighPrecMeters]
   ) =>
+  Bool ->
   Id Merchant ->
   Id MerchantOperatingCity ->
   SnapToRoadReq ->
   m ([Maps.MapsService], Either String SnapToRoadResp)
-snapToRoadWithFallback merchantId merchantOperatingCityId = Maps.snapToRoadWithFallback handler
+snapToRoadWithFallback rectifyDistantPointsFailure merchantId merchantOperatingCityId =
+  if rectifyDistantPointsFailure
+    then Maps.nonFailingSnapToRoadWithFallback handler
+    else Maps.snapToRoadWithFallback handler
   where
     handler = Maps.SnapToRoadHandler {..}
 

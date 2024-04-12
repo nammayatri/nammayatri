@@ -119,7 +119,7 @@ data ServiceHandle m = ServiceHandle
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
-    finalDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> Meters -> Maybe HighPrecMoney -> Bool -> m (),
+    finalDistanceCalculation :: Bool -> Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> Meters -> Maybe HighPrecMoney -> Bool -> m (),
     getInterpolatedPoints :: Id DP.Person -> m [LatLong],
     clearInterpolatedPoints :: Id DP.Person -> m (),
     findConfig :: Maybe Text -> Maybe Text -> m (Maybe DTConf.TransporterConfig),
@@ -329,7 +329,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
               -- here we update the current ride, so below we fetch the updated version
               pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking rideOld tripEndPoint thresholdConfig
               whenJust (nonEmpty tripEndPoints) \tripEndPoints' -> do
-                withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges pickupDropOutsideOfThreshold
+                withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation (DTC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory) rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges pickupDropOutsideOfThreshold
 
               distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed driverId
               when distanceCalculationFailed $ do

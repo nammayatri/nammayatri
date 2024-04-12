@@ -106,13 +106,18 @@ isEndOtpRequired _ = False
 
 -- Move it to configs later if required
 isOdometerReadingsRequired :: TripCategory -> Bool
-isOdometerReadingsRequired (Rental _) = True
+isOdometerReadingsRequired (Rental _) = False
 isOdometerReadingsRequired _ = False
 
 -- Move it to configs later if required
 isGoHomeAvailable :: TripCategory -> Bool
 isGoHomeAvailable (OneWay _) = True
 isGoHomeAvailable _ = False
+
+shouldRectifyDistantPointsSnapToRoadFailure :: TripCategory -> Bool
+shouldRectifyDistantPointsSnapToRoadFailure tripCategory = case tripCategory of
+  Rental _ -> True
+  _ -> False
 
 isRentalTrip :: TripCategory -> Bool
 isRentalTrip tripCategory = case tripCategory of
