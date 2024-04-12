@@ -63,7 +63,8 @@ onTrack ValidatedOnTrackReq {..} = do
         void $ QRide.updateTrackingUrl ride.id trackUrl'
     else do
       whenJust trackingLocation $ \trackingLocation' -> do
-        void $ Hedis.setExp (Common.mkRideTrackingRedisKey ride.id.getId) trackingLocation' 10
+        logDebug $ "Updating tracking location for ride:" <> show ride.id <> " to " <> show trackingLocation'
+        void $ Hedis.setExp (Common.mkRideTrackingRedisKey ride.id.getId) trackingLocation' 60
 
 validateRequest :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => OnTrackReq -> m ValidatedOnTrackReq
 validateRequest OnTrackReq {..} = do
