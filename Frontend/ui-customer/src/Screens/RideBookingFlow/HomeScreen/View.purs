@@ -3212,6 +3212,7 @@ homeScreenViewV2 push state =
           , width MATCH_PARENT
           , gravity CENTER_VERTICAL
           , margin $ Margin 16 0 16 16
+          , onClick push $ const WhereToClick
           , accessibility DISABLE
           ]
       ])else
