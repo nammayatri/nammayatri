@@ -47,6 +47,7 @@ data DTrackRes = TrackRes
     driverLocation :: Maybe DriverLocation,
     isValueAddNP :: Bool
   }
+  deriving (Generic, Show)
 
 track ::
   (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) =>
@@ -67,7 +68,9 @@ track transporterId req = do
     if not isValueAddNP
       then do
         driverLocations <- LF.driversLocation [ride.driverId]
-        return $ listToMaybe $ sortBy (comparing (Down . (.coordinatesCalculatedAt))) driverLocations
+        let resLoc = listToMaybe $ sortBy (comparing (Down . (.coordinatesCalculatedAt))) driverLocations
+        logTagDebug ("rideId:-" <> show ride.id) $ "track driverLocation:-" <> show resLoc
+        return resLoc
       else return Nothing
   return $
     TrackRes
