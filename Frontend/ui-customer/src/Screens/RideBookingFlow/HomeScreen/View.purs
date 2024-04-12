@@ -251,7 +251,6 @@ screen initialState =
               ConfirmingLocation -> do
                 void $ pure $ enableMyLocation true
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                -- void $ setMapPadding 0 0 0 112
                 _ <- storeCallBackLocateOnMap push UpdatePickupLocation
                 pure unit
               TryAgain -> do
@@ -3790,7 +3789,7 @@ repeatRideCard push state index trip =
     , stroke $ "1,"<> Color.grey800
     , margin $ Margin 8 8 8 8
     , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
-    , padding $ Padding 12 16 16 16
+    , padding $ Padding 0 16 16 16
     , background Color.white900
     , gravity CENTER_VERTICAL
     , cornerRadii $ Corners 16.0 true true true true
@@ -3852,6 +3851,8 @@ repeatRideCard push state index trip =
     imageName = case trip.vehicleVariant of
                   Just variant -> getVehicleVariantImage variant
                   Nothing -> "ny_ic_green_loc_tag"
+    
+    imageDimensions = if trip.vehicleVariant == Just "AUTO_RICKSHAW" then {height : V 45, width : V 55} else {height : V 45, width : V 55}
 
 pillTagView :: forall w. {text :: String, image :: String} -> PrestoDOM (Effect Unit) w
 pillTagView config = 
