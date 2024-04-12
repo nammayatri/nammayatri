@@ -929,7 +929,7 @@ homeScreenFlow = do
                                                         frequencyCount : Just 1,
                                                         isSpecialZone : state.props.isSpecialZone,
                                                         vehicleVariant : Just state.data.driverInfoCardState.vehicleVariant,
-                                                        serviceTierName : state.data.driverInfoCardState.serviceTierName
+                                                        serviceTierNameV2 : state.data.driverInfoCardState.serviceTierName
                                                         }
                                             currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
                                             currentMap = getSuggestionsMapFromLocal FunctionCall
@@ -1497,7 +1497,7 @@ homeScreenFlow = do
           (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
           geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
           pickUpPoints = mapSpecialZoneGates srcSpecialLocation.gatesInfo
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = cityName, locateOnMapProps{ sourceLocationName = Just srcSpecialLocation.locationName, sourceGeoJson = Just geoJson, sourceGates = Just pickUpPoints}, repeatRideServiceTierName = state.serviceTierName}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = cityName, locateOnMapProps{ sourceLocationName = Just srcSpecialLocation.locationName, sourceGeoJson = Just geoJson, sourceGates = Just pickUpPoints}, repeatRideServiceTierName = state.serviceTierNameV2}})
       setValueToLocalStore CUSTOMER_LOCATION $ show cityName
       when (state.isSpecialZone) $ do
         modifyScreenState $ HomeScreenStateType 
@@ -2577,7 +2577,7 @@ fetchAndModifyLocationLists savedLocationResp = do
               (getGeoHash trip1.destLat trip1.destLong precision) 
               == 
               (getGeoHash trip2.destLat trip2.destLong precision)
-              && trip1.vehicleVariant == trip2.vehicleVariant
+              && trip1.serviceTierNameV2 == trip2.serviceTierNameV2
             ) 
             trips
 

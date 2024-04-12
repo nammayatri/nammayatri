@@ -1396,7 +1396,7 @@ type Trip = {
   , locationScore :: Maybe Number
   , isSpecialZone :: Boolean
   , vehicleVariant :: Maybe String
-  , serviceTierName :: Maybe String
+  , serviceTierNameV2 :: Maybe String
 }
 type SuggestionsData =  {
     suggestionsMap :: SuggestionsMap

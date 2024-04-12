@@ -654,7 +654,7 @@ getTripFromRideHistory state = {
   , recencyDate : Nothing
   , locationScore : Nothing
   , vehicleVariant : Just $ show state.data.selectedItem.vehicleVariant
-  , serviceTierName : state.data.selectedItem.serviceTierName
+  , serviceTierNameV2 : state.data.selectedItem.serviceTierName
   }
 
 fetchPickupCharges :: Array EstimateFares -> Int 

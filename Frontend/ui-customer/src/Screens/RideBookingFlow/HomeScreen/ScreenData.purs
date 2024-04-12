@@ -582,5 +582,5 @@ dummyTrip = {
     locationScore: Nothing,  
     isSpecialZone: true,
     vehicleVariant: Nothing,
-    serviceTierName : Nothing
+    serviceTierNameV2 : Nothing
 }
