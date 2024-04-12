@@ -287,18 +287,19 @@ type FlowServer api = FlowServerR AppEnv api
 type Flow = FlowR AppEnv
 
 instance Registry Flow where
-  registryLookup =
-    Registry.withSubscriberCache $ \sub ->
-      fetchFromDB sub.subscriber_id sub.unique_key_id sub.merchant_id
-        >>>= \registryUrl -> do
-          subId <- Registry.registryLookup registryUrl sub
-          totalSubIds <- QWhiteList.countTotalSubscribers
-          if totalSubIds == 0
-            then do
-              Registry.checkBlacklisted isBlackListed subId
-            else do
-              Registry.checkWhitelisted isNotWhiteListed subId
+  registryLookup req = do
+    mbSubscriber <- Registry.withSubscriberCache performLookup req
+
+    totalSubIds <- QWhiteList.countTotalSubscribers
+    if totalSubIds == 0
+      then do
+        Registry.checkBlacklisted isBlackListed mbSubscriber
+      else do
+        Registry.checkWhitelisted isNotWhiteListed mbSubscriber
     where
+      performLookup sub =
+        fetchFromDB sub.subscriber_id sub.unique_key_id sub.merchant_id >>>= \registryUrl ->
+          Registry.registryLookup registryUrl sub
       fetchFromDB subscriberId uniqueId merchantId = do
         mbRegistryMapFallback <- CRM.findBySubscriberIdAndUniqueId subscriberId uniqueId
         case mbRegistryMapFallback of
