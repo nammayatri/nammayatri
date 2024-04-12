@@ -24,6 +24,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
 import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as Vehicle
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -153,7 +154,7 @@ mkWaitingChargesAPIEntity WaitingCharges {waitingChargePerMin} =
 
 data EstimateAPIEntity = EstimateAPIEntity
   { id :: Id Estimate,
-    vehicleVariant :: DVST.VehicleServiceTierType,
+    vehicleVariant :: Vehicle.VehicleVariant,
     serviceTierName :: Maybe Text,
     serviceTierShortDesc :: Maybe Text,
     estimatedFare :: Money,
@@ -231,7 +232,7 @@ mkEstimateAPIEntity Estimate {..} = do
         nightShiftInfo = mkNightShiftInfoAPIEntity <$> nightShiftInfo,
         waitingCharges = mkWaitingChargesAPIEntity waitingCharges,
         totalFareRange = mkFareRangeAPIEntity totalFareRange,
-        vehicleVariant = vehicleServiceTierType,
+        vehicleVariant = DVST.castServiceTierToVariant vehicleServiceTierType,
         ..
       }
   where
