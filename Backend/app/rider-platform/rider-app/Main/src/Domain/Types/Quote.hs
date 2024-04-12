@@ -26,6 +26,7 @@ import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleServiceTier as DVST
+import Domain.Types.VehicleVariant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -71,7 +72,7 @@ newtype OneWayQuoteDetails = OneWayQuoteDetails
 
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
-    vehicleVariant :: DVST.VehicleServiceTierType,
+    vehicleVariant :: Variant.VehicleVariant,
     serviceTierName :: Maybe Text,
     serviceTierShortDesc :: Maybe Text,
     estimatedFare :: Money,
@@ -153,6 +154,6 @@ makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
           estimatedFareWithCurrency = mkPriceAPIEntity estimatedFare,
           estimatedTotalFareWithCurrency = mkPriceAPIEntity estimatedTotalFare,
           discountWithCurrency = mkPriceAPIEntity <$> discount,
-          vehicleVariant = vehicleServiceTierType,
+          vehicleVariant = DVST.castServiceTierToVariant vehicleServiceTierType, -- to maintain backward compatibility
           ..
         }
