@@ -288,17 +288,19 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = (.signatureExpiry)
 
 instance Registry Flow where
-  registryLookup =
-    Registry.withSubscriberCache $ \sub -> do
-      fetchFromDB sub.merchant_id >>= \registryUrl -> do
-        subId <- Registry.registryLookup registryUrl sub
-        totalSubIds <- QWhiteList.countTotalSubscribers
-        if totalSubIds == 0
-          then do
-            Registry.checkBlacklisted isBlackListed subId
-          else do
-            Registry.checkWhitelisted isNotWhiteListed subId
+  registryLookup req = do
+    mbSubscriber <- Registry.withSubscriberCache performLookup req
+
+    totalSubIds <- QWhiteList.countTotalSubscribers
+    if totalSubIds == 0
+      then do
+        Registry.checkBlacklisted isBlackListed mbSubscriber
+      else do
+        Registry.checkWhitelisted isNotWhiteListed mbSubscriber
     where
+      performLookup sub = do
+        fetchFromDB sub.merchant_id >>= \registryUrl -> do
+          Registry.registryLookup registryUrl sub
       fetchFromDB merchantId = do
         merchant <- CM.findById (Id merchantId) >>= fromMaybeM (MerchantDoesNotExist merchantId)
         pure $ merchant.registryUrl
