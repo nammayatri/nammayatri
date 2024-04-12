@@ -129,31 +129,33 @@ bulkUpdateByDriverIdV2 ::
   TransporterConfig ->
   m ()
 bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount bulkUploadTitle mbexpirationTime transporterConfig = do
-  let coinsValue_ = amount.getHighPrecMoney / transporterConfig.coinConversionRate.getHighPrecMoney
-      coinsValue = round coinsValue_
-  Coins.updateDriverCoins driverId coinsValue transporterConfig.timeDiffFromUtc
-  now <- getCurrentTime
-  uuid <- generateGUIDText
-  let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
-      status_ = if coinsValue > 0 then DTCC.Remaining else DTCC.Used
-  let driverCoinEvent =
-        DTCC.CoinHistory
-          { id = Id uuid,
-            driverId = driverId.getId,
-            merchantId = merchantId.getId,
-            merchantOptCityId = merchantOpCityId.getId,
-            eventFunction = eventFunction,
-            coins = coinsValue,
-            status = status_,
-            createdAt = now,
-            updatedAt = now,
-            expirationAt = expiryTime,
-            coinsUsed = 0,
-            bulkUploadTitle = Just bulkUploadTitle
-          }
-  CHistory.updateCoinEvent driverCoinEvent
-  Coins.sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue eventFunction
-  pure ()
+  case eventFunction of
+    DCT.BulkUploadFunctionV2 _ -> do
+      let coinsValue_ = amount.getHighPrecMoney / transporterConfig.coinConversionRate.getHighPrecMoney
+          coinsValue = round coinsValue_
+      Coins.updateDriverCoins driverId coinsValue transporterConfig.timeDiffFromUtc
+      now <- getCurrentTime
+      uuid <- generateGUIDText
+      let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
+          status_ = if coinsValue > 0 then DTCC.Remaining else DTCC.Used
+      let driverCoinEvent =
+            DTCC.CoinHistory
+              { id = Id uuid,
+                driverId = driverId.getId,
+                merchantId = merchantId.getId,
+                merchantOptCityId = merchantOpCityId.getId,
+                eventFunction = eventFunction,
+                coins = coinsValue,
+                status = status_,
+                createdAt = now,
+                updatedAt = now,
+                expirationAt = expiryTime,
+                coinsUsed = 0,
+                bulkUploadTitle = Just bulkUploadTitle
+              }
+      CHistory.updateCoinEvent driverCoinEvent
+      Coins.sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue eventFunction
+    otherEventFunction -> throwError $ NonBulkUploadCoinFunction $ show otherEventFunction
 
 coinHistoryHandler :: ShortId DM.Merchant -> Context.City -> Id SP.Person -> Maybe Integer -> Maybe Integer -> Flow Common.CoinHistoryRes
 coinHistoryHandler merchantShortId opCity driverId mbLimit mbOffset = do
