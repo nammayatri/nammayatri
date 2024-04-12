@@ -51,9 +51,9 @@ callBAP uri body = do
   selfId <- asks (.selfId)
   let authKey = getHttpManagerKey selfId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing "Some action" fakeAPI uri internalEndPointHashMap body
+  Beckn.callBecknAPI Nothing (Just $ ET.ManagerSelector authKey) Nothing "Some action" fakeAPI uri internalEndPointHashMap body
   where
-    fakeAPI :: Proxy (ReqBody '[JSONBS] BS.ByteString :> Post '[JSON] AckResponse)
+    fakeAPI :: Proxy (Header "custom-request-id" Text :> ReqBody '[JSONBS] BS.ByteString :> Post '[JSON] AckResponse)
     fakeAPI = Proxy
 
 callbackReceiver :: SignatureAuthResult -> Text -> BS.ByteString -> FlowHandler AckResponse

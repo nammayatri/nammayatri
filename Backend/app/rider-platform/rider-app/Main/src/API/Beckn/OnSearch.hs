@@ -34,9 +34,10 @@ handler = onSearch
 
 onSearch ::
   SignatureAuthResult ->
+  Maybe Text ->
   OnSearch.OnSearchReqV2 ->
   FlowHandler AckResponse
-onSearch _ reqV2 = withFlowHandlerBecknAPI do
+onSearch _ _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.onSearchReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logInfo $ "OnSearch received:-" <> show reqV2

@@ -36,9 +36,10 @@ handler = onCancel
 
 onCancel ::
   SignatureAuthResult ->
+  Maybe Text ->
   OnCancel.OnCancelReqV2 ->
   FlowHandler AckResponse
-onCancel _ req = withFlowHandlerBecknAPI do
+onCancel _ _ req = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId req.onCancelReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "onCancel API Flow" $ "Received onCancel request:-" <> show req

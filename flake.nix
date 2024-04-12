@@ -6,7 +6,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel/backend/ART-function-switch-implementation";
+      url = "github:nammayatri/shared-kernel/backend/custom-req-id-in-api-call";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

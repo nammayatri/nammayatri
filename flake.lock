@@ -3819,16 +3819,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1713175674,
-        "narHash": "sha256-vGNMkRVWhm0cmR/wc7l49T6inTvOxqWlpg72HnkORrc=",
+        "lastModified": 1713174660,
+        "narHash": "sha256-TpcK+OVax9ImOjWfvDcgvmMVqQlx5O8q9khnAJFP6Ts=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "b872f3fb0e2e9e5c175aaef74ea17ca35982fd09",
+        "rev": "c8f9a3c655d4b286d28003dfc7cf2a2afb234ce1",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "backend/ART-function-switch-implementation",
+        "ref": "backend/custom-req-id-in-api-call",
         "repo": "shared-kernel",
         "type": "github"
       }

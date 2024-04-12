@@ -72,4 +72,4 @@ callBecknAPIWithSignature ::
 callBecknAPIWithSignature a b c d = do
   bapId <- asks (.selfId)
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  void $ callBecknAPI (Just $ ET.ManagerSelector $ getHttpManagerKey bapId) Nothing a b c internalEndPointHashMap d
+  void $ callBecknAPI Nothing (Just $ ET.ManagerSelector $ getHttpManagerKey bapId) Nothing a b c internalEndPointHashMap d

@@ -35,9 +35,10 @@ handler = onSelect
 
 onSelect ::
   SignatureAuthResult ->
+  Maybe Text ->
   OnSelect.OnSelectReqV2 ->
   FlowHandler AckResponse
-onSelect _ reqV2 = withFlowHandlerBecknAPI do
+onSelect _ _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.onSelectReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     mbDOnSelectReq <- ACL.buildOnSelectReqV2 reqV2

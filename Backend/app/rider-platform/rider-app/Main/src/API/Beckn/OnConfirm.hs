@@ -36,9 +36,10 @@ handler = onConfirm
 
 onConfirm ::
   SignatureAuthResult ->
+  Maybe Text ->
   OnConfirm.OnConfirmReqV2 ->
   FlowHandler AckResponse
-onConfirm _ reqV2 = withFlowHandlerBecknAPI do
+onConfirm _ _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.onConfirmReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     bppSubscriberId <- Utils.getContextBppId reqV2.onConfirmReqContext

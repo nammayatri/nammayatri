@@ -35,9 +35,10 @@ handler = onInit
 
 onInit ::
   SignatureAuthResult ->
+  Maybe Text ->
   Spec.OnInitReq ->
   FlowHandler Spec.AckResponse
-onInit _ req = withFlowHandlerAPI $ do
+onInit _ _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onInitReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   logDebug $ "Received OnInit request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do

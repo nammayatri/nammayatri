@@ -30,67 +30,77 @@ import Tools.Metrics (CoreMetrics)
 search ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasField "requestId" r (Maybe Text)
   ) =>
   BaseUrl ->
   Spec.SearchReq ->
   m Spec.AckResponse
 search gatewayUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  mbRequestId <- asks (.requestId)
   bapId <- req.searchReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature bapId "search" Spec.searchAPI gatewayUrl internalEndPointHashMap req
+  callBecknAPIWithSignature mbRequestId bapId "search" Spec.searchAPI gatewayUrl internalEndPointHashMap req
 
 init ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasField "requestId" r (Maybe Text)
   ) =>
   BaseUrl ->
   Spec.InitReq ->
   m Spec.AckResponse
 init providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  mbRequestId <- asks (.requestId)
   bapId <- req.initReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature bapId "init" Spec.initAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature mbRequestId bapId "init" Spec.initAPI providerUrl internalEndPointHashMap req
 
 confirm ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasField "requestId" r (Maybe Text)
   ) =>
   BaseUrl ->
   Spec.ConfirmReq ->
   m Spec.AckResponse
 confirm providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  mbRequestId <- asks (.requestId)
   bapId <- req.confirmReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature bapId "confirm" Spec.confirmAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature mbRequestId bapId "confirm" Spec.confirmAPI providerUrl internalEndPointHashMap req
 
 status ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasField "requestId" r (Maybe Text)
   ) =>
   BaseUrl ->
   Spec.StatusReq ->
   m Spec.AckResponse
 status providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  mbRequestId <- asks (.requestId)
   bapId <- req.statusReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature bapId "status" Spec.statusAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature mbRequestId bapId "status" Spec.statusAPI providerUrl internalEndPointHashMap req
 
 cancel ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasField "requestId" r (Maybe Text)
   ) =>
   BaseUrl ->
   Spec.CancelReq ->
   m Spec.AckResponse
 cancel providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  mbRequestId <- asks (.requestId)
   bapId <- req.cancelReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature bapId "cancel" Spec.cancelAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature mbRequestId bapId "cancel" Spec.cancelAPI providerUrl internalEndPointHashMap req
 
 callBecknAPIWithSignature ::
   ( MonadFlow m,
@@ -98,6 +108,7 @@ callBecknAPIWithSignature ::
     IsBecknAPI api req res,
     SanitizedUrl api
   ) =>
+  Maybe Text ->
   Text ->
   Text ->
   Proxy api ->
@@ -105,4 +116,4 @@ callBecknAPIWithSignature ::
   HM.HashMap BaseUrl BaseUrl ->
   req ->
   m res
-callBecknAPIWithSignature a = callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing
+callBecknAPIWithSignature mbRequestId a = callBecknAPI mbRequestId (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing

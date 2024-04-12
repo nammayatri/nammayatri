@@ -35,9 +35,10 @@ handler = onSearch
 
 onSearch ::
   SignatureAuthResult ->
+  Maybe Text ->
   Spec.OnSearchReq ->
   FlowHandler Spec.AckResponse
-onSearch _ req = withFlowHandlerAPI $ do
+onSearch _ _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onSearchReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   logDebug $ "Received OnSearch request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
