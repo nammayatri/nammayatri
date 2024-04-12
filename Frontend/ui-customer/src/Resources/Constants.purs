@@ -17,7 +17,7 @@ module Resources.Constants where
 
 import ConfigProvider
 
-import Accessor (_description, _amount)
+import Accessor (_description, _amount, _currency)
 import Common.Types.App (LazyCheck(..))
 import Data.Array (filter, length, null, reverse, (!!), head, all, elem, foldl)
 import Data.Function.Uncurried (runFn2)
@@ -32,10 +32,13 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Prelude (map, show, negate, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
-import Resources.Localizable.EN (getEN)
+import Prelude (map, show, negate, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*),(>>=))
 import Screens.Types as ST
-import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
+import JBridge as JB
+import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..), PriceAPIEntity(..), Currency(..))
+import ConfigProvider
+import Data.String as DS
+import Resources.Localizable.EN (getEN)
 
 type Language
   = { name :: String
@@ -207,10 +210,10 @@ getFaresList fares chargeableRideDistance =
           { fareType : item.description
           , price : currency <> " " <> 
             (show $ case item.description of 
-              "BASE_FARE" -> item.amount + getMerchSpecBaseFare fares
-              "SGST" -> (item.amount * 2) + getFareFromArray fares "FIXED_GOVERNMENT_RATE"
-              "WAITING_OR_PICKUP_CHARGES" -> item.amount + getFareFromArray fares "PLATFORM_FEE"
-              _ -> item.amount)
+              "BASE_FARE" -> item.amountWithCurrency ^. _amount + getMerchSpecBaseFare fares
+              "SGST" -> (item.amountWithCurrency ^. _amount * 2.0) + getFareFromArray fares "FIXED_GOVERNMENT_RATE"
+              "WAITING_OR_PICKUP_CHARGES" -> item.amountWithCurrency ^. _amount + getFareFromArray fares "PLATFORM_FEE"
+              _ -> item.amountWithCurrency ^. _amount)
           , title : case item.description of
                       "BASE_FARE" -> (getEN BASE_FARES) -- <> if chargeableRideDistance == "0 m" then "" else " (" <> chargeableRideDistance <> ")"
                       "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
@@ -233,25 +236,43 @@ getFaresList fares chargeableRideDistance =
     )
     (getFilteredFares fares)
 
-getMerchSpecBaseFare :: Array FareBreakupAPIEntity -> Int
+getMerchSpecBaseFare :: Array FareBreakupAPIEntity -> Number
 getMerchSpecBaseFare fares =
   case getMerchant FunctionCall of
     YATRISATHI -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE"]
     _ -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE"]
 
 
-getAllFareFromArray :: Array FareBreakupAPIEntity -> Array String -> Int
+getAllFareFromArray :: Array FareBreakupAPIEntity -> Array String -> Number
 getAllFareFromArray fares titles =
   let
     matchingFares = filter (\fare -> (fare^._description) `elem` titles) fares
   in
-    foldl (\acc fare -> acc + fare^._amount) 0 matchingFares
+    foldl (\acc (FareBreakupAPIEntity fare) -> acc + (fare.amountWithCurrency ^. _amount) ) 0.0 matchingFares
 
-getFareFromArray :: Array FareBreakupAPIEntity -> String -> Int
-getFareFromArray fareBreakUp fareType = (fromMaybe dummyFareBreakUp (head (filter (\fare -> fare^._description == (fareType)) fareBreakUp)))^._amount
+
+getFareFromArray :: Array FareBreakupAPIEntity -> String -> Number
+getFareFromArray arrFareBreakUp fareType =
+  let (FareBreakupAPIEntity fareBreakUp) = (fromMaybe dummyFareBreakUp (head (filter (\fare -> fare^._description == (fareType)) arrFareBreakUp)))
+      in
+        fareBreakUp.amountWithCurrency ^. _amount
+
+getCurrencyFromArray :: Array FareBreakupAPIEntity -> Currency
+getCurrencyFromArray arrFareBreakUp =
+  -- Here we are taking the currency of the BASE_FARE in the array
+  let (FareBreakupAPIEntity fareBreakUp) = (fromMaybe dummyFareBreakUp (head (filter (\fare -> fare^._description == "BASE_FARE") arrFareBreakUp)))
+      in
+        fareBreakUp.amountWithCurrency ^. _currency
 
 dummyFareBreakUp :: FareBreakupAPIEntity
-dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
+dummyFareBreakUp = FareBreakupAPIEntity
+  { amount: 0
+  , description: ""
+  , amountWithCurrency : PriceAPIEntity {
+      currency : INR
+      , amount : 0.0
+    }
+  }
 
 getMerchantSpecificFilteredFares :: Merchant -> Array String
 getMerchantSpecificFilteredFares merchant = 

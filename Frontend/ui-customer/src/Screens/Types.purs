@@ -39,7 +39,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes)
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes, Currency(..))
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
@@ -281,6 +281,7 @@ type TripDetailsScreenData =
     source :: String,
     destination :: String,
     totalAmount :: String,
+    currency :: Currency,
     paymentMode :: PaymentMode,
     rating :: Int,
     selectedItem :: IndividualRideCardState,
@@ -559,7 +560,8 @@ type HomeScreenStateData =
   {
     suggestedAmount :: Int
   , currentSearchResultType :: SearchResultType
-  , finalAmount :: Int
+  , finalAmount :: Number
+  , currency :: Currency
   , startedAt :: String
   , endedAt :: String
   , source :: String
@@ -1148,7 +1150,8 @@ type DriverInfoCard =
   , source :: String
   , destination :: String
   , rideId :: String
-  , price :: Int
+  , price :: Number
+  , currency :: Currency
   , sourceLat :: Number
   , sourceLng :: Number
   , destinationLat :: Number
@@ -1182,7 +1185,7 @@ type RatingCard =
     rideId :: String
   , rating :: Int
   , driverName :: String
-  , finalAmount :: Int
+  , finalAmount :: Number
   , rideStartTime :: String
   , rideEndTime :: String
   , source :: String
@@ -1194,7 +1197,7 @@ type RatingCard =
   , bookingId :: String
   , rideEndTimeUTC :: String
   , dateDDMMYY :: String
-  , offeredFare :: Int
+  , offeredFare :: Number
   , distanceDifference :: Int
   , feedback :: String
   , feedbackList :: Array FeedbackAnswer

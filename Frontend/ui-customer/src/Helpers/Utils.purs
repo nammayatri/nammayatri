@@ -79,7 +79,7 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo)
-import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..))
+import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), Currency(..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
@@ -598,7 +598,7 @@ getPaymentMethod _ =
   in maybe ("cash") (\payload -> fromMaybe "cash" $ payload ^. _payload ^. _paymentMethod) mBPayload
 
 
-triggerRideStatusEvent :: String -> Maybe Int -> Maybe String -> String -> Flow GlobalState Unit 
+triggerRideStatusEvent :: String -> Maybe Number -> Maybe String -> String -> Flow GlobalState Unit 
 triggerRideStatusEvent status amount bookingId screen = do
   let (payload :: InnerPayload) = { action : "trip_status"
     , ride_status : Just status
@@ -886,3 +886,16 @@ getSelectedServices dummy =
     Kochi -> ["Eco", "Hatchback", "Sedan"]
     Pondicherry -> ["Eco", "Auto"]
     _ ->  ["Eco", "Hatchback", "Sedan"] 
+getCurrencySymbol :: Currency -> String
+getCurrencySymbol currency 
+    | currency == INR = "$"
+    | currency == USD = "$"
+    | currency == EUR = "€"
+    | otherwise = show currency
+
+showDisplayPrice :: Currency -> Number -> String
+showDisplayPrice currency price
+    | currency == INR = show $ round price
+    | currency == USD = show price
+    | currency == EUR = show price
+    | otherwise = show price

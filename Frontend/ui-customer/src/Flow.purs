@@ -1137,7 +1137,7 @@ homeScreenFlow = do
       void $ lift $ lift $ fork $ HelpersAPI.callApi $ Remote.makeRideFeedBackReq state.data.rideRatingState.rideId state.data.rideRatingState.feedbackList
       void $ lift $ lift $ fork $ HelpersAPI.callApi $ getfeedbackReq state
       void $ updateLocalStage HomeScreen
-      let finalAmount = if state.data.finalAmount == 0 then state.data.rideRatingState.finalAmount else state.data.finalAmount
+      let finalAmount = if state.data.finalAmount == 0.0 then state.data.rideRatingState.finalAmount else state.data.finalAmount
       let bookingId = if state.props.bookingId == "" then state.data.rideRatingState.bookingId else state.props.bookingId
       pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $ EventPayload {
                                           event : "process_result"
@@ -1987,11 +1987,11 @@ dummyAddressGeometry = AddressGeometry {
   }
  }
 
-getFinalAmount :: RideBookingRes -> Int
+getFinalAmount :: RideBookingRes -> Number
 getFinalAmount (RideBookingRes resp) =
     let rideList = resp.rideList
         (RideAPIEntity ride) = (fromMaybe dummyRideAPIEntity (rideList !! 0))
-    in INT.round $ fromMaybe 0.0 $ fromString (show (fromMaybe 0 ride.computedPrice))
+    in fromMaybe 0.0 (ride.computedPriceWithCurrency >>= (\(PriceAPIEntity priceEntity) -> Just priceEntity.amount))
 
 tripDetailsScreenFlow ::  FlowBT String Unit
 tripDetailsScreenFlow = do
@@ -2878,6 +2878,7 @@ rideCompletedDetails (RideBookingRes resp) = do
       (RideBookingDetails contents) = bookingDetails.contents
       (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
       differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 ride.chargeableRideDistance)
+      estimatedFare = resp.estimatedFareWithCurrency  ^. _amount
       finalAmount =  getFinalAmount (RideBookingRes resp)
       timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
       nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)

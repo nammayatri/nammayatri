@@ -56,6 +56,7 @@ checkRideStatus rideAssigned = do
         let state = state'.homeScreen
             (RideBookingRes resp) = (fromMaybe HSD.dummyRideBooking (head listResp.list))
             status = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._status
+            (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (head resp.rideList)
             rideStatus = if status == "NEW" then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
             fareProductType = ((resp.bookingDetails) ^. _fareProductType)
             otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
@@ -64,7 +65,7 @@ checkRideStatus rideAssigned = do
               state
                 { data
                     { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) isQuotes
-                    , finalAmount = fromMaybe 0 $ (fromMaybe dummyRideAPIEntity (head resp.rideList) )^. _computedPrice
+                    , finalAmount = fromMaybe 0.0 (ride.computedPriceWithCurrency >>= (\(PriceAPIEntity priceEntity) -> Just priceEntity.amount))
                     , sourceAddress = getAddressFromBooking resp.fromLocation
                     , destinationAddress = getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
                     , currentSearchResultType = if isQuotes then QUOTES else ESTIMATES
@@ -141,14 +142,14 @@ checkRideStatus rideAssigned = do
                   , data { rideRatingState
                           { driverName = currRideListItem.driverName
                           , rideId = currRideListItem.id
-                          , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
+                          , finalAmount = fromMaybe 0.0 (currRideListItem.computedPriceWithCurrency >>= (\(PriceAPIEntity priceEntity) -> Just priceEntity.amount))--currRideListItem.computedPrice
                           , source = decodeAddress (Booking resp.fromLocation)
                           , destination = (decodeAddress (Booking (resp.bookingDetails ^._contents^._toLocation)))
                           , vehicleNumber = (currRideListItem.vehicleNumber)
                           , status = (currRideListItem.status)
                           , shortRideId = currRideListItem.shortRideId
                           , rideEndTimeUTC = ""
-                          , offeredFare = resp.estimatedTotalFare
+                          , offeredFare = resp.estimatedTotalFareWithCurrency ^. _amount
                           , distanceDifference = differenceOfDistance
                           , bookingId = resp.id
                           , feedback = ""
@@ -165,9 +166,9 @@ checkRideStatus rideAssigned = do
                                             Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                             Nothing        -> ""
                           }
-                          , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
+                          , finalAmount = fromMaybe 0.0 (currRideListItem.computedPriceWithCurrency >>= (\(PriceAPIEntity priceEntity) -> Just priceEntity.amount))
                           , driverInfoCardState {
-                            price = resp.estimatedTotalFare,
+                            price = resp.estimatedTotalFareWithCurrency ^. _amount,
                             rideId = currRideListItem.id,
                             providerType = maybe Common.ONUS (\valueAdd -> if valueAdd then Common.ONUS else Common.OFFUS) resp.isValueAddNP
                           }

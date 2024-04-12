@@ -20,19 +20,19 @@ import Common.Types.App (LazyCheck(..))
 import Common.Types.App as CTP
 import Data.Array (filter, null, (!!))
 import Data.Lens ((^.))
-import Data.Maybe 
+import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (convertUTCtoISC, os)
-import Helpers.Utils (FetchImageFrom(..), fetchImage, isHaveFare, withinTimeRange, getCityFromString, getVehicleVariantImage)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, isHaveFare, withinTimeRange, getCityFromString, getVehicleVariantImage, getCurrencySymbol)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Prelude (map, show, ($), (&&), (+), (-), (/=), (<>), (==), (||))
+import Prelude (map, show, ($), (&&), (+), (-), (/=), (<>), (==), (||), (>>=))
 import PrestoDOM.Types.Core (toPropValue)
-import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getKmMeter, fetchVehicleVariant)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getKmMeter, fetchVehicleVariant, getCurrencyFromArray)
 import Resources.Localizable.EN (getEN)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.Types (Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..), City(..))
-import Services.API (FareBreakupAPIEntity, RideAPIEntity(..), RideBookingRes(..))
+import Services.API (FareBreakupAPIEntity, RideAPIEntity(..), RideBookingRes(..), PriceAPIEntity(..), Currency(..))
 import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
 import Data.Ord (abs)
 import ConfigProvider
@@ -92,6 +92,8 @@ myRideListTransformer isSrcServiceable listRes = filter (\item -> (item.status =
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
     nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
     nightChargeTill = "5 AM"
+    amount = fromMaybe 0.0 (rideDetails.computedPriceWithCurrency >>= (\(PriceAPIEntity priceEntity) -> Just priceEntity.amount))
+    currency = fromMaybe INR (rideDetails.computedPriceWithCurrency >>= (\(PriceAPIEntity priceEntity) -> Just priceEntity.currency))
     referenceString' = (if nightChargesVal && (getMerchant CTP.FunctionCall) /= YATRI then "1.5" <> (getEN $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) else "")
                         <> (if isHaveFare "DRIVER_SELECTED_FARE" updatedFareList then "\n\n" <> getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO else "")
                         <> (if isHaveFare "WAITING_CHARGES" updatedFareList then "\n\n" <> getEN WAITING_CHARGE_DESCRIPTION else "")
@@ -105,7 +107,7 @@ myRideListTransformer isSrcServiceable listRes = filter (\item -> (item.status =
     time :  convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A",
     source :  decodeAddress $ Booking ride.fromLocation,
     destination : decodeAddress $ Booking $ ride.bookingDetails ^._contents^._toLocation,
-    totalAmount :  ((getCurrency appConfig)) <> " " <> (show (fromMaybe 0 rideDetails.computedPrice)),
+    totalAmount :  (getCurrencySymbol currency)  <> (show amount),
     cardVisibility :  "visible",
     shimmerVisibility :  "gone",
     driverImage :  fetchImage FF_ASSET "ny_ic_user",
@@ -153,8 +155,8 @@ matchRidebyId rideOne rideTwo = rideOne.bookingId == rideTwo.bookingId
 
 getFares ∷ Array FareBreakupAPIEntity → Fares
 getFares fares = {
-  baseFare : (getCurrency appConfig) <>  " " <> (show $ ((getFareFromArray fares "BASE_FARE") + (getFareFromArray fares "EXTRA_DISTANCE_FARE")) - 10)
-, pickupCharges : (getCurrency appConfig) <> " 10.0"
-, waitingCharges : (getCurrency appConfig) <> " " <> (show $ getFareFromArray fares "WAITING_CHARGES")
-, nominalFare : (getCurrency appConfig) <> " " <> (show $ getFareFromArray fares "DRIVER_SELECTED_FARE")
+  baseFare : (getCurrencyFromArray fares) <>  " " <> (show $ ((getFareFromArray fares "BASE_FARE") + (getFareFromArray fares "EXTRA_DISTANCE_FARE")) - 10.0)
+, pickupCharges :  (getCurrencyFromArray fares) <> " 10.0"
+, waitingCharges :  (getCurrencyFromArray fares) <> " " <> (show $ getFareFromArray fares "WAITING_CHARGES")
+, nominalFare :  (getCurrencyFromArray fares) <> " " <> (show $ getFareFromArray fares "DRIVER_SELECTED_FARE")
 }

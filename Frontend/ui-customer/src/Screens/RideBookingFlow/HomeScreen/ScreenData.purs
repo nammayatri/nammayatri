@@ -21,7 +21,7 @@ import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..))
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), PriceAPIEntity(..), Currency(..) )
 import Prelude (($) ,negate)
 import Data.Array (head)
 import Prelude(negate)
@@ -39,7 +39,8 @@ initData :: HomeScreenState
 initData = {
     data: {
       suggestedAmount : 0
-    , finalAmount : 0
+    , finalAmount : 0.0
+    , currency : INR
     , startedAt : ""
     , currentSearchResultType : ESTIMATES
     , endedAt : ""
@@ -415,7 +416,7 @@ dummyPreviousRiderating = {
   rideId : ""
 , rating : 0
 , driverName : ""
-, finalAmount : 0
+, finalAmount : 0.0
 , rideStartTime : ""
 , rideEndTime : ""
 , source : ""
@@ -427,7 +428,7 @@ dummyPreviousRiderating = {
 , bookingId : ""
 , rideEndTimeUTC : ""
 , dateDDMMYY : ""
-, offeredFare : 0
+, offeredFare : 0.0
 , distanceDifference : 0
 , feedback : ""
 , feedbackList : []
@@ -448,7 +449,8 @@ dummyDriverInfo =
   , source : ""
   , destination : ""
   , rideId : ""
-  , price : 0
+  , price : 0.0
+  , currency : INR
   , sourceLat : 0.0
   , sourceLng : 0.0
   , destinationLat : 0.0
@@ -502,24 +504,6 @@ dummyAddress =
   , "ward"      : Nothing
   , "placeId"   : Nothing
   }
-dummyQuoteAPIEntity :: QuoteAPIEntity
-dummyQuoteAPIEntity = QuoteAPIEntity {
-  agencyNumber : Nothing,
-  createdAt : "",
-  discount : Nothing,
-  estimatedTotalFare : 0,
-  agencyName : "",
-  vehicleVariant : "",
-  estimatedFare : 0,
-  tripTerms : [],
-  id : "",
-  agencyCompletedRidesCount : Nothing,
-  quoteDetails : QuoteAPIDetails {fareProductType : "", contents : dummyDriverOfferAPIEntity},
-  serviceTierShortDesc : Nothing,
-  serviceTierName : Nothing, 
-  airConditioned : Nothing
-  
-}
 
 dummyDriverOfferAPIEntity :: QuoteAPIContents
 dummyDriverOfferAPIEntity =
@@ -575,6 +559,14 @@ dummyRideBooking = RideBookingRes
   createdAt : "",
   discount : Nothing ,
   estimatedTotalFare : 0,
+  estimatedTotalFareWithCurrency : PriceAPIEntity {
+      currency : INR
+      , amount : 0.0
+    },
+  estimatedFareWithCurrency : PriceAPIEntity {
+      currency : INR
+      , amount : 0.0
+    },
   agencyName : "",
   rideList :[] ,
   estimatedFare : 0,
@@ -607,11 +599,6 @@ dummyRideBookingDetails = RideBookingDetails {
   otpCode : Nothing
 }
 
-dummyFareBreakUp :: FareBreakupAPIEntity
-dummyFareBreakUp = FareBreakupAPIEntity{
-  amount : 0,
-  description : "fare"
-}
 
 dummyTrip :: Trip
 dummyTrip = {

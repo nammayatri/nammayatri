@@ -49,7 +49,7 @@ type RatingCardData =
     rating :: Int
   , driverName :: String
   , rideId :: String
-  , finalAmount :: Int
+  , finalAmount :: Number
   , rideStartTime :: String
   , rideStartDate :: String
   , rideEndTime :: String
@@ -61,7 +61,7 @@ type RatingCardData =
   , bookingId :: String
   , rideEndTimeUTC :: String
   , dateDDMMYY :: String
-  , offeredFare :: Int
+  , offeredFare :: Number
   , distanceDifference :: Int
   , feedback :: String
   , feedbackList :: Array FeedbackAnswer
@@ -92,7 +92,7 @@ dummyPreviousRiderating = {
   rideId : ""
 , rating : 0
 , driverName : ""
-, finalAmount : 0
+, finalAmount : 0.0
 , rideStartTime : ""
 , rideEndTime : ""
 , source : ""
@@ -104,7 +104,7 @@ dummyPreviousRiderating = {
 , bookingId : ""
 , rideEndTimeUTC : ""
 , dateDDMMYY : ""
-, offeredFare : 0
+, offeredFare : 0.0
 , distanceDifference : 0
 , feedback : ""
 , feedbackList : []

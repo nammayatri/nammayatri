@@ -26,6 +26,7 @@ import PrestoDOM
 import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..))
 import Components.BannerCarousel as BannerCarousel
 import Common.Types.App as CTP
+import Services.API (Currency(..))
 
 data Action = NoAction
             | PrimaryButtonAC PrimaryButtonController.Action
@@ -79,7 +80,8 @@ type DriverInfoCardData =
   , source :: String
   , destination :: String
   , rideId :: String
-  , price :: Int
+  , price :: Number
+  , currency :: Currency
   , sourceLat :: Number
   , sourceLng :: Number
   , destinationLat :: Number

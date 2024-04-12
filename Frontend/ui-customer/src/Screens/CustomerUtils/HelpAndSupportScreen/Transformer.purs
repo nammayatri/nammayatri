@@ -25,7 +25,7 @@ import Data.Array ((!!), null, filter, elem)
 import Language.Types (STR(..))
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Helpers.Utils (toStringJSON, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (toStringJSON, fetchImage, getCurrencySymbol, FetchImageFrom(..))
 import JBridge (showDialer, hideKeyboardOnNavigation,toast, differenceBetweenTwoUTC)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -35,7 +35,7 @@ import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getK
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.Types ( DeleteStatus(..), IssueInfo, IssueModalType(..))
-import Services.API (IssueReportCustomerListItem(..), RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..))
+import Services.API (IssueReportCustomerListItem(..), RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..), PriceAPIEntity(..), Currency(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Data.String 
 import Storage (getValueToLocalStore, KeyStore(..))
@@ -65,6 +65,8 @@ myRideListTransform state listRes = filter (\item -> (item.data.status == "COMPL
     baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
     updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
     config = getAppConfig appConfig
+    amount = fromMaybe 0.0 (rideDetails.computedPriceWithCurrency >>= (\(PriceAPIEntity priceEntity) -> Just priceEntity.amount))
+    currency = fromMaybe INR (rideDetails.computedPriceWithCurrency >>= (\(PriceAPIEntity priceEntity) -> Just priceEntity.currency))
       in  {
         data:{
           date : (convertUTCtoISC (ride.createdAt) "ddd, Do MMM"),
@@ -73,7 +75,7 @@ myRideListTransform state listRes = filter (\item -> (item.data.status == "COMPL
           destination: (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
           rating: (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
           driverName :((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _driverName) ,
-          totalAmount : (config.currency <> " " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
+          totalAmount : (getCurrencySymbol currency)  <> (show amount),
           status : (ride.status),
           isNull : false,
           rideStartTime : (convertUTCtoISC (fromMaybe "" ride.rideStartTime )"h:mm A"),
@@ -105,9 +107,6 @@ myRideListTransform state listRes = filter (\item -> (item.data.status == "COMPL
       }
       }) listRes)
 
-
-dummyFareBreakUp :: FareBreakupAPIEntity
-dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
 
 isEmailPresent :: LazyCheck -> Boolean
 isEmailPresent _ = not ( getValueToLocalStore USER_EMAIL == "__failed" || getValueToLocalStore USER_EMAIL == "(null)" )

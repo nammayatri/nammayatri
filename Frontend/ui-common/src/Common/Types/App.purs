@@ -203,7 +203,7 @@ newtype EventPayload = EventPayload {
 
 type InnerPayload = {
     action :: String
-  , trip_amount :: Maybe Int
+  , trip_amount :: Maybe Number
   , trip_id :: Maybe String
   , screen :: Maybe String
   , exit_app :: Boolean
@@ -217,20 +217,7 @@ type LayoutBound =
   { height :: Int
   , width :: Int
 }
--- newtype LocationLatLong = LocationLatLong
---   { lat :: String
---   , long :: String
---   }
 
--- derive instance genericLocationLatLong :: Generic (LocationLatLong )  _
--- derive instance newtypeLocationLatLong :: Newtype (LocationLatLong ) _
--- instance decodeLocationLatLong :: Decode (LocationLatLong ) where decode = defaultDecode
--- instance encodeLocationLatLong :: Encode (LocationLatLong ) where encode = defaultEncode
-
--- derive instance genericLocationLatLong :: Generic LocationLatLong _
--- derive instance newtypeLocationLatLong :: Newtype LocationLatLong _
--- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
--- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
 
 data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup | WaitingCharges | TollOrParkingCharges
 derive instance genericRateCardType :: Generic RateCardType _

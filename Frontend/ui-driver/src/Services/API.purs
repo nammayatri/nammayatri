@@ -714,18 +714,18 @@ instance showRidesInfo :: Show RidesInfo where show = genericShow
 instance decodeRidesInfo :: Decode RidesInfo where decode = defaultDecode
 instance encodeRidesInfo :: Encode RidesInfo where encode = defaultEncode
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT
+-- data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT
 
-derive instance genericVehicleVariant :: Generic VehicleVariant _
-instance showVehicleVariant :: Show VehicleVariant where show = genericShow
-instance decodeVehicleVariant :: Decode VehicleVariant where decode = defaultDecode
-instance encodeVehicleVariant :: Encode VehicleVariant where encode = defaultEncode
-instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
-  where
- standardEncode SEDAN = standardEncode {}
- standardEncode SUV = standardEncode {}
- standardEncode HATCHBACK = standardEncode {}
- standardEncode AUTO_VARIANT = standardEncode {}
+-- derive instance genericVehicleVariant :: Generic VehicleVariant _
+-- instance showVehicleVariant :: Show VehicleVariant where show = genericShow
+-- instance decodeVehicleVariant :: Decode VehicleVariant where decode = defaultDecode
+-- instance encodeVehicleVariant :: Encode VehicleVariant where encode = defaultEncode
+-- instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
+--   where
+--  standardEncode SEDAN = standardEncode {}
+--  standardEncode SUV = standardEncode {}
+--  standardEncode HATCHBACK = standardEncode {}
+--  standardEncode AUTO_VARIANT = standardEncode {}
 
 data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING
 

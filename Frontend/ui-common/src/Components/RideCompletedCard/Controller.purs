@@ -22,6 +22,7 @@ import Data.Generic.Rep (class Generic)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import Data.Maybe
 import Styles.Types
+import Services.API (Currency(..))
 
 data Action = Support
             | RideDetails
@@ -100,8 +101,9 @@ config = {
   topCard : {
     title : "",
     titleColor : Color.grey900,
-    finalAmount : 0,
-    initalAmount : 0,
+    finalAmount : 0.0,
+    initalAmount : 0.0,
+    currency : INR,
     fareUpdatedVisiblity : false,
     gradient : [Color.black900, Color.black900, Color.pickledBlue, Color.black900],
     topPill : {
@@ -239,8 +241,9 @@ type CustomerIssueCard = {
 type TopCard = {
   title :: String,
   titleColor :: String,
-  finalAmount :: Int,
-  initalAmount :: Int,
+  finalAmount :: Number,
+  initalAmount :: Number,
+  currency :: Currency,
   fareUpdatedVisiblity :: Boolean,
   gradient :: Array String,
   topPill :: TopPill,

@@ -1036,6 +1036,7 @@ driverInfoTransformer state =
     , destination : cardState.destination
     , rideId : cardState.rideId
     , price : cardState.price
+    , currency : cardState.currency
     , sourceLat : cardState.sourceLat
     , sourceLng : cardState.sourceLng
     , destinationLat : cardState.destinationLat
@@ -1599,6 +1600,7 @@ rideCompletedCardConfig state =
           title =  getString RIDE_COMPLETED,
           titleColor = topCardConfig.titleColor,
           finalAmount = state.data.finalAmount,
+          currency = state.data.currency,
           initalAmount = state.data.driverInfoCardState.price,
           fareUpdatedVisiblity = state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing,
           gradient = topCardGradient,

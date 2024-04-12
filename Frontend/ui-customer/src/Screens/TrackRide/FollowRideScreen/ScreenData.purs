@@ -7,7 +7,7 @@ import Screens.HomeScreen.ScreenData
 import Screens.Types
 import PrestoDOM (BottomSheetState(..))
 import Foreign.Object (empty)
-import Services.API (Route(..), Snapped(..), LatLong(..), GetRouteResp(..), GetDriverLocationResp(..))
+import Services.API (Route(..), Snapped(..), LatLong(..), GetRouteResp(..), GetDriverLocationResp(..), Currency(..))
 import Common.Types.App as CT
 
 initData :: FollowRideScreenState
@@ -164,7 +164,7 @@ mockDriverLocation =
         , lon: 77.622155
         }
 
-mockDriverInfo :: DriverInfoCard
+mockDriverInfo :: DriverInfoCard -- Replace with dummyDriverInfo function
 mockDriverInfo =
   { otp: ""
   , driverName: "Test Driver"
@@ -178,7 +178,8 @@ mockDriverInfo =
   , source: "NA"
   , destination: "NA"
   , rideId: ""
-  , price: 0
+  , price: 0.0
+  , currency: INR
   , sourceLat: 12.942134
   , sourceLng: 77.622155
   , destinationLat: 12.934941

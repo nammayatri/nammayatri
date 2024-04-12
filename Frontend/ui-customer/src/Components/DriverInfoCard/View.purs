@@ -44,7 +44,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, chatSuggestion)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode, getDefaultPixelSize)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode, getDefaultPixelSize,specialZoneTagConfig, getCurrencySymbol)
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig)
 import Helpers.Utils (parseFloat)
 import JBridge (fromMetersToKm, getLayoutBounds)
@@ -874,6 +874,8 @@ ratingView push state =
 
 paymentMethodView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> String -> Boolean -> String -> PrestoDOM (Effect Unit) w
 paymentMethodView push state title shouldShowIcon uid =
+  let currency = getCurrencySymbol state.data.currency
+  in
   linearLayout
   [ orientation HORIZONTAL
   , width MATCH_PARENT
@@ -884,7 +886,7 @@ paymentMethodView push state title shouldShowIcon uid =
   , background Color.white900
   , padding $ Padding 16 16 16 16
   , accessibility ENABLE
-  , accessibilityHint $ "Fare Estimate :" <> state.data.config.currency <> show state.data.price <> " : Pay by cash or U P I"
+  , accessibilityHint $ "Fare Estimate :" <> currency <> show state.data.price <> " : Pay by cash or U P I"
   , cornerRadius 8.0
   ][  linearLayout
       [ orientation VERTICAL
@@ -897,7 +899,7 @@ paymentMethodView push state title shouldShowIcon uid =
           , color Color.black700
           ] <> FontStyle.body3 TypoGraphy
         , textView $
-          [ text $ state.data.config.currency <> show state.data.price
+          [ text $ currency <> show state.data.price
           , margin $ MarginTop 4
           , color Color.black800
           ] <> FontStyle.h2 TypoGraphy

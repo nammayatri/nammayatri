@@ -3474,7 +3474,7 @@ logoutFlow = do
   void $ pure $ JB.stopService "in.juspay.mobility.app.GRPCNotificationService"
   if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
     chooseCityFlow
-  else authenticationFlow ""
+  else chooseCityFlow
 
 runInternetCondition :: FlowBT String Unit
 runInternetCondition = do

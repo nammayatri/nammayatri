@@ -12,7 +12,7 @@ import Effect (Effect)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when)
 import Common.Styles.Colors as Color
 import Components.SelectListModal as CancelRidePopUp
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getCurrencySymbol)
 import Data.Array (mapWithIndex, length, (!!), null)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, safeMarginTop, screenHeight, getNewIDWithTag)
 import Components.PrimaryButton as PrimaryButton
@@ -217,6 +217,8 @@ topPillView config push =
 
 priceAndDistanceUpdateView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 priceAndDistanceUpdateView config push = 
+  let currency = getCurrencySymbol config.topCard.currency
+  in 
   linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -234,16 +236,16 @@ priceAndDistanceUpdateView config push =
           , height WRAP_CONTENT
           , gravity CENTER
           ][ textView $ 
-              [ text if config.isFreeRide then "₹0" else "₹" <> (show config.topCard.finalAmount)
-              , accessibilityHint $ "Ride Complete: Final Fare ₹"  <> (show config.topCard.finalAmount)
+              [ text if config.isFreeRide then currency <> "0" else currency <> (show config.topCard.finalAmount)
+              , accessibilityHint $ "Ride Complete: Final Fare " <> currency  <> (show config.topCard.finalAmount)
               , accessibility config.accessibility
               , color $ if config.theme == LIGHT then Color.black800 else Color.white900
               , width WRAP_CONTENT
               , height WRAP_CONTENT
               ] <> (FontStyle.title0 TypoGraphy)
           , textView $
-              [ textFromHtml $ "<strike> ₹" <> (show config.topCard.initalAmount) <> "</strike>"
-              , accessibilityHint $ "Your Fare Has Been Updated From ₹"  <> (show config.topCard.initalAmount) <> " To ₹" <> (show config.topCard.finalAmount)
+              [ textFromHtml $ "<strike>" <> currency <> (show config.topCard.initalAmount) <> "</strike>"
+              , accessibilityHint $ "Your Fare Has Been Updated From " <> currency  <> (show config.topCard.initalAmount) <> " To" <> currency <> (show config.topCard.finalAmount)
               , accessibility config.accessibility
               , margin $ Margin 8 5 0 0
               , width WRAP_CONTENT

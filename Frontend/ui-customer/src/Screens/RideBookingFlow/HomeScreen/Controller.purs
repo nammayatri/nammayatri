@@ -91,7 +91,7 @@ import Resources.Constants (encodeAddress, getAddressFromBooking, decodeAddress,
 import Constants (defaultDensity)
 import Screens (ScreenName(..), getScreen)
 import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
-import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
+import Screens.HomeScreen.ScreenData (dummyAddress, dummyZoneType)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, dummyEstimateEntity)
 import Screens.RideBookingFlow.HomeScreen.Config
@@ -3091,7 +3091,7 @@ dummyRideRatingState = {
   rating              : 0,
   driverName          : "",
   rideId              :  "",
-  finalAmount         : 0,
+  finalAmount         : 0.0,
   rideStartTime       : "",
   rideStartDate       : "",
   rideEndTime         : "",
@@ -3103,7 +3103,7 @@ dummyRideRatingState = {
   bookingId           : "",
   rideEndTimeUTC      : "",
   dateDDMMYY          : "",
-  offeredFare         : 0,
+  offeredFare         : 0.0,
   distanceDifference  : 0,
   feedback            : "",
   feedbackList        : []

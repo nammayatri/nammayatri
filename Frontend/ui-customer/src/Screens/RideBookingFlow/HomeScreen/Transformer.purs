@@ -17,7 +17,7 @@ module Screens.HomeScreen.Transformer where
 
 import Prelude
 
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
+import Accessor
 
 import Components.ChooseVehicle (Config, config, SearchType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (config) as QLI
@@ -31,15 +31,15 @@ import Data.Eq
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim, null)
 import Data.Function.Uncurried (runFn1)
-import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices)
+import Helpers.Utils (parseFloat, withinTimeRange,isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getCurrencySymbol, showDisplayPrice, getAllServices, getSelectedServices)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..))
-import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..))
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData)
+import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..), Currency(..), PriceAPIEntity(..))
 import Services.Backend as Remote
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Storage (setValueToLocalStore, getValueToLocalStore, KeyStore(..))
@@ -66,6 +66,7 @@ import Helpers.RateCardUtils (getFareBreakupList)
 import Data.Tuple as DT
 import Screens.RideBookingFlow.HomeScreen.Config (getTipConfig)
 import Data.Foldable (maximum)
+import Data.Boolean (otherwise)
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -150,7 +151,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , source : decodeAddress (Booking resp.fromLocation)
       , destination : decodeAddress (Booking (resp.bookingDetails ^._contents^._toLocation))
       , rideId : rideList.id
-      , price : resp.estimatedTotalFare
+      , price : resp.estimatedTotalFareWithCurrency ^. _amount
+      , currency : resp.estimatedTotalFareWithCurrency ^. _currency
       , sourceLat : resp.fromLocation ^._lat
       , sourceLng : resp.fromLocation ^._lon
       , destinationLat : (resp.bookingDetails ^._contents^._toLocation ^._lat)
@@ -210,6 +212,7 @@ encodeAddressDescription address tag placeId lat lon addressComponents = do
 dummyRideAPIEntity :: RideAPIEntity
 dummyRideAPIEntity = RideAPIEntity{
   computedPrice : Nothing,
+  computedPriceWithCurrency : Nothing,
   status : "NEW",
   vehicleModel : "",
   createdAt : "",
@@ -484,6 +487,7 @@ getEstimates (EstimateAPIEntity estimate) estimates index isFareRange count acti
                         Just (FareRange fareRange) -> Just (f fareRange)
                         _ -> Nothing
       calculateFareRangeDifference fareRange = fareRange ^. _maxFare - fareRange ^. _minFare
+      (PriceAPIEntity priceEntity) = estimate.estimatedTotalFareWithCurrency
       availableServices =
         if estimate.vehicleVariant == "BOOK_ANY" then
           foldl
@@ -501,15 +505,14 @@ getEstimates (EstimateAPIEntity estimate) estimates index isFareRange count acti
       { vehicleImage = getVehicleVariantImage estimate.vehicleVariant
       , vehicleVariant = estimate.vehicleVariant
       , price = case estimate.totalFareRange of
-                Nothing -> currency <> (show estimate.estimatedTotalFare)
-                Just (FareRange fareRange) -> if fareRange.minFare == fareRange.maxFare then currency <> (show estimate.estimatedTotalFare)
-                                              else  currency <> (show fareRange.minFare) <> " - " <> currency <> (show fareRange.maxFare)
-      , activeIndex = activeIndex
+                Nothing -> (getCurrencySymbol priceEntity.currency)  <> (show priceEntity.amount)
+                Just (FareRange fareRange) -> if fareRange.minFareWithCurrency ^. _amount == fareRange.maxFareWithCurrency ^. _amount then (getCurrencySymbol priceEntity.currency)  <> (show priceEntity.amount)
+                                              else (getCurrencySymbol $ fareRange.minFareWithCurrency ^. _currency) <> (show $ fareRange.minFareWithCurrency ^. _amount) <> " - " <> (getCurrencySymbol $ fareRange.maxFareWithCurrency ^. _currency) <> (show $ fareRange.maxFareWithCurrency ^. _amount)
+      , activeIndex = 0
       , index = index
       , id = trim estimate.id
       , capacity = getVehicleCapacity estimate.vehicleVariant
       , showInfo = config.estimateAndQuoteConfig.showInfoIcon
-      , basePrice = estimate.estimatedTotalFare
       , searchResultType = if isFareRange then ChooseVehicle.ESTIMATES else ChooseVehicle.QUOTES
       , serviceTierName =  mapServiceTierName estimate.vehicleVariant estimate.isValueAddNP estimate.serviceTierName
       , serviceTierShortDesc = mapServiceTierShortDesc estimate.vehicleVariant estimate.isValueAddNP estimate.serviceTierShortDesc
@@ -574,6 +577,8 @@ getTripDetailsState (RideBookingRes ride) state = do
                           else 1.1
       endTime = fromMaybe "" rideDetails.rideEndTime
       startTime = fromMaybe "" rideDetails.rideStartTime
+      amount = fromMaybe 0.0 (rideDetails.computedPriceWithCurrency >>= (\(PriceAPIEntity priceEntity) -> Just priceEntity.amount))
+      currency = fromMaybe INR (rideDetails.computedPriceWithCurrency >>= (\(PriceAPIEntity priceEntity) -> Just priceEntity.currency))
   state {
     data {
       tripId = rideDetails.shortRideId,
@@ -583,7 +588,7 @@ getTripDetailsState (RideBookingRes ride) state = do
       destination= (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
       rating= (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _rideRating)),
       driverName =((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _driverName) ,
-      totalAmount = ("₹ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _computedPrice))),
+      totalAmount = (getCurrencySymbol currency)  <> (show amount),
       selectedItem = dummyIndividualCard{
         status = ride.status,
         faresList = getFaresList ride.fareBreakup (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance))),
@@ -597,7 +602,7 @@ getTripDetailsState (RideBookingRes ride) state = do
         rideStartTime = (convertUTCtoISC startTime "h:mm A"),
         rideEndTime = (convertUTCtoISC endTime "h:mm A"),
         vehicleNumber = rideDetails.vehicleNumber,
-        totalAmount = ("₹ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _computedPrice))),
+        totalAmount = (getCurrencySymbol currency)  <> (show amount),
         shortRideId = rideDetails.shortRideId,
         baseDistance = baseDistanceVal,
         referenceString = (if (nightChargesVal && (getMerchant FunctionCall) /= YATRI) then (show nightCharges) <> (getEN $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) else "")
@@ -644,6 +649,10 @@ dummyEstimateEntity =
     , createdAt: ""
     , discount: Nothing
     , estimatedTotalFare: 0
+    , estimatedTotalFareWithCurrency : PriceAPIEntity {
+      currency : INR
+      , amount : 0.0
+    }
     , agencyName: ""
     , vehicleVariant: ""
     , estimatedFare: 0

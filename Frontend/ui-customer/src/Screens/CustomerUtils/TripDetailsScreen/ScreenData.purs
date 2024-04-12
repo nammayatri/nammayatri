@@ -19,6 +19,7 @@ import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Screens.Types (TripDetailsScreenState, PaymentMode(..), TripDetailsGoBackType(..))
 import ConfigProvider
 import Data.Maybe(Maybe(..))
+import Services.API (Currency(..))
 
 initData :: TripDetailsScreenState
 initData = {
@@ -36,7 +37,8 @@ initData = {
       selectedItem : dummyIndividualCard,
       vehicleVariant : Nothing,
       config : getAppConfig appConfig,
-      categories : []
+      categories : [],
+      currency : INR
   },
   props: {
     reportIssue : false,
