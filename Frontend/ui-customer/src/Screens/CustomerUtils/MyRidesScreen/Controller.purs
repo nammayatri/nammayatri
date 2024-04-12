@@ -191,7 +191,9 @@ eval _ state = continue state
 myRideListTransformerProp :: Array RideBookingRes  -> Array ItemState
 myRideListTransformerProp listRes =  filter (\item -> (any (_ == item.status) [(toPropValue "COMPLETED"), (toPropValue "CANCELLED"), (toPropValue "REALLOCATED")])) (map (\(RideBookingRes ride) -> 
   let imageInfo = case fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleVariant)of
-                    Just variant -> split (Pattern ",") (getVehicleVariantImage $ show variant)
+                    Just variant -> split (Pattern ",") (if (show variant) == "AUTO_RICKSHAW" 
+                                                            then "ny_ic_single_estimate_auto,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_single_estimate_auto.png" 
+                                                            else getVehicleVariantImage $ show variant)
                     Nothing -> ["",""]
       imageName = fromMaybe "" $ imageInfo !!0
       imageUrl = fromMaybe "" $ imageInfo !!1
