@@ -42,6 +42,7 @@ upsert a@Vehicle {..} = do
           Se.Set BeamV.luggageCapacity luggageCapacity,
           Se.Set BeamV.airConditioned airConditioned,
           Se.Set BeamV.vehicleRating vehicleRating,
+          Se.Set BeamV.selectedServiceTiers selectedServiceTiers,
           Se.Set BeamV.updatedAt updatedAt
         ]
         [Se.Is BeamV.registrationNo (Se.Eq a.registrationNo)]
