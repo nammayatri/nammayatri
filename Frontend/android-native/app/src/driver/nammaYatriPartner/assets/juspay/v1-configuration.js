@@ -258,7 +258,7 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
           "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
@@ -422,7 +422,7 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
           "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
