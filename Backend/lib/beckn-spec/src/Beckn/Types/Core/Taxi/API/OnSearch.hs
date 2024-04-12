@@ -20,7 +20,7 @@ import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
 import Kernel.Utils.Servant.JSONBS
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type OnSearchReq = BecknCallbackReq OnSearchMessage
 
@@ -30,16 +30,19 @@ type OnSearchRes = AckResponse
 
 type OnSearchAPI =
   "on_search"
+    :> Header "custom-request-id" Text
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] OnSearchRes
 
 type OnSearchAPIV1 =
   "on_search"
+    :> Header "custom-request-id" Text
     :> ReqBody '[JSON] OnSearchReq
     :> Post '[JSON] OnSearchRes
 
 type OnSearchAPIV2 =
   "on_search"
+    :> Header "custom-request-id" Text
     :> ReqBody '[JSON] OnSearchReqV2
     :> Post '[JSON] OnSearchRes
 

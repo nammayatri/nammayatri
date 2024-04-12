@@ -18,12 +18,13 @@ import Beckn.Types.Core.Metro.OnSearch.Catalog (Catalog)
 import Kernel.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type OnSearchReq = BecknCallbackReq OnSearchCatalog
 
 type OnSearchAPI =
   "on_search"
+    :> Header "custom-request-id" Text
     :> ReqBody '[JSON] OnSearchReq
     :> Post '[JSON] AckResponse
 

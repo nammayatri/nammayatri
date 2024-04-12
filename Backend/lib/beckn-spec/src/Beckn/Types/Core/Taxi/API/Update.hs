@@ -19,7 +19,7 @@ import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
 import Kernel.Utils.Servant.JSONBS
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type UpdateReq = BecknReq UpdateMessage
 
@@ -27,17 +27,20 @@ type UpdateRes = AckResponse
 
 type UpdateAPI =
   "update"
+    :> Header "custom-request-id" Text
     -- :> ReqBody '[JSON] UpdateReq
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] UpdateRes
 
 type UpdateAPIV1 =
   "update"
+    :> Header "custom-request-id" Text
     :> ReqBody '[JSON] UpdateReq
     :> Post '[JSON] UpdateRes
 
 type UpdateAPIV2 =
   "update"
+    :> Header "custom-request-id" Text
     :> ReqBody '[JSON] UpdateReq
     :> Post '[JSON] UpdateRes
 

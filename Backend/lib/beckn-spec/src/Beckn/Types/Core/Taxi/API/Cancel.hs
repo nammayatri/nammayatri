@@ -20,7 +20,7 @@ import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
 import Kernel.Utils.Servant.JSONBS
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type CancelReq = BecknReq CancelMessage
 
@@ -30,6 +30,7 @@ type CancelRes = AckResponse
 
 type CancelAPI =
   "cancel"
+    :> Header "custom-request-id" Text
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] CancelRes
 
@@ -38,6 +39,7 @@ cancelAPI = Proxy
 
 type CancelAPIV1 =
   "cancel"
+    :> Header "custom-request-id" Text
     :> ReqBody '[JSON] CancelReq
     :> Post '[JSON] CancelRes
 
@@ -46,6 +48,7 @@ cancelAPIV1 = Proxy
 
 type CancelAPIV2 =
   "cancel"
+    :> Header "custom-request-id" Text
     :> ReqBody '[JSON] CancelReqV2
     :> Post '[JSON] CancelRes
 

@@ -20,7 +20,7 @@ import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
 import Kernel.Utils.Servant.JSONBS
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type OnConfirmReq = BecknCallbackReq OnConfirmMessage
 
@@ -30,6 +30,7 @@ type OnConfirmRes = AckResponse
 
 type OnConfirmAPI =
   "on_confirm"
+    :> Header "custom-request-id" Text
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] OnConfirmRes
 
@@ -38,6 +39,7 @@ onConfirmAPI = Proxy
 
 type OnConfirmAPIV1 =
   "on_confirm"
+    :> Header "custom-request-id" Text
     :> ReqBody '[JSON] OnConfirmReq
     :> Post '[JSON] OnConfirmRes
 
@@ -46,6 +48,7 @@ onConfirmAPIV1 = Proxy
 
 type OnConfirmAPIV2 =
   "on_confirm"
+    :> Header "custom-request-id" Text
     :> ReqBody '[JSON] OnConfirmReqV2
     :> Post '[JSON] OnConfirmRes
 

@@ -21,7 +21,7 @@ import Kernel.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
 import Kernel.Utils.Servant.JSONBS
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type OnSelectReq = BecknCallbackReq OnSelectMessage
 
@@ -31,6 +31,7 @@ type OnSelectRes = AckResponse
 
 type OnSelectAPI =
   "on_select"
+    :> Header "custom-request-id" Text
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] OnSelectRes
 
@@ -39,6 +40,7 @@ onSelectAPI = Proxy
 
 type OnSelectAPIV1 =
   "on_select"
+    :> Header "custom-request-id" Text
     :> ReqBody '[JSON] OnSelectReq
     :> Post '[JSON] OnSelectRes
 
@@ -47,6 +49,7 @@ onSelectAPIV1 = Proxy
 
 type OnSelectAPIV2 =
   "on_select"
+    :> Header "custom-request-id" Text
     :> ReqBody '[JSON] OnSelectReqV2
     :> Post '[JSON] OnSelectRes
 
