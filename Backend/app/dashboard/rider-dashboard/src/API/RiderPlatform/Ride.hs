@@ -53,11 +53,17 @@ type API =
            :<|> TicketRideListAPI
        )
 
-type RideListAPI = Common.RideListAPI
+type RideListAPI =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'RIDE_LIST
+    :> Common.RideListAPI
 
-type ShareRideInfoAPI = Common.ShareRideInfoAPI
+type ShareRideInfoAPI =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'SHARE_RIDE_INFO
+    :> Common.ShareRideInfoAPI
 
-type TripRouteAPI = Common.TripRouteAPI
+type TripRouteAPI =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'TRIP_ROUTE
+    :> Common.TripRouteAPI
 
 type RideInfoAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'RIDE_INFO_CUSTOMER
@@ -104,9 +110,10 @@ buildTransaction endpoint apiTokenInfo =
 shareRideInfo ::
   ShortId DM.Merchant ->
   City.City ->
+  ApiTokenInfo ->
   Id Common.Ride ->
   FlowHandler Common.ShareRideInfoRes
-shareRideInfo merchantShortId opCity rideId = withFlowHandlerAPI' $ do
+shareRideInfo merchantShortId opCity _ rideId = withFlowHandlerAPI' $ do
   shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
   checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey $ getId rideId) shareRideApiRateLimitOptions
   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
@@ -126,6 +133,7 @@ shareRideInfoByShortId merchantShortId opCity rideShortId = withFlowHandlerAPI' 
 rideList ::
   ShortId DM.Merchant ->
   City.City ->
+  ApiTokenInfo ->
   Maybe Int ->
   Maybe Int ->
   Maybe Common.BookingStatus ->
@@ -135,7 +143,7 @@ rideList ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   FlowHandler Common.RideListRes
-rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo =
+rideList merchantShortId opCity _ mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo =
   withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
     Client.callRiderAppOperations checkedMerchantId opCity (.rides.rideList) mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo
@@ -143,11 +151,12 @@ rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbShortRideId m
 tripRoute ::
   ShortId DM.Merchant ->
   City.City ->
+  ApiTokenInfo ->
   Id Common.Ride ->
   Double ->
   Double ->
   FlowHandler Maps.GetRoutesResp
-tripRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI' $ do
+tripRoute merchantShortId opCity _ rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
   Client.callRiderAppOperations checkedMerchantId opCity (.rides.tripRoute) rideId pickupLocationLat pickupLocationLon
 
