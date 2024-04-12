@@ -3790,7 +3790,7 @@ repeatRideCard push state index trip =
     , stroke $ "1,"<> Color.grey800
     , margin $ Margin 8 8 8 8
     , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
-    , padding $ Padding 12 16 16 16
+    , padding $ Padding paddingLeft 16 16 16
     , background Color.white900
     , gravity CENTER_VERTICAL
     , cornerRadii $ Corners 16.0 true true true true
@@ -3800,11 +3800,11 @@ repeatRideCard push state index trip =
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , gravity CENTER
-        , margin $ MarginRight 8
+        , margin margin'
         ][ imageView
-            [ imageWithFallback $ fetchImage FF_ASSET imageName
-            , height $ V 40
-            , width $ V 60
+            [ imageWithFallback imageName
+            , height imageDimensions.height
+            , width imageDimensions.width
             ]
         ]
       , linearLayout
@@ -3851,7 +3851,15 @@ repeatRideCard push state index trip =
 
     imageName = case trip.vehicleVariant of
                   Just variant -> getVehicleVariantImage variant
-                  Nothing -> "ny_ic_green_loc_tag"
+                  Nothing -> fetchImage FF_ASSET "ny_ic_green_loc_tag"
+    
+    imageDimensions = case trip.vehicleVariant of
+                        Just variant -> {height : V 40, width : V 60} 
+                        Nothing -> {height : V 20, width : V 20}
+    
+    paddingLeft = if isNothing trip.vehicleVariant then 25 else 0
+
+    margin' = if isNothing trip.vehicleVariant then MarginRight 25 else MarginHorizontal 5 5
 
 pillTagView :: forall w. {text :: String, image :: String} -> PrestoDOM (Effect Unit) w
 pillTagView config = 
