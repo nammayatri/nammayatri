@@ -1150,3 +1150,6 @@ getBN stringKey =
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "আপনার আসন্ন ভাড়া বুকিং " <> bookingTime <> "-এ আছে"
         UPCOMING_BOOKINGS -> "আপনার আসন্ন বুকিং রয়েছে"
         SCHEDULED -> "শিডিউল করা হয়েছে"
+        CHOOSE_TICKETS -> "টিকেট নির্বাচন করুন"
+        BOOK_TICKETS -> "টিকেট বুক করুন"
+        LOCATIONS_WITHIN_SPECIAL_ZONE_ARE_NOT_ELIGIBLE_FOR_INTERCITY_RIDES -> "বিশেষ অঞ্চলের মধ্যে অবস্থিত স্থানগুলো আন্তঃনগর চালনার জন্য অযোগ্য।"

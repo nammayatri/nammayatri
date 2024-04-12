@@ -29,7 +29,7 @@ import Prelude ((==), (<>), ($), (/=), (>), (||), map, not)
 import Styles.Colors as Color
 import Font.Style as FontStyle
 import Font.Size as FontSize
-import Data.Maybe(isJust, maybe, Maybe(..)) as MB
+import Data.Maybe as MB
 import Helpers.Utils as HU
 import Data.String as DS
 import Prelude (show, (&&))
@@ -139,45 +139,10 @@ confirmLocBtnConfig state =
   in confirmLocBtnConfig'
 
 mapInputViewConfig :: ST.SearchLocationScreenState -> Boolean -> InputView.InputViewConfig
--- mapInputViewConfig state isEditable = let 
---     getInputView = getInputViewConfigBasedOnActionType state.props.actionType
---     config = InputView.config 
---     inputViewConfig' = config
---       { headerText = MB.maybe ("Trip Details") ( \ currTextField -> if currTextField == ST.SearchLocPickup then "Edit Pickup" else "Add Stop") state.props.focussedTextField,
---       headerVisibility =  getInputView.headerVisibility,
---         imageLayoutMargin = getInputView.imageLayoutMargin,
---         inputView = map 
---           ( \item -> 
---             { margin : item.margin
---             , padding : Padding 8 7 8 7 
---             , textValue : item.textValue
---             , height : WRAP_CONTENT
---             , isFocussed : item.isFocussed
---             , id : show item.id
---             , placeHolder : item.placeHolder 
---             , canClearText : (item.canClearText  || state.props.canClearText ) && item.isFocussed
---             , isEditable : isEditable && item.isEditable
---             , isClickable : item.isEditable
---             , prefixImage : { 
---                 imageName : item.prefixImageName,
---                 height : V 15,
---                 width : V 15 ,
---                 padding : Padding 0 0 0 0 }
---             , stroke : ((if item.isFocussed then "1," else "0,") <> Color.yellow900)
---             , imageSeparator : separatorConfig 
---             , clearTextIcon : { 
---                 imageName : (state.appConfig.searchLocationConfig.clearTextImage) ,
---                 height : V 19,
---                 width : V 19 ,
---                 padding : PaddingVertical 10 2 }
---             , cornerRadius : 4.0
---             } 
---           ) 
---           (inputViewArray state)
 mapInputViewConfig state isEditable = 
   let 
-    getInputView = getInputViewConfigBasedOnActionType state.props.actionType
-    headerVisibility = getInputView.headerVisibility
+    inputView = getInputViewConfigBasedOnActionType state.props.actionType
+    headerVisibility = inputView.headerVisibility
     imageLayoutMargin = if headerVisibility then MarginLeft 24 else MarginLeft 16
     backIconPadding = if headerVisibility then PaddingTop 16 else PaddingTop 8
     headerText = 
@@ -189,45 +154,14 @@ mapInputViewConfig state isEditable =
             getString ADD_STOP
         ) 
         state.props.focussedTextField
-    config = InputView.config 
-    inputViewConfig' = config
+    inputViewConfig' = InputView.config 
       { headerText = headerText
       , suffixButtonVisibility = GONE
       , headerVisibility = headerVisibility
       , imageLayoutMargin = imageLayoutMargin
-      , inputView = map (\item -> transformInputViewArray item) (inputViewArray state)
+      , inputView = map transformInputViewArray (inputViewArray state)
       }
   in inputViewConfig'
-
--- inputViewArray state = 
---   let 
---     srcLoc = MB.maybe "" (_.address) state.data.srcLoc 
---     destLoc = MB.maybe "" (_.address) state.data.destLoc
---     addressOnMap = state.data.latLonOnMap.address
---     pickUpFocussed = state.props.focussedTextField == MB.Just ST.SearchLocPickup 
---     dropLocFocussed = state.props.focussedTextField == MB.Just ST.SearchLocDrop 
---     getInputView = getInputViewConfigBasedOnActionType state.props.actionType
---   in 
---     [ { textValue : if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc
---       , isFocussed : pickUpFocussed
---       , prefixImageName : getInputView.srcPrefixImageName
---       , margin : getInputView.inputViewMargin
---       , placeHolder : getInputView.srcPlaceHolder
---       , canClearText : DS.length (if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc) > 2
---       , id : ST.SearchLocPickup
---       , isEditable : not $ (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN))
---       } ,
---       { textValue : if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc
---       , isFocussed : dropLocFocussed
---       , prefixImageName : getInputView.destPrefixImageName
---       , margin : MarginTop 8
---       , placeHolder : getInputView.destPlaceHolder
---       , canClearText : DS.length (if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc) > 2
---       , id : ST.SearchLocDrop
---       , isEditable : true
---       }
---     ]
-
   where
     transformInputViewArray item = 
       { padding : Padding 8 7 8 7 
@@ -267,33 +201,26 @@ mapInputViewConfig state isEditable =
 
     inputViewArray state = 
       let 
-        srcLoc = MB.maybe "" (_.address) state.data.srcLoc 
-        destLoc = MB.maybe "" (_.address) state.data.destLoc
+        srcLoc = MB.fromMaybe "" $ map _.address state.data.srcLoc 
+        destLoc = MB.fromMaybe "" $ map _.address state.data.destLoc
         addressOnMap = state.data.latLonOnMap.address
         pickUpFocussed = state.props.focussedTextField == MB.Just ST.SearchLocPickup 
         dropLocFocussed = state.props.focussedTextField == MB.Just ST.SearchLocDrop 
         getInputView = getInputViewConfigBasedOnActionType state.props.actionType
-      in 
-        [ { textValue :  srcLoc
-          , isFocussed : pickUpFocussed
-          , prefixImageName : getInputView.srcPrefixImageName
+        createInputViewConfig textValue isFocussed prefixImageName placeHolder id isEditable = 
+          { textValue : textValue
+          , isFocussed : isFocussed
+          , prefixImageName : prefixImageName
           , margin : getInputView.inputViewMargin
-          , placeHolder : getInputView.srcPlaceHolder
-          , canClearText : DS.length (if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc) > 2
-          , id : ST.SearchLocPickup
-          , isEditable : not $ (state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN) || (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN))
-          } ,
-          { textValue : destLoc
-          , isFocussed : dropLocFocussed
-          , prefixImageName : getInputView.destPrefixImageName
-          , margin : getInputView.inputViewMargin
-          , placeHolder : getInputView.destPlaceHolder
-          , canClearText : DS.length (if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc) > 2
-          , id : ST.SearchLocDrop
-          , isEditable : true
+          , placeHolder : placeHolder
+          , canClearText : DS.length (if addressOnMap /= "" && isFocussed then addressOnMap else textValue) > 2
+          , id : id
+          , isEditable : isEditable
           }
+      in 
+        [ createInputViewConfig srcLoc pickUpFocussed getInputView.srcPrefixImageName getInputView.srcPlaceHolder ST.SearchLocPickup (not $ (state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN) || (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN)))
+        , createInputViewConfig destLoc dropLocFocussed getInputView.destPrefixImageName getInputView.destPlaceHolder ST.SearchLocDrop true
         ]
-      
     getInputViewConfigBasedOnActionType :: ST.SearchLocationActionType -> { srcPrefixImageName :: String, destPrefixImageName :: String, srcPlaceHolder :: String, destPlaceHolder :: String, inputViewMargin :: Margin, headerVisibility :: Boolean, imageLayoutMargin :: Margin }
     getInputViewConfigBasedOnActionType actionType =
       case actionType of 
@@ -356,7 +283,7 @@ locUnserviceablePopUpConfig state = let
       margin = MarginTop 16
       },
     secondaryText { 
-      text = if state.props.isSpecialZone then ("Locations within special zone are not eligible for intercity rides") else getString ONLY_LOCATION_WITHIN_CITY_LIMITS , -- TODO-mercy : Add Translation
+      text = if state.props.isSpecialZone then (getString LOCATIONS_WITHIN_SPECIAL_ZONE_ARE_NOT_ELIGIBLE_FOR_INTERCITY_RIDES) else getString ONLY_LOCATION_WITHIN_CITY_LIMITS ,
       margin = MarginTop 4
       },
     option1 {

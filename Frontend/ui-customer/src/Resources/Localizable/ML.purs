@@ -1152,3 +1152,6 @@ getML stringKey =
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "നിങ്ങൾക്ക് " <> bookingTime <> "-ന് വരാനിരിക്കുന്ന വാടക ബുക്കിംഗ് ഉണ്ട്"
         SCHEDULED -> "ഷെഡ്യൂൽ ചെയ്തിട്ടുണ്ട്"
         UPCOMING_BOOKINGS -> "നിങ്ങൾക്ക് അടിയന്തരാവക ബുക്കിങ്ങുകൾ ഉണ്ട്"
+        CHOOSE_TICKETS -> "ടിക്കറ്റുകൾ തിരഞ്ഞെടുക്കുക"
+        BOOK_TICKETS -> "ടിക്കറ്റുകൾ ബുക്ക് ചെയ്യുക"
+        LOCATIONS_WITHIN_SPECIAL_ZONE_ARE_NOT_ELIGIBLE_FOR_INTERCITY_RIDES -> "പ്രത്യേക മേഖലയിലെ സ്ഥലങ്ങൾ അന്തർനഗര യാത്രകൾക്ക് അയോഗ്യമാണ്."

@@ -1150,3 +1150,6 @@ getEN stringKey =
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "You have an upcoming rental booking on " <> bookingTime 
         SCHEDULED -> "Scheduled"
         UPCOMING_BOOKINGS -> "You have upcoming bookings"
+        CHOOSE_TICKETS -> "Choose Tickets"
+        BOOK_TICKETS -> "Book Tickets"
+        LOCATIONS_WITHIN_SPECIAL_ZONE_ARE_NOT_ELIGIBLE_FOR_INTERCITY_RIDES -> "Locations within special zone are not eligible for intercity rides."

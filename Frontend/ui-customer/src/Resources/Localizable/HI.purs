@@ -1150,3 +1150,6 @@ getHI stringKey =
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "आपके पास " <> bookingTime <> " को आगामी किराये की बुकिंग हैं।"
         SCHEDULED -> "शेड्यूल किया गया"
         UPCOMING_BOOKINGS -> "आपके पास आने वाली बुकिंगें हैं"
+        CHOOSE_TICKETS -> "टिकट चुनें"
+        BOOK_TICKETS -> "टिकट बुक करें" 
+        LOCATIONS_WITHIN_SPECIAL_ZONE_ARE_NOT_ELIGIBLE_FOR_INTERCITY_RIDES -> "विशेष क्षेत्र के भीतर के स्थान अंतरशहरी सवारियों के लिए अयोग्य हैं।"

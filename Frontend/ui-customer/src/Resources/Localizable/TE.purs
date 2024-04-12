@@ -1165,3 +1165,6 @@ getTE stringKey =
     YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "మీకు " <> bookingTime <>  "కి రాబోయే అద్దె బుకింగ్ ఉంది"
     SCHEDULED -> "షెడ్యూల్ చేయబడింది"
     UPCOMING_BOOKINGS -> "మీకు అనుకూలంగా బుకింగ్‌లు ఉన్నాయి"
+    CHOOSE_TICKETS -> "టికెట్‌లను ఎంచుకోండి"
+    BOOK_TICKETS -> "టికెట్ బుక్" 
+    LOCATIONS_WITHIN_SPECIAL_ZONE_ARE_NOT_ELIGIBLE_FOR_INTERCITY_RIDES -> "ప్రత్యేక వార్తలో ఉన్న స్థలాలు ఇంటర్‌సిటీ రైడ్‌లకు అనుమతించబడవు."

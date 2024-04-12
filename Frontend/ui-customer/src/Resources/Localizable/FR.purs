@@ -1151,3 +1151,6 @@ getFR stringKey =
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "Vous avez une réservation de location à venir le " <> bookingTime
         SCHEDULED -> "Planifié"
         UPCOMING_BOOKINGS -> "Vous avez des réservations à venir"
+        CHOOSE_TICKETS -> "Choisissez vos billets"
+        BOOK_TICKETS -> "Réserver des billets"
+        LOCATIONS_WITHIN_SPECIAL_ZONE_ARE_NOT_ELIGIBLE_FOR_INTERCITY_RIDES -> "Les emplacements situés dans une zone spéciale ne sont pas éligibles pour les trajets interurbains."

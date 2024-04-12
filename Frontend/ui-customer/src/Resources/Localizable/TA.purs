@@ -1167,3 +1167,6 @@ getTA stringKey =
     YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> bookingTime <> " அன்று உங்களுக்கு வாடகை முன்பதிவு உள்ளது"
     SCHEDULED -> "அட்டவணைச் செய்யப்பட்டது"
     UPCOMING_BOOKINGS -> "வராத புகைப்படங்கள் உங்களுக்கு உள்ளன"
+    CHOOSE_TICKETS -> "டிக்கெட்களைத் தேர்ந்தெடு"
+    BOOK_TICKETS -> "டிக்கெட்களை முன்பதிவு செய்க"
+    LOCATIONS_WITHIN_SPECIAL_ZONE_ARE_NOT_ELIGIBLE_FOR_INTERCITY_RIDES -> "சிறப்பு மண்டலத்தில் உள்ள இடங்கள் இடைநகர சவாரிகளுக்கு தகுதியற்றவை."

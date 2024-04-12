@@ -36,9 +36,9 @@ genericHeaderConfig state = let
         text = case state.props.currentStage of
                   ST.DescriptionStage -> case state.data.placeInfo of
                                             Just placeInfo -> placeInfo ^._name
-                                            Nothing -> "Book Tickets"
-                  ST.ChooseTicketStage -> "Choose Tickets"
-                  ST.ViewTicketStage -> if DA.null state.props.ticketBookingList.booked && DA.null state.props.ticketBookingList.pendingBooking then (getString MY_TICKETS) else "Choose Tickets"
+                                            Nothing -> (getString BOOK_TICKETS)
+                  ST.ChooseTicketStage -> (getString CHOOSE_TICKETS)
+                  ST.ViewTicketStage -> if DA.null state.props.ticketBookingList.booked && DA.null state.props.ticketBookingList.pendingBooking then (getString MY_TICKETS) else (getString CHOOSE_TICKETS)
                   ST.TicketInfoStage -> state.props.selectedBookingInfo.ticketPlaceName
                   _ -> ""
       , color = Color.darkCharcoal
@@ -58,7 +58,7 @@ primaryButtonConfig state = let
         { text = (case state.props.currentStage of 
                     ST.DescriptionStage -> buttonConfigForDescription.buttonText
                     ST.ChooseTicketStage -> ("Pay ₹" <> (show state.data.totalAmount))
-                    ST.ViewTicketStage -> "Book Tickets"
+                    ST.ViewTicketStage -> (getString BOOK_TICKETS)
                     _ -> "")
         , color = Color.yellow900
         }
@@ -73,11 +73,11 @@ primaryButtonConfig state = let
   where
     getButtonTextForDescriptionStage :: {buttonText :: String, isClickable :: Boolean}
     getButtonTextForDescriptionStage =
-      maybe  {buttonText : "Book Tickets", isClickable : true} 
-        (\(TicketPlaceResp pInfo) ->  maybe {buttonText : "Book Tickets", isClickable : true}  
+      maybe  {buttonText : (getString BOOK_TICKETS), isClickable : true} 
+        (\(TicketPlaceResp pInfo) ->  maybe {buttonText : (getString BOOK_TICKETS), isClickable : true}  
                       (\status -> case status of
                                     ComingSoon -> {buttonText : "Coming Soon", isClickable : false} 
-                                    _ -> {buttonText : "Book Tickets", isClickable : true} 
+                                    _ -> {buttonText : (getString BOOK_TICKETS), isClickable : true} 
                       ) pInfo.status
         ) state.data.placeInfo
 

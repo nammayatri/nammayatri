@@ -1151,3 +1151,6 @@ getKN stringKey =
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "ನೀವು ಮುಂಬರುವ ಬಾಡಿಗೆ ಬುಕಿಂಗ್ ಅನ್ನು " <> bookingTime <> " ರಂದು ಹೊಂದಿದ್ದೀರಿ"
         SCHEDULED -> "ಷೆಡ್ಯೂಲ್ ಮಾಡಲಾಗಿದೆ"
         UPCOMING_BOOKINGS -> "ನಿಮಗೆ ಮುಂದಿನ ಬುಕಿಂಗ್‌ಗಳಿವೆ"
+        CHOOSE_TICKETS -> "ಟಿಕೆಟ್‌ಗಳನ್ನು ಆಯ್ಕೆ ಮಾಡಿ"
+        BOOK_TICKETS -> "ಟಿಕೆಟ್‌ಗಳನ್ನು ಬುಕ್ ಮಾಡಿ"
+        LOCATIONS_WITHIN_SPECIAL_ZONE_ARE_NOT_ELIGIBLE_FOR_INTERCITY_RIDES -> "ವಿಶೇಷ ಝೋನ್‌ನಲ್ಲಿರುವ ಸ್ಥಳಗಳು ಅಂತರ್ನಗರ ಸವಾರಿಗಳಿಗೆ ಅನರ್ಹವಾಗಿವೆ."

@@ -124,24 +124,24 @@ eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLo
 
 eval CheckFlowStatusAction state = exit $ CurrentFlowStatus
 
-eval (ChooseVehicleAC (ChooseVehicleController.OnSelect variant)) state =
-  let updatedQuotes = map (\item -> 
-                              item {activeIndex = variant.index , quoteDetails {activeIndex = variant.index}}) state.data.quotesList
-      selectedQuote = (fetchSelectedQuote updatedQuotes)
-  in  continue state { data { quotesList = updatedQuotes , selectedQuote = selectedQuote}}
+eval (ChooseVehicleAC (ChooseVehicleController.OnSelect variant)) state = do
+  let 
+    updateActiveIndex item = item { activeIndex = variant.index, quoteDetails { activeIndex = variant.index } }
+    updatedQuotes = map updateActiveIndex state.data.quotesList
+    selectedQuote = fetchSelectedQuote updatedQuotes
+  continue state { data { quotesList = updatedQuotes, selectedQuote = selectedQuote } }
   
 eval (ChooseVehicleAC (ChooseVehicleController.ShowRateCard _)) state = 
   continue state { props { showRateCard = true }}
 
 eval (MapReady _ _ _) state = do 
-  if state.props.searchLocStage == PredictionSelectedFromHome then 
-    continueWithCmd state [do 
-      pure (LocationListItemAC [] (LocationListItemController.OnClick state.data.predictionSelectedFromHome))
-    ]
-    else if state.props.searchLocStage == ChooseYourRide then do
+  case state.props.searchLocStage of
+    PredictionSelectedFromHome -> 
+      continueWithCmd state [pure (LocationListItemAC [] (LocationListItemController.OnClick state.data.predictionSelectedFromHome))]
+    ChooseYourRide -> do
       pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
       drawRouteOnMap state
-    else continue state
+    _ -> continue state
 
 eval (PopUpModalAC (PopUpModalController.OnButton2Click)) state = updateAndExit state{props{locUnserviceable = false, isSpecialZone = false}} $ HomeScreen state
 
@@ -149,15 +149,12 @@ eval (MenuButtonAC (MenuButtonController.OnClick config)) state = do
   let 
     updatedState = state { data { defaultGate = config.id } }
     focusedIndex = DA.findIndex (\item -> item.place == config.id) state.data.nearByGates
+    focusScrollView index = void $ pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
+    maybeFocusScrollView = MB.maybe (pure unit) focusScrollView focusedIndex
 
   continueWithCmd updatedState 
     [ do
-        case focusedIndex of
-          MB.Just index -> do
-            void $ pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
-            pure unit
-          MB.Nothing -> pure unit
-
+        maybeFocusScrollView
         void $ animateCamera config.lat config.lng 25.0 "NO_ZOOM"
         pure NoAction
     ]
@@ -186,12 +183,6 @@ eval (LocationListItemAC savedLocations (LocationListItemController.FavClick ite
     else exit $ SaveFavLoc state{data{saveFavouriteCard{ address = item.description , selectedItem = item, tag = "", tagExists = false, isBtnActive = false }}} savedLocations
 
 eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do 
-  -- if state.props.actionType == MetroStationSelectionAction then do
-  --     let metroLocInfo = {stationName: item.title, stationCode : item.tag }
-  --     let updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : MB.Nothing, addressComponents : dummyAddress, metroInfo : MB.Just metroLocInfo, stationCode : item.tag}
-  --         newState = if state.props.focussedTextField == MB.Just SearchLocPickup then 
-  --                         state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop }} 
-  --                         else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop} }
   void $ pure $ hideKeyboardOnNavigation true
   MB.maybe (continue state) (\currTextField -> predictionClicked currTextField) state.props.focussedTextField
   where 
@@ -242,16 +233,6 @@ eval (FavouriteLocationModelAC (FavouriteLocModelController.FavouriteLocationAC 
     pure (LocationListItemAC [] (LocationListItemController.OnClick item))
     ]
 
--- eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textField isEditText hasFocus)) state = do
---   case textField of 
---     "SearchLocPickup" -> pure $ setText (getNewIDWithTag textField) $ MB.maybe "" (\srcLoc -> srcLoc.address) state.data.srcLoc
---     "SearchLocDrop" ->  pure $ setText (getNewIDWithTag textField) $ MB.maybe "" (\destLoc -> destLoc.address) state.data.destLoc
---     _ -> pure unit
-  
---   let canClearText = canClear textField
---   let sortedCachedLoc = fetchSortedCachedSearches state globalProps textField
---   continue state{ props{focussedTextField = mkTextFieldTag textField, canClearText = canClearText}
---                 , data {locationList = sortedCachedLoc, updatedMetroStations = state.data.metroStations}}
 eval (LocationTagBarAC savedLoc (LocationTagBarController.TagClicked tag)) state = do 
   case tag of 
     "ADD_HOME" -> handleAddLocation "HOME_TAG"
@@ -307,16 +288,6 @@ eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textFie
         "SearchLocDrop" -> MB.Just SearchLocDrop
         _ -> MB.Nothing
 
---     canClear :: String -> Boolean
---     canClear textField = 
---       case textField of 
---         "SearchLocPickup" ->( STR.length $ MB.maybe "" (\srcLoc -> srcLoc.address) state.data.srcLoc) > 2 
---         "SearchLocDrop" ->  (STR.length $ MB.maybe "" (\destLoc -> destLoc.address) state.data.destLoc) > 2 
---         _ -> false
--- eval (InputViewAC _ (InputViewController.AutoCompleteCallBack value pickUpchanged)) state = do 
---   if state.props.actionType == MetroStationSelectionAction then continue state
---     else 
---       autoCompleteAPI state value $ if pickUpchanged then SearchLocPickup else SearchLocDrop
     getAddress :: MB.Maybe LocationInfo -> String
     getAddress location = MB.maybe "" (\loc -> loc.address) location
 
@@ -349,12 +320,6 @@ eval (InputViewAC _ (InputViewController.InputChanged value)) state = do
   ]
   
 
--- eval (UpdateLocAndLatLong recentSearches lat lng) state = do 
---   let updatedLoc = {placeId : MB.Nothing, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress , address : "" , lat : NUM.fromString lat , lon : NUM.fromString lng, metroInfo : MB.Nothing, stationCode : ""}
---   continue state{ data 
---                     { --srcLoc = MB.Just updatedLoc -- need to check
---                       currentLoc = MB.Just updatedLoc
---                     , locationList = DA.sortBy (comparing (_.actualDistance)) $ updateLocListWithDistance recentSearches (MB.fromMaybe 0.0 updatedLoc.lat) (MB.fromMaybe 0.0 updatedLoc.lon) true state.appConfig.suggestedTripsAndLocationConfig.locationWithinXDist }
 eval (UpdateLocAndLatLong cachedSearches lat lng) state = do 
   let defaultAddress = if state.props.actionType == MetroStationSelectionAction then "" else "Current Location"
       updatedLoc = {placeId : MB.Nothing, city : AnyCity , addressComponents : LocationListItemController.dummyAddress , address : defaultAddress , lat : NUM.fromString lat , lon : NUM.fromString lng, metroInfo : MB.Nothing, stationCode : ""}

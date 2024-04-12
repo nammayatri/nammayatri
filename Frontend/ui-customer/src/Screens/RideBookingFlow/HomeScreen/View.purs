@@ -253,16 +253,6 @@ screen initialState =
                 when (not initialState.props.chatcallbackInitiated && initialState.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) $ startChatSerivces push initialState.data.driverInfoCardState.bppRideId "Customer" false
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               RideStarted -> do
-                -- _ <- pure $ enableMyLocation false
-                --   _ <- clearChatMessages
-                --   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
-                --   _ <- storeCallBackOpenChatScreen push OpenChatScreen
-                --   _ <- startChatListenerService
-                --   _ <- pure $ scrollOnResume push ScrollToBottom
-                --   push InitializeChat
-                --   pure unit
-                -- else
-                --   pure unit
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
@@ -655,8 +645,15 @@ messageWidgetView push state =
         ][]
      ]
   ]
-  where disableSuggestions :: HomeScreenState -> Boolean
-        disableSuggestions state = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || not state.data.config.feature.enableChat || not state.data.config.feature.enableSuggestions
+  where 
+    disableSuggestions :: HomeScreenState -> Boolean
+    disableSuggestions state = 
+      let 
+        isOneWaySpecialZone = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
+        isChatEnabled = state.data.config.feature.enableChat
+        areSuggestionsEnabled = state.data.config.feature.enableSuggestions
+      in 
+        isOneWaySpecialZone || not isChatEnabled || not areSuggestionsEnabled
 
 messagingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 messagingView push state = 

@@ -2042,21 +2042,21 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Debounc
   else continue state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SourceChanged input)) state = do
-  let srcValue = if (state.data.source == "" || state.data.source == "Current Location") then true else false
-  let sourceSelectType = if state.props.locateOnMap then ST.MAP else state.props.rideSearchProps.sourceSelectType
-      newState = state {props{ rideSearchProps{ sourceSelectType = sourceSelectType } }}
-  if (input /= state.data.source) then do 
-    continueWithCmd newState { props { isRideServiceable = true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length input) > 2, isAutoComplete = if (STR.length input) > 2 then state.props.searchLocationModelProps.isAutoComplete else false}}} 
-      [ do
-          _ <- pure $ updateInputString input
-          pure NoAction
-      ]
+  let 
+    srcValue = STR.null state.data.source || state.data.source == getString CURRENT_LOCATION
+    sourceSelectType = if state.props.locateOnMap then ST.MAP else state.props.rideSearchProps.sourceSelectType
+    newState = state { props { rideSearchProps { sourceSelectType = sourceSelectType } } }
+    isInputChanged = input /= state.data.source
+    isInputLengthGreaterThanTwo = STR.length input > 2
+    autoComplete = if isInputLengthGreaterThanTwo then state.props.searchLocationModelProps.isAutoComplete else false
+    crossBtnSrcVisibility = isInputLengthGreaterThanTwo
+    updateCmd = do
+      _ <- pure $ updateInputString input
+      pure NoAction
+  if isInputChanged then 
+    continueWithCmd newState { props { isRideServiceable = true, searchLocationModelProps { crossBtnSrcVisibility = crossBtnSrcVisibility, isAutoComplete = autoComplete } } } [updateCmd]
   else
-    continueWithCmd newState{props {searchLocationModelProps{crossBtnSrcVisibility = (STR.length input) > 2, isAutoComplete = false}}}
-      [ do
-          _ <- pure $ updateInputString input
-          pure NoAction
-      ]
+    continueWithCmd newState { props { searchLocationModelProps { crossBtnSrcVisibility = crossBtnSrcVisibility, isAutoComplete = false } } } [updateCmd]
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DestinationChanged input)) state = do
   if (input /= state.data.destination) then do
