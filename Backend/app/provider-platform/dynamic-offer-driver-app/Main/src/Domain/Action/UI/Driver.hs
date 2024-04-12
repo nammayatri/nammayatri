@@ -717,24 +717,26 @@ updateDriver (personId, _, merchantOpCityId) req = do
   mVehicle <- QVehicle.findById personId
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   whenJust mVehicle $ \vehicle -> do
-    -- deprecated logic, moved to driver service tier options
-    checkIfCanDowngrade vehicle
-    let canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan
-    let canDowngradeToHatchback = fromMaybe driverInfo.canDowngradeToHatchback req.canDowngradeToHatchback
-    let canDowngradeToTaxi = fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi
-    let canSwitchToRental = fromMaybe driverInfo.canSwitchToRental req.canSwitchToRental
-    let availableUpiApps = req.availableUpiApps <|> driverInfo.availableUpiApps
-    let selectedServiceTiers =
-          case vehicle.variant of
-            SV.AUTO_RICKSHAW -> [DVST.AUTO_RICKSHAW]
-            SV.TAXI -> [DVST.TAXI]
-            SV.HATCHBACK -> [DVST.HATCHBACK] <> [DVST.TAXI | canDowngradeToTaxi]
-            SV.SEDAN -> [DVST.SEDAN] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi]
-            SV.SUV -> [DVST.SUV] <> [DVST.SEDAN | canDowngradeToSedan] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi]
-            SV.TAXI_PLUS -> [DVST.TAXI_PLUS]
+    when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental) $ do
+      -- deprecated logic, moved to driver service tier options
+      checkIfCanDowngrade vehicle
+      let canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan
+      let canDowngradeToHatchback = fromMaybe driverInfo.canDowngradeToHatchback req.canDowngradeToHatchback
+      let canDowngradeToTaxi = fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi
+      let canSwitchToRental = fromMaybe driverInfo.canSwitchToRental req.canSwitchToRental
+      let availableUpiApps = req.availableUpiApps <|> driverInfo.availableUpiApps
+      let selectedServiceTiers =
+            case vehicle.variant of
+              SV.AUTO_RICKSHAW -> [DVST.AUTO_RICKSHAW]
+              SV.TAXI -> [DVST.TAXI, DVST.ECO]
+              SV.HATCHBACK -> [DVST.HATCHBACK, DVST.COMFY] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToTaxi]
+              SV.SEDAN -> [DVST.SEDAN, DVST.COMFY] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToTaxi]
+              SV.SUV -> [DVST.SUV] <> [DVST.SEDAN | canDowngradeToSedan] <> [DVST.COMFY | canDowngradeToSedan] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToTaxi]
+              SV.TAXI_PLUS -> [DVST.TAXI_PLUS]
 
-    QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental availableUpiApps person.id
-    QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
+      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental availableUpiApps person.id
+      when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
+        QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
 
   updatedDriverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
