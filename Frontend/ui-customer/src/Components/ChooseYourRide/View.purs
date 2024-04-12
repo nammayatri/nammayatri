@@ -10,7 +10,7 @@ import Components.ChooseYourRide.Controller (Action(..), Config)
 import Components.PrimaryButton as PrimaryButton
 import Data.Array (mapWithIndex, length, (!!), any)
 import Data.Function.Uncurried (runFn1)
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils as HU
@@ -557,6 +557,7 @@ quoteListView push config isSingleEstimate =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , padding $ PaddingBottom 10
+          , margin $ MarginHorizontal 16 16
           , orientation VERTICAL
           ]( mapWithIndex
               ( \index item -> 
@@ -574,7 +575,7 @@ getQuoteListViewHeight config isSingleEstimate =
 primaryButtonRequestRideConfig :: Config -> PrimaryButton.Config
 primaryButtonRequestRideConfig config = PrimaryButton.config
   { textConfig
-    { text = (getString BOOK_NOW)
+    { text = getString $ BOOK name
     , color = Color.yellow900
     , accessibilityHint = "Confirm And Book Button"
     }
@@ -584,4 +585,8 @@ primaryButtonRequestRideConfig config = PrimaryButton.config
   , enableRipple = true
   , rippleColor = Color.rippleShade
   }
+  where 
+    name = case config.quoteList !! config.activeIndex of
+              Just selectedItem -> fromMaybe "" selectedItem.serviceTierName
+              Nothing -> ""
 

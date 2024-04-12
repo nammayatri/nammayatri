@@ -30,10 +30,10 @@ separatorView color' margin' =
     ]
     []
 
-recommendContactsToInstallView :: forall w. LazyCheck -> PrestoDOM (Effect Unit) w
-recommendContactsToInstallView _lazy =
+recommendContactsToInstallView :: forall w. String -> PrestoDOM (Effect Unit) w
+recommendContactsToInstallView appName =
   textView
-    $ [ text $ getString $ RECOMMEND_EMERGENCY_CONTACTS_TO_INSTALL "RECOMMEND_EMERGENCY_CONTACTS_TO_INSTALL"
+    $ [ text $ getString $ RECOMMEND_EMERGENCY_CONTACTS_TO_INSTALL appName
       , color Color.black700
       , background Color.blue600
       , padding $ Padding 8 12 8 12

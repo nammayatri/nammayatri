@@ -1088,3 +1088,9 @@ getFR stringKey =
         PARKING_CHARGES_DESC -> "Les frais de stationnement facturés par le conducteur ne sont pas inclus dans le tarif. Ils doivent être réglés après le trajet entre le conducteur et le passager."
         TOLL_OR_PARKING_CHARGES -> "^Péage/Frais de stationnement"
         TOLL_CHARGES_ESTIMATED -> "Frais de péage (estimés)^"
+        ADD_TIP -> "Ajouter un pourboire"
+        CHANGE_RIDE_TYPE -> "Changer le type de trajet"
+        TRY_ADDING_TIP_OR_CHANGE_RIDE_TYPE -> "Essayez d'ajouter un pourboire ou de changer le type de trajet"
+        APPLICABLE_TOLL_CHARGES -> "Les frais de péage applicables sont inclus dans les tarifs"
+        UPDATE_TIP_STR -> "Mettre à jour le pourboire"
+        BOOK name -> "Réserver " <> name

@@ -63,7 +63,6 @@ type SearchLocationModelState = {
   , isAutoComplete :: Boolean
   , showLoader :: Boolean
   , prevLocation :: String
-  , findPlaceIllustration :: Boolean
   , currentLocationText :: String
 }
 

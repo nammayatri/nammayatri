@@ -278,11 +278,11 @@ window.getMerchantConfig = function () {
         },
         "suv" : {
           "name" : "SUV",
-          "image" : "ny_ic_suv,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_suv.png"
+          "image" : "ny_ic_suv_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_suv_shadow.png"
         },
         "autoRickshaw" : {
           "name" : "Auto Rickshaw",
-          "image" : "ny_ic_single_estimate_auto,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_single_estimate_auto.png"
+          "image" : "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png"
         }
 
       }
@@ -303,7 +303,7 @@ window.getMerchantConfig = function () {
       , "website" : "https://nammayatri.in/"
     }
     , "referral" : {
-      "domain" : "https://nammayatri.in"
+      "domain" : "https://nammayatri.in/"
     , "customerAppId" : "in.juspay.nammayatri"
   },
   })

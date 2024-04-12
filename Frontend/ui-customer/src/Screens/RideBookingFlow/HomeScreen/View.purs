@@ -73,7 +73,7 @@ import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getCityConfig, getVehicleVariantImage, getImageBasedOnCity)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize)
 import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -200,7 +200,7 @@ screen initialState =
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
               SettingPrice -> do
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                let isRepeatRideEstimate = checkRecentRideVariant initialState
+                let isRepeatRideEstimate = (initialState.props.isRepeatRide && isNothing initialState.props.repeatRideServiceTierName) || checkRecentRideVariant initialState
                 if (initialState.props.isRepeatRide && isRepeatRideEstimate) 
                     then startTimer initialState.data.config.suggestedTripsAndLocationConfig.repeatRideTime "repeatRide" "1" push RepeatRideCountDown
                 else if (initialState.props.isRepeatRide && not isRepeatRideEstimate) then do 
@@ -251,7 +251,7 @@ screen initialState =
               ConfirmingLocation -> do
                 void $ pure $ enableMyLocation true
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                void $ setMapPadding 0 0 0 112
+                -- void $ setMapPadding 0 0 0 112
                 _ <- storeCallBackLocateOnMap push UpdatePickupLocation
                 pure unit
               TryAgain -> do
@@ -299,7 +299,7 @@ view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effec
 view push state =
   let 
     showLabel = not $ DS.null state.props.defaultPickUpPoint
-    extraPadding = if state.props.currentStage == ConfirmingLocation then 112 else 0
+    extraPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize (if os == "IOS" then 10 else 112) else 0
   in
   frameLayout
     [ height MATCH_PARENT
@@ -1107,7 +1107,7 @@ bannersCarousal view state push =
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , margin $ MarginTop 24
+        , margin $ MarginTop 12
         ][CarouselHolder.carouselView push $ getCarouselConfig view state banners]
       else dummyView state
       
@@ -1115,24 +1115,25 @@ bannersCarousal view state push =
 emptySuggestionsBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 emptySuggestionsBanner state push = 
   let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+      dimension = if state.data.config.feature.enableAdditionalServices then 230 else 250
   in linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadius 12.0
-    , margin $ Margin 16 10 16 10
+    , margin $ Margin 16 10 16 0
     , gravity CENTER_HORIZONTAL
     , orientation VERTICAL
     , visibility $ boolToVisibility $ (not (suggestionViewVisibility state)) && not (state.props.showShimmer && null state.data.tripSuggestions) && state.data.config.homeScreen.bannerViewVisibility
     ][  imageView 
-        [ height $ V 190
-        , width $ V 220 
+        [ height $ V dimension
+        , width $ V dimension 
         , imageWithFallback $ getImageBasedOnCity "ny_ic_home_illustration"
         ]
       , textView $
         [ text $ getVarString WELCOME_TEXT $ Arr.singleton appName
         , gravity CENTER
         , width MATCH_PARENT 
-        , margin $ MarginBottom 12
+        , margin $ MarginBottom 4
         , color Color.black900
         ] <> (FontStyle.subHeading1 LanguageStyle)
       , textView $
@@ -1150,17 +1151,21 @@ savedLocationsView state push =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , clickable state.props.isSrcServiceable
+    , visibility $ boolToVisibility $ not $ state.props.showShimmer
     , padding $ PaddingHorizontal 16 16
     ]
-    [ linearLayout
+    [ PrestoAnim.animationSet [ fadeIn true ] $
+      linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
-        , margin $ MarginTop 16
+        , margin $ MarginVertical marginTop 8
         , alpha if state.props.isSrcServiceable then 1.0 else 0.4
         , onClick push (const NoAction)
         ]
         [ LocationTagBar.view (push <<< SavedAddressClicked) { savedLocations: state.data.savedLocations } ]
     ]
+  where 
+    marginTop = if not $ null $ getBannerConfigs state BannerCarousel then 20 else 24
 
 recentSearchesView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 recentSearchesView state push =
@@ -1378,7 +1383,7 @@ rideRequestFlowView push state =
       getViewBasedOnStage :: (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
       getViewBasedOnStage push state = do
         if state.props.currentStage == SettingPrice then
-          if state.props.isRepeatRide && checkRecentRideVariant state
+          if state.props.isRepeatRide && (isNothing state.props.repeatRideServiceTierName || checkRecentRideVariant state)
             then estimatedFareView push state
           else
             ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
@@ -2564,7 +2569,7 @@ waitTimeInfoPopUp push state =
   ][ RequestInfoCard.view (push <<< RequestInfoCardAction) (waitTimeInfoCardConfig state) ]
 
 lottieLoaderView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-lottieLoaderView state push =
+lottieLoaderView state push = 
   lottieAnimationView
     [ id (getNewIDWithTag "lottieLoader")
     , afterRender
@@ -3151,13 +3156,12 @@ homeScreenViewV2 push state =
           , orientation VERTICAL
           ][  homescreenHeader push state 
             , linearLayout
-              [ height MATCH_PARENT
-              , width WRAP_CONTENT
+              [ weight 1.0
               , background Color.white900
               , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
               , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.white900, Color.grey700]) else (Linear 180.0 [Color.white900 , Color.white900,  Color.grey700])
               ][ scrollView
-                  [ height $ if os == "IOS" then (V (getHeightFromPercent 90)) else MATCH_PARENT
+                  [ height MATCH_PARENT
                   , width MATCH_PARENT
                   , padding $ PaddingBottom 70
                   , nestedScrollView true
@@ -3166,18 +3170,28 @@ homeScreenViewV2 push state =
                       [ width $ V (screenWidth unit)
                       , height WRAP_CONTENT
                       , orientation VERTICAL
-                      ] $ [savedLocationsView state push] <> 
-                        (if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
-                          [locationUnserviceableView push state]
-                        else 
-                          []
-                          <> contentView state
-                          <> [ shimmerView state
-                          , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
-                          , suggestionsView push state
-                          , emptySuggestionsBanner state push
+                      ] [ linearLayout
+                          [ width MATCH_PARENT
+                          , height WRAP_CONTENT
+                          , orientation VERTICAL
+                          , id $ getNewIDWithTag "homescreenContent"
+                          , gravity $ CENTER_HORIZONTAL
+                          ]$ [ savedLocationsView state push ] <>
+                          ((if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
+                            [locationUnserviceableView push state]
+                          else 
+                            []
+                            <> (if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else [])
+                            <> (if isHomeScreenView state then contentView state else [])
+                            -- <> if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else []
+                            <> [ shimmerView state
+                              , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
+                              , suggestionsView push state
+                              , emptySuggestionsBanner state push
+                              ])
+                            )
                           , footerView push state
-                          ])
+                      ]
                   ]
               ]
           ]
@@ -3185,28 +3199,14 @@ homeScreenViewV2 push state =
   where 
     contentView state = if state.props.showShimmer then [
       PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
-        shimmerFrameLayout
-        [ height $ V 100
+        linearLayout
+        [ height WRAP_CONTENT
         , width MATCH_PARENT 
-        , background Color.greyDark
-        , margin $ Margin 16 24 16 0
-        , cornerRadius 8.0
-        , onAnimationEnd
-            ( \action -> do
-                _ <- push action
-                _ <- getCurrentPosition push CurrentLocation
-                case state.props.currentStage of
-                  HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
-                  _ -> pure unit
-                pure unit
-            )(const MapReadyAction)
-        ][]] 
+        , onAnimationEnd push (const MapReadyAction)
+        ][tagShimmerView state]] 
       else
       (maybe 
-        (if isHomeScreenView state && state.props.isBannerDataComputed 
-          then [mapView push state "CustomerHomeScreenMap"] 
-          else [emptyTextView state]
-        ) 
+        ([]) 
         (\item -> [bannersCarousal item state push]) 
         state.data.bannerData.bannerItem)
 
@@ -3218,11 +3218,22 @@ isHomeScreenView state = state.props.currentStage == HomeScreen
 
 footerView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 footerView push state = 
+  let headerBounds = (runFn1 getLayoutBounds (getNewIDWithTag "homescreenHeader"))
+      contentBounds = (runFn1 getLayoutBounds (getNewIDWithTag "homescreenContent")) 
+      contentHeight = contentBounds.height
+      dynamicMargin = screenHeight unit - getDefaultPixelSize (headerBounds.height + contentHeight ) 
+      marginTop = if state.props.suggestionsListExpanded 
+                      then getDefaultPixelSize 150 
+                  else if dynamicMargin > 150 
+                      then dynamicMargin 
+                  else getDefaultPixelSize 150
+  in
   linearLayout  
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
     , padding $ Padding 24 5 24 30
+    , margin $ MarginTop marginTop
     , gravity CENTER
     , accessibilityHint $  getString BOOK_AND_MOVE <>  getString ANYWHERE_IN_THE_CITY
     ][
@@ -3332,7 +3343,7 @@ pickupLocationView push state =
               , disableClickFeedback true
               , clickable $ not (state.props.currentStage == SearchLocationModel)
               , onClick push $ const OpenSettings
-              , padding $ Padding 8 8 8 8 
+              , padding $ Padding 0 8 8 8 
               , background $ state.data.config.homeScreen.header.menuButtonBackground
               , cornerRadius 20.0
               , rippleColor Color.rippleShade
@@ -3386,16 +3397,19 @@ pickupLocationView push state =
           , linearLayout[
               height WRAP_CONTENT
             , width MATCH_PARENT
-            , padding $ Padding 16 8 16 16
+            , clipChildren false
             ][  linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT 
                 , padding $ Padding 14 16 14 16 
                 , stroke $ "1," <> Color.mountainFig
+                , margin $ Margin 16 8 16 16
                 , onClick push $ const WhereToClick
+                , clickable $ state.props.isSrcServiceable
+                , alpha $ if state.props.isSrcServiceable then 1.0 else 0.5
                 , gravity CENTER_VERTICAL
                 , background Color.black900
-                , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.black 0.2 
+                , shadow $ getShadowFromConfig state.data.config.homeScreen.whereToButton.shadow
                 , cornerRadius $ 8.0 
                 ][  imageView 
                     [ height $ V 20 
@@ -3420,19 +3434,25 @@ pickupLocationView push state =
 mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> PrestoDOM (Effect Unit) w
 mapView push state idTag = 
   let mapDimensions = getMapDimensions state
+      bottomPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize extraBottomPadding else 0
+      banners = getBannerConfigs state BannerCarousel
+      isVisible = if isHomeScreenView state then (null banners) && (not state.props.showShimmer)
+                      else (not (state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == SearchLocation ))
+    
   in
   PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
   relativeLayout
-    [ height mapDimensions.height
+    [ height if (isHomeScreenView state && not (null banners)) || (isHomeScreenView state && state.props.showShimmer) then V 0 else mapDimensions.height
     , width mapDimensions.width 
     -- , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
-    , stroke $ "1,"<>Color.grey700
-    , margin if state.props.currentStage == HomeScreen then (Margin 16 16 16 0) else (Margin 0 0 0 0)
+    , margin $ if isHomeScreenView state && null banners then MarginTop 16 else MarginTop 0
+    , visibility $ boolToInvisibility isVisible
+    , padding $ PaddingBottom $ bottomPadding
     , onAnimationEnd
             ( \action -> do
                 _ <- push action
                 _ <- getCurrentPosition push CurrentLocation
-                _ <- showMap (getNewIDWithTag idTag) isCurrentLocationEnabled "satellite" zoomLevel push MAPREADY
+                _ <- showMap (getNewIDWithTag idTag) isCurrentLocationEnabled "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
                 if os == "IOS" then
                   case state.props.currentStage of  
                     HomeScreen -> void $ setMapPadding 0 0 0 0
@@ -3444,17 +3464,18 @@ mapView push state idTag =
                 case state.props.currentStage of
                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
                   _ -> pure unit
+                pure unit
             )
             (const MapReadyAction)
-    ]$[ linearLayout
-        [ height  $ mapDimensions.height
-        , width $ mapDimensions.width 
-        , accessibility DISABLE_DESCENDANT
-        , id (getNewIDWithTag idTag)
-        , visibility if state.props.isSrcServiceable then VISIBLE else GONE
-        , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
-        , clickable $ not isHomeScreenView state 
-        ][]
+    ]$[  linearLayout
+          [ height  $ if isHomeScreenView state && (not (null banners)) then V 0 else mapDimensions.height
+          , width $ mapDimensions.width 
+          , accessibility DISABLE_DESCENDANT
+          , id (getNewIDWithTag idTag)
+          , visibility if state.props.isSrcServiceable then VISIBLE else GONE
+          , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
+          , clickable $ not isHomeScreenView state 
+          ][]
     --  , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][] -- TODO :: Mercy Once rentals is enabled.
      , linearLayout 
         [ height WRAP_CONTENT
@@ -3541,7 +3562,7 @@ suggestionsView push state =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , padding $ PaddingBottom 10
-  , margin $ Margin 8 14 8 0
+  , margin $ Margin 8 24 8 0
   , visibility $ boolToVisibility $ suggestionViewVisibility state && not (state.props.showShimmer && null state.data.tripSuggestions)
   ]
   [ let isTripSuggestionsEmpty = null state.data.tripSuggestions
@@ -3549,6 +3570,7 @@ suggestionsView push state =
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , gravity CENTER_VERTICAL
+      , margin $ MarginBottom 12
       ][ textView $
         [ height MATCH_PARENT
         , width WRAP_CONTENT
@@ -3577,6 +3599,7 @@ suggestionsView push state =
       then "Places you might like to go to." 
       else "One click booking for your favourite journeys!"
     , margin $ MarginBottom 7
+    , visibility GONE
     ] <> FontStyle.body3 TypoGraphy
   , if null state.data.tripSuggestions 
     then suggestedLocationCardView push state
@@ -3585,14 +3608,14 @@ suggestionsView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , visibility $
-        if length state.data.tripSuggestions > 2 
+        if length state.data.tripSuggestions > 3
         then VISIBLE 
         else if not $ null state.data.tripSuggestions 
           then GONE
-          else if length state.data.destinationSuggestions > 2 
+          else if length state.data.destinationSuggestions > 3 
             then VISIBLE
             else GONE
-    , padding $ PaddingVertical 10 6
+    , padding $ PaddingVertical 6 6
     , gravity CENTER_HORIZONTAL
     , onClick push $ const ShowMoreSuggestions
     ]
@@ -3605,36 +3628,59 @@ suggestionsView push state =
 
 shimmerView :: forall w. HomeScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state =
-  shimmerFrameLayout
+  linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
     , background Color.transparent
     , visibility $ boolToVisibility $ state.props.showShimmer && null state.data.tripSuggestions
     ] 
-    [ linearLayout
+    [ shimmerFrameLayout
         [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation VERTICAL
+        , height $ V 80
+        , margin $ Margin 16 16 16 10
+        , cornerRadius 8.0
+        , background Color.greyDark
         ]
-        [ linearLayout
-            [ width MATCH_PARENT
-            , height $ V 80
-            , margin $ Margin 16 16 16 10
-            , cornerRadius 8.0
-            , background Color.greyDark
-            ]
-            []
-        , linearLayout
-            [ width MATCH_PARENT
-            , height $ V 80
-            , margin $ MarginHorizontal 16 16 
-            , cornerRadius 8.0
-            , background Color.greyDark
-            ]
-            []
+        []
+    , shimmerFrameLayout
+        [ width MATCH_PARENT
+        , height $ V 80
+        , margin $ Margin 16 16 16 10
+        , cornerRadius 8.0
+        , background Color.greyDark
         ]
+        []
+    , shimmerFrameLayout
+        [ width MATCH_PARENT
+        , height $ V 80
+        , margin $ MarginHorizontal 16 16 
+        , cornerRadius 8.0
+        , background Color.greyDark
+        ]
+        []
     ]
+
+tagShimmerView state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ Margin 8 8 8 0
+    ](map (\_ -> 
+      shimmerFrameLayout
+      [ height WRAP_CONTENT
+      , weight 1.0 
+      , cornerRadius 24.0
+      , padding $ Padding 12 8 12 8
+      , stroke $"1,"<> Color.grey900
+      , margin $ MarginHorizontal 8 8
+
+      ][textView
+        [ cornerRadius 16.0 
+        , height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.greyDark
+        ]]) [1,2,3])
 
 movingRightArrowView :: forall w. String -> PrestoDOM (Effect Unit) w
 movingRightArrowView viewId =
@@ -3672,7 +3718,7 @@ suggestedDestinationCard push state index suggestion =
     , stroke $ "1,"<> Color.grey800
     , margin $ Margin 8 8 8 8
     , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
-    , padding $ Padding 16 16 16 16
+    , padding $ Padding 12 16 16 16
     , background Color.white900
     , gravity CENTER_VERTICAL
     , cornerRadius 16.0
@@ -3682,10 +3728,9 @@ suggestedDestinationCard push state index suggestion =
         [ height $ V 26
         , width $ V 26
         , gravity CENTER
-        , padding (Padding 3 3 3 3)
-        , margin $ MarginRight 4
+        , margin $ MarginRight 8
         ][ imageView
-            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sd"
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_green_loc_tag"
             , height $ V 20
             , width $ V 20
             ]
@@ -3745,7 +3790,7 @@ repeatRideCard push state index trip =
     , stroke $ "1,"<> Color.grey800
     , margin $ Margin 8 8 8 8
     , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
-    , padding $ Padding 16 16 16 16
+    , padding $ Padding 12 16 16 16
     , background Color.white900
     , gravity CENTER_VERTICAL
     , cornerRadii $ Corners 16.0 true true true true
@@ -3755,12 +3800,11 @@ repeatRideCard push state index trip =
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , gravity CENTER
-        , padding (Padding 3 3 3 3)
-        , margin $ MarginRight 4
+        , margin $ MarginRight 8
         ][ imageView
-            [ imageWithFallback $ fetchImage FF_ASSET $ getVehicleVariantImage trip.vehicleVariant
-            , height $ V 30
-            , width $ V 50
+            [ imageWithFallback $ fetchImage FF_ASSET imageName
+            , height $ V 40
+            , width $ V 60
             ]
         ]
       , linearLayout
@@ -3804,6 +3848,10 @@ repeatRideCard push state index trip =
     getTripSubTitle :: String -> String
     getTripSubTitle destination = 
       (DS.drop ((fromMaybe 0 (DS.indexOf (DS.Pattern ",") (destination))) + 2) (destination))
+
+    imageName = case trip.vehicleVariant of
+                  Just variant -> getVehicleVariantImage variant
+                  Nothing -> "ny_ic_green_loc_tag"
 
 pillTagView :: forall w. {text :: String, image :: String} -> PrestoDOM (Effect Unit) w
 pillTagView config = 
@@ -4109,3 +4157,6 @@ newView push state =
     , margin $ MarginLeft 8
     , visibility $ boolToVisibility $ state.data.config.homeScreen.showAdditionalServicesNew
     ] <> FontStyle.tags TypoGraphy
+
+extraBottomPadding :: Int 
+extraBottomPadding =  if os == "IOS" then 80 else 112

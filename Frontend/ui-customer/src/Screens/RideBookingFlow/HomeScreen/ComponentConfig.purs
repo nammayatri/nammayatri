@@ -88,6 +88,8 @@ import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDri
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController 
 import LocalStorage.Cache (getValueFromCache)
 import ConfigProvider
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
+import Data.Lens ((^.), view)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -628,14 +630,28 @@ logOutPopUpModelConfig state =
           , padding = (Padding 0 10 0 10)
           },
           option2 {
-            text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
+            text = getString CHANGE_RIDE_TYPE
           , width = MATCH_PARENT
           , background = Color.white900
           , strokeColor = Color.white900
           , margin = MarginTop 14
-          , padding = PaddingBottom $ getBottomMargin
           , color = Color.black650
           , height = WRAP_CONTENT
+          },
+          optionWithHtml  {
+            textOpt1 {
+              text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
+            , visibility = VISIBLE
+            , textStyle = FontStyle.SubHeading1
+            , color = Color.black650
+            } 
+            , width = MATCH_PARENT
+            , height = WRAP_CONTENT
+            , margin = MarginVertical 14 14
+            , padding = PaddingBottom $ getBottomMargin
+            , visibility = true
+            , background = Color.white900
+            , strokeColor = Color.white900
           },
           cornerRadius = (Corners 15.0 true true false false)
       }
@@ -857,7 +873,7 @@ rateCardConfig state =
   let
     config' = RateCard.config
     bangaloreCode = HU.getCityCodeFromCity Bangalore
-    fareInfoText =  mkFareInfoText state.props.city
+    fareInfoText =  mkFareInfoText state.props.city state.data.rateCard.vehicleVariant
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
     nightShiftMultiplier = if city == Delhi then "1.25" else "1.5"
     nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
@@ -929,9 +945,9 @@ rateCardConfig state =
     rateCardConfig'
   where 
 
-    mkFareInfoText :: City -> String
-    mkFareInfoText city = 
-      if DA.any ( _ == city) [ Bangalore, Tumakuru , Mysore]
+    mkFareInfoText :: City -> String -> String
+    mkFareInfoText city vehicleVariant = 
+      if DA.any ( _ == city) [ Bangalore, Tumakuru , Mysore] && vehicleVariant == "AUTO_RICKSHAW" 
         then (getString $ FARE_INFO_TEXT "FARE_INFO_TEXT") 
         else ""
     
@@ -1073,8 +1089,11 @@ getVehicleTitle vehicle =
     _ -> "") <> " - " <> (getString RATE_CARD)
 
 nyRateCardList :: ST.HomeScreenState -> Array FareList
-nyRateCardList state =
-  ([{key : ((getString MIN_FARE_UPTO) <> " 2.0 km" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.baseFare))},
+nyRateCardList state = let
+  isCab = state.data.selectedEstimatesObject.vehicleVariant /= "AUTO_RICKSHAW"
+  minFareUpto = if isCab then " 4.0 km" else " 2.0 km"
+  in
+  ([{key : ((getString MIN_FARE_UPTO) <> minFareUpto <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.baseFare))},
     {key : ((getString RATE_ABOVE_MIN_FARE) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.extraFare) <> "/ km")},
     {key : (getString $ DRIVER_PICKUP_CHARGES "DRIVER_PICKUP_CHARGES"), val : ("₹" <> HU.toStringJSON (state.data.rateCard.pickUpCharges))}
     ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then
@@ -1290,7 +1309,6 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , isAutoComplete: state.props.searchLocationModelProps.isAutoComplete
                                     , showLoader: state.props.searchLocationModelProps.showLoader
                                     , prevLocation: state.data.searchLocationModelData.prevLocation
-                                    , findPlaceIllustration : state.props.searchLocationModelProps.findPlaceIllustration
                                     , currentLocationText : state.props.currentLocation.place 
                                     }
 
@@ -1477,6 +1495,7 @@ chooseYourRideConfig state =
   {
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
+    activeIndex = state.data.selectedEstimatesObject.index,
     quoteList = state.data.specialZoneQuoteList,
     showTollExtraCharges = state.props.hasToll,
     nearByDrivers = state.data.nearByDrivers,
@@ -1515,12 +1534,18 @@ getTipViewData dummy =
 getTipViewProps :: ST.HomeScreenState -> TipViewProps
 getTipViewProps state = do  
   let tipViewProps = state.props.tipViewProps
-  case tipViewProps.stage of
+      cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
+      stage = if not cityConfig.featureConfig.enableChangeRideVariant && tipViewProps.stage == ADD_TIP_OR_CHANGE_RIDE_TYPE 
+                then DEFAULT 
+                else tipViewProps.stage
+  case stage of
     DEFAULT ->  tipViewProps{ stage = DEFAULT
                             , onlyPrimaryText = false
                             , isprimaryButtonVisible = false
                             , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
                             , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
+                            , secondaryButtonText = getString GO_BACK_
+                            , secondaryButtonVisibility = cityConfig.featureConfig.enableChangeRideVariant
                             }
     TIP_AMOUNT_SELECTED -> tipViewProps{ stage = TIP_AMOUNT_SELECTED
                                        , onlyPrimaryText = false
@@ -1528,9 +1553,28 @@ getTipViewProps state = do
                                        , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
                                        , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
                                        , primaryButtonText = getTipViewText tipViewProps state (getString CONTINUE_SEARCH_WITH)
+                                       , secondaryButtonText = getString GO_BACK_
+                                       , secondaryButtonVisibility = cityConfig.featureConfig.enableChangeRideVariant
                                        }
     TIP_ADDED_TO_SEARCH -> tipViewProps{ onlyPrimaryText = true, isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "." }
     RETRY_SEARCH_WITH_TIP -> tipViewProps{ onlyPrimaryText = true , isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "." }
+    ADD_TIP_OR_CHANGE_RIDE_TYPE -> tipViewProps{ showTipsList = false
+                                              , isprimaryButtonVisible = true
+                                              , primaryText = getString TRY_ADDING_TIP_OR_CHANGE_RIDE_TYPE
+                                              , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
+                                              , primaryButtonText = getString ADD_TIP
+                                              , secondaryButtonText = getString CHANGE_RIDE_TYPE
+                                              , secondaryButtonVisibility = cityConfig.featureConfig.enableChangeRideVariant
+                                              }
+    UPDATE_TIP -> tipViewProps
+                    { showTipsList = false
+                    , isprimaryButtonVisible = true
+                    , primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "."
+                    , primaryButtonText = getString UPDATE_TIP_STR
+                    , secondaryButtonText = getString CHANGE_RIDE_TYPE
+                    , secondaryButtonVisibility = cityConfig.featureConfig.enableChangeRideVariant
+                    , onlyPrimaryText = false
+                    }
 
 getTipViewText :: TipViewProps -> ST.HomeScreenState -> String -> String
 getTipViewText tipViewProps state prefixString = do
@@ -1664,6 +1708,14 @@ chooseVehicleConfig state = let
     , layoutMargin = Margin 0 0 0 0
     , isSingleEstimate = isSingleEstimate
     , tollCharge = selectedEstimates.tollCharge
+    , serviceTierName = selectedEstimates.serviceTierName
+    , serviceTierShortDesc = selectedEstimates.serviceTierShortDesc
+    , airConditioned = selectedEstimates.airConditioned
+    , extraFare = selectedEstimates.extraFare
+    , additionalFare = selectedEstimates.additionalFare
+    , nightShiftMultiplier = selectedEstimates.nightShiftMultiplier
+    , nightCharges = selectedEstimates.nightCharges
+    , baseFare = selectedEstimates.baseFare
     }
   in chooseVehicleConfig'
 
@@ -1891,7 +1943,7 @@ locationTagBarConfig state  = let
           { imageConfig : 
               { height : V 20
               , width : V 20
-              , imageWithFallback : item.image
+              , imageWithFallback : fetchImage FF_ASSET item.image
               } ,
             textConfig : 
               { text : item.text
@@ -1971,11 +2023,12 @@ getSafetyAlertData state = case state.props.safetyAlertType of
 shareRideConfig :: ST.HomeScreenState -> PopupWithCheckboxController.Config
 shareRideConfig state = let
   config = PopupWithCheckboxController.config
+  appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
   shareRideConfig' = config{
     title = getString SHARE_RIDE,
-    description = getString $ SHARE_RIDE_DESCRIPTION "SHARE_RIDE_DESCRIPTION",
+    description = getString $ SHARE_RIDE_DESCRIPTION appName,
     secondaryButtonText = getString SHARE_LINK,
-    secondaryButtonImage = fetchImage FF_ASSET "ny_ic_share",
+    secondaryButtonImage = HU.fetchImage HU.FF_ASSET "ny_ic_share",
     secondaryButtonVisibliity = true, 
     contactList = fromMaybe [] state.data.contactList,
     primaryButtonConfig = shareRideButtonConfig state
@@ -1998,7 +2051,7 @@ shareRideButtonConfig state =
     }
   where
   numberOfSelectedContacts = DA.length $ DA.filter (\contact -> contact.isSelected) $ fromMaybe [] state.data.contactList
-    
+
 referralPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config 
 referralPopUpConfig state = 
   let status = state.props.referral.referralStatus

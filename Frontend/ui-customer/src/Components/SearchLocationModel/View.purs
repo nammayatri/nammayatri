@@ -404,7 +404,7 @@ searchResultsView state push =
     , padding (PaddingBottom 60)
     , background Color.white900
     , scrollBarY false
-    , visibility $ boolToVisibility $ not (null state.locationList || state.findPlaceIllustration) 
+    , visibility $ boolToVisibility $ not $ null state.locationList
     ][  linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -521,7 +521,7 @@ findPlacesIllustration push state =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , visibility if state.findPlaceIllustration then VISIBLE else GONE
+      , visibility $ boolToVisibility $ null state.locationList
       , gravity CENTER_HORIZONTAL
       , margin $ Margin 7 ((screenHeight unit)/7) 16 0
       ]

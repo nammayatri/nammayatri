@@ -71,7 +71,7 @@ locationTagBarConfig state globalProps =
           })
         [ { image : home.image, text : home.text, id : home.id },
           { image : work.image, text : work.text, id : work.id },
-          { image : "ny_ic_fav_red", text : "All Favourites", id : "ALL_FAVOURITES" }]
+          { image : "ny_ic_fav_red", text : "Favourites", id : "ALL_FAVOURITES" }]
   in 
     { tagList : locTagList }
 

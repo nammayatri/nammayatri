@@ -451,6 +451,7 @@ type IndividualRideCardState =
   , isSrcServiceable :: Boolean
   , optionsVisibility :: Boolean
   , merchantExoPhone :: String
+  , serviceTierName :: Maybe String
   }
 
 
@@ -591,7 +592,6 @@ type HomeScreenStateData =
   , selectedEstimatesObject :: ChooseVehicle.Config
   , lastMessage :: ChatComponentConfig
   , cancelRideConfirmationData :: CancelRideConfirmationData
-  , pickUpCharges :: Int
   , ratingViewState :: RatingViewState
   , config :: AppConfig
   , logField :: Object Foreign
@@ -796,6 +796,7 @@ type HomeScreenStateProps =
   , isBannerDataComputed :: Boolean
   , repeatRideVariant :: String
   , hasToll :: Boolean
+  , repeatRideServiceTierName :: Maybe String
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -838,7 +839,6 @@ type SearchLocationModelProps = {
   , showLoader :: Boolean
   , crossBtnSrcVisibility :: Boolean
   , crossBtnDestVisibility :: Boolean
-  , findPlaceIllustration :: Boolean
 }
 
 type SearchLocationModelData = {
@@ -902,7 +902,7 @@ instance eqSheetState :: Eq SheetState where eq = genericEq
 instance encodeSheetState :: Encode SheetState where encode = defaultEnumEncode
 instance decodeSheetState :: Decode SheetState where decode = defaultEnumDecode
 
-data TipViewStage = DEFAULT | TIP_AMOUNT_SELECTED | TIP_ADDED_TO_SEARCH | RETRY_SEARCH_WITH_TIP
+data TipViewStage = DEFAULT | TIP_AMOUNT_SELECTED | TIP_ADDED_TO_SEARCH | RETRY_SEARCH_WITH_TIP | ADD_TIP_OR_CHANGE_RIDE_TYPE | UPDATE_TIP
 
 derive instance genericTipViewStage :: Generic TipViewStage _
 instance showTipViewStage :: Show TipViewStage where show = genericShow
@@ -921,6 +921,9 @@ type TipViewProps = {
   , customerTipArrayWithValues :: Array Int
   , activeIndex :: Int
   , primaryButtonText :: String
+  , secondaryButtonText :: String
+  , secondaryButtonVisibility :: Boolean
+  , showTipsList :: Boolean
 }
 
 type Contact = {
@@ -990,11 +993,11 @@ type EstimateInfo = {
   defaultQuote :: ChooseVehicle.Config,
   estimateId :: String,
   estimatedVarient :: Array EstimateAPIEntity,
-  pickUpCharges :: Int,
-  nightShiftMultiplier :: Number,
-  nightCharges :: Boolean,
-  baseFare :: Int,
-  extraFare :: Int,
+  -- pickUpCharges :: Int,
+  -- -- nightShiftMultiplier :: Number,
+  -- -- nightCharges :: Boolean,
+  -- baseFare :: Int,
+  -- extraFare :: Int,
   showRateCardIcon :: Boolean,
   zoneType :: SpecialTags,
   createdTime :: String,
@@ -1043,7 +1046,8 @@ type EmergencyContactsScreenData = {
 type EmergencyContactsScreenProps = {
   showContactList :: Boolean,
   showInfoPopUp :: Boolean,
-  fromSosFlow :: Boolean
+  fromSosFlow :: Boolean,
+  appName :: String
 }
 
 type ContactDetail = {
@@ -1150,6 +1154,7 @@ type DriverInfoCard =
   , sourceAddress :: Address
   , destinationAddress :: Address
   , status :: String
+  , serviceTierName :: Maybe String
   }
 
 type RatingCard =
@@ -1374,7 +1379,7 @@ type DestinationGeoHash = String
 
 type Suggestions = {
     destinationSuggestions :: Array LocationListItemState
-  , variantBasedTripSuggestions :: Array Trip 
+  , tripSuggestions :: Array Trip 
 }
 
 type Trip = {
@@ -1390,7 +1395,8 @@ type Trip = {
   , recencyDate :: Maybe String
   , locationScore :: Maybe Number
   , isSpecialZone :: Boolean
-  , vehicleVariant :: String
+  , vehicleVariant :: Maybe String
+  , serviceTierName :: Maybe String
 }
 type SuggestionsData =  {
     suggestionsMap :: SuggestionsMap
@@ -2037,7 +2043,8 @@ type NammaSafetyScreenProps =  {
   fromBannerLink :: Boolean,
   showPastRidePopUp :: Boolean,
   checkPastRide :: Boolean,
-  reportPastRide :: Boolean
+  reportPastRide :: Boolean,
+  appName :: String
 }
 data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
 
