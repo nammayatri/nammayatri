@@ -31,6 +31,7 @@ import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Tools.Auth
 
 -------- Feedback Flow ----------
@@ -49,5 +50,7 @@ rating :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> A
 rating (personId, _) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   dFeedbackRes <- DFeedback.feedback request
   becknReq <- ACL.buildRatingReqV2 dFeedbackRes
-  void $ withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq
+  fork "call bpp rating api" $ do
+    isValueAddNP <- CQVAN.isValueAddNP dFeedbackRes.providerId
+    when isValueAddNP . void . withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq
   pure Success
