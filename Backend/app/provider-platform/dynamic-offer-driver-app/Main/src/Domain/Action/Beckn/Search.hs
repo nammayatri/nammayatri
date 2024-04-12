@@ -126,6 +126,7 @@ data NearestDriverInfo = NearestDriverInfo
     distanceToNearestDriver :: Meters,
     driverLatLongs :: NonEmpty LatLong
   }
+  deriving (Generic, Show)
 
 getDistanceAndDuration :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> LatLong -> Maybe Meters -> Maybe Seconds -> Flow (Meters, Seconds)
 getDistanceAndDuration _ _ _ _ (Just distance) (Just duration) = return (distance, duration)

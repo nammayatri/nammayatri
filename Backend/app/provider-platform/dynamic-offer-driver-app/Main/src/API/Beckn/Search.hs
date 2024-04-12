@@ -73,10 +73,14 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
       bppUri <- Utils.mkBppUri transporterId.getId
       fork "search request processing" $
         Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
-          dSearchRes <- DSearch.handler validatedSReq dSearchReq
+          dSearchResWithQuotes <- DSearch.handler validatedSReq dSearchReq
           internalEndPointHashMap <- asks (.internalEndPointHashMap)
 
           isValueAddNP <- VNP.isValueAddNP dSearchReq.bapId
+          let dSearchResWihoutQuotes = dSearchResWithQuotes {DSearch.quotes = []}
+          -- in case of non value-add-np transactions, when quotes are present, setting them empty to avoid sending quotes to BAP.
+          let dSearchRes = bool dSearchResWihoutQuotes dSearchResWithQuotes isValueAddNP
+
           when ((notNull dSearchRes.quotes && isValueAddNP) || null dSearchRes.quotes) $ do
             onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri (Just bppId) (Just bppUri) city country
             let context' = onSearchReq.onSearchReqContext
