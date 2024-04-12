@@ -50,9 +50,10 @@ handler = track
 track ::
   Id DM.Merchant ->
   SignatureAuthResult ->
+  Maybe Text ->
   Track.TrackReqV2 ->
   FlowHandler AckResponse
-track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI do
+track transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.trackReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "track APIV2 Flow" $ "Reached:-" <> show reqV2

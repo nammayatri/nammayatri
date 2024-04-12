@@ -53,9 +53,10 @@ handler = confirm
 confirm ::
   Id DM.Merchant ->
   SignatureAuthResult ->
+  Maybe Text ->
   Confirm.ConfirmReqV2 ->
   FlowHandler AckResponse
-confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI do
+confirm transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.confirmReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "Confirm APIV2 Flow" "Reached"

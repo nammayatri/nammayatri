@@ -40,9 +40,10 @@ handler = update
 update ::
   Id Merchant ->
   SignatureAuthResult ->
+  Maybe Text ->
   Update.UpdateReq ->
   FlowHandler AckResponse
-update _ (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
+update _ (SignatureAuthResult _ subscriber) _ req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "updateAPI" "Received update API call."
     dUpdateReq <- ACL.buildUpdateReq subscriber req

@@ -41,9 +41,10 @@ handler = rating
 rating ::
   Id Merchant ->
   SignatureAuthResult ->
+  Maybe Text ->
   Rating.RatingReqV2 ->
   FlowHandler AckResponse
-rating merchantId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI $ do
+rating merchantId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandlerBecknAPI $ do
   transactionId <- Utils.getTransactionId reqV2.ratingReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "ratingAPIV2" $ "Received rating API call:-" <> show reqV2

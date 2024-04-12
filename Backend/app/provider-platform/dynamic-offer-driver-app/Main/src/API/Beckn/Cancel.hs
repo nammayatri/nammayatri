@@ -58,9 +58,10 @@ handler = cancel
 cancel ::
   Id DM.Merchant ->
   SignatureAuthResult ->
+  Maybe Text ->
   Cancel.CancelReqV2 ->
   FlowHandler AckResponse
-cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
+cancel transporterId subscriber _ reqV2 = withFlowHandlerBecknAPI do
   (dCancelReq, callbackUrl, bapId, msgId, city, country, txnId, bppId, bppUri) <- do
     transactionId <- Utils.getTransactionId reqV2.cancelReqContext
     Utils.withTransactionIdLogTag transactionId $ do

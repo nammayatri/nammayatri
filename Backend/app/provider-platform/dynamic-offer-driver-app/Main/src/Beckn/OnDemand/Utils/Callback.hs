@@ -52,7 +52,7 @@ type WithBecknCallback api callback_result m =
     CoreMetrics m,
     HasClient ET.EulerClient api,
     Client ET.EulerClient api
-      ~ (callback_result -> ET.EulerClient AckResponse)
+      ~ (Maybe Text -> callback_result -> ET.EulerClient AckResponse)
   ) =>
   Action ->
   Proxy api ->
@@ -69,7 +69,7 @@ withBecknCallback ::
 withBecknCallback doWithCallback auth action api cbUrl internalEndPointHashMap fromError cbHandler = do
   forkBecknCallback
     fromError
-    (doWithCallback . void . callBecknAPI auth Nothing action api cbUrl internalEndPointHashMap)
+    (doWithCallback . void . callBecknAPI Nothing auth Nothing action api cbUrl internalEndPointHashMap)
     action
     cbHandler
   return Ack
