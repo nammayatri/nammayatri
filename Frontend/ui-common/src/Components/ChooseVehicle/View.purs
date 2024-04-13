@@ -31,9 +31,9 @@ view push config =
 cardView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 cardView push config = 
   let isActiveIndex = config.index == config.activeIndex
-      stroke' = if isActiveIndex &&  (not config.showEditButton) then "2," <> Color.blue800 else "1," <> Color.white900
+      stroke' = if isActiveIndex && (not config.showEditButton) then "2," <> Color.blue800 else "1," <> Color.white900
       background' = if isActiveIndex && (not config.showEditButton) then Color.blue600 else Color.white900
-      padding' = Padding 8 16 12 16
+      padding' = PaddingVertical 16 16
       bounds = JB.getLayoutBounds $ EHC.getNewIDWithTag config.id
   in 
   frameLayout
@@ -181,7 +181,7 @@ vehicleDetailsView push config =
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 priceDetailsView push config =
   let isActiveIndex = config.index == config.activeIndex
-      infoIcon = if isActiveIndex then "ny_ic_info_blue_lg" else "ny_ic_info_grey"
+      infoIcon ="ny_ic_info_blue_lg"
   in
   linearLayout
     [ height MATCH_PARENT
@@ -207,7 +207,7 @@ priceDetailsView push config =
         , height $ V 15
         , gravity CENTER_VERTICAL
         , margin $ MarginLeft 4
-        , visibility $ boolToVisibility $ config.showInfo
+        , visibility $ boolToVisibility $ config.showInfo && isActiveIndex
         ]
     ]
 

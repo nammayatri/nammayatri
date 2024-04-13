@@ -242,7 +242,7 @@ initData = {
     , cancelRideConfirmationPopup : false
     , searchAfterEstimate : false
     , tipViewProps : {
-        stage : ADD_TIP_OR_CHANGE_RIDE_TYPE
+        stage : DEFAULT
       , isVisible : false
       , onlyPrimaryText : false
       , isprimaryButtonVisible : false
@@ -252,9 +252,6 @@ initData = {
       , customerTipArrayWithValues : []
       , activeIndex : -1
       , primaryButtonText : ""
-      , secondaryButtonText : ""
-      , secondaryButtonVisibility : false
-      , showTipsList : true
       }
     , focussedBottomIcon : MOBILITY
     , timerId : ""

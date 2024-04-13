@@ -1671,7 +1671,7 @@ findEstimates updatedState = do
                                                   , destLabelIcon : Just $ zoneLabelIcon state.props.zoneType.destinationTag
                                                   , sourceGeoJson : if DS.null state.data.polygonCoordinates then Nothing else Just $ state.data.polygonCoordinates 
                                                   , sourceGates : if null state.data.nearByPickUpPoints then Nothing else Just $ state.data.nearByPickUpPoints })
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, findingQuotesProgress = 0.0}, data{nearByDrivers = Nothing}})
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, selectedQuote = Nothing, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, findingQuotesProgress = 0.0}, data{nearByDrivers = Nothing, quoteListModelState = []}})
   updateLocalStage FindingEstimate
   homeScreenFlow
 

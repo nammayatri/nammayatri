@@ -903,7 +903,7 @@ instance eqSheetState :: Eq SheetState where eq = genericEq
 instance encodeSheetState :: Encode SheetState where encode = defaultEnumEncode
 instance decodeSheetState :: Decode SheetState where decode = defaultEnumDecode
 
-data TipViewStage = DEFAULT | TIP_AMOUNT_SELECTED | TIP_ADDED_TO_SEARCH | RETRY_SEARCH_WITH_TIP | ADD_TIP_OR_CHANGE_RIDE_TYPE | UPDATE_TIP
+data TipViewStage = DEFAULT | TIP_AMOUNT_SELECTED | TIP_ADDED_TO_SEARCH | RETRY_SEARCH_WITH_TIP
 
 derive instance genericTipViewStage :: Generic TipViewStage _
 instance showTipViewStage :: Show TipViewStage where show = genericShow
@@ -922,9 +922,6 @@ type TipViewProps = {
   , customerTipArrayWithValues :: Array Int
   , activeIndex :: Int
   , primaryButtonText :: String
-  , secondaryButtonText :: String
-  , secondaryButtonVisibility :: Boolean
-  , showTipsList :: Boolean
 }
 
 type Contact = {
