@@ -359,11 +359,17 @@ mkOneWayQuoteDetails OneWayQuoteDetails {..} = DQuote.OneWayQuoteDetails {..}
 buildOneWaySpecialZoneQuoteDetails :: MonadFlow m => OneWaySpecialZoneQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
 buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
   id <- generateGUID
+  now <- getCurrentTime
+  let createdAt = now
+      updatedAt = now
   pure DSpecialZoneQuote.SpecialZoneQuote {..}
 
 buildInterCityQuoteDetails :: MonadFlow m => InterCityQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
 buildInterCityQuoteDetails InterCityQuoteDetails {..} = do
   id <- generateGUID
+  now <- getCurrentTime
+  let createdAt = now
+      updatedAt = now
   pure DSpecialZoneQuote.SpecialZoneQuote {..}
 
 buildRentalDetails :: MonadFlow m => RentalQuoteDetails -> m DRentalDetails.RentalDetails

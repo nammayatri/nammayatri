@@ -37,25 +37,25 @@ import Storage.Queries.RentalDetails as QueryRD
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
 import qualified Storage.Queries.TripTerms as QTT
 
-createDetails :: (MonadFlow m, EsqDBFlow m r) => QuoteDetails -> m ()
+createDetails :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => QuoteDetails -> m ()
 createDetails = \case
   OneWayDetails _ -> pure ()
   RentalDetails rentalDetails -> QueryRD.createRentalDetails rentalDetails
   DriverOfferDetails driverOffer -> QueryDO.createDriverOffer driverOffer
-  OneWaySpecialZoneDetails specialZoneQuote -> QuerySZQ.createSpecialZoneQuote specialZoneQuote
-  InterCityDetails specialZoneQuote -> QuerySZQ.createSpecialZoneQuote specialZoneQuote
+  OneWaySpecialZoneDetails specialZoneQuote -> QuerySZQ.create specialZoneQuote
+  InterCityDetails specialZoneQuote -> QuerySZQ.create specialZoneQuote
 
 createQuote :: (MonadFlow m, EsqDBFlow m r) => Quote -> m ()
 createQuote = createWithKV
 
-create :: (MonadFlow m, EsqDBFlow m r) => Quote -> m ()
-create quote = do
+create' :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Quote -> m ()
+create' quote = do
   traverse_ QTT.createTripTerms (quote.tripTerms)
   _ <- createDetails (quote.quoteDetails)
   createQuote quote
 
-createMany :: (MonadFlow m, EsqDBFlow m r) => [Quote] -> m ()
-createMany = traverse_ create
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Quote] -> m ()
+createMany = traverse_ create'
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Quote -> m (Maybe Quote)
 findById quoteId = findOneWithKV [Se.Is BeamQ.id $ Se.Eq (getId quoteId)]

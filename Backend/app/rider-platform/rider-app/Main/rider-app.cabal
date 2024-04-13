@@ -194,6 +194,7 @@ library
       Domain.Action.UI.Select
       Domain.Action.UI.Serviceability
       Domain.Action.UI.Sos
+      Domain.Action.UI.SpecialZoneQuote
       Domain.Action.UI.Support
       Domain.Action.UI.TicketService
       Domain.Action.UI.Whatsapp
@@ -229,7 +230,6 @@ library
       Domain.Types.RentalDetails
       Domain.Types.SavedReqLocation
       Domain.Types.SearchRequest
-      Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
       Domain.Types.UtilsTH
       Domain.Types.VehicleServiceTier
@@ -287,7 +287,6 @@ library
       Storage.Beam.RentalDetails
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchRequest
-      Storage.Beam.SpecialZoneQuote
       Storage.Beam.SystemConfigs
       Storage.Beam.TripTerms
       Storage.Beam.WhiteListOrg
@@ -357,11 +356,11 @@ library
       Storage.Queries.RideExtra
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchRequest
-      Storage.Queries.SpecialZoneQuote
       Storage.Queries.Transformers.AppInstalls
       Storage.Queries.Transformers.BlackListOrg
       Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.Transformers.SearchReqLocation
+      Storage.Queries.Transformers.SpecialZoneQuote
       Storage.Queries.TripTerms
       Storage.Queries.WhiteListOrg
       Tools.AadhaarVerification
@@ -436,6 +435,7 @@ library
       Domain.Types.ServicePeopleCategory
       Domain.Types.Sos
       Domain.Types.SpecialOccasion
+      Domain.Types.SpecialZoneQuote
       Domain.Types.Station
       Domain.Types.TicketBooking
       Domain.Types.TicketBookingPeopleCategory
@@ -483,6 +483,7 @@ library
       Storage.Beam.ServicePeopleCategory
       Storage.Beam.Sos
       Storage.Beam.SpecialOccasion
+      Storage.Beam.SpecialZoneQuote
       Storage.Beam.Station
       Storage.Beam.TicketBooking
       Storage.Beam.TicketBookingPeopleCategory
@@ -538,6 +539,7 @@ library
       Storage.Queries.ServicePeopleCategory
       Storage.Queries.Sos
       Storage.Queries.SpecialOccasion
+      Storage.Queries.SpecialZoneQuote
       Storage.Queries.Station
       Storage.Queries.TicketBooking
       Storage.Queries.TicketBookingPeopleCategory
