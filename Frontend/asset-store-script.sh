@@ -1,9 +1,11 @@
 #!/bin/bash
 
 # Define the source and target repositories
-TARGET_REPOS=("https://github.com/MercyQueen/asset-store")
+TARGET_REPOS=("git@github.com:MercyQueen/asset-store")
 branch_name=$1
 abcd=$2
+# ALL_CHANGED_FILES=$3
+abkjsdbfk=$4
 
 files_to_be_added=();
 
@@ -24,7 +26,6 @@ create_pull_request() {
     local target_repo="$TARGET_REPOS"
     local target_repo_name="$(basename "$target_repo")" || { echo "Error: Invalid target repository URL"; return 1; }
 
-    echo "acbdbksjhjksdhf $abcd"
     if [ -z "$branch_name" ]; then
         echo "Error: Branch name not provided"
         return 1
@@ -41,17 +42,20 @@ create_pull_request() {
     CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r $COMMIT_HASH)
 
 # Print the list of changed files
-    echo "Changed files:"
-    echo "$CHANGED_FILES"
+    echo "Changed filessdff:"
+    echo "$ALL_CHANGED_FILES"
     # Check if there are staged files
     local CHANGED_FILES
     # CHANGED_FILES="$(git diff --cached --name-only)" || { echo "Error: Failed to retrieve staged files"; return 1; }
     declare -a staged_files_array
-
-    while IFS= read -r line; do
-        staged_files_array+=("$line")
-         echo "files are " $line
-    done <<< "$CHANGED_FILES"
+    for file in ${ALL_CHANGED_FILES[@]}; do
+        staged_files_array+=("$file")
+        echo "$file was changed"
+    done
+    # while IFS= read -r line; do
+    #     staged_files_array+=("$line")
+    #      echo "files are " $line
+    # done <<< "$ALL_CHANGED_FILES"
     echo $target_repo_name
 
     # Clone or update the target repository
@@ -59,18 +63,16 @@ create_pull_request() {
     echo "Current directory: $current_directory"
     echo "Target repository: $target_repo_name"
     # git clone "$target_repo" || { echo "Error: Failed to clone repository"; return 1; }
-    if [ ! -d "$target_repo_name" ]; then
-        # git clone "$target_repo" "$target_repo_name" || { echo "Error: Failed to clone repository"; return 1; }
-        git config --global user.name 'GitHub Actions'
-        git config --global user.email 'actions@users.noreply.github.com'
-        git remote set-url origin git@github.com:nammayatri/asset-store.git "$target_repo_name"
-        git clone https://github.com/MercyQueen/asset-store.git "$target_repo_name"
+    # if [ ! -d "$target_repo_name" ]; then
+    #     # git clone "$target_repo" "$target_repo_name" || { echo "Error: Failed to clone repository"; return 1; }
+    #     git config --global user.name 'GitHub Actions'
+    #     git config --global user.email 'actions@users.noreply.github.com'
+    #     git remote set-url origin git@github.com:MercyQueen/asset-store.git "$target_repo_name"
+    #     git clone https://MercyQueen:$PAT_TOKEN@github "$target_repo_name"
 
-    else
-        echo "Repository already exists in $target_repo_name"
-    fi
-    lss=$(ls)
-    echo "ls is $lss"
+    # else
+    #     echo "Repository already exists in $target_repo_name"
+    # fi
     cd "$target_repo_name" || { echo "Error: Directory $target_repo_name does not exist after cloning"; return 1; }
     git checkout main
     git pull origin --rebase main || { echo "Error: Failed to pull latest changes"; return 1; }
@@ -94,7 +96,7 @@ create_pull_request() {
         dir=${src_path_components[5]}
         dir_array=()
         sub_dir=${src_path_components[4]}
-        asset_type=${file_type}
+        
         asset_name=${src_path_components[length-1]}
 
         # Determine file type based on path_components[3]
@@ -103,18 +105,18 @@ create_pull_request() {
         else
             file_type="lottie"
         fi
-
+        asset_type=${file_type}
         # Check if the source path contains any of the following keywords for directory
         if echo ${dir} | grep -q "jatriSaathi"; then
-            dir_array=("jatriSaathi")
+            dir_array=("jatrisaathi")
         elif echo ${dir} | grep -q "nammaYatri"; then
-            dir_array=("nammaYatri")
+            dir_array=("nammayatri")
         elif echo ${dir} | grep -q "yatri"; then
             dir_array=("yatri")
         elif echo ${dir} | grep -q "manayatri"; then
             dir_array=("manayatri")
         else 
-            dir_array=("jatriSaathi" "nammaYatri" "yatri" "manayatri")
+            dir_array=("jatrisaathi" "nammayatri" "yatri" "manayatri")
         fi
 
         # Iterate through dir_array and call add_file_for_commit
@@ -123,6 +125,7 @@ create_pull_request() {
             if [[ ${sub_directory} == "main" ]]; then 
                 sub_directory="${dir}common"
             fi 
+            echo "Dir: $dir, Sub-directory: $sub_directory, Asset type: $asset_type, Asset name: $asset_name, Source path: $source_path"
             add_file_for_commit "$dir" "$sub_directory" "$asset_type" "$asset_name" "$source_path"
         done
     fi
@@ -135,18 +138,17 @@ create_pull_request() {
 
     git add .
     git commit -m "Add new asset from asset store"
-    git push origin "$branch_name" || { echo "Error: Failed to push changes to branch $branch_name"; return 1; }
+    echo "hvghhgjhghjg"
+    git push --set-upstream origin "$branch_name"
+    git push #origin "$branch_name" || { echo "Error: Failed to push changes to branch $branch_name"; return 1; }
     pull_request_url="${target_repo}/compare/main...${branch_name}"
     echo "Pull request URL: $pull_request_url"
-
-    curl -X POST \
-      -H "Accept: application/vnd.github.v3+json" \
-      -H "Authorization: token $token" \
-      https://github.com/MercyQueen/asset-store/dispatches \
-      -d '{"event_type":"trigger_workflow", "client_payload": {"branch": "'$branch_name'"}}'
+    curl -X POST -H "Authorization: token $PAT_TOKEN" \
+        https://api.github.com/repos/MercyQueen/asset-store/dispatches \
+        -d '{"event_type": "trigger_workflow",  "client_payload": {"branch": "'$branch_name'" , "ref" : "main"}}'
 
     cd ..
-    rm -rf "$target_repo_name"
+    rm -rf "$target_repo_name" 
     
 
 }
