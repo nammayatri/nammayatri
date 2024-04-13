@@ -200,6 +200,7 @@
       "ny_ic_blind_pickup" : true,
       "ny_ic_blue_auto" : true,
       "ny_ic_blue_circle" : true,
+      "ny_ic_blue_edit" : true,
       "ny_ic_blue_marker" : true,
       "ny_ic_blue_share" : true,
       "ny_ic_briefcase" : true,
