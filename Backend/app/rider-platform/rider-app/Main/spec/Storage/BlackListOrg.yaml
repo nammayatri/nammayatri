@@ -27,7 +27,7 @@ BlackListOrg:
 
   toTType:
     createdAt: Kernel.Prelude.Just|I
-    updatedAt: Kernel.Prelude.Just|I  
+    updatedAt: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -35,6 +35,7 @@ BlackListOrg:
 
   sqlType:
     domain: character varying(255)
+    subscriberId: character varying(255)
 
   queries:
     findBySubscriberIdAndDomain:
