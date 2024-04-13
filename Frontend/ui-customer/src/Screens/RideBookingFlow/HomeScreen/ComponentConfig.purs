@@ -630,28 +630,14 @@ logOutPopUpModelConfig state =
           , padding = (Padding 0 10 0 10)
           },
           option2 {
-            text = getString CHANGE_RIDE_TYPE
+            text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
           , width = MATCH_PARENT
           , background = Color.white900
           , strokeColor = Color.white900
           , margin = MarginTop 14
+          , padding = PaddingBottom $ getBottomMargin
           , color = Color.black650
           , height = WRAP_CONTENT
-          },
-          optionWithHtml  {
-            textOpt1 {
-              text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
-            , visibility = VISIBLE
-            , textStyle = FontStyle.SubHeading1
-            , color = Color.black650
-            } 
-            , width = MATCH_PARENT
-            , height = WRAP_CONTENT
-            , margin = MarginVertical 14 14
-            , padding = PaddingBottom $ getBottomMargin
-            , visibility = true
-            , background = Color.white900
-            , strokeColor = Color.white900
           },
           cornerRadius = (Corners 15.0 true true false false)
       }
@@ -1535,18 +1521,12 @@ getTipViewData dummy =
 getTipViewProps :: ST.HomeScreenState -> TipViewProps
 getTipViewProps state = do  
   let tipViewProps = state.props.tipViewProps
-      cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
-      stage = if not cityConfig.featureConfig.enableChangeRideVariant && tipViewProps.stage == ADD_TIP_OR_CHANGE_RIDE_TYPE 
-                then DEFAULT 
-                else tipViewProps.stage
-  case stage of
+  case tipViewProps.stage of
     DEFAULT ->  tipViewProps{ stage = DEFAULT
                             , onlyPrimaryText = false
                             , isprimaryButtonVisible = false
                             , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
                             , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
-                            , secondaryButtonText = getString GO_BACK_
-                            , secondaryButtonVisibility = cityConfig.featureConfig.enableChangeRideVariant
                             }
     TIP_AMOUNT_SELECTED -> tipViewProps{ stage = TIP_AMOUNT_SELECTED
                                        , onlyPrimaryText = false
@@ -1554,28 +1534,10 @@ getTipViewProps state = do
                                        , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
                                        , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
                                        , primaryButtonText = getTipViewText tipViewProps state (getString CONTINUE_SEARCH_WITH)
-                                       , secondaryButtonText = getString GO_BACK_
-                                       , secondaryButtonVisibility = cityConfig.featureConfig.enableChangeRideVariant
                                        }
     TIP_ADDED_TO_SEARCH -> tipViewProps{ onlyPrimaryText = true, isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "." }
     RETRY_SEARCH_WITH_TIP -> tipViewProps{ onlyPrimaryText = true , isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "." }
-    ADD_TIP_OR_CHANGE_RIDE_TYPE -> tipViewProps{ showTipsList = false
-                                              , isprimaryButtonVisible = true
-                                              , primaryText = getString TRY_ADDING_TIP_OR_CHANGE_RIDE_TYPE
-                                              , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
-                                              , primaryButtonText = getString ADD_TIP
-                                              , secondaryButtonText = getString CHANGE_RIDE_TYPE
-                                              , secondaryButtonVisibility = cityConfig.featureConfig.enableChangeRideVariant
-                                              }
-    UPDATE_TIP -> tipViewProps
-                    { showTipsList = false
-                    , isprimaryButtonVisible = true
-                    , primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "."
-                    , primaryButtonText = getString UPDATE_TIP_STR
-                    , secondaryButtonText = getString CHANGE_RIDE_TYPE
-                    , secondaryButtonVisibility = cityConfig.featureConfig.enableChangeRideVariant
-                    , onlyPrimaryText = false
-                    }
+
 
 getTipViewText :: TipViewProps -> ST.HomeScreenState -> String -> String
 getTipViewText tipViewProps state prefixString = do

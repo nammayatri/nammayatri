@@ -33,7 +33,6 @@ data Action = GoBack
             | HidePopUp
             | ChangeTip
             | TipsViewActionController TipsView.Action
-            | SecondaryBtnClick
 
 type QuoteListModelState = {
      source :: String

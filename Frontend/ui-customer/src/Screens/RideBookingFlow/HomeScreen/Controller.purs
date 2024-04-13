@@ -2095,21 +2095,15 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
 
 
 eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryButtonClick PrimaryButtonController.OnClick)) state = do
-  let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
-  case state.props.tipViewProps.stage, cityConfig.featureConfig.enableChangeRideVariant of
-    ADD_TIP_OR_CHANGE_RIDE_TYPE, true -> 
-      continue state { props {tipViewProps {stage = DEFAULT} } }
-    UPDATE_TIP, true -> continue state { props {tipViewProps {stage = TIP_AMOUNT_SELECTED} } }
-    _, _ -> do
-      let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".Tip") "true"
-      let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
-          customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
-      _ <- pure $ clearTimerWithId state.props.timerId
-      void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), scaleType="CENTER_CROP"}
-      let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH, onlyPrimaryText = true}
-      let newState = state{ props{rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }, findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex, isTipSelected = true } }, data{nearByDrivers = Nothing}}
-      _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
-      updateAndExit newState $ RetryFindingQuotes false newState
+  let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".Tip") "true"
+  let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+      customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+  _ <- pure $ clearTimerWithId state.props.timerId
+  void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), scaleType="CENTER_CROP"}
+  let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH, onlyPrimaryText = true}
+  let newState = state{ props{rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }, findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex, isTipSelected = true } }, data{nearByDrivers = Nothing}}
+  _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
+  updateAndExit newState $ RetryFindingQuotes false newState
 
 eval (QuoteListModelActionController (QuoteListModelController.TipsViewActionController (TipsView.TipBtnClick index value))) state = do
   let check = index == state.props.tipViewProps.activeIndex
@@ -2119,20 +2113,6 @@ eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActi
   _ <- pure $ performHapticFeedback unit
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote_confirm"
   exit $ ConfirmRide state
-
-eval (QuoteListModelActionController (QuoteListModelController.SecondaryBtnClick)) state = 
-  case state.props.tipViewProps.stage of
-    ADD_TIP_OR_CHANGE_RIDE_TYPE -> exit $ RepeatSearch state 
-    UPDATE_TIP -> exit $ RepeatSearch state { props {tipViewProps {stage = ADD_TIP_OR_CHANGE_RIDE_TYPE, activeIndex = -1} } }
-    TIP_AMOUNT_SELECTED -> do
-      case (getTipViewData "LazyCheck") of
-          Just (TipViewData tipView) -> do
-            if tipView.activeIndex == -1 then
-              continue state { props {tipViewProps {stage = ADD_TIP_OR_CHANGE_RIDE_TYPE, activeIndex = -1} } }
-            else
-              continue state { props {tipViewProps {stage = TIP_ADDED_TO_SEARCH, activeIndex = tipView.activeIndex} } }
-          Nothing -> continue state { props {tipViewProps {stage = ADD_TIP_OR_CHANGE_RIDE_TYPE, activeIndex = -1} } }
-    _ -> continue state { props {tipViewProps {stage = ADD_TIP_OR_CHANGE_RIDE_TYPE, activeIndex = -1} } }
 
 eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController (QuoteListItemController.CountDown seconds status id))) state = do
   if status == "EXPIRED" then do
@@ -2172,9 +2152,7 @@ eval (QuoteListModelActionController (QuoteListModelController.HomeButtonActionC
   updateAndExit state CheckCurrentStatus
 
 eval (QuoteListModelActionController (QuoteListModelController.ChangeTip)) state = do
-  let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
-  let newStage = if cityConfig.featureConfig.enableChangeRideVariant then UPDATE_TIP else DEFAULT
-  continue state {props { tipViewProps {stage = newStage}}}
+  continue state {props { tipViewProps {stage = DEFAULT}}}
 
 eval (Restart err) state = exit $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state
 
@@ -2195,14 +2173,21 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
         _ <- pure $ clearTimerWithId state.props.timerId
         let tipViewData = HomeScreenData.initData.props.tipViewProps
         _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
-        exit $ CheckCurrentStatus
+        exit $ RepeatSearch state{props{customerTip = HomeScreenData.initData.props.customerTip, tipViewProps = HomeScreenData.initData.props.tipViewProps, isPopUp = NoPopUp, selectedQuote = Nothing}, data{quoteListModelState = []}}
       else do
       _ <- pure $ clearTimerWithId state.props.timerId
       let newState = state{props{findingRidesAgain = true , searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = RetryFindingQuote, isPopUp = NoPopUp, rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }}}
       updateAndExit newState $ RetryFindingQuotes true newState
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
-    TipsPopUp -> exit $ RepeatSearch state { props { isPopUp = NoPopUp, tipViewProps {stage = ADD_TIP_OR_CHANGE_RIDE_TYPE, activeIndex = -1}} }
+    TipsPopUp -> case state.props.currentStage of
+      QuoteList -> do
+        _ <- pure $ performHapticFeedback unit
+        updateAndExit state CheckCurrentStatus
+      FindingQuotes -> do
+        _ <- pure $ performHapticFeedback unit
+        exit $ CheckCurrentStatus
+      _ -> continue state
     Logout -> exit LogoutUser
     ConfirmBack -> do
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_no_retry"
@@ -2218,17 +2203,6 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isP
     ActiveQuotePopUp -> do
       _ <- pure $ performHapticFeedback unit
       exit $ CheckCurrentStatus
-  
-eval (PopUpModalAction (PopUpModal.OptionWithHtmlClick)) state = case state.props.isPopUp of
-    TipsPopUp -> case state.props.currentStage of
-      QuoteList -> do
-        _ <- pure $ performHapticFeedback unit
-        updateAndExit state CheckCurrentStatus
-      FindingQuotes -> do
-        _ <- pure $ performHapticFeedback unit
-        exit $ CheckCurrentStatus
-      _ -> continue state
-    _ -> continue state
 
 eval (PopUpModalAction (PopUpModal.TipsViewActionController (TipsView.TipBtnClick index value))) state = do
   _ <- pure $ performHapticFeedback unit
