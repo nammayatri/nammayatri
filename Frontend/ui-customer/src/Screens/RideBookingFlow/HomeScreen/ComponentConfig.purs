@@ -1717,6 +1717,8 @@ chooseVehicleConfig state = let
     , nightShiftMultiplier = selectedEstimates.nightShiftMultiplier
     , nightCharges = selectedEstimates.nightCharges
     , baseFare = selectedEstimates.baseFare
+    , showEditButton = true
+    , editBtnText = getString CHANGE
     }
   in chooseVehicleConfig'
 

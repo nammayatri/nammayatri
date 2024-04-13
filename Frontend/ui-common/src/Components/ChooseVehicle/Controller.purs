@@ -15,6 +15,7 @@ data Action
   | OnSelect Config
   | OnImageClick
   | ShowRateCard Config
+  | OnEditClick
 
 type Config
   = { vehicleImage :: String
@@ -45,6 +46,8 @@ type Config
     , nightCharges :: Boolean
     , baseFare :: Int
     , airConditioned :: Maybe Boolean
+    , showEditButton :: Boolean
+    , editBtnText :: String
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -86,4 +89,6 @@ config =
   , nightCharges: false
   , baseFare : 0
   , airConditioned : Nothing
+  , showEditButton : false
+  , editBtnText : ""
   }

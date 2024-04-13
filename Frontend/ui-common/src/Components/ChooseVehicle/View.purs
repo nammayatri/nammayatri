@@ -31,8 +31,8 @@ view push config =
 cardView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 cardView push config = 
   let isActiveIndex = config.index == config.activeIndex
-      stroke' = if isActiveIndex then "2," <> Color.blue800 else "1," <> Color.white900
-      background' = if isActiveIndex then Color.blue600 else Color.white900
+      stroke' = if isActiveIndex &&  (not config.showEditButton) then "2," <> Color.blue800 else "1," <> Color.white900
+      background' = if isActiveIndex && (not config.showEditButton) then Color.blue600 else Color.white900
       padding' = Padding 8 16 12 16
       bounds = JB.getLayoutBounds $ EHC.getNewIDWithTag config.id
   in 
@@ -123,6 +123,7 @@ vehicleDetailsView push config =
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , orientation HORIZONTAL
+    , gravity CENTER_VERTICAL
     ]
     [ textView
         $ [ width WRAP_CONTENT
@@ -135,6 +136,30 @@ vehicleDetailsView push config =
           , color Color.black800
           ]
         <> FontStyle.body7 TypoGraphy
+    , linearLayout[
+        width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , cornerRadius 12.0
+      , margin $ MarginLeft 4
+      , padding $ Padding 8 5 8 5
+      , onClick push $ const $ OnEditClick
+      , visibility $ boolToVisibility $ config.showEditButton
+      , background Color.blue600
+      , gravity CENTER_VERTICAL
+      ][
+        imageView [
+          width $ V 10
+        , height $ V 10
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_edit"
+        ]
+      , textView $ [
+          width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text config.editBtnText
+        , color Color.blue800
+        , margin $ MarginLeft 4
+        ] <> FontStyle.tags TypoGraphy
+      ]
     ]
   where 
     getVehicleName :: Config -> String

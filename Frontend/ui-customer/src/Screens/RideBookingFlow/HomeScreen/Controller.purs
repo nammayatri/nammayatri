@@ -723,6 +723,7 @@ data ScreenOutput = LogoutUser
                   | GoToMetroTicketBookingFlow HomeScreenState
                   | GoToSafetyEducation HomeScreenState
                   | RepeatSearch HomeScreenState
+                  | ChangeVehicleVarient HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -912,6 +913,8 @@ eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) s
         }
       }
     }
+
+eval (ChooseSingleVehicleAction (ChooseVehicleController.OnEditClick)) state =  exit $ ChangeVehicleVarient state{ props{isRepeatRide = false }}
 
 eval ShowMoreSuggestions state = do
   void $ pure $ map (\item -> startLottieProcess lottieAnimationConfig{ rawJson =  (getAssetsBaseUrl FunctionCall) <> "lottie/right_arrow.json" , speed = 1.0,lottieId = (getNewIDWithTag $ "movingArrowView" <> show item), minProgress = 0.0 }) [0,1]
@@ -2618,6 +2621,9 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
                                     , nightCharges = config.nightCharges
                                     , baseFare = config.baseFare
                                     }}}
+
+
+
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".BookNow") "true"

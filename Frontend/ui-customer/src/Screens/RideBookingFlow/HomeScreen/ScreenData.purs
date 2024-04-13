@@ -126,6 +126,8 @@ initData = {
       , nightCharges: false
       , baseFare : 0
       , airConditioned : Nothing
+      , showEditButton : false
+      , editBtnText : ""
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
