@@ -31,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Geometry (getGeomFromKML)
 import Kernel.Utils.Validation (runRequestValidation)
+import Lib.Types.SpecialLocation as SL
 import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
@@ -261,32 +262,34 @@ driverPoolConfigUpdate ::
   City.City ->
   ApiTokenInfo ->
   Meters ->
+  SL.Area ->
   Maybe Common.Variant ->
   Maybe Text ->
   Common.DriverPoolConfigUpdateReq ->
   FlowHandler APISuccess
-driverPoolConfigUpdate merchantShortId opCity apiTokenInfo tripDistance variant tripCategory req = withFlowHandlerAPI' $ do
+driverPoolConfigUpdate merchantShortId opCity apiTokenInfo tripDistance area variant tripCategory req = withFlowHandlerAPI' $ do
   runRequestValidation Common.validateDriverPoolConfigUpdateReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.DriverPoolConfigUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.driverPoolConfigUpdate) tripDistance variant tripCategory req
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.driverPoolConfigUpdate) tripDistance area variant tripCategory req
 
 driverPoolConfigCreate ::
   ShortId DM.Merchant ->
   City.City ->
   ApiTokenInfo ->
   Meters ->
+  SL.Area ->
   Maybe Common.Variant ->
   Maybe Text ->
   Common.DriverPoolConfigCreateReq ->
   FlowHandler APISuccess
-driverPoolConfigCreate merchantShortId opCity apiTokenInfo tripDistance variant tripCategory req = withFlowHandlerAPI' $ do
+driverPoolConfigCreate merchantShortId opCity apiTokenInfo tripDistance area variant tripCategory req = withFlowHandlerAPI' $ do
   runRequestValidation Common.validateDriverPoolConfigCreateReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.DriverPoolConfigCreateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.driverPoolConfigCreate) tripDistance variant tripCategory req
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.driverPoolConfigCreate) tripDistance area variant tripCategory req
 
 driverIntelligentPoolConfig ::
   ShortId DM.Merchant ->

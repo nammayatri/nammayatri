@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.DriverPoolConfig.DriverPoolConfig])
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.DriverPoolConfig.DriverPoolConfig]))
 findAllByMerchantOpCityId limit offset (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId] (Se.Desc Beam.tripDistance) limit offset
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverPoolConfig.DriverPoolConfig -> m (Maybe Domain.Types.DriverPoolConfig.DriverPoolConfig))
@@ -35,6 +35,7 @@ updateByPrimaryKey (Domain.Types.DriverPoolConfig.DriverPoolConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.actualDistanceThreshold actualDistanceThreshold,
+      Se.Set Beam.area area,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.distanceBasedBatchSplit distanceBasedBatchSplit,
       Se.Set Beam.driverBatchSize driverBatchSize,
@@ -69,6 +70,7 @@ instance FromTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPo
       Just
         Domain.Types.DriverPoolConfig.DriverPoolConfig
           { actualDistanceThreshold = actualDistanceThreshold,
+            area = area,
             createdAt = createdAt,
             distanceBasedBatchSplit = distanceBasedBatchSplit,
             driverBatchSize = driverBatchSize,
@@ -101,6 +103,7 @@ instance ToTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPool
   toTType' (Domain.Types.DriverPoolConfig.DriverPoolConfig {..}) = do
     Beam.DriverPoolConfigT
       { Beam.actualDistanceThreshold = actualDistanceThreshold,
+        Beam.area = area,
         Beam.createdAt = createdAt,
         Beam.distanceBasedBatchSplit = distanceBasedBatchSplit,
         Beam.driverBatchSize = driverBatchSize,

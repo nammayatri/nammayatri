@@ -30,6 +30,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Types.SpecialLocation as SL
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareProduct as BeamFP
 
@@ -40,7 +41,7 @@ findAllBoundedFareProductForVariants ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   TripCategory ->
-  Domain.Area ->
+  SL.Area ->
   m [Domain.FareProduct]
 findAllBoundedFareProductForVariants (Id merchantOpCityId) tripCategory area =
   findAllWithKV
@@ -57,7 +58,7 @@ findAllUnboundedFareProductForVariants ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   TripCategory ->
-  Domain.Area ->
+  SL.Area ->
   m [Domain.FareProduct]
 findAllUnboundedFareProductForVariants (Id merchantOpCityId) tripCategory area =
   findAllWithKV
@@ -75,7 +76,7 @@ findAllBoundedByMerchantOpCityIdVariantArea ::
   Id DMOC.MerchantOperatingCity ->
   TripCategory ->
   DVST.ServiceTierType ->
-  Domain.Area ->
+  SL.Area ->
   m [Domain.FareProduct]
 findAllBoundedByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory serviceTier area =
   findAllWithKV
@@ -94,7 +95,7 @@ findUnboundedByMerchantOpCityIdVariantArea ::
   Id DMOC.MerchantOperatingCity ->
   TripCategory ->
   DVST.ServiceTierType ->
-  Domain.Area ->
+  SL.Area ->
   m (Maybe Domain.FareProduct)
 findUnboundedByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory serviceTier area =
   findOneWithKV

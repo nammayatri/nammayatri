@@ -28,3 +28,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN trip_distance i
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN vehicle_variant text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN area text NOT NULL default 'Default';

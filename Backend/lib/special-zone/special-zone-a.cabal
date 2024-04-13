@@ -85,11 +85,14 @@ library
     , exceptions
     , http-client
     , http-types
+    , lens
     , mobility-core
+    , openapi3
     , record-dot-preprocessor
     , record-hasfield
     , servant
     , servant-client
+    , servant-openapi3
     , servant-server
     , text
     , time
