@@ -230,7 +230,6 @@ library
       Domain.Types.RentalDetails
       Domain.Types.SavedReqLocation
       Domain.Types.SearchRequest
-      Domain.Types.TripTerms
       Domain.Types.UtilsTH
       Domain.Types.VehicleServiceTier
       Domain.Types.VehicleVariant
@@ -288,7 +287,6 @@ library
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchRequest
       Storage.Beam.SystemConfigs
-      Storage.Beam.TripTerms
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
@@ -361,7 +359,7 @@ library
       Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.Transformers.SearchReqLocation
       Storage.Queries.Transformers.SpecialZoneQuote
-      Storage.Queries.TripTerms
+      Storage.Queries.Transformers.TripTerms
       Storage.Queries.WhiteListOrg
       Tools.AadhaarVerification
       Tools.Auth
@@ -443,6 +441,7 @@ library
       Domain.Types.TicketBookingServiceCategory
       Domain.Types.TicketPlace
       Domain.Types.TicketService
+      Domain.Types.TripTerms
       Domain.Types.ValueAddNP
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
@@ -491,6 +490,7 @@ library
       Storage.Beam.TicketBookingServiceCategory
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
+      Storage.Beam.TripTerms
       Storage.Beam.ValueAddNP
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
@@ -547,6 +547,7 @@ library
       Storage.Queries.TicketBookingServiceCategory
       Storage.Queries.TicketPlace
       Storage.Queries.TicketService
+      Storage.Queries.TripTerms
       Storage.Queries.ValueAddNP
   other-modules:
       Paths_rider_app

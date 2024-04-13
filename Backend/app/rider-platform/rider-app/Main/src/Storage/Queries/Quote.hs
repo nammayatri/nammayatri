@@ -50,7 +50,7 @@ createQuote = createWithKV
 
 create' :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Quote -> m ()
 create' quote = do
-  traverse_ QTT.createTripTerms (quote.tripTerms)
+  traverse_ QTT.create (quote.tripTerms)
   _ <- createDetails (quote.quoteDetails)
   createQuote quote
 

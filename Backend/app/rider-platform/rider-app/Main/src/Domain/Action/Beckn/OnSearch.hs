@@ -389,6 +389,9 @@ buildTripTerms ::
 buildTripTerms [] = pure Nothing
 buildTripTerms descriptions = do
   id <- generateGUID
+  now <- getCurrentTime
+  let createdAt = now
+      updatedAt = now
   pure . Just $ DTripTerms.TripTerms {..}
 
 buildEstimateBreakUp ::
