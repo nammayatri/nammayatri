@@ -12,27 +12,7 @@ INSERT INTO atlas_app.merchant_operating_city (id, merchant_id, merchant_short_i
 ('yatri-00-0000-0000-0000-00000000city', 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51', 'YATRI', 'Kochi');
 
 ----------------------------------------------------- Service Usage Config / Message / PaymentMethod / Exophone / Config Table Migrations -----------------------------------------------
--- Add the new column
-ALTER TABLE atlas_app.merchant_service_usage_config
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
-
-ALTER TABLE atlas_app.merchant_message
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
-
-ALTER TABLE atlas_app.merchant_payment_method
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
-
 -- Update the values of the new column
-UPDATE atlas_app.merchant_service_usage_config
-SET merchant_operating_city_id = merchant_operating_city.id
-FROM atlas_app.merchant_operating_city
-WHERE atlas_app.merchant_service_usage_config.merchant_id = merchant_operating_city.merchant_id;
-
-UPDATE atlas_app.merchant_message
-SET merchant_operating_city_id = merchant_operating_city.id
-FROM atlas_app.merchant_operating_city
-WHERE atlas_app.merchant_message.merchant_id = merchant_operating_city.merchant_id;
-
 UPDATE atlas_app.merchant_payment_method
 SET merchant_operating_city_id = merchant_operating_city.id
 FROM atlas_app.merchant_operating_city
@@ -48,35 +28,11 @@ SET merchant_operating_city_id = merchant_operating_city.id
 FROM atlas_app.merchant_operating_city
 WHERE atlas_app.merchant_config.merchant_id = merchant_operating_city.merchant_id;
 
--- Set the column as NOT NULL
-ALTER TABLE atlas_app.merchant_service_usage_config
-ALTER COLUMN merchant_operating_city_id SET NOT NULL;
-
-ALTER TABLE atlas_app.merchant_message
-ALTER COLUMN merchant_operating_city_id SET NOT NULL;
-
-ALTER TABLE atlas_app.merchant_payment_method
-ALTER COLUMN merchant_operating_city_id SET NOT NULL;
-
 ALTER TABLE atlas_app.exophone
 ALTER COLUMN merchant_operating_city_id SET NOT NULL;
 
 ALTER TABLE atlas_app.merchant_config
 ALTER COLUMN merchant_operating_city_id SET NOT NULL;
-
--- Drop the primary key constraint
-ALTER TABLE atlas_app.merchant_service_usage_config
-DROP CONSTRAINT merchant_service_usage_config_pkey;
-
-ALTER TABLE atlas_app.merchant_message
-DROP CONSTRAINT merchant_message_pkey;
-
--- Add the merchant_operating_city_id column as the primary key
-ALTER TABLE atlas_app.merchant_service_usage_config
-ADD PRIMARY KEY (merchant_operating_city_id);
-
-ALTER TABLE atlas_app.merchant_message
-ADD PRIMARY KEY (merchant_operating_city_id, message_key);
 
 -- TODO : Remove 'merchant_id' columns from the following tables
 -- DROP QUERIES (Drop the merchant_id column)
@@ -97,9 +53,6 @@ ADD PRIMARY KEY (merchant_operating_city_id, message_key);
 ----------------------------------------------------------------------- END --------------------------------------------------------------------------
 
 -- Add merchant_operating_city_id column to required tables
-ALTER TABLE atlas_app.search_request
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
-
 ALTER TABLE atlas_app.estimate
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
 

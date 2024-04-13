@@ -22,8 +22,8 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
@@ -175,10 +175,13 @@ confirm DConfirmReq {..} = do
         quoteDetails = details,
         searchRequestId = searchRequest.id,
         maxEstimatedDistance = searchRequest.maxDistance,
-        paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> paymentMethod,
+        paymentMethodInfo = mkPaymentMethodInfo <$> paymentMethod,
         ..
       }
   where
+    mkPaymentMethodInfo :: DMPM.MerchantPaymentMethod -> DMPM.PaymentMethodInfo
+    mkPaymentMethodInfo DMPM.MerchantPaymentMethod {..} = DMPM.PaymentMethodInfo {..}
+
     mkConfirmQuoteDetails quoteDetails fulfillmentId = do
       case quoteDetails of
         DQuote.OneWayDetails _ -> pure ConfirmOneWayDetails

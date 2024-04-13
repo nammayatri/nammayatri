@@ -2,22 +2,6 @@ CREATE TABLE atlas_app.quote_bak_1026 AS TABLE atlas_app.quote;
 CREATE TABLE atlas_app.ride_booking_bak_1026 AS TABLE atlas_app.ride_booking;
 CREATE TABLE atlas_app.search_request_location_1026 AS TABLE atlas_app.search_request_location;
 
-CREATE TABLE atlas_app.booking_location (
-   id CHARACTER(36) PRIMARY KEY NOT NULL,
-   lat DOUBLE PRECISION NOT NULL,
-   lon DOUBLE PRECISION NOT NULL,
-   city CHARACTER VARYING(255),
-   state CHARACTER VARYING(255),
-   country CHARACTER VARYING(255),
-   street CHARACTER VARYING(255),
-   door CHARACTER VARYING(255),
-   building CHARACTER VARYING(255),
-   area_code CHARACTER VARYING(255),
-   area CHARACTER VARYING(255),
-   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-
 INSERT INTO
    atlas_app.booking_location (
       SELECT
@@ -43,12 +27,6 @@ INSERT INTO
             OR T2.to_location_id = T1.id
          )
    );
-ALTER TABLE
-   atlas_app.search_request
-ADD
-   CONSTRAINT search_request_from_location_id_fkey FOREIGN KEY (from_location_id) REFERENCES atlas_app.search_request_location(id),
-ADD
-   CONSTRAINT search_request_to_location_id_fkey FOREIGN KEY (to_location_id) REFERENCES atlas_app.search_request_location(id);
 
 ALTER TABLE
    atlas_app.ride_booking DROP CONSTRAINT ride_booking_from_location_id_fkey,

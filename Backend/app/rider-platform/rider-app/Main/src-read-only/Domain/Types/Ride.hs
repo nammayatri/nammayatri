@@ -5,7 +5,7 @@
 module Domain.Types.Ride where
 
 import Data.Aeson
-import qualified Domain.Types.Booking.Type
+import qualified Domain.Types.Booking
 import qualified Domain.Types.Client
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
@@ -20,7 +20,7 @@ import qualified Tools.Beam.UtilsTH
 
 data Ride = Ride
   { allowedEditLocationAttempts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Type.Booking,
+    bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     bppRideId :: Kernel.Types.Id.Id Domain.Types.Ride.BPPRide,
     chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),

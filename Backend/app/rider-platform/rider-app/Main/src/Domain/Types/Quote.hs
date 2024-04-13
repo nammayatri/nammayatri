@@ -17,6 +17,7 @@ module Domain.Types.Quote where
 
 import Control.Applicative
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import qualified Domain.Action.UI.RentalDetails as DRentalDetails
 import qualified Domain.Types.BppDetails as DBppDetails
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Merchant as DMerchant

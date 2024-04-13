@@ -31,11 +31,11 @@ import Control.Applicative ((<|>))
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
-import Domain.Types.Booking.Type
+import Domain.Types.Booking
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.Quote (QuoteAPIEntity (..))

@@ -14,7 +14,8 @@
 
 module Mobility.AppBackend.Utils where
 
-import qualified "rider-app" Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import qualified "rider-app" Domain.Action.Dashboard.Merchant as DAMSC
+import qualified "rider-app" Domain.Types.MerchantServiceConfig as DMSC
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -25,7 +26,7 @@ import Utils (runAppFlow)
 changeCachedMapsConfig :: Maps.MapsServiceConfig -> IO ()
 changeCachedMapsConfig googleCfg = runAppFlow "change cached maps config" do
   let serviceConfig = DMSC.MapsServiceConfig googleCfg
-  yatriServiceConfig <- DMSC.buildMerchantServiceConfig Fixtures.yatriMerchantId (Id "cityId") serviceConfig
+  yatriServiceConfig <- DAMSC.buildMerchantServiceConfig Fixtures.yatriMerchantId (Id "cityId") serviceConfig
   CQMSC.cacheMerchantServiceConfig yatriServiceConfig
 
 clearCachedMapsConfig :: IO ()

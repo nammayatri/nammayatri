@@ -29,10 +29,10 @@ where
 
 import qualified Data.Geohash as DG
 import Data.Text (pack)
-import Domain.Types.Maps.PlaceNameCache as DTM
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import Domain.Types.PlaceNameCache as DTM
 import qualified Kernel.External.Maps.Interface.Types as MIT
 import Kernel.External.Maps.Types
 import Kernel.External.Types (ServiceFlow)

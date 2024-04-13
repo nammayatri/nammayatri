@@ -19,7 +19,7 @@ import Control.Applicative ((<|>))
 import Data.Text (strip)
 import qualified Data.Time as T
 import qualified Database.Beam as B
-import qualified Domain.Types.Booking.Type as Booking
+import qualified Domain.Types.Booking as Booking
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.MerchantOperatingCity as DMOC

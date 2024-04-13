@@ -7,8 +7,8 @@ import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
 import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
-import Domain.Types.Booking.Type as Booking
-import qualified Domain.Types.Booking.Type as DRB
+import Domain.Types.Booking as Booking
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.LocationMapping as DLM

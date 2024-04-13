@@ -2014,11 +2014,11 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1712767997,
-        "narHash": "sha256-/AnsiLfI7a0k6ey1e7G+blhlbFCQ5O8BZy665JDnwCo=",
+        "lastModified": 1713272552,
+        "narHash": "sha256-9fbbmv6JrJoiKw6a6mKtRnCMo+zgE8j/+JoA8jJZmXo=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "20c533d7afedd8e434d2537ccf9af3d127f56ee9",
+        "rev": "eb733c8e8da6e5e7bc35a1551a9dbf07acbc84c9",
         "type": "github"
       },
       "original": {

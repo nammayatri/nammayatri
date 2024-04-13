@@ -9,7 +9,7 @@ imports:
   PriceAPIEntity: Kernel.Types.Common
   BaseUrl: Kernel.Types.Common
   VehicleVariant: Domain.Types.VehicleVariant
-  Booking: Domain.Types.Booking.Type
+  Booking: Domain.Types.Booking
   Client: Domain.Types.Client
   VehicleServiceTierType: Domain.Types.VehicleServiceTier
 

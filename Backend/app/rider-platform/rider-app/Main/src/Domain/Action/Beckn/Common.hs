@@ -20,7 +20,7 @@ import Data.Time hiding (getCurrentTime)
 import Domain.Action.UI.HotSpot
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.HotSpot
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DPerson

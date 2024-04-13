@@ -30,8 +30,8 @@ import qualified Domain.Types.Location as Location
 import Domain.Types.LocationAddress
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS

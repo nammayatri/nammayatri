@@ -25,7 +25,7 @@ import qualified Data.Text as T
 import Domain.Action.Beckn.Common as Common
 import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis

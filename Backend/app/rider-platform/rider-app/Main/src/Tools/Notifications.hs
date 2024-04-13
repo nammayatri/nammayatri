@@ -24,9 +24,9 @@ import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.Estimate (Estimate)
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
-import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.MerchantServiceConfig as DMSC
+import Domain.Types.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import qualified Domain.Types.NotificationSoundsConfig as NSC
 import Domain.Types.Person as Person
 import Domain.Types.Quote (mkQAPIEntityList)

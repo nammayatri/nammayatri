@@ -18,10 +18,3 @@ ALTER TABLE atlas_app.merchant ADD COLUMN arrived_pickup_threshold_value double 
 
 ALTER TABLE atlas_app.quote ADD COLUMN distance_unit character varying(255);
 ALTER TABLE atlas_app.quote ADD COLUMN distance_to_nearest_driver_value double precision;
-
-ALTER TABLE atlas_app.rental_details ADD COLUMN distance_unit character varying(255);
-ALTER TABLE atlas_app.rental_details ADD COLUMN included_distance_per_hr_value double precision;
-
-ALTER TABLE atlas_app.search_request ADD COLUMN distance_unit character varying(255);
-ALTER TABLE atlas_app.search_request ADD COLUMN distance_value double precision;
-ALTER TABLE atlas_app.search_request ADD COLUMN max_distance_value double precision;
