@@ -194,7 +194,7 @@ window.getMerchantConfig = function () {
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
           "variantList" : ["AutoCategory"],
-          "enableCabsSubscriptionView" : false,
+          "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -225,9 +225,9 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
-          "enableCabsSubscriptionView" : false,
+          "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -260,7 +260,7 @@ window.getMerchantConfig = function () {
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
           "variantList" : ["AutoCategory"],
-          "enableCabsSubscriptionView" : false,
+          "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -291,9 +291,9 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
-          "enableCabsSubscriptionView" : false,
+          "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -357,9 +357,9 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : false
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
-          "enableCabsSubscriptionView" : false,
+          "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -390,9 +390,9 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
-          "enableCabsSubscriptionView" : false,
+          "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : false,
@@ -424,7 +424,7 @@ window.getMerchantConfig = function () {
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
           "variantList" : ["AutoCategory"],
-          "enableCabsSubscriptionView" : false,
+          "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -455,9 +455,9 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
-          "enableCabsSubscriptionView" : false,
+          "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -487,9 +487,9 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
-          "enableCabsSubscriptionView" : false,
+          "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -520,7 +520,7 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
@@ -552,9 +552,9 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
-          "enableCabsSubscriptionView" : false,
+          "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : false,
@@ -602,7 +602,7 @@ window.getMerchantConfig = function () {
 }
 
 let staticSubscriptionConfig = [
-  {"price" : 45.0, "frequency" : "PER_DAY", "variantCategory" : "CarCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" :  "FREE_RIDE_OFFER", "showSelected" : false, "planDesc" : "CAB_DAILY_UNLIMITED_OFFER"},
-  {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "CAB_DAILY_PER_RIDE_OFFER"},
+  {"price" : 90.0, "frequency" : "PER_DAY", "variantCategory" : "CarCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" :  "FREE_RIDE_OFFER", "showSelected" : false, "planDesc" : "CAB_DAILY_UNLIMITED_OFFER"},
+  {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of ₹99 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹99-*$*-प्रति दिन अधिकतम ₹99 तक-*$*-প্রতিদিন সর্বোচ্চ ₹99 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹99 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹99 வரை-*$*-రోజుకు గరిష్టంగా ₹99 వరకు"},
   {"price" : 25.0, "frequency" : "PER_DAY", "variantCategory" : "AutoCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" : "NO_CHARGES_TILL", "showSelected" : true, "planDesc" : ""}
 ]
