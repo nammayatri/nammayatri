@@ -42,11 +42,6 @@ ADD
 
 DROP TABLE atlas_app.rental_quote;
 
-CREATE TABLE atlas_app.trip_terms (
-    id character(36) NOT NULL PRIMARY KEY,
-    descriptions text NOT NULL
-);
-
 ALTER TABLE
     atlas_app.quote
 ADD
