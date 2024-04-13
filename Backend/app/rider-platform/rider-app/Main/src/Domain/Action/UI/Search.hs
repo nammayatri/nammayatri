@@ -66,7 +66,7 @@ import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedLocation as CSavedLocation
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Person.PersonDisability as PD
+import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import Tools.Event

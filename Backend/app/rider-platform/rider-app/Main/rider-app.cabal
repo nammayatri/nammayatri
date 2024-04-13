@@ -424,6 +424,7 @@ library
       Domain.Types.MerchantState
       Domain.Types.NotificationSoundsConfig
       Domain.Types.OnSearchEvent
+      Domain.Types.PersonDisability
       Domain.Types.PersonStats
       Domain.Types.Rating
       Domain.Types.RegistrationToken
@@ -470,6 +471,7 @@ library
       Storage.Beam.MerchantState
       Storage.Beam.NotificationSoundsConfig
       Storage.Beam.OnSearchEvent
+      Storage.Beam.PersonDisability
       Storage.Beam.PersonStats
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
@@ -524,6 +526,7 @@ library
       Storage.Queries.OrphanInstances.PersonStats
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.PersonDisability
       Storage.Queries.PersonStats
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
