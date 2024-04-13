@@ -77,7 +77,7 @@ import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
-import qualified Storage.Queries.Person.PersonDisability as PDisability
+import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Tools.Auth (authTokenCacheKey, decryptAES128)

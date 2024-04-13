@@ -7,7 +7,7 @@ where
 import qualified Domain.Action.UI.Disability as DDisability
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Person.PersonDisability as PersonDisability
+import qualified Domain.Types.PersonDisability as PersonDisability
 import Environment
 import Kernel.Prelude
 import Kernel.Types.Id

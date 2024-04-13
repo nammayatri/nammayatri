@@ -61,7 +61,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Person.PersonDisability as PDisability
+import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as MapSearch

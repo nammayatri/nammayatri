@@ -1,0 +1,50 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+
+PersonDisability:
+  tableName: person_disability
+
+  fields:
+    personId : Id Person
+    disabilityId : Text
+    tag : Text
+    description : Maybe Text
+    createdAt: UTCTime
+    updatedAt : UTCTime
+
+  types:
+    DisabilityItem:
+       id : Id DisabilityItem
+       tag : Text
+       description : Text
+
+  beamType:
+    createdAt: Maybe UTCTime
+
+  fromTType:
+    createdAt: Kernel.Prelude.fromMaybe updatedAt|I
+
+  toTType:
+    createdAt: Kernel.Prelude.Just|I
+
+  constraints:
+    personId: PrimaryKey
+
+  queries:
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where: personId
+
+    updateDisabilityByPersonId:
+      kvFunction: updateWithKV
+      params: [disabilityId, tag, description, updatedAt]
+      where: personId
+
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where: personId
+
+  excludedFields: [merchantId, merchantOperatingCityId]

@@ -44,7 +44,7 @@ import Domain.Types.Booking.Type as DBooking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
-import qualified Domain.Types.Person.PersonDisability as PersonDisability
+import qualified Domain.Types.PersonDisability as PersonDisability
 import Environment
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -78,7 +78,7 @@ import Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Disability as QD
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
-import qualified Storage.Queries.Person.PersonDisability as PDisability
+import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonStats as QPS
 import Tools.Error
 
@@ -251,7 +251,7 @@ updateDisability hasDisability mbDisability personId = do
         newDisability <- makeDisability selectedDisability disability.tag mbDescription
         PDisability.create newDisability
       when (isJust customerDisability) $ do
-        PDisability.updateDisabilityByPersonId personId disabilityId disability.tag mbDescription
+        PDisability.updateDisabilityByPersonId disabilityId disability.tag mbDescription personId
       where
         makeDisability personDisability tag mbDescription = do
           now <- getCurrentTime
@@ -261,6 +261,7 @@ updateDisability hasDisability mbDisability personId = do
                 disabilityId = getId $ personDisability.id,
                 tag = tag,
                 description = mbDescription,
+                createdAt = now,
                 updatedAt = now
               }
   pure APISuccess.Success

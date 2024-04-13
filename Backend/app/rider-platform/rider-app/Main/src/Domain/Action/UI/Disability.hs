@@ -5,7 +5,7 @@ where
 
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Person.PersonDisability as PersonDisability
+import qualified Domain.Types.PersonDisability as PersonDisability
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Types (Language (ENGLISH))
