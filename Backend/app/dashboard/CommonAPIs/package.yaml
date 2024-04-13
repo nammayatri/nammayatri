@@ -111,3 +111,5 @@ library:
         ghc-options:
           - -O2
           - -j4
+  dependencies:
+    - special-zone-a

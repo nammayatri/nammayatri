@@ -120,6 +120,7 @@ library
     , servant-server
     , shared-services
     , special-zone
+    , special-zone-a
     , template-haskell
     , text
     , time
@@ -195,6 +196,7 @@ executable provider-dashboard-exe
     , servant-openapi3
     , servant-server
     , special-zone
+    , special-zone-a
     , template-haskell
     , text
     , time

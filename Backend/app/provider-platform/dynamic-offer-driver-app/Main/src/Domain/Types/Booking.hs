@@ -19,7 +19,6 @@ import Data.OpenApi (ToSchema)
 import Data.Time
 import qualified Domain.Types.Common as DTC
 import Domain.Types.FareParameters (FareParameters)
-import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -31,6 +30,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import qualified Lib.Types.SpecialLocation as SL
 import Tools.Beam.UtilsTH
 
 data BookingStatus
@@ -54,7 +54,7 @@ data Booking = Booking
     specialZoneOtpCode :: Maybe Text,
     specialLocationTag :: Maybe Text,
     disabilityTag :: Maybe Text,
-    area :: Maybe FareProductD.Area,
+    area :: Maybe SL.Area,
     providerId :: Id DM.Merchant, -- FIXME merchantId
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     primaryExophone :: Text,

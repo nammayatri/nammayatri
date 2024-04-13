@@ -15,7 +15,6 @@
 
 module Domain.Types.SearchRequest where
 
-import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -25,6 +24,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
+import qualified Lib.Types.SpecialLocation as SL
 import qualified Tools.Maps as Maps
 
 data SearchRequest = SearchRequest
@@ -35,7 +35,7 @@ data SearchRequest = SearchRequest
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     riderId :: Maybe (Id RD.RiderDetails),
     fromLocation :: DLoc.Location,
-    area :: Maybe FareProductD.Area,
+    area :: Maybe SL.Area,
     bapId :: Text,
     bapUri :: BaseUrl,
     bapCity :: Maybe Context.City,

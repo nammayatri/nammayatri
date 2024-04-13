@@ -15,8 +15,6 @@
 
 module Domain.Types.FareProduct where
 
-import qualified Data.List as List
-import qualified Data.Text as T
 import Data.Time
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FarePolicy as FarePolicyD
@@ -26,7 +24,7 @@ import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
-import Lib.Types.SpecialLocation (SpecialLocation (..))
+import Lib.Types.SpecialLocation (Area (..))
 import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
@@ -63,40 +61,6 @@ instance Read TimeBound where
         Nothing -> [(Unbounded, "")]
 
 $(mkBeamInstancesForEnum ''TimeBound)
-
-data Area
-  = Pickup (Id SpecialLocation)
-  | Drop (Id SpecialLocation)
-  | Default
-  deriving stock (Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
-  deriving (PrettyShow) via Showable Area
-
-instance Read Area where
-  readsPrec d' =
-    readParen
-      (d' > app_prec)
-      ( \r ->
-          [ (Default, r1)
-            | r1 <- stripPrefix "Default" r
-          ]
-            ++ [ (Pickup (Id $ T.pack r1), "")
-                 | r1 <- stripPrefix "Pickup_" r
-               ]
-            ++ [ (Drop (Id $ T.pack r1), "")
-                 | r1 <- stripPrefix "Drop_" r
-               ]
-      )
-    where
-      app_prec = 10
-      stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
-
-instance Show Area where
-  show (Pickup specialLocationId) = "Pickup_" <> T.unpack specialLocationId.getId
-  show (Drop specialLocationId) = "Drop_" <> T.unpack specialLocationId.getId
-  show Default = "Default"
-
-$(mkBeamInstancesForEnum ''Area)
 
 data FareProduct = FareProduct
   { id :: Id FareProduct,

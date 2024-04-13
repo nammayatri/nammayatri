@@ -75,6 +75,9 @@ dependencies:
   - exceptions
   - http-client
   - containers
+  - servant-openapi3
+  - openapi3
+  - lens
 
 ghc-options:
   - -fwrite-ide-info

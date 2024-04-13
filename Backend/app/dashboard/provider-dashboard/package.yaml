@@ -121,6 +121,7 @@ library:
     - rider-app
     - special-zone
     - shared-services
+    - special-zone-a
 
 executables:
   provider-dashboard-exe:
@@ -150,3 +151,4 @@ executables:
       - mobility-core
       - beckn-spec
       - special-zone
+      - special-zone-a

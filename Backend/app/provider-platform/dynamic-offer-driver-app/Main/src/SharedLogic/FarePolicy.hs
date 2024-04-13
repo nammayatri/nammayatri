@@ -18,7 +18,6 @@ import Data.Text as T hiding (find)
 import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FarePolicy as FarePolicyD
-import qualified Domain.Types.FareProduct as FareProductD
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ServiceTierType as DVST
@@ -27,6 +26,7 @@ import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.FareProduct as FareProduct
 import qualified Storage.CachedQueries.FarePolicy as QFP
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
@@ -35,7 +35,7 @@ import Tools.Maps
 
 data FarePoliciesProduct = FarePoliciesProduct
   { farePolicies :: [FarePolicyD.FullFarePolicy],
-    area :: FareProductD.Area,
+    area :: SL.Area,
     specialLocationTag :: Maybe Text
   }
 
@@ -50,7 +50,7 @@ getFarePolicyByEstOrQuoteIdWithoutFallback estOrQuoteId = do
       return Nothing
     Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
 
-getFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe FareProductD.Area -> Text -> Maybe Text -> Maybe Text -> m FarePolicyD.FullFarePolicy
+getFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe Text -> Maybe Text -> m FarePolicyD.FullFarePolicy
 getFarePolicyByEstOrQuoteId merchantOpCityId tripCategory vehicleServiceTier area estOrQuoteId txnId idName = do
   Redis.safeGet (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId) >>= \case
     Nothing -> do
@@ -70,11 +70,11 @@ cacheFarePolicyByEstimateId estimateId fp = Redis.setExp (makeFarePolicyByEstOrQ
 clearCachedFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> m ()
 clearCachedFarePolicyByEstOrQuoteId = Redis.del . makeFarePolicyByEstOrQuoteIdKey
 
-getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe FareProductD.Area -> Maybe Text -> Maybe Text -> m FarePolicyD.FullFarePolicy
+getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Maybe Text -> Maybe Text -> m FarePolicyD.FullFarePolicy
 getFarePolicy merchantOpCityId tripCategory serviceTier Nothing txnId idName = do
   fareProduct <-
-    FareProduct.getBoundedFareProduct merchantOpCityId tripCategory serviceTier FareProductD.Default
-      |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId tripCategory serviceTier FareProductD.Default
+    FareProduct.getBoundedFareProduct merchantOpCityId tripCategory serviceTier SL.Default
+      |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId tripCategory serviceTier SL.Default
       >>= fromMaybeM NoFareProduct
   farePolicy <- QFP.findById txnId idName fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
   return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory farePolicy
@@ -88,8 +88,8 @@ getFarePolicy merchantOpCityId tripCategory serviceTier (Just area) txnId idName
       return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory farePolicy
     Nothing -> do
       fareProduct <-
-        FareProduct.getBoundedFareProduct merchantOpCityId tripCategory serviceTier FareProductD.Default
-          |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId tripCategory serviceTier FareProductD.Default
+        FareProduct.getBoundedFareProduct merchantOpCityId tripCategory serviceTier SL.Default
+          |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId tripCategory serviceTier SL.Default
           >>= fromMaybeM NoFareProduct
       farePolicy <- QFP.findById txnId idName fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
       return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory farePolicy
@@ -193,8 +193,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
             mkBreakupItem perExtraKmFareCaption (mkValue $ show (round section.perExtraKmRate :: Money))
           perExtraKmFareItems = mkPerExtraKmFareItem <$> (toList perExtraKmFareSections)
 
-          perExtraKmStepFareCaption = show Tags.EXTRA_PER_KM_STEP_FARE
-          mkPerExtraKmStepFareBreakup = mkBreakupItem perExtraKmStepFareCaption (mkValue $ show perExtraKmFareSections)
+          perExtraKmStepFareItems = mkPerExtraKmStepFareItem [] (toList perExtraKmFareSections) det.baseDistance.getMeters
 
           baseDistanceCaption = show Tags.BASE_DISTANCE
           baseDistanceBreakup = mkBreakupItem baseDistanceCaption (mkValue $ show det.baseDistance)
@@ -205,10 +204,21 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
           pickupChargeCaption = show Tags.DEAD_KILOMETER_FARE
           pickupChargeBreakup = mkBreakupItem pickupChargeCaption (mkValue $ show det.deadKmFare)
 
-      [baseDistanceBreakup, baseFareBreakup, mkPerExtraKmStepFareBreakup, pickupChargeBreakup]
+      [baseDistanceBreakup, baseFareBreakup, pickupChargeBreakup]
         <> perExtraKmFareItems
+        <> perExtraKmStepFareItems
         <> (waitingChargeBreakups det.waitingChargeInfo)
         <> (nightShiftChargeBreakups det.nightShiftCharge)
+      where
+        mkPerExtraKmStepFareItem perExtraKmStepFareItems [] _ = perExtraKmStepFareItems
+        mkPerExtraKmStepFareItem perExtraKmStepFareItems [s1] startDistance = do
+          let perExtraKmStepFareCaption = show $ Tags.EXTRA_PER_KM_STEP_FARE startDistance Nothing
+              perExtraKmStepFareItem = mkBreakupItem perExtraKmStepFareCaption (mkValue $ show (round s1.perExtraKmRate :: Money))
+          perExtraKmStepFareItems <> [perExtraKmStepFareItem]
+        mkPerExtraKmStepFareItem perExtraKmStepFareItems (s1 : s2 : ss) startDistance = do
+          let perExtraKmStepFareCaption = show $ Tags.EXTRA_PER_KM_STEP_FARE startDistance (Just s2.startDistance.getMeters)
+              perExtraKmStepFareItem = mkBreakupItem perExtraKmStepFareCaption (mkValue $ show (round s1.perExtraKmRate :: Money))
+          mkPerExtraKmStepFareItem (perExtraKmStepFareItems <> [perExtraKmStepFareItem]) (s2 : ss) s2.startDistance.getMeters
 
     mkAdditionalSlabBreakups det = do
       let baseDistanceCaption = show Tags.BASE_DISTANCE

@@ -11,12 +11,22 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Lib.Types.SpecialLocation where
 
+import Control.Lens.Operators
+import qualified Data.List as List
+import Data.OpenApi hiding (name)
+import qualified Data.Text as T
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Maps (LatLong)
-import Kernel.Prelude
+import Kernel.Prelude hiding (show)
 import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
+import Servant.API (FromHttpApiData (..), ToHttpApiData (..))
+import Text.Show
 
 data SpecialLocation = SpecialLocation
   { id :: Id SpecialLocation,
@@ -34,3 +44,56 @@ data GatesInfo = GatesInfo
     address :: Maybe String
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
+data Area
+  = Pickup (Id SpecialLocation)
+  | Drop (Id SpecialLocation)
+  | Default
+  deriving stock (Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving (PrettyShow) via Showable Area
+
+instance Read Area where
+  readsPrec d' =
+    readParen
+      (d' > app_prec)
+      ( \r ->
+          [ (Default, r1)
+            | r1 <- stripPrefix "Default" r
+          ]
+            ++ [ (Pickup (Id $ T.pack r1), "")
+                 | r1 <- stripPrefix "Pickup_" r
+               ]
+            ++ [ (Drop (Id $ T.pack r1), "")
+                 | r1 <- stripPrefix "Drop_" r
+               ]
+      )
+    where
+      app_prec = 10
+      stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
+
+instance Show Area where
+  show (Pickup specialLocationId) = "Pickup_" <> T.unpack specialLocationId.getId
+  show (Drop specialLocationId) = "Drop_" <> T.unpack specialLocationId.getId
+  show Default = "Default"
+
+$(mkBeamInstancesForEnum ''Area)
+
+instance ToParamSchema Area where
+  toParamSchema _ =
+    mempty
+      & title ?~ "Area"
+      & type_ ?~ OpenApiString
+      & format ?~ "Default,Pickup_<SpecialLocationId>,Drop_<SpecialLocationId>"
+
+instance FromHttpApiData Area where
+  parseUrlPiece = parse . T.unpack
+    where
+      parse "Default" = Right Default
+      parse str =
+        case readMaybe str :: Maybe Area of
+          Just area -> Right area
+          Nothing -> Right Default
+
+instance ToHttpApiData Area where
+  toUrlPiece = T.pack . show
