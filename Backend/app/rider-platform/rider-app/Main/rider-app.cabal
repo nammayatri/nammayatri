@@ -223,7 +223,6 @@ library
       Domain.Types.Merchant.MerchantServiceUsageConfig
       Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
-      Domain.Types.Person.PersonDisability
       Domain.Types.Person.PersonFlowStatus
       Domain.Types.PlaceBasedServiceConfig
       Domain.Types.Quote
@@ -278,7 +277,6 @@ library
       Storage.Beam.Payment
       Storage.Beam.Person
       Storage.Beam.Person.PersonDefaultEmergencyNumber
-      Storage.Beam.Person.PersonDisability
       Storage.Beam.Person.PersonFlowStatus
       Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.Quote
@@ -342,7 +340,6 @@ library
       Storage.Queries.Merchant.MerchantServiceUsageConfig
       Storage.Queries.Person
       Storage.Queries.Person.PersonDefaultEmergencyNumber
-      Storage.Queries.Person.PersonDisability
       Storage.Queries.Person.PersonFlowStatus
       Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfig
