@@ -1,1 +1,0 @@
-ALTER TABLE atlas_app.merchant ADD COLUMN geo_hash_precision_value INT NOT NULL DEFAULT 9;

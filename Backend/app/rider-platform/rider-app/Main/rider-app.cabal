@@ -219,7 +219,6 @@ library
       Domain.Types.Geometry
       Domain.Types.HotSpot
       Domain.Types.LocationAddress
-      Domain.Types.Merchant
       Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
       Domain.Types.Person.PersonDisability
@@ -264,7 +263,6 @@ library
       Storage.Beam.Geometry.Geometry
       Storage.Beam.Geometry.GeometryGeom
       Storage.Beam.IssueManagement
-      Storage.Beam.Merchant
       Storage.Beam.Payment
       Storage.Beam.Person
       Storage.Beam.Person.PersonDefaultEmergencyNumber
@@ -323,7 +321,7 @@ library
       Storage.Queries.Geometry
       Storage.Queries.IssueExtra
       Storage.Queries.LocationMappingExtra
-      Storage.Queries.Merchant
+      Storage.Queries.MerchantExtra
       Storage.Queries.MerchantPaymentMethodExtra
       Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.MerchantServiceUsageConfigExtra
@@ -342,6 +340,7 @@ library
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.Transformers.AppInstalls
       Storage.Queries.Transformers.Booking
+      Storage.Queries.Transformers.Merchant
       Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.Transformers.MerchantMessage
       Storage.Queries.Transformers.MerchantPaymentMethod
@@ -407,6 +406,7 @@ library
       Domain.Types.Issue
       Domain.Types.Location
       Domain.Types.LocationMapping
+      Domain.Types.Merchant
       Domain.Types.MerchantConfig
       Domain.Types.MerchantMessage
       Domain.Types.MerchantOperatingCity
@@ -464,6 +464,7 @@ library
       Storage.Beam.Issue
       Storage.Beam.Location
       Storage.Beam.LocationMapping
+      Storage.Beam.Merchant
       Storage.Beam.MerchantConfig
       Storage.Beam.MerchantMessage
       Storage.Beam.MerchantOperatingCity
@@ -521,6 +522,7 @@ library
       Storage.Queries.Issue
       Storage.Queries.Location
       Storage.Queries.LocationMapping
+      Storage.Queries.Merchant
       Storage.Queries.MerchantConfig
       Storage.Queries.MerchantMessage
       Storage.Queries.MerchantOperatingCity
@@ -537,6 +539,7 @@ library
       Storage.Queries.OrphanInstances.FareBreakup
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.LocationMapping
+      Storage.Queries.OrphanInstances.Merchant
       Storage.Queries.OrphanInstances.MerchantPaymentMethod
       Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.MerchantServiceUsageConfig

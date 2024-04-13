@@ -9,6 +9,183 @@ imports:
   SmsService: Kernel.External.SMS.Types
   WhatsappService: Kernel.External.Whatsapp.Types
   IssueTicketService: Kernel.External.Ticket.Types
+  Subscriber: Kernel.Types.Registry
+  ShortId: Kernel.Types.Id
+  City: Kernel.Types.Beckn.Context
+  IndianState: Kernel.Types.Beckn.Context
+  Country: Kernel.Types.Beckn.Context
+  GeofencingConfig: Kernel.Types.Geofencing
+  BaseUrl: Kernel.Types.Common
+  Base64: Kernel.Types.Base64
+  NominalDiffTime: Kernel.Prelude
+  Seconds: Kernel.Types.Common
+  GeoRestriction: Kernel.Types.Geofencing
+Merchant:
+  derives: "Generic,Show,'UsageSafety"
+
+  fields:
+    id: Id Merchant
+    subscriberId: ShortId Subscriber
+    shortId: ShortId Merchant
+    name: Text
+    defaultCity: City
+    defaultState: IndianState
+    country: Country
+    geofencingConfig: GeofencingConfig
+    gatewayUrl: BaseUrl
+    registryUrl: BaseUrl
+    fallbackShortId: ShortId Merchant
+    bapId: Text
+    bapUniqueKeyId: Text
+    driverOfferBaseUrl: BaseUrl
+    driverOfferApiKey: Text
+    driverOfferMerchantId: Text
+    geoHashPrecisionValue: Int
+    minimumDriverRatesCount: Int
+    signingPublicKey: Base64
+    cipherText: Maybe Base64
+    signatureExpiry: Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    isAvoidToll: Bool
+    aadhaarVerificationTryLimit: Int
+    aadhaarKeyExpiryTime: Seconds
+    mediaFileSizeUpperLimit: Int
+    mediaFileUrlPattern: Text
+    editPickupDistanceThreshold: HighPrecMeters
+    driverDistanceThresholdFromPickup: HighPrecMeters
+    numOfAllowedEditPickupLocationAttemptsThreshold: Int
+    publicMediaFileUrlPattern: Text
+    scheduleRideBufferTime: NominalDiffTime
+    fakeOtpMobileNumbers: "[Text]"
+    kaptureDisposition: Text
+    arrivedPickupThreshold: Meters
+    driverOnTheWayNotifyExpiry: Seconds
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+  beamFields:
+    defaultCity:
+      city: City
+    defaultState:
+      state: IndianState
+    geofencingConfig:
+      originRestriction: GeoRestriction
+      destinationRestriction: GeoRestriction
+  beamType:
+    gatewayUrl: Text
+    registryUrl: Text
+    driverOfferBaseUrl: Text
+    scheduleRideBufferTime: Seconds
+    arrivedPickupThreshold: Maybe Meters
+    driverOnTheWayNotifyExpiry: Maybe Seconds
+
+  toTType:
+    city: defaultCity|E
+    state: defaultState|E
+    originRestriction: (.origin)|I
+    destinationRestriction: (.destination)|I
+    gatewayUrl: Kernel.Prelude.showBaseUrl|I
+    registryUrl: Kernel.Prelude.showBaseUrl|I
+    driverOfferBaseUrl: Kernel.Prelude.showBaseUrl|I
+    scheduleRideBufferTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    arrivedPickupThreshold: (Just arrivedPickupThreshold)|E
+    driverOnTheWayNotifyExpiry: (Just driverOnTheWayNotifyExpiry)|E
+
+  fromTType:
+    defaultCity: city|E
+    defaultState: state|E
+    geofencingConfig: mkGeofencingConfig
+    gatewayUrl: Kernel.Prelude.parseBaseUrl|IM
+    registryUrl: Kernel.Prelude.parseBaseUrl|IM
+    driverOfferBaseUrl: Kernel.Prelude.parseBaseUrl|IM
+    scheduleRideBufferTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
+    arrivedPickupThreshold: (fromMaybe 50 arrivedPickupThreshold)|E
+    driverOnTheWayNotifyExpiry: (fromMaybe 3600 driverOnTheWayNotifyExpiry)|E
+
+  sqlType:
+    editPickupDistanceThreshold: double precision
+    driverDistanceThresholdFromPickup: double precision
+    numOfAllowedEditPickupLocationAttemptsThreshold: int
+    signingPublicKey: text
+    signatureExpiry: int
+    state: text
+    fallbackShortId: text
+    originRestriction: text[]
+    destinationRestriction: text[]
+    distanceWeightage: int
+    exoPhones: text[]
+    country: text
+    name: character varying(255)
+    aadhaarVerificationTryLimit: integer
+    aadhaarKeyExpiryTime: integer
+    subscriberId: character(36)
+    city: text
+    timeDiffFromUtc: int
+    publicMediaFileUrlPattern: text
+    kaptureDisposition: text
+    mediaFileUrlPattern: text
+    mediaFileSizeUpperLimit: int
+    fakeOtpMobileNumbers: text[]
+    driverOfferBaseUrl: text
+    driverOfferApiKey: varchar(128)
+    driverOfferMerchantId: varchar(255)
+    geoHashPrecisionValue: INT
+    cipherText: text
+    scheduleRideBufferTime: integer
+    trackingShortUrlPattern: text
+    bapUniqueKeyId: text
+    bapId: text
+    isAvoidToll: boolean
+    minimumDriverRatesCount: int
+    fcmUrl: text
+    fcmJsonPath: text
+    fcmRedisTokenKeyPrefix: text
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+    arrivedPickupThreshold: double precision
+    driverOnTheWayNotifyExpiry: integer
+
+  default:
+    arrivedPickupThreshold: "50"
+    driverOnTheWayNotifyExpiry: "3600"
+    scheduleRideBufferTime: "1800"
+    numOfAllowedEditPickupLocationAttemptsThreshold: "2"
+    driverDistanceThresholdFromPickup: "100"
+    editPickupDistanceThreshold: "100"
+    publicMediaFileUrlPattern: "'http://localhost:8013/v2/<DOMAIN>/media?filePath=<FILE_PATH>'"
+    mediaFileSizeUpperLimit: "10000000"
+    mediaFileUrlPattern: "'http://localhost:8013/v2/<DOMAIN>/media?filePath=<FILE_PATH>'"
+    isAvoidToll: "true"
+    country: "'India'"
+    cipherText: "'TXlTZWNyZXRLZXkxMjM0NQo='"
+    geoHashPrecisionValue: "9"
+    city: "'Kochi'"
+
+
+  constraints:
+    shortId: SecondaryKey
+    subscriberId: SecondaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByShortId:
+      kvFunction: findOneWithKV
+      where: shortId
+    findBySubscriberId:
+      kvFunction: findOneWithKV
+      where: subscriberId
+
+  excludedDefaultQueries:
+    - createMany
+    - findByPrimaryKey
+    - updateByPrimaryKey
 
 MerchantServiceConfig:
   derives: "Generic,'UsageSafety"
