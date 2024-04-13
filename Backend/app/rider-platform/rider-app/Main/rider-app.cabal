@@ -233,7 +233,6 @@ library
       Domain.Types.UtilsTH
       Domain.Types.VehicleServiceTier
       Domain.Types.VehicleVariant
-      Domain.Types.WhiteListOrg
       Environment
       Lib.Mesh
       SharedLogic.Cac
@@ -287,7 +286,6 @@ library
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchRequest
       Storage.Beam.SystemConfigs
-      Storage.Beam.WhiteListOrg
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.BppDetails
@@ -360,7 +358,8 @@ library
       Storage.Queries.Transformers.SearchReqLocation
       Storage.Queries.Transformers.SpecialZoneQuote
       Storage.Queries.Transformers.TripTerms
-      Storage.Queries.WhiteListOrg
+      Storage.Queries.Transformers.WhiteListOrg
+      Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Beam.UtilsTH
@@ -443,6 +442,7 @@ library
       Domain.Types.TicketService
       Domain.Types.TripTerms
       Domain.Types.ValueAddNP
+      Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
       Storage.Beam.AadhaarVerification
@@ -492,6 +492,7 @@ library
       Storage.Beam.TicketService
       Storage.Beam.TripTerms
       Storage.Beam.ValueAddNP
+      Storage.Beam.WhiteListOrg
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
       Storage.Queries.AadhaarVerification
@@ -527,6 +528,7 @@ library
       Storage.Queries.OrphanInstances.PersonStats
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.PersonDisability
       Storage.Queries.PersonStats
       Storage.Queries.Rating
@@ -549,6 +551,7 @@ library
       Storage.Queries.TicketService
       Storage.Queries.TripTerms
       Storage.Queries.ValueAddNP
+      Storage.Queries.WhiteListOrg
   other-modules:
       Paths_rider_app
   hs-source-dirs:

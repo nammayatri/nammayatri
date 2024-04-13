@@ -31,6 +31,9 @@ TripTerms:
   constraints:
     id: PrimaryKey
 
+  sqlType:
+    descriptions: text
+
   queries:
     findById'':
       kvFunction: findOneWithKV
