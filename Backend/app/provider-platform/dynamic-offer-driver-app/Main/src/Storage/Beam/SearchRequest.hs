@@ -17,10 +17,10 @@
 module Storage.Beam.SearchRequest where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.FareProduct as FareProductD
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
+import qualified Lib.Types.SpecialLocation as SL
 import Tools.Beam.UtilsTH
 import qualified Tools.Maps as Maps
 
@@ -33,7 +33,7 @@ data SearchRequestT f = SearchRequestT
     fromLocationId :: B.C f (Maybe Text),
     toLocationId :: B.C f (Maybe Text),
     riderId :: B.C f (Maybe Text),
-    area :: B.C f (Maybe FareProductD.Area),
+    area :: B.C f (Maybe SL.Area),
     bapId :: B.C f Text,
     bapUri :: B.C f Text,
     bapCity :: B.C f (Maybe Context.City),

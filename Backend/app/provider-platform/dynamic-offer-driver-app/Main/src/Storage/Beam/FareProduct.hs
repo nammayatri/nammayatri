@@ -20,6 +20,7 @@ import Domain.Types.Common
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
+import qualified Lib.Types.SpecialLocation as SL
 import Tools.Beam.UtilsTH
 
 data FareProductT f = FareProductT
@@ -28,7 +29,7 @@ data FareProductT f = FareProductT
     merchantOperatingCityId :: B.C f Text,
     farePolicyId :: B.C f Text,
     vehicleVariant :: B.C f DVST.ServiceTierType,
-    area :: B.C f Domain.Area,
+    area :: B.C f SL.Area,
     tripCategory :: B.C f TripCategory,
     timeBounds :: B.C f Domain.TimeBound,
     enabled :: B.C f Bool

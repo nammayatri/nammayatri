@@ -35,7 +35,6 @@ import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
-import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -60,6 +59,7 @@ import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.LocationUpdates as LocUpd
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -115,7 +115,7 @@ data ServiceHandle m = ServiceHandle
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> DTConf.TransporterConfig -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Maybe LatLong -> m (),
-    getFarePolicyByEstOrQuoteId :: Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe DFareProduct.Area -> Text -> Maybe Text -> Maybe Text -> m DFP.FullFarePolicy,
+    getFarePolicyByEstOrQuoteId :: Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe Text -> Maybe Text -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,

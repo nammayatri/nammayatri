@@ -33,6 +33,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
+import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool (getDriverPoolConfig)
@@ -107,7 +108,7 @@ initiateDriverSearchBatch ::
 initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCategory serviceTier estOrQuoteId customerExtraFee messageId isRepeatSearch = do
   farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory serviceTier searchReq.area estOrQuoteId (Just searchReq.transactionId) (Just "transactionId")
   searchTry <- createNewSearchTry farePolicy
-  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory searchReq.estimatedDistance (Just searchReq.transactionId) (Just "transactionId")
+  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance (Just searchReq.transactionId) (Just "transactionId")
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just searchReq.transactionId) (Just "transactionId")
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
   let driverPickUpCharges = extractDriverPickupCharges farePolicy.farePolicyDetails

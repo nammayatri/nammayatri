@@ -14,7 +14,8 @@
 
 module BecknV2.OnDemand.Tags where
 
-import Kernel.Prelude
+import Kernel.Prelude hiding (show)
+import Text.Show
 
 -- ##############################################################
 -- This section contains type aliases for all TagGroups and Tags
@@ -45,6 +46,16 @@ data TagGroup
   | PREVIOUS_CANCELLATION_REASONS
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+data EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE
+  { startDistanceThreshold :: Int,
+    endDistanceThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show EXTRA_PER_KM_STEP_FARE where
+  show (EXTRA_PER_KM_STEP_FARE startDist (Just endDist)) = "EXTRA_PER_KM_STEP_FARE_" <> show startDist <> "_" <> show endDist
+  show (EXTRA_PER_KM_STEP_FARE startDist Nothing) = "EXTRA_PER_KM_STEP_FARE_" <> show startDist <> "_Above"
+
 data Tag
   = -- ## Item tags ##
     -- FARE_POLICY
@@ -61,7 +72,6 @@ data Tag
   | DRIVER_MIN_EXTRA_FEE
   | DRIVER_MAX_EXTRA_FEE
   | EXTRA_PER_KM_FARE
-  | EXTRA_PER_KM_STEP_FARE
   | WAITING_OR_PICKUP_CHARGES
   | CONSTANT_WAITING_CHARGE
   | FREE_WAITING_TIME_IN_MINUTES

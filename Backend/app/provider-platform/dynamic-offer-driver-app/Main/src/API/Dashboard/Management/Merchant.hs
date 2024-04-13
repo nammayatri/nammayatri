@@ -23,6 +23,7 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common (Meters, withFlowHandlerAPI)
+import qualified Lib.Types.SpecialLocation as SL
 import Servant hiding (Unauthorized, throwError)
 import Storage.Beam.SystemConfigs ()
 
@@ -119,21 +120,23 @@ driverPoolConfigUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Meters ->
+  SL.Area ->
   Maybe Common.Variant ->
   Maybe Text ->
   Common.DriverPoolConfigUpdateReq ->
   FlowHandler APISuccess
-driverPoolConfigUpdate merchantShortId opCity tripDistance variant tripCategory = withFlowHandlerAPI . DMerchant.driverPoolConfigUpdate merchantShortId opCity tripDistance variant tripCategory
+driverPoolConfigUpdate merchantShortId opCity tripDistance area variant tripCategory = withFlowHandlerAPI . DMerchant.driverPoolConfigUpdate merchantShortId opCity tripDistance area variant tripCategory
 
 driverPoolConfigCreate ::
   ShortId DM.Merchant ->
   Context.City ->
   Meters ->
+  SL.Area ->
   Maybe Common.Variant ->
   Maybe Text ->
   Common.DriverPoolConfigCreateReq ->
   FlowHandler APISuccess
-driverPoolConfigCreate merchantShortId opCity tripDistance variant tripCategory = withFlowHandlerAPI . DMerchant.driverPoolConfigCreate merchantShortId opCity tripDistance variant tripCategory
+driverPoolConfigCreate merchantShortId opCity tripDistance area variant tripCategory = withFlowHandlerAPI . DMerchant.driverPoolConfigCreate merchantShortId opCity tripDistance area variant tripCategory
 
 driverIntelligentPoolConfig ::
   ShortId DM.Merchant ->

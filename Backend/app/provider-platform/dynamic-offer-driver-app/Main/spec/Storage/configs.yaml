@@ -6,6 +6,7 @@ imports:
   Seconds: Kernel.Types.Common
   IndianState: Kernel.Types.Beckn.Context
   ServiceTierType: Domain.Types.ServiceTierType
+  Area: Lib.Types.SpecialLocation
 
 DriverPoolConfig:
   tableName: driver_pool_config
@@ -33,6 +34,7 @@ DriverPoolConfig:
     driverToDestinationDistanceThreshold: Meters
     driverToDestinationDuration: Seconds
     scheduleTryTimes: "[Int]"
+    area: Area
     createdAt: UTCTime
     updatedAt: UTCTime
     vehicleVariant: Maybe ServiceTierType|NoRelation
@@ -51,6 +53,7 @@ DriverPoolConfig:
 
   default:
     tripCategory: "'All'"
+    area: "'Default'"
     distanceBasedBatchSplit: "Array ['BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 4 }']"
     scheduleTryTimes: "'{1800, 900, 300}'"
 

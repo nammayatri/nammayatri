@@ -18,7 +18,7 @@ module Storage.CachedQueries.Merchant.DriverPoolConfig
     create,
     findAllByMerchantOpCityId,
     findByMerchantOpCityIdAndTripDistance,
-    findByMerchantOpCityIdAndTripDistanceAndDVeh,
+    findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh,
     update,
   )
 where
@@ -30,6 +30,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Types.SpecialLocation as SL
 import qualified Storage.Queries.DriverPoolConfig as Queries
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverPoolConfig -> m ()
@@ -44,8 +45,8 @@ findAllByMerchantOpCityId id =
 findByMerchantOpCityIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> m (Maybe DriverPoolConfig)
 findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance = find (\config -> config.tripDistance == tripDistance) <$> findAllByMerchantOpCityId merchantOpCityId
 
-findByMerchantOpCityIdAndTripDistanceAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe DVST.ServiceTierType -> Text -> m (Maybe DriverPoolConfig)
-findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance serviceTier tripCategory = find (\config -> config.tripDistance == tripDistance && config.vehicleVariant == serviceTier && config.tripCategory == tripCategory) <$> findAllByMerchantOpCityId merchantOpCityId
+findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe DVST.ServiceTierType -> Text -> SL.Area -> m (Maybe DriverPoolConfig)
+findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area = find (\config -> config.tripDistance == tripDistance && config.vehicleVariant == serviceTier && config.tripCategory == tripCategory && config.area == area) <$> findAllByMerchantOpCityId merchantOpCityId
 
 cacheDriverPoolConfigs :: (CacheFlow m r) => Id MerchantOperatingCity -> [DriverPoolConfig] -> m ()
 cacheDriverPoolConfigs merchantOpCityId cfg = do

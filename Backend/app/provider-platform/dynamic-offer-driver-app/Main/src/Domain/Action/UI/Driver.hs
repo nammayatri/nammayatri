@@ -155,6 +155,7 @@ import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
+import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Cac
 import SharedLogic.CallBAP (sendDriverOffer, sendRideAssignedUpdateToBAP)
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
@@ -927,8 +928,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
       activeQuotes <- QDrQt.findActiveQuotesByDriverId driverId driverUnlockDelay
       logDebug $ "active quotes for driverId = " <> driverId.getId <> show activeQuotes
       pure $ not $ null activeQuotes
-    getQuoteLimit dist vehicleServiceTier tripCategory txnId = do
-      driverPoolCfg <- DP.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory dist (Just txnId) (Just "transactionId")
+    getQuoteLimit dist vehicleServiceTier tripCategory txnId area = do
+      driverPoolCfg <- DP.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory area dist (Just txnId) (Just "transactionId")
       pure driverPoolCfg.driverQuoteLimit
 
     acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD = do
@@ -937,7 +938,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
           throwError (InternalError "SEARCH_TRY_CANCELLED")
         CS.markSearchTryAsAssigned searchTry.id
       logDebug $ "offered fare: " <> show req.offeredFare
-      quoteLimit <- getQuoteLimit searchReq.estimatedDistance searchTry.vehicleServiceTier searchTry.tripCategory searchReq.transactionId
+      quoteLimit <- getQuoteLimit searchReq.estimatedDistance searchTry.vehicleServiceTier searchTry.tripCategory searchReq.transactionId (fromMaybe SL.Default searchReq.area)
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
       when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
 

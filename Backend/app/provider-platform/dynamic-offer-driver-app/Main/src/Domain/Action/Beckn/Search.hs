@@ -33,7 +33,6 @@ import qualified Domain.Action.UI.Maps as DMaps
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
-import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -58,6 +57,7 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.Queries.GateInfo (findGateInfoByLatLongWithoutGeoJson)
+import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
@@ -171,7 +171,7 @@ handler ValidatedDSearchReq {..} sReq = do
   (driverPool, selectedFarePolicies) <-
     if transporterConfig.considerDriversForSearch
       then do
-        (pool, policies) <- selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig possibleTripOption.isScheduled farePolicies
+        (pool, policies) <- selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies
         pure (nonEmpty pool, policies)
       else return (Nothing, catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleServiceTier)) farePolicies)
   (mbSpecialZoneGateId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
@@ -205,7 +205,7 @@ handler ValidatedDSearchReq {..} sReq = do
     combineFarePoliciesProducts products =
       FarePoliciesProduct
         { farePolicies = concatMap farePolicies products,
-          area = maybe DFareProduct.Default (.area) $ listToMaybe products,
+          area = maybe SL.Default (.area) $ listToMaybe products,
           specialLocationTag = (listToMaybe products) >>= (.specialLocationTag)
         }
 
@@ -296,9 +296,9 @@ addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes = do
               nearestDriverInfo = NearestDriverInfo {..}
           return (input, vehicleServiceTierItem, Just nearestDriverInfo)
 
-selectDriversAndMatchFarePolicies :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> [DFP.FullFarePolicy] -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
-selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig isScheduled farePolicies = do
-  driverPoolCfg <- getSearchDriverPoolConfig merchantOpCityId mbDistance
+selectDriversAndMatchFarePolicies :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
+selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies = do
+  driverPoolCfg <- getSearchDriverPoolConfig merchantOpCityId mbDistance area
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
   driverPoolNotOnRide <- calculateDriverPool cityServiceTiers Estimate driverPoolCfg Nothing fromLocation merchantId True Nothing False
   logDebug $ "Driver Pool not on ride " <> show driverPoolNotOnRide
@@ -340,7 +340,7 @@ buildSearchRequest ::
   Maybe Meters ->
   Maybe Seconds ->
   Maybe Text ->
-  DFareProduct.Area ->
+  SL.Area ->
   Maybe HighPrecMoney ->
   m DSR.SearchRequest
 buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area tollCharges = do

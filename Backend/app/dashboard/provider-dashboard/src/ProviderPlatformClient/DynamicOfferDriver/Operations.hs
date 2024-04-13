@@ -50,6 +50,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Types.SpecialLocation as SL
 import Servant
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
@@ -150,8 +151,8 @@ data MerchantAPIs = MerchantAPIs
     merchantCommonConfig :: Euler.EulerClient Merchant.MerchantCommonConfigRes,
     merchantCommonConfigUpdate :: Merchant.MerchantCommonConfigUpdateReq -> Euler.EulerClient APISuccess,
     driverPoolConfig :: Maybe Meters -> Euler.EulerClient Merchant.DriverPoolConfigRes,
-    driverPoolConfigUpdate :: Meters -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
-    driverPoolConfigCreate :: Meters -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigCreateReq -> Euler.EulerClient APISuccess,
+    driverPoolConfigUpdate :: Meters -> SL.Area -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
+    driverPoolConfigCreate :: Meters -> SL.Area -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigCreateReq -> Euler.EulerClient APISuccess,
     driverIntelligentPoolConfig :: Euler.EulerClient Merchant.DriverIntelligentPoolConfigRes,
     driverIntelligentPoolConfigUpdate :: Merchant.DriverIntelligentPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
     documentVerificationConfig :: Maybe Merchant.DocumentType -> Maybe Common.Category -> Euler.EulerClient Merchant.DocumentVerificationConfigRes,

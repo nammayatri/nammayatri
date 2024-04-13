@@ -109,6 +109,7 @@ library
     , servant-openapi3
     , servant-server
     , singletons
+    , special-zone-a
     , template-haskell
     , text
     , time

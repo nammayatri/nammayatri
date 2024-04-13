@@ -37,6 +37,7 @@ import Kernel.Types.Value
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Validation
+import qualified Lib.Types.SpecialLocation as SL
 import Servant
 
 ---------------------------------------------------------
@@ -264,6 +265,7 @@ type DriverPoolConfigUpdateAPI =
     :> "driverPool"
     :> "update"
     :> MandatoryQueryParam "tripDistance" Meters
+    :> MandatoryQueryParam "area" SL.Area
     :> QueryParam "vehicleVariant" Variant
     :> QueryParam "tripCategory" Text
     :> ReqBody '[JSON] DriverPoolConfigUpdateReq
@@ -316,6 +318,7 @@ type DriverPoolConfigCreateAPI =
     :> "driverPool"
     :> "create"
     :> MandatoryQueryParam "tripDistance" Meters
+    :> MandatoryQueryParam "area" SL.Area
     :> QueryParam "vehiclevariant" Variant
     :> QueryParam "tripCategory" Text
     :> ReqBody '[JSON] DriverPoolConfigCreateReq

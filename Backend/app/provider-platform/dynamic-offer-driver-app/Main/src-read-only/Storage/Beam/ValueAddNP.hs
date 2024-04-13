@@ -11,7 +11,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
-data ValueAddNPT f = ValueAddNPT {enabled :: B.C f Kernel.Prelude.Bool, subscriberId :: B.C f Kernel.Prelude.Text, createdAt :: B.C f Kernel.Prelude.UTCTime, updatedAt :: B.C f Kernel.Prelude.UTCTime}
+data ValueAddNPT f = ValueAddNPT {enabled :: (B.C f Kernel.Prelude.Bool), subscriberId :: (B.C f Kernel.Prelude.Text), createdAt :: (B.C f Kernel.Prelude.UTCTime), updatedAt :: (B.C f Kernel.Prelude.UTCTime)}
   deriving (Generic, B.Beamable)
 
 instance B.Table ValueAddNPT where
@@ -20,6 +20,6 @@ instance B.Table ValueAddNPT where
 
 type ValueAddNP = ValueAddNPT Identity
 
-$(enableKVPG ''ValueAddNPT ['subscriberId] [])
+$(enableKVPG (''ValueAddNPT) [('subscriberId)] [])
 
-$(mkTableInstances ''ValueAddNPT "value_add_np")
+$(mkTableInstances (''ValueAddNPT) "value_add_np")

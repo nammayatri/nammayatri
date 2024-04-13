@@ -10,11 +10,13 @@ import qualified Domain.Types.ServiceTierType
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.Types.SpecialLocation
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
 import qualified Tools.Beam.UtilsTH
 
 data DriverPoolConfig = DriverPoolConfig
   { actualDistanceThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    area :: Lib.Types.SpecialLocation.Area,
     createdAt :: Kernel.Prelude.UTCTime,
     distanceBasedBatchSplit :: [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.BatchSplitByPickupDistance],
     driverBatchSize :: Kernel.Prelude.Int,

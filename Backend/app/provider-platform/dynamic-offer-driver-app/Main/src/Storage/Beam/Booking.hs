@@ -18,11 +18,11 @@ module Storage.Beam.Booking where
 import qualified Database.Beam as B
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Common as DTC
-import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
+import qualified Lib.Types.SpecialLocation as SL
 import Tools.Beam.UtilsTH
 
 data BookingT f = BookingT
@@ -35,7 +35,7 @@ data BookingT f = BookingT
     specialLocationTag :: B.C f (Maybe Text),
     specialZoneOtpCode :: B.C f (Maybe Text),
     disabilityTag :: B.C f (Maybe Text),
-    area :: B.C f (Maybe FareProductD.Area),
+    area :: B.C f (Maybe SL.Area),
     providerId :: B.C f Text,
     merchantOperatingCityId :: B.C f (Maybe Text),
     primaryExophone :: B.C f Text,
