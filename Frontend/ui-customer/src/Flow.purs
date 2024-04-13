@@ -1733,7 +1733,9 @@ followRideScreenFlow callInitUI = do
       pure $ removeAllPolylines ""
       void $ liftFlowBT $ runEffectFn1 clearMap ""
       (GlobalState gs) <- getState
-      let currentMapFragment = if gs.homeScreen.props.currentStage == HomeScreen then "CustomerHomeScreenMap" else "CustomerHomeScreen"
+      let currentMapFragment = if os == "IOS" then "CustomerHomeScreenMap" 
+                               else if gs.homeScreen.props.currentStage == HomeScreen then "CustomerHomeScreenMap" 
+                               else "CustomerHomeScreen"
       void $ liftFlowBT $ reallocateMapFragment (getNewIDWithTag currentMapFragment)
       modifyScreenState $ FollowRideScreenStateType (\_  -> FollowRideScreenData.initData)
       currentFlowStatus
