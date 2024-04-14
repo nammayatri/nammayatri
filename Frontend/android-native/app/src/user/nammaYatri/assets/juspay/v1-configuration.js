@@ -262,23 +262,23 @@ window.getMerchantConfig = function () {
       , "variantInfo" : {
         "hatchback" : {
           "name" : "Hatchback",
-          "image" : "ny_ic_hatchback,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_hatchback-2.png"
+          "image" : "ic_hatchback_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_hatchback_ac.png"
           },
         "taxiPlus" : {
           "name" : "AC Taxi",
-          "image" : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan_ac.png"
+          "image" : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png"
         },
         "sedan" : {
           "name" : "Sedan",
-          "image" : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
+          "image" : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png"
         },
         "taxi" : {
           "name" : "Non-AC Taxi",
-          "image" : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
+          "image" : "ic_taxi,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_taxi.png"
         },
         "suv" : {
           "name" : "SUV",
-          "image" : "ny_ic_suv_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_suv_shadow.png"
+          "image" : "ic_suv_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_suv_ac.png"
         },
         "autoRickshaw" : {
           "name" : "Auto Rickshaw",

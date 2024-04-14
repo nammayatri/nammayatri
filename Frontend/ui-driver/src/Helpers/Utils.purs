@@ -560,11 +560,16 @@ getVehicleVariantImage variant =
                         "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
                         _           -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         NAMMAYATRI -> case variant of
-                        "SEDAN"     -> "ny_ic_sedan," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ny_ic_sedan.png"
-                        "SUV"       -> "ny_ic_suv," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ny_ic_suv.png"
-                        "HATCHBACK" -> "ny_ic_hatchback," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ny_ic_hatchback.png"
-                        "RENTALS"   -> "ic_rentals," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ic_rentals.png"
-                        "INTERCITY" -> "ic_intercity," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ic_intercity.png"
+                        "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
+                        "SUV"       -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
+                        "HATCHBACK" -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
+                        "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
+                        "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
+                        "TAXI"      -> "ic_taxi," <> commonUrl <> "ic_taxi.png"
+                        "PREMIUM"   -> "ic_cab_premium" <> commonUrl <> "ic_cab_premium.png"
+                        "TAXI_PLUS" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
+                        "ECO"       -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
+                        "COMFY"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
                         "AUTO_RICKSHAW" -> 
                           case (getValueFromCache (show DRIVER_LOCATION) getKeyInSharedPrefKeys) of
                             "Hyderabad" -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
