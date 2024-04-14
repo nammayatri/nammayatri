@@ -70,7 +70,9 @@ type Config = {
   showSafetyCenter :: Boolean,
   safetyTitle :: String,
   rentalRideConfig :: RentalRideConfig,
-  rentalRideTextConfig :: RentalRideTextConfig
+  rentalRideTextConfig :: RentalRideTextConfig,
+  capacity :: Maybe Int,
+  serviceTierAndAC :: String
 }
 
 data Theme = DARK | LIGHT
@@ -90,6 +92,8 @@ config :: Config
 config = {
   isDriver : true,
   isFreeRide : false,
+  capacity : Nothing,
+  serviceTierAndAC : "",
   showSafetyCenter : false,
   topCard : {
     title : "",

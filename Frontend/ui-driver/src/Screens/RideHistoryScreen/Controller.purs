@@ -290,7 +290,10 @@ rideListResponseTransformer list =
         specialZoneText : specialLocationConfig.text,
         specialZonePickup : checkSpecialPickupZone ride.specialLocationTag,
         tripType : rideTypeConstructor ride.tripCategory,
-        tollCharge : fromMaybe 0 ride.tollCharges
+        tollCharge : fromMaybe 0 ride.tollCharges,
+        rideType : ride.vehicleServiceTierName,
+        tripStartTime : ride.tripStartTime,
+        tripEndTime : ride.tripEndTime
       }) list
 
 
@@ -330,5 +333,8 @@ dummyCard =  {
     specialZoneText : "",
     specialZonePickup : false,
     tripType : OneWay,
-    tollCharge : 0
+    tollCharge : 0,
+    rideType : "",
+    tripStartTime : Nothing,
+    tripEndTime : Nothing
   }

@@ -22,7 +22,7 @@ import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
@@ -40,7 +40,12 @@ import Styles.Colors as Color
 import Common.Styles.Colors as Colors
 import Storage(getValueToLocalStore , KeyStore(..))
 import ConfigProvider
+import Data.Function.Uncurried (runFn2)
 import Mobility.Prelude as MP
+import JBridge as JB
+import Data.Number as NUM
+import Data.Int as INT
+import Helpers.Utils as HU
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -159,7 +164,7 @@ tagView state config =
   horizontalScrollView 
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , margin $ MarginVertical 0 15
+  , margin $ MarginVertical 15 15
   , visibility if anyTag then VISIBLE else GONE
   , scrollBarX false
   ][linearLayout
@@ -210,17 +215,11 @@ tripDetailsView state =
   , width MATCH_PARENT
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
-  ][  frameLayout
-      [ height MATCH_PARENT
-      , width WRAP_CONTENT
-      , orientation HORIZONTAL
-      , gravity CENTER_VERTICAL
-      ][ imageView
-          [ imageWithFallback $ getVehicleImage state
-          , width (V 36)
-          , height (V 36)
-          ]
-        ]
+  ][  imageView
+      [ imageWithFallback $ getVehicleImage state
+      , width $ V 36
+      , height $ V 36
+      ]
     , linearLayout 
       [ height MATCH_PARENT
       , width WRAP_CONTENT
@@ -248,6 +247,10 @@ tripDetailsView state =
               , color Color.black800
               ] <> FontStyle.body1 TypoGraphy
             ]
+          , textView $
+            [ text state.data.vehicleModel
+            , color Color.black700
+            ] <> FontStyle.body3 TypoGraphy
         ]
     , linearLayout
       [ height WRAP_CONTENT
@@ -269,11 +272,24 @@ tripDetailsView state =
 separatorView ::  forall w . PrestoDOM (Effect Unit) w
 separatorView =
   linearLayout
-  [ height (V 1)
+  [ height $ V 1
   , width MATCH_PARENT
-  , margin (Margin 0 16 0 16)
+  , margin $ MarginTop 16
   , background Color.lightGreyShade
   ][]
+
+type TripDetailsRow = {
+  keyLeft :: String,
+  valLeft :: String,
+  keyRight :: String,
+  valRight :: String,
+  leftClick :: Action,
+  rightClick :: Action,
+  leftAsset :: String,
+  rightAsset :: String,
+  leftVisibility :: Boolean,
+  rightVisibility :: Boolean
+}
 
 tripDataView ::  forall w . (Action -> Effect Unit) ->  ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 tripDataView push state = 
@@ -282,93 +298,85 @@ tripDataView push state =
   , width MATCH_PARENT
   , orientation VERTICAL
   , gravity CENTER_VERTICAL
-  ][  linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation HORIZONTAL
-        ][ linearLayout
-            [ height WRAP_CONTENT
-            , width $ V $ (EHC.screenWidth unit) / 2
-            , orientation VERTICAL
-            ][ textView $
-                [ text (getString TRIP_ID)
-                , color Color.black700
-                , margin (MarginBottom 4) 
-                ] <> FontStyle.body5 TypoGraphy
-              , linearLayout
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , orientation HORIZONTAL
-                , onClick push (const Copy)
-                ][ textView $
-                    [ text state.data.tripId
-                    , width WRAP_CONTENT
-                    , color Color.black900
-                    ] <> FontStyle.body14 TypoGraphy
-                  , imageView
-                    [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_copy"
-                    , height (V 15)
-                    , width (V 13)
-                    , margin (Margin 10 5 0 0)
-                    
-                    ]
-
-                ]
-              
-            ]
-          , linearLayout
-            [ height WRAP_CONTENT
-            , width $ V $ (EHC.screenWidth unit) / 2
-            , orientation VERTICAL
-            ][ textView $
-                [ text (getString RIDER)
-                , color Color.black700
-                , margin (MarginBottom 4) 
-                ] <> FontStyle.body5 TypoGraphy
-              , textView $
-                [ text state.data.rider
-                , color Color.black900
-                ] <> FontStyle.body14 TypoGraphy
-            ]
-        ] 
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation HORIZONTAL
-        , margin $ MarginTop 20
-        , visibility if state.data.status == "CANCELLED" then GONE else VISIBLE
-        ][ linearLayout
-            [ height WRAP_CONTENT
-            , width $ V $ (EHC.screenWidth unit) / 2
-            , orientation VERTICAL
-            ][ textView $
-                [ text (getString DISTANCE)
-                , color Color.black700
-                , margin (MarginBottom 4) 
-                ] <> FontStyle.body5 TypoGraphy
-              , textView $
-                [ text (state.data.distance <> " km")
-                , color Color.black900
-                ] <> FontStyle.body14 TypoGraphy
-            ]
-          , linearLayout
-            [ height WRAP_CONTENT
-            , width $ V $ (EHC.screenWidth unit) / 2
-            , orientation VERTICAL
-            , visibility $ MP.boolToVisibility $ state.data.tollCharge /= 0
-            ][ textView $
-                [ text $ getString TOLL_INCLUDED
-                , color Color.black700
-                , margin $ MarginBottom 4
-                ] <> FontStyle.body5 TypoGraphy
-              , textView $
-                [ text $ (getCurrency appConfig) <> (show state.data.tollCharge)
-                , color Color.black900
-                ] <> FontStyle.body14 TypoGraphy
-            ]
-        ] 
+  ][  tripDetailsRow push {  keyLeft : getString RIDE_TYPE, valLeft : state.data.rideType, keyRight : (getString TRIP_ID), valRight : state.data.tripId, leftClick : NoAction, rightClick : Copy, leftAsset : "", rightAsset : "ny_ic_copy", leftVisibility : true, rightVisibility : true},
+      tripDetailsRow push {  keyLeft : getString DISTANCE, valLeft : (state.data.distance <> " km"), keyRight : getString TRIP_TIME, valRight : tripTime, leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : true, rightVisibility : true},
+      tripDetailsRow push {  keyLeft : getString EARNINGS_PER_KM, valLeft : earningPerKm, keyRight : (getString TOLL_INCLUDED), valRight : currency <> (show state.data.tollCharge), leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : true, rightVisibility : state.data.tollCharge /= 0}
   ]
+  where 
+    tripTime = case state.data.tripStartTime, state.data.tripEndTime of
+                Just startTime, Just endTime -> (show $ runFn2 JB.differenceBetweenTwoUTCInMinutes endTime startTime) <> " Min"
+                _, _ -> "NA"
+    currency = getCurrency appConfig
+    earningPerKm =
+      let mbDist = NUM.fromString state.data.distance
+      in case mbDist of
+          Just dist | dist > 0.0 -> currency <> HU.parseFloat ( INT.toNumber (state.data.totalAmount - state.data.tollCharge) / dist) 2
+          _ -> "NA"
 
+tripDetailsRow :: forall w . (Action -> Effect Unit) -> TripDetailsRow -> PrestoDOM (Effect Unit) w
+tripDetailsRow push tripDetailsRowItem =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation HORIZONTAL
+    , margin $ MarginTop 20
+    ][ linearLayout
+        [ height WRAP_CONTENT
+        , width $ V $ (EHC.screenWidth unit) / 2
+        , orientation VERTICAL
+        , visibility $ MP.boolToVisibility tripDetailsRowItem.leftVisibility
+        ][ textView $
+            [ text tripDetailsRowItem.keyLeft
+            , color Color.black700
+            , margin $ MarginBottom 4
+            ] <> FontStyle.body1 TypoGraphy
+          , linearLayout
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , orientation HORIZONTAL
+            , onClick push $ const tripDetailsRowItem.leftClick
+            ][ textView $
+                [ text tripDetailsRowItem.valLeft
+                , width WRAP_CONTENT
+                , color Color.black900
+                ] <> FontStyle.body1 TypoGraphy
+              , imageView
+                [ imageWithFallback $ fetchImage FF_COMMON_ASSET tripDetailsRowItem.leftAsset
+                , height $ V 15
+                , width $ V 13
+                , margin $ Margin 10 5 0 0
+                ]
+            ]
+        ]
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width $ V $ (EHC.screenWidth unit) / 2
+        , orientation VERTICAL
+        , visibility $ MP.boolToVisibility tripDetailsRowItem.rightVisibility
+        ][ textView $
+            [ text tripDetailsRowItem.keyRight
+            , color Color.black700
+            , margin $ MarginBottom 4
+            ] <> FontStyle.body1 TypoGraphy
+          , linearLayout
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , orientation HORIZONTAL
+            , onClick push $ const tripDetailsRowItem.rightClick
+            ][ textView $
+                [ text tripDetailsRowItem.valRight
+                , width WRAP_CONTENT
+                , color Color.black900
+                ] <> FontStyle.body1 TypoGraphy
+              , imageView
+                [ imageWithFallback $ fetchImage FF_COMMON_ASSET tripDetailsRowItem.rightAsset
+                , height $ V 15
+                , width $ V 13
+                , margin $ Margin 10 5 0 0
+                ]
+            ]
+        ]
+    ]
 
 ----------------- report Isssue ----------------
 reportIssueView ::  forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w

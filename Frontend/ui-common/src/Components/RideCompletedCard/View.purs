@@ -90,18 +90,55 @@ tollTextVew config =
     ] <> FontStyle.body3 TypoGraphy
   ]
 
+rideTierAndCapacity :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+rideTierAndCapacity push config = 
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , background Color.white800
+  , gravity CENTER
+  , padding $ Padding 8 8 8 8
+  , margin $ MarginVertical 12 12
+  , cornerRadius 4.0
+  , visibility $ boolToVisibility config.isDriver
+  ][ textView $
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , text config.serviceTierAndAC
+      , color Color.black700
+      ] <> FontStyle.body1 TypoGraphy
+    , imageView
+      [ height $ V 16
+      , width $ V 16
+      , imageWithFallback $ fetchImage FF_ASSET "ic_profile_active"
+      , visibility $ boolToVisibility $ isJust config.capacity
+      , margin $ MarginHorizontal 4 2
+      ]
+    , textView $
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , color Color.black700
+      ] <> FontStyle.body1 TypoGraphy
+        <> case config.capacity of
+            Just cap -> [text $ show cap ]
+            Nothing -> [visibility GONE]
+  ] 
+
 topPillAndSupportView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 topPillAndSupportView config push = 
   relativeLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , padding $ PaddingTop safeMarginTop
-        ][linearLayout[
-            width MATCH_PARENT
+        ][linearLayout
+          [ width MATCH_PARENT
           , height WRAP_CONTENT
           , gravity CENTER 
           , margin $ MarginTop 5
-          ] $ if config.topCard.topPill.visible then [topPillView config push] else []
+          , orientation VERTICAL
+          ][  if config.topCard.topPill.visible then topPillView config push else linearLayout[visibility GONE][]
+            , rideTierAndCapacity push config
+          ]
         , linearLayout [
             width MATCH_PARENT
           , height WRAP_CONTENT

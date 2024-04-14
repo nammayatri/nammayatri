@@ -1364,3 +1364,6 @@ getEN stringKey =
         TOLL_ROAD_CHANGED -> "Toll charges reduced as toll road was not taken"
         RIDE_TOLL_FARE_INCLUDES -> "*Ride fare includes toll charges."
         TOLL_INCLUDED -> "Toll (included in fare)"
+        TRIP_TIME -> "Trip Time"
+        EARNINGS_PER_KM -> "Earnings per km"
+        OPTIONAL_DOCUMENT -> "Optional Document"

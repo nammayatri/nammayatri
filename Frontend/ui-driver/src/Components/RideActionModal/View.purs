@@ -803,39 +803,73 @@ rentalRideInfoView push config =
   [  separator true , waitTimeView push config ] else [ 
      separator true , totalDistanceView push config ]
   ) else []
-      
 
-normalRideInfoView :: (Action -> Effect Unit) -> Config -> forall w . Array (PrestoDOM (Effect Unit) w) 
-normalRideInfoView push config =
-  [ 
-    linearLayout[
-      width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation VERTICAL
-    ][
-      linearLayout [
-        height WRAP_CONTENT,
-        width MATCH_PARENT
-      ][
-        estimatedFareView push config
-        , separator true
-        , totalDistanceView push config
-        , separator $ config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
-        , waitTimeView push config
-        , linearLayout
-          [ weight 1.0
-          , height MATCH_PARENT
-          ][]
-      ]
-    , textView $ [
-        text $ getString RIDE_TOLL_FARE_INCLUDES
-      , color Color.black650
-      , width MATCH_PARENT
-      , height WRAP_CONTENT
-      , margin $ MarginTop 12
-      , visibility $ boolToVisibility config.tollText
+rideTierAndCapacity :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+rideTierAndCapacity push config = 
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , background Color.grey700 
+  , gravity CENTER
+  , padding $ Padding 8 8 8 8
+  , margin $ MarginBottom 12
+  , cornerRadius 4.0
+  ][ textView $
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , text config.serviceTierAndAC
+      , color Color.black700
       ] <> FontStyle.body1 TypoGraphy
-    ]
+    , imageView
+      [ height $ V 16
+      , width $ V 16
+      , imageWithFallback $ fetchImage FF_ASSET "ic_profile_active"
+      , visibility $ boolToVisibility $ Maybe.isJust config.capacity
+      , margin $ MarginHorizontal 4 2
+      ]
+    , textView $
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , color Color.black700
+      ] <> FontStyle.body1 TypoGraphy
+        <> case config.capacity of
+            Maybe.Just cap -> [text $ show cap]
+            Maybe.Nothing -> [visibility GONE]
+  ] 
+
+normalRideInfoView :: (Action -> Effect Unit) -> Config -> forall w. Array (PrestoDOM (Effect Unit) w)
+normalRideInfoView push config =
+  [ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      ]
+      [ rideTierAndCapacity push config
+      , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          ]
+          [ estimatedFareView push config
+          , separator true
+          , totalDistanceView push config
+          , separator $ config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
+          , waitTimeView push config
+          , linearLayout
+              [ weight 1.0
+              , height MATCH_PARENT
+              ]
+              []
+          ]
+      , textView
+          $ [ text $ getString RIDE_TOLL_FARE_INCLUDES
+            , color Color.black650
+            , width MATCH_PARENT
+            , height WRAP_CONTENT
+            , margin $ MarginTop 12
+            , visibility $ boolToVisibility config.tollText
+            ]
+          <> FontStyle.body1 TypoGraphy
+      ]
   ]
 
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w

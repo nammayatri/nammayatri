@@ -1363,3 +1363,6 @@ getKN stringKey =
         TOLL_ROAD_CHANGED -> "ಟೋಲ್ ರಸ್ತೆಯನ್ನು ತೆಗೆದುಕೊಳ್ಳದ ಕಾರಣ ಟೋಲ್ ಶುಲ್ಕಗಳನ್ನು ಕಡಿಮೆ ಮಾಡಲಾಗಿದೆ"
         RIDE_TOLL_FARE_INCLUDES -> "*ರೈಡ್ ದರವು ಟೋಲ್ ಶುಲ್ಕಗಳನ್ನು ಒಳಗೊಂಡಿರುತ್ತದೆ."
         TOLL_INCLUDED -> "ಟೋಲ್ (ಶುಲ್ಕದಲ್ಲಿ ಸೇರಿಸಲಾಗಿದೆ)"
+        TRIP_TIME -> "ಪ್ರವಾಸ ಸಮಯ"
+        EARNINGS_PER_KM -> "ಪ್ರತಿ ಕಿಮೀಗೆ ಗಳಿಕೆಗಳು"
+        OPTIONAL_DOCUMENT -> "ಐಚ್ಛಿಕ ದಾಖಲೆ"

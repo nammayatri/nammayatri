@@ -1364,3 +1364,6 @@ getTE stringKey =
         TOLL_ROAD_CHANGED -> "టోల్ రోడ్ తీసుకోనందున టోల్ ఛార్జీలు తగ్గించబడ్డాయి"
         RIDE_TOLL_FARE_INCLUDES -> "*రైడ్ ఛార్జీలో టోల్ ఛార్జీలు ఉంటాయి."
         TOLL_INCLUDED -> "టోల్ (ఛార్జీలో చేర్చబడింది)"
+        TRIP_TIME -> "ప్రయాణ సమయం"
+        EARNINGS_PER_KM -> "కిమీకి సంపాదన"
+        OPTIONAL_DOCUMENT -> "ఐచ్ఛిక పత్రం"

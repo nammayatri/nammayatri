@@ -795,7 +795,10 @@ type IndividualRideCardState =
     spLocTagVisibility :: Boolean,
     specialZonePickup :: Boolean,
     tripType :: TripType,
-    tollCharge :: Int
+    tollCharge :: Int,
+    rideType :: String,
+    tripStartTime :: Maybe String,
+    tripEndTime :: Maybe String
   }
 
 
@@ -1020,7 +1023,9 @@ type EndRideData = {
     payerVpa :: String,
     specialZonePickup :: Maybe Boolean,
     actualTollCharge :: Int,
-    estimatedTollCharge :: Int
+    estimatedTollCharge :: Int,
+    capacity :: Maybe Int,
+    serviceTier :: String
   }
 type PaymentState = {
   rideCount :: Int,
@@ -1131,7 +1136,9 @@ type ActiveRide = {
   lastStopLon :: Maybe Number,
   startOdometerReading :: Maybe Number,
   endOdometerReading :: Maybe Number,
-  driverVehicle :: String
+  driverVehicle :: String,
+  serviceTier :: String,
+  capacity :: Maybe Int
 }
 
 type HomeScreenProps =  {
@@ -1331,7 +1338,11 @@ type TripDetailsScreenData =
     config :: AppConfig,
     goBackTo :: GoBackToScreen,
     specialZonePickup :: Boolean,
-    tollCharge :: Int
+    tollCharge :: Int,
+    rideType :: String,
+    tripStartTime :: Maybe String,
+    tripEndTime :: Maybe String,
+    vehicleModel :: String
   }
 
 type TripDetailsScreenProps =
@@ -2490,7 +2501,8 @@ type CoinHistoryItem = {
   earnings ::  Maybe Int,
   status :: Maybe String,
   tagImages :: Array String,
-  cash :: Number
+  cash :: Number,
+  vehicleVariant :: String
 }
 
 type TableItem = {

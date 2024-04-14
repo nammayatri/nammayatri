@@ -79,6 +79,8 @@ initData =
           , actualRideDuration: Nothing
           , startOdometerReading: Nothing
           , endOdometerReading: Nothing
+          , serviceTier : ""
+          , capacity : Nothing
           }
       , cancelRideModal:
           { selectionOptions: []
@@ -153,6 +155,8 @@ initData =
           , specialZonePickup: Nothing
           , actualTollCharge : 0
           , estimatedTollCharge : 0
+          , capacity : Nothing
+          , serviceTier : ""
           }
       , driverGotoState:
           { gotoCount: 0
