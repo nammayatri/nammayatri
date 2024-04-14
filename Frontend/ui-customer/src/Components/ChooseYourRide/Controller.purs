@@ -5,6 +5,7 @@ import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import ConfigProvider
 import MerchantConfig.Types
+import PrestoDOM(BottomSheetState(..))
 import Screens.Types(TipViewProps, TipViewStage(..), ZoneType(..))
 import Prelude (negate)
 
@@ -19,6 +20,8 @@ data Action
   | TipBtnClick Int Int
   | AddTip
   | ChangeTip
+  | UpdateMapPadding Int Int String
+  | ScrollStateChanged String 
 
 
 type Config
@@ -39,6 +42,7 @@ type Config
     , customerTipArray :: Array String
     , customerTipArrayWithValues :: Array Int
     , enableTips :: Boolean
+    , currentSheetState :: BottomSheetState
     }
 
 config :: Config
@@ -74,4 +78,5 @@ config =
     }
   , tipForDriver : 0
   , enableTips : true
+  , currentSheetState : HALF_EXPANDED
   }

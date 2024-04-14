@@ -300,6 +300,7 @@ initData = {
     , autoScrollTimerId : ""
     , autoScroll : true
     , enableChatWidget : false
+    , chooseVehicleSheetState : HALF_EXPANDED
     , sosBannerType : Nothing
     , showShareRide : false
     , followsRide: false

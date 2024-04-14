@@ -17,11 +17,11 @@ import Helpers.Utils as HU
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
-import JBridge (getLayoutBounds)
+import JBridge (getLayoutBounds, getHeightFromPercent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), (<>), const, pure, unit, not, show, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-), (/=))
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml)
+import Prelude (Unit, ($), (<>), const, pure,discard, unit, not, show, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-), (/=))
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..),nestedScrollView, Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml, onStateChanged)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
@@ -42,32 +42,42 @@ view push config =
     , clipChildren false
     , gravity BOTTOM
     , orientation VERTICAL
+    -- , id $ EHC.getNewIDWithTag "ChooseYourRideLayout"
+    , afterRender push $ const $ UpdateMapPadding (getPeekHeight config isSingleEstimate) (calculateHalfExpandedHeight (getPeekHeight config isSingleEstimate) 0.7) "6"
     ]
     [ 
-      -- linearLayout
-      -- [ height WRAP_CONTENT
-      -- , width MATCH_PARENT
-      -- , orientation VERTICAL
-      -- , alignParentBottom "true,-1"
-      -- ]
-      -- [ 
-        -- coordinatorLayout
-        -- [ height WRAP_CONTENT
-        -- , width MATCH_PARENT
-        -- ]
-        -- [
-          --  bottomSheetLayout
-          -- [ height WRAP_CONTENT
-          -- , width MATCH_PARENT
-          -- , background Color.transparent
-          -- , accessibility DISABLE
-          -- , peakHeight $ getPeekHeight config isSingleEstimate
-          -- , topShift 0.0
-          -- , sheetState COLLAPSED
-          -- , bottomShift 1.0
-          -- , orientation VERTICAL
-          -- ]
-          -- [ 
+      linearLayout
+      [ height $ WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , alignParentBottom "true,-1"
+      , id $ EHC.getNewIDWithTag "chooseRideLayout"
+      ]
+      [ 
+        coordinatorLayout
+        [ height $ WRAP_CONTENT
+        , width MATCH_PARENT
+        ]
+        [
+           bottomSheetLayout
+          [ height $ WRAP_CONTENT
+          , width MATCH_PARENT
+          , accessibility DISABLE
+          , peakHeight $ spy "bottoms zxc h :" $ getPeekHeight config isSingleEstimate
+          , halfExpandedRatio 0.7
+          , onStateChanged 
+              (\action -> do
+                case action of 
+                  ScrollStateChanged val -> do
+                    push (UpdateMapPadding (getPeekHeight config isSingleEstimate) (calculateHalfExpandedHeight (getPeekHeight config isSingleEstimate) 0.7) val)
+                    push (ScrollStateChanged val) 
+                  _ -> push action
+                pure unit
+              ) ScrollStateChanged
+          , sheetState HALF_EXPANDED
+          , orientation VERTICAL
+          ]
+          [ 
             linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
@@ -76,14 +86,15 @@ view push config =
             [ chooseYourRideView push config isSingleEstimate
             -- , bottomDummyView push config
             ]
-          -- ]
-        -- ]
-      -- ]
+          ]
+        ]
+      ]
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
       , background Color.white900
+      , id $ EHC.getNewIDWithTag "bottomButtonLayout"
       , alignParentBottom "true,-1"
       , clickable true
       -- , margin $ MarginTop 8
@@ -94,25 +105,28 @@ view push config =
       , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config) ]
     ]
   where
+    -- getHeight :: String -> Length
+    -- getHeight _ = if (runFn1 getLayoutBounds (EHC.getNewIDWithTag "ChooseYourRideLayout")).height > (EHC.screenHeight unit -300)
+    --                            then V $ EHC.screenHeight unit - 300
+    --                            else WRAP_CONTENT
+    calculateHalfExpandedHeight :: Int -> Number -> Int
+    calculateHalfExpandedHeight peekHeight halfExpandedRatio =
+      let
+        z = runFn1 getLayoutBounds $ EHC.getNewIDWithTag "chooseRideLayout"
+        expandedPart =  (toNumber (z.height - peekHeight)) * halfExpandedRatio
+      in
+        peekHeight + (ceil expandedPart)
     getPeekHeight :: Config -> Boolean -> Int
     getPeekHeight config isSingleEstimate = 
       let
-        headerLayout = runFn1 getLayoutBounds $ EHC.getNewIDWithTag "rideEstimateHeaderLayout"
-        bottomButtonLayout = runFn1 getLayoutBounds $ EHC.getNewIDWithTag "bottomButtonLayout"
-        len = length config.quoteList
-        quoteHeight = HU.getDefaultPixelSize $ config.selectedEstimateHeight
-        estimateItemHeight = if quoteHeight == 0 then (if isSingleEstimate then 48 else 84) else quoteHeight
-        quoteViewVisibleHeight = if len > 2 then (3 * estimateItemHeight) else (len * estimateItemHeight) + (estimateItemHeight / 2)
-        
         pixels = runFn1 HU.getPixels FunctionCall
         density = (runFn1 HU.getDeviceDefaultDensity FunctionCall) / defaultDensity
-
-        currentPeekHeight = headerLayout.height + quoteViewVisibleHeight + bottomButtonLayout.height
-        requiredPeekHeight = if EHC.os == "IOS" 
-                             then ceil ((toNumber (currentPeekHeight+ 270)) / pixels) 
-                             else ceil ((toNumber currentPeekHeight / pixels) * density) 
+        currentPeekHeight = (getQuoteListViewHeightInt config isSingleEstimate)
+        -- requiredPeekHeight = if EHC.os == "IOS" 
+        --                      then ceil ((toNumber (currentPeekHeight+ 270)) / pixels) 
+        --                      else ceil ((toNumber currentPeekHeight / pixels) * density) 
       in 
-        if requiredPeekHeight == 0 then 470 else requiredPeekHeight
+        if currentPeekHeight == 0 then 470 else currentPeekHeight
 
 addTipView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 addTipView push state = 
@@ -232,23 +246,6 @@ tipsHorizontalView push state =
       ) state.customerTipArray
     )
   ]
- 
-bottomDummyView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-bottomDummyView push config =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , background Color.white900
-    , id $ EHC.getNewIDWithTag "bottomButtonLayout"
-    , padding $ Padding 16 10 16 16
-    ][ linearLayout
-        [ width MATCH_PARENT
-        , height $ V if EHC.os == "IOS" then 70 else 24
-        , visibility $ boolToVisibility $ config.bookingPreferenceEnabled
-        ][]
-    , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config)
-    ]
 
 bookingPreferencesView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 bookingPreferencesView push config = 
@@ -471,13 +468,27 @@ chooseYourRideView push config isSingleEstimate =
         , padding $ PaddingTop if EHC.os == "IOS" then 13 else 7
         , stroke $ "1," <> Color.grey900
         , gravity CENTER
+        , id $ EHC.getNewIDWithTag "rideEstimateHeaderLayout"
         , cornerRadii $ Corners 24.0 true true false false
         ][ linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
-            , id $ EHC.getNewIDWithTag "rideEstimateHeaderLayout"
-            ][ textView (
+            ][ 
+              linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , gravity CENTER_HORIZONTAL
+                ][
+                linearLayout
+                 [background Color.transparentGrey
+                 , height $ V 4
+                 , width $ V 34
+                 , margin (MarginVertical 8 6)
+                 , cornerRadius if EHC.os == "IOS" then 2.0 else 4.0
+                 ][]
+                ]
+              , textView (
                 [ text 
                     if length config.quoteList > 1 
                     then (getString CHOOSE_YOUR_RIDE)
@@ -550,14 +561,16 @@ quoteListView push config isSingleEstimate =
     , margin $ MarginTop 16
     , afterRender push (const NoAction)
     ]
-    [ scrollView
-      [ height $ getQuoteListViewHeight config isSingleEstimate
+    [ scrollView  
+      [ height $ scrollViewHeight config isSingleEstimate
+      -- WRAP_CONTENT -- $ getQuoteListViewHeight config isSingleEstimate
+      , nestedScrollView $ length config.quoteList > 4
       , width MATCH_PARENT
       ][  linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
-          , padding $ PaddingBottom 10
           , margin $ MarginHorizontal 16 16
+          , padding $ PaddingBottom (if EHC.os == "IOS" then 40 else 10)
           , orientation VERTICAL
           ]( mapWithIndex
               ( \index item -> 
@@ -571,6 +584,25 @@ getQuoteListViewHeight config isSingleEstimate =
         quoteHeight = HU.getDefaultPixelSize $ config.selectedEstimateHeight
         height = if quoteHeight == 0 then (if isSingleEstimate then 48 else 84) else quoteHeight
     in V $ (if len >= 4 then 3 * height else len * height) + if len == 1 then 16 else 5
+
+scrollViewHeight :: Config -> Boolean -> Length
+scrollViewHeight config isSingleEstimate =
+  let 
+    len = length config.quoteList
+    quoteHeight = HU.getDefaultPixelSize $ config.selectedEstimateHeight
+    height = if quoteHeight == 0 then (if isSingleEstimate then 48 else 84) else quoteHeight
+    totalHeight = len * height + if len == 1 then 16 else 5
+    iosmh = HU.getDefaultPixelSize $ EHC.screenHeight unit - 200
+    andmh = (getHeightFromPercent 50)
+    maxHeight =if EHC.os == "IOS" then iosmh else andmh -- HU.getDefaultPixelSize $ EHC.screenHeight unit - if (EHC.os == "IOS") then 350 else (getHeightFromPercent 60)
+  in 
+    V $ if (spy "totalHeight zxc " totalHeight) > (spy "maxheight zxc " maxHeight) then maxHeight else totalHeight
+getQuoteListViewHeightInt :: Config -> Boolean -> Int
+getQuoteListViewHeightInt config isSingleEstimate =
+    let len = length config.quoteList
+        quoteHeight = HU.getDefaultPixelSize $ config.selectedEstimateHeight
+        height = if quoteHeight == 0 then (if isSingleEstimate then 48 else 84) else quoteHeight
+    in height + 120 -- (if len >= 4 then 4 * (height) else (len+1) * height) + if len == 1 then 80 else 5
 
 primaryButtonRequestRideConfig :: Config -> PrimaryButton.Config
 primaryButtonRequestRideConfig config = PrimaryButton.config
