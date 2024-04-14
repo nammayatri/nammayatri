@@ -122,7 +122,9 @@ rideActionModalConfig state =
     startODOReading = fromMaybe "--" $ show <$> state.data.activeRide.startOdometerReading,
     tollText = state.props.hasToll,
     driverVehicle = state.data.activeRide.driverVehicle,
-    cityConfig = state.data.cityConfig
+    cityConfig = state.data.cityConfig,
+    serviceTierAndAC = state.data.activeRide.serviceTier,
+    capacity = state.data.activeRide.capacity
     }
     in rideActionModalConfig'
 
@@ -1312,6 +1314,8 @@ getRideCompletedConfig state = let
   pspIcon = (Const.getPspIcon payerVpa)
   config' = config{
     isFreeRide = state.props.isFreeRide,
+    serviceTierAndAC = state.data.endRideData.serviceTier,
+    capacity = state.data.endRideData.capacity,
     primaryButtonConfig {
       width = MATCH_PARENT,
       margin = MarginTop 0,

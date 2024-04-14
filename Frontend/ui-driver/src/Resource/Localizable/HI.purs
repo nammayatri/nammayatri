@@ -1364,3 +1364,6 @@ getHI stringKey =
         TOLL_ROAD_CHANGED -> "टोल रोड नहीं लिए जाने से टोल शुल्क कम हो गया"
         RIDE_TOLL_FARE_INCLUDES -> "*सवारी किराये में टोल शुल्क शामिल है।"
         TOLL_INCLUDED -> "टोल (किराया में शामिल)"
+        TRIP_TIME -> "यात्रा का समय"
+        EARNINGS_PER_KM -> "प्रति किमी आय"
+        OPTIONAL_DOCUMENT -> "वैकल्पिक दस्तावेज़"

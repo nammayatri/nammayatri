@@ -1365,3 +1365,6 @@ getBN stringKey =
         TOLL_ROAD_CHANGED -> "টোল রোড নেওয়া না হওয়ায় টোল চার্জ কমে গেছে"
         RIDE_TOLL_FARE_INCLUDES -> "*রাইডের ভাড়া টোল চার্জ অন্তর্ভুক্ত।"
         TOLL_INCLUDED -> "টোল (ভাড়ায় অন্তর্ভুক্ত)"
+        TRIP_TIME -> "ট্রিপ টাইম"
+        EARNINGS_PER_KM -> "প্রতি কিমি আয়"
+        OPTIONAL_DOCUMENT -> "ঐচ্ছিক নথি"

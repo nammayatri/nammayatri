@@ -2355,13 +2355,31 @@ homeScreenFlow = do
                     specialZoneImage = specialZoneConfig.imageUrl,
                     specialZoneText = specialZoneConfig.text,
                     specialZonePickup = isSpecialPickUpZone,
-                    tollCharge = fromMaybe 0 response.tollCharges
+                    tollCharge = fromMaybe 0 response.tollCharges,
+                    vehicleModel = response.vehicleModel,
+                    rideType = response.vehicleServiceTierName,
+                    tripStartTime = response.tripStartTime,
+                    tripEndTime = response.tripEndTime
                   }})
                 let payerVpa = fromMaybe "" response.payerVpa
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
                   { data {
                       activeRide {endOdometerReading = (\(API.OdometerReading {value}) -> value) <$> response.endOdometerReading}, 
-                      endRideData {actualTollCharge = fromMaybe 0 response.tollCharges, estimatedTollCharge = fromMaybe 0 response.estimatedTollCharges, actualRideDuration = response.actualDuration,actualRideDistance = response.chargeableDistance, finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag, payerVpa = payerVpa, specialZonePickup = if isSpecialPickUpZone then Just true else Nothing }
+                      endRideData { 
+                        actualTollCharge = fromMaybe 0 response.tollCharges, 
+                        estimatedTollCharge = fromMaybe 0 response.estimatedTollCharges, 
+                        actualRideDuration = response.actualDuration,
+                        actualRideDistance = response.chargeableDistance, 
+                        finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, 
+                        riderName = fromMaybe "" response.riderName, 
+                        rideId = response.id, 
+                        tip = response.customerExtraFee, 
+                        disability = response.disabilityTag, 
+                        payerVpa = payerVpa, 
+                        specialZonePickup = if isSpecialPickUpZone then Just true else Nothing,
+                        capacity = response.vehicleCapacity,
+                        serviceTier = response.vehicleServiceTierName
+                        }
                     },
                     props {
                       isFreeRide = fromMaybe false response.isFreeRide
@@ -3745,7 +3763,11 @@ driverEarningsFlow = do
       specialZoneText = selectedCard.specialZoneText,
       specialZonePickup = selectedCard.specialZonePickup,
       tollCharge = selectedCard.tollCharge,
-      goBackTo = ST.Earning
+      goBackTo = ST.Earning,
+      rideType = selectedCard.rideType,
+      tripStartTime = selectedCard.tripStartTime,
+      tripEndTime = selectedCard.tripEndTime,
+      vehicleModel = selectedCard.vehicleModel
       }})
       tripDetailsScreenFlow
     LOAD_MORE_HISTORY state -> do

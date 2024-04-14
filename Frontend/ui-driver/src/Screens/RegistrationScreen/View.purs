@@ -392,7 +392,7 @@ vehicleSpecificList push state registerationSteps =
         , visibility $ boolToVisibility $ length optionalDocs > 0
         , onClick push $ const ExpandOptionalDocs
         ][ textView $
-            [ text "Optional Document"
+            [ text $ getString OPTIONAL_DOCUMENT
             , color Color.black800
             ] <> FontStyle.body1 TypoGraphy
           , imageView

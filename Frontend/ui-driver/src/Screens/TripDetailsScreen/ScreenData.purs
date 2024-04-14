@@ -45,7 +45,12 @@ initData = {
       goBackTo : ST.Earning,
       config : DC.config,
       specialZonePickup : false ,
-      tollCharge : 0
+      tollCharge : 0,
+      rideType : "",
+      tripStartTime : Nothing,
+      tripEndTime : Nothing,
+      vehicleModel : ""
+
   },
   props: {
     rating : 4,

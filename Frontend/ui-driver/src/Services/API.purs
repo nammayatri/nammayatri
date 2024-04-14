@@ -598,7 +598,11 @@ newtype RidesInfo = RidesInfo
       startOdometerReading :: Maybe OdometerReading,
       endOdometerReading :: Maybe OdometerReading,
       tollCharges :: Maybe Int,
-      estimatedTollCharges :: Maybe Int
+      estimatedTollCharges :: Maybe Int,
+      vehicleServiceTierName :: String,
+      vehicleServiceTier :: String,
+      isVehicleAirConditioned :: Maybe Boolean,
+      vehicleCapacity :: Maybe Int
   }
 
 newtype OdometerReading = OdometerReading

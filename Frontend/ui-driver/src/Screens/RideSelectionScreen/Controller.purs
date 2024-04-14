@@ -238,6 +238,9 @@ rideListResponseTransformer list categoryAction =
     , specialZonePickup : false
     , tripType : rideTypeConstructor ride.tripCategory
     , tollCharge : fromMaybe 0 ride.tollCharges
+    , rideType : ride.vehicleServiceTierName
+    , tripStartTime : ride.tripStartTime
+    , tripEndTime : ride.tripEndTime
     }
   ) (filter (\(RidesInfo ride) -> ((ride.status /= "CANCELLED" && categoryAction == "LOST_AND_FOUND") || (categoryAction /= "LOST_AND_FOUND"))) list))
 

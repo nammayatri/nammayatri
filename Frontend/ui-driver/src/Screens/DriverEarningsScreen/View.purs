@@ -1875,13 +1875,22 @@ historyViewItemForEarnings push item state index =
                     ]
                   <> FontStyle.captions TypoGraphy
               , linearLayout
-                  [ height WRAP_CONTENT
-                  , width WRAP_CONTENT
-                  , background $ Color.grey900
-                  , cornerRadius 26.0
-                  , padding $ PaddingHorizontal 5 5
-                  ]
-                  (map (\name -> (tagview name)) item.tagImages)
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                ][  imageView
+                    [ width $ V 20
+                    , height $ V 20
+                    , margin $ MarginRight 5
+                    , imageWithFallback $ fetchImage FF_ASSET $ getVehicleVariantImage item.vehicleVariant
+                    ]
+                , linearLayout
+                    [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , background $ Color.grey900
+                    , cornerRadius 26.0
+                    , padding $ PaddingHorizontal 5 5
+                    ] (map (\name -> (tagview name)) item.tagImages)
+                ]
               ]
           , linearLayout
               [ height WRAP_CONTENT

@@ -1364,3 +1364,6 @@ getML stringKey =
         TOLL_ROAD_CHANGED -> "ടോൾ റോഡ് എടുക്കാത്തതിനാൽ ടോൾ നിരക്കുകൾ കുറച്ചു"
         RIDE_TOLL_FARE_INCLUDES -> "*റൈഡ് നിരക്കിൽ ടോൾ നിരക്കുകളും ഉൾപ്പെടുന്നു."
         TOLL_INCLUDED -> "ടോൾ (നിരക്കിൽ ഉൾപ്പെടുത്തിയിരിക്കുന്നു)"
+        TRIP_TIME -> "ട്രിപ്പ് സമയം"
+        EARNINGS_PER_KM -> "ഒരു കിലോമീറ്ററിന് വരുമാനം"
+        OPTIONAL_DOCUMENT -> "ഓപ്ഷണൽ ഡോക്യുമെൻ്റ്"

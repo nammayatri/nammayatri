@@ -1364,3 +1364,6 @@ getTA stringKey =
         TOLL_ROAD_CHANGED -> "டோல் ரோடு எடுக்கப்படாததால் டோல் கட்டணம் குறைக்கப்பட்டது"
         RIDE_TOLL_FARE_INCLUDES -> "*சவாரி கட்டணத்தில் டோல் கட்டணங்களும் அடங்கும்."
         TOLL_INCLUDED -> "டோல் (கட்டணத்தில் சேர்க்கப்பட்டுள்ளது)"
+        TRIP_TIME -> "பயண நேரம்"
+        EARNINGS_PER_KM -> "ஒரு கிமீ வருவாய்"
+        OPTIONAL_DOCUMENT -> "விருப்ப ஆவணம்"

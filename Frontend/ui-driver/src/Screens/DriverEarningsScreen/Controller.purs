@@ -208,6 +208,7 @@ eval (CoinTransactionResponseAction (CoinTransactionRes resp)) state = do
             , destination: Nothing
             , status: Nothing
             , tagImages: []
+            , vehicleVariant : ""
             }
         )
         resp.coinTransactionHistory
@@ -243,6 +244,7 @@ eval (CoinUsageResponseAction (CoinsUsageRes resp)) state = do
             , destination: Nothing
             , status: Nothing
             , tagImages: []
+            , vehicleVariant : ""
             }
         )
         resp.coinUsageHistory
@@ -504,7 +506,10 @@ rideHistoryItemTransformer (RidesInfo ride) =
     specialZoneImage : specialLocationConfig.imageUrl,
     specialZoneText : specialLocationConfig.text,
     specialZonePickup : checkSpecialPickupZone ride.specialLocationTag,
-    tollCharge : fromMaybe 0 ride.tollCharges
+    tollCharge : fromMaybe 0 ride.tollCharges,
+    rideType : ride.vehicleServiceTierName,
+    tripStartTime : ride.tripStartTime,
+    tripEndTime : ride.tripEndTime
   }
 
 getDisabilityType :: Maybe String -> Maybe DisabilityType
@@ -530,6 +535,7 @@ earningHistoryItemsListTransformer list =
           , event: ""
           , tagImages: getTagImages (RidesInfo ride)
           , cash: 0.0
+          , vehicleVariant : ride.vehicleVariant
           }
       )
       list
@@ -729,7 +735,11 @@ dummyRideHistoryItem = RidesInfo {
       startOdometerReading : Nothing,
       endOdometerReading : Nothing,
       tollCharges : Nothing,
-      estimatedTollCharges : Nothing
+      estimatedTollCharges : Nothing,
+      vehicleServiceTierName : "",
+      vehicleServiceTier : "",
+      isVehicleAirConditioned : Nothing,
+      vehicleCapacity : Nothing
   }
 
 dummyLocationInfo :: LocationInfo
