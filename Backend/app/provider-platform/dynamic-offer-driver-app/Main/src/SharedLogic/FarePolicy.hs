@@ -211,14 +211,17 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
         <> (nightShiftChargeBreakups det.nightShiftCharge)
       where
         mkPerExtraKmStepFareItem perExtraKmStepFareItems [] _ = perExtraKmStepFareItems
-        mkPerExtraKmStepFareItem perExtraKmStepFareItems [s1] startDistance = do
-          let perExtraKmStepFareCaption = show $ Tags.EXTRA_PER_KM_STEP_FARE startDistance Nothing
+        mkPerExtraKmStepFareItem perExtraKmStepFareItems [s1] baseDistance = do
+          let startDistance = s1.startDistance.getMeters + baseDistance
+              perExtraKmStepFareCaption = show $ Tags.EXTRA_PER_KM_STEP_FARE startDistance Nothing
               perExtraKmStepFareItem = mkBreakupItem perExtraKmStepFareCaption (mkValue $ show (round s1.perExtraKmRate :: Money))
           perExtraKmStepFareItems <> [perExtraKmStepFareItem]
-        mkPerExtraKmStepFareItem perExtraKmStepFareItems (s1 : s2 : ss) startDistance = do
-          let perExtraKmStepFareCaption = show $ Tags.EXTRA_PER_KM_STEP_FARE startDistance (Just s2.startDistance.getMeters)
+        mkPerExtraKmStepFareItem perExtraKmStepFareItems (s1 : s2 : ss) baseDistance = do
+          let startDistance = s1.startDistance.getMeters + baseDistance
+              endDistance = s2.startDistance.getMeters + baseDistance
+              perExtraKmStepFareCaption = show $ Tags.EXTRA_PER_KM_STEP_FARE startDistance (Just endDistance)
               perExtraKmStepFareItem = mkBreakupItem perExtraKmStepFareCaption (mkValue $ show (round s1.perExtraKmRate :: Money))
-          mkPerExtraKmStepFareItem (perExtraKmStepFareItems <> [perExtraKmStepFareItem]) (s2 : ss) s2.startDistance.getMeters
+          mkPerExtraKmStepFareItem (perExtraKmStepFareItems <> [perExtraKmStepFareItem]) (s2 : ss) baseDistance
 
     mkAdditionalSlabBreakups det = do
       let baseDistanceCaption = show Tags.BASE_DISTANCE
