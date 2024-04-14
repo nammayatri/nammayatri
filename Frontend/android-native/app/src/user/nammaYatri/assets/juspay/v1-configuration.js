@@ -270,7 +270,7 @@ window.getMerchantConfig = function () {
         },
         "sedan" : {
           "name" : "Sedan",
-          "image" : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png"
+          "image" : "ny_ic_sedan_ac_new,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png"
         },
         "taxi" : {
           "name" : "Non-AC Taxi",
