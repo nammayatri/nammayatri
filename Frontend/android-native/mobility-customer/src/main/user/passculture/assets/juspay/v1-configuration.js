@@ -124,6 +124,7 @@ window.getMerchantConfig = function () {
     "nyBrandingVisibility": false,
     "fontType": "Assets",
     "tipEnabledCities" : ["Bangalore", "Hyderabad"],
+    "maxVehicleIconsToShowOnMap" : 10,
     "black900": "#2C2F3A",
     "black800": "#454545",
     "showHamMenu" : true,

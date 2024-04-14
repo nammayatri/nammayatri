@@ -836,8 +836,8 @@ driverLocationTracking push action duration id routeState = do
               newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
 
               point = { lat: srcLat, lng: srcLon }
-              srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
-              destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = ride.destination }
+              srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker }
+              destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = ride.destination }
             addSosMarkers state.data.sosStatus point
             void $ liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
             liftFlow $ animateCamera srcLat srcLon 16.0 "ZOOM"
@@ -977,8 +977,8 @@ updateMockData push state id = defaultMockInviteFlow id state
   drawDriverRoute :: DriverInfoCard -> Paths -> Maybe Route -> Boolean -> Flow GlobalState Unit
   drawDriverRoute ride srcPoint route showRipples = do
     let markers = normalRoute ""
-        srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = getString SOS_LOCATION }
-        destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = getString DROP }
+        srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker, primaryText = getString SOS_LOCATION }
+        destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = getString DROP }
     void $ runExceptT $ runBackT $ drawMapRoute srcPoint.lat srcPoint.lng ride.destinationLat ride.destinationLng srcMarkerConfig destMarkerConfig "NORMAL" route "trip" $ (HSConfig.specialLocationConfig "" "" false getPolylineAnimationConfig) { autoZoom = false }
     when showRipples $ do
       liftFlow $ addAndUpdateSOSRipples srcPoint

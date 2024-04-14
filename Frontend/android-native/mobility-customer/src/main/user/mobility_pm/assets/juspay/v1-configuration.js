@@ -181,6 +181,7 @@ window.getMerchantConfig = function () {
     "defaultLanguage": "EN_US",
     "fontKannada": "Roboto",
     "tipEnabledCities" : ["Bangalore", "Hyderabad"],
+    "maxVehicleIconsToShowOnMap" : 10,
     "fontName": "Roboto"
     , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"

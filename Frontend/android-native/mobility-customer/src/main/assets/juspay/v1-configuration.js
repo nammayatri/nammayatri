@@ -52,6 +52,7 @@ window.getMerchantConfig = function () {
     "isGradient": "false",
     "gradient": [],
     "tipEnabledCities" : ["Bangalore", "Hyderabad"],
+    "maxVehicleIconsToShowOnMap" : 10,
     "primaryTextColor": "#FFFFFF",
     "primaryBackground": "#D63941",
     "estimateConfirmText": "",

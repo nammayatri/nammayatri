@@ -58,8 +58,9 @@ import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl, index, mapWithIndex, find, updateAt, insert, delete, tail)
-import Data.Function.Uncurried (runFn3)
+import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl, index, mapWithIndex, find, updateAt, insert, delete, tail, take)
+import Data.Function.Uncurried (runFn3, runFn2)
+import Data.Foldable (foldMap)
 import Data.Int (toNumber, round, fromString, fromNumber, ceil)
 import Data.Lens ((^.), view)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
@@ -76,13 +77,13 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWi
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation)
+import Helpers.Utils (shuffle, addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig)
+import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, removeAllMarkers, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, defaultMarkerConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo, logStatus)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<), min)
 import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (BottomSheetState(..), Eval, update, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
@@ -96,11 +97,11 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, dummyEstimateEntity)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..), City(..))
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..), City(..), ActiveDrivers(..), LatLongAndId(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
-import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
+import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore, deleteValueFromLocalStore)
 import Control.Monad.Trans.Class (lift)
 import Presto.Core.Types.Language.Flow (doAff)
 import Effect.Class (liftEffect)
@@ -1499,6 +1500,8 @@ eval BackPressed state = do
     SettingPrice -> do
       void $ pure $ performHapticFeedback unit
       void $ pure $ clearTimerWithId state.props.repeatRideTimerId
+      void $ pure $ deleteValueFromLocalStore ANIMATE_MARKERS_ON_MAP_ID
+      void $ pure $ removeVehicleIconsFromMap state.data.activeDriversLatLng
       let updatedState = state{props{repeatRideTimer = "", repeatRideTimerId = "", isSearchCancelled = false}}
       if updatedState.props.showRateCard then 
         if updatedState.data.rateCard.currentRateCardType /= DefaultRateCard then
@@ -2162,6 +2165,8 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
       lon = if isDestinationNotEmpty then state.props.destinationLong else state.props.sourceLong
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ removeAllPolylines ""
+  void $ pure $ deleteValueFromLocalStore ANIMATE_MARKERS_ON_MAP_ID
+  void $ pure $ removeVehicleIconsFromMap state.data.activeDriversLatLng
   _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon state.props.confirmLocationCategory }}
   pure $ unsafePerformEffect $ logEvent state.data.logField if state.props.isSource == Just true  then "ny_user_src_set_location_on_map" else "ny_user_dest_set_location_on_map"
   let srcValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source
@@ -2647,7 +2652,9 @@ eval (UpdateLocAndLatLong lat lng) state = do
       slng = fromMaybe 0.0 (NUM.fromString lng)
   continueWithCmd state{props{currentLocation { lat = slat, lng = slng } , sourceLat = slat, sourceLong = slng , locateOnMapLocation {sourceLat = slat, sourceLng = slng, source = state.data.source, sourceAddress = state.data.sourceAddress}}} [do
     if os == "IOS" && state.props.currentStage == HomeScreen then do
-      _ <- addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 (0.5) (0.9)
+      let markerName = getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)
+          markerConfig = defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
+      void $ showMarker markerConfig 9.9 9.9 160 0.5 0.9
       pure unit
       else pure unit
     pure NoAction
@@ -2719,9 +2726,11 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
       (Tuple estimateId otherSelectedEstimates) = spy "Praveen" $ getEstimateId state.data.specialZoneQuoteList state.data.selectedEstimatesObject 
   _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
   void $ pure $ setValueToLocalStore SELECTED_VARIANT (state.data.selectedEstimatesObject.vehicleVariant)
+  void $ pure $ deleteValueFromLocalStore ANIMATE_MARKERS_ON_MAP_ID
+  void $ pure $ removeVehicleIconsFromMap state.data.activeDriversLatLng
   if state.data.currentSearchResultType == QUOTES then  do
     _ <- pure $ updateLocalStage ConfirmingRide
-    exit $ ConfirmRide state{props{currentStage = ConfirmingRide}}
+    updateAndExit state{props{currentStage = ConfirmingRide}} $ ConfirmRide state{props{currentStage = ConfirmingRide}}
   else if state.data.iopState.showMultiProvider then do 
     void $  pure $ updateLocalStage ProviderSelection 
     exit $ Cancel state { data { iopState { providerSelectionStage = true}, otherSelectedEstimates = otherSelectedEstimates}, props {estimateId = estimateId}}
@@ -2770,7 +2779,9 @@ eval MapReadyAction state = do
       permissionConditionB <- isLocationEnabled unit
       internetCondition <- isInternetAvailable unit
       when (state.props.currentStage == HomeScreen) $ do
-        void $ addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 (0.5) (0.9)
+        let markerName = getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)
+            markerConfig = defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
+        void $ showMarker markerConfig 9.9 9.9 160 0.5 0.9
       let action =  if( not internetCondition) then TriggerPermissionFlow INTERNET_ACTION
                     else if ( not (permissionConditionA && permissionConditionB)) then TriggerPermissionFlow LOCATION_DISABLED
                     else CheckAndAskNotificationPermission
@@ -3023,7 +3034,9 @@ updateFeedback feedbackId feedbackItem feedbackList =
 showPersonMarker :: HomeScreenState -> String -> JB.Location -> Effect Unit
 showPersonMarker state marker location = do
   when (state.props.currentStage == HomeScreen) $ do
-    void $ addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) location.lat location.lng 160 0.5 0.9
+    let markerName = getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)
+        markerConfig = defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
+    void $ showMarker markerConfig location.lat location.lng 160 0.5 0.9
   void $ pure $ printLog "Location :: " location
   animateCamera location.lat location.lng zoomLevel "ZOOM"
 
@@ -3172,8 +3185,10 @@ recenterCurrentLocation state = continueWithCmd state [ do
       _ <- pure $ currentPosition "NO_ZOOM"
       pure unit
     else do
+      let markerName = getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)
+          markerConfig = defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
       _ <- pure $ currentPosition ""
-      _ <- addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 (0.5) (0.9)
+      void $ showMarker markerConfig 9.9 9.9 160 0.5 0.9
       pure unit
     -- let newState = state{data{source = state.props.currentLocation.place}}
     pure NoAction
@@ -3321,6 +3336,7 @@ estimatesListFlow estimates state count = do
       nearByDrivers = getNearByDrivers estimates
       nearByDriversLength = length nearByDrivers
       (Tuple estimateId otherSelectedEstimates) = if defaultQuote.vehicleVariant == "BOOK_ANY" then getSelectedEstimates defaultQuote quoteList else (Tuple defaultQuote.id []) 
+      activeDriversLatLng = getActiveDriversInfo estimates state
       _ = runFn2 updatePushInIdMap "EstimatePolling" true
       quoteList' = map (\quote -> quote{activeIndex = defaultQuote.index}) quoteList
 
@@ -3334,6 +3350,7 @@ estimatesListFlow estimates state count = do
         , currentSearchResultType = ESTIMATES
         , selectedEstimatesObject = defaultQuote
         , nearByDrivers = if nearByDriversLength > 0 then Just nearByDriversLength else Nothing
+        , activeDriversLatLng = activeDriversLatLng
         , iopState { 
           showPrefButton = state.data.currentCityConfig.iopConfig.enable && (not (null topProviderEstimates)) && (not newState.props.isRepeatRide)
           , providerPrefInfo = state.data.iopState.providerPrefInfo
@@ -3485,6 +3502,49 @@ getPeekHeight state =
 
 checkRecentRideVariant :: HomeScreenState -> Boolean
 checkRecentRideVariant state = any (\item -> item.providerType == ONUS && isJust item.serviceTierName && item.serviceTierName == state.props.repeatRideServiceTierName) state.data.specialZoneQuoteList 
+
+getActiveDriversInfo :: Array EstimateAPIEntity -> HomeScreenState -> Array ActiveDrivers
+getActiveDriversInfo estimates state = do
+  let allActiveDrivers = getAllActiveDriversInfo estimates state.props.city state.props.sourceLat state.props.sourceLong
+      totalDrivers = foldl ( \acc item -> acc + item.driversToShowOnMap) 0 allActiveDrivers
+      totalIconsToShow = min state.data.config.maxVehicleIconsToShowOnMap totalDrivers
+  map ( \item -> do
+        let numberOfIconsToShow = ceil (toNumber(item.driversToShowOnMap * totalIconsToShow) / toNumber(totalDrivers))
+            sortedDriversLatLngByDist = sortBy (\a b -> compare (a.distFromSource) (b.distFromSource)) item.driversLatLongAndId
+            driverLatLongsToStore = min (length sortedDriversLatLngByDist) (2 * numberOfIconsToShow)
+        { 
+          vehicleVariant : item.vehicleVariant, 
+          driversLatLongAndId : shuffle $ take driverLatLongsToStore sortedDriversLatLngByDist,
+          driversToShowOnMap : numberOfIconsToShow,
+          shouldAnimate : if length sortedDriversLatLngByDist >= 2 * numberOfIconsToShow then true else false
+        }
+      ) allActiveDrivers
+
+
+getAllActiveDriversInfo :: Array EstimateAPIEntity -> City -> Number -> Number -> Array ActiveDrivers
+getAllActiveDriversInfo estimates city sourceLat sourceLong = 
+  map (\(EstimateAPIEntity item) -> do 
+    let vehicleIcon = Remote.getCitySpecificMarker city item.vehicleVariant
+    { 
+      vehicleVariant : item.vehicleVariant, 
+      driversLatLongAndId : mapWithIndex (\index item -> do
+        let (LatLong latlong) = item
+        {
+          id : vehicleIcon <> show index, 
+          latLong : item, 
+          distFromSource : getDistanceBwCordinates sourceLat sourceLong latlong.lat latlong.lon,
+          randomRotation : fromMaybe 0.0 (NUM.fromString $ getRandomID 360)
+        }) item.driversLatLong,
+      driversToShowOnMap : length item.driversLatLong,
+      shouldAnimate : false
+    }
+  ) estimates
+
+removeVehicleIconsFromMap :: Array ActiveDrivers -> Unit
+removeVehicleIconsFromMap activeDrivers = do
+  foldMap (\item ->
+    foldMap (\dl -> removeMarker dl.id) item.driversLatLongAndId
+  ) activeDrivers
 
 checkRecentRideVariantInEstimates :: Array EstimateAPIEntity -> Maybe String -> Boolean
 checkRecentRideVariantInEstimates estimates repeatRideServiceName = any (\(EstimateAPIEntity item) -> item.isValueAddNP == Just true && isJust item.serviceTierName && item.serviceTierName == repeatRideServiceName) estimates 

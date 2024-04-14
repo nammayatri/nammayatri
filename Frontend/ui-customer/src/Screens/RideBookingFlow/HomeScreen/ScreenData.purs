@@ -167,6 +167,7 @@ initData = {
     , nearByDrivers : Nothing
     , disability : Nothing
     , searchLocationModelData : dummySearchLocationModelData
+    , activeDriversLatLng : []
     , waitTimeInfo : false
     , lastSentMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , lastReceivedMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }

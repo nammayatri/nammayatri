@@ -582,24 +582,21 @@ export const openUrlInMailApp = function (str) {
   };
 };
 
-export const addMarkerImpl = function (title) {
-  return function (lat) {
-    return function (lng) {
-      return function (markerSize) {
-        return function (anchorV) {
-          return function (anchorV1) {
-            return function () {
-              console.log("I AM HERE ------------------");
-              window.JBridge.upsertMarker(title, lat, lng, markerSize, anchorV, anchorV1);
-              return true;
-            };
-          }
-        }
-      }
-    };
-  };
-};
+export const showMarkerImpl = function (markerConfig, lat, lng, markerSize, anchorV, anchorV1) {
+  if (window.__OS == "IOS" && window.JBridge.showMarker) {
+    window.JBridge.showMarker(JSON.stringify(markerConfig), lat, lng, false);
+  } else if(window.__OS == "ANDROID" && window.JBridge.showMarker){
+    window.JBridge.showMarker(JSON.stringify(markerConfig), lat, lng, markerSize, anchorV, anchorV1);
+  } else {
+    window.JBridge.upsertMarker(markerConfig.pointerIcon, lat, lng, markerSize, anchorV, anchorV1);
+  }
+}
 
+export const fadeInFadeOutMarker = function (animationType, markerId) {
+  if (window.JBridge.fadeInFadeOutMarker) {
+    window.JBridge.fadeInFadeOutMarker(animationType, markerId);
+  }
+}
 
 export const removeMarker = function (title) {
   try {
@@ -608,6 +605,12 @@ export const removeMarker = function (title) {
   } catch (e) {
     console.log(e);
     console.log("error in removeMarker----------------------------------", e);
+  }
+};
+
+export const removeAllMarkers = function (id) {
+  if(window.JBridge.removeAllMarkers) {
+    window.JBridge.removeAllMarkers(); 
   }
 };
 
@@ -623,7 +626,6 @@ export const methodArgumentCount = function (functionName) {
     return 0;
   }
 }
-
 
 export const drawRoute = function (data, style, trackColor, isActual, sourceMarkerConfig, destMarkerConfig, polylineWidth, type, mapRouteConfig) {
   console.log("I AM HERE ------------------ IN DRAW ROUTE");
@@ -647,8 +649,6 @@ export const updateMarker = function (markerConfig) {
     }
   }
 }
-
-
 
 export const updateRoute = (configObj) => {
   if (window.JBridge.updateRoute) {

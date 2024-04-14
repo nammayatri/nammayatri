@@ -608,6 +608,7 @@ type HomeScreenStateData =
   , nearByDrivers :: Maybe Int
   , disability :: Maybe DisabilityT
   , searchLocationModelData :: SearchLocationModelData
+  , activeDriversLatLng :: Array ActiveDrivers
   , waitTimeInfo :: Boolean
   , lastSentMessage :: ChatComponent
   , lastReceivedMessage :: ChatComponent
@@ -676,6 +677,20 @@ type LocationDetails = {
     addressComponents :: Array AddressComponents,
     placeId :: Maybe String
   }
+
+type ActiveDrivers = {
+  vehicleVariant :: String,
+  driversLatLongAndId :: Array LatLongAndId,
+  driversToShowOnMap :: Int,
+  shouldAnimate :: Boolean
+}
+
+type LatLongAndId = {
+  latLong :: LatLong,
+  id :: String,
+  distFromSource :: Number,
+  randomRotation :: Number
+}
 
 type BannerCarousalData = {
   bannerItem :: Maybe ListItem,

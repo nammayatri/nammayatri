@@ -104,8 +104,10 @@ foreign import setFCMTokenWithTimeOut :: EffectFn2 Int (String -> Effect Unit) U
 foreign import openUrlInApp  :: String -> Effect Unit
 foreign import renderCameraProfilePicture :: String -> Effect Unit
 foreign import openUrlInMailApp  :: String -> Effect Unit
-foreign import addMarkerImpl :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
+foreign import showMarkerImpl :: EffectFn6 MarkerConfig Number Number Int Number Number Boolean
+foreign import fadeInFadeOutMarker :: Fn2 String String Unit
 foreign import removeMarker :: String -> Unit
+foreign import removeAllMarkers :: String -> Unit
 -- foreign import parseAddress      :: String -> Address
 foreign import disableActionEditText :: String -> Unit
 foreign import uploadFile :: Boolean -> Effect Unit
@@ -402,8 +404,8 @@ showLoader str = liftFlow (showLoaderImpl str)
 -- showQrCode :: String -> String -> Effect Unit
 -- showQrCode id str = showQrCodeImpl id str
 
-addMarker :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
-addMarker title lat lng markerSize anchorV anchorV1 = (addMarkerImpl title lat lng markerSize anchorV anchorV1)
+showMarker :: MarkerConfig -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
+showMarker = runEffectFn6 showMarkerImpl
 
 showMap :: forall action. String -> Boolean -> String -> Number -> Number -> Number -> (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Boolean
 showMap = showMapImpl --liftFlow (showMapImpl id mapType)
@@ -416,9 +418,6 @@ showMap = showMapImpl --liftFlow (showMapImpl id mapType)
 --             _ <- liftFlow (loaderTextImpl (title)  (subTitle))
 --             liftFlow (toggleLoaderImpl flag)
 --         Nothing -> liftFlow (toggleLoaderImpl flag)
-
-showMarker :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
-showMarker title lat lng markerSize anchorV anchorV1 = addMarker title lat lng markerSize anchorV anchorV1
 
 removeAllPolylines :: String -> Unit 
 removeAllPolylines str = removeAllPolylinesImpl markersToRemove
@@ -521,6 +520,9 @@ type MarkerConfig = {
   , markerCallbackForTags :: Array String
   , theme :: String
   , position :: Paths
+  , rotation :: Number
+  , markerId :: String
+  , animationType :: String
 }
 
 defaultMarkerConfig :: MarkerConfig
@@ -535,6 +537,9 @@ defaultMarkerConfig = {
   , markerCallbackForTags : []
   , theme : "DARK"
   , position : { lat : 0.0, lng : 0.0 }
+  , rotation : 0.0
+  , markerId : ""
+  , animationType : ""
 }
 
 type MapRouteConfig = {

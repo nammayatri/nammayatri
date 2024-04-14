@@ -88,6 +88,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -385,7 +386,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                             googleMap.getUiSettings().setAllGesturesEnabled(false);
                             googleMap.getUiSettings().setRotateGesturesEnabled(false);
                             googleMap.getUiSettings().setMyLocationButtonEnabled(false);
-                            markers = new JSONObject();
+                            markers = new HashMap<>();
                             markersElement.put(pureScriptId, markers);
                             this.googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
                                 @Override

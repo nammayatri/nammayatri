@@ -216,6 +216,7 @@ window.getMerchantConfig = function () {
     , "callOptions" : ["ANONYMOUS", "DIRECT"]
     , "termsVersion" : 2.0
     , "tipEnabledCities" : ["Bangalore", "Hyderabad"]
+    , "maxVehicleIconsToShowOnMap" : 10
     , "showDisabilityBanner" : false
     , "enableContactSupport" : false
     , "enableGeocoder" : true

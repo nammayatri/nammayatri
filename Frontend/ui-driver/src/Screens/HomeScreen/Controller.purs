@@ -70,7 +70,7 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion, getExpiryTime,liftFlow)
 import Engineering.Helpers.Commons as EHC
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig, defaultMarkerConfig)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion)
 import Engineering.Helpers.Utils (saveObject)
@@ -78,7 +78,6 @@ import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
 import Foreign.Generic (class Decode, ForeignError, decode, decodeJSON, encode)
 import Foreign (unsafeToForeign)
 import Helpers.Utils as HU
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams, sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, uploadFile, getCurrentLatLong, uploadMultiPartData)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -618,7 +617,7 @@ eval (UploadImage) state = do
   else if state.props.odometerUploadAttempts < 3 then do
     continueWithCmd (state {props {odometerUploadAttempts = state.props.odometerUploadAttempts + 1,odometerImageUploading = true}}) [do
       let _ = unsafePerformEffect $ logEvent state.data.logField "UPLOAD odometer reading"
-      _ <- liftEffect $ uploadFile false
+      _ <- liftEffect $ JB.uploadFile false
       pure NoAction
       ]
   else do
@@ -638,7 +637,7 @@ eval (CallBackImageUpload image imageName imagePath) state = do
                   pure state{props{startRideOdometerImage = Just image,currentStage= ST.RideStarted,odometerImageUploading = false}}
     
     continueWithCmd newState [do
-        void $  runEffectFn3 uploadMultiPartData imagePath (EP.uploadOdometerImage "") "Image"
+        void $  runEffectFn3 JB.uploadMultiPartData imagePath (EP.uploadOdometerImage "") "Image"
         pure NoAction
       ]
 
@@ -1413,7 +1412,7 @@ showDriverMarker state marker toAnimateCamera location = do
 
 updateDemoLocationIcon :: Number -> Number -> Effect Unit
 updateDemoLocationIcon lat lng = do
-  _ <- showMarker "ny_ic_demo_location" lat lng 100 0.5 0.5
+  void $ showMarker defaultMarkerConfig {markerId = "ny_ic_demo_location", pointerIcon = "ny_ic_demo_location"} lat lng 100 0.5 0.5
   _ <- pure $ enableMyLocation true
   animateCamera lat lng zoomLevel "ZOOM"
 

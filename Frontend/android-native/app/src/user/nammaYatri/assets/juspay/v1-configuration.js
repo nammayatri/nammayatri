@@ -194,6 +194,7 @@ window.getMerchantConfig = function () {
       "isServiceablePopupFullScreen" : true,
     }
     , "tipEnabledCities" : ["Bangalore", "Hyderabad"]
+    , "maxVehicleIconsToShowOnMap" : 10
     , "autoSelectBackground" : "#53BB6F"
     , "enableMockLocation" : true
     , "defaultLanguage" : "EN_US"

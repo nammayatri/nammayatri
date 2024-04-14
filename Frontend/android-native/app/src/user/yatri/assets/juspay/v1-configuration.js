@@ -100,6 +100,7 @@ window.getMerchantConfig = function () {
     "profileName": "#FFFFFF",
     "profileImage": "#012A72",
     "tipEnabledCities" : ["Bangalore", "Hyderabad"],
+    "maxVehicleIconsToShowOnMap" : 10,
     "tipDisplayDuration" : 30,
     "profileCompletion" : "#FCC32C",
     "feedbackBackground": "#2C2F3A",

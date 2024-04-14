@@ -50,7 +50,7 @@ import Components.Referral as ReferralComponent
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex,take, (!!),head, filter, cons, null, tail)
+import Data.Array (any, length, mapWithIndex,take, (!!),head, filter, cons, null, tail, drop)
 import Data.Array as Arr
 import Data.Function.Uncurried (runFn3)
 import DecodeUtil (getAnyFromWindow)
@@ -66,7 +66,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC, getRandomID)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
@@ -75,7 +75,7 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize)
-import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition, differenceBetweenTwoUTCInMinutes)
+import JBridge (fadeInFadeOutMarker, showMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition, differenceBetweenTwoUTCInMinutes)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (printLog, logStatus)
@@ -98,7 +98,7 @@ import Screens.RideBookingFlow.HomeScreen.Config
 import Services.API
 import Screens.NammaSafetyFlow.Components.ContactsList (contactCardView)
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), RideBookingListRes(..))
-import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..),City(..), BottomNavBarIcon(..), NewContacts, ReferralStatus(..))
+import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..),City(..), BottomNavBarIcon(..), NewContacts, ReferralStatus(..), ActiveDrivers(..), LatLongAndId(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, getRouteMarkers, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
@@ -224,6 +224,9 @@ screen initialState =
                 else if (initialState.props.isRepeatRide && not isRepeatRideVariantAvailable) then do 
                     void $ pure $ toast $ getString LAST_CHOSEN_VARIANT_NOT_AVAILABLE
                 else pure unit
+                let uniqueIdForAnimatMarkers = getRandomID 999999
+                void $ pure $ setValueToLocalStore ANIMATE_MARKERS_ON_MAP_ID uniqueIdForAnimatMarkers
+                void $ launchAff $ flowRunner defaultGlobalState $ animateMarkers initialState.data.activeDriversLatLng initialState.props.city true uniqueIdForAnimatMarkers
                 when initialState.data.iopState.providerSelectionStage $ 
                   startTimer initialState.data.currentCityConfig.iopConfig.autoSelectTime "providerSelectionStage" "1" push ProviderAutoSelected
               PickUpFarFromCurrentLocation -> 
@@ -2613,7 +2616,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
       _ <- pure $ enableMyLocation true
       _ <- pure $ removeAllPolylines ""
       _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng zoomLevel "ZOOM"
-      _ <- doAff $ liftEffect $ addMarker "ny_ic_src_marker" state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 110 0.5 0.9
+      _ <- doAff $ liftEffect $ showMarker defaultMarkerConfig{ markerId = "ny_ic_src_marker", pointerIcon = "ny_ic_src_marker" } state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 110 0.5 0.9
+      -- _ <- doAff $ liftEffect $ addMarker "ny_ic_src_marker" "ny_ic_src_marker" state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 110 0.5 0.9 0.0
       void $ delay $ Milliseconds duration
       driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
       else do
@@ -2648,8 +2652,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
             --   driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
             if ((getValueToLocalStore TRACKING_ID) == trackingId) then do
               if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
-                let srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
-                    destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker }
+                let srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker }
+                    destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker }
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
                 _ <- pure $ removeAllPolylines ""
                 _ <- liftFlow $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" mapRouteConfig
@@ -2669,8 +2673,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                         else
                                           walkCoordinate srcLat srcLon dstLat dstLon
                             newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
-                            srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
-                            destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = getMarkerPrimaryText routes.distance }
+                            srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker }
+                            destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = getMarkerPrimaryText routes.distance }
                         void $ liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" mapRouteConfig
                         _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
                         void $ delay $ Milliseconds duration
@@ -4179,3 +4183,38 @@ bookingPrefOptions push state =
       ]
     ]
     where btnActive autoAssign = (state.props.flowWithoutOffers && autoAssign || not state.props.flowWithoutOffers && not autoAssign)
+
+
+animateMarkers activeDriversLatLng city flag uniqueId = do
+  flag <- liftFlow $ showActiveDriversOnMap activeDriversLatLng city flag
+  delay $ Milliseconds 10000.0 -- time of 10 seconds to change icons
+  void $ pure $ changeAnimationOfMarkers activeDriversLatLng flag
+  if (uniqueId == getValueToLocalStore ANIMATE_MARKERS_ON_MAP_ID && isLocalStageOn SettingPrice) then animateMarkers activeDriversLatLng city (not flag) uniqueId
+  else pure unit
+
+showActiveDriversOnMap :: Array ActiveDrivers -> City -> Boolean -> Effect Boolean
+showActiveDriversOnMap activeDrivers city flag = do
+  _ <- Arr.foldMap ( \item -> do
+    let vehicleIcon = Remote.getCitySpecificMarker city item.vehicleVariant
+    addMarkersOnMap vehicleIcon item.driversLatLongAndId item.driversToShowOnMap flag item.shouldAnimate
+  ) activeDrivers
+  pure flag
+
+addMarkersOnMap :: String -> Array LatLongAndId -> Int -> Boolean -> Boolean -> Effect Unit
+addMarkersOnMap vehicleIcon driversLatLongAndId driversToShowOnMap flag shouldAnimate = do
+  let shuffledDrivers = if (flag || not shouldAnimate) then take driversToShowOnMap driversLatLongAndId else drop (length driversLatLongAndId - driversToShowOnMap) driversLatLongAndId
+  foldMapWithIndex (\index item -> do 
+          let randomRotation = fromMaybe 0.0 (NUM.fromString $ getRandomID 360)
+              (LatLong latLon) = item.latLong
+              markerConfig = defaultMarkerConfig{ markerId = item.id, pointerIcon = vehicleIcon, rotation = if shouldAnimate then randomRotation else item.randomRotation, animationType = if shouldAnimate then "FADE_IN" else ""}
+          void $ showMarker markerConfig latLon.lat latLon.lon 130 0.5 0.9
+          pure unit
+          ) shuffledDrivers
+  pure unit
+
+changeAnimationOfMarkers :: Array ActiveDrivers -> Boolean -> Unit
+changeAnimationOfMarkers activeDrivers flag = do
+  Arr.foldMap (\item -> do
+    let latLongArr = if (flag || not item.shouldAnimate) then take item.driversToShowOnMap item.driversLatLongAndId else drop (length item.driversLatLongAndId - item.driversToShowOnMap) item.driversLatLongAndId
+    Arr.foldMap (\dl -> if item.shouldAnimate then runFn2 fadeInFadeOutMarker "FADE_OUT" dl.id else unit) latLongArr
+  ) activeDrivers

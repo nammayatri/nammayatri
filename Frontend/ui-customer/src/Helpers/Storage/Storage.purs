@@ -104,6 +104,7 @@ data KeyStore
   | HAS_TOLL_CHARGES -- @TODO: Remove this key after toll charges are coming from backend
   | AC_POPUP_SHOWN_FOR_RIDE
   | STARTED_ESTIMATE_SEARCH
+  | ANIMATE_MARKERS_ON_MAP_ID
 
 derive instance genericKeyStore :: Generic KeyStore _
 
