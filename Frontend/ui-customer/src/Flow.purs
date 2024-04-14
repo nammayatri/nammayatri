@@ -1635,6 +1635,7 @@ findEstimates updatedState = do
   void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show updatedState.props.sourceLat) <> " long: " <> (show updatedState.props.sourceLong))},
                                       {key : "Latest Search", value : (unsafeToForeign $ currentDate <> " " <> currentTime)}]
   (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress state.props.rideSearchProps.sourceManuallyMoved state.props.rideSearchProps.destManuallyMoved state.props.rideSearchProps.sessionId state.props.isSpecialZone)
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{route = rideSearchRes.routeInfo}})
   routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong srcMarkerConfig destMarkerConfig "NORMAL" rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
   void $ pure $ deleteValueFromLocalStore TIP_VIEW_DATA
   case rideSearchRes.routeInfo of
@@ -1803,6 +1804,7 @@ rideSearchFlow flowType = do
           void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show finalState.props.sourceLat) <> " long: " <> (show finalState.props.sourceLong))},
                                               {key : "Latest Search", value : unsafeToForeign (currentDate <> " " <> currentTime)}]
           (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress finalState.props.rideSearchProps.sourceManuallyMoved finalState.props.rideSearchProps.destManuallyMoved finalState.props.rideSearchProps.sessionId finalState.props.isSpecialZone)
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{route = rideSearchRes.routeInfo}})
           void $ pure $ deleteValueFromLocalStore TIP_VIEW_DATA
           void $ liftFlowBT $ setFlowStatusData 
             ( FlowStatusData 

@@ -774,6 +774,7 @@ type HomeScreenStateProps =
   , nightSafetyFlow :: Boolean 
   , reAllocation :: ReAllocationProp
   , homeScreenSheetState :: BottomSheetState
+  , chooseVehicleSheetState :: BottomSheetState
   , autoScrollTimer :: String
   , autoScrollTimerId :: String
   , autoScroll :: Boolean
