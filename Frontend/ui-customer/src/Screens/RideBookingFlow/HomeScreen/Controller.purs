@@ -68,7 +68,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Unsafe (unsafePerformEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn9)
+import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.Commons
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
@@ -76,7 +76,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, zoneLabelIcon, getCityConfig)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo)
@@ -96,7 +96,7 @@ import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEst
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..))
-import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..), Route(..))
+import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
@@ -133,7 +133,6 @@ import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import LocalStorage.Cache (getValueFromCache)
 import DecodeUtil (getAnyFromWindow)
 import JBridge as JB
-import Constants.Configs (getPolylineAnimationConfig)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -2541,33 +2540,6 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC ChooseVehic
   let height = (runFn1 getLayoutBounds $ getNewIDWithTag state.props.estimateId).height
   continue state{ props{ defaultPickUpPoint = "", selectedEstimateHeight = height } }
 
-eval (ChooseYourRideAction (ChooseYourRideController.UpdateMapPadding peakHeight halfh val)) state = do
-  let halfHPadding = if ((screenHeight unit) / 2) < halfh then ((screenHeight unit) / 2) else halfh
-      markers = Remote.normalRoute ""
-      srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = state.data.source, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = zoneLabelIcon state.props.zoneType.sourceTag}
-      destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = state.data.destination, labelImage = zoneLabelIcon state.props.zoneType.destinationTag }
-      bottomMapPadding = if val == "4" then peakHeight else halfHPadding  
-      currentSheetState = getBottomSheetState val
-  continueWithCmd state
-        [ do
-            if any (_ == val) ["4","6", "3"] && currentSheetState /= state.props.chooseVehicleSheetState then
-              case state.data.route of
-                  Just (Route routes) -> do
-                    _ <- pure $ removeAllPolylines ""
-                    void $ liftEffect $ setMapPadding 0 (safeMarginTop+90) 0 bottomMapPadding
-                    void $ liftEffect $ runEffectFn9 drawRoute (Remote.walkCoordinates routes.points) "LineString" "#323643" true srcMarkerConfig destMarkerConfig 8 "NORMAL" (specialLocationConfig "" "" false getPolylineAnimationConfig)
-                    pure NoAction
-                  Nothing -> pure NoAction
-          else pure NoAction
-        ]
-
-eval (ChooseYourRideAction (ChooseYourRideController.ScrollStateChanged scrollState)) state = do
-  let _ = spy "scrollState" scrollState
-      sheetStateToBottomsheetState = getBottomSheetState scrollState
-      quoteList = if sheetStateToBottomsheetState == COLLAPSED then (filter (\item -> item.activeIndex == item.index) state.data.specialZoneQuoteList)<>(filter (\item -> item.activeIndex /= item.index) state.data.specialZoneQuoteList) else state.data.specialZoneQuoteList
-                  
-  continue state{props{chooseVehicleSheetState = sheetStateToBottomsheetState}, data{specialZoneQuoteList = quoteList}}
-
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".ChooseVehicle") "true"
   if config.activeIndex == config.index then 
@@ -3203,21 +3175,3 @@ checkRecentRideVariant state = any (\item -> isJust item.serviceTierName && item
 checkRecentRideVariantInEstimates :: Array EstimateAPIEntity -> Maybe String -> Boolean
 checkRecentRideVariantInEstimates estimates repeatRideServiceName = 
   any (\(EstimateAPIEntity item) -> isJust item.serviceTierName && item.serviceTierName == repeatRideServiceName) estimates 
-
-getBottomSheetState :: String -> BottomSheetState
-getBottomSheetState state = 
-  let sheetState = case state of 
-              "1" -> STATE_DRAGGING
-              "2" -> STATE_SETTLING
-              "3" -> STATE_EXPANDED
-              "4" -> STATE_COLLAPSED
-              "5" -> STATE_HIDDEN
-              "6" -> STATE_HALF_EXPANDED
-              _ -> STATE_HIDDEN
-      bottomSheetState = case sheetState of
-              STATE_EXPANDED -> EXPANDED
-              STATE_COLLAPSED -> COLLAPSED
-              STATE_HIDDEN -> HIDDEN
-              STATE_HALF_EXPANDED -> HALF_EXPANDED
-              _ -> HIDDEN
-  in bottomSheetState
