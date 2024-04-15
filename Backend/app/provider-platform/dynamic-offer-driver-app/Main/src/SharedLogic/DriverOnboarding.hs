@@ -136,7 +136,7 @@ selectVehicleTierForDriver person driverInfo vehicle cityVehicleServiceTiers =
   filter filterVehicleTier cityVehicleServiceTiers
   where
     filterVehicleTier vehicleServiceTier = do
-      let seatingCapacityCheck = compareNumber vehicle.capacity vehicleServiceTier.seatingCapacity
+      let _seatingCapacityCheck = compareNumber vehicle.capacity vehicleServiceTier.seatingCapacity
       let luggageCapacityCheck = compareNumber vehicle.luggageCapacity vehicleServiceTier.luggageCapacity
       let airConditionedCheck =
             (compareNumber driverInfo.airConditionScore vehicleServiceTier.airConditioned)
@@ -145,7 +145,12 @@ selectVehicleTierForDriver person driverInfo vehicle cityVehicleServiceTiers =
       let vehicleRatingCheck = compareNumber vehicle.vehicleRating vehicleServiceTier.vehicleRating
       let variantCheck = vehicle.variant `elem` vehicleServiceTier.allowedVehicleVariant
 
-      seatingCapacityCheck && luggageCapacityCheck && airConditionedCheck && driverRatingCheck && vehicleRatingCheck && variantCheck
+      -- seatingCapacityCheck &&
+      luggageCapacityCheck
+        && airConditionedCheck
+        && driverRatingCheck
+        && vehicleRatingCheck
+        && variantCheck
 
     compareNumber :: Ord a => Maybe a -> Maybe a -> Bool
     compareNumber mbX mbY =

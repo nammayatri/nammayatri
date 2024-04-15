@@ -49,6 +49,8 @@ data BookingT f = BookingT
     toLocationId :: B.C f (Maybe Text),
     vehicleVariant :: B.C f DVST.ServiceTierType,
     vehicleServiceTierName :: B.C f (Maybe Text),
+    vehicleServiceTierSeatingCapacity :: B.C f (Maybe Int),
+    vehicleServiceTierAirConditioned :: B.C f (Maybe Double),
     estimatedDistance :: B.C f (Maybe Meters),
     maxEstimatedDistance :: B.C f (Maybe HighPrecMeters),
     estimatedFare :: B.C f HighPrecMoney,

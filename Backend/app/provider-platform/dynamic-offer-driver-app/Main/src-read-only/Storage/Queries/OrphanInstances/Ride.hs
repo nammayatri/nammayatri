@@ -62,7 +62,9 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             tripStartTime = tripStartTime,
             uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
             uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+            vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity
           }
 
 instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
@@ -108,5 +110,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.tripStartTime = tripStartTime,
         Beam.uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
         Beam.uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+        Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity
       }
