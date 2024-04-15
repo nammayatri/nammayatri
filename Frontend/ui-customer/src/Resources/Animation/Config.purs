@@ -74,7 +74,7 @@ translateYAnimHomeConfig direction = animConfig {
 
 chooseRideAnimConfig :: Common.AnimConfig
 chooseRideAnimConfig = animConfig {
-  duration = 350
+  duration = 200
 , fromY = if os == "IOS" then (screenHeight unit) else (80)
 }
 

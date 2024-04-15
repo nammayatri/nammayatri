@@ -98,9 +98,16 @@ view push config =
       ,linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , padding $ PaddingBottom 20
       ][ case config.buttonText of
-          Just text ->  commonTV push text Color.blue800 FontStyle.subHeading1 CENTER 8 (if config.currentRateCardType == DefaultRateCard then Close else GoToDefaultStart)
+          Just text' -> textView $ 
+                       [ text text'
+                       , height WRAP_CONTENT
+                       , width MATCH_PARENT
+                       , padding $ PaddingVertical 12 16
+                       , onClick push $ const $ if config.currentRateCardType == DefaultRateCard then Close else GoToDefaultStart
+                       , color Color.blue800
+                       , gravity CENTER
+                       ] <> FontStyle.subHeading1 TypoGraphy
           Nothing -> linearLayout[][]
       ]
     ]      
@@ -148,7 +155,7 @@ defaultRateCardView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM 
 defaultRateCardView push config = 
   scrollView
   [ width MATCH_PARENT
-  , height if os == "IOS" then (V 330) else WRAP_CONTENT
+  , height if os == "IOS" then (V 350) else WRAP_CONTENT
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -201,8 +208,7 @@ defaultRateCardView push config =
                     [ width MATCH_PARENT
                       , height WRAP_CONTENT
                       , orientation HORIZONTAL
-                      , margin $ MarginVertical 12 12
-                      , padding $ PaddingHorizontal 20 20
+                      , padding $ Padding 20 12 20 12
                       , onClick push $ const case item.key of
                         "DRIVER_ADDITIONS" -> GoToDriverAddition
                         "FARE_UPDATE_POLICY" -> GoToFareUpdate
