@@ -271,7 +271,7 @@ getTA stringKey =
     ESTIMATES_REVISED_TO -> "திருத்தப்பட்ட மதிப்பீடு"
     RATE_CARD -> "விலை அட்டை"
     NIGHT_TIME_CHARGES from till -> "இரவு நேரக் கட்டணம் ("<> from <> " முதல் " <> till <> " வரை)"
-    MIN_FARE_UPTO -> "குறைந்தபட்ச கட்டணம்"
+    MIN_FARE_UPTO val -> "குறைந்த கிமீயில் " <> val
     MORE_THAN -> "அதிகம்"
     RATE_ABOVE_MIN_FARE -> "குறைந்தபட்ச கட்டணத்திற்கு மேல் "
     DRIVER_PICKUP_CHARGES _ -> "டிரைவர் பிக்அப் கட்டணம்"
@@ -350,7 +350,7 @@ getTA stringKey =
     ENABLE_THIS_FEATURE_TO_CHOOSE_YOUR_RIDE -> "உங்களுக்கு விருப்பமான சவாரி மற்றும் கட்டணத்தைத் தேர்வுசெய்ய இந்த அம்சத்தை இயக்கவும்"
     BOOKING_PREFERENCE -> "முன்பதிவு விருப்பம்"
     BASE_FARES -> "அடிப்படை கட்டணம்"
-    PICKUP_CHARGE -> "டிரைவர் பிக்அப் கட்டணம்"
+    PICKUP_CHARGE -> "பிக் அப் கட்டணம்"
     TOTAL_PAID -> "மொத்தம் செலுத்தப்பட்டது"
     WAITING_CHARGE -> "காத்திருப்பு கட்டணங்கள்"
     NOMINAL_FARE -> "கட்டாயமற்ற டிரைவர் கோரிக்கை*"
@@ -1108,3 +1108,5 @@ getTA stringKey =
     PLEASE_STAY_CALM_TEAM_ALERTED appName -> "தயவுசெய்து சுமாராக இருங்கள், "<> appName <>" பாதுகாப்பு குழு அறிக்கை அளிக்கப்படும்!"
     INDICATION_TO_EMERGENCY_CONTACTS appName -> appName <>" உங்கள் எதிர்கால உதவி தொடர்புகளுக்கு இது ஒரு சோதனை வழிமுறை என்று அறிவிக்கும்."
     BOOK name -> "புத்தகம் " <> name
+    FARE_FOR limit -> limit <> " வரை கட்டணம்"
+    WAITING_CHARGE_LIMIT timeLimit -> "காத்திருப்பு கட்டணம் ("<> timeLimit <>" நிமிடங்கள் பின்பு)"

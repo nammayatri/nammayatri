@@ -212,7 +212,6 @@ defaultRateCardView push config =
                       , onClick push $ const case item.key of
                         "DRIVER_ADDITIONS" -> GoToDriverAddition
                         "FARE_UPDATE_POLICY" -> GoToFareUpdate
-                        "WAITING_CHARGES" -> GoToWaitingCharges
                         "TOLL_OR_PARKING_CHARGES" -> GoToTollOrParkingCharges
                         _  -> NoAction
                     ][  textView

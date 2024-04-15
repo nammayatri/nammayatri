@@ -24,7 +24,7 @@ import Components.QuoteListItem.Controller (config) as QLI
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Array (mapWithIndex, filter, head, find)
 import Data.Array as DA
-import Data.Int (toNumber, round)
+import Data.Int (toNumber, round, fromString)
 import Data.Lens ((^.), view)
 import Data.Ord
 import Data.Eq
@@ -46,7 +46,7 @@ import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
 import JBridge (fromMetersToKm, getLatLonFromAddress, Location)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityFromString)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
-import Common.Types.App (LazyCheck(..), Paths)
+import Common.Types.App (LazyCheck(..), Paths, FareList)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Resources.Localizable.EN (getEN)
 import MerchantConfig.Types (EstimateAndQuoteConfig)
@@ -58,6 +58,7 @@ import ConfigProvider
 import Locale.Utils
 import Data.Either (Either(..))
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
+import Mobility.Prelude as MP
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -415,9 +416,7 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
       config = getCityConfig (getAppConfig appConfig).cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
       estimateFareBreakup = fromMaybe [] estimate.estimateFareBreakup
       pickUpCharges = fetchPickupCharges estimateFareBreakup
-      extraFare = maybe 0 calculateExtraFare (find hasExtraPerKmFare estimateFareBreakup)
-      hasExtraPerKmFare item = item ^. _title == "EXTRA_PER_KM_FARE"
-      calculateExtraFare extraPerKmFare = round $ (toNumber $ extraPerKmFare ^. _price) * fareMultiplier
+      extraFare = getFareBreakupList (EstimateAPIEntity estimate)
       fareMultiplier = if nightCharges then nightShiftMultiplier else 1.0
       additionalFare = maybe 20 calculateFareRangeDifference (estimate.totalFareRange)
       calculateFareRangeDifference fareRange = fareRange ^. _maxFare - fareRange ^. _minFare
@@ -430,6 +429,7 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
                       else false
       baseFare = maybe 0 calculateBaseFare (find hasBaseDistanceFare estimateFareBreakup)
       hasBaseDistanceFare item = item ^. _title == "BASE_DISTANCE_FARE"
+      baseDistance = maybe 0 (view _price) (find hasBaseDistanceFare estimateFareBreakup)
       calculateBaseFare baseDistFare = round $ (toNumber $ baseDistFare ^. _price) * fareMultiplier
   in ChooseVehicle.config {
         vehicleImage = getVehicleVariantImage estimate.vehicleVariant
@@ -565,24 +565,6 @@ getEstimatesInfo estimates vehicleVariant state =
 
     additionalFare = maybe 20 calculateFareRangeDifference (head estimatedVariant >>= view _totalFareRange)
     calculateFareRangeDifference fareRange = fareRange ^. _maxFare - fareRange ^. _minFare
-
-    nightShiftRate = head estimates >>= view _nightShiftRate
-    nightShiftStart = maybe "" (view _nightShiftStart >>> fromMaybe "") nightShiftRate
-    nightShiftEnd = maybe "" (view _nightShiftEnd >>> fromMaybe "") nightShiftRate
-    nightShiftMultiplier = maybe 0.0 (view _nightShiftMultiplier >>> fromMaybe 0.0) nightShiftRate
-    nightCharges = if isJust nightShiftRate 
-                    then withinTimeRange nightShiftStart nightShiftEnd (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss")
-                    else false
-
-    baseFare = maybe 0 calculateBaseFare (find hasBaseDistanceFare estimateFareBreakup)
-    hasBaseDistanceFare item = item ^. _title == "BASE_DISTANCE_FARE"
-    calculateBaseFare baseDistFare = round $ (toNumber $ baseDistFare ^. _price) * fareMultiplier
-    fareMultiplier = if nightCharges then nightShiftMultiplier else 1.0
-
-    extraFare = maybe 0 calculateExtraFare (find hasExtraPerKmFare estimateFareBreakup)
-    hasExtraPerKmFare item = item ^. _title == "EXTRA_PER_KM_FARE"
-    calculateExtraFare extraPerKmFare = round $ (toNumber $ extraPerKmFare ^. _price) * fareMultiplier
-
     showRateCardIcon = not (DA.null estimateFareBreakup)
     zoneType = getSpecialTag $ case head estimatedVariant of
                   Just entity -> view _specialLocationTag entity
@@ -732,3 +714,61 @@ mapSpecialZoneGates gates =
                               city : Nothing,
                               isSpecialPickUp : Just $ isJust item.geoJson
                             }) gates
+
+
+getFareBreakupList ::  EstimateAPIEntity -> Array FareList
+getFareBreakupList (EstimateAPIEntity estimate) = 
+  [ { key : getString $ MIN_FARE_UPTO $ show (baseDistance / 1000) <> "km", val : "₹" <> show baseFare }]
+  <> (map constructExtraFareBreakup extraFareBreakup)
+  <> (if tollCharge > 0 then [{ key : getString TOLL_CHARGES_ESTIMATED, val : "₹" <> (show $ fetchTollCharge fareBreakup) }] else [])
+  <> [ { key : getString PICKUP_CHARGE, val : "₹" <> (show $ fetchPickupCharges fareBreakup) }]
+  <> [ { key : getString $ WAITING_CHARGE_LIMIT $ show freeWaitingTime, val : "₹" <> show waitingCharge <> "/min"  }]
+  where 
+    fareBreakup = fromMaybe [] estimate.estimateFareBreakup
+    extraFareBreakup = DA.sortBy compareByLimit $ DA.mapMaybe (\item -> if MP.startsWith "EXTRA_PER_KM_STEP_FARE_" (item ^. _title) 
+                                                                          then Just $ parseStepFare item 
+                                                                          else Nothing) fareBreakup
+    compareByLimit a b = compare a.lLimit b.lLimit
+    baseFare = maybe 0 calculateBaseFare (find hasBaseDistanceFare fareBreakup)
+    hasBaseDistanceFare item = item ^. _title == "BASE_DISTANCE_FARE"
+    fareMultiplier = if nightCharges then nightShiftMultiplier else 1.0
+    nightShiftRate = estimate.nightShiftRate
+    nightShiftStart = maybe "" (view _nightShiftStart >>> fromMaybe "") nightShiftRate
+    nightShiftEnd = maybe "" (view _nightShiftEnd >>> fromMaybe "") nightShiftRate
+    nightShiftMultiplier = maybe 0.0 (view _nightShiftMultiplier >>> fromMaybe 0.0) nightShiftRate
+    nightCharges = if isJust nightShiftRate 
+                    then withinTimeRange nightShiftStart nightShiftEnd (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss")
+                    else false
+    hasBaseDistance item = item ^. _title == "BASE_DISTANCE"
+    baseDistance = maybe 0 (view _price) (find hasBaseDistance fareBreakup)
+    calculateBaseFare baseDistFare = round $ (toNumber $ baseDistFare ^. _price) * fareMultiplier
+    freeWaitingTime = maybe 0 getPrice (find (\item -> item ^. _title == "FREE_WAITING_TIME_IN_MINUTES") fareBreakup)
+    waitingCharge = maybe 0 getPrice (find (\item -> item ^. _title == "WAITING_CHARGE_PER_MIN") fareBreakup)
+    tollCharge = fetchTollCharge fareBreakup
+    getPrice item = item ^. _price
+
+    parseStepFare :: EstimateFares -> StepFare
+    parseStepFare item = 
+      let title = item ^. _title
+          price = item ^. _price
+          trimmedTitle = drop (length "EXTRA_PER_KM_STEP_FARE_") title
+          limits = split (Pattern "_") trimmedTitle
+          upperlimit = case limits DA.!! 1 of
+                        Just "Above" -> "+"
+                        Just limit -> "-" <> show ((fromMaybe 0 $ fromString limit)/1000) <> "km"
+                        Nothing -> ""
+          lowerlimit = case (limits DA.!! 0) of
+                        Just limit -> fromMaybe 0 $ fromString limit
+                        Nothing -> 0
+      in { lLimit : lowerlimit, uLimit : upperlimit, price : price }
+
+    constructExtraFareBreakup :: StepFare -> FareList
+    constructExtraFareBreakup item = 
+      let lowerlimit = show (item.lLimit/1000) <> "km"
+      in { key : getString $ FARE_FOR $ lowerlimit <> item.uLimit, val : "₹" <> (show $ round $ fareMultiplier * (toNumber item.price)) }
+
+type StepFare = 
+  { lLimit :: Int,
+    uLimit :: String,
+    price :: Int
+  }

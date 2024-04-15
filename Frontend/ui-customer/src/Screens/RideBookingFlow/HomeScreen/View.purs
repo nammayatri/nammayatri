@@ -3672,11 +3672,12 @@ shimmerView state =
         []
     ]
 
+tagShimmerView :: forall w. HomeScreenState -> PrestoDOM (Effect Unit) w
 tagShimmerView state = 
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , margin $ Margin 8 8 8 0
+    , margin $ Margin 8 8 8 8
     ](map (\_ -> 
       shimmerFrameLayout
       [ height WRAP_CONTENT
@@ -3688,7 +3689,7 @@ tagShimmerView state =
 
       ][textView
         [ cornerRadius 16.0 
-        , height WRAP_CONTENT
+        , height $ V 36
         , width MATCH_PARENT
         , background Color.greyDark
         ]]) [1,2,3])

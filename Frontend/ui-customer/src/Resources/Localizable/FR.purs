@@ -253,7 +253,7 @@ getFR stringKey =
         ESTIMATES_REVISED_TO -> "L'estimation révisée est"
         RATE_CARD -> "Carte tarifaire"
         NIGHT_TIME_CHARGES from till -> "Charges nocturnes (22 h à 5 h)"
-        MIN_FARE_UPTO -> "Min. Tarif jusqu'à 2 km"
+        MIN_FARE_UPTO _ -> "Min. Tarif jusqu'à 2 km"
         RATE_ABOVE_MIN_FARE -> "Taux supérieur au tarif minimum"
         DRIVER_PICKUP_CHARGES _ -> "Frais de ramassage des conducteurs"
         DAY_TIMES_OF -> ""
@@ -1094,3 +1094,5 @@ getFR stringKey =
         APPLICABLE_TOLL_CHARGES -> "Les frais de péage applicables sont inclus dans les tarifs"
         UPDATE_TIP_STR -> "Mettre à jour le pourboire"
         BOOK name -> "Réserver " <> name
+        FARE_FOR limit -> "Tarif pour " <> limit
+        WAITING_CHARGE_LIMIT timeLimit -> "Frais d'attente après " <> timeLimit

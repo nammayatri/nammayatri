@@ -931,7 +931,7 @@ type Contact = {
 type RateCard =
   {
     baseFare :: Int,
-    extraFare :: Int,
+    extraFare :: Array FareList,
     pickUpCharges :: Int,
     additionalFare :: Int,
     nightShiftMultiplier :: Number,
