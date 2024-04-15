@@ -3207,7 +3207,7 @@ homeScreenViewV2 push state =
         ][tagShimmerView state]] 
       else if state.data.config.banners.homeScreenCabLaunch && state.props.city == ST.Bangalore then ([
         imageView
-          [ imageWithFallback "ic_banner_cabs,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_banner_cabs.png"
+          [ imageWithFallback "ny_ic_cab_banner,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_cab_banner.png"
           , height $ V 120
           , width MATCH_PARENT
           , gravity CENTER_VERTICAL
