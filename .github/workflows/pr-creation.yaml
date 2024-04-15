@@ -1,12 +1,12 @@
 name: Execute Script
 
 on:
-  push:
-    branches:
-      - main  # Adjust this to the branch you want to trigger the workflow on
+  pull_request:
+    types: [closed]
 
 jobs:
-  execute_script:
+  on_pr_merge:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     
     defaults:
@@ -17,7 +17,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
           
-      - name: Run script
+      - name: Test changed-files
+        uses: actions/checkout@v4
+    
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44    
+
+      - name: Clone private repo 
         run: |
-          chmod +x asset-store-script.sh  # Ensure script has executable permissions
-          ./asset-store-script.sh abcd ${{ secrets.GITHUB_TOKEN }} 
+          git config --global user.email "mercyqueen71@gmail.com"
+          git config --global user.name "MercyQueen"
+          git clone https://MercyQueen:$PAT_TOKEN@github.com/MercyQueen/asset-store.git asset-store
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+      - name: Run script
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }} 
+        run: |
+          chmod +x asset-store-script.sh 
+          ./asset-store-script.sh ${{ github.event.pull_request.base.ref }} ${{ secrets.GITHUB_TOKEN }}
