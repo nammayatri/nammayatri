@@ -5,6 +5,7 @@
 module Domain.Types.WhiteListOrg where
 
 import Domain.Types.Common (UsageSafety (..))
+import qualified Domain.Types.Merchant
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Domain
 import qualified Kernel.Types.Id
@@ -15,10 +16,11 @@ data WhiteListOrgD (s :: UsageSafety) = WhiteListOrg
   { createdAt :: Kernel.Prelude.UTCTime,
     domain :: Kernel.Types.Beckn.Domain.Domain,
     id :: Kernel.Types.Id.Id Domain.Types.WhiteListOrg.WhiteListOrg,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     subscriberId :: Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 type WhiteListOrg = WhiteListOrgD ('Safe)
 

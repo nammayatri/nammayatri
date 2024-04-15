@@ -18,7 +18,16 @@ instance FromTType' Beam.WhiteListOrg Domain.Types.WhiteListOrg.WhiteListOrg whe
   fromTType' (Beam.WhiteListOrgT {..}) = do
     createdAt' <- getCreatedAt createdAt
     updatedAt' <- getUpdatedAt updatedAt
-    pure $ Just Domain.Types.WhiteListOrg.WhiteListOrg {createdAt = createdAt', domain = domain, id = Kernel.Types.Id.Id id, subscriberId = Kernel.Types.Id.ShortId subscriberId, updatedAt = updatedAt'}
+    pure $
+      Just
+        Domain.Types.WhiteListOrg.WhiteListOrg
+          { createdAt = createdAt',
+            domain = domain,
+            id = Kernel.Types.Id.Id id,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            subscriberId = Kernel.Types.Id.ShortId subscriberId,
+            updatedAt = updatedAt'
+          }
 
 instance ToTType' Beam.WhiteListOrg Domain.Types.WhiteListOrg.WhiteListOrg where
   toTType' (Domain.Types.WhiteListOrg.WhiteListOrg {..}) = do
@@ -26,6 +35,7 @@ instance ToTType' Beam.WhiteListOrg Domain.Types.WhiteListOrg.WhiteListOrg where
       { Beam.createdAt = Kernel.Prelude.Just createdAt,
         Beam.domain = domain,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt
       }

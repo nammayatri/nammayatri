@@ -18,6 +18,7 @@ import Data.Aeson (object)
 import qualified Data.List as L
 import qualified Data.Text as T
 import Data.Time hiding (secondsToNominalDiffTime)
+import Domain.Action.UI.Quote (mkQAPIEntityList)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BppDetails as DBppDetails
@@ -29,7 +30,6 @@ import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageCon
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.NotificationSoundsConfig as NSC
 import Domain.Types.Person as Person
-import Domain.Types.Quote (mkQAPIEntityList)
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide

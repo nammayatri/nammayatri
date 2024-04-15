@@ -8,8 +8,6 @@ ALTER TABLE atlas_app.estimate_breakup ADD COLUMN currency character varying(255
 
 ALTER TABLE atlas_app.fare_breakup ADD COLUMN currency character varying(255);
 
-ALTER TABLE atlas_app.quote ADD COLUMN currency character varying(255);
-
 ALTER TABLE atlas_app.rental_details ADD COLUMN currency character varying(255);
 ALTER TABLE atlas_app.rental_details ADD COLUMN base_fare_amount double precision;
 ALTER TABLE atlas_app.rental_details ADD COLUMN per_hour_charge_amount double precision;

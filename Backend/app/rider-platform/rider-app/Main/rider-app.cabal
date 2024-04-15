@@ -225,7 +225,6 @@ library
       Domain.Types.Person.PersonDefaultEmergencyNumber
       Domain.Types.Person.PersonFlowStatus
       Domain.Types.PlaceBasedServiceConfig
-      Domain.Types.Quote
       Domain.Types.RentalDetails
       Domain.Types.SavedReqLocation
       Domain.Types.SearchRequest
@@ -279,7 +278,6 @@ library
       Storage.Beam.Person.PersonDefaultEmergencyNumber
       Storage.Beam.Person.PersonFlowStatus
       Storage.Beam.PlaceBasedServiceConfig
-      Storage.Beam.Quote
       Storage.Beam.RentalDetails
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchRequest
@@ -343,7 +341,7 @@ library
       Storage.Queries.Person.PersonFlowStatus
       Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfig
-      Storage.Queries.Quote
+      Storage.Queries.QuoteExtra
       Storage.Queries.RegistrationTokenExtra
       Storage.Queries.RentalDetails
       Storage.Queries.RideExtra
@@ -352,6 +350,7 @@ library
       Storage.Queries.Transformers.AppInstalls
       Storage.Queries.Transformers.BlackListOrg
       Storage.Queries.Transformers.MerchantConfig
+      Storage.Queries.Transformers.Quote
       Storage.Queries.Transformers.SearchReqLocation
       Storage.Queries.Transformers.SpecialZoneQuote
       Storage.Queries.Transformers.TripTerms
@@ -419,6 +418,7 @@ library
       Domain.Types.OnSearchEvent
       Domain.Types.PersonDisability
       Domain.Types.PersonStats
+      Domain.Types.Quote
       Domain.Types.Rating
       Domain.Types.RegistrationToken
       Domain.Types.Ride
@@ -469,6 +469,7 @@ library
       Storage.Beam.OnSearchEvent
       Storage.Beam.PersonDisability
       Storage.Beam.PersonStats
+      Storage.Beam.Quote
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
       Storage.Beam.Ride
@@ -523,11 +524,13 @@ library
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.LocationMapping
       Storage.Queries.OrphanInstances.PersonStats
+      Storage.Queries.OrphanInstances.Quote
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.PersonDisability
       Storage.Queries.PersonStats
+      Storage.Queries.Quote
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
       Storage.Queries.Ride

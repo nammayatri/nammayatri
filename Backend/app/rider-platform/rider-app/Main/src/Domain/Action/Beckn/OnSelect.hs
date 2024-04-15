@@ -164,6 +164,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             providerId = providerInfo.providerId,
             providerUrl = providerInfo.url,
             createdAt = now,
+            updatedAt = now,
             quoteDetails = DQuote.DriverOfferDetails driverOffer,
             requestId = estimate.requestId,
             itemId = estimate.itemId,
