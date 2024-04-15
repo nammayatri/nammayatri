@@ -286,7 +286,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String getDriverProfile() {
         String baseUrl = in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
-        String driverProfileUrl = baseUrl + "/driver/profile";
+        String driverProfileUrl = "https://api.sandbox.beckn.juspay.in/dev/dobpp/test/ui/driver/profile";
         try {
             MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
             Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);

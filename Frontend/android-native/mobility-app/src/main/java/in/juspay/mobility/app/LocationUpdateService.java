@@ -741,7 +741,7 @@ public class LocationUpdateService extends Service {
                     Log.d(LOG_TAG, "DriverUpdateLoc Executor Executed");
                     Map<String, String> baseHeaders = callAPIHandler.getBaseHeaders(context);
                     String baseUrl = sharedPref.getString("BASE_URL", "null");
-                    String orderUrl = baseUrl + "/driver/location";
+                    String orderUrl = "https://api.sandbox.beckn.juspay.in/dev/dobpp/test/ui/driver/location";
                     String result = null;
 
                     if (baseHeaders.containsKey("token") && !Objects.equals(baseHeaders.get("token"), "__failed")) {
@@ -759,7 +759,7 @@ public class LocationUpdateService extends Service {
                             baseHeaders.put("vt", vVariant);
                             baseHeaders.put("dm", drMode);
                         } else {
-                            MobilityAPIResponse apiResponse = callAPIHandler.callAPI(baseUrl+"/driver/profile", baseHeaders, "{}","GET");
+                            MobilityAPIResponse apiResponse = callAPIHandler.callAPI("https://api.sandbox.beckn.juspay.in/dev/dobpp/test/ui/driver/profile", baseHeaders, "{}","GET");
                             try {
                                 JSONObject resp = new JSONObject(apiResponse.getResponseBody());
                                 if (resp.has("mode")) {

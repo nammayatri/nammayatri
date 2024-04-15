@@ -51,7 +51,7 @@ logout :: String -> String
 logout dummyString = (getBaseUrl "") <> "/auth/logout"
 
 getDriverInfo :: String -> String
-getDriverInfo dummyString = (getBaseUrl "") <> "/driver/profile"
+getDriverInfo dummyString = "https://api.sandbox.beckn.juspay.in/dev/dobpp/test/ui/driver/profile" --(getBaseUrl "") <> "/driver/profile"
 
 getRideHistory :: String -> String -> String -> String -> String -> String
 getRideHistory limit offset isActive status day= do
@@ -66,7 +66,7 @@ offerRide :: String -> String
 offerRide dummyString = (getBaseUrl "") <> "/driver/searchRequest/quote/offer"
 
 updateDriverInfo :: String -> String
-updateDriverInfo dummyString = (getBaseUrl "") <> "/driver/profile"
+updateDriverInfo dummyString = "https://api.sandbox.beckn.juspay.in/dev/dobpp/test/ui/driver/profile"
 
 listCancelReason :: String -> String
 listCancelReason dummyString = (getBaseUrl "") <> "/cancellationReason/list"

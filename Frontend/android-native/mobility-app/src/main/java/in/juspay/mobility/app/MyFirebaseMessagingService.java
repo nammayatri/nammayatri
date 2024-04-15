@@ -514,7 +514,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             try {
                 String orderUrl;
                 if (merchantType.equals("DRIVER")) {
-                    orderUrl = baseUrl + "/driver/profile";
+                    orderUrl = "https://api.sandbox.beckn.juspay.in/dev/dobpp/test/ui/driver/profile";
                 } else {
                     orderUrl = baseUrl + "/profile";
                 }
