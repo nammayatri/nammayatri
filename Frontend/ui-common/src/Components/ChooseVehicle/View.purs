@@ -41,8 +41,8 @@ cardView push config =
   , height WRAP_CONTENT
   ]
   [ PrestoAnim.animationSet
-    [ Anim.fadeInWithDuration 400 isActiveIndex,
-      Anim.fadeOutWithDuration 400 $ not isActiveIndex
+    [ Anim.fadeInWithDuration 200 isActiveIndex,
+      Anim.fadeOutWithDuration 200 $ not isActiveIndex
     ] $ linearLayout
         [ width MATCH_PARENT
         , height $ V bounds.height
