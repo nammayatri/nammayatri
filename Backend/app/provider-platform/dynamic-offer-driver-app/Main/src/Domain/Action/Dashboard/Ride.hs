@@ -314,6 +314,7 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant,
         nextStopLocation = mkLocationAPIEntity <$> nextStopLoc,
         lastStopLocation = mkLocationAPIEntity <$> lastStopLoc,
+        vehicleServiceTierName = booking.vehicleServiceTierName,
         endOtp = ride.endOtp
       }
 

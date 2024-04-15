@@ -262,6 +262,7 @@ data RideInfoRes = RideInfoRes
     distanceCalculationFailed :: Maybe Bool,
     driverDeviatedFromRoute :: Maybe Bool,
     vehicleVariant :: Maybe Variant,
+    vehicleServiceTierName :: Text,
     nextStopLocation :: Maybe LocationAPIEntity,
     lastStopLocation :: Maybe LocationAPIEntity,
     endOtp :: Maybe Text

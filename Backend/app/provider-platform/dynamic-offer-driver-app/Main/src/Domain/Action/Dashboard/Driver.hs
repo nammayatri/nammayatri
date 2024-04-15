@@ -672,6 +672,15 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
       pure $ map getShortId availableMerchantsShortId
     Nothing -> pure []
   merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId
+  selectedServiceTiers <-
+    maybe
+      (pure [])
+      ( \v ->
+          v.selectedServiceTiers `forM` \serviceTierType -> do
+            serviceTier <- CQVST.findByServiceTierTypeAndCityId serviceTierType person.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTierType))
+            return serviceTier.name
+      )
+      vehicle
   pure
     Common.DriverInfoRes
       { driverId = cast @DP.Person @Common.Driver person.id,
@@ -694,6 +703,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         canDowngradeToTaxi = info.canDowngradeToTaxi,
         canSwitchToRental = info.canSwitchToRental,
         vehicleNumber = vehicle <&> (.registrationNo),
+        selectedServiceTiers,
         driverLicenseDetails,
         vehicleRegistrationDetails,
         rating = person.rating,

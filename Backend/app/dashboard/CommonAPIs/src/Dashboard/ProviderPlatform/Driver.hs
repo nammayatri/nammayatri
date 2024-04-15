@@ -486,6 +486,7 @@ data DriverInfoRes = DriverInfoRes
     canDowngradeToTaxi :: Bool,
     canSwitchToRental :: Bool,
     vehicleNumber :: Maybe Text,
+    selectedServiceTiers :: [Text],
     driverLicenseDetails :: Maybe DriverLicenseAPIEntity,
     vehicleRegistrationDetails :: [DriverRCAssociationAPIEntity],
     onboardingDate :: Maybe UTCTime,
