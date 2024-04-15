@@ -22,8 +22,6 @@ module Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
 where
 
 import Client.Main as CM
--- import Data.Aeson.Types as DAT
-
 import Control.Lens.Combinators
 import Control.Lens.Fold
 import Data.Aeson as DA

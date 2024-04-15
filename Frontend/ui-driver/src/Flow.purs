@@ -40,7 +40,7 @@ import Data.Array (any, concat, cons, elem, elemIndex, filter, find, foldl, head
 import Data.Array as DA
 import Data.Either (Either(..), either, isRight)
 import Data.Function (on)
-import Data.Function.Uncurried (runFn1, runFn2)
+import Data.Function.Uncurried (runFn1, runFn2, runFn3)
 import Data.Functor (map)
 import Data.Int (ceil, fromString, round, toNumber)
 import Data.Lens ((^.))
@@ -123,10 +123,10 @@ import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
-import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), UploadOdometerImageResp(UploadOdometerImageResp))
+import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), UploadOdometerImageResp(UploadOdometerImageResp), GetUiConfigResp(..))
 import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos)
-import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
+import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates, getUiConfigs)
 import Services.Backend as Remote
 import Engineering.Helpers.Events as Events
 import Services.Config (getBaseUrl)
@@ -146,6 +146,7 @@ import Helpers.API as HelpersAPI
 import Engineering.Helpers.API as EHA
 import LocalStorage.Cache (getValueFromCache)
 import Effect.Unsafe (unsafePerformEffect)
+import DecodeUtil
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -2154,18 +2155,57 @@ onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
         Nothing -> onBoardingSubscriptionScreenFlow (state.props.screenCount-1)
   pure unit
 
+cacFlow :: Maybe String -> FlowBT String Unit
+cacFlow newHash = do
+  let currHash = getValueToLocalStore UI_CONFIG_HASH
+  let toss = fromMaybe 49 $ fromString $ getValueToLocalStore CAC_TOSS
+  if (newHash /= Just currHash) 
+    then do
+      cfgResp' <- lift $ lift $ getUiConfigs toss
+      case cfgResp' of 
+        Right (cfgResp) ->
+          case cfgResp of 
+            EmptyGetUiConfigResp _ -> do
+              _ <- pure $ spy "INFO " "Empty response from getUiConfigs driver so not updating city config."
+              pure unit
+            GetUiConfigResp cfg -> do
+                _ <- pure $ spy "DEBUG : Response from driver getUiConfigs : " cfgResp
+                setValueToLocalStore UI_CONFIGS (stringifyJSON cfg)
+                _ <- pure $ runFn2 setInWindow "UI_CONFIGS" (stringifyJSON cfg)
+                setValueToLocalStore UI_CONFIG_HASH $ fromMaybe "" newHash
+        Left _ -> do
+            _ <- pure $ spy "DEBUG " "Error in fetching driver info and hence unable to update city config." 
+            pure unit
+  else do
+    let config = runFn3 getFromWindowString "UI_CONFIGS" Nothing Just
+    case config of
+      Nothing -> do
+        _ <- pure $ spy "INFO " "UI_CONFIGS not found in window."
+        let config' =  getValueToLocalStore UI_CONFIGS
+        if (config' == "__failed") then do
+          _ <- pure $ spy "INFO " "UI_CONFIGS not found in local storage."
+          deleteValueFromLocalStore UI_CONFIG_HASH
+          cacFlow newHash
+        else do
+          _ <- pure $ runFn2 setInWindow "UI_CONFIGS" config'
+          pure unit
+        pure unit
+      Just _ -> pure unit
+
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
   liftFlowBT $ markPerformance "HOME_SCREEN_FLOW"
   logField_ <- lift $ lift $ getLogFields
+  (GlobalState globalState) <- getState
+  (GetDriverInfoResp getDriverInfoRes) <- getDriverInfoDataFromCache (GlobalState globalState) false
+  _ <- cacFlow getDriverInfoRes.frontendConfigHash
+  let _ = getAppConfigCAC Constants.appConfig
   Events.measureDurationFlowBT "Flow.homeScreenFlow" $ do    
     void $ pure $ cleverTapSetLocation unit
     if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && (not $ any (\item -> isLocalStageOn item) [RideAccepted, RideStarted, ChatWithCustomer]) then currentRideFlow Nothing Nothing
       else pure unit
-    (GlobalState globalState) <- getState
-    getDriverInfoResp <- getDriverInfoDataFromCache (GlobalState globalState) false
-    when globalState.homeScreen.data.config.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp
-    when globalState.homeScreen.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
+    when globalState.homeScreen.data.config.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoRes)
+    when globalState.homeScreen.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoRes)
     updateBannerAndPopupFlags
     void $ lift $ lift $ toggleLoader false
     liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED  
@@ -2789,18 +2829,18 @@ nyPaymentFlow planCardConfig fromScreen = do
         Left err -> setSubscriptionStatus Pending PS.PENDING_VBV planCardConfig toss
     Left (errorPayload) -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
   
-  getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi toss
-  case getDriverInfoApiResp of
-    Right resp -> do
-      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
-      let (GetDriverInfoResp getDriverInfoResp) = resp
-      if fromScreen == "ONBOARDING" then
-        modifyScreenState $ RegisterScreenStateType (\registerScreen -> registerScreen { data {subscriptionStatus = case getDriverInfoResp.autoPayStatus of
-                                                                                                                  Nothing -> ST.NOT_STARTED
-                                                                                                                  Just status -> if status == "ACTIVE" then ST.COMPLETED else ST.IN_PROGRESS }})
-      else pure unit
-    Left _ -> pure unit
-  updateDriverDataToStates
+  -- getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi toss
+  -- case getDriverInfoApiResp of
+  --   Right resp -> do
+  --     modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
+  --     let (GetDriverInfoResp getDriverInfoResp) = resp
+  --     if fromScreen == "ONBOARDING" then
+  --       modifyScreenState $ RegisterScreenStateType (\registerScreen -> registerScreen { data {subscriptionStatus = case getDriverInfoResp.autoPayStatus of
+  --                                                                                                                 Nothing -> ST.NOT_STARTED
+  --                                                                                                                 Just status -> if status == "ACTIVE" then ST.COMPLETED else ST.IN_PROGRESS }})
+  --     else pure unit
+  --   Left _ -> pure unit
+  -- updateDriverDataToStates
   if fromScreen == "ONBOARDING" then
     onBoardingFlow
   else

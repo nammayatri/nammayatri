@@ -21,7 +21,6 @@ module Storage.Queries.Merchant.TransporterConfig
     #-}
 where
 
-import qualified Data.Aeson as A
 import Domain.Types.Location (dummyFromLocationData, dummyToLocationData)
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
@@ -120,8 +119,8 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             driverAutoPayNotificationTime = secondsToNominalDiffTime driverAutoPayNotificationTime,
             driverAutoPayExecutionTime = secondsToNominalDiffTime driverAutoPayExecutionTime,
             languagesToBeTranslated,
-            avgSpeedOfVehicle = valueToMaybe =<< avgSpeedOfVehicle,
-            aadhaarImageResizeConfig = valueToMaybe =<< aadhaarImageResizeConfig,
+            avgSpeedOfVehicle = avgSpeedOfVehicle,
+            aadhaarImageResizeConfig = aadhaarImageResizeConfig,
             mandateNotificationRescheduleInterval = secondsToNominalDiffTime mandateNotificationRescheduleInterval,
             mandateExecutionRescheduleInterval = secondsToNominalDiffTime mandateExecutionRescheduleInterval,
             bankErrorExpiry = secondsToNominalDiffTime bankErrorExpiry,
@@ -131,8 +130,8 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             updateOrderStatusBatchSize,
             orderAndNotificationStatusCheckTime = secondsToNominalDiffTime orderAndNotificationStatusCheckTime,
             orderAndNotificationStatusCheckTimeLimit = secondsToNominalDiffTime orderAndNotificationStatusCheckTimeLimit,
-            volunteerSmsSendingLimit = valueToMaybe =<< volunteerSmsSendingLimit,
-            driverSmsReceivingLimit = valueToMaybe =<< driverSmsReceivingLimit,
+            volunteerSmsSendingLimit = volunteerSmsSendingLimit,
+            driverSmsReceivingLimit = driverSmsReceivingLimit,
             coinFeature = coinFeature,
             coinConversionRate = coinConversionRate,
             cancellationTimeDiff = secondsToNominalDiffTime cancellationTimeDiff,
@@ -145,19 +144,14 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             badDebtTimeThreshold = badDebtTimeThreshold,
             driverAutoPayExecutionTimeFallBack = secondsToNominalDiffTime driverAutoPayExecutionTimeFallBack,
             orderAndNotificationStatusCheckFallBackTime = secondsToNominalDiffTime orderAndNotificationStatusCheckFallBackTime,
-            dummyFromLocation = fromMaybe dummyFromLocationData (valueToMaybe =<< dummyFromLocation),
-            dummyToLocation = fromMaybe dummyToLocationData (valueToMaybe =<< dummyToLocation),
+            dummyFromLocation = fromMaybe dummyFromLocationData dummyFromLocation,
+            dummyToLocation = fromMaybe dummyToLocationData dummyToLocation,
             scheduleRideBufferTime = secondsToNominalDiffTime scheduleRideBufferTime,
             canSuvDowngradeToHatchback = fromMaybe False canSuvDowngradeToHatchback,
             arrivedPickupThreshold = fromMaybe 100 arrivedPickupThreshold,
             variantsToEnableForSubscription = variantsToEnableForSubscription,
             ..
           }
-    where
-      valueToMaybe :: FromJSON a => A.Value -> Maybe a
-      valueToMaybe value = case A.fromJSON value of
-        A.Success a -> Just a
-        A.Error _ -> Nothing
 
 instance ToTType' BeamTC.TransporterConfig TransporterConfig where
   toTType' :: TransporterConfig -> BeamTC.TransporterConfig
@@ -233,8 +227,8 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,
         BeamTC.canSuvDowngradeToTaxi = canSuvDowngradeToTaxi,
         BeamTC.canSuvDowngradeToHatchback = Just canSuvDowngradeToHatchback,
-        BeamTC.avgSpeedOfVehicle = toJSON <$> avgSpeedOfVehicle,
-        BeamTC.aadhaarImageResizeConfig = toJSON <$> aadhaarImageResizeConfig,
+        BeamTC.avgSpeedOfVehicle = avgSpeedOfVehicle,
+        BeamTC.aadhaarImageResizeConfig = aadhaarImageResizeConfig,
         BeamTC.enableFaceVerification = enableFaceVerification,
         BeamTC.isAvoidToll = isAvoidToll,
         BeamTC.specialZoneBookingOtpExpiry = specialZoneBookingOtpExpiry,
@@ -246,8 +240,8 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.coinConversionRate = coinConversionRate,
         BeamTC.driverFeeOverlaySendingTimeLimitInDays = driverFeeOverlaySendingTimeLimitInDays,
         BeamTC.overlayBatchSize = overlayBatchSize,
-        BeamTC.volunteerSmsSendingLimit = toJSON <$> volunteerSmsSendingLimit,
-        BeamTC.driverSmsReceivingLimit = toJSON <$> driverSmsReceivingLimit,
+        BeamTC.volunteerSmsSendingLimit = volunteerSmsSendingLimit,
+        BeamTC.driverSmsReceivingLimit = driverSmsReceivingLimit,
         BeamTC.snapToRoadConfidenceThreshold = snapToRoadConfidenceThreshold,
         BeamTC.useWithSnapToRoadFallback = useWithSnapToRoadFallback,
         BeamTC.badDebtRescheduleTime = nominalDiffTimeToSeconds badDebtRescheduleTime,
@@ -289,8 +283,8 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.specialLocationTags = specialLocationTags,
         BeamTC.kaptureDisposition = kaptureDisposition,
         BeamTC.fakeOtpMobileNumbers = fakeOtpMobileNumbers,
-        BeamTC.dummyFromLocation = Just $ toJSON dummyFromLocation,
-        BeamTC.dummyToLocation = Just $ toJSON dummyToLocation,
+        BeamTC.dummyFromLocation = Just dummyFromLocation,
+        BeamTC.dummyToLocation = Just dummyToLocation,
         BeamTC.variantsToEnableForSubscription = variantsToEnableForSubscription,
         BeamTC.dlNumberVerification = dlNumberVerification,
         BeamTC.pastDaysRideCounter = pastDaysRideCounter,

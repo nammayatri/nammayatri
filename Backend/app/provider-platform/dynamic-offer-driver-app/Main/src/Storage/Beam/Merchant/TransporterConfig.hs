@@ -15,8 +15,9 @@
 
 module Storage.Beam.Merchant.TransporterConfig where
 
-import qualified Data.Aeson as A
 import qualified Database.Beam as B
+import Domain.Types.Location
+import qualified Domain.Types.Merchant.TransporterConfig as DTMT
 import Domain.Types.UtilsTH
 import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.External.Types (Language)
@@ -79,7 +80,7 @@ data TransporterConfigT f = TransporterConfigT
     aadhaarVerificationRequired :: B.C f Bool,
     enableDashboardSms :: B.C f Bool,
     subscriptionStartTime :: B.C f UTCTime,
-    avgSpeedOfVehicle :: B.C f (Maybe A.Value),
+    avgSpeedOfVehicle :: B.C f (Maybe DTMT.AvgSpeedOfVechilePerKm),
     mandateValidity :: B.C f Int,
     bankErrorExpiry :: B.C f Seconds,
     driverLocationAccuracyBuffer :: B.C f Meters,
@@ -91,7 +92,7 @@ data TransporterConfigT f = TransporterConfigT
     canSuvDowngradeToHatchback :: B.C f (Maybe Bool),
     canSwitchToRental :: B.C f Bool,
     canSwitchToInterCity :: B.C f Bool,
-    aadhaarImageResizeConfig :: B.C f (Maybe A.Value),
+    aadhaarImageResizeConfig :: B.C f (Maybe DTMT.AadhaarImageResizeConfig),
     enableFaceVerification :: B.C f Bool,
     specialZoneBookingOtpExpiry :: B.C f Int,
     driverFeeRetryThresholdConfig :: B.C f Int,
@@ -111,8 +112,8 @@ data TransporterConfigT f = TransporterConfigT
     badDebtRescheduleTime :: B.C f Seconds,
     badDebtSchedulerTime :: B.C f Seconds,
     badDebtTimeThreshold :: B.C f Int,
-    volunteerSmsSendingLimit :: B.C f (Maybe A.Value),
-    driverSmsReceivingLimit :: B.C f (Maybe A.Value),
+    volunteerSmsSendingLimit :: B.C f (Maybe DTMT.DashboardMediaSendingLimit),
+    driverSmsReceivingLimit :: B.C f (Maybe DTMT.DashboardMediaSendingLimit),
     languagesToBeTranslated :: B.C f [Language],
     coinFeature :: B.C f Bool,
     coinConversionRate :: B.C f HighPrecMoney,
@@ -145,10 +146,10 @@ data TransporterConfigT f = TransporterConfigT
     orderAndNotificationStatusCheckFallBackTime :: B.C f Seconds,
     acStatusCheckGap :: B.C f Int,
     kaptureDisposition :: B.C f Text,
-    dummyFromLocation :: B.C f (Maybe A.Value),
+    dummyFromLocation :: B.C f (Maybe DummyLocationInfo),
     arrivedStopThreshold :: B.C f (Maybe HighPrecMeters),
     arrivedPickupThreshold :: B.C f (Maybe HighPrecMeters),
-    dummyToLocation :: B.C f (Maybe A.Value),
+    dummyToLocation :: B.C f (Maybe DummyLocationInfo),
     scheduleRideBufferTime :: B.C f Seconds,
     fakeOtpMobileNumbers :: B.C f [Text],
     variantsToEnableForSubscription :: B.C f [Vehicle.Variant],

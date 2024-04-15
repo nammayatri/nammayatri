@@ -27,8 +27,8 @@ getFrontendConfigs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) => Pers
 getFrontendConfigs person mbToss = do
   ghcCond <- liftIO $ CM.hashMapToString $ HM.fromList [(T.pack "city", (DA.String . T.pack . show) person.currentCity)]
   contextValue <- case mbToss of
-    Just toss -> liftIO $ CM.evalExperiment "atlas_customer_ui" ghcCond toss -- CACTODO: remove hardcoding of tenant name
-    Nothing -> liftIO $ CM.evalCtx "atlas_customer_ui" ghcCond
+    Just toss -> liftIO $ CM.evalExperiment "test" ghcCond toss -- CACTODO: remove hardcoding of tenant name
+    Nothing -> liftIO $ CM.evalCtx "test" ghcCond
   case contextValue of
     Left err -> do
       logError $ "Error in getting frontend configs: " <> show err <> "City: " <> show person.currentCity <> "toss: " <> show mbToss

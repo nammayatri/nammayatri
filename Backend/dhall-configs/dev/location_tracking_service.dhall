@@ -40,7 +40,7 @@ in  { logger_cfg
     , drainer_delay = 2
     , new_ride_drainer_delay = 2
     , kafka_cfg
-    , port = 8081
+    , port = 8087
     , auth_url = "http://127.0.0.1:8016/internal/auth"
     , auth_api_key = "ae288466-2add-11ee-be56-0242ac120002"
     , bulk_location_callback_url =

@@ -16,6 +16,11 @@ module Domain.Types.Merchant.TransporterConfig where
 
 import Data.Aeson as A
 import Data.Text as Text
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
+import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import Domain.Types.Common
 import Domain.Types.Location (DummyLocationInfo)
 import Domain.Types.Merchant (Merchant)
@@ -32,7 +37,7 @@ data AadhaarImageResizeConfig = AadhaarImageResizeConfig
   { height :: Int,
     width :: Int
   }
-  deriving (Generic, Show, FromJSON, ToJSON, Read)
+  deriving (Generic, Show, FromJSON, ToJSON, Read, Ord, Eq)
 
 data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm -- FIXME make datatype to [(Variant, Kilometers)]
   { sedan :: Kilometers,
@@ -43,7 +48,7 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm -- FIXME make datatype to [
     taxiplus :: Kilometers,
     bike :: Kilometers
   }
-  deriving (Generic, Show, FromJSON, ToJSON, Read)
+  deriving (Generic, Show, FromJSON, ToJSON, Read, Ord, Eq)
 
 data DashboardMediaSendingLimit = DashboardMediaSendingLimit
   { sms :: Int,
@@ -51,7 +56,48 @@ data DashboardMediaSendingLimit = DashboardMediaSendingLimit
     overlay :: Int,
     alert :: Int
   }
-  deriving (Generic, Show, FromJSON, ToJSON, Read)
+  deriving (Generic, Show, FromJSON, ToJSON, Read, Ord, Eq)
+
+fromFieldType ::
+  (FromJSON a, Typeable a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion a
+fromFieldType f mbValue = do
+  value <- fromField f mbValue
+  case A.fromJSON value of
+    A.Success a -> pure a
+    _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed"
+
+instance FromField DashboardMediaSendingLimit where
+  fromField = fromFieldType
+
+instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be DashboardMediaSendingLimit where
+  sqlValueSyntax = sqlValueSyntax . A.toJSON
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DashboardMediaSendingLimit
+
+instance FromBackendRow Postgres DashboardMediaSendingLimit
+
+instance FromField AvgSpeedOfVechilePerKm where
+  fromField = fromFieldType
+
+instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be AvgSpeedOfVechilePerKm where
+  sqlValueSyntax = sqlValueSyntax . A.toJSON
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be AvgSpeedOfVechilePerKm
+
+instance FromBackendRow Postgres AvgSpeedOfVechilePerKm
+
+instance FromField AadhaarImageResizeConfig where
+  fromField = fromFieldType
+
+instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be AadhaarImageResizeConfig where
+  sqlValueSyntax = sqlValueSyntax . A.toJSON
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be AadhaarImageResizeConfig
+
+instance FromBackendRow Postgres AadhaarImageResizeConfig
 
 -- ProviderConfig?
 data TransporterConfigD u = TransporterConfig

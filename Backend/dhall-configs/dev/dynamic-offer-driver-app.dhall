@@ -224,7 +224,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.SendManualPaymentLink, mapValue = True }
       ]
 
-let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
+let LocationTrackingeServiceConfig = { url = "http://localhost:8087/" }
 
 let cacConfig =
         { host = "http://localhost:8080"

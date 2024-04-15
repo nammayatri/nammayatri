@@ -188,7 +188,7 @@ import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
 import Services.Config(getNumbersToWhiteList)
 import SessionCache(getValueFromWindow, setValueInWindow)
 import LocalStorage.Cache (clearCache)
-import DecodeUtil (getAnyFromWindow)
+import DecodeUtil (getAnyFromWindow, stringifyJSON, setInWindow)
 import Data.Foldable (foldMap)
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.FollowRideScreen.Controller (deleteDismisedMockDrills)
@@ -197,6 +197,8 @@ import Foreign.Object (lookup)
 import Screens.RideSelectionScreen.Transformer (myRideListTransformer)
 import Services.FlowCache as FlowCache
 import Data.HashMap as DHM
+import Services.CacAPIType (GetUiConfigResp (..))
+import ConfigProvider (getAppConfigCAC)
 import Helpers.API as HelpersAPI
 import Helpers.Referral (applyReferralCode)
 
@@ -591,8 +593,57 @@ updateDisabilityList screenType = do
     Right (GetDisabilityListResp resp) -> pure $ getDisabilityList resp
     Left err -> pure $ getDisabilityList []
 
+
+cacFlow :: FlowBT String Unit
+cacFlow  = do
+  let toss = fromMaybe 49 $ INT.fromString $ getValueToLocalStore CAC_TOSS
+  cfgResp' <- lift $ lift $ Remote.getUiConfigs toss
+  case cfgResp' of 
+    Right (cfgResp) ->
+      case cfgResp of 
+        EmptyGetUiConfigResp _ -> do
+          _ <- pure $ spy "INFO " "Empty response from getUiConfigs driver so not updating city config."
+          pure unit
+        GetUiConfigResp cfg -> do
+            _ <- pure $ spy "DEBUG : Response from driver getUiConfigs : " cfgResp
+            setValueToLocalStore UI_CONFIGS (stringifyJSON cfg)
+            _ <- pure $ runFn2 setInWindow "UI_CONFIGS" (stringifyJSON cfg)
+            pure unit
+    Left _ -> do
+        _ <- pure $ spy "DEBUG " "Error in fetching driver info and hence unable to update city config." 
+        pure unit
+
+updateConfigState :: AppConfig -> FlowBT String Unit
+updateConfigState config = do
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{config= config }})
+  modifyScreenState $ EnterMobileNumberScreenType (\mobileNumberScreen -> mobileNumberScreen{data{config= config }})
+  modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguageScreen -> chooseLanguageScreen{data{config= config }})
+  modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen{data{config= config }})
+  modifyScreenState $ MyRideScreenStateType (\myRideScreen -> myRideScreen{data{config= config }})
+  modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen{data{config= config }})
+  modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen{data{config= config }})
+  modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> selectLanguageScreen{data{config= config }})
+  modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen{data{config= config }})
+  modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen{data{config= config }})
+  modifyScreenState $ MyProfileScreenStateType (\myProfileScreen -> myProfileScreen{data{config= config }})
+  modifyScreenState $ ContactUsScreenStateType (\contactUsScreen -> contactUsScreen{data{config= config }})
+  modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreen -> savedLocationScreen{data{config= config }})
+  modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen{config= config })
+  modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen{appConfig= config })
+  modifyScreenState $ AboutUsScreenStateType (\aboutUsScreen -> aboutUsScreen{appConfig= config })
+  modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreen -> appUpdatePopUpScreen{config= config })
+  modifyScreenState $ SearchLocationScreenStateType (\searchLocationScreen -> searchLocationScreen{appConfig= config })
+  modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{data{config= config }})
+  modifyScreenState $ FollowRideScreenStateType (\followRideScreen -> followRideScreen{data{config= config }})
+  modifyScreenState $ MetroTicketBookingScreenStateType (\metroTicketBookingScreen -> metroTicketBookingScreen{config= config })
+
+
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
+  void $ cacFlow
+  let config = getAppConfigCAC appConfig
+  void $ updateConfigState config
+  
   liftFlowBT $ markPerformance "HOME_SCREEN_FLOW"
   logField_ <- lift $ lift $ getLogFields
   (GlobalState currentState) <- getState

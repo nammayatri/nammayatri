@@ -14,8 +14,13 @@
 
 module Domain.Types.Location where
 
-import Data.Aeson
+import Data.Aeson as A
 import Data.Time
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
+import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps.HasCoordinates (HasCoordinates)
 import Kernel.Prelude
@@ -76,7 +81,27 @@ data DummyLocationInfo = DummyLocationInfo
     areaCode :: Maybe Text,
     fullAddress :: Maybe Text
   }
-  deriving (Generic, Show, Read, Eq, PrettyShow, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, Read, Eq, Ord, PrettyShow, ToJSON, FromJSON, ToSchema)
+
+fromFieldDummyLocationInfo ::
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion DummyLocationInfo
+fromFieldDummyLocationInfo f mbValue = do
+  value <- fromField f mbValue
+  case A.fromJSON value of
+    A.Success a -> pure a
+    _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed"
+
+instance FromField DummyLocationInfo where
+  fromField = fromFieldDummyLocationInfo
+
+instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be DummyLocationInfo where
+  sqlValueSyntax = sqlValueSyntax . A.toJSON
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DummyLocationInfo
+
+instance FromBackendRow Postgres DummyLocationInfo
 
 makeLocationAPIEntity :: Location -> LocationAPIEntity
 makeLocationAPIEntity Location {..} = do

@@ -34,6 +34,7 @@ import Control.Monad.Except.Trans (lift)
 import Data.Maybe
 import Log
 import DecodeUtil
+import Debug (spy)
 
 foreign import mergeforegin :: Array Foreign -> Foreign
 
@@ -47,12 +48,20 @@ foreign import loadFileInDUI :: String -> String
 
 foreign import getAppConfigFromWindow :: Fn3 String (Maybe AppConfig) (AppConfig -> (Maybe AppConfig)) (Maybe AppConfig) 
 
+getConfigFromCAC :: String -> String 
+getConfigFromCAC _ = do
+  let config = runFn3 getFromWindowString "UI_CONFIGS" Nothing Just
+  case config of
+    Nothing -> "{}"
+    Just config' -> config'
+
 loadAppConfig :: String -> AppConfig
 loadAppConfig _ =
   let defaultConfig = unsafeToForeign DefaultConfig.config
       merchantConfig = getConfigFromFile ReExport.configuration_file
-      
-      mergedConfig = mergeObjects $ [ defaultConfig] <> merchantConfig
+      cacConfig = getConfigFromCAC ""
+      mergedConfig' = mergeObjects $ [ defaultConfig] <> merchantConfig
+      mergedConfig = mergeObjects $ [ mergedConfig'] <> [encode cacConfig]
       decodeAppConfig = decodeForeignObject mergedConfig DefaultConfig.config
       _ = runFn2 loadInWindow ReExport.appConfig mergedConfig
       _ = runFn2 (loadInWindow :: Fn2 String AppConfig Unit) ReExport.decodeAppConfig decodeAppConfig
@@ -100,6 +109,13 @@ getAppConfig _ = do
   case mBconfig of
       Nothing -> loadAppConfig ""
       Just config -> config
+
+getAppConfigCAC :: String -> AppConfig
+getAppConfigCAC key = do
+  let config = loadAppConfig ""
+      -- _ = runFn2 setInWindow key (stringifyJSON config)
+      _ = printLog "CAC AppConfig in getAppConfigCAC:" config
+  config
 
 getCurrency :: String -> String
 getCurrency key = (getAppConfig key).currency

@@ -70,7 +70,7 @@ mkCacParseInstanceList name = do
 -- | Will generate string for simple testing in repl. Using: putStrLn testSplice
 mkCacInstancesDebug :: Name -> Q [Dec]
 mkCacInstancesDebug name = do
-  decs <- mkCacParseInstanceList name
+  decs <- mkCacParseInstance name
   testFunc <- mkTestSplice decs
   pure $ decs <> testFunc
 
