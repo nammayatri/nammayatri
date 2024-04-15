@@ -114,7 +114,7 @@ getDriverIntelligentPoolConfigFromCAC id srId idName = do
               pure toss'
       )
       srId
-  tenant <- liftIO (SE.lookupEnv "TENANT") <&> fromMaybe "driver_offer_bpp_v2"
+  tenant <- liftIO (SE.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
   contextValue <- liftIO $ CM.evalExperimentAsString tenant dipcCond toss
   let res' = contextValue ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverIntelligentPoolConfig:") (itraversed . indices (Text.isPrefixOf "driverIntelligentPoolConfig:" . DAK.toText))
       res = DA.Object (DAKM.fromList res') ^? _JSON :: (Maybe DriverIntelligentPoolConfig)
@@ -134,7 +134,7 @@ getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingC
 getConfigFromInMemory id srId idName = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
   dipc <- L.getOption (DTC.DriverIntelligentPoolConfig id.getId)
-  isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
+  isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "atlas_driver_offer_bpp_v2" tenant)
   bool
     ( maybe
         ( getDriverIntelligentPoolConfigFromCAC id Nothing Nothing

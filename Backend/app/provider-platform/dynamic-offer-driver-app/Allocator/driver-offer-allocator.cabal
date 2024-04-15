@@ -68,6 +68,8 @@ library
       StandaloneDeriving
       PackageImports
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  extra-libraries:
+      cac_client
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -81,6 +83,7 @@ library
     , exceptions
     , extra
     , generic-lens
+    , haskell-cac
     , hspec
     , mobility-core
     , openapi3
@@ -153,6 +156,8 @@ executable driver-offer-allocator-exe
       StandaloneDeriving
       PackageImports
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  extra-libraries:
+      cac_client
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -165,6 +170,7 @@ executable driver-offer-allocator-exe
     , exceptions
     , extra
     , generic-lens
+    , haskell-cac
     , hspec
     , mobility-core
     , openapi3

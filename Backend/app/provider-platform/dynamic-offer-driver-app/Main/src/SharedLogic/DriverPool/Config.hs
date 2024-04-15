@@ -176,7 +176,7 @@ getConfigFromInMemory id mbvst tripCategory dist srId idName = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
   let roundeDist = doubleToInt (fromIntegral (dist.getMeters) / 1000)
   dpc <- L.getOption (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundeDist)
-  isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
+  isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "atlas_driver_offer_bpp_v2" tenant)
   dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId id)), (pack "tripCategory", DA.String (Text.pack tripCategory)), (pack "tripDistance", DA.Number (fromIntegral (getMeters dist)))] <> [("vehicleVariant", DA.String (Text.pack (show (fromJust mbvst)))) | isJust mbvst])
   cfg <-
     bool
