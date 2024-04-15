@@ -5,7 +5,7 @@ import Common.Types.App
 import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
 import Effect (Effect)
 import Font.Style as FontStyle
-import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), negate)
+import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), negate, (*), (/))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout)
 import Common.Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
@@ -29,93 +29,114 @@ view push config =
     isActiveIndex = config.index == config.activeIndex
 
 cardView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-cardView push config = 
-  let isActiveIndex = config.index == config.activeIndex
-      stroke' = if isActiveIndex && (not config.showEditButton) then "2," <> Color.blue800 else "1," <> Color.white900
-      background' = if isActiveIndex && (not config.showEditButton) then Color.blue600 else Color.white900
-      padding' = PaddingVertical 16 16
-      bounds = JB.getLayoutBounds $ EHC.getNewIDWithTag config.id
-  in 
-  frameLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  ]
-  [ PrestoAnim.animationSet
-    [ Anim.fadeInWithDuration 200 isActiveIndex,
-      Anim.fadeOutWithDuration 200 $ not isActiveIndex
-    ] $ linearLayout
-        [ width MATCH_PARENT
-        , height $ V bounds.height
-        , background background'
-        , cornerRadius 6.0
-        , stroke stroke'
-        ][]
-  , linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , cornerRadius 6.0
-  , id $ EHC.getNewIDWithTag config.id
-  , margin $ config.layoutMargin
-  , padding padding'
-  , clickable config.isEnabled
-  , onClick push $ const $ OnSelect config
-  , afterRender push (const NoAction)
-  ][ linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , afterRender push (const NoAction)
-      ][ linearLayout
-          [ height $ V 48
-          , width $ V 60
-          ][imageView
-            [ imageWithFallback config.vehicleImage
-            , height $ V if config.vehicleVariant == "AUTO_RICKSHAW" then 45 else 48
-            , width $ V 60
+cardView push config =
+  let
+    isActiveIndex = config.index == config.activeIndex
+    stroke' = if isActiveIndex && (not config.showEditButton) then "2," <> Color.blue800 else "1," <> Color.white900
+    background' = if isActiveIndex && (not config.showEditButton) then Color.blue600 else Color.white900
+    padding' = PaddingVertical 16 16
+    bounds = JB.getLayoutBounds $ EHC.getNewIDWithTag config.id
+  in
+    frameLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      ][  PrestoAnim.animationSet
+            [ Anim.fadeInWithDuration 100 isActiveIndex
+            , Anim.fadeOutWithDuration 100 $ not isActiveIndex
             ]
-          ]
-        , linearLayout
-          [ width WRAP_CONTENT
+            $ linearLayout
+                [ width MATCH_PARENT
+                , height $ V bounds.height
+                , background background'
+                , cornerRadius 6.0
+                , stroke stroke'
+                , gravity RIGHT
+                ][]
+      , linearLayout
+          [ width MATCH_PARENT
           , height WRAP_CONTENT
-          , orientation VERTICAL
-          , weight 1.0
-          ][ linearLayout
+          , cornerRadius 6.0
+          , id $ EHC.getNewIDWithTag config.id
+          , margin $ config.layoutMargin
+          , padding padding'
+          , clickable config.isEnabled
+          , onClick push $ const $ OnSelect config
+          , afterRender push (const NoAction)
+          ]
+          [ linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
-              ][ linearLayout
-                  [ height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , orientation VERTICAL
-                  , gravity CENTER_VERTICAL
-                  , padding $ PaddingLeft 8
-                  ][ linearLayout
-                      [ width MATCH_PARENT
-                      , height WRAP_CONTENT
-                      , gravity CENTER_VERTICAL
-                      ][ vehicleDetailsView push config
-                       , linearLayout [weight 1.0][]
-                       , linearLayout
-                         [ width WRAP_CONTENT
-                         , height WRAP_CONTENT
-                         , gravity RIGHT
-                         , afterRender push (const NoAction)
-                         ][priceDetailsView push config]
-                      ]
-                  , linearLayout
-                    [ width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , padding $ PaddingTop 5
-                    , gravity CENTER_VERTICAL
-                    ][ capacityView push config 
-                     , descriptionView config.serviceTierShortDesc config.vehicleVariant config.airConditioned
+              , afterRender push (const NoAction)
+              ]
+              [ linearLayout
+                  [ height $ V 48
+                  , width $ V 60
+                  ]
+                  [ imageView
+                    [ imageWithFallback config.vehicleImage
+                    , height $ V if config.vehicleVariant == "AUTO_RICKSHAW" then 45 else 48
+                    , width $ V 60
                     ]
                   ]
-                  
-                  
+              , linearLayout
+                  [ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , orientation VERTICAL
+                  , weight 1.0
+                  ]
+                  [ linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      ]
+                      [ linearLayout
+                          [ height WRAP_CONTENT
+                          , width MATCH_PARENT
+                          , orientation VERTICAL
+                          , gravity CENTER_VERTICAL
+                          , padding $ PaddingLeft 8
+                          ]
+                          [ linearLayout
+                              [ width MATCH_PARENT
+                              , height WRAP_CONTENT
+                              , gravity CENTER_VERTICAL
+                              ]
+                              [ vehicleDetailsView push config
+                              , linearLayout [ weight 1.0 ] []
+                              , linearLayout
+                                  [ width WRAP_CONTENT
+                                  , height WRAP_CONTENT
+                                  , gravity RIGHT
+                                  , afterRender push (const NoAction)
+                                  ][ priceDetailsView push config ]
+                              ]
+                          , linearLayout
+                              [ width WRAP_CONTENT
+                              , height WRAP_CONTENT
+                              , padding $ PaddingTop 5
+                              , gravity CENTER_VERTICAL
+                              ]
+                              [ capacityView push config
+                              , descriptionView config.serviceTierShortDesc config.vehicleVariant config.airConditioned
+                              ]
+                          ]
+                      ]
+                  ]
               ]
-        ]
-      ]
-  ]
-  ]
+          ]
+      , linearLayout
+        [ height $ V bounds.height
+        , width $ MATCH_PARENT
+        , gravity RIGHT
+        ][linearLayout
+          [ height $ V bounds.height
+          , width $ V ((EHC.screenWidth unit) * 3/10)
+          , clickable true
+          , onClick push $ const $ case isActiveIndex of
+                                    false -> OnSelect config
+                                    true  -> if config.showInfo then ShowRateCard config else NoAction
+          ][]
+       ]
+    ]
 
 vehicleDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 vehicleDetailsView push config =
@@ -246,7 +267,7 @@ descriptionView description vehicleVariant airConditioned =
     , gravity CENTER_VERTICAL
     , visibility $ boolToVisibility $ isJust description
     ][ imageView
-        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_circle"
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_circle_grey"
         , width $ V 3
         , height $ V 3
         , margin $ Margin 2 2 0 0
