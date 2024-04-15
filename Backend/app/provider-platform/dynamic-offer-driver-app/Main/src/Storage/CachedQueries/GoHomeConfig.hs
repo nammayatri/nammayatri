@@ -54,14 +54,14 @@ create = Queries.create
 getGoHomeConfigFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Int -> Maybe Text -> Maybe Text -> String -> m GoHomeConfig
 getGoHomeConfigFromCACStrict toss stickyId idName context = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
-  config <- liftIO $ CM.evalExperimentAsString (fromMaybe "driver_offer_bpp_v2" tenant) context toss
+  config <- liftIO $ CM.evalExperimentAsString (fromMaybe "atlas_driver_offer_bpp_v2" tenant) context toss
   let res8 = config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "goHomeConfig:") (itraversed . indices (Text.isPrefixOf "goHomeConfig:" . DAK.toText))
       res9 = DA.Object (DAKM.fromList res8) ^? _JSON :: Maybe GoHomeConfig
   maybe
     (error "Could not find Go-To config")
     ( \res'' -> do
         when (isJust stickyId) do
-          variantIds <- liftIO $ CM.getVariants (fromMaybe "driver_offer_bpp_v2" tenant) context toss
+          variantIds <- liftIO $ CM.getVariants (fromMaybe "atlas_driver_offer_bpp_v2" tenant) context toss
           let idName' = fromMaybe (error "idName not found") idName
               cacData = CACData (fromJust stickyId) idName' (Text.pack context) "goHomeConfig" (Text.pack (show variantIds))
           pushToKafka cacData "cac-data" ""
@@ -82,14 +82,14 @@ getGoHomeConfigFromCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merc
 getGoHomeConfigFromCAC id' toss stickyId idName = do
   context <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id'))]
   tenant <- liftIO $ Se.lookupEnv "TENANT"
-  config <- liftIO $ CM.evalExperimentAsString (fromMaybe "driver_offer_bpp_v2" tenant) context toss
+  config <- liftIO $ CM.evalExperimentAsString (fromMaybe "atlas_driver_offer_bpp_v2" tenant) context toss
   let res8 = config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "goHomeConfig:") (itraversed . indices (Text.isPrefixOf "goHomeConfig:" . DAK.toText))
       res9 = DA.Object (DAKM.fromList res8) ^? _JSON :: Maybe GoHomeConfig
   maybe
-    (logDebug ("GoHomeConfig from CAC Not Parsable: " <> show res8 <> " for tenant: " <> Text.pack (fromMaybe "driver_offer_bpp_v2" tenant)) >> createThroughConfigHelper toss stickyId idName context)
+    (logDebug ("GoHomeConfig from CAC Not Parsable: " <> show res8 <> " for tenant: " <> Text.pack (fromMaybe "atlas_driver_offer_bpp_v2" tenant)) >> createThroughConfigHelper toss stickyId idName context)
     ( \res'' -> do
         when (isJust stickyId) do
-          variantIds <- liftIO $ CM.getVariants (fromMaybe "driver_offer_bpp_v2" tenant) context toss
+          variantIds <- liftIO $ CM.getVariants (fromMaybe "atlas_driver_offer_bpp_v2" tenant) context toss
           let idName' = fromMaybe (error "idName not found") idName
               cacData = CACData (fromJust stickyId) idName' (Text.pack context) "goHomeConfig" (Text.pack (show variantIds))
           pushToKafka cacData "cac-data" ""
@@ -117,7 +117,7 @@ findByMerchantOpCityId id stickyId idName = do
       then do
         logDebug $ "Getting goHomeConfig from CAC for merchatOperatingCity:" <> getId id
         tenant <- liftIO $ Se.lookupEnv "TENANT"
-        isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
+        isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "atlas_driver_offer_bpp_v2" tenant)
         if isExp
           then do
             Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACGoHomeConfigKey stickyId) >>= \case

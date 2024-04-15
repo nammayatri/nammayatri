@@ -90,7 +90,7 @@ findById txnId idName id = do
           ( do
               logDebug $ "Getting farePolicy from CAC for farePolicyId:" <> getId id
               tenant <- liftIO $ SE.lookupEnv "TENANT"
-              isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
+              isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "atlas_driver_offer_bpp_v2" tenant)
               if isExp && isJust txnId
                 then do
                   Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACFarePolicy (fromJust txnId)) >>= \case

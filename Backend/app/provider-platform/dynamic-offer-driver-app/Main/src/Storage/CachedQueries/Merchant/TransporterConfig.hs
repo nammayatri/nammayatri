@@ -73,7 +73,7 @@ getTransporterConfigFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r)
 getTransporterConfigFromCACStrict id' toss = do
   context <- liftIO $ CM.hashMapToString $ HashMap.fromList [(Text.pack "merchantOperatingCityId", DA.String (getId id'))]
   tenant <- liftIO $ Se.lookupEnv "TENANT"
-  config <- liftIO $ CM.evalExperimentAsString (fromMaybe "driver_offer_bpp_v2" tenant) context toss
+  config <- liftIO $ CM.evalExperimentAsString (fromMaybe "atlas_driver_offer_bpp_v2" tenant) context toss
   let res' =
         config
           ^@.. _Value
@@ -117,7 +117,7 @@ getConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperating
 getConfig id toss stickId idName = do
   confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(Text.pack "merchantOperatingCityId", DA.String (getId id))]
   tenant <- liftIO $ Se.lookupEnv "TENANT"
-  config <- liftIO $ CM.evalExperimentAsString (fromMaybe "driver_offer_bpp_v2" tenant) confCond toss
+  config <- liftIO $ CM.evalExperimentAsString (fromMaybe "atlas_driver_offer_bpp_v2" tenant) confCond toss
   let res' =
         config
           ^@.. _Value
@@ -130,10 +130,10 @@ getConfig id toss stickId idName = do
       res'' = parsingMiddleware $ DAKM.fromList res'
       res = DA.Object res'' ^? _JSON :: Maybe TransporterConfig
   maybe
-    (logDebug ("TransporterConfig from CAC Not Parsable: " <> show res' <> "for tenant" <> Text.pack (fromMaybe "driver_offer_bpp_v2" tenant)) >> createThroughConfigHelper id toss)
+    (logDebug ("TransporterConfig from CAC Not Parsable: " <> show res' <> "for tenant" <> Text.pack (fromMaybe "atlas_driver_offer_bpp_v2" tenant)) >> createThroughConfigHelper id toss)
     ( \res''' -> do
         when (isJust stickId) do
-          variantIds <- liftIO $ CM.getVariants (fromMaybe "driver_offer_bpp_v2" tenant) confCond toss
+          variantIds <- liftIO $ CM.getVariants (fromMaybe "atlas_driver_offer_bpp_v2" tenant) confCond toss
           let idName' = fromMaybe (error "idName not found") idName
               cacData = CACData (fromJust stickId) idName' (Text.pack confCond) "transporterConfig" (Text.pack (show variantIds))
           pushToKafka cacData "cac-data" ""
@@ -186,7 +186,7 @@ findByMerchantOpCityId id mbstickId idName = do
 findByMerchantOpCityIdCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m TransporterConfig
 findByMerchantOpCityIdCAC id (Just stickId) idName = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
-  isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
+  isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "atlas_driver_offer_bpp_v2" tenant)
   ( if isExp
       then
         ( do

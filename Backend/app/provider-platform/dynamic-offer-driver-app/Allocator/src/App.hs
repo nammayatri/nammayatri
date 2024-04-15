@@ -14,7 +14,10 @@
 
 module App where
 
+import qualified Client.Main as CM
+import qualified Data.Bool as B
 import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
+import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
@@ -48,6 +51,23 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestT
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
+
+createCAC :: AppCfg -> IO ()
+createCAC appCfg = do
+  cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
+  case cacStatus of
+    0 -> CM.startCACPolling appCfg.cacConfig.tenants
+    _ -> do
+      -- logError "CAC client failed to start"
+      threadDelay 1000000
+      B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
+  superPositionStatus <- CM.initSuperPositionClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
+  case superPositionStatus of
+    0 -> CM.runSuperPositionPolling appCfg.cacConfig.tenants
+    _ -> do
+      -- logError "CAC super position client failed to start"
+      threadDelay 1000000
+      B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
 
 allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle AllocatorJobType
 allocatorHandle flowRt env =
@@ -83,6 +103,7 @@ runDriverOfferAllocator configModifier = do
   handlerEnv <- buildHandlerEnv handlerCfg
   hostname <- getPodName
   let loggerRt = L.getEulerLoggerRuntime hostname handlerCfg.appCfg.loggerConfig
+  _ <- createCAC handlerCfg.appCfg
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlow
       flowRt
