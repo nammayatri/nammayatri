@@ -67,7 +67,9 @@ data Ride = Ride
     tripStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     uiDistanceCalculationWithAccuracy :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     uiDistanceCalculationWithoutAccuracy :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    vehicleServiceTierAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
