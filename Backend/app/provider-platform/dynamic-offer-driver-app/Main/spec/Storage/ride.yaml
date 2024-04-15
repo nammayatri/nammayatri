@@ -16,6 +16,8 @@ imports:
   Device : Kernel.Types.Version
   DeviceType: Kernel.Types.Version
   Version: Kernel.Types.Version
+  Double: Kernel.Prelude
+  Int: Kernel.Prelude
 
 Ride:
   tableName: ride
@@ -74,6 +76,8 @@ Ride:
     backendConfigVersion: Maybe Version
     backendAppVersion: Maybe Text
     clientDevice: Maybe Device
+    vehicleServiceTierSeatingCapacity: Maybe Int
+    vehicleServiceTierAirConditioned: Maybe Double
 
   sqlType:
     id: character(36)
