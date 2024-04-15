@@ -3,11 +3,14 @@
 
 module Storage.Queries.WhiteListOrgExtra where
 
+import Domain.Types.Merchant
+import Domain.Types.WhiteListOrg
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Types.Beckn.Domain (Domain (..))
+import Kernel.Types.Id
+import Kernel.Types.Registry.Subscriber (Subscriber)
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.WhiteListOrg as BeamBLO
 import Storage.Queries.OrphanInstances.WhiteListOrg

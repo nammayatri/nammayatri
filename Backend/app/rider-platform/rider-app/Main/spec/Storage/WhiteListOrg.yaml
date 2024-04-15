@@ -34,12 +34,7 @@ WhiteListOrg:
     id: PrimaryKey
     subscriberId: SecondaryKey
 
-  queries:
-    findBySubscriberIdAndDomain:
-      kvFunction: findOneWithKV
-      where:
-        and: [subscriberId, domain]
-        
+  queries:        
     findBySubscriberIdAndDomainAndMerchantId:
       kvFunction: findOneWithKV
       where:

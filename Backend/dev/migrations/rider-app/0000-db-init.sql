@@ -207,32 +207,6 @@ ALTER TABLE atlas_app.product_instance_backup OWNER TO atlas_app_user;
 
 
 
-CREATE TABLE atlas_app.quote (
-id character(36) NOT NULL,
-request_id character varying(255) NOT NULL,
-estimated_fare numeric(30,10) NOT NULL,
-provider_id character varying(255) NOT NULL,
-created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-vehicle_variant character varying(60) DEFAULT ''::character varying NOT NULL,
-discount double precision,
-estimated_total_fare numeric(30,2),
-total_fare numeric(30,2),
-provider_mobile_number character varying(255) NOT NULL,
-distance_to_nearest_driver double precision NOT NULL,
-provider_name character varying(255) NOT NULL,
-provider_completed_rides_count integer NOT NULL,
-bpp_quote_id character(36) NOT NULL,
-provider_url character varying(255) NOT NULL
-,CONSTRAINT  idx_16394_primary PRIMARY KEY (id)
-);
-ALTER TABLE atlas_app.quote OWNER TO atlas_app_user;
-CREATE INDEX idx_16394_case_id ON atlas_app.quote USING btree (request_id);
-
-
-
-
-
-
 
 CREATE TABLE atlas_app.search_request (
 id character(36) NOT NULL,

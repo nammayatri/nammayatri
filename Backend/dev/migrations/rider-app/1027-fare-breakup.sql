@@ -42,11 +42,6 @@ ADD
 
 DROP TABLE atlas_app.rental_quote;
 
-ALTER TABLE
-    atlas_app.quote
-ADD
-    COLUMN trip_terms_id character(36) REFERENCES atlas_app.trip_terms (id);
-
 UPDATE
     atlas_app.quote AS T1
 SET
@@ -75,11 +70,6 @@ CREATE TABLE atlas_app.fare_breakup (
     description text NOT NULL,
     amount double precision NOT NULL
 );
-
-ALTER TABLE
-    atlas_app.quote
-ADD
-    COLUMN fare_product_type varchar(255) NOT NULL DEFAULT 'ONE_WAY';
 
 ALTER TABLE
     atlas_app.quote

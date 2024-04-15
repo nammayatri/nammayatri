@@ -340,6 +340,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
         providerId = providerInfo.providerId,
         providerUrl = providerInfo.url,
         createdAt = now,
+        updatedAt = now,
         quoteDetails = quoteDetails',
         merchantId = searchRequest.merchantId,
         merchantOperatingCityId = searchRequest.merchantOperatingCityId,

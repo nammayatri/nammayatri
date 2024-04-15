@@ -67,5 +67,3 @@ ALTER COLUMN
 ALTER TABLE
    atlas_app.ride_booking DROP COLUMN request_id,
    DROP COLUMN quote_id;
-ALTER TABLE
-   atlas_app.quote DROP COLUMN bpp_quote_id;

@@ -31,6 +31,7 @@ import Control.Applicative ((<|>))
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
+import Domain.Action.UI.Quote as UQuote
 import Domain.Types.Booking.Type
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
@@ -38,8 +39,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
-import Domain.Types.Quote (QuoteAPIEntity (..))
-import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant (VehicleVariant)
@@ -194,7 +193,7 @@ selectList estimateId = do
   selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId DDO.ACTIVE
   bppDetailList <- forM ((.providerId) <$> selectedQuotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
   isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
-  pure $ SelectListRes $ DQuote.mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList
+  pure $ SelectListRes $ UQuote.mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList
 
 selectResult :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
 selectResult estimateId = do
@@ -209,4 +208,4 @@ selectResult estimateId = do
       selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId DDO.ACTIVE
       bppDetailList <- forM ((.providerId) <$> selectedQuotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
-      return $ QuotesResultResponse {bookingId = Nothing, selectedQuotes = Just $ SelectListRes $ DQuote.mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList}
+      return $ QuotesResultResponse {bookingId = Nothing, selectedQuotes = Just $ SelectListRes $ UQuote.mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList}

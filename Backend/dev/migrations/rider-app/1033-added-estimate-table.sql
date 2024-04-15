@@ -28,4 +28,3 @@ CREATE TABLE atlas_app.driver_offer (
 -- TODO do we need to migrate old data?
 DROP TABLE atlas_app.selected_quote;
 
-ALTER TABLE atlas_app.quote ADD COLUMN driver_offer_id character(36) REFERENCES atlas_app.driver_offer (id);
