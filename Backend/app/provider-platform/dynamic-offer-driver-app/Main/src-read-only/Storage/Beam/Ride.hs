@@ -54,7 +54,9 @@ data RideT f = RideT
     tripStartTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     uiDistanceCalculationWithAccuracy :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     uiDistanceCalculationWithoutAccuracy :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    vehicleServiceTierAirConditioned :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
+    vehicleServiceTierSeatingCapacity :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int))
   }
   deriving (Generic, B.Beamable)
 
