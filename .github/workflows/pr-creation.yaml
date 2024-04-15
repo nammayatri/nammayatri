@@ -38,4 +38,4 @@ jobs:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }} 
         run: |
           chmod +x asset-store-script.sh 
-          ./asset-store-script.sh ${{ github.event.pull_request.base.ref }} ${{ secrets.GITHUB_TOKEN }}
+          ./asset-store-script.sh ${{ github.event.pull_request.head.ref }} ${{ secrets.GITHUB_TOKEN }}
