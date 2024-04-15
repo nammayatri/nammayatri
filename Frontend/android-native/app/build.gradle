@@ -163,13 +163,13 @@ android {
             buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
         }
-        mtUser {
+        brdgUser {
             applicationId "com.mobility.movingtech"
             buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
             buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
         }
-        mtDriver {
+        brdgDriver {
             applicationId "com.mobility.movingtechdriver"
             buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
             buildConfigField "String", "MERCHANT", "\"KA\""
@@ -212,10 +212,10 @@ android {
     sourceSets {
         nyUser.setRoot('src/user/nammaYatri')
         myUser.setRoot('src/user/manaYatri')
-        mtUser.setRoot('src/user/movingTech')
+        brdgUser.setRoot('src/user/bridge')
         nyDriver.setRoot('src/driver/nammaYatriPartner')
         myDriver.setRoot('src/driver/manaYatriPartner')
-        mtDriver.setRoot('src/driver/movingTechDriver')
+        brdgDriver.setRoot('src/driver/bridgeDriver')
         ysUser.setRoot('src/user/jatriSaathi')
         ysDriver.setRoot('src/driver/jatriSaathiDriver')
         yatriUser.setRoot('src/user/yatri')
@@ -223,12 +223,12 @@ android {
         passCulturePartner.setRoot('src/driver/passCulturePartner')
         nyUser.res.srcDir('src/user/common/res')
         myUser.res.srcDir('src/user/common/res')
-        mtUser.res.srcDir('src/user/common/res')
+        brdgUser.res.srcDir('src/user/common/res')
         ysUser.res.srcDir('src/user/common/res')
         yatriUser.res.srcDir('src/user/common/res')
         nyDriver.res.srcDir('src/driver/common/res')
         myDriver.res.srcDir('src/driver/common/res')
-        mtDriver.res.srcDir('src/driver/common/res')
+        brdgDriver.res.srcDir('src/driver/common/res')
         ysDriver.res.srcDir('src/driver/common/res')
         yatriDriver.res.srcDir('src/driver/common/res')
         passCulturePartner.res.srcDir('src/driver/common/res')
@@ -288,13 +288,13 @@ dependencies {
     compileOnly project(path: ':mobility-common')
     nyDriverImplementation project(path: ':mobility-driver')
     myDriverImplementation project(path: ':mobility-driver')
-    mtDriverImplementation project(path: ':mobility-driver')
+    brdgDriverImplementation project(path: ':mobility-driver')
     passCulturePartnerImplementation project(path: ':mobility-driver')
     ysDriverImplementation project(path: ':mobility-driver')
     yatriDriverImplementation project(path: ':mobility-driver')
     nyUserImplementation project(path: ':mobility-customer')
     myUserImplementation project(path: ':mobility-customer')
-    mtUserImplementation project(path: ':mobility-customer')
+    brdgUserImplementation project(path: ':mobility-customer')
     ysUserImplementation project(path: ':mobility-customer')
     yatriUserImplementation project(path: ':mobility-customer')
     implementation platform('com.google.firebase:firebase-bom:32.7.1')

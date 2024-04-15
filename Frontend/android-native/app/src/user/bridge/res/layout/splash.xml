@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:background="@color/black"
+    android:visibility="gone"
+    android:id="@+id/splash">
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:src="@drawable/ny_ic_bridge_splash" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="bottom"
+        android:orientation="vertical"
+        android:paddingBottom="50dp">
+        <ImageView
+            android:layout_width="300dp"
+            android:layout_height="47.45dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_powered_by" />
+    </LinearLayout>    
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_gravity="center">
+            <ImageView
+                android:layout_width="180dp"
+                android:layout_height="58dp"
+                android:layout_margin="40dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ny_ic_bridge" />
+        </LinearLayout>
+
+</RelativeLayout>
