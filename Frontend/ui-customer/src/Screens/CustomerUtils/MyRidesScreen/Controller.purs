@@ -25,7 +25,7 @@ import Data.Int (fromString, round, toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), split)
-import Engineering.Helpers.Commons (strToBool)
+import Engineering.Helpers.Commons (strToBool, os)
 import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, fetchImage, FetchImageFrom(..), isParentView, emitTerminateApp, getCityFromString, getVehicleVariantImage, getAssetLink)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (firebaseLogEvent)
@@ -217,7 +217,7 @@ myRideListTransformerProp listRes =  filter (\item -> (any (_ == item.status) [(
     rideEndTimeUTC : toPropValue (fromMaybe ride.createdAt ride.rideEndTime),
     alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5",
     zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone",
-    variantImage : toPropValue $ PrestoList.renderImageSource $ PrestoList.ImageUrl imageUrl imageName
+    variantImage : toPropValue $ if os == "IOS" then "url->" <> imageUrl <> "," <> imageName else  "url->" <> imageUrl
   }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
 

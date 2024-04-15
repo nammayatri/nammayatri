@@ -249,7 +249,7 @@ getBN stringKey =
         ESTIMATES_REVISED_TO -> "সংশোধিত অনুমান হল"
         RATE_CARD -> "রেট কার্ড"
         NIGHT_TIME_CHARGES from till -> "রাতের সময় চার্জ"
-        MIN_FARE_UPTO -> "পর্যন্ত সর্বনিম্ন ভাড়া"
+        MIN_FARE_UPTO val -> "ন্যূনতম ভাড়া পর্যন্ত " <> val
         MORE_THAN  -> "কিলোমিটারেরও বেশি"
         RATE_ABOVE_MIN_FARE -> "ন্যূনতম ভাড়ার উপরে রেট"
         DRIVER_PICKUP_CHARGES _ -> "সেবা মূল্য"
@@ -330,7 +330,7 @@ getBN stringKey =
         ENABLE_THIS_FEATURE_TO_CHOOSE_YOUR_RIDE -> "আপনার পছন্দের রাইড এবং ভাড়া চয়ন করতে এই বৈশিষ্ট্যটি সক্রিয় করুন"
         BOOKING_PREFERENCE -> "বুকিং অগ্রাধিকার"
         BASE_FARES -> "বেস ভাড়া "
-        PICKUP_CHARGE -> "ড্রাইভার পিকআপ চার্জ"
+        PICKUP_CHARGE -> "পিকআপ চার্জ"
         TOTAL_PAID -> "মোট প্রদত্ত"
         WAITING_CHARGE -> "অপেক্ষার চার্জ"
         DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO -> "* ড্রাইভাররা ট্রাফিক, রিটার্ন ট্রিপের সম্ভাবনা ইত্যাদির মতো অন্যান্য বিষয়গুলি কভার করতে ₹20 পর্যন্ত অতিরিক্ত ভাড়া নিতে পারে।"
@@ -1093,3 +1093,5 @@ getBN stringKey =
         PLEASE_STAY_CALM_TEAM_ALERTED appName -> "দয়া করে শান্ত থাকুন, "<> appName <>" সুরক্ষা দলকে সতর্ক করা হয়েছে!"
         INDICATION_TO_EMERGENCY_CONTACTS appName -> appName <> "আপনার আত্মীয়দের জানাবে যে এটি একটি পরীক্ষামূলক ড্রিল, যাতে তারা স্ট্রেস-ফ্রি অভিজ্ঞতা পাবেন।"
         BOOK name -> "বুক " <> name
+        FARE_FOR limit -> limit <> " এর জন্য ভাড়া"
+        WAITING_CHARGE_LIMIT timeLimit -> "অপেক্ষা চার্জ (" <> timeLimit <> " মিনিটের পরে)"

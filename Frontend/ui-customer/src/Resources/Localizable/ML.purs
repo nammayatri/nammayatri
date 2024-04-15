@@ -246,7 +246,7 @@ getML stringKey =
         ESTIMATES_REVISED_TO -> "പുതുക്കിയ എസ്റ്റിമേറ്റ്"
         RATE_CARD -> "റേറ്റ് കാർഡ്"
         NIGHT_TIME_CHARGES from till -> "രാത്രികാല ചാർജുകൾ"
-        MIN_FARE_UPTO -> "വരെയാണ് കുറഞ്ഞ നിരക്ക്"
+        MIN_FARE_UPTO val -> "നിരക്ക് " <> val <> " വരെ"
         MORE_THAN  -> "കിലോമീറ്ററിലധികം"
         RATE_ABOVE_MIN_FARE -> "മിനിമം നിരക്കിന് മുകളിലുള്ള നിരക്ക്"
         DRIVER_PICKUP_CHARGES _ -> "ഡ്രൈവർ പിക്കപ്പ് നിരക്കുകൾ"
@@ -323,7 +323,7 @@ getML stringKey =
         ENABLE_THIS_FEATURE_TO_CHOOSE_YOUR_RIDE -> "നിങ്ങളുടെ ഇഷ്ടപ്രകാരമുള്ള റൈഡും നിരക്കും തിരഞ്ഞെടുക്കുന്നതിന് ഈ സവിശേഷത എനേബിൾ ചെയ്യുക"
         BOOKING_PREFERENCE -> "ബുക്കിംഗ് മുൻഗണന"
         BASE_FARES -> "അടിസ്ഥാന നിരക്ക്"
-        PICKUP_CHARGE -> "ഡ്രൈവർ പിക്കപ്പ് നിരക്ക്"
+        PICKUP_CHARGE -> "പിക്കപ്പ് ചാർജുകൾ"
         TOTAL_PAID -> "ആകെ നൽകിയ പണം"
         WAITING_CHARGE -> "കാത്തിരിപ്പ് ചാർജുകൾ"
         DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO -> "* ഡ്രൈവർമാർക്ക് റിട്ടേൺ യാത്ര ലഭിക്കാനുള്ള സാധ്യത, ട്രാഫിക് തുടങ്ങിയ മറ്റ് ഘടകങ്ങൾ ഉൾകോള്ളിച്ചുകൊണ്ട് ₹20 വരെ കൂടുതൽ അഭ്യർത്ഥിക്കാം."
@@ -1093,3 +1093,5 @@ getML stringKey =
         PLEASE_STAY_CALM_TEAM_ALERTED appName -> "ദയവായി ശാന്തമായി ഇരുക്കുക, "<> appName <>" സുരക്ഷ ടീമ് അറിയിക്കപ്പെടുന്നു!"
         INDICATION_TO_EMERGENCY_CONTACTS appName -> appName <>" നിങ്ങളുടെ എമർജൻസി കോൺടാക്റ്റുകൾക്ക് ഇത് ഒരു പരീക്ഷണ പരിശീലനമായി ഇരിക്കുന്നുവെന്ന് സൂചിപ്പിക്കുന്നു."
         BOOK name -> "ബുക്ക് " <> name
+        FARE_FOR limit -> limit <> " കോടതി"
+        WAITING_CHARGE_LIMIT timeLimit -> "കാത്തിരിക്കൽ ചാർജുകൾ ("<> timeLimit <>" മിനിറ്റ് ശേഷം)"

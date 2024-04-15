@@ -255,7 +255,7 @@ getEN stringKey =
         ESTIMATES_REVISED_TO -> "The revised estimate is"
         RATE_CARD -> "Rate Card"
         NIGHT_TIME_CHARGES from till -> "Night-time Charges ("<> from <> " to   " <> till <> ")"
-        MIN_FARE_UPTO -> "Min. Fare upto"
+        MIN_FARE_UPTO val -> "Min. Fare upto " <> val
         MORE_THAN -> "More than"
         RATE_ABOVE_MIN_FARE -> "Rate above Min. Fare"
         DRIVER_PICKUP_CHARGES _ -> "Driver Pickup Charges"
@@ -334,7 +334,7 @@ getEN stringKey =
         ENABLE_THIS_FEATURE_TO_CHOOSE_YOUR_RIDE -> "Enable this feature to choose your preferred ride & fare"
         BOOKING_PREFERENCE -> "Booking Preference"
         BASE_FARES -> "Base Fare "
-        PICKUP_CHARGE -> "Driver Pickup Charges"
+        PICKUP_CHARGE -> "Pickup Charges"
         TOTAL_PAID -> "Total Paid"
         WAITING_CHARGE -> "Waiting Charges"
         NOMINAL_FARE -> "Optional Driver Request*"
@@ -1091,3 +1091,5 @@ getEN stringKey =
         APPLICABLE_TOLL_CHARGES -> "Applicable Toll charges are included in the fares"
         UPDATE_TIP_STR -> "Update Tip"
         BOOK name -> "Book " <> name
+        FARE_FOR limit -> "Fare for " <> limit
+        WAITING_CHARGE_LIMIT timeLimit -> "Waiting Charges (after " <> timeLimit <> " mins)"

@@ -271,7 +271,7 @@ getTE stringKey =
     ESTIMATES_REVISED_TO -> "సవరించిన అంచనా"
     RATE_CARD -> "రేట్ కార్డు"
     NIGHT_TIME_CHARGES from till  -> "రాత్రి-సమయ ఛార్జీలు ("<> from <> " నుండి " <> till <> "వరకు)"
-    MIN_FARE_UPTO -> "కనిష్ట వరకు ఛార్జీలు"
+    MIN_FARE_UPTO val -> "కనిష్ట ధరకు " <> val <> " వరకు"
     MORE_THAN -> "మించి"
     RATE_ABOVE_MIN_FARE -> "కనిష్ట రేటు కంటే ఎక్కువ. ఛార్జీల"
     DRIVER_PICKUP_CHARGES _ -> "డ్రైవర్ పికప్ ఛార్జీలు"
@@ -350,7 +350,7 @@ getTE stringKey =
     ENABLE_THIS_FEATURE_TO_CHOOSE_YOUR_RIDE -> "మీరు ఇష్టపడే రైడ్ & ఛార్జీలను ఎంచుకోవడానికి ఈ ఫీచర్‌ని ప్రారంభించండి"
     BOOKING_PREFERENCE -> "బుకింగ్ ప్రాధాన్యత"
     BASE_FARES -> "బేస్ ఫేర్ "
-    PICKUP_CHARGE -> "డ్రైవర్ పికప్ ఛార్జీలు"
+    PICKUP_CHARGE -> "పికప్ ఛార్జీలు"
     TOTAL_PAID -> "మొత్తం చెల్లించబడింది"
     WAITING_CHARGE -> "వెయిటింగ్ ఛార్జీలు"
     NOMINAL_FARE -> "ఐచ్ఛిక డ్రైవర్ అభ్యర్థన*"
@@ -1106,3 +1106,5 @@ getTE stringKey =
     PLEASE_STAY_CALM_TEAM_ALERTED appName -> "దయచేసి స్థిరంగా ఉండండి, "<> appName <>" భద్రత టీమ్‌కు అలర్ట్ అయినది!"
     INDICATION_TO_EMERGENCY_CONTACTS appName -> appName <>" మీ అత్యంత కాలంగా సంక్రాంతి చేసే అనుకూలతనాన్ని అనుసరించడానికి మీ ఎత్తుచేయుటకు చెందిన మీ అత్యంత కాలంగా సంక్రాంతి చేసే అనుకూలతనాన్ని అనుసరించడానికి సూచనలు ఇవ్వించినది."
     BOOK name -> "బుక్ " <> name
+    FARE_FOR limit -> limit <> " కోసం ధర" 
+    WAITING_CHARGE_LIMIT timeLimit -> "వైటింగ్ ఛార్జీలు ("<> timeLimit <>" నిమిషాల తర్వాత)"

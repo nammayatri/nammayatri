@@ -70,7 +70,7 @@ initData = {
        currentRateCardType : DefaultRateCard,
        onFirstPage:false,
        baseFare : 0,
-       extraFare : 0,
+       extraFare : [],
        pickUpCharges : 0,
        vehicleVariant : "",
        createdTime : "",
@@ -120,7 +120,7 @@ initData = {
       , tollCharge : 0
       , serviceTierName : Nothing
       , serviceTierShortDesc : Nothing
-      , extraFare: 0
+      , extraFare: []
       , additionalFare: 0
       , nightShiftMultiplier: 0.0
       , nightCharges: false

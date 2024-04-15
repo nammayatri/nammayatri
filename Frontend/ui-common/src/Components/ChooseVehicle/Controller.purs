@@ -8,7 +8,7 @@ import Foreign.Generic (decode, encode, class Decode, class Encode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (Margin(..))
 import Data.Maybe (Maybe(..))
-import Common.Types.App (RateCardType(..))
+import Common.Types.App (RateCardType(..), FareList)
 
 data Action
   = NoAction
@@ -40,7 +40,7 @@ type Config
     , tollCharge :: Int
     , serviceTierShortDesc :: Maybe String
     , serviceTierName :: Maybe String
-    , extraFare :: Int
+    , extraFare :: Array FareList
     , additionalFare :: Int
     , nightShiftMultiplier :: Number
     , nightCharges :: Boolean
@@ -83,7 +83,7 @@ config =
   , tollCharge : 0
   , serviceTierShortDesc : Nothing
   , serviceTierName : Nothing
-  , extraFare: 0
+  , extraFare: []
   , additionalFare: 0
   , nightShiftMultiplier: 0.0
   , nightCharges: false

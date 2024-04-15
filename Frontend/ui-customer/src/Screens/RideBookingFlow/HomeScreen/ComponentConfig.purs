@@ -892,18 +892,17 @@ rateCardConfig state =
                                         _ -> getString RATE_CARD
                       MU.YATRI -> getVehicleTitle state.data.rateCard.vehicleVariant
                       _ -> ""
-        , fareList = (case MU.getMerchant FunctionCall of
+        , fareList = 
+            state.data.rateCard.extraFare 
+              <>
+                  (case MU.getMerchant FunctionCall of
                       MU.NAMMAYATRI -> case city of
                                         Delhi -> nyRateCardListForDelhi state
                                         Kochi -> yatriRateCardList state.data.rateCard.vehicleVariant state
-                                        Hyderabad -> hydRateCardList state
-                                        Chennai -> chennaiRateCardList state.data.rateCard.vehicleVariant state
-                                        Pondicherry -> pondicherryRateCardList state
                                         Bangalore -> nyRateCardList state
-                                        _ -> nyRateCardList state
+                                        _ -> []
                       MU.YATRI -> yatriRateCardList state.data.rateCard.vehicleVariant state
                       _ -> []) 
-                      <> if state.data.rateCard.tollCharge > 0 then [{key : getString TOLL_CHARGES_ESTIMATED, val : (getCurrency appConfig) <> (show state.data.rateCard.tollCharge)}] else []
 
         , otherOptions  = cityBasedOtherOptions city
         , fareInfoText = fareInfoText
@@ -915,7 +914,6 @@ rateCardConfig state =
                                                                    else getString $ DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE" )},
           {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)},
           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-          {key : "WAITING_CHARGE", val : (getString WAITING_CHARGE)<> "°"},
           {key : "WAITING_CHARGE_RATECARD_DESCRIPTION", val : (getString $ WAITING_CHARGE_RATECARD_DESCRIPTION waitingChargesPerMin freeWaitingTime)},
           {key : "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS", val : (getString YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS)},
           {key : "REASON_CHANGE_IN_ROUTE", val : ("<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B))},
@@ -941,35 +939,29 @@ rateCardConfig state =
     cityBasedOtherOptions city = case city of 
                                     Delhi -> [
                                                   {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE },
                                                   {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
                                                  ]
                                     Kochi -> [
                                                   {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE },
                                                   {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
                                                  ]
                                     Hyderabad -> [
                                                   {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE },
                                                   {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
                                                  ]
                                     Chennai -> [
                                                   {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE },
                                                   {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
                                                  ]
                                     Pondicherry -> []
                                     Bangalore -> [
                                                   {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
                                                   {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE },
                                                   {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
                                                  ]
                                     _ -> [
                                           {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
                                           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                          {key : "WAITING_CHARGES", val : getString WAITING_CHARGE },
                                           {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
                                           ]
 
@@ -988,82 +980,18 @@ yatriRateCardList :: String -> ST.HomeScreenState -> Array FareList
 yatriRateCardList vehicleVariant state = do
   let lang = getLanguageLocale languageKey
   case vehicleVariant of
-    "HATCHBACK" -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , val : "₹140"}
-                   , { key : "5 km - 13 km" , val : "₹18 / km"}
-                   , { key : "13 km - 30 km" , val : "₹25 / km"}
-                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN), val : "₹36 / km"}
-                   , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.rateCard.pickUpCharges) }
-                   , { key : (getString DRIVER_ADDITIONS) , val : "₹0 - ₹60"}]
+    "HATCHBACK" -> [ { key : (getString DRIVER_ADDITIONS) , val : "₹0 - ₹60"}]
 
-    "SEDAN"     -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO), val : "₹150"}
-                   , { key : "5 km - 13 km" , val : "₹18 / km"}
-                   , { key : "13 km - 30 km" , val : "₹25 / km"}
-                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN) ,val : "₹36 / km"}
-                   , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.rateCard.pickUpCharges) }
-                   , { key : (getString DRIVER_ADDITIONS) ,val : "₹0 - ₹60"}]
+    "SEDAN"     -> [{ key : (getString DRIVER_ADDITIONS) ,val : "₹0 - ₹60"}]
 
-    "SUV"       -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , val : "₹165"}
-                   , { key : "5 km - 13 km" , val : "₹20 / km"}
-                   , { key : "13 km - 30 km" , val : "₹28 / km"}
-                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN) , val :"₹40 / km"}
-                   , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.rateCard.pickUpCharges) }
-                   , { key : (getString DRIVER_ADDITIONS) ,val : "₹0 - ₹60"}]
+    "SUV"       -> [ { key : (getString DRIVER_ADDITIONS) ,val : "₹0 - ₹60"}]
 
-    "AUTO_RICKSHAW"  -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 1.5 km" else "1.5 km " <> (getString MIN_FARE_UPTO) , val : "₹30"}
-                        , { key : (getString RATE_ABOVE_MIN_FARE), val : "₹15 / km"}
-                        , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.rateCard.pickUpCharges) }
-                        , { key : (getString DRIVER_ADDITIONS) , val : "10% of the base fare"}]
+    "AUTO_RICKSHAW"  -> [ { key : (getString DRIVER_ADDITIONS) , val : "10% of the base fare"}]
 
     _ -> []
 
-chennaiRateCardList :: String -> ST.HomeScreenState -> Array FareList
-chennaiRateCardList vehicleVariant state = do
-  let lang = getLanguageLocale languageKey
-  case vehicleVariant of
-    "HATCHBACK" -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , val : "₹90"}
-                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN), val : "₹18 / km"}
-                   , { key : (getString PICKUP_CHARGE), val : "₹ 40" }
-                   ]
-    "SEDAN"     -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO), val : "₹105"}
-                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) ,val : "₹21 / km"}
-                   , { key : (getString PICKUP_CHARGE), val : "₹ 40" }
-                   ]
-
-    "SUV"       -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , val : "₹140"}
-                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) , val :"₹28 / km"}
-                   , { key : (getString PICKUP_CHARGE), val : "₹ 60" }
-                   ]
-
-    "AUTO_RICKSHAW"  -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 2.0 km" else "2.0 km " <> (getString MIN_FARE_UPTO) , val : "₹40"}
-                        , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 2.0 km" else "2.0 " <> (getString MORE_THAN), val : "₹14 / km"}               
-                        , { key : (getString PICKUP_CHARGE), val : "₹ 20" }
-                        ]
-    _ -> []
 
 
-hydRateCardList :: ST.HomeScreenState -> Array FareList
-hydRateCardList state = do
-  let isPeakTime = JB.withinTimeRange "17:00:00" "19:30:00" $ EHC.convertUTCtoISC (state.data.rateCard.createdTime) "HH:mm:ss"
-      isDayWeekend = isWeekend state.data.rateCard.createdTime
-  if (isPeakTime && (not isDayWeekend)) then 
-    [{key : ((getString MIN_FARE_UPTO) <> " 2.0 km"), val : ("₹40")},
-    { key : "2.0 km - 12 km" , val : "₹16 / km"},
-    { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 12 km" else "12 " <> (getString MORE_THAN) ,val : "₹15 / km"},
-    { key : (getString PICKUP_CHARGE), val : "₹ 10" }
-    ]
-  else
-    [{key : ((getString MIN_FARE_UPTO) <> " 2.0 km"), val : ("₹30")},
-      { key : "2.0 km - 12 km" , val : "₹14 / km"},
-      { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 12 km" else "12 " <> (getString MORE_THAN) ,val : "₹13 / km"},
-      { key : (getString PICKUP_CHARGE), val : "₹ 10" }
-      ]
-
-pondicherryRateCardList :: ST.HomeScreenState -> Array FareList
-pondicherryRateCardList state = do
-  [{key : ((getString MIN_FARE_UPTO) <> " 2.0 km"), val : ("₹35")},
-    { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 2km" else "2 " <> (getString MORE_THAN) ,val : "₹18 / km"},
-    { key : (getString PICKUP_CHARGE), val : "₹ 10" }
-    ]
 
 getVehicleTitle :: String -> String
 getVehicleTitle vehicle =
@@ -1079,20 +1007,15 @@ nyRateCardList state = let
   isCab = state.data.selectedEstimatesObject.vehicleVariant /= "AUTO_RICKSHAW"
   minFareUpto = if isCab then " 4.0 km" else " 2.0 km"
   in
-  ([{key : ((getString MIN_FARE_UPTO) <> minFareUpto <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.baseFare))},
-    {key : ((getString RATE_ABOVE_MIN_FARE) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.extraFare) <> "/ km")},
-    {key : (getString $ DRIVER_PICKUP_CHARGES "DRIVER_PICKUP_CHARGES"), val : ("₹" <> HU.toStringJSON (state.data.rateCard.pickUpCharges))}
-    ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then
-    [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
+  (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) 
+    then [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] 
+    else [])
 
 nyRateCardListForDelhi :: ST.HomeScreenState -> Array FareList
 nyRateCardListForDelhi state = 
-  ([{key : ((getString MIN_FARE_UPTO) <> " 1.5 km" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹30")},
-    { key : "1.5 km - 5 km" , val : "₹15 / km"},
-    { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) ,val : "₹10 / km"},
-    {key : (getString $ DRIVER_PICKUP_CHARGES "DRIVER_PICKUP_CHARGES"), val : ("₹" <> HU.toStringJSON (state.data.rateCard.pickUpCharges))}
-    ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then
-    [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
+  (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) 
+      then [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] 
+      else [])
 
 estimateChangedPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 estimateChangedPopupConfig state =

@@ -128,7 +128,7 @@ rideDetails push state =
   , PrestoList.onClickHolder push OnClick
   , margin (MarginBottom 20)
   ][  imageView 
-      [ PrestoList.imageUrlWithFallbackHolder "variantImage"
+      [ PrestoList.imageUrlHolder "variantImage"
       , height $ V 32
       , width $ V 32
       , margin $ MarginRight 8
