@@ -480,8 +480,8 @@ locateOnMapConfig = {
       , labelImage : "ny_ic_metro_white,https://assets.moving.tech/beckn/common/common/ny_ic_auto.png"
       , labelActionImage : ""
       , theme : "LIGHT"
-      , spotIcon : "ny_ic_zone_pickup_marker_green,https://assets.moving.tech/beckn/common/common/ny_ic_circle.png"
-      , selectedSpotIcon : "ny_ic_selected_zone_pickup_marker_green,https://assets.moving.tech/beckn/passculture/user/images/ny_ic_outer_circle.png"
+      , spotIcon : "ny_ic_zone_pickup_marker_green,https://assets.moving.tech/beckn/common/common/ny_ic_star_inactive.png"
+      , selectedSpotIcon : "ny_ic_selected_zone_pickup_marker_green,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_star_active_rounded.png"
       , showZoneLabel : false
       }
   , navigateToNearestGate : true

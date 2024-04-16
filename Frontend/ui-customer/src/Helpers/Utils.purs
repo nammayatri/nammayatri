@@ -859,7 +859,7 @@ specialZoneTagConfig zoneType =
 zoneLabelIcon :: ZoneType -> String
 zoneLabelIcon zoneType =
   case zoneType of
-    METRO -> "ny_ic_metro_white"
+    METRO -> "ny_ic_metro_white,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_briefcase.png"
     _ -> ""
 
 transformGeoJsonFeature :: Maybe String -> Array GateInfoFull -> String

@@ -916,8 +916,8 @@ public class MobilityCommonBridge extends HyperBridge {
                                         images.add(markerConfig.pointerIcon);
 //                                        images.add(pointerImage);
 //                                        images.add(actionImage);
-                                        NetworkTaskManager //.with(bridgeComponents.getContext())
-                                                .load(images, bridgeComponents).post(() -> {
+                                        NetworkTaskManager.with(bridgeComponents)
+                                                .load(images).post(() -> {
                                             Bitmap markerBitmap = getMarkerBitmapFromView(null, true, null, MarkerType.SPECIAL_ZONE_MARKER, markerConfig);
                                             labelView.setImageBitmap(markerBitmap);
                                         }).execute();
@@ -1234,8 +1234,8 @@ public class MobilityCommonBridge extends HyperBridge {
                 images.add(markerConfig.labelActionImage);
                 images.add(markerConfig.pointerIcon);
                 images.add(icon);
-                NetworkTaskManager //.with(bridgeComponents.getContext())
-                        .load(images, bridgeComponents).post(() -> {
+                NetworkTaskManager.with(bridgeComponents)
+                        .load(images).post(() -> {
                             MarkerOptions markerOptionsObj = new MarkerOptions()
                             .title("")
                             .position(new LatLng(lat, lng))
@@ -1551,8 +1551,8 @@ public class MobilityCommonBridge extends HyperBridge {
                     Marker existingMarker = (Marker)markers.get(id);
                     if (position != null) existingMarker.setPosition(position);
                     existingMarker.setVisible(true);
-                    NetworkTaskManager //.with(bridgeComponents.getContext())
-                            .load(images, bridgeComponents).post(() -> {
+                    NetworkTaskManager.with(bridgeComponents)
+                            .load(images).post(() -> {
                                 Bitmap markerBitmap = getMarkerBitmapFromView(null, markerImage.equals(""), actionImage, MarkerType.NORMAL_MARKER, markerConfig);
                                 existingMarker.setIcon(BitmapDescriptorFactory.fromBitmap(markerBitmap));
                             }).execute();
@@ -1560,8 +1560,8 @@ public class MobilityCommonBridge extends HyperBridge {
 //                    existingMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(null, markerImage.equals(""), actionImage, MarkerType.NORMAL_MARKER, markerConfig)));
                 } else {
                     LatLng finalPosition = position;
-                    NetworkTaskManager //.with(bridgeComponents.getContext())
-                            .load(images, bridgeComponents).post(() -> {
+                    NetworkTaskManager.with(bridgeComponents)
+                            .load(images).post(() -> {
                         try {
 //                        Bitmap markerBitmap = getMarkerBitmapFromView(null, markerImage.equals(""), actionImage, MarkerType.NORMAL_MARKER, markerConfig);
 //                        existingMarker.setIcon(BitmapDescriptorFactory.fromBitmap(markerBitmap));
@@ -2246,8 +2246,8 @@ public class MobilityCommonBridge extends HyperBridge {
                     images.add(markerConfig.pointerIcon);
                     images.add(destinationIcon);
                     images.add(sourceIcon);
-                    NetworkTaskManager //.with(bridgeComponents.getContext())
-                            .load(images, bridgeComponents).post(() -> {
+                    NetworkTaskManager.with(bridgeComponents)
+                            .load(images).post(() -> {
                         try {
                             if (!destinationIcon.equals("")) {
                                 List<LatLng> points = polylineOptions.getPoints();
@@ -2320,8 +2320,8 @@ public class MobilityCommonBridge extends HyperBridge {
                         images.add(markerConfig.labelActionImage);
                         images.add(markerConfig.pointerIcon);
                         images.add(markerObject.optString("pointerIcon"));
-                        NetworkTaskManager//.with(bridgeComponents.getContext())
-                                .load(images, bridgeComponents).post(() -> {
+                        NetworkTaskManager.with(bridgeComponents)
+                                .load(images).post(() -> {
                             try {
                                 Bitmap markerBitmap = getMarkerBitmapFromView(markerObject.optString("pointerIcon"), !markerObject.optBoolean("showPointer", false), null, MarkerType.NORMAL_MARKER, markerConfig);
                                 MarkerOptions markerObj = new MarkerOptions()
@@ -2386,8 +2386,8 @@ public class MobilityCommonBridge extends HyperBridge {
         images.add(markerConfig.pointerIcon);
         images.add(pointerImage);
         images.add(actionImage);
-        NetworkTaskManager //.with(bridgeComponents.getContext())
-                .load(images, bridgeComponents).post(() -> {
+        NetworkTaskManager.with(bridgeComponents)
+                .load(images).post(() -> {
             Bitmap markerBitmap = getMarkerBitmapFromView(pointerImage, isInvisiblePointer, actionImage, markerType, markerConfig);
             imageView.setImageBitmap(markerBitmap);
         }).execute();
@@ -2500,8 +2500,8 @@ public class MobilityCommonBridge extends HyperBridge {
             int lastIndex = url.lastIndexOf('/') + 1;
             String urlImageName = url.length() > lastIndex + 1 ? url.substring(lastIndex) : "";
             if (!urlImageName.equals("") && isImagePresent(urlImageName)) {
-                return NetworkTaskManager //.with(bridgeComponents.getContext())
-                        .fetchImageFromInternalStorage(urlImageName, bridgeComponents);
+                return NetworkTaskManager.with(bridgeComponents)
+                        .fetchImageFromInternalStorage(urlImageName);
             } else {
                 String fallbackImageName = splitImage[0];
                 int imageID = context.getResources().getIdentifier(fallbackImageName, "drawable", bridgeComponents.getContext().getPackageName());
@@ -2623,8 +2623,8 @@ public class MobilityCommonBridge extends HyperBridge {
         if (!labelActionImage.equals("")) {
             Context context = bridgeComponents.getContext();
             ImageView imageView = customMarkerView.findViewById(R.id.label_image_action);
-            Bitmap bitmap = NetworkTaskManager //.with(bridgeComponents.getContext())
-                    .fetchImageWithFallback(labelActionImage, bridgeComponents);
+            Bitmap bitmap = NetworkTaskManager.with(bridgeComponents)
+                    .fetchImageWithFallback(labelActionImage);
             if (bitmap != null) {
                 imageView.setImageBitmap(bitmap);
                 imageView.setVisibility(View.VISIBLE);
@@ -2638,8 +2638,8 @@ public class MobilityCommonBridge extends HyperBridge {
         Context context = bridgeComponents.getContext();
         if (actionImage != null) {
             ImageView markerActionImage = customMarkerView.findViewById(R.id.marker_action_image);
-            Bitmap bitmap = NetworkTaskManager//.with(bridgeComponents.getContext())
-                .fetchImageWithFallback(actionImage, bridgeComponents);
+            Bitmap bitmap = NetworkTaskManager.with(bridgeComponents)
+                .fetchImageWithFallback(actionImage);
             if (bitmap != null) {
                 markerActionImage.setImageBitmap(bitmap);
                 markerActionImage.setVisibility(View.VISIBLE);
@@ -2656,8 +2656,8 @@ public class MobilityCommonBridge extends HyperBridge {
     private void setMarkerPointerImage(String pointerImage, Boolean isInvisiblePointer, MarkerType markerType, View customMarkerView) {
         Context context = bridgeComponents.getContext();
         ImageView pointer = customMarkerView.findViewById(R.id.pointer_img);
-        Bitmap bitmap = NetworkTaskManager//.with(bridgeComponents.getContext())
-             .fetchImageWithFallback(pointerImage, bridgeComponents);
+        Bitmap bitmap = NetworkTaskManager.with(bridgeComponents)
+             .fetchImageWithFallback(pointerImage);
 //        if (bitmap != null) {
 //            markerActionImage.setImageBitmap(bitmap);
 //            markerActionImage.setVisibility(View.VISIBLE);
@@ -2690,8 +2690,8 @@ public class MobilityCommonBridge extends HyperBridge {
 //            Context context = bridgeComponents.getContext();
             if (labelImageName != null && !labelImageName.equals("")) {
                 ImageView labelImage = customMarkerView.findViewById(R.id.zone_image);
-                Bitmap bitmap = NetworkTaskManager//.with(bridgeComponents.getContext())
-                     .fetchImageWithFallback(labelImageName, bridgeComponents);
+                Bitmap bitmap = NetworkTaskManager.with(bridgeComponents)
+                     .fetchImageWithFallback(labelImageName);
                 if (bitmap != null) {
                     labelImage.setImageBitmap(bitmap);
                     labelImage.setVisibility(View.VISIBLE);
