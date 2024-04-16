@@ -946,7 +946,7 @@ eval (UpdateRepeatTrips rideList) state = do
     continue shimmerState
 
         
-eval UpdatePeekHeight state = continue state{data{peekHeight = getPeekHeight state}, props{showShimmer = if os =="IOS" then false else state.props.showShimmer}}
+eval UpdatePeekHeight state = continue state{data{peekHeight = getPeekHeight state}}
 
 eval (Scroll item) state = do
   let sheetState = if item == state.props.currSlideIndex then state.props.isHomescreenExpanded
