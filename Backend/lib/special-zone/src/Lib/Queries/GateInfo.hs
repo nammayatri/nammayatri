@@ -23,9 +23,6 @@ import Lib.Tabular.GateInfo
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.SpecialLocation as SL
 
-create :: D.GateInfo -> SqlDB ()
-create = Esq.create
-
 findById :: Transactionable m => Id D.GateInfo -> m (Maybe D.GateInfo)
 findById = Esq.findById
 
@@ -54,3 +51,13 @@ findGateInfoByLatLongWithoutGeoJson point = do
     gateInfo <- from $ table @GateInfoT
     where_ $ gateInfo ^. GateInfoPoint ==. val point
     return gateInfo
+
+deleteById :: Id D.GateInfo -> SqlDB ()
+deleteById = Esq.deleteByKey @GateInfoT
+
+deleteAll :: Id SL.SpecialLocation -> SqlDB ()
+deleteAll specialLocationId =
+  Esq.delete $ do
+    gateInfo <- from $ table @GateInfoT
+    where_ $
+      gateInfo ^. GateInfoSpecialLocationId ==. val (toKey specialLocationId)

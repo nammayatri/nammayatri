@@ -17,42 +17,39 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Lib.Tabular.SpecialLocationPriority where
+module Lib.Tabular.GateInfoGeom where
 
+import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import qualified Lib.Types.SpecialLocationPriority as Domain
+import Lib.Tabular.SpecialLocation (SpecialLocationTId)
+import qualified Lib.Types.GateInfo as Domain
+
+derivePersistField "LatLong"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    SpecialLocationPriorityT sql=special_location_priority
+    GateInfoGeomT sql=gate_info
       id Text
-      merchantId Text
-      category Text
-      pickupPriority Int
-      dropPriority Int
+      point LatLong
+      specialLocationId SpecialLocationTId
+      defaultDriverExtra Int Maybe
+      name Text
+      address Text Maybe
+      canQueueUpOnGate Bool
+      geom Text Maybe
+      createdAt UTCTime
+      updatedAt UTCTime
       Primary id
       deriving Generic
     |]
 
-instance TEntityKey SpecialLocationPriorityT where
-  type DomainKey SpecialLocationPriorityT = Id Domain.SpecialLocationPriority
-  fromKey (SpecialLocationPriorityTKey _id) = Id _id
-  toKey (Id id) = SpecialLocationPriorityTKey id
-
-instance FromTType SpecialLocationPriorityT Domain.SpecialLocationPriority where
-  fromTType SpecialLocationPriorityT {..} =
-    return $
-      Domain.SpecialLocationPriority
-        { id = Id id,
-          ..
-        }
-
-instance ToTType SpecialLocationPriorityT Domain.SpecialLocationPriority where
-  toTType Domain.SpecialLocationPriority {..} =
-    SpecialLocationPriorityT
+instance ToTType GateInfoGeomT Domain.GateInfo where
+  toTType Domain.GateInfo {..} =
+    GateInfoGeomT
       { id = getId id,
+        specialLocationId = toKey specialLocationId,
         ..
       }

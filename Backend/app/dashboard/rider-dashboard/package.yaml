@@ -113,6 +113,7 @@ library:
     - lib-dashboard
     - rider-app
     - shared-services
+    - special-zone-a
 
 executables:
   rider-dashboard-exe:

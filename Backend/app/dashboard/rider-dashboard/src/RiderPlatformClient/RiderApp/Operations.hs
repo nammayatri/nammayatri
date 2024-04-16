@@ -23,6 +23,7 @@ import qualified "rider-app" API.Dashboard as BAP
 import qualified "rider-app" API.Types.UI.TicketService as DTB
 import qualified Beckn.Types.Core.Taxi.Search ()
 import qualified Dashboard.Common.Booking as Booking
+import qualified Dashboard.Common.Merchant as CMerchant
 import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
@@ -46,6 +47,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (callAPI)
+import qualified Lib.Types.SpecialLocation as SL
 import Servant hiding (route)
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
@@ -84,7 +86,11 @@ data MerchantAPIs = MerchantAPIs
     mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes
+    createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes,
+    upsertSpecialLocation :: Maybe (Id SL.SpecialLocation) -> CMerchant.UpsertSpecialLocationReqT -> Euler.EulerClient APISuccess,
+    deleteSpecialLocation :: Id SL.SpecialLocation -> Euler.EulerClient APISuccess,
+    upsertSpecialLocationGate :: Id SL.SpecialLocation -> CMerchant.UpsertSpecialLocationGateReqT -> Euler.EulerClient APISuccess,
+    deleteSpecialLocationGate :: Id SL.SpecialLocation -> Text -> Euler.EulerClient APISuccess
   }
 
 data RidesAPIs = RidesAPIs
@@ -174,7 +180,11 @@ mkAppBackendAPIs merchantId city token = do
       :<|> mapsServiceUsageConfigUpdate
       :<|> smsServiceConfigUpdate
       :<|> smsServiceUsageConfigUpdate
-      :<|> createMerchantOperatingCity = merchantClient
+      :<|> createMerchantOperatingCity
+      :<|> upsertSpecialLocation
+      :<|> deleteSpecialLocation
+      :<|> upsertSpecialLocationGate
+      :<|> deleteSpecialLocationGate = merchantClient
 
     listIssue
       :<|> ticketStatusCallBack = issueClient

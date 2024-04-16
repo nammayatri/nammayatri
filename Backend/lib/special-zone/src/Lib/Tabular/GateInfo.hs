@@ -40,6 +40,7 @@ mkPersist
       address Text Maybe
       canQueueUpOnGate Bool
       createdAt UTCTime
+      updatedAt UTCTime
       Primary id
       deriving Generic
     |]
@@ -55,13 +56,6 @@ instance FromTType GateInfoT Domain.GateInfo where
       Domain.GateInfo
         { id = Id id,
           specialLocationId = fromKey specialLocationId,
+          geom = Nothing,
           ..
         }
-
-instance ToTType GateInfoT Domain.GateInfo where
-  toTType Domain.GateInfo {..} =
-    GateInfoT
-      { id = getId id,
-        specialLocationId = toKey specialLocationId,
-        ..
-      }

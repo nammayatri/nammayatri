@@ -66,6 +66,10 @@ type API =
            :<|> CreateMerchantOperatingCityAPI
            :<|> SchedulerTriggerAPI
            :<|> UpdateOnboardingVehicleVariantMapping
+           :<|> UpsertSpecialLocationAPI
+           :<|> DeleteSpecialLocationAPI
+           :<|> UpsertSpecialLocationGateAPI
+           :<|> DeleteSpecialLocationGatesAPI
        )
 
 type MerchantUpdateAPI =
@@ -164,6 +168,22 @@ type UpdateOnboardingVehicleVariantMapping =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
     :> Common.UpdateOnboardingVehicleVariantMappingAPI
 
+type UpsertSpecialLocationAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPSERT_SPECIAL_LOCATION
+    :> Common.UpsertSpecialLocationAPI
+
+type DeleteSpecialLocationAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'DELETE_SPECIAL_LOCATION
+    :> Common.DeleteSpecialLocationAPI
+
+type UpsertSpecialLocationGateAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPSERT_SPECIAL_LOCATION_GATE
+    :> Common.UpsertSpecialLocationGateAPI
+
+type DeleteSpecialLocationGatesAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'DELETE_SPECIAL_LOCATION_GATE
+    :> Common.DeleteSpecialLocationGateAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   merchantUpdate merchantId city
@@ -190,6 +210,10 @@ handler merchantId city =
     :<|> createMerchantOperatingCity merchantId city
     :<|> schedulerTrigger merchantId city
     :<|> updateOnboardingVehicleVariantMapping merchantId city
+    :<|> upsertSpecialLocation merchantId city
+    :<|> deleteSpecialLocation merchantId city
+    :<|> upsertSpecialLocationGate merchantId city
+    :<|> deleteSpecialLocationGate merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -468,3 +492,34 @@ updateOnboardingVehicleVariantMapping merchantShortId opCity apiTokenInfo req = 
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (addMultipartBoundary . (.merchant.updateOnboardingVehicleVariantMapping)) req
   where
     addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
+
+upsertSpecialLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReq -> FlowHandler APISuccess
+upsertSpecialLocation merchantShortId opCity apiTokenInfo mbSpecialLocationId req@Common.UpsertSpecialLocationReq {..} = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.UpsertSpecialLocationEndpoint apiTokenInfo (Just req)
+  geom <- maybe (return Nothing) mkGeom (req.file)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.upsertSpecialLocation) mbSpecialLocationId Common.UpsertSpecialLocationReqT {geom = geom, ..}
+
+deleteSpecialLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SL.SpecialLocation -> FlowHandler APISuccess
+deleteSpecialLocation merchantShortId opCity apiTokenInfo specialLocationId = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.DeleteSpecialLocationEndpoint apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.deleteSpecialLocation) specialLocationId
+
+upsertSpecialLocationGate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReq -> FlowHandler APISuccess
+upsertSpecialLocationGate merchantShortId opCity apiTokenInfo specialLocationId req@Common.UpsertSpecialLocationGateReq {..} = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.UpsertSpecialLocationGateEndpoint apiTokenInfo (Just req)
+  geom <- maybe (return Nothing) mkGeom (req.file)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.upsertSpecialLocationGate) specialLocationId Common.UpsertSpecialLocationGateReqT {geom = geom, ..}
+
+deleteSpecialLocationGate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SL.SpecialLocation -> Text -> FlowHandler APISuccess
+deleteSpecialLocationGate merchantShortId opCity apiTokenInfo specialLocationId gateName = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.DeleteSpecialLocationGateEndpoint apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.deleteSpecialLocationGate) specialLocationId gateName
+
+mkGeom :: FilePath -> Flow (Maybe Text)
+mkGeom kmlFile = do
+  result <- getGeomFromKML kmlFile >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom.")
+  return $ Just $ T.pack result
