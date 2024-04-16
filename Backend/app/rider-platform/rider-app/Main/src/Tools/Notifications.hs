@@ -276,13 +276,13 @@ disableFollowRide ::
   Id Person ->
   m ()
 disableFollowRide personId = do
-  void $ QPDEN.updateShareRideForAll personId $ Just False
   emContacts <- QPDEN.findAllByPersonId personId
-  let followingContacts = filter (.enableForFollowing) emContacts
+  let followingContacts = filter (\item -> item.enableForFollowing || item.enableForShareRide) emContacts
   mapM_
     ( \contact -> maybe (pure ()) updateFollowRideCount contact.contactPersonId
     )
     followingContacts
+  void $ QPDEN.updateShareRideForAll personId $ Just False
   where
     updateFollowRideCount emPersonId = do
       CQFollowRide.updateFollowRideList emPersonId personId False
