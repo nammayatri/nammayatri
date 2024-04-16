@@ -1,4 +1,3 @@
-ALTER TABLE atlas_app.person ADD COLUMN notification_token character varying(255);
 ALTER TABLE atlas_app.merchant_service_usage_config
     ADD COLUMN notify_person character varying(30);
 UPDATE atlas_app.merchant_service_usage_config

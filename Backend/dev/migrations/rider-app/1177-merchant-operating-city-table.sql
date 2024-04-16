@@ -131,10 +131,6 @@ ALTER COLUMN city SET NOT NULL;
 
 ------------------------------------------------------------- Person Table Migrations ----------------------------------------------------------------
 -- Add new column 'current_city'
-ALTER TABLE atlas_app.person
-ADD COLUMN current_city               character varying(255) NULL,
--- Add new column 'merchant_operating_city_id'
-ADD COLUMN merchant_operating_city_id character(36)          NULL;
 
 -- Update the values of the 'current_city' column
 UPDATE atlas_app.person

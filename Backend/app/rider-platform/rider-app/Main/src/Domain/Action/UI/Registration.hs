@@ -33,10 +33,11 @@ import Data.Aeson.Types ((.:), (.:?))
 import Data.Maybe (listToMaybe)
 import Data.OpenApi hiding (email, info)
 import qualified Data.Text.Encoding as TE
+import Domain.Action.UI.Person as SP
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import Domain.Types.Person (PersonAPIEntity, PersonE (updatedAt))
+import Domain.Types.Person (PersonE (updatedAt))
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.PersonStats as DPS
@@ -416,7 +417,7 @@ verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m) => SP.Per
 verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   let isNewPerson = person.isNew
   RegistrationToken.deleteByPersonIdExceptNew person.id regToken.id
-  when isNewPerson $ Person.setIsNewFalse person.id
+  when isNewPerson $ Person.setIsNewFalse False person.id
   when isNewPerson $
     Notify.notifyOnRegistration regToken person deviceToken
   updPerson <- Person.findById (Id regToken.entityId) >>= fromMaybeM (PersonDoesNotExist regToken.entityId)
@@ -460,11 +461,11 @@ verify tokenId req = do
     merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
     when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken)
   void $ RegistrationToken.setVerified True tokenId
-  void $ Person.updateDeviceToken person.id deviceToken
+  void $ Person.updateDeviceToken deviceToken person.id
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
   when (isNothing person.referralCode) $ do
     newCustomerReferralCode <- generateCustomerReferralCode
-    checkIfReferralCodeExists <- Person.findPersonByCustomerReferralCode newCustomerReferralCode
+    checkIfReferralCodeExists <- Person.findPersonByCustomerReferralCode (Just newCustomerReferralCode)
     when (isNothing checkIfReferralCodeExists) $
       void $ Person.updateCustomerReferralCode person.id newCustomerReferralCode
   return $ AuthVerifyRes token personAPIEntity
@@ -487,7 +488,7 @@ callWhatsappOptApi mobileNo personId merchantId hasOptedIn = do
   let status = fromMaybe Whatsapp.OPT_IN hasOptedIn
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationDoesNotExist $ "personId:- " <> personId.getId)
   void $ whatsAppOptAPI merchantId merchantOperatingCityId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
-  void $ Person.updateWhatsappNotificationEnrollStatus personId $ Just status
+  void $ Person.updateWhatsappNotificationEnrollStatus (Just status) personId
 
 getRegistrationTokenE :: (CacheFlow m r, EsqDBFlow m r) => Id SR.RegistrationToken -> m SR.RegistrationToken
 getRegistrationTokenE tokenId =
@@ -598,7 +599,7 @@ logout ::
   m APISuccess
 logout personId = do
   cleanCachedTokens personId
-  void $ Person.updateDeviceToken personId Nothing
+  void $ Person.updateDeviceToken Nothing personId
   void $ RegistrationToken.deleteByPersonId personId
   pure AP.Success
 

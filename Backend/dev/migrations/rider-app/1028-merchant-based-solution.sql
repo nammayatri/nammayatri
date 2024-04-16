@@ -9,7 +9,6 @@ INSERT INTO atlas_app.merchant (id, short_id) VALUES
     ('da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', 'NAMMA_YATRI');
 
 
-ALTER TABLE atlas_app.person ADD COLUMN merchant_id character(36) NOT NULL REFERENCES atlas_app.merchant (id) DEFAULT 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51';
 
 ALTER TABLE atlas_app.ride_booking ADD COLUMN merchant_id character(36) NOT NULL REFERENCES atlas_app.merchant (id) DEFAULT 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51';
 ALTER TABLE atlas_app.search_request ADD COLUMN merchant_id character(36) NOT NULL REFERENCES atlas_app.merchant (id) DEFAULT 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51';

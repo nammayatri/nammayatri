@@ -183,6 +183,7 @@ library
       Domain.Action.UI.Invoice
       Domain.Action.UI.Maps
       Domain.Action.UI.Payment
+      Domain.Action.UI.Person
       Domain.Action.UI.PersonStats
       Domain.Action.UI.Profile
       Domain.Action.UI.Quote
@@ -221,7 +222,6 @@ library
       Domain.Types.Merchant.MerchantPaymentMethod
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
-      Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
       Domain.Types.Person.PersonFlowStatus
       Domain.Types.PlaceBasedServiceConfig
@@ -274,7 +274,6 @@ library
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
       Storage.Beam.Payment
-      Storage.Beam.Person
       Storage.Beam.Person.PersonDefaultEmergencyNumber
       Storage.Beam.Person.PersonFlowStatus
       Storage.Beam.PlaceBasedServiceConfig
@@ -336,9 +335,9 @@ library
       Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
-      Storage.Queries.Person
       Storage.Queries.Person.PersonDefaultEmergencyNumber
       Storage.Queries.Person.PersonFlowStatus
+      Storage.Queries.PersonExtra
       Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.QuoteExtra
@@ -350,6 +349,7 @@ library
       Storage.Queries.Transformers.AppInstalls
       Storage.Queries.Transformers.BlackListOrg
       Storage.Queries.Transformers.MerchantConfig
+      Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.Quote
       Storage.Queries.Transformers.SearchReqLocation
       Storage.Queries.Transformers.SpecialZoneQuote
@@ -416,6 +416,7 @@ library
       Domain.Types.MerchantState
       Domain.Types.NotificationSoundsConfig
       Domain.Types.OnSearchEvent
+      Domain.Types.Person
       Domain.Types.PersonDisability
       Domain.Types.PersonStats
       Domain.Types.Quote
@@ -467,6 +468,7 @@ library
       Storage.Beam.MerchantState
       Storage.Beam.NotificationSoundsConfig
       Storage.Beam.OnSearchEvent
+      Storage.Beam.Person
       Storage.Beam.PersonDisability
       Storage.Beam.PersonStats
       Storage.Beam.Quote
@@ -523,11 +525,13 @@ library
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.LocationMapping
+      Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.PersonStats
       Storage.Queries.OrphanInstances.Quote
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.WhiteListOrg
+      Storage.Queries.Person
       Storage.Queries.PersonDisability
       Storage.Queries.PersonStats
       Storage.Queries.Quote

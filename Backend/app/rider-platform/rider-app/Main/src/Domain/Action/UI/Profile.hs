@@ -185,7 +185,7 @@ getPersonDetails (personId, _) mbToss = do
     if (isNothing person.customerReferralCode)
       then do
         newCustomerReferralCode <- DR.generateCustomerReferralCode
-        checkIfReferralCodeExists <- QPerson.findPersonByCustomerReferralCode newCustomerReferralCode
+        checkIfReferralCodeExists <- QPerson.findPersonByCustomerReferralCode (Just newCustomerReferralCode)
         if (isNothing checkIfReferralCodeExists)
           then do
             void $ QPerson.updateCustomerReferralCode personId newCustomerReferralCode
@@ -238,12 +238,12 @@ updateDisability hasDisability mbDisability personId = do
   case (hasDisability, mbDisability) of
     (Nothing, _) -> logDebug "No Disability"
     (Just False, _) -> do
-      QPerson.updateHasDisability personId $ Just False
+      QPerson.updateHasDisability (Just False) personId
       PDisability.deleteByPersonId personId
     (Just True, Nothing) -> throwError $ InvalidRequest "Field disability can't be null if hasDisability is True"
     (Just True, Just selectedDisability) -> do
       customerDisability <- B.runInReplica $ PDisability.findByPersonId personId
-      QPerson.updateHasDisability personId $ Just True
+      QPerson.updateHasDisability (Just True) personId
       let disabilityId = getId $ selectedDisability.id
       disability <- runInReplica $ QD.findByDisabilityId disabilityId >>= fromMaybeM (DisabilityDoesNotExist disabilityId)
       let mbDescription = (selectedDisability.description) <|> (Just disability.description)
@@ -275,7 +275,7 @@ validateRefferalCode personId refCode = do
   if isCustomerReferralCode
     then do
       unless (TU.validateAlphaNumericWithLength refCode 6) (throwError $ InvalidRequest "Referral Code must have 6 digits and must be Alphanumeric")
-      referredByPerson <- QPerson.findPersonByCustomerReferralCode refCode >>= fromMaybeM (InvalidRequest "Invalid ReferralCode")
+      referredByPerson <- QPerson.findPersonByCustomerReferralCode (Just refCode) >>= fromMaybeM (InvalidRequest "Invalid ReferralCode")
       when (personId == referredByPerson.id) (throwError $ InvalidRequest "Cannot refer yourself")
       stats <- QPS.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
       void $ QPS.updateReferralCount (stats.referralCount + 1) personId

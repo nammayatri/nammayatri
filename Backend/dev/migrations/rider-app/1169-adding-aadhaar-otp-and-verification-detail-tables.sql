@@ -20,5 +20,3 @@ WITH MerchantMapsServiceConfigs AS (
 )
 INSERT INTO atlas_app.merchant_service_config (merchant_id, service_name, config_json)
   (SELECT * FROM MerchantMapsServiceConfigs);
-
-ALTER TABLE  atlas_app.person ADD COLUMN aadhaar_verified boolean NOT NULL DEFAULT false;

@@ -1,2 +1,1 @@
-ALTER TABLE atlas_app.person DROP CONSTRAINT unique_mobile_number_country_code;
 ALTER TABLE atlas_app.person ADD CONSTRAINT unique_mobile_number_country_code_merchant_id UNIQUE (mobile_country_code, mobile_number_hash,merchant_id);

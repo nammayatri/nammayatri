@@ -30,6 +30,7 @@ import qualified Data.HashMap.Strict as HM
 import Data.List (sortBy)
 import Data.Ord
 import qualified Domain.Action.Beckn.OnTrack as OnTrack
+import qualified Domain.Action.UI.Person as UPerson
 import Domain.Types.Booking.API (makeRideAPIEntity)
 import qualified Domain.Types.Booking.Type as DB
 import Domain.Types.Location (LocationAPIEntity, makeLocationAPIEntity)
@@ -78,7 +79,7 @@ data GetRideStatusResp = GetRideStatusResp
   { fromLocation :: LocationAPIEntity,
     toLocation :: Maybe LocationAPIEntity,
     ride :: RideAPIEntity,
-    customer :: SPerson.PersonAPIEntity,
+    customer :: UPerson.PersonAPIEntity,
     driverPosition :: Maybe MapSearch.LatLong
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -183,7 +184,7 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
           DB.InterCityDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.DriverOfferDetails details -> Just $ makeLocationAPIEntity details.toLocation,
         ride = makeRideAPIEntity ride,
-        customer = SPerson.makePersonAPIEntity decRider tag isSafetyCenterDisabled,
+        customer = UPerson.makePersonAPIEntity decRider tag isSafetyCenterDisabled,
         driverPosition = mbPos <&> (.currPoint)
       }
 

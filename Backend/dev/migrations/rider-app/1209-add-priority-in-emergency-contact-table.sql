@@ -1,7 +1,6 @@
 ALTER TABLE atlas_app.person_default_emergency_number ADD COLUMN contact_person_id text;
 ALTER TABLE atlas_app.person_default_emergency_number ADD COLUMN enable_for_following boolean NOT NULL DEFAULT FALSE;
 ALTER TABLE atlas_app.person_default_emergency_number ADD COLUMN priority int NOT NULL DEFAULT 0;
-ALTER TABLE atlas_app.person ADD COLUMN follows_ride boolean NOT NULL DEFAULT FALSE;
 
 
 WITH MerchantMessages AS (
