@@ -164,6 +164,11 @@ blackLessTrans = "#99000000"
 transparent :: Color
 transparent = "#00FFFFFF"
 
+transparentMid :: Color
+transparentMid = "#60FFFFFF"
+
+transparentHigh :: Color
+transparentHigh = "#99FFFFFF"
 
 black800 :: Color
 black800 = 
