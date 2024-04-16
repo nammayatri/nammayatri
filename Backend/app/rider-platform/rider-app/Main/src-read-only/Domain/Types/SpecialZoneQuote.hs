@@ -4,6 +4,7 @@
 
 module Domain.Types.SpecialZoneQuote where
 
+import Data.Aeson (eitherDecode)
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Kernel.Utils.GenericPretty

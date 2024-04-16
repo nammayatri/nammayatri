@@ -26,12 +26,12 @@ createMany = traverse_ create
 deleteByMerchantOperatingCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
 deleteByMerchantOperatingCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do deleteWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
-findAllByMerchantOperatingCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.Exophone.Exophone])
+findAllByMerchantOperatingCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.Exophone.Exophone]))
 findAllByMerchantOperatingCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
 findByMerchantOperatingCityIdAndService ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Call.Types.CallService -> m [Domain.Types.Exophone.Exophone])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Call.Types.CallService -> m ([Domain.Types.Exophone.Exophone]))
 findByMerchantOperatingCityIdAndService (Kernel.Types.Id.Id merchantOperatingCityId) callService = do
   findAllWithKV
     [ Se.And

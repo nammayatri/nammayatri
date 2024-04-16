@@ -150,7 +150,10 @@ Quote:
 
   sqlType:
     requestId: character varying(255)
-    estimatedFare: character varying(255)
+    estimatedFare: numeric(30,10)
+    discount: numeric(30,2)
+    estimatedTotalFare: numeric(30,2)
+
     providerId: character varying(255)
     vehicle_variant: character varying(60)
     distanceToNearestDriver: double precision
@@ -187,5 +190,3 @@ Quote:
   excludedDefaultQueries:
     - create
     - createMany
-
-  excludedFields: [updatedAt]

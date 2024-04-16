@@ -12,10 +12,8 @@ WITH MerchantMessages AS (
 INSERT INTO atlas_app.merchant_message (merchant_id, message_key, message, merchant_operating_city_id)
   (SELECT * FROM MerchantMessages);
 
-ALTER TABLE atlas_app.person ADD COLUMN share_emergency_contacts boolean NOT NULL default false,
-  ADD COLUMN trigger_support boolean NOT NULL default true,
-  ADD COLUMN night_safety_checks boolean NOT NULL default true,
-  ADD COLUMN has_completed_safety_setup boolean NOT NULL default false;
+ALTER TABLE atlas_app.person
+  ADD COLUMN trigger_support boolean NOT NULL default true;
 
 ALTER TABLE atlas_app.merchant ADD COLUMN tracking_short_url_pattern text DEFAULT 'nammayatri.in/t/' NOT NULL;
 

@@ -97,4 +97,4 @@ postShareRide (mbPersonId, merchantId) req = do
 updateFollowDetails :: Person.Person -> PDEN.PersonDefaultEmergencyNumberAPIEntity -> Flow ()
 updateFollowDetails contactPersonEntity PDEN.PersonDefaultEmergencyNumberAPIEntity {..} = do
   void $ CQFollowRide.updateFollowRideList contactPersonEntity.id personId True
-  QPerson.updateFollowsRide contactPersonEntity.id True
+  QPerson.updateFollowsRide True contactPersonEntity.id

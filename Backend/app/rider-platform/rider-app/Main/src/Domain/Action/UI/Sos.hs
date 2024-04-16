@@ -227,7 +227,7 @@ postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
         void $ QPDEN.updateShareRideForAll personId (Just True)
         enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
     _ -> do
-      when (not $ fromMaybe False person.hasCompletedMockSafetyDrill) $ QP.updateSafetyDrillStatus personId $ Just True
+      when (not $ fromMaybe False person.hasCompletedMockSafetyDrill) $ QP.updateSafetyDrillStatus (Just True) personId
       when (fromMaybe False onRide) $ do
         let mockEntity = DSos.SosMockDrill {personId, status = DSos.MockPending}
         Redis.setExp (CQSos.mockSosKey personId) mockEntity 13400

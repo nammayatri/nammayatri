@@ -4,6 +4,7 @@
 
 module Domain.Types.Quote where
 
+import Data.Aeson (eitherDecode)
 import qualified Domain.Action.UI.SpecialZoneQuote
 import qualified Domain.Types.DriverOffer
 import qualified Domain.Types.Merchant
