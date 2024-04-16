@@ -248,30 +248,30 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
   unless (rideOld.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
-  (tripEndPoint, mbOdometer) <- case req of
+  (tripEndPoint, mbOdometer, rideEndedBy') <- case req of
     DriverReq driverReq -> do
       when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing driverReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
       logTagInfo "driver -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
-      pure (driverReq.point, driverReq.odometer)
+      pure (driverReq.point, driverReq.odometer, DRide.Driver)
     DashboardReq dashboardReq -> do
       when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing dashboardReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
       logTagInfo "dashboard -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
       case dashboardReq.point of
-        Just point -> pure (point, dashboardReq.odometer)
+        Just point -> pure (point, dashboardReq.odometer, DRide.Dashboard)
         Nothing -> do
           -- FIX THIS
           toLocation <- booking.toLocation & fromMaybeM (InvalidRequest "Trip end location is required")
-          pure $ (getCoordinates toLocation, dashboardReq.odometer)
+          pure (getCoordinates toLocation, dashboardReq.odometer, DRide.Dashboard)
     CronJobReq cronJobReq -> do
       logTagInfo "cron job -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
       case cronJobReq.point of
-        Just point -> pure (point, Nothing)
+        Just point -> pure (point, Nothing, DRide.CronJob)
         Nothing -> do
           toLocation <- booking.toLocation & fromMaybeM (InvalidRequest "Trip end location is required")
-          pure $ (getCoordinates toLocation, Nothing)
+          pure (getCoordinates toLocation, Nothing, DRide.CronJob)
     CallBasedReq _ -> do
       toLocation <- booking.toLocation & fromMaybeM (InvalidRequest "Trip end location is required")
-      pure $ (getCoordinates toLocation, Nothing)
+      pure (getCoordinates toLocation, Nothing, DRide.CallBased)
 
   goHomeConfig <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId")
   ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
@@ -348,6 +348,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                chargeableDistance = Just chargeableDistance,
                fare = Just finalFare,
                tripEndPos = Just tripEndPoint,
+               rideEndedBy = Just rideEndedBy',
                fareParametersId = Just newFareParams.id,
                distanceCalculationFailed = distanceCalculationFailed,
                pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,

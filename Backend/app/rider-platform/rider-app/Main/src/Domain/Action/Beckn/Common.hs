@@ -542,9 +542,9 @@ validateRideCompletedReq RideCompletedReq {..} = do
   if bookingAlreadyCompleted && rideAlreadyCompleted
     then validateFarePaidReq booking
     else do
-      unless (bookingCanBeCompleted || (bookingAlreadyCompleted && rideCanBeCompleted)) $
+      unless (isInitiatedByCronJob || bookingCanBeCompleted || (bookingAlreadyCompleted && rideCanBeCompleted)) $
         throwError (BookingInvalidStatus $ show booking.status)
-      unless (rideCanBeCompleted || (rideAlreadyCompleted && bookingCanBeCompleted)) $
+      unless (isInitiatedByCronJob || rideCanBeCompleted || (rideAlreadyCompleted && bookingCanBeCompleted)) $
         throwError (RideInvalidStatus $ show ride.status)
       person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
       return . Left $ ValidatedRideCompletedReq {..}
@@ -567,11 +567,12 @@ validateBookingCancelledReq ::
   BookingCancelledReq ->
   m ValidatedBookingCancelledReq
 validateBookingCancelledReq BookingCancelledReq {..} = do
+  let isInitiatedByCronJob = maybe False (.isInitiatedByCronJob) bookingDetails
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
   mbRide <- QRide.findActiveByRBId booking.id
   let isRideCancellable = maybe False (\ride -> ride.status `notElem` [DRide.INPROGRESS, DRide.CANCELLED]) mbRide
       bookingAlreadyCancelled = booking.status == DRB.CANCELLED
-  unless (isBookingCancellable booking || (isRideCancellable && bookingAlreadyCancelled)) $
+  unless (isInitiatedByCronJob || isBookingCancellable booking || (isRideCancellable && bookingAlreadyCancelled)) $
     throwError (BookingInvalidStatus (show booking.status))
   return $ ValidatedBookingCancelledReq {..}
   where

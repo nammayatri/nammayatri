@@ -213,6 +213,13 @@ updateStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateRideEndedBy :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> RideEndedBy -> m ()
+updateRideEndedBy rideId rideEndedBy = do
+  updateOneWithKV
+    [ Se.Set BeamR.rideEndedBy $ Just rideEndedBy
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateUiDistanceCalculation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Maybe Int -> Maybe Int -> m ()
 updateUiDistanceCalculation rideId dist1 dist2 = do
   now <- getCurrentTime
@@ -314,7 +321,8 @@ updateAll rideId ride = do
       Se.Set BeamR.distanceCalculationFailed ride.distanceCalculationFailed,
       Se.Set BeamR.pickupDropOutsideOfThreshold ride.pickupDropOutsideOfThreshold,
       Se.Set BeamR.endOdometerReadingValue (ride.endOdometerReading <&> (.value)),
-      Se.Set BeamR.updatedAt now
+      Se.Set BeamR.updatedAt now,
+      Se.Set BeamR.rideEndedBy ride.rideEndedBy
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 

@@ -158,6 +158,7 @@ buildRide driverId booking ghrId otp enableFrequentLocationUpdates clientId = do
         tripEndTime = Nothing,
         tripStartPos = Nothing,
         tripEndPos = Nothing,
+        rideEndedBy = Nothing,
         startOdometerReading = Nothing,
         endOdometerReading = Nothing,
         fromLocation = booking.fromLocation, --check if correct
