@@ -70,10 +70,12 @@ findSpecialLocationByLatLongFull point = do
 
 findSpecialLocationByLatLongNearby :: Transactionable m => LatLong -> Int -> m (Maybe (D.SpecialLocation, Text))
 findSpecialLocationByLatLongNearby point radius = do
-  Esq.findOne $ do
-    specialLocation <- from $ table @SpecialLocationT
-    where_ $ pointCloseByOrWithin (point.lon, point.lat) (val radius)
-    return (specialLocation, F.getGeomGeoJSON)
+  specialLocations <-
+    Esq.findAll $ do
+      specialLocation <- from $ table @SpecialLocationT
+      where_ $ pointCloseByOrWithin (point.lon, point.lat) (val radius)
+      return (specialLocation, F.getGeomGeoJSON)
+  return $ listToMaybe specialLocations
 
 findPickupSpecialLocationByLatLong :: Transactionable m => LatLong -> m (Maybe D.SpecialLocation)
 findPickupSpecialLocationByLatLong point = do
@@ -84,10 +86,12 @@ findPickupSpecialLocationByLatLong point = do
 
 findSpecialLocationByLatLong' :: Transactionable m => LatLong -> m (Maybe D.SpecialLocation)
 findSpecialLocationByLatLong' point = do
-  Esq.findOne $ do
-    specialLocation <- from $ table @SpecialLocationT
-    where_ $ containsPoint (point.lon, point.lat)
-    return specialLocation
+  specialLocations <-
+    Esq.findAll $ do
+      specialLocation <- from $ table @SpecialLocationT
+      where_ $ containsPoint (point.lon, point.lat)
+      return specialLocation
+  return $ listToMaybe specialLocations
 
 findSpecialLocationByLatLong :: Transactionable m => LatLong -> m (Maybe (D.SpecialLocation, Text))
 findSpecialLocationByLatLong point = do

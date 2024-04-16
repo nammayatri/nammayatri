@@ -56,6 +56,26 @@ instance Show EXTRA_PER_KM_STEP_FARE where
   show (EXTRA_PER_KM_STEP_FARE startDist (Just endDist)) = "EXTRA_PER_KM_STEP_FARE_" <> show startDist <> "_" <> show endDist
   show (EXTRA_PER_KM_STEP_FARE startDist Nothing) = "EXTRA_PER_KM_STEP_FARE_" <> show startDist <> "_Above"
 
+data DRIVER_EXTRA_FEE_BOUNDS_STEP_MIN_FEE = DRIVER_EXTRA_FEE_BOUNDS_STEP_MIN_FEE
+  { startDistanceThreshold :: Int,
+    endDistanceThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show DRIVER_EXTRA_FEE_BOUNDS_STEP_MIN_FEE where
+  show (DRIVER_EXTRA_FEE_BOUNDS_STEP_MIN_FEE startDist (Just endDist)) = "DRIVER_EXTRA_FEE_BOUNDS_STEP_MIN_FEE_" <> show startDist <> "_" <> show endDist
+  show (DRIVER_EXTRA_FEE_BOUNDS_STEP_MIN_FEE startDist Nothing) = "DRIVER_EXTRA_FEE_BOUNDS_STEP_MIN_FEE_" <> show startDist <> "_Above"
+
+data DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE = DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE
+  { startDistanceThreshold :: Int,
+    endDistanceThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE where
+  show (DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE startDist (Just endDist)) = "DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE_" <> show startDist <> "_" <> show endDist
+  show (DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE startDist Nothing) = "DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE_" <> show startDist <> "_Above"
+
 data Tag
   = -- ## Item tags ##
     -- FARE_POLICY
@@ -64,9 +84,14 @@ data Tag
   | PER_KM_CHARGE
   | DEAD_KILOMETER_FARE
   | WAITING_CHARGE_PER_MIN
+  | WAITING_CHARGE_RATE_PER_MIN
   | NIGHT_CHARGE_MULTIPLIER
   | NIGHT_SHIFT_START_TIME
   | NIGHT_SHIFT_END_TIME
+  | NIGHT_SHIFT_START_TIME_IN_SECONDS
+  | NIGHT_SHIFT_END_TIME_IN_SECONDS
+  | NIGHT_SHIFT_CHARGE_PERCENTAGE
+  | CONSTANT_NIGHT_SHIFT_CHARGE
   | RESTRICTED_PERSON
   | RESTRICTION_PROOF
   | DRIVER_MIN_EXTRA_FEE
@@ -84,7 +109,7 @@ data Tag
   | PLATFORM_FEE_CGST
   | PLATFORM_FEE_SGST
   | TOLL_CHARGES
-  | CONGESTION_CHARGE_MULTIPLIER
+  | CONGESTION_CHARGE_PERCENTAGE
   | -- INFO
     DISTANCE_TO_NEAREST_DRIVER_METER
   | ETA_TO_NEAREST_DRIVER_MIN
