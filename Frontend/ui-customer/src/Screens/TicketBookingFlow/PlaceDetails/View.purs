@@ -554,7 +554,7 @@ priceView prices categoryDisabled =
 chooseTicketsView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 chooseTicketsView state push = 
   let filteredServiceDatav2  = filterServiceDataAccordingToOpDay state.props.selectedOperationalDay state.data.servicesInfo
-      filteresServiceCatData = map (\service -> service { serviceCategories = (getFilteredServiceCategories state service.expiry service.serviceCategories) } ) state.data.servicesInfo
+      filteresServiceCatData = map (\service -> service { serviceCategories = (getFilteredServiceCategories state service service.serviceCategories) } ) state.data.servicesInfo
   in
   PrestoAnim.animationSet [Anim.fadeIn true]  $  
   linearLayout[
@@ -652,7 +652,7 @@ chooseTicketsView state push =
       if (getCurrentDatev2 "") < state.data.dateOfVisit then "Date Error! Booking allowed only upto " <> show (getLimitOfDaysAccToPlaceType state) <> " days in advance"
       else "Tickets are available current day onwards"
 
-    checkIfServiceClosedForToday services = maybe true (\_ -> false) $ find (\service -> not DA.null (getFilteredServiceCategories state service.expiry service.serviceCategories)) services
+    checkIfServiceClosedForToday services = maybe true (\_ -> false) $ find (\service -> not DA.null (getFilteredServiceCategories state service service.serviceCategories)) services
 
 serviceInputView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> ST.TicketServiceData -> PrestoDOM (Effect Unit) w
 serviceInputView push state service = 
@@ -715,7 +715,7 @@ individualServiceView push state service =
       ]
   ] <> (if service.isExpanded && (not bookingClosedForService) then [individualSerivceBHView push state service] else [] )--[individualTicketBHView push state valBH service] else [])
   where
-    isValid serviceCategories = foldl (\acc serviceCategory -> acc || isServiceCatValid state service.expiry serviceCategory.validOpDay ) false serviceCategories
+    isValid serviceCategories = foldl (\acc serviceCategory -> acc || isServiceCatValid state service serviceCategory.validOpDay ) false serviceCategories
 
 placeClosed :: Maybe TicketPlaceResp -> Boolean
 placeClosed mbPlaceInfo = case mbPlaceInfo of
@@ -1232,11 +1232,11 @@ filterServiceDataAccordingToOpDay selectedOpDay services = do
       else [serviceCategory { operationalDays = operationalDaysAccToSelOpDay}]
 
 
-getFilteredServiceCategories :: ST.TicketBookingScreenState -> ServiceExpiry -> Array ST.ServiceCategory -> Array ST.ServiceCategory
-getFilteredServiceCategories state expiry serviceCategories =  filter (\serviceCat -> isServiceCatValid state expiry serviceCat.validOpDay ) serviceCategories
+getFilteredServiceCategories :: ST.TicketBookingScreenState -> ST.TicketServiceData -> Array ST.ServiceCategory -> Array ST.ServiceCategory
+getFilteredServiceCategories state service serviceCategories =  filter (\serviceCat -> isServiceCatValid state service serviceCat.validOpDay ) serviceCategories
 
-isServiceCatValid :: ST.TicketBookingScreenState -> ServiceExpiry -> Maybe ST.OperationalDaysData -> Boolean
-isServiceCatValid state expiry mbValidOpDay = maybe false (\opday -> (not DA.null (getFilteredSlots opday.slot state)) || (getFilteredTime opday.timeIntervals)) mbValidOpDay
+isServiceCatValid :: ST.TicketBookingScreenState -> ST.TicketServiceData -> Maybe ST.OperationalDaysData -> Boolean
+isServiceCatValid state service mbValidOpDay = maybe false (\opday -> (not DA.null (getFilteredSlots opday.slot state)) || (getFilteredTime opday.timeIntervals)) mbValidOpDay
   where
     getFilteredTime timeIntervals =
       let now = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
@@ -1247,16 +1247,19 @@ isServiceCatValid state expiry mbValidOpDay = maybe false (\opday -> (not DA.nul
         case selTimeInterval of
           Nothing -> false
           Just sti ->
-            let startTime = if not DS.null sti.startTime then convertUTCTimeToISTTimeinHHMMSS sti.startTime else ""
-                endTime = if not DS.null  sti.endTime then convertUTCTimeToISTTimeinHHMMSS sti.endTime else ""
-                newEndTime = if not DS.null endTime then case expiry of
+            let notNullStartTime = not DS.null sti.startTime
+                notNullEndTime = not DS.null sti.endTime
+                startTime = if notNullStartTime then convertUTCTimeToISTTimeinHHMMSS sti.startTime else ""
+                endTime = if notNullEndTime then convertUTCTimeToISTTimeinHHMMSS sti.endTime else ""
+                newEndTime = if notNullEndTime then case service.expiry of
                                   API.InstantExpiry val -> runFn3 incrOrDecrTimeFrom endTime val false
                                   _ -> endTime
                              else ""
             in
-            if not DS.null startTime && not DS.null newEndTime then now > startTime && now < newEndTime
-            else if not DS.null startTime then now > startTime
-            else if not DS.null newEndTime then now < newEndTime
+            if service.allowFutureBooking && notNullEndTime then now < newEndTime
+            else if notNullStartTime && notNullEndTime then now > startTime && now < newEndTime
+            else if notNullStartTime then now > startTime
+            else if notNullEndTime then now < newEndTime
             else false
       else true
 
