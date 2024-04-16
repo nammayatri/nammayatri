@@ -190,7 +190,8 @@ type AddVehicleDetailsScreenProps =  {
   successfulValidation :: Boolean,
   multipleRCstatus :: StageStatus,
   menuOptions :: Boolean,
-  confirmChangeVehicle :: Boolean
+  confirmChangeVehicle :: Boolean,
+  contactSupportModal :: AnimType
  }
 
 data ValidationStatus  =  Success | Failure | InProgress | None
@@ -251,6 +252,7 @@ type UploadDrivingLicenseStateProps = {
   , successfulValidation :: Boolean
   , menuOptions :: Boolean
   , confirmChangeVehicle :: Boolean
+  , contactSupportModal :: AnimType
 }
 
  -- ############################################################# RegistrationScreen ################################################################################
@@ -2661,7 +2663,8 @@ type DocumentCaptureScreenData = {
   errorMessage :: Maybe String,
   vehicleCategory :: Maybe VehicleCategory,
   docId :: String,
-  linkedRc :: Maybe String
+  linkedRc :: Maybe String,
+  cityConfig :: CityConfig
 } 
 
 type DocumentCaptureScreenProps = {
@@ -2669,7 +2672,8 @@ type DocumentCaptureScreenProps = {
   logoutModalView :: Boolean,
   validating :: Boolean,
   menuOptions :: Boolean,
-  confirmChangeVehicle :: Boolean
+  confirmChangeVehicle :: Boolean,
+  contactSupportModal :: AnimType
 } 
 
 

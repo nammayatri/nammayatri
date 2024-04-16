@@ -42,6 +42,7 @@ import Font.Style as FontStyle
 import ConfigProvider
 import Mobility.Prelude
 import Components.OptionsMenu as OptionsMenuConfig
+import Components.BottomDrawerList as BottomDrawerList
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -199,4 +200,14 @@ optionsMenuConfig state = OptionsMenuConfig.config {
   itemPadding = Padding 16 16 16 16,
   cornerRadius = 4.0,
   enableAnim = true
+}
+
+bottomDrawerListConfig :: ST.AddVehicleDetailsScreenState -> BottomDrawerList.Config
+bottomDrawerListConfig state = BottomDrawerList.config {
+  animState = state.props.contactSupportModal,
+  titleText = getString CONTACT_SUPPORT_VIA,
+  itemList = [
+    {prefixImg : "ny_ic_whatsapp_black", title : "Whatsapp", desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
+    {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.callSupport, identifier : "call"}
+  ]
 }

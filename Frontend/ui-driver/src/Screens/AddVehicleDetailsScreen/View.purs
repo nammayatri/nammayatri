@@ -64,6 +64,8 @@ import Mobility.Prelude
 import Components.OptionsMenu as OptionsMenu
 import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
 import Data.Array as DA
+import Components.BottomDrawerList as BottomDrawerList
+import Screens.Types as ST
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -170,7 +172,7 @@ view push state =
         [ width MATCH_PARENT
         , height MATCH_PARENT
         ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_RC_IMAGE), openGenericMessageModal : state.props.limitExceedModal, buttonText : (getString NEXT) }] else linearLayout [][]
-
+    , if state.props.contactSupportModal /= ST.HIDE then BottomDrawerList.view (push <<< BottomDrawerListAC) (bottomDrawerListConfig state) else linearLayout[][]
     , if state.props.openReferralMobileNumber then
         linearLayout
         [ width MATCH_PARENT

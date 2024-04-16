@@ -21,6 +21,7 @@ import Screens.Types
 import Foreign.Object (empty)
 import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
 import ConfigProvider
+import Screens.Types as ST
 
 initData :: AddVehicleDetailsScreenState
 initData = {
@@ -73,6 +74,7 @@ initData = {
       successfulValidation : false,
       multipleRCstatus : NOT_STARTED,
       menuOptions : false,
-      confirmChangeVehicle : false
+      confirmChangeVehicle : false,
+      contactSupportModal : ST.HIDE
     }
 }

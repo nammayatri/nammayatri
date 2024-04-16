@@ -60,6 +60,7 @@ import Screens.RegistrationScreen.ScreenData as SD
 import Resource.Constants as Constant
 import Data.Int (toNumber, floor)
 import Components.OptionsMenu as OptionsMenu
+import Components.BottomDrawerList as BottomDrawerList
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
 screen initialState =
@@ -269,72 +270,7 @@ contactSupportView push state =
       where viewVisibility = state.props.contactSupportView && (state.data.cityConfig.registration.callSupport || state.data.cityConfig.registration.whatsappSupport)
 
 contactSupportModal :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
-contactSupportModal push state = 
-  linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , background Color.black9000
-  , clickable true
-  , gravity BOTTOM
-  , onClick push $ const BackPressed
-  , visibility $ boolToVisibility $ state.props.contactSupportModal /= ST.HIDE
-  ][  PrestoAnim.animationSet
-      [ Anim.translateYAnim AnimConfig.animConfig {fromY = 300, toY = 0, ifAnim = state.props.contactSupportModal == ST.SHOW}
-      , Anim.translateYAnim AnimConfig.animConfig {fromY = 0, toY = 300, ifAnim = state.props.contactSupportModal == ST.ANIMATING}
-      ] $
-        linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , gravity BOTTOM
-          , orientation VERTICAL
-          , background Color.white900
-          , cornerRadii $ Corners 24.0 true true false false
-          , padding $ Padding 16 16 16 24
-          , onAnimationEnd push $ const $ SupportClick false
-          ][  commonTV push (getString CONTACT_SUPPORT_VIA) Color.black700 FontStyle.subHeading2 LEFT 8 NoAction true (Padding 16 0 0 20)
-            , supportComponent push state {prefixImg : "ny_ic_whatsapp_black", title : "Whatsapp", desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", action : WhatsAppClick, visibility : state.data.cityConfig.registration.whatsappSupport}
-            , linearLayout[width MATCH_PARENT, height $ V 1, background Color.grey900, margin $ MarginVertical 16 16, visibility border][]
-            , supportComponent push state {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", action : CallButtonClick, visibility : state.data.cityConfig.registration.callSupport}
-          ]
-  ]
-  where border = boolToVisibility $ state.data.cityConfig.registration.callSupport && state.data.cityConfig.registration.whatsappSupport
-
-type SupportComponent = {
-  prefixImg :: String,
-  title :: String,
-  desc :: String,
-  postFixImg :: String,
-  action :: Action,
-  visibility :: Boolean
-}
-
-supportComponent :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState -> SupportComponent -> PrestoDOM (Effect Unit) w
-supportComponent push state supportComponent = 
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , gravity CENTER_VERTICAL
-  , onClick push $ const supportComponent.action
-  , visibility $ boolToVisibility supportComponent.visibility
-  ][  imageView
-      [ width $ V 26
-      , height $ V 26
-      , imageWithFallback $ fetchImage FF_ASSET supportComponent.prefixImg
-      ]
-    , linearLayout
-      [ weight 1.0
-      , height WRAP_CONTENT
-      , orientation VERTICAL
-      , margin $ MarginHorizontal 10 10
-      ][  commonTV push supportComponent.title Color.black800 FontStyle.subHeading2 LEFT 0 NoAction true (PaddingTop 0)
-        , commonTV push supportComponent.desc Color.black600 FontStyle.tags LEFT 4 NoAction true (PaddingTop 0)
-      ]
-    , imageView
-      [ width $ V 26
-      , height $ V 26
-      , imageWithFallback $ fetchImage FF_ASSET supportComponent.postFixImg
-      ]
-  ]
+contactSupportModal push state = BottomDrawerList.view (push <<< BottomDrawerListAC) (bottomDrawerListConfig state)
 
 commonTV :: forall w .  (Action -> Effect Unit) -> String -> String -> (LazyCheck -> forall properties. (Array (Prop properties))) -> Gravity -> Int -> Action -> Boolean -> Padding -> PrestoDOM (Effect Unit) w
 commonTV push text' color' theme gravity' marginTop action visibility' padding' = 

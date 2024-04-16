@@ -22,6 +22,7 @@ import Foreign.Object (empty)
 import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
 import Screens.Types (UploadDrivingLicenseState)
 import ConfigProvider
+import Screens.Types as ST
 
 initData :: UploadDrivingLicenseState
 initData = {
@@ -66,5 +67,6 @@ initData = {
       , successfulValidation : false
       , menuOptions : false
       , confirmChangeVehicle : false
+      , contactSupportModal : ST.HIDE
       }
     }
