@@ -26,6 +26,7 @@ module Tools.Maps
     getPickupRoutes,
     getTripRoutes,
     getDistanceForCancelRide,
+    getServiceConfigForRectifyingSnapToRoadDistantPointsFailure,
   )
 where
 
@@ -134,17 +135,15 @@ snapToRoadWithFallback ::
   ( ServiceFlow m r,
     HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters],
     HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters],
+    HasFlowEnv m r '["maxStraightLineRectificationThreshold" ::: HighPrecMeters],
     HasFlowEnv m r '["osrmMatchThreshold" ::: HighPrecMeters]
   ) =>
-  Bool ->
+  Maybe MapsServiceConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
   SnapToRoadReq ->
   m ([Maps.MapsService], Either String SnapToRoadResp)
-snapToRoadWithFallback rectifyDistantPointsFailure merchantId merchantOperatingCityId =
-  if rectifyDistantPointsFailure
-    then Maps.nonFailingSnapToRoadWithFallback handler
-    else Maps.snapToRoadWithFallback handler
+snapToRoadWithFallback rectifyDistantPointsFailureUsing merchantId merchantOperatingCityId = Maps.snapToRoadWithFallback rectifyDistantPointsFailureUsing handler
   where
     handler = Maps.SnapToRoadHandler {..}
 
@@ -165,6 +164,20 @@ snapToRoadWithFallback rectifyDistantPointsFailure merchantId merchantOperatingC
       case merchantMapsServiceConfig.serviceConfig of
         DOSC.MapsServiceConfig msc -> pure msc
         _ -> throwError $ InternalError "Unknown Service Config"
+
+getServiceConfigForRectifyingSnapToRoadDistantPointsFailure ::
+  ServiceFlow m r =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  m MapsServiceConfig
+getServiceConfigForRectifyingSnapToRoadDistantPointsFailure merchantId merchantOpCityId = do
+  orgMapsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  orgMapsServiceConfig <-
+    QOMSC.findByMerchantIdAndServiceWithCity merchantId (DOSC.MapsService orgMapsConfig.rectifyDistantPointsFailure) merchantOpCityId
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show orgMapsConfig.rectifyDistantPointsFailure))
+  case orgMapsServiceConfig.serviceConfig of
+    DOSC.MapsServiceConfig msc -> return msc
+    _ -> throwError $ InternalError "Unknown Service Config"
 
 runWithServiceConfig ::
   ServiceFlow m r =>

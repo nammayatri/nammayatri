@@ -74,6 +74,7 @@ import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Maps as TM
 import qualified Tools.SMS as Sms
 
 data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq | CallBasedReq CallBasedEndRideReq | CronJobReq CronJobEndRideReq
@@ -119,7 +120,7 @@ data ServiceHandle m = ServiceHandle
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
-    finalDistanceCalculation :: Bool -> Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> Meters -> Maybe HighPrecMoney -> Bool -> m (),
+    finalDistanceCalculation :: Maybe MapsServiceConfig -> Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> Meters -> Maybe HighPrecMoney -> Bool -> m (),
     getInterpolatedPoints :: Id DP.Person -> m [LatLong],
     clearInterpolatedPoints :: Id DP.Person -> m (),
     findConfig :: Maybe Text -> Maybe Text -> m (Maybe DTConf.TransporterConfig),
@@ -329,7 +330,11 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
               -- here we update the current ride, so below we fetch the updated version
               pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking rideOld tripEndPoint thresholdConfig
               whenJust (nonEmpty tripEndPoints) \tripEndPoints' -> do
-                withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation (DTC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory) rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges pickupDropOutsideOfThreshold
+                rectificationMapsConfig <-
+                  if (DTC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory)
+                    then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
+                    else pure Nothing
+                withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges pickupDropOutsideOfThreshold
 
               distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed driverId
               when distanceCalculationFailed $ do

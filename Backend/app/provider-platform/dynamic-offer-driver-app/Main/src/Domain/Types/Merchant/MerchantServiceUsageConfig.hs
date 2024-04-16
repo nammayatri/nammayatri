@@ -50,6 +50,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     aadhaarVerificationService :: AadhaarVerificationService,
     faceVerificationService :: VerificationService,
     issueTicketService :: IssueTicketService,
+    rectifyDistantPointsFailure :: MapsService,
     getExophone :: CallService,
     sendSearchRequestToDriver :: [NotificationService],
     updatedAt :: UTCTime,

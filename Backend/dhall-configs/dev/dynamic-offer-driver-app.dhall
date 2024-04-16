@@ -341,4 +341,5 @@ in  { esqDBCfg
     , _version = "2.0.0"
     , cacConfig
     , superPositionConfig
+    , maxStraightLineRectificationThreshold = +800
     }

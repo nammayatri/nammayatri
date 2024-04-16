@@ -60,7 +60,7 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     clearInterpolatedPoints :: Id person -> m (),
     expireInterpolatedPoints :: Id person -> m (),
     getInterpolatedPoints :: Id person -> m [LatLong],
-    interpolatePointsAndCalculateDistanceAndToll :: Bool -> Id person -> [LatLong] -> m (HighPrecMeters, [LatLong], [MapsService], Bool, Maybe HighPrecMoney),
+    interpolatePointsAndCalculateDistanceAndToll :: Maybe MapsServiceConfig -> Id person -> [LatLong] -> m (HighPrecMeters, [LatLong], [MapsService], Bool, Maybe HighPrecMoney),
     wrapDistanceCalculation :: Id person -> m () -> m (),
     isDistanceCalculationFailed :: Id person -> m Bool,
     updateDistance :: Id person -> HighPrecMeters -> Int -> Int -> m (),
@@ -96,16 +96,16 @@ processWaypoints ::
   Meters ->
   Maybe HighPrecMoney ->
   Bool ->
-  Bool ->
+  Maybe MapsServiceConfig ->
   NonEmpty LatLong ->
   m ()
-processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist estTollCharges pickupDropOutsideThreshold rectifyDistantPointsFailure waypoints = do
+processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist estTollCharges pickupDropOutsideThreshold rectifyDistantPointsFailureUsing waypoints = do
   calculationFailed <- isDistanceCalculationFailed driverId
   if calculationFailed
     then logWarning "Failed to calculate actual distance for this ride, ignoring"
     else wrapDistanceCalculation driverId $ do
       addPoints driverId waypoints
-      recalcDistanceBatches ih ending driverId estDist estTollCharges pickupDropOutsideThreshold rectifyDistantPointsFailure waypoints
+      recalcDistanceBatches ih ending driverId estDist estTollCharges pickupDropOutsideThreshold rectifyDistantPointsFailureUsing waypoints
 
 lastTwoOnRidePointsRedisKey :: Id person -> Text
 lastTwoOnRidePointsRedisKey driverId = "Driver-Location-Last-Two-OnRide-Points:DriverId-" <> driverId.getId
@@ -138,10 +138,10 @@ recalcDistanceBatches ::
   Meters ->
   Maybe HighPrecMoney ->
   Bool ->
-  Bool ->
+  Maybe MapsServiceConfig ->
   NonEmpty LatLong ->
   m ()
-recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist estTollCharges pickupDropOutsideThreshold rectifyDistantPointsFailure waypoints = do
+recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist estTollCharges pickupDropOutsideThreshold rectifyDistantPointsFailureUsing waypoints = do
   prevBatchTwoEndPoints :: Maybe [LatLong] <- Redis.safeGet $ lastTwoOnRidePointsRedisKey driverId
   let modifiedWaypoints =
         case prevBatchTwoEndPoints of
@@ -151,7 +151,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
   Redis.setExp (lastTwoOnRidePointsRedisKey driverId) currentLastTwoPoints 21600 -- 6 hours
   routeDeviation <- updateRouteDeviation driverId (toList modifiedWaypoints)
   let recomputeIfPickupDropNotOutsideOfThreshold = getRecomputeIfPickupDropNotOutsideOfThreshold
-  let snapToRoadCallCondition = (routeDeviation && recomputeIfPickupDropNotOutsideOfThreshold) || pickupDropOutsideThreshold
+  let snapToRoadCallCondition = (routeDeviation && recomputeIfPickupDropNotOutsideOfThreshold) || pickupDropOutsideThreshold || isJust rectifyDistantPointsFailureUsing
   if ending
     then do
       if snapToRoadCallCondition
@@ -178,7 +178,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
       batchLeft <- continueCondition
       if batchLeft
         then do
-          (dist, servicesUsed, snapCallFailed) <- recalcDistanceBatchStep h rectifyDistantPointsFailure driverId
+          (dist, servicesUsed, snapCallFailed) <- recalcDistanceBatchStep h rectifyDistantPointsFailureUsing driverId
           let googleCalled = Google `elem` servicesUsed
               osrmCalled = OSRM `elem` servicesUsed
           if snapCallFailed
@@ -197,12 +197,12 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
 recalcDistanceBatchStep ::
   (CacheFlow m r, Monad m, Log m) =>
   RideInterpolationHandler person m ->
-  Bool ->
+  Maybe MapsServiceConfig ->
   Id person ->
   m (HighPrecMeters, [MapsService], Bool)
-recalcDistanceBatchStep RideInterpolationHandler {..} rectifyDistantPointsFailure driverId = do
+recalcDistanceBatchStep RideInterpolationHandler {..} rectifyDistantPointsFailureUsing driverId = do
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
-  (distance, interpolatedWps, servicesUsed, snapToRoadFailed, mbTollCharges) <- interpolatePointsAndCalculateDistanceAndToll rectifyDistantPointsFailure driverId batchWaypoints
+  (distance, interpolatedWps, servicesUsed, snapToRoadFailed, mbTollCharges) <- interpolatePointsAndCalculateDistanceAndToll rectifyDistantPointsFailureUsing driverId batchWaypoints
   whenJust mbTollCharges $ \tollCharges -> do
     void $ Redis.incrby (onRideTollChargesKey driverId) (round tollCharges.getHighPrecMoney)
     Redis.expire (onRideTollChargesKey driverId) 21600 -- 6 hours
@@ -238,7 +238,7 @@ mkRideInterpolationHandler ::
   (Maybe (Id person) -> RoutePoints -> m (Maybe HighPrecMoney)) ->
   (Id person -> Meters -> m Meters) ->
   Bool ->
-  (Bool -> Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
+  (Maybe MapsServiceConfig -> Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
   RideInterpolationHandler person m
 mkRideInterpolationHandler isEndRide updateDistance updateTollCharges updateRouteDeviation getTollChargesOnTheRoute getTravelledDistance getRecomputeIfPickupDropNotOutsideOfThreshold snapToRoadCall =
   RideInterpolationHandler
@@ -326,17 +326,17 @@ interpolatePointsAndCalculateDistanceAndTollImplementation ::
     HasFlowEnv m r '["osrmMatchThreshold" ::: HighPrecMeters]
   ) =>
   Bool ->
-  (Bool -> Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
+  (Maybe MapsServiceConfig -> Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
   (Maybe (Id person) -> RoutePoints -> m (Maybe HighPrecMoney)) ->
-  Bool ->
+  Maybe MapsServiceConfig ->
   Id person ->
   [LatLong] ->
   m (HighPrecMeters, [LatLong], [Maps.MapsService], Bool, Maybe HighPrecMoney)
-interpolatePointsAndCalculateDistanceAndTollImplementation isEndRide snapToRoadCall getTollChargesOnTheRoute rectifyDistantPointsFailure driverId wps = do
+interpolatePointsAndCalculateDistanceAndTollImplementation isEndRide snapToRoadCall getTollChargesOnTheRoute rectifyDistantPointsFailureUsing driverId wps = do
   if isEndRide && isAllPointsEqual wps
     then pure (0, take 1 wps, [], False, Nothing)
     else do
-      (servicesUsed, res) <- snapToRoadCall rectifyDistantPointsFailure $ Maps.SnapToRoadReq {points = wps}
+      (servicesUsed, res) <- snapToRoadCall rectifyDistantPointsFailureUsing $ Maps.SnapToRoadReq {points = wps}
       case res of
         Left _ -> pure (0, [], [], True, Nothing)
         Right response -> do
