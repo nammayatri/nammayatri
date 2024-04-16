@@ -593,7 +593,7 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   driversLatLong :: Array LatLong,
   serviceTierName :: Maybe String,
   serviceTierShortDesc :: Maybe String,
-  airConditioned :: Maybe Boolean
+  airConditioned :: Maybe Boolean,
   providerName :: Maybe String,
   providerId :: Maybe String,
   isValueAddNP :: Maybe Boolean --true if entity is from ny
@@ -928,7 +928,7 @@ newtype RideBookingRes = RideBookingRes {
   hasNightIssue :: Maybe Boolean,
   sosStatus :: Maybe CTA.SosStatus,
   serviceTierName :: Maybe String,
-  airConditioned :: Maybe Boolean
+  airConditioned :: Maybe Boolean,
   isValueAddNP :: Maybe Boolean,
   providerName :: Maybe String
 }

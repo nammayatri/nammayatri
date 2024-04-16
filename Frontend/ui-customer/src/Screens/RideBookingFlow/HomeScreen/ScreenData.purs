@@ -562,7 +562,7 @@ dummyRideBooking = RideBookingRes
   hasDisability : Nothing,
   sosStatus: Nothing,
   serviceTierName : Nothing, 
-  airConditioned : Nothing
+  airConditioned : Nothing,
   isValueAddNP : Nothing,
   providerName : Nothing
   }

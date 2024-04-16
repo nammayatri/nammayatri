@@ -51,7 +51,6 @@ public class InAppNotification extends AppCompatActivity {
     public void generateNotification( JSONObject jsonObject) throws JSONException {
         Notification notification;
         // if channel id is not in our channels then we will create new channelId and attach layout for this channelId
-        if (!notificationChannels.has(channelId) && mainLayout != null) {
         String title = jsonObject.optString("title");
         String message = jsonObject.optString("message");
         String channelId = jsonObject.optString("channelId");
@@ -62,6 +61,7 @@ public class InAppNotification extends AppCompatActivity {
         String onTapAction = jsonObject.optString("onTapAction");
         boolean showLoader = jsonObject.optBoolean("showLoader", false);
         int durationInMilliSeconds = Integer.parseInt(jsonObject.optString("durationInMilliSeconds"));
+         if (!notificationChannels.has(channelId) && mainLayout != null) {
             notification = new Notification(channelId);
             notification.attachEventListenerToNotification(onTapAction);
 

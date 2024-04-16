@@ -392,6 +392,7 @@ type CityConfig = {
   cityCode :: String,
   geoCodeConfig :: GeoCodeConfig,
   enableCabs :: Boolean,
+  iopConfig :: InteroperabilityConfig,
   estimateAndQuoteConfig :: EstimateConfig,
   featureConfig :: CityBasedFeatures
 }
@@ -403,7 +404,6 @@ type CityBasedFeatures = {
 
 type EstimateConfig = {
   showInfoIcon :: Boolean
-  iopConfig :: InteroperabilityConfig
 }
 
 type GeoCodeConfig = {

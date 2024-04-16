@@ -893,7 +893,6 @@ data Action = NoAction
             | AllChatsLoaded
             | GoToSafetyEducationScreen
             | SpecialZoneInfoTag
-            | SpecialZoneInfoTag 
             | ShowMultipleProvider Boolean
             | ShowPref
             | ProviderAutoSelected Int String String
@@ -1283,10 +1282,8 @@ eval (SendQuickMessage chatSuggestion) state = do
   else continue state
 
 eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = do
-  if state.data.config.feature.enableChat then do
-    if not state.props.chatcallbackInitiated || state.data.waitTimeInfo then continue state else do
   if state.data.config.feature.enableChat && state.data.driverInfoCardState.providerType == CTP.ONUS then do
-    if not state.props.chatcallbackInitiated || state.props.emergencyHelpModal || state.data.waitTimeInfo then continue state else do
+    if not state.props.chatcallbackInitiated || state.data.waitTimeInfo then continue state else do
       _ <- pure $ performHapticFeedback unit
       _ <- pure $ updateLocalStage ChatWithDriver
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
