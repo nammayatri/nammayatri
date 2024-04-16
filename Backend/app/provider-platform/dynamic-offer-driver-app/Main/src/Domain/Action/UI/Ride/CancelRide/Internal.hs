@@ -54,8 +54,8 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
 
-cancelRideImpl :: Id DRide.Ride -> SBCR.BookingCancellationReason -> Flow ()
-cancelRideImpl rideId bookingCReason = do
+cancelRideImpl :: Id DRide.Ride -> DRide.RideEndedBy -> SBCR.BookingCancellationReason -> Flow ()
+cancelRideImpl rideId rideEndedBy bookingCReason = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
@@ -63,7 +63,7 @@ cancelRideImpl rideId bookingCReason = do
   merchant <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  cancelRideTransaction booking ride bookingCReason merchantId
+  cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
@@ -127,13 +127,15 @@ cancelRideTransaction ::
   DRide.Ride ->
   SBCR.BookingCancellationReason ->
   Id DMerc.Merchant ->
+  DRide.RideEndedBy ->
   m ()
-cancelRideTransaction booking ride bookingCReason merchantId = do
+cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy = do
   let driverId = cast ride.driverId
   void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
   QDI.updateOnRide False (cast ride.driverId)
   void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
   void $ QRide.updateStatus ride.id DRide.CANCELLED
+  void $ QRide.updateRideEndedBy ride.id rideEndedBy
   QBCR.upsert bookingCReason
   void $ QRB.updateStatus booking.id SRB.CANCELLED
   when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId

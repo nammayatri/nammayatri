@@ -46,6 +46,7 @@ data RideT f = RideT
     numberOfSnapToRoadCalls :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     otp :: B.C f Kernel.Prelude.Text,
     pickupDropOutsideOfThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    rideEndedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy),
     safetyAlertTriggered :: B.C f Kernel.Prelude.Bool,
     shortId :: B.C f Kernel.Prelude.Text,
     startOdometerReadingFileId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -62,7 +63,9 @@ data RideT f = RideT
     tripStartTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     uiDistanceCalculationWithAccuracy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     uiDistanceCalculationWithoutAccuracy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
   }
   deriving (Generic, B.Beamable)
 
