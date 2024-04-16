@@ -679,11 +679,12 @@ onBoardingFlow = do
         vehicleCategory = state.data.vehicleCategory
         }}
       uploadDrivingLicenseFlow
-    UPLOAD_VEHICLE_DETAILS state -> do
+    UPLOAD_VEHICLE_DETAILS state rcNumberPrefixList -> do
       modifyScreenState $ AddVehicleDetailsScreenStateType $ \_ -> AddVehicleDetailsScreenData.initData { data {
         driverMobileNumber = state.data.phoneNumber, 
         cityConfig = state.data.cityConfig,
-        vehicleCategory = state.data.vehicleCategory
+        vehicleCategory = state.data.vehicleCategory,
+        rcNumberPrefixList = rcNumberPrefixList
         }}
       addVehicleDetailsflow false
     PERMISSION_SCREEN state -> do
@@ -730,7 +731,8 @@ onBoardingFlow = do
                 isDisabled : step.isDisabled,
                 disableWarning : fromMaybe "" step.disableWarning,
                 isHidden : step.isHidden,
-                dependencyDocumentType : map (\item -> RC.transformToRegisterationStep item) step.dependencyDocumentType
+                dependencyDocumentType : map (\item -> RC.transformToRegisterationStep item) step.dependencyDocumentType,
+                rcNumberPrefixList : step.rcNumberPrefixList
               }) onBoardingDocsArr
     
     transfromDocumentStatusItem :: Array API.DocumentStatusItem ->  String -> Maybe String -> Maybe String -> Array ST.DocumentStatus

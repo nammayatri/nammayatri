@@ -157,7 +157,8 @@ type AddVehicleDetailsScreenData =  {
   driverMobileNumber :: String,
   cityConfig :: CityConfig,
   vehicleCategory :: Maybe VehicleCategory,
-  config :: AppConfig
+  config :: AppConfig,
+  rcNumberPrefixList :: Array String
  }
 
 type AddVehicleDetailsScreenProps =  {
@@ -306,7 +307,8 @@ type StepProgress = {
   isDisabled :: Boolean,
   disableWarning :: String,
   isHidden :: Boolean,
-  dependencyDocumentType :: Array RegisterationStep
+  dependencyDocumentType :: Array RegisterationStep,
+  rcNumberPrefixList :: Array String
 }
 
 type RegistrationScreenProps = {

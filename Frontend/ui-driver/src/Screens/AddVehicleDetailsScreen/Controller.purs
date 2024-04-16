@@ -466,9 +466,3 @@ overrides _ push state = []
 
 dateFormat :: Int -> String
 dateFormat date = if date < 10 then "0" <> (show date) else (show date)
-
-validateRegistrationNumber :: String -> Boolean
-validateRegistrationNumber regNum =
-  let vehicleConfig = (getAppConfig appConfig).vehicle
-      values = split (Pattern "|") $ vehicleConfig.validationPrefix
-  in regNum `elem` values
