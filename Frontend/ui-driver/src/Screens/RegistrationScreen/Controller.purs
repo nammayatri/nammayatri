@@ -46,6 +46,7 @@ import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore)
 import Data.Array as DA
 import Screens.RegistrationScreen.ScreenData as SD
 import Components.OptionsMenu as OptionsMenu
+import Components.BottomDrawerList as BottomDrawerList
 
 instance showAction :: Show Action where
   show _ = ""
@@ -120,6 +121,7 @@ data Action = BackPressed
             | ContinueButtonAction PrimaryButtonController.Action
             | ExpandOptionalDocs
             | OptionsMenuAction OptionsMenu.Action
+            | BottomDrawerListAC BottomDrawerList.Action
             
 derive instance genericAction :: Generic Action _
 instance eqAction :: Eq Action where
@@ -172,6 +174,16 @@ eval (VehicleMismatchAC (PopUpModal.OnButton2Click)) state = continue state { da
 eval (VehicleMismatchAC (PopUpModal.OnButton1Click)) state = continue state { data { vehicleCategory = Mb.Nothing, vehicleTypeMismatch = false}}
 
 eval (SupportClick show) state = continue state { props { contactSupportModal = if show then ST.SHOW else if state.props.contactSupportModal == ST.ANIMATING then ST.HIDE else state.props.contactSupportModal}}
+
+eval (BottomDrawerListAC BottomDrawerList.Dismiss) state = continue state { props { contactSupportModal = ST.ANIMATING}}
+
+eval (BottomDrawerListAC BottomDrawerList.OnAnimationEnd) state = continue state { props { contactSupportModal = if state.props.contactSupportModal == ST.ANIMATING then ST.HIDE else state.props.contactSupportModal}}
+
+eval (BottomDrawerListAC (BottomDrawerList.OnItemClick item)) state = do
+  case item.identifier of
+    "whatsapp" -> continueWithCmd state [pure WhatsAppClick]
+    "call" -> continueWithCmd state [pure CallButtonClick]
+    _ -> continue state
 
 eval WhatsAppClick state = continueWithCmd state [do
   let supportPhone = state.data.cityConfig.registration.supportWAN

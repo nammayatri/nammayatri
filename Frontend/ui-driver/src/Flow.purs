@@ -418,6 +418,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription = d
           void $ pure $ setValueToLocalStore DRIVER_LOCATION <$> (capitalize <$> getCityFromCode <$> getDriverInfoResp.operatingCity)
           updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
           liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
+          maybe (pure unit) (setValueToLocalStore MOBILE_NUMBER_KEY) getDriverInfoResp.mobileNumber
           if getDriverInfoResp.enabled 
             then do
               deleteValueFromLocalStore ENTERED_RC
@@ -710,7 +711,7 @@ onBoardingFlow = do
       onBoardingFlow
     DOCUMENT_CAPTURE_FLOW state doctype -> do
       let defState = DocumentCaptureData.initData
-      modifyScreenState $ DocumentCaptureScreenStateType (\_ -> defState { data { docType = doctype, vehicleCategory = state.data.vehicleCategory, linkedRc = state.data.linkedRc}})
+      modifyScreenState $ DocumentCaptureScreenStateType (\_ -> defState { data { cityConfig = state.data.cityConfig, docType = doctype, vehicleCategory = state.data.vehicleCategory, linkedRc = state.data.linkedRc}})
       documentcaptureScreenFlow
     SELECT_LANG_FROM_REGISTRATION -> do
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})

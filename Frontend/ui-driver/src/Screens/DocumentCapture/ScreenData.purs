@@ -16,6 +16,7 @@ module Screens.DocumentCaptureScreen.ScreenData where
 
 import Screens.Types as ST
 import Data.Maybe(Maybe(..))
+import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
 
 initData :: ST.DocumentCaptureScreenState
 initData =
@@ -26,12 +27,14 @@ initData =
       , vehicleCategory : Nothing
       , docId : ""
       , linkedRc : Nothing
+      , cityConfig : dummyCityConfig
       }
   , props:
       { validateDocModal : false,
         logoutModalView : false,
         validating : false,
         menuOptions : false,
-        confirmChangeVehicle : false
+        confirmChangeVehicle : false,
+        contactSupportModal : ST.HIDE
       }
   }

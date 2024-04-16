@@ -64,6 +64,7 @@ import ConfigProvider
 import Components.OptionsMenu as OptionsMenu
 import Data.Array as DA
 import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
+import Components.BottomDrawerList as BottomDrawerList
 
 
 screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
@@ -174,6 +175,7 @@ linearLayout
       width MATCH_PARENT
     , height MATCH_PARENT
       ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_date_of_issue"}] else linearLayout [][]
+    , if state.props.contactSupportModal /= ST.HIDE then BottomDrawerList.view (push <<< BottomDrawerListAC) (bottomDrawerListConfig state) else linearLayout[][]
     , if state.props.openGenericMessageModal then 
       linearLayout[
       width MATCH_PARENT

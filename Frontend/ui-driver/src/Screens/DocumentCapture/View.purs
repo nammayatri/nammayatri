@@ -24,7 +24,7 @@ import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
-import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==))
+import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=))
 import Screens.DocumentCaptureScreen.Controller (Action(..), eval, ScreenOutput(..))
 import Screens.DocumentCaptureScreen.ComponentConfig
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
@@ -47,6 +47,7 @@ import Components.OptionsMenu as OptionsMenu
 import Debug (spy)
 import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
 import Data.Array as DA
+import Components.BottomDrawerList as BottomDrawerList
 
 screen :: ST.DocumentCaptureScreenState -> Screen Action ST.DocumentCaptureScreenState ScreenOutput
 screen initialState = 
@@ -95,10 +96,12 @@ view push state =
                 ]
           ]
         , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
-    ]   
+      ]
+    , if state.props.contactSupportModal /= ST.HIDE then BottomDrawerList.view (push <<< BottomDrawerListAC) (bottomDrawerListConfig state) else linearLayout[][]
     ] <> if state.props.validateDocModal then [ValidateDocumentModal.view (push <<< ValidateDocumentModalAction) (validateDocModalState state)] else []
       <> if DA.any (_ == true) [state.props.logoutModalView, state.props.confirmChangeVehicle] then [ popupModal push state ] else []
       <> if state.props.menuOptions then [menuOptionModal push state] else []
+
 
 menuOptionModal :: forall w. (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> PrestoDOM (Effect Unit) w
 menuOptionModal push state = 
