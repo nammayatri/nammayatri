@@ -20,7 +20,7 @@ import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type SearchAPI =
   "search"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] Spec.SearchReq
     :> Post '[JSON] Spec.AckResponse
 
@@ -29,7 +29,7 @@ searchAPI = Proxy
 
 type OnSearchAPI =
   "on_search"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] Spec.OnSearchReq
     :> Post '[JSON] Spec.AckResponse
 
@@ -38,7 +38,7 @@ onSearchAPI = Proxy
 
 type InitAPI =
   "init"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] Spec.InitReq
     :> Post '[JSON] Spec.AckResponse
 
@@ -47,7 +47,7 @@ initAPI = Proxy
 
 type OnInitAPI =
   "on_init"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] Spec.OnInitReq
     :> Post '[JSON] Spec.AckResponse
 
@@ -56,7 +56,7 @@ onInitAPI = Proxy
 
 type ConfirmAPI =
   "confirm"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] Spec.ConfirmReq
     :> Post '[JSON] Spec.AckResponse
 
@@ -65,7 +65,7 @@ confirmAPI = Proxy
 
 type OnConfirmAPI =
   "on_confirm"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] Spec.OnConfirmReq
     :> Post '[JSON] Spec.AckResponse
 
@@ -74,7 +74,7 @@ onConfirmAPI = Proxy
 
 type StatusAPI =
   "status"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] Spec.StatusReq
     :> Post '[JSON] Spec.AckResponse
 
@@ -83,7 +83,7 @@ statusAPI = Proxy
 
 type OnStatusAPI =
   "on_status"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] Spec.OnStatusReq
     :> Post '[JSON] Spec.AckResponse
 
@@ -92,7 +92,7 @@ onStatusAPI = Proxy
 
 type CancelAPI =
   "cancel"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] Spec.CancelReq
     :> Post '[JSON] Spec.AckResponse
 
@@ -101,7 +101,7 @@ cancelAPI = Proxy
 
 type OnCancelAPI =
   "on_cancel"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] Spec.OnCancelReq
     :> Post '[JSON] Spec.AckResponse
 

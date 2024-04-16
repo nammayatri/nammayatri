@@ -29,7 +29,7 @@ type RatingRes = AckResponse
 
 type RatingAPIV1 =
   "rating"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] RatingReq
     :> Post '[JSON] RatingRes
 
@@ -38,7 +38,7 @@ ratingAPIV1 = Proxy
 
 type RatingAPIV2 =
   "rating"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] RatingReqV2
     :> Post '[JSON] RatingRes
 

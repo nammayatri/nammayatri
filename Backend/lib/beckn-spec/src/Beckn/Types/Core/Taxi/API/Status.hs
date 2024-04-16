@@ -30,7 +30,7 @@ type StatusRes = AckResponse
 
 type StatusAPI =
   "status"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] StatusRes
 
@@ -39,7 +39,7 @@ statusAPI = Proxy
 
 type StatusAPIV1 =
   "status"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] StatusReq
     :> Post '[JSON] StatusRes
 
@@ -48,7 +48,7 @@ statusAPIV1 = Proxy
 
 type StatusAPIV2 =
   "status"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] StatusReqV2
     :> Post '[JSON] StatusRes
 

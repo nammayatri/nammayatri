@@ -30,7 +30,7 @@ type CancelRes = AckResponse
 
 type CancelAPI =
   "cancel"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] CancelRes
 
@@ -39,7 +39,7 @@ cancelAPI = Proxy
 
 type CancelAPIV1 =
   "cancel"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] CancelReq
     :> Post '[JSON] CancelRes
 
@@ -48,7 +48,7 @@ cancelAPIV1 = Proxy
 
 type CancelAPIV2 =
   "cancel"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] CancelReqV2
     :> Post '[JSON] CancelRes
 

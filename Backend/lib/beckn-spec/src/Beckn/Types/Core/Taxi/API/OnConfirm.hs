@@ -30,7 +30,7 @@ type OnConfirmRes = AckResponse
 
 type OnConfirmAPI =
   "on_confirm"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] OnConfirmRes
 
@@ -39,7 +39,7 @@ onConfirmAPI = Proxy
 
 type OnConfirmAPIV1 =
   "on_confirm"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] OnConfirmReq
     :> Post '[JSON] OnConfirmRes
 
@@ -48,7 +48,7 @@ onConfirmAPIV1 = Proxy
 
 type OnConfirmAPIV2 =
   "on_confirm"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] OnConfirmReqV2
     :> Post '[JSON] OnConfirmRes
 

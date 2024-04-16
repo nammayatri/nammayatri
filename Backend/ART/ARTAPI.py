@@ -92,15 +92,12 @@ def groupDataIntoFile(file_path,apikey):
                 continue
 
 
-
-
-
 def callApiForART (path):
     with open(path, 'r') as file:
         api_data = json.load(file)
         for api_name, api_details in api_data.items():
             for line in api_details:
-                if "rawPathInfo" in line:
+                if "rawPathInfo" in line and not "/beckn/" in line:
                     # we will ask here to call the api or not or move to next
                     ask = input(f' Do you want to call the API: {api_name} (y/n) or Exit (e):')
                     if ask.lower() == "e":
@@ -120,7 +117,7 @@ def callApiForART (path):
                         host = "http://" + headers["Host"]
                     urlPath = eval(api_details["rawPathInfo"])
                     handledUrl = host + urlPath + eval(api_details["rawQueryString"])
-                    requestBody = eval(api_details["body"])
+                    requestBody = eval(api_details["body"].replace("Just", "").replace("Nothing", ""))
                     if len (requestBody) :
                         requestBody = json.loads(requestBody)
 

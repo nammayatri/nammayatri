@@ -29,7 +29,7 @@ type TrackRes = AckResponse
 
 type TrackAPIV1 =
   "track"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] TrackReq
     :> Post '[JSON] TrackRes
 
@@ -38,7 +38,7 @@ trackAPIV1 = Proxy
 
 type TrackAPIV2 =
   "track"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] TrackReqV2
     :> Post '[JSON] TrackRes
 

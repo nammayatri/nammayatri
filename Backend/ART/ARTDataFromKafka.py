@@ -100,7 +100,7 @@ def process_log_file(input_file_path):
                         requestIds[requestId].append([line, parsableLine['timestamp']])
                     if "requestMethod" in line :
                         apiPath = parsableLine["request"]["rawPathInfo"].replace('"', "")
-                        if apiPath not in requestIdForAPI :
+                        if apiPath not in requestIdForAPI and "/beckn/" not in apiPath:
                             requestIdForAPI[apiPath] = [requestId,parsableLine['timestamp']]
 
                 except Exception as e:
@@ -113,23 +113,23 @@ def process_log_file(input_file_path):
 
         requestIdForAPI = {key: value[0] for key, value in sorted(requestIdForAPI.items(), key=lambda item: item[1][1])}
         for key, value in requestIdForAPI.items():
-            if "/beckn/" in key:
-                requestDataBeckn = requestIds[value]
-                requestDataBeckn = handleBecknCalls(requestDataBeckn)
-                # requestDataBeckn = [sublist[0] for sublist in sorted(requestDataBeckn, key=lambda x: x[1])]
-                becknCallsQueries+=(requestDataBeckn)
+            # if "/beckn/" in key:
+            #     requestDataBeckn = requestIds[value]
+            #     requestDataBeckn = handleBecknCalls(requestDataBeckn)
+            #     # requestDataBeckn = [sublist[0] for sublist in sorted(requestDataBeckn, key=lambda x: x[1])]
+            #     becknCallsQueries+=(requestDataBeckn)
 
-            else:
-                requestData = requestIds[value]
-                requestData = [sublist[0] for sublist in sorted(requestData, key=lambda x: x[1])] # sort by timestamp
-                requestData = handleAPIdata(requestData)
-                groupedRequestIdsForDiffChecker[key] = requestData # will be used to for diff checker
-                groupedRequestIds[key]=(requestData+nullRequestIds)
+            # else:
+            requestData = requestIds[value]
+            requestData = [sublist[0] for sublist in sorted(requestData, key=lambda x: x[1])] # sort by timestamp
+            requestData = handleAPIdata(requestData)
+            groupedRequestIdsForDiffChecker[key] = requestData # will be used to for diff checker
+            groupedRequestIds[key]=(requestData+nullRequestIds)
         #append beckn calls to each key in groupedRequestIds
         # lets make the beckn calls unique by first element  and sort them by timestamp
-        becknCallsQueries = [sublist[0] for sublist in sorted(becknCallsQueries, key=lambda x: x[1])]
-        becknCallsQueries = list(set(becknCallsQueries))
-        groupedRequestIds = {key: value+becknCallsQueries for key, value in groupedRequestIds.items()}
+        # becknCallsQueries = [sublist[0] for sublist in sorted(becknCallsQueries, key=lambda x: x[1])]
+        # becknCallsQueries = list(set(becknCallsQueries))
+        # groupedRequestIds = {key: value+becknCallsQueries for key, value in groupedRequestIds.items()}
 
         return (groupedRequestIds, nullRequestIds, groupedRequestIdsForDiffChecker)
 
@@ -153,7 +153,7 @@ def write_diff_checker_data_to_file(groupedRequestIdsForDiffChecker, output_file
 
 
 
-input_file_path = getFilePath("newlog.log")
+input_file_path = getFilePath("custom.log")
 output_file_path_api = getFilePath("APIdata.json")
 output_log_file_path_grouped = getFilePath("groupedRequestIds.log")
 diff_checker_file_path_mocker = getFilePath("groupedRequestIdsForDiffChecker.log")

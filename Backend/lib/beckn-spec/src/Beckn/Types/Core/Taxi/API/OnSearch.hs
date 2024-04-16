@@ -30,19 +30,19 @@ type OnSearchRes = AckResponse
 
 type OnSearchAPI =
   "on_search"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] OnSearchRes
 
 type OnSearchAPIV1 =
   "on_search"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] OnSearchReq
     :> Post '[JSON] OnSearchRes
 
 type OnSearchAPIV2 =
   "on_search"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] OnSearchReqV2
     :> Post '[JSON] OnSearchRes
 

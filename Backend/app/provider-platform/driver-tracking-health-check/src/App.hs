@@ -51,7 +51,7 @@ runDriverHealthcheck configModifier = do
             & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown (releaseAppEnv appEnv))
             & setPort config.healthcheckPort
     void . forkIO . runSettings settings $
-      Server.run healthCheckAPI healthCheck EmptyContext (App.EnvR flowRt' appEnv)
+      Server.run healthCheckAPI healthCheck EmptyContext (App.EnvR flowRt' appEnv Nothing)
 
     runFlowR flowRt' appEnv Service.driverTrackingHealthcheckService
     waitForShutdown appEnv.isShuttingDown

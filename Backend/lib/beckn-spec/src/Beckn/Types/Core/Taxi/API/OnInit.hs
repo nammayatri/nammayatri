@@ -30,19 +30,19 @@ type OnInitRes = AckResponse
 
 type OnInitAPI =
   "on_init"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] OnInitRes
 
 type OnInitAPIV1 =
   "on_init"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] OnInitReq
     :> Post '[JSON] OnInitRes
 
 type OnInitAPIV2 =
   "on_init"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] OnInitReqV2
     :> Post '[JSON] OnInitRes
 

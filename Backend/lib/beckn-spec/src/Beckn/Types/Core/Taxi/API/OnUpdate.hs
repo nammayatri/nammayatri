@@ -29,7 +29,7 @@ type OnUpdateRes = AckResponse
 
 type OnUpdateAPIV1 =
   "on_update"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] OnUpdateReq
     :> Post '[JSON] OnUpdateRes
 
@@ -38,7 +38,7 @@ onUpdateAPIV1 = Proxy
 
 type OnUpdateAPIV2 =
   "on_update"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] OnUpdateReqV2
     :> Post '[JSON] OnUpdateRes
 

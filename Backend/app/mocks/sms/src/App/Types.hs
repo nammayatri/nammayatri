@@ -17,6 +17,7 @@ module App.Types where
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import EulerHS.Prelude
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
 import Kernel.Types.Common hiding (id)
@@ -43,7 +44,11 @@ data AppEnv = AppEnv
     smsMap :: MVar (Map.Map MobileNumber [Text]),
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
-    version :: Metrics.DeploymentVersion
+    version :: Metrics.DeploymentVersion,
+    requestId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    isArtReplayerEnabled :: Bool
   }
   deriving (Generic)
 
@@ -54,6 +59,10 @@ buildAppEnv AppCfg {..} = do
   smsMap <- newMVar Map.empty
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   isShuttingDown <- mkShutdown
+  let shouldLogRequestId = False
+      requestId = Nothing
+      kafkaProducerForART = Nothing
+      isArtReplayerEnabled = False
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

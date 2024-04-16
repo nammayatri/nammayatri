@@ -21,7 +21,7 @@ import Kernel.Types.Beckn.ReqTypes
 import Servant
 
 type ConfirmAPI =
-  "confirm" :> Header "custom-request-id" Text :> ReqBody '[JSON] (BecknReq ConfirmMessage) :> Post '[JSON] AckResponse
+  "confirm" :> Header "x-custom-request-id" Text :> ReqBody '[JSON] (BecknReq ConfirmMessage) :> Post '[JSON] AckResponse
 
 confirmAPI :: Proxy ConfirmAPI
 confirmAPI = Proxy

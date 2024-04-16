@@ -29,7 +29,7 @@ type SearchRes = AckResponse
 
 type SearchAPI =
   "search"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] SearchReqV2
     :> Post '[JSON] SearchRes
 
@@ -38,7 +38,7 @@ searchAPI = Proxy
 
 type SearchAPIV1 =
   "search"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] SearchReq
     :> Post '[JSON] SearchRes
 
@@ -47,7 +47,7 @@ searchAPIV1 = Proxy
 
 type SearchAPIV2 =
   "search"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] SearchReqV2
     :> Post '[JSON] SearchRes
 

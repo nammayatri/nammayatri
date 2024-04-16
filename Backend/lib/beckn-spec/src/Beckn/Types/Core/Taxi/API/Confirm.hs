@@ -30,20 +30,20 @@ type ConfirmRes = AckResponse
 
 type ConfirmAPI =
   "confirm"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     -- :> ReqBody '[JSON] ConfirmReq
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] ConfirmRes
 
 type ConfirmAPIV1 =
   "confirm"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] ConfirmReq
     :> Post '[JSON] ConfirmRes
 
 type ConfirmAPIV2 =
   "confirm"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] ConfirmReqV2
     :> Post '[JSON] ConfirmRes
 

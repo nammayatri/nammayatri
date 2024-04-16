@@ -27,20 +27,20 @@ type UpdateRes = AckResponse
 
 type UpdateAPI =
   "update"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     -- :> ReqBody '[JSON] UpdateReq
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] UpdateRes
 
 type UpdateAPIV1 =
   "update"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] UpdateReq
     :> Post '[JSON] UpdateRes
 
 type UpdateAPIV2 =
   "update"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] UpdateReq
     :> Post '[JSON] UpdateRes
 

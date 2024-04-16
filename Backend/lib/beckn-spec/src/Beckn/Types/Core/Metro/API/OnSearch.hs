@@ -24,7 +24,7 @@ type OnSearchReq = BecknCallbackReq OnSearchCatalog
 
 type OnSearchAPI =
   "on_search"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] OnSearchReq
     :> Post '[JSON] AckResponse
 

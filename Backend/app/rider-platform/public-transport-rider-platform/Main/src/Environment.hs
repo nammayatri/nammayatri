@@ -101,7 +101,8 @@ data AppEnv = AppEnv
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    isArtReplayerEnabled :: Bool
   }
   deriving (Generic)
 
@@ -131,6 +132,7 @@ buildAppEnv AppCfg {..} = do
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Just kafkaProducerTools
+      isArtReplayerEnabled = False
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

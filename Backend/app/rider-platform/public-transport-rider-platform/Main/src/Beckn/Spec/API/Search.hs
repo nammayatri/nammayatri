@@ -22,7 +22,7 @@ import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type SearchAPI =
   "search"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] (BecknReq SearchMessage)
     :> Post '[JSON] AckResponse
 

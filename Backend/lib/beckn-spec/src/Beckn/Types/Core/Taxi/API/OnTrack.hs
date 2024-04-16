@@ -29,7 +29,7 @@ type OnTrackRes = AckResponse
 
 type OnTrackAPIV1 =
   "on_track"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] OnTrackReq
     :> Post '[JSON] OnTrackRes
 
@@ -38,7 +38,7 @@ onTrackAPIV1 = Proxy
 
 type OnTrackAPIV2 =
   "on_track"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] OnTrackReqV2
     :> Post '[JSON] OnTrackRes
 

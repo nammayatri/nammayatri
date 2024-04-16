@@ -44,6 +44,7 @@ data TagGroup
   | RIDE_ODOMETER_DETAILS
   | DRIVER_NEW_MESSAGE
   | PREVIOUS_CANCELLATION_REASONS
+  | CUSTOM_REQUEST_IDS
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE
@@ -162,4 +163,6 @@ data Tag
     MESSAGE
   | -- Previous cancellation reasons tags
     CANCELLATION_REASON
+  | -- custom request id
+    CUSTOM_REQUEST_ID
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

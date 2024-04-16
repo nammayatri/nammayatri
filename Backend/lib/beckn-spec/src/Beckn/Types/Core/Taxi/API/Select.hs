@@ -30,7 +30,7 @@ type SelectRes = AckResponse
 
 type SelectAPI =
   "select"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     -- :> ReqBody '[JSON] SelectReq
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] SelectRes
@@ -40,7 +40,7 @@ selectAPI = Proxy
 
 type SelectAPIV1 =
   "select"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] SelectReq
     :> Post '[JSON] SelectRes
 
@@ -49,7 +49,7 @@ selectAPIV1 = Proxy
 
 type SelectAPIV2 =
   "select"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] SelectReqV2
     :> Post '[JSON] SelectRes
 

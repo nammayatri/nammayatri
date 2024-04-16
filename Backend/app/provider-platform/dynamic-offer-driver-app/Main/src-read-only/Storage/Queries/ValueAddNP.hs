@@ -20,7 +20,7 @@ create = createWithKV
 createMany :: KvDbFlow m r => ([Domain.Types.ValueAddNP.ValueAddNP] -> m ())
 createMany = traverse_ create
 
-findAll :: KvDbFlow m r => (Kernel.Prelude.Bool -> m ([Domain.Types.ValueAddNP.ValueAddNP]))
+findAll :: KvDbFlow m r => (Kernel.Prelude.Bool -> m [Domain.Types.ValueAddNP.ValueAddNP])
 findAll enabled = do findAllWithKV [Se.Is Beam.enabled $ Se.Eq enabled]
 
 findByPrimaryKey :: KvDbFlow m r => (Kernel.Prelude.Text -> m (Maybe Domain.Types.ValueAddNP.ValueAddNP))

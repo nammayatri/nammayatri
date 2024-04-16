@@ -149,7 +149,7 @@ runDynamicOfferDriverApp' appCfg = do
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'
     let timeoutMiddleware = UE.timeoutEvent flowRt appEnv (responseLBS status408 [] "") appCfg.incomingAPIResponseTimeout
-    runSettings settings $ timeoutMiddleware (App.run (App.EnvR flowRt' appEnv))
+    runSettings settings $ timeoutMiddleware (App.run (App.EnvR flowRt' appEnv Nothing))
 
 convertToHashMap :: Map.Map String Http.ManagerSettings -> HashMap.HashMap Text Http.ManagerSettings
 convertToHashMap = HashMap.fromList . map convert . Map.toList

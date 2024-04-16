@@ -33,6 +33,7 @@ type SubscriberId = Text
 createIfNotPresent :: KvDbFlow m r => BppDetails -> m ()
 createIfNotPresent bppDetails = do
   maybeBppDetails <- findBySubscriberIdAndDomain' bppDetails.subscriberId bppDetails.domain
+  logDebug $ "createIfNotPresent: maybeBppDetails: Vijay" <> show maybeBppDetails
   whenNothing maybeBppDetails $ do
     void $ Queries.create bppDetails
     void $ cacheBppDetails bppDetails
@@ -41,17 +42,20 @@ createIfNotPresent bppDetails = do
 
 findBySubscriberIdAndDomain :: KvDbFlow m r => SubscriberId -> Context.Domain -> m (Maybe BppDetails)
 findBySubscriberIdAndDomain subscriberId domain = do
+  logDebug $ "findBySubscriberIdAndDomain: subscriberId: " <> show subscriberId <> " domain: " <> show domain
   let domainText = show domain
   findBySubscriberIdAndDomain' subscriberId domainText
 
 findBySubscriberIdAndDomain' :: KvDbFlow m r => SubscriberId -> Domain -> m (Maybe BppDetails)
 findBySubscriberIdAndDomain' subscriberId domain =
-  Hedis.safeGet (makeSubscriberIdKey subscriberId domain) >>= \case
-    Just a -> return $ Just a
-    Nothing -> flip whenJust cacheBppDetails /=<< Queries.findBySubscriberIdAndDomain subscriberId domain
+  logDebug ("findBySubscriberIdAndDomain': subscriberId: " <> show subscriberId <> " domain: " <> show domain)
+    >> Hedis.safeGet (makeSubscriberIdKey subscriberId domain) >>= \case
+      Just a -> return $ Just a
+      Nothing -> flip whenJust cacheBppDetails /=<< Queries.findBySubscriberIdAndDomain subscriberId domain
 
 cacheBppDetails :: (CacheFlow m r) => BppDetails -> m ()
 cacheBppDetails bppDetails = do
+  logDebug $ "cacheBppDetails: Vijay" <> show bppDetails
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeSubscriberIdKey bppDetails.subscriberId bppDetails.domain
   Hedis.setExp idKey bppDetails expTime

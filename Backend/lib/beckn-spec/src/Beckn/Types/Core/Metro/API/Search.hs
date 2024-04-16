@@ -25,7 +25,7 @@ type SearchReq = BecknReq SearchIntent
 
 type SearchAPI =
   "search"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] SearchReq
     :> Post '[JSON] AckResponse
 

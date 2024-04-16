@@ -22,7 +22,7 @@ import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type StatusAPI =
   "status"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] (BecknReq StatusMessage)
     :> Post '[JSON] AckResponse
 

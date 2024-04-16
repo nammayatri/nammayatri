@@ -25,7 +25,7 @@ type OnCancelRes = AckResponse
 
 type OnCancelAPIV2 =
   "on_cancel"
-    :> Header "custom-request-id" Text
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] OnCancelReqV2
     :> Post '[JSON] OnCancelRes
 
