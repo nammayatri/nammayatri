@@ -144,7 +144,8 @@ data AppCfg = AppCfg
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
     _version :: Text,
     cacConfig :: CacConfig,
-    superPositionConfig :: SuperPositionConfig
+    superPositionConfig :: SuperPositionConfig,
+    maxStraightLineRectificationThreshold :: HighPrecMeters
   }
   deriving (Generic, FromDhall)
 
@@ -226,7 +227,8 @@ data AppEnv = AppEnv
     superPositionConfig :: SuperPositionConfig,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    maxStraightLineRectificationThreshold :: HighPrecMeters
   }
   deriving (Generic)
 

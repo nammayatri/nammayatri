@@ -80,6 +80,7 @@ instance ToTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConfig
         BeamMSUC.getDistancesForCancelRide = getDistancesForCancelRide,
         BeamMSUC.smsProvidersPriorityList = smsProvidersPriorityList,
         BeamMSUC.snapToRoadProvidersList = snapToRoadProvidersList,
+        BeamMSUC.rectifyDistantPointsFailure = rectifyDistantPointsFailure,
         BeamMSUC.whatsappProvidersPriorityList = whatsappProvidersPriorityList,
         BeamMSUC.verificationService = verificationService,
         BeamMSUC.driverBackgroundVerificationService = driverBackgroundVerificationService,

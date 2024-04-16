@@ -29,6 +29,7 @@ import Lib.LocationUpdates
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.Maps as TM
 
 data BulkLocUpdateReq = BulkLocUpdateReq
   { rideId :: Id DRide.Ride,
@@ -46,5 +47,9 @@ bulkLocUpdate req = do
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchantId <- fromMaybeM (InternalError "Ride does not have a merchantId") $ ride.merchantId
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId ride.merchantOperatingCityId False
-  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler (DC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory) rideId driverId loc
+  rectificationServiceConfig <-
+    if DC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory
+      then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
+      else pure Nothing
+  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig rideId driverId loc
   pure Success

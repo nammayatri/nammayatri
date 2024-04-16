@@ -43,6 +43,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getDistancesForCancelRide :: B.C f MapsService,
     smsProvidersPriorityList :: B.C f [SmsService],
     snapToRoadProvidersList :: B.C f [MapsService],
+    rectifyDistantPointsFailure :: B.C f MapsService,
     whatsappProvidersPriorityList :: B.C f [WhatsappService],
     verificationService :: B.C f VerificationService,
     faceVerificationService :: B.C f VerificationService,
