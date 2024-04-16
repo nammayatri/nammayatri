@@ -17,7 +17,8 @@ instance FromTType' Beam.Issue Domain.Types.Issue.Issue where
     pure $
       Just
         Domain.Types.Issue.Issue
-          { bookingId = Kernel.Types.Id.Id <$> bookingId,
+          { becknIssueId = becknIssueId,
+            bookingId = Kernel.Types.Id.Id <$> bookingId,
             contactEmail = contactEmail,
             createdAt = createdAt,
             customerId = Kernel.Types.Id.Id customerId,
@@ -33,7 +34,8 @@ instance FromTType' Beam.Issue Domain.Types.Issue.Issue where
 instance ToTType' Beam.Issue Domain.Types.Issue.Issue where
   toTType' (Domain.Types.Issue.Issue {..}) = do
     Beam.IssueT
-      { Beam.bookingId = Kernel.Types.Id.getId <$> bookingId,
+      { Beam.becknIssueId = becknIssueId,
+        Beam.bookingId = Kernel.Types.Id.getId <$> bookingId,
         Beam.contactEmail = contactEmail,
         Beam.createdAt = createdAt,
         Beam.customerId = Kernel.Types.Id.getId customerId,

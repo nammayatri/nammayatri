@@ -13,17 +13,18 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data IssueT f = IssueT
-  { bookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    contactEmail :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    customerId :: B.C f Kernel.Prelude.Text,
-    description :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    nightSafety :: B.C f Kernel.Prelude.Bool,
-    reason :: B.C f Kernel.Prelude.Text,
-    status :: B.C f IssueManagement.Common.IssueStatus,
-    ticketId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { becknIssueId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    bookingId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    contactEmail :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    customerId :: (B.C f Kernel.Prelude.Text),
+    description :: (B.C f Kernel.Prelude.Text),
+    id :: (B.C f Kernel.Prelude.Text),
+    nightSafety :: (B.C f Kernel.Prelude.Bool),
+    reason :: (B.C f Kernel.Prelude.Text),
+    status :: (B.C f IssueManagement.Common.IssueStatus),
+    ticketId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -35,4 +36,4 @@ type Issue = IssueT Identity
 
 $(enableKVPG ''IssueT ['id] [['bookingId], ['customerId], ['ticketId]])
 
-$(mkTableInstances ''IssueT "issue")
+$(mkTableInstances (''IssueT) "issue")

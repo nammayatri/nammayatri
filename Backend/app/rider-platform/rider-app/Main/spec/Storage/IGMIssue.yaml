@@ -1,0 +1,34 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+
+IGMIssue:
+  tableName: igm_issue
+
+  types:
+    Status:
+      enum: "OPEN, CLOSED, ESCALATED"
+
+  fields:
+    id: Id IGMIssue
+    internalIssueId: Text
+    issueType: Text
+    issueStatus: Status
+    respondantName: Maybe Text
+    respondantEmail: Maybe Text
+    respondantPhone: Maybe Text
+    respondingMerchantId: Id Merchant
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  excludedFields: [merchantOperatingCityId]
+
+  queries:
+    findByinternalIssueId:
+      kvFunction: findOneWithKV
+      where: internalIssueId
+
+  constraints:
+    id: PrimaryKey
+    internalIssueId: SecondaryKey
