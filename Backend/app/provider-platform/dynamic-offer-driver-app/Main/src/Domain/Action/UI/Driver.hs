@@ -346,6 +346,7 @@ data DriverRespondReq = DriverRespondReq
 data DriverStatsRes = DriverStatsRes
   { totalRidesOfDay :: Int,
     totalEarningsOfDay :: Money,
+    totalRidesDistanceOfDay :: Meters,
     bonusEarning :: Money,
     coinBalance :: Int
   }
@@ -1036,7 +1037,8 @@ getStats (driverId, _, merchantOpCityId) date = do
     DriverStatsRes
       { coinBalance = coinBalance_,
         totalRidesOfDay = length rides,
-        totalEarningsOfDay = sum (mapMaybe (.fare) rides),
+        totalEarningsOfDay = sum (mapMaybe (.fare) rides) - (round $ sum (mapMaybe (.tollCharges) rides) :: Money),
+        totalRidesDistanceOfDay = sum (mapMaybe (.chargeableDistance) rides),
         bonusEarning =
           let (driverSelFares, customerExtFees) = (mapMaybe (.driverSelectedFare) fareParameters, mapMaybe (.customerExtraFee) fareParameters)
               driverSelFares' = getMoney <$> driverSelFares
