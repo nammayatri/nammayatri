@@ -377,7 +377,7 @@ view push state =
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , background Color.transparent
-                    , padding (PaddingBottom if os == "IOS" then 53 else 70)
+                    , padding (PaddingBottom if os == "IOS" then 43 + (if showLabel then 20 else 0) else 70)
                     , gravity CENTER
                     , accessibility DISABLE
                     , orientation VERTICAL

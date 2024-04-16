@@ -97,7 +97,7 @@ eval  (DatePicker _ resp year month date ) state = do
       let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if date < 10 then "0"  else "") <> (show date)
           validDate = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (getLimitOfDaysAccToPlaceType state)) selectedDateString)
                       && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
-          selectedOpDay = convertUTCtoISC ((show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month + 1)) <> "-" <> (show date)) "dddFull"
+          selectedOpDay = convertUTCtoISC ((show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month + 1)) <> "-" <> (if date < 10 then "0"  else "") <> (show date)) "dddFull"
           modifiedServicesData = map (modifyService selectedOpDay) state.data.servicesInfo
           
       continue state { props{selectedOperationalDay = selectedOpDay, validDate = validDate },data { totalAmount = 0, servicesInfo = modifiedServicesData, dateOfVisit = selectedDateString }}

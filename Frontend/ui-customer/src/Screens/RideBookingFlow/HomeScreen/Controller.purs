@@ -1567,24 +1567,30 @@ eval OpenSearchLocation state = do
 
 eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = continueWithCmd state [ do pure $ OpenSearchLocation ]
 
-eval (UpdateLocation key lat lon) state = case key of
-  "LatLon" -> do
-    exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
-  _ ->  if length (filter( \ (item) -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
-          exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
-        else continue state
-
-eval (UpdatePickupLocation  key lat lon) state =
+eval (UpdateLocation key lat lon) state = do
+  let latitude = fromMaybe 0.0 (NUM.fromString lat)
+      longitude = fromMaybe 0.0 (NUM.fromString lon)
   case key of
-    "LatLon" -> do
-      exit $ UpdatePickupName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+    "LatLon" ->
+      exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} latitude longitude
+    _ ->  case (filter(\item -> item.place == key) state.data.nearByPickUpPoints) !! 0 of
+            Just spot -> exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} spot.lat spot.lng
+            Nothing -> continue state
+
+eval (UpdatePickupLocation  key lat lon) state = do
+  let latitude = fromMaybe 0.0 (NUM.fromString lat)
+      longitude = fromMaybe 0.0 (NUM.fromString lon)
+  case key of
+    "LatLon" ->
+      exit $ UpdatePickupName state{props{defaultPickUpPoint = ""}} latitude longitude
     _ -> do
       let focusedIndex = findIndex (\item -> item.place == key) state.data.nearByPickUpPoints
-      case focusedIndex of
-        Just index -> do
+          spot = (filter(\item -> item.place == key) state.data.nearByPickUpPoints) !! 0
+      case focusedIndex, spot of
+        Just index, Just spot' -> do
           _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
-          exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
-        Nothing -> continue state
+          exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} spot'.lat spot'.lng
+        _, _ -> continue state
 
 eval (CheckBoxClick autoAssign) state = do
   _ <- pure $ performHapticFeedback unit
