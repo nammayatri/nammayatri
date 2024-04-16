@@ -1,0 +1,39 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+module Storage.Beam.IGMIssue where
+
+import qualified Data.Text
+import qualified Database.Beam as B
+import qualified Domain.Types.IGMIssue
+import Kernel.External.Encryption
+import Kernel.Prelude
+import qualified Kernel.Prelude
+import Tools.Beam.UtilsTH
+
+data IGMIssueT f = IGMIssueT
+  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    id :: (B.C f Data.Text.Text),
+    internalIssueId :: (B.C f Data.Text.Text),
+    issueStatus :: (B.C f Domain.Types.IGMIssue.Status),
+    issueType :: (B.C f Data.Text.Text),
+    respondantEmail :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
+    respondantName :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
+    respondantPhone :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
+    respondingMerchantId :: (B.C f Data.Text.Text),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text)))
+  }
+  deriving (Generic, B.Beamable)
+
+instance B.Table IGMIssueT where
+  data PrimaryKey IGMIssueT f = IGMIssueId (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
+  primaryKey = IGMIssueId . id
+
+type IGMIssue = IGMIssueT Identity
+
+$(enableKVPG (''IGMIssueT) [('id)] [[('internalIssueId)]])
+
+$(mkTableInstances (''IGMIssueT) "igm_issue")

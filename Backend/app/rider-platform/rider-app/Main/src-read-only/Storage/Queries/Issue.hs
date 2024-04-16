@@ -28,7 +28,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Issue.Issue {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.bookingId (Kernel.Types.Id.getId <$> bookingId),
+    [ Se.Set Beam.becknIssueId becknIssueId,
+      Se.Set Beam.bookingId (Kernel.Types.Id.getId <$> bookingId),
       Se.Set Beam.contactEmail contactEmail,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.customerId (Kernel.Types.Id.getId customerId),

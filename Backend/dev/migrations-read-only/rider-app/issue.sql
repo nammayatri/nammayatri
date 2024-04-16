@@ -12,3 +12,14 @@ ALTER TABLE atlas_app.issue ADD COLUMN status text NOT NULL default 'OPEN';
 ALTER TABLE atlas_app.issue ADD COLUMN ticket_id text ;
 ALTER TABLE atlas_app.issue ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.issue ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.issue ADD COLUMN backn_issue_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.issue ADD COLUMN beckn_issue_id text ;
+ALTER TABLE atlas_app.issue DROP COLUMN backn_issue_id;

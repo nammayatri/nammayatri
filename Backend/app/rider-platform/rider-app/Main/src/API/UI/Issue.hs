@@ -1,7 +1,11 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 module API.UI.Issue where
 
 import qualified Data.HashMap.Strict as HM
+import Beckn.ACL.IGM.Issue
 import qualified Domain.Action.Dashboard.Ride as DRide
+import Domain.Action.UI.IGM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import Environment
@@ -22,11 +26,14 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified SharedLogic.CallIGMBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.IGMConfig as QIGMConfig
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
@@ -177,7 +184,22 @@ fetchMedia :: (Id SP.Person, Id DM.Merchant) -> Text -> FlowHandler Text
 fetchMedia (personId, merchantId) = withFlowHandlerAPI . Common.fetchMedia (cast personId, cast merchantId)
 
 createIssueReport :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> Common.IssueReportReq -> FlowHandler Common.IssueReportRes
-createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ Common.createIssueReport (cast personId, cast merchantId) mbLanguage req customerIssueHandle CUSTOMER
+createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbIGMReq <- buildIGMIssueReq req.rideId
+  becknIssueId <- case mbIGMReq of
+    Just igmReq | not igmReq.isValueAddNP -> processIGMReq igmReq person
+    _ -> return Nothing
+  Common.createIssueReport (cast personId, cast merchantId) mbLanguage req (buildMerchantConfig merchantId) customerIssueHandle CUSTOMER becknIssueId
+  where
+    processIGMReq igmReq person = do
+      merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      igmConfig <- QIGMConfig.findByMerchantId merchantId >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchantId)
+      merchantOperatingCity <- CQMOC.findById igmReq.booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show igmReq.booking.merchantOperatingCityId)
+      (becknIssueReq, issueId) <- buildIssueReq igmReq.booking igmReq.ride req merchant person igmConfig merchantOperatingCity
+      fork "sending beckn issue" . withShortRetry $ do
+        void $ CallBPP.issue igmReq.booking.providerUrl becknIssueReq
+      return $ Just issueId
 
 issueMediaUpload :: (Id SP.Person, Id DM.Merchant) -> Common.IssueMediaUploadReq -> FlowHandler Common.IssueMediaUploadRes
 issueMediaUpload (personId, merchantId) req = withFlowHandlerAPI $ Common.issueMediaUpload (cast personId, cast merchantId) customerIssueHandle req

@@ -7,9 +7,13 @@ module IGM.Types
   ( Ack (..),
     AckMessage (..),
     AckResponse (..),
+    City (..),
     Complainant (..),
     ComplainantAction (..),
     ComplainantPerson (..),
+    Contact (..),
+    Context (..),
+    Country (..),
     Descriptor (..),
     Error (..),
     Fulfillment (..),
@@ -25,7 +29,6 @@ module IGM.Types
     IssuePost200ResponseMessage (..),
     IssuePost200ResponseMessageAck (..),
     IssueReq (..),
-    IssueReqContext (..),
     IssueReqMessage (..),
     IssueResolution (..),
     IssueSource (..),
@@ -33,6 +36,7 @@ module IGM.Types
     IssueStatusReqMessage (..),
     IssueSubCategory (..),
     Item (..),
+    Location (..),
     OnIssueReq (..),
     OnIssueReqMessage (..),
     OnIssueStatusReq (..),
@@ -61,14 +65,13 @@ import qualified Data.Text as T
 import Data.Time
 import Data.UUID (UUID)
 import GHC.Generics (Generic)
+import Kernel.Types.TimeRFC339 (UTCTimeRFC3339)
 import Prelude
 
 -- | Describes the acknowledgement sent in response to an API call. If the implementation uses HTTP/S, then Ack must be returned in the same session. Every API call to a BPP must be responded to with an Ack whether the BPP intends to respond with a callback or not. This has one property called &#x60;status&#x60; that indicates the status of the Acknowledgement.
-data Ack = Ack
+newtype Ack = Ack
   { -- | The status of the acknowledgement. If the request passes the validation criteria of the BPP, then this is set to ACK. If a BPP responds with status = `ACK` to a request, it is required to respond with a callback. If the request fails the validation criteria, then this is set to NACK. Additionally, if a BPP does not intend to respond with a callback even after the request meets the validation criteria, it should set this value to `NACK`.
-    ackStatus :: Maybe Text,
-    -- | A list of tags containing any additional information sent along with the Acknowledgement.
-    ackTags :: Maybe [TagGroup]
+    ackStatus :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -141,10 +144,37 @@ optionsAckResponse =
         ("ackResponseMessage", "message")
       ]
 
+-- | Describes a city
+data City = City
+  { -- | City code
+    cityCode :: Maybe Text,
+    -- | Name of the city
+    cityName :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON City where
+  parseJSON = genericParseJSON optionsCity
+
+instance ToJSON City where
+  toJSON = genericToJSON optionsCity
+
+optionsCity :: Options
+optionsCity =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("cityCode", "code"),
+        ("cityName", "name")
+      ]
+
 -- | - Describes an entity that raises a complaint with an interfacing app.  - The complainant may be an end user (buyer or seller) or a network participant (buyer app/ seller app/ logistic services  provider app)
 data Complainant = Complainant
   { -- |
-    complainantContact :: Value,
+    complainantContact :: Maybe Contact,
     -- |
     complainantPerson :: Maybe ComplainantPerson
   }
@@ -225,6 +255,119 @@ optionsComplainantPerson =
       [ ("complainantPersonName", "name")
       ]
 
+-- | Describes the contact information of an entity
+data Contact = Contact
+  { -- |
+    contactPhone :: Maybe Text,
+    contactEmail :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Contact where
+  parseJSON = genericParseJSON optionsContact
+
+instance ToJSON Contact where
+  toJSON = genericToJSON optionsContact
+
+optionsContact :: Options
+optionsContact =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("contactPhone", "phone"),
+        ("contactEmail", "email")
+      ]
+
+-- | Every API call in beckn protocol has a context. It provides a high-level overview to the receiver about the nature of the intended transaction. Typically, it is the BAP that sets the transaction context based on the consumer&#39;s location and action on their UI. But sometimes, during unsolicited callbacks, the BPP also sets the transaction context but it is usually the same as the context of a previous full-cycle, request-callback interaction between the BAP and the BPP. The context object contains four types of fields. &lt;ol&gt;&lt;li&gt;Demographic information about the transaction using fields like &#x60;domain&#x60;, &#x60;country&#x60;, and &#x60;region&#x60;.&lt;/li&gt;&lt;li&gt;Addressing details like the sending and receiving platform&#39;s ID and API URL.&lt;/li&gt;&lt;li&gt;Interoperability information like the protocol version that implemented by the sender and,&lt;/li&gt;&lt;li&gt;Transaction details like the method being called at the receiver&#39;s endpoint, the transaction_id that represents an end-to-end user session at the BAP, a message ID to pair requests with callbacks, a timestamp to capture sending times, a ttl to specifiy the validity of the request, and a key to encrypt information if necessary.&lt;/li&gt;&lt;/ol&gt; This object must be passed in every interaction between a BAP and a BPP. In HTTP/S implementations, it is not necessary to send the context during the synchronous response. However, in asynchronous protocols, the context must be sent during all interactions,
+data Context = Context
+  { -- | The Beckn protocol method being called by the sender and executed at the receiver.
+    contextAction :: Maybe Text,
+    -- | A globally unique identifier of the platform, Typically it is the fully qualified domain name (FQDN) of the platform.
+    contextBapId :: Maybe Text,
+    -- | The callback URL of the Subscriber. This should necessarily contain the same domain name as set in `subscriber_id``.
+    contextBapUri :: Maybe Text,
+    -- |
+    contextBppId :: Maybe Text,
+    -- |
+    contextBppUri :: Maybe Text,
+    -- |
+    contextDomain :: Maybe Text,
+    -- | The encryption public key of the sender
+    contextKey :: Maybe Text,
+    -- |
+    contextLocation :: Maybe Location,
+    -- | This is a unique value which persists during a request / callback cycle. Since beckn protocol APIs are asynchronous, BAPs need a common value to match an incoming callback from a BPP to an earlier call. This value can also be used to ignore duplicate messages coming from the BPP. It is recommended to generate a fresh message_id for every new interaction. When sending unsolicited callbacks, BPPs must generate a new message_id.
+    contextMessageId :: Maybe Text,
+    -- | Time of request generation in RFC3339 format
+    contextTimestamp :: Maybe UTCTimeRFC3339,
+    -- | This is a unique value which persists across all API calls from `search` through `confirm`. This is done to indicate an active user session across multiple requests. The BPPs can use this value to push personalized recommendations, and dynamic offerings related to an ongoing transaction despite being unaware of the user active on the BAP.
+    contextTransactionId :: Maybe Text,
+    -- | The duration in ISO8601 format after timestamp for which this message holds valid
+    contextTtl :: Maybe Text,
+    -- | Version of transaction protocol being used by the sender.
+    contextVersion :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Context where
+  parseJSON = genericParseJSON optionsContext
+
+instance ToJSON Context where
+  toJSON = genericToJSON optionsContext
+
+optionsContext :: Options
+optionsContext =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("contextAction", "action"),
+        ("contextBapId", "bap_id"),
+        ("contextBapUri", "bap_uri"),
+        ("contextBppId", "bpp_id"),
+        ("contextBppUri", "bpp_uri"),
+        ("contextDomain", "domain"),
+        ("contextKey", "key"),
+        ("contextLocation", "location"),
+        ("contextMessageId", "message_id"),
+        ("contextTimestamp", "timestamp"),
+        ("contextTransactionId", "transaction_id"),
+        ("contextTtl", "ttl"),
+        ("contextVersion", "version")
+      ]
+
+-- | Describes a country
+data Country = Country
+  { -- | Country code as per ISO 3166-1 and ISO 3166-2 format
+    countryCode :: Maybe Text,
+    -- | Name of the country
+    countryName :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Country where
+  parseJSON = genericParseJSON optionsCountry
+
+instance ToJSON Country where
+  toJSON = genericToJSON optionsCountry
+
+optionsCountry :: Options
+optionsCountry =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("countryCode", "code"),
+        ("countryName", "name")
+      ]
+
 -- | Physical description of something.
 data Descriptor = Descriptor
   { -- |
@@ -262,7 +405,8 @@ data Error = Error
     -- | Human readable message describing the error. Used mainly for logging. Not recommended to be shown to the user.
     errorMessage :: Maybe Text,
     -- | Path to json schema generating the error. Used only during json schema validation errors
-    errorPaths :: Maybe Text
+    errorPaths :: Maybe Text,
+    errorType :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -282,7 +426,8 @@ optionsError =
     table =
       [ ("errorCode", "code"),
         ("errorMessage", "message"),
-        ("errorPaths", "paths")
+        ("errorPaths", "paths"),
+        ("errorType", "type")
       ]
 
 -- |
@@ -372,7 +517,7 @@ optionsGROContact =
 -- | *  Describes the Issue/complaint raised for a particular order, transaction or fulfillment or item for which an issue is faced by the buyer. * It also describes the Issue/complaint raised by the network participants to its conuter party or casacaded counterparty apps as and when applicable * Describes the issue when it is escalated as a Grievance or a Dispute *  supplementary Information  Describes and details evidence of the information about the issue . When the complainant or respondent seeks an issue update the addtional information about the update are populated as part of the supplementary information.    the supplementary information section , details information including but not limited to any of the following or more:      * comments from the complaintant/ respondent for seeking more information about the issue     * comments from the complaintant/ respondent providing the update on the issue with more information on the issue      * Picutres providing further information about the issue     * documents attachment/links providing further information about the issue etc
 data Issue = Issue
   { -- |
-    issueCategory :: Maybe IssueCategory,
+    issueCategory :: Maybe Text,
     -- |
     issueComplainantInfo :: Maybe Complainant,
     -- | timestamp for the creation of the issue
@@ -400,9 +545,11 @@ data Issue = Issue
     -- | ### Statues   1. Open : indicating that the issue is opened and further action is yet to be taken on the issue   2. Closed : indicating that the issue is closed and no further action/update/info/resolution action/status change are expected/accepted on this issue.
     issueStatus :: Maybe Text,
     -- |
-    issueSubCategory :: Maybe IssueSubCategory,
+    issueSubCategory :: Maybe Text,
     -- | timestamp for the capturing the time an issue was last updated
-    issueUpdatedAt :: UTCTime
+    issueUpdatedAt :: UTCTime,
+    -- |
+    issueRating :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -435,7 +582,8 @@ optionsIssue =
         ("issueSource", "source"),
         ("issueStatus", "status"),
         ("issueSubCategory", "sub_category"),
-        ("issueUpdatedAt", "updated_at")
+        ("issueUpdatedAt", "updated_at"),
+        ("issueRating", "rating")
       ]
 
 -- | Status of the issue updated by respondent or the complainant The issue may attain different status based on its lifecycle. TODO add info of enums in here and in issue-source
@@ -649,7 +797,7 @@ optionsIssuePost200ResponseMessageAck =
 -- |
 data IssueReq = IssueReq
   { -- |
-    issueReqContext :: IssueReqContext,
+    context :: Context,
     -- |
     issueReqMessage :: IssueReqMessage
   }
@@ -669,71 +817,8 @@ optionsIssueReq =
     }
   where
     table =
-      [ ("issueReqContext", "context"),
+      [ ("context", "context"),
         ("issueReqMessage", "message")
-      ]
-
--- | Describes a beckn message context
-data IssueReqContext = IssueReqContext
-  { -- | Defines the Beckn API call. Any actions other than the enumerated actions are not supported by Beckn Protocol
-    issueReqContextAction :: Text,
-    -- | Unique id of the BAP. By default it is the fully qualified domain name of the BAP
-    issueReqContextBapId :: Text,
-    -- | URI of the BAP for accepting callbacks. Must have the same domain name as the bap_id
-    issueReqContextBapUri :: Text,
-    -- | Unique id of the BPP. By default it is the fully qualified domain name of the BPP
-    issueReqContextBppId :: Maybe Text,
-    -- | URI of the BPP. Must have the same domain name as the bap_id
-    issueReqContextBppUri :: Maybe Text,
-    -- | City code
-    issueReqContextCity :: Text,
-    -- | Version of Beckn core API specification being used
-    issueReqContextCoreVersion :: Text,
-    -- | Country code as per ISO 3166-1 and ISO 3166-2 format
-    issueReqContextCountry :: Text,
-    -- | Describes the domain of an object
-    issueReqContextDomain :: Text,
-    -- | The encryption public key of the sender
-    issueReqContextKey :: Maybe Text,
-    -- | This is a unique value which persists during a request / callback cycle
-    issueReqContextMessageId :: Text,
-    -- | Time of request generation in RFC3339 format
-    issueReqContextTimestamp :: UTCTime,
-    -- | This is a unique value which persists across all API calls from search through confirm
-    issueReqContextTransactionId :: Text,
-    -- | The duration in ISO8601 format after timestamp for which this message holds valid
-    issueReqContextTtl :: Maybe Text
-  }
-  deriving (Show, Eq, Generic, Data)
-
-instance FromJSON IssueReqContext where
-  parseJSON = genericParseJSON optionsIssueReqContext
-
-instance ToJSON IssueReqContext where
-  toJSON = genericToJSON optionsIssueReqContext
-
-optionsIssueReqContext :: Options
-optionsIssueReqContext =
-  defaultOptions
-    { omitNothingFields = True,
-      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
-    }
-  where
-    table =
-      [ ("issueReqContextAction", "action"),
-        ("issueReqContextBapId", "bap_id"),
-        ("issueReqContextBapUri", "bap_uri"),
-        ("issueReqContextBppId", "bpp_id"),
-        ("issueReqContextBppUri", "bpp_uri"),
-        ("issueReqContextCity", "city"),
-        ("issueReqContextCoreVersion", "core_version"),
-        ("issueReqContextCountry", "country"),
-        ("issueReqContextDomain", "domain"),
-        ("issueReqContextKey", "key"),
-        ("issueReqContextMessageId", "message_id"),
-        ("issueReqContextTimestamp", "timestamp"),
-        ("issueReqContextTransactionId", "transaction_id"),
-        ("issueReqContextTtl", "ttl")
       ]
 
 -- |
@@ -826,7 +911,7 @@ optionsIssueSource =
 -- |
 data IssueStatusReq = IssueStatusReq
   { -- |
-    issueStatusReqContext :: IssueReqContext,
+    issueStatusReqContext :: Context,
     -- |
     issueStatusReqMessage :: IssueStatusReqMessage
   }
@@ -851,7 +936,7 @@ optionsIssueStatusReq =
       ]
 
 -- |
-data IssueStatusReqMessage = IssueStatusReqMessage
+newtype IssueStatusReqMessage = IssueStatusReqMessage
   { -- | Network issue identifier is a unique number assigned to a complaint by the interfacing application
     issueStatusReqMessageIssueId :: Text
   }
@@ -923,10 +1008,43 @@ optionsItem =
         ("itemQuantity", "quantity")
       ]
 
+-- | The physical location of something
+data Location = Location
+  { -- |
+    locationCity :: Maybe City,
+    -- |
+    locationCountry :: Maybe Country
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Location where
+  parseJSON = genericParseJSON optionsLocation
+
+instance ToJSON Location where
+  toJSON = genericToJSON optionsLocation
+
+optionsLocation :: Options
+optionsLocation =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("locationAddress", "address"),
+        ("locationAreaCode", "area_code"),
+        ("locationCity", "city"),
+        ("locationCountry", "country"),
+        ("locationGps", "gps"),
+        ("locationId", "id"),
+        ("locationState", "state"),
+        ("locationUpdatedAt", "updated_at")
+      ]
+
 -- |
 data OnIssueReq = OnIssueReq
   { -- |
-    onIssueReqContext :: IssueReqContext,
+    onIssueReqContext :: Context,
     -- |
     onIssueReqError :: Maybe IssuePost200ResponseError,
     -- |
@@ -980,7 +1098,7 @@ optionsOnIssueReqMessage =
 -- |
 data OnIssueStatusReq = OnIssueStatusReq
   { -- |
-    onIssueStatusReqContext :: IssueReqContext,
+    onIssueStatusReqContext :: Context,
     -- |
     onIssueStatusReqError :: Maybe IssuePost200ResponseError,
     -- |
@@ -1018,7 +1136,9 @@ data OrderDetails = OrderDetails
     -- |
     orderDetailsProviderId :: Maybe Text,
     -- |
-    orderDetailsState :: Maybe Text
+    orderDetailsState :: Maybe Text,
+    -- |
+    orderMerchantId :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -1040,7 +1160,8 @@ optionsOrderDetails =
         ("orderDetailsId", "id"),
         ("orderDetailsItems", "items"),
         ("orderDetailsProviderId", "provider_id"),
-        ("orderDetailsState", "state")
+        ("orderDetailsState", "state"),
+        ("orderMerchantId", "merchant_order_id")
       ]
 
 -- |

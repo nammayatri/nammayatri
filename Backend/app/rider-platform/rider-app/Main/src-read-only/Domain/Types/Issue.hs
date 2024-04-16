@@ -13,7 +13,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data Issue = Issue
-  { bookingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Quote.Quote),
+  { becknIssueId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bookingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Quote.Quote),
     contactEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     customerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
