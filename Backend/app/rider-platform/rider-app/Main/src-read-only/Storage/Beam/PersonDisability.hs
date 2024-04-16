@@ -12,12 +12,12 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PersonDisabilityT f = PersonDisabilityT
-  { createdAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    description :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    disabilityId :: (B.C f Kernel.Prelude.Text),
-    personId :: (B.C f Kernel.Prelude.Text),
-    tag :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    disabilityId :: B.C f Kernel.Prelude.Text,
+    personId :: B.C f Kernel.Prelude.Text,
+    tag :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -27,6 +27,6 @@ instance B.Table PersonDisabilityT where
 
 type PersonDisability = PersonDisabilityT Identity
 
-$(enableKVPG (''PersonDisabilityT) [('personId)] [])
+$(enableKVPG ''PersonDisabilityT ['personId] [])
 
-$(mkTableInstances (''PersonDisabilityT) "person_disability")
+$(mkTableInstances ''PersonDisabilityT "person_disability")

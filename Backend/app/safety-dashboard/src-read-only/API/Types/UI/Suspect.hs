@@ -10,23 +10,12 @@ import qualified Kernel.Prelude
 import Servant
 import "lib-dashboard" Tools.Auth
 
-data SuspectBulkUploadReq = SuspectBulkUploadReq
-  { suspects :: [API.Types.UI.Suspect.SuspectUploadReq]
-  }
+data SuspectBulkUploadReq = SuspectBulkUploadReq {suspects :: [API.Types.UI.Suspect.SuspectUploadReq]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data SuspectBulkUploadResp = SuspectBulkUploadResp {dlList :: [Kernel.Prelude.Maybe Data.Text.Text], message :: Data.Text.Text, voterIdList :: [Kernel.Prelude.Maybe Data.Text.Text]}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data SuspectBulkUploadResp = SuspectBulkUploadResp
-  { dlList :: [Kernel.Prelude.Maybe Data.Text.Text],
-    message :: Data.Text.Text,
-    voterIdList :: [Kernel.Prelude.Maybe Data.Text.Text]
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
-
-data SuspectFlagStatusChangeReq = SuspectFlagStatusChangeReq
-  { dl :: Kernel.Prelude.Maybe Data.Text.Text,
-    reasonToChange :: Data.Text.Text,
-    voterId :: Kernel.Prelude.Maybe Data.Text.Text
-  }
+data SuspectFlagStatusChangeReq = SuspectFlagStatusChangeReq {dl :: Kernel.Prelude.Maybe Data.Text.Text, reasonToChange :: Data.Text.Text, voterId :: Kernel.Prelude.Maybe Data.Text.Text}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data SuspectUploadReq = SuspectUploadReq

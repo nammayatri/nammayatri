@@ -4,6 +4,7 @@
 
 module Domain.Types.PersonDisability where
 
+import Data.Aeson (eitherDecode)
 import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Id

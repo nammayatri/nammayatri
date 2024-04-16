@@ -25,7 +25,7 @@ ALTER TABLE atlas_app.quote ADD COLUMN client_sdk_version text ;
 ALTER TABLE atlas_app.quote ADD COLUMN client_os_version text ;
 ALTER TABLE atlas_app.quote ADD COLUMN client_os_type text ;
 ALTER TABLE atlas_app.quote ADD COLUMN client_config_version text ;
-ALTER TABLE atlas_app.quote ADD COLUMN client_bundle_version text ;
+ALTER TABLE atlas_app.quote ADD COLUN client_bundle_version text ;
 ALTER TABLE atlas_app.quote ADD COLUMN backend_config_version text ;
 ALTER TABLE atlas_app.quote ADD COLUMN backend_app_version text ;
 

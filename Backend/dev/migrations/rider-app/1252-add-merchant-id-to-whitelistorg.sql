@@ -1,4 +1,3 @@
-ALTER TABLE atlas_app.white_list_org ADD COLUMN merchant_id character varying(36) NOT NULL DEFAULT ''::character varying;
 
 -- whitelist merchant level
 -- NOTE: RUN IT AFTER SUCCESSFULL PROD RELEASE

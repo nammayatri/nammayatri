@@ -5,6 +5,7 @@
 module Domain.Types.Ride where
 
 import Data.Aeson
+import Data.Aeson (eitherDecode)
 import qualified Domain.Types.Booking.Type
 import qualified Domain.Types.Client
 import qualified Domain.Types.Location

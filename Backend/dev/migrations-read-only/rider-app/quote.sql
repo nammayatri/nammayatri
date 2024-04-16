@@ -1,5 +1,12 @@
 CREATE TABLE atlas_app.quote ();
 
+ALTER TABLE atlas_app.quote ADD COLUMN backend_app_version text ;
+ALTER TABLE atlas_app.quote ADD COLUMN backend_config_version text ;
+ALTER TABLE atlas_app.quote ADD COLUMN client_bundle_version text ;
+ALTER TABLE atlas_app.quote ADD COLUMN client_config_version text ;
+ALTER TABLE atlas_app.quote ADD COLUMN client_os_type text ;
+ALTER TABLE atlas_app.quote ADD COLUMN client_os_version text ;
+ALTER TABLE atlas_app.quote ADD COLUMN client_sdk_version text ;
 ALTER TABLE atlas_app.quote ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.quote ADD COLUMN currency character varying(255) ;
 ALTER TABLE atlas_app.quote ADD COLUMN discount numeric(30,2) ;
@@ -28,14 +35,3 @@ ALTER TABLE atlas_app.quote ADD COLUMN updated_at timestamp with time zone  defa
 ALTER TABLE atlas_app.quote ADD COLUMN valid_till timestamp with time zone NOT NULL;
 ALTER TABLE atlas_app.quote ADD COLUMN vehicle_variant text NOT NULL;
 ALTER TABLE atlas_app.quote ADD PRIMARY KEY ( id);
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.quote ADD COLUMN client_sdk_version text ;
-ALTER TABLE atlas_app.quote ADD COLUMN client_os_version text ;
-ALTER TABLE atlas_app.quote ADD COLUMN client_os_type text ;
-ALTER TABLE atlas_app.quote ADD COLUMN client_config_version text ;
-ALTER TABLE atlas_app.quote ADD COLUMN client_bundle_version text ;
-ALTER TABLE atlas_app.quote ADD COLUMN backend_config_version text ;
-ALTER TABLE atlas_app.quote ADD COLUMN backend_app_version text ;

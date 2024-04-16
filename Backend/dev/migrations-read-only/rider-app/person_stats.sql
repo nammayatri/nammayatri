@@ -18,3 +18,8 @@ ALTER TABLE atlas_app.person_stats ADD PRIMARY KEY ( person_id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person_stats ADD COLUMN referral_count integer NOT NULL default 0;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person_stats ALTER COLUMN created_at DROP NOT NULL;

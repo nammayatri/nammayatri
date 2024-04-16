@@ -106,7 +106,7 @@ Person:
       mobileNumberHash: Maybe DbHash
     clientDevice:
       clientOsType: Maybe DeviceType
-      clientOsVersion: Maybe Text  
+      clientOsVersion: Maybe Text
     email:
       emailEncrypted: Maybe Text
       emailHash: Maybe DbHash
@@ -124,7 +124,7 @@ Person:
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
     clientOsVersion: Maybe Text
-    
+
 
   fromTType:
     merchantOperatingCityId: Kernel.Prelude.fst updateMerchantOpIdAndCity|E

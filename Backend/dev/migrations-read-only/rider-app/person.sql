@@ -1,11 +1,15 @@
 CREATE TABLE atlas_app.person ();
 
 ALTER TABLE atlas_app.person ADD COLUMN aadhaar_verified boolean NOT NULL default false;
+ALTER TABLE atlas_app.person ADD COLUMN backend_app_version text ;
 ALTER TABLE atlas_app.person ADD COLUMN blocked boolean NOT NULL;
 ALTER TABLE atlas_app.person ADD COLUMN blocked_at timestamp with time zone ;
 ALTER TABLE atlas_app.person ADD COLUMN blocked_by_rule_id character varying(36) ;
-ALTER TABLE atlas_app.person ADD COLUMN bundle_version text ;
-ALTER TABLE atlas_app.person ADD COLUMN client_version text ;
+ALTER TABLE atlas_app.person ADD COLUMN client_bundle_version text ;
+ALTER TABLE atlas_app.person ADD COLUMN client_config_version text ;
+ALTER TABLE atlas_app.person ADD COLUMN client_os_type text ;
+ALTER TABLE atlas_app.person ADD COLUMN client_os_version text ;
+ALTER TABLE atlas_app.person ADD COLUMN client_sdk_version text ;
 ALTER TABLE atlas_app.person ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.person ADD COLUMN current_city text ;
 ALTER TABLE atlas_app.person ADD COLUMN customer_referral_code text ;
@@ -55,19 +59,3 @@ ALTER TABLE atlas_app.person ADD COLUMN updated_at timestamp with time zone NOT 
 ALTER TABLE atlas_app.person ADD COLUMN use_fake_otp text ;
 ALTER TABLE atlas_app.person ADD COLUMN whatsapp_notification_enroll_status character varying(255) ;
 ALTER TABLE atlas_app.person ADD PRIMARY KEY ( id);
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.person ADD COLUMN client_sdk_version text ;
-ALTER TABLE atlas_app.person ADD COLUMN client_os_version text ;
-ALTER TABLE atlas_app.person ADD COLUMN client_os_type text ;
-ALTER TABLE atlas_app.person ADD COLUMN client_config_version text ;
-ALTER TABLE atlas_app.person ADD COLUMN client_bundle_version text ;
-ALTER TABLE atlas_app.person ADD COLUMN backend_app_version text ;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.person DROP COLUMN client_version;
-ALTER TABLE atlas_app.person DROP COLUMN bundle_version;
