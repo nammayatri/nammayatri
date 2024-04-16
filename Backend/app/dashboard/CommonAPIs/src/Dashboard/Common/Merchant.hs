@@ -41,9 +41,11 @@ import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import Kernel.Types.Id
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import Lib.Types.SpecialLocation
 import Servant
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
@@ -67,6 +69,10 @@ data MerchantEndpoint
   | UpdateFPPerExtraKmRate
   | SchedulerTriggerAPIEndpoint
   | UpdateOnboardingVehicleVariantMappingEndpoint
+  | UpsertSpecialLocationEndpoint
+  | DeleteSpecialLocationEndpoint
+  | UpsertSpecialLocationGateEndpoint
+  | DeleteSpecialLocationGateEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "MerchantEndpoint"
@@ -706,3 +712,137 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
 
 instance HideSecrets CreateMerchantOperatingCityReq where
   hideSecrets = identity
+
+---- UpsertSpecialLocation ---------------------------------------
+
+type UpsertSpecialLocationAPI =
+  "specialLocation"
+    :> QueryParam "specialLocationId" (Id SpecialLocation)
+    :> "upsert"
+    :> MultipartForm Tmp UpsertSpecialLocationReq
+    :> Post '[JSON] APISuccess
+
+data UpsertSpecialLocationReq = UpsertSpecialLocationReq
+  { file :: Maybe FilePath,
+    reqContentType :: Maybe Text,
+    locationName :: Maybe Text,
+    category :: Maybe Text,
+    city :: Maybe Context.City
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp UpsertSpecialLocationReq where
+  fromMultipart form = do
+    let eitherFile = lookupFile "file" form
+        (fileField, contentType_) = getFileAndFileType eitherFile
+    ( UpsertSpecialLocationReq fileField contentType_
+        <$> parseMaybeInput "locationName" form
+      )
+      <*> parseMaybeInput "category" form
+      <*> parseMaybeInput "city" form
+
+instance HideSecrets UpsertSpecialLocationReq where
+  hideSecrets = identity
+
+getFileAndFileType :: Either String (FileData tag) -> (Maybe (MultipartResult tag), Maybe Text)
+getFileAndFileType ethFile =
+  case ethFile of
+    Right fileData -> do
+      let payload = fdPayload fileData
+          fileCType = fdFileCType fileData
+      (Just payload, Just fileCType)
+    Left _err -> (Nothing, Nothing)
+
+type UpsertSpecialLocationAPIT =
+  "specialLocation"
+    :> QueryParam "specialLocationId" (Id SpecialLocation)
+    :> "upsert"
+    :> ReqBody '[JSON] UpsertSpecialLocationReqT
+    :> Post '[JSON] APISuccess
+
+data UpsertSpecialLocationReqT = UpsertSpecialLocationReqT
+  { locationName :: Maybe Text,
+    geom :: Maybe Text,
+    category :: Maybe Text,
+    city :: Maybe Context.City
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+---- DeleteSpecialLocation ----------------------------------
+
+type DeleteSpecialLocationAPI =
+  "specialLocation"
+    :> Capture "specialLocationId" (Id SpecialLocation)
+    :> "delete"
+    :> Delete '[JSON] APISuccess
+
+------- UpsertSpecialLocationGates ---------------------------------------
+
+type UpsertSpecialLocationGateAPI =
+  "specialLocation"
+    :> Capture "specialLocationId" (Id SpecialLocation)
+    :> "gates"
+    :> "upsert"
+    :> MultipartForm Tmp UpsertSpecialLocationGateReq
+    :> Post '[JSON] APISuccess
+
+data UpsertSpecialLocationGateReq = UpsertSpecialLocationGateReq
+  { file :: Maybe FilePath,
+    reqContentType :: Maybe Text,
+    name :: Text,
+    latitude :: Maybe Double,
+    longitude :: Maybe Double,
+    defaultDriverExtra :: Maybe Int,
+    address :: Maybe Text,
+    canQueueUpOnGate :: Maybe Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp UpsertSpecialLocationGateReq where
+  fromMultipart form = do
+    let eitherFile = lookupFile "file" form
+        (fileField, contentType_) = getFileAndFileType eitherFile
+    ( UpsertSpecialLocationGateReq fileField contentType_
+        <$> parseInput "name" form
+      )
+      <*> parseMaybeInput "latitude" form
+      <*> parseMaybeInput "longitude" form
+      <*> parseMaybeInput "defaultDriverExtra" form
+      <*> parseMaybeInput "address" form
+      <*> parseMaybeInput "canQueueUpOnGate" form
+
+instance HideSecrets UpsertSpecialLocationGateReq where
+  hideSecrets = identity
+
+type UpsertSpecialLocationGateAPIT =
+  "specialLocation"
+    :> Capture "specialLocationId" (Id SpecialLocation)
+    :> "gates"
+    :> "upsert"
+    :> ReqBody '[JSON] UpsertSpecialLocationGateReqT
+    :> Post '[JSON] APISuccess
+
+data UpsertSpecialLocationGateReqT = UpsertSpecialLocationGateReqT
+  { name :: Text,
+    geom :: Maybe Text,
+    latitude :: Maybe Double,
+    longitude :: Maybe Double,
+    defaultDriverExtra :: Maybe Int,
+    address :: Maybe Text,
+    canQueueUpOnGate :: Maybe Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+---- DeleteSpecialLocationGate ----------------------------------
+
+type DeleteSpecialLocationGateAPI =
+  "specialLocation"
+    :> Capture "specialLocationId" (Id SpecialLocation)
+    :> "gates"
+    :> "delete"
+    :> Capture "gateName" Text
+    :> Delete '[JSON] APISuccess

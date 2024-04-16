@@ -31,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, fromMaybeM, throwError, withFlowHandlerAPI')
 import Kernel.Utils.Geometry (getGeomFromKML)
 import Kernel.Utils.Validation (runRequestValidation)
+import qualified Lib.Types.SpecialLocation as SL
 import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
@@ -48,6 +49,10 @@ type API =
            :<|> SmsServiceConfigUpdateAPI
            :<|> SmsServiceUsageConfigUpdateAPI
            :<|> CreateMerchantOperatingCityAPI
+           :<|> UpsertSpecialLocationAPI
+           :<|> DeleteSpecialLocationAPI
+           :<|> UpsertSpecialLocationGateAPI
+           :<|> DeleteSpecialLocationGateAPI
        )
 
 type MerchantUpdateAPI =
@@ -78,6 +83,22 @@ type CreateMerchantOperatingCityAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'CREATE_MERCHANT_OPERATING_CITY
     :> Common.CreateMerchantOperatingCityAPI
 
+type UpsertSpecialLocationAPI =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'UPSERT_SPECIAL_LOCATION
+    :> Common.UpsertSpecialLocationAPI
+
+type DeleteSpecialLocationAPI =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'DELETE_SPECIAL_LOCATION
+    :> Common.DeleteSpecialLocationAPI
+
+type UpsertSpecialLocationGateAPI =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'UPSERT_SPECIAL_LOCATION_GATE
+    :> Common.UpsertSpecialLocationGateAPI
+
+type DeleteSpecialLocationGateAPI =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'DELETE_SPECIAL_LOCATION_GATE
+    :> Common.DeleteSpecialLocationGateAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   merchantUpdate merchantId city
@@ -87,6 +108,10 @@ handler merchantId city =
     :<|> smsServiceConfigUpdate merchantId city
     :<|> smsServiceUsageConfigUpdate merchantId city
     :<|> createMerchantOperatingCity merchantId city
+    :<|> upsertSpecialLocation merchantId city
+    :<|> deleteSpecialLocation merchantId city
+    :<|> upsertSpecialLocationGate merchantId city
+    :<|> deleteSpecialLocationGate merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -183,3 +208,34 @@ createMerchantOperatingCity merchantShortId opCity apiTokenInfo req@Common.Creat
   unless (req.city `elem` merchant.supportedOperatingCities) $
     SQM.updateSupportedOperatingCities merchantShortId (merchant.supportedOperatingCities <> [req.city])
   T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.createMerchantOperatingCity) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
+
+upsertSpecialLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReq -> FlowHandler APISuccess
+upsertSpecialLocation merchantShortId opCity apiTokenInfo specialLocationId req@Common.UpsertSpecialLocationReq {..} = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.UpsertSpecialLocationEndpoint apiTokenInfo (Just req)
+  geom <- maybe (return Nothing) mkGeom (req.file)
+  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.upsertSpecialLocation) specialLocationId Common.UpsertSpecialLocationReqT {geom = geom, ..}
+
+deleteSpecialLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SL.SpecialLocation -> FlowHandler APISuccess
+deleteSpecialLocation merchantShortId opCity apiTokenInfo specialLocationId = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.DeleteSpecialLocationEndpoint apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.deleteSpecialLocation) specialLocationId
+
+upsertSpecialLocationGate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReq -> FlowHandler APISuccess
+upsertSpecialLocationGate merchantShortId opCity apiTokenInfo specialLocationId req@Common.UpsertSpecialLocationGateReq {..} = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.UpsertSpecialLocationGateEndpoint apiTokenInfo (Just req)
+  geom <- maybe (return Nothing) mkGeom (req.file)
+  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.upsertSpecialLocationGate) specialLocationId Common.UpsertSpecialLocationGateReqT {geom = geom, ..}
+
+deleteSpecialLocationGate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SL.SpecialLocation -> Text -> FlowHandler APISuccess
+deleteSpecialLocationGate merchantShortId opCity apiTokenInfo specialLocationId gateName = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.DeleteSpecialLocationGateEndpoint apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.deleteSpecialLocationGate) specialLocationId gateName
+
+mkGeom :: FilePath -> Flow (Maybe Text)
+mkGeom kmlFile = do
+  result <- getGeomFromKML kmlFile >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom.")
+  return $ Just $ T.pack result

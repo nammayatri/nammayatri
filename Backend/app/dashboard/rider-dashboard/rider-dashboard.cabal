@@ -111,6 +111,7 @@ library
     , servant-openapi3
     , servant-server
     , shared-services
+    , special-zone-a
     , template-haskell
     , text
     , time

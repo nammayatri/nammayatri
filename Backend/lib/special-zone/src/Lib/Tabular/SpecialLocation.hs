@@ -38,6 +38,7 @@ mkPersist
       gates (PostgresList Domain.GatesInfo)
       merchantOperatingCityId Text Maybe
       createdAt UTCTime
+      updatedAt UTCTime
       Primary id
       deriving Generic
     |]
@@ -53,13 +54,6 @@ instance FromTType SpecialLocationT Domain.SpecialLocation where
       Domain.SpecialLocation
         { id = Id id,
           gates = unPostgresList gates,
+          geom = Nothing,
           ..
         }
-
-instance ToTType SpecialLocationT Domain.SpecialLocation where
-  toTType Domain.SpecialLocation {..} =
-    SpecialLocationT
-      { id = getId id,
-        gates = PostgresList gates,
-        ..
-      }

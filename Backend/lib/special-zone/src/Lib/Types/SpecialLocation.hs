@@ -34,7 +34,9 @@ data SpecialLocation = SpecialLocation
     category :: Text,
     merchantOperatingCityId :: Maybe Text,
     gates :: [GatesInfo], --TODO: deprecate this later
-    createdAt :: UTCTime
+    geom :: Maybe Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 

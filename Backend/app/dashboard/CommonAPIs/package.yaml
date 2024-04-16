@@ -81,6 +81,7 @@ dependencies:
   - extra
   - servant-multipart
   - beckn-services
+  - special-zone-a
 
 ghc-options:
   - -Wall

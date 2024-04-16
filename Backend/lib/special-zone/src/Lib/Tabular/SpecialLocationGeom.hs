@@ -17,42 +17,37 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Lib.Tabular.SpecialLocationPriority where
+module Lib.Tabular.SpecialLocationGeom where
 
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import qualified Lib.Types.SpecialLocationPriority as Domain
+import qualified Lib.Types.SpecialLocation as Domain
+
+deriving instance Read Domain.GatesInfo
+
+derivePersistField "Domain.GatesInfo"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    SpecialLocationPriorityT sql=special_location_priority
+    SpecialLocationGeomT sql=special_location
       id Text
-      merchantId Text
+      locationName Text
       category Text
-      pickupPriority Int
-      dropPriority Int
+      gates (PostgresList Domain.GatesInfo)
+      merchantOperatingCityId Text Maybe
+      geom Text Maybe
+      createdAt UTCTime
+      updatedAt UTCTime
       Primary id
       deriving Generic
     |]
 
-instance TEntityKey SpecialLocationPriorityT where
-  type DomainKey SpecialLocationPriorityT = Id Domain.SpecialLocationPriority
-  fromKey (SpecialLocationPriorityTKey _id) = Id _id
-  toKey (Id id) = SpecialLocationPriorityTKey id
-
-instance FromTType SpecialLocationPriorityT Domain.SpecialLocationPriority where
-  fromTType SpecialLocationPriorityT {..} =
-    return $
-      Domain.SpecialLocationPriority
-        { id = Id id,
-          ..
-        }
-
-instance ToTType SpecialLocationPriorityT Domain.SpecialLocationPriority where
-  toTType Domain.SpecialLocationPriority {..} =
-    SpecialLocationPriorityT
+instance ToTType SpecialLocationGeomT Domain.SpecialLocation where
+  toTType Domain.SpecialLocation {..} =
+    SpecialLocationGeomT
       { id = getId id,
+        gates = PostgresList gates,
         ..
       }

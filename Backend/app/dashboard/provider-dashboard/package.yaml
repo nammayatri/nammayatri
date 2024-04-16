@@ -120,6 +120,7 @@ library:
     - dynamic-offer-driver-app
     - rider-app
     - special-zone
+    - special-zone-a
     - shared-services
     - special-zone-a
 

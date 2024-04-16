@@ -36,16 +36,20 @@ data SpecialLocationFull = SpecialLocationFull
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
-create :: D.SpecialLocation -> SqlDB ()
-create = Esq.create
-
 findById :: Transactionable m => Id D.SpecialLocation -> m (Maybe D.SpecialLocation)
 findById = Esq.findById
+
+findByIdWithGeom :: Transactionable m => Id D.SpecialLocation -> m (Maybe (D.SpecialLocation, Maybe Text))
+findByIdWithGeom specialLocationId =
+  Esq.findOne $ do
+    specialLocation <- from $ table @SpecialLocationT
+    where_ $ specialLocation ^. SpecialLocationId ==. val specialLocationId.getId
+    return (specialLocation, F.mbGetGeomGeoJSON)
 
 makeFullSpecialLocation :: Transactionable m => (D.SpecialLocation, Text) -> m SpecialLocationFull
 makeFullSpecialLocation (D.SpecialLocation {..}, specialShape) = do
   gatesWithShape <- QGI.findAllGatesBySpecialLocationId id
-  let gatesInfoFull = map (\(GD.GateInfo {point = gatePoint, id = gateId, createdAt = _gateCreatedAt, ..}, gateShape) -> GD.GateInfoFull {GD.id = gateId, GD.point = gatePoint, GD.geoJson = gateShape, ..}) gatesWithShape
+  let gatesInfoFull = map (\(GD.GateInfo {point = gatePoint, id = gateId, createdAt = _gateCreatedAt, geom = _gateGeom, updatedAt = _gateUpdatedAt, ..}, gateShape) -> GD.GateInfoFull {GD.id = gateId, GD.point = gatePoint, GD.geoJson = gateShape, ..}) gatesWithShape
   pure $ SpecialLocationFull {gatesInfo = gatesInfoFull, geoJson = Just specialShape, ..}
 
 findFullSpecialLocationsByMerchantOperatingCityId :: Transactionable m => Text -> m [SpecialLocationFull]
@@ -101,3 +105,6 @@ findSpecialLocationByLatLong point = do
       where_ $ containsPoint (point.lon, point.lat)
       return (specialLocation, F.getGeomGeoJSON)
   return $ listToMaybe specialLocations
+
+deleteById :: Id D.SpecialLocation -> SqlDB ()
+deleteById = Esq.deleteByKey @SpecialLocationT

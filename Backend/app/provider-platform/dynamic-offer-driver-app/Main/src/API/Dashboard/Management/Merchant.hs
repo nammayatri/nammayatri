@@ -53,6 +53,10 @@ type API =
            :<|> Common.CreateMerchantOperatingCityAPIT
            :<|> Common.SchedulerTriggerAPI
            :<|> Common.UpdateOnboardingVehicleVariantMappingAPI
+           :<|> Common.UpsertSpecialLocationAPIT
+           :<|> Common.DeleteSpecialLocationAPI
+           :<|> Common.UpsertSpecialLocationGateAPIT
+           :<|> Common.DeleteSpecialLocationGateAPI
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -81,6 +85,10 @@ handler merchantId city =
     :<|> createMerchantOperatingCity merchantId city
     :<|> schedulerTrigger merchantId city
     :<|> updateOnboardingVehicleVariantMapping merchantId city
+    :<|> upsertSpecialLocation merchantId city
+    :<|> deleteSpecialLocation merchantId city
+    :<|> upsertSpecialLocationGate merchantId city
+    :<|> deleteSpecialLocationGate merchantId city
 
 merchantUpdate ::
   ShortId DM.Merchant ->
@@ -235,3 +243,15 @@ createMerchantOperatingCity merchantShortId opCity req = withFlowHandlerAPI $ DM
 
 updateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> Context.City -> Common.UpdateOnboardingVehicleVariantMappingReq -> FlowHandler APISuccess
 updateOnboardingVehicleVariantMapping merchantShortId opCity req = withFlowHandlerAPI $ DMerchant.updateOnboardingVehicleVariantMapping merchantShortId opCity req
+
+upsertSpecialLocation :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> FlowHandler APISuccess
+upsertSpecialLocation merchantShortId opCity mbSpecialLocationId = withFlowHandlerAPI . DMerchant.upsertSpecialLocation merchantShortId opCity mbSpecialLocationId
+
+deleteSpecialLocation :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> FlowHandler APISuccess
+deleteSpecialLocation merchantShortId opCity = withFlowHandlerAPI . DMerchant.deleteSpecialLocation merchantShortId opCity
+
+upsertSpecialLocationGate :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> FlowHandler APISuccess
+upsertSpecialLocationGate merchantShortId opCity specialLocationId req = withFlowHandlerAPI $ DMerchant.upsertSpecialLocationGate merchantShortId opCity specialLocationId req
+
+deleteSpecialLocationGate :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Text -> FlowHandler APISuccess
+deleteSpecialLocationGate merchantShortId opCity specialLocationId gateName = withFlowHandlerAPI $ DMerchant.deleteSpecialLocationGate merchantShortId opCity specialLocationId gateName

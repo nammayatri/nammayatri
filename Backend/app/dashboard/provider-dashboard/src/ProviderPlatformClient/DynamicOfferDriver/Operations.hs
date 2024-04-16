@@ -170,7 +170,11 @@ data MerchantAPIs = MerchantAPIs
     updateFarePolicy :: Id Common.FarePolicy -> Merchant.UpdateFarePolicyReq -> Euler.EulerClient APISuccess,
     createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes,
     schedulerTrigger :: Merchant.SchedulerTriggerReq -> Euler.EulerClient APISuccess,
-    updateOnboardingVehicleVariantMapping :: (LBS.ByteString, Common.UpdateOnboardingVehicleVariantMappingReq) -> Euler.EulerClient APISuccess
+    updateOnboardingVehicleVariantMapping :: (LBS.ByteString, Common.UpdateOnboardingVehicleVariantMappingReq) -> Euler.EulerClient APISuccess,
+    upsertSpecialLocation :: Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Euler.EulerClient APISuccess,
+    deleteSpecialLocation :: Id SL.SpecialLocation -> Euler.EulerClient APISuccess,
+    upsertSpecialLocationGate :: Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Euler.EulerClient APISuccess,
+    deleteSpecialLocationGate :: Id SL.SpecialLocation -> Text -> Euler.EulerClient APISuccess
   }
 
 data MessageAPIs = MessageAPIs
@@ -367,7 +371,11 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> updateFarePolicy
       :<|> createMerchantOperatingCity
       :<|> schedulerTrigger
-      :<|> updateOnboardingVehicleVariantMapping = merchantClient
+      :<|> updateOnboardingVehicleVariantMapping
+      :<|> upsertSpecialLocation
+      :<|> deleteSpecialLocation
+      :<|> upsertSpecialLocationGate
+      :<|> deleteSpecialLocationGate = merchantClient
 
     uploadFile
       :<|> addLinkAsMedia

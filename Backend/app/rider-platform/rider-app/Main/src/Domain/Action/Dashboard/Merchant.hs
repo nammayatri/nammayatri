@@ -20,10 +20,16 @@ module Domain.Action.Dashboard.Merchant
     smsServiceConfigUpdate,
     smsServiceUsageConfigUpdate,
     createMerchantOperatingCity,
+    upsertSpecialLocation,
+    deleteSpecialLocation,
+    upsertSpecialLocationGate,
+    deleteSpecialLocationGate,
   )
 where
 
+import Control.Applicative
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
+import qualified Data.Text as T
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Geometry as DGEO
 import qualified Domain.Types.Merchant as DM
@@ -35,14 +41,22 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.RiderConfig as DRC
 import Environment
 import qualified Kernel.External.Maps as Maps
+import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.SMS as SMS
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto (runTransaction)
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
+import qualified Lib.Queries.GateInfo as QGI
+import qualified Lib.Queries.GateInfoGeom as QGIG
+import qualified Lib.Queries.SpecialLocation as QSL
+import qualified Lib.Queries.SpecialLocationGeom as QSLG
+import qualified Lib.Types.GateInfo as D
+import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -228,6 +242,93 @@ smsServiceUsageConfigUpdate merchantShortId city req = do
   CQMSUC.clearCache merchantOperatingCity.id
   logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchantOperatingCity.id)
   pure Success
+
+upsertSpecialLocation :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Flow APISuccess
+upsertSpecialLocation merchantShortId _city mbSpecialLocationId request = do
+  existingSLWithGeom <- maybe (return Nothing) QSL.findByIdWithGeom mbSpecialLocationId
+  let mbExistingSL = fst <$> existingSLWithGeom
+      mbGeom = snd =<< existingSLWithGeom
+  updatedSL <- mkSpecialLocation mbExistingSL mbGeom
+  void $
+    runTransaction $
+      if isJust mbExistingSL then QSLG.updateSpecialLocation updatedSL else QSLG.create updatedSL
+  return Success
+  where
+    mkSpecialLocation :: Maybe SL.SpecialLocation -> Maybe Text -> Flow SL.SpecialLocation
+    mkSpecialLocation mbExistingSpLoc mbGeometry = do
+      let geom = request.geom <|> mbGeometry
+      id <- maybe generateGUID (return . (.id)) mbExistingSpLoc
+      now <- getCurrentTime
+      merchantOperatingCity <- maybe (return Nothing) (CQMOC.findByMerchantShortIdAndCity merchantShortId) request.city
+      locationName <-
+        fromMaybeM (InvalidRequest "Location Name cannot be empty for a new special location") $
+          request.locationName <|> (mbExistingSpLoc <&> (.locationName))
+      category <- fromMaybeM (InvalidRequest "Category is a required field for a new special location") $ request.category <|> (mbExistingSpLoc <&> (.category))
+      return $
+        SL.SpecialLocation
+          { gates = [],
+            createdAt = maybe now (.createdAt) mbExistingSpLoc,
+            updatedAt = now,
+            merchantOperatingCityId = (.id.getId) <$> merchantOperatingCity,
+            ..
+          }
+
+deleteSpecialLocation :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Flow APISuccess
+deleteSpecialLocation _merchantShortid _city specialLocationId = do
+  void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Special Location with given id not found")
+  void $ runTransaction $ QSL.deleteById specialLocationId
+  void $ runTransaction $ QGI.deleteAll specialLocationId
+  pure Success
+
+upsertSpecialLocationGate :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Flow APISuccess
+upsertSpecialLocationGate _merchantShortId _city specialLocationId request = do
+  void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
+  existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
+  createOrUpdateGate existingGates request
+  return Success
+  where
+    createOrUpdateGate :: [(D.GateInfo, Maybe Text)] -> Common.UpsertSpecialLocationGateReqT -> Flow ()
+    createOrUpdateGate existingGates req = do
+      let existingGatewithGeom = find (\(gate, _mbGeom) -> normalizeName gate.name == normalizeName req.name) existingGates
+          existingGate = fst <$> existingGatewithGeom
+          mbGeom = snd =<< existingGatewithGeom
+      updatedGate <- mkGate req existingGate mbGeom
+      void $
+        runTransaction $
+          if isNothing existingGate then QGIG.create updatedGate else QGIG.updateGate updatedGate
+
+    mkGate :: Common.UpsertSpecialLocationGateReqT -> Maybe D.GateInfo -> Maybe Text -> Flow D.GateInfo
+    mkGate reqT mbGate mbGeom = do
+      id <- cast <$> maybe generateGUID (return . (.id)) mbGate
+      now <- getCurrentTime
+      latitude <- fromMaybeM (InvalidRequest "Latitude field cannot be empty for a new gate") $ reqT.latitude <|> (mbGate <&> (.point.lat))
+      longitude <- fromMaybeM (InvalidRequest "Longitude field cannot be empty for a new gate") $ reqT.longitude <|> (mbGate <&> (.point.lon))
+      address <- fromMaybeM (InvalidRequest "Address cannot be empty for a new gate") $ reqT.address <|> (mbGate >>= (.address))
+      let canQueueUpOnGate = fromMaybe False $ reqT.canQueueUpOnGate <|> (mbGate <&> (.canQueueUpOnGate))
+          defaultDriverExtra = reqT.defaultDriverExtra <|> (mbGate >>= (.defaultDriverExtra))
+          geom = reqT.geom <|> mbGeom
+      return $
+        D.GateInfo
+          { name = reqT.name,
+            address = Just address,
+            geom,
+            createdAt = maybe now (.createdAt) mbGate,
+            updatedAt = now,
+            point = LatLong {lat = latitude, lon = longitude},
+            ..
+          }
+
+deleteSpecialLocationGate :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Text -> Flow APISuccess
+deleteSpecialLocationGate _merchantShortId _city specialLocationId gateName = do
+  existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
+  let existingGate = fst <$> find (\(gate, _mbGeom) -> normalizeName gate.name == normalizeName gateName) existingGates
+  case existingGate of
+    Nothing -> throwError $ InvalidRequest "Could not find any gates with the specified name for the given specialLocationId"
+    Just gate -> runTransaction $ QGI.deleteById gate.id
+  return Success
+
+normalizeName :: Text -> Text
+normalizeName = T.strip . T.toLower
 
 createMerchantOperatingCity :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
 createMerchantOperatingCity merchantShortId city req = do

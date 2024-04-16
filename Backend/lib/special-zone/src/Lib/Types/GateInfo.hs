@@ -38,7 +38,9 @@ data GateInfo = GateInfo
     defaultDriverExtra :: Maybe Int,
     name :: Text,
     address :: Maybe Text,
+    geom :: Maybe Text,
     createdAt :: UTCTime,
+    updatedAt :: UTCTime,
     canQueueUpOnGate :: Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
