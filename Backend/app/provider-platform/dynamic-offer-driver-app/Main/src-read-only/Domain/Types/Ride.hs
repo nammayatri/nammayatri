@@ -53,6 +53,7 @@ data Ride = Ride
     numberOfSnapToRoadCalls :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     otp :: Kernel.Prelude.Text,
     pickupDropOutsideOfThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    rideEndedBy :: Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy,
     safetyAlertTriggered :: Kernel.Prelude.Bool,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     startOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
@@ -76,8 +77,12 @@ data Ride = Ride
 data OdometerReading = OdometerReading {fileId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile), value :: Kernel.Types.Common.Centesimal}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
+data RideEndedBy = Driver | Dashboard | CallBased | CronJob deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
 
-$(mkHttpInstancesForEnum (''RideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
+
+$(mkHttpInstancesForEnum ''RideStatus)

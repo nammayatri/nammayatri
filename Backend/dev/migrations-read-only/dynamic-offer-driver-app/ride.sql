@@ -61,3 +61,11 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN client_config_version text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN client_bundle_version text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN backend_config_version text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN backend_app_version text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN vehicle_service_tier_seating_capacity integer ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN vehicle_service_tier_air_conditioned double precision ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN ride_ended_by text ;
