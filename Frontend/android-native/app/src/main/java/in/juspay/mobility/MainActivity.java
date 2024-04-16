@@ -564,9 +564,11 @@ public class MainActivity extends AppCompatActivity {
         String baseUrl = key.equals("USER") ? in.juspay.mobility.BuildConfig.CONFIG_URL_USER : in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
         SharedPreferences sharedPreff = getApplicationContext().getSharedPreferences(
                 activity.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
+        String clientId = key.equals("USER") ? getResources().getString(R.string.customer_clientId) : "null";
         SharedPreferences.Editor editor = sharedPreff.edit();
         editor.putString("MERCHANT_ID", merchantId);
         editor.putString("BASE_URL", baseUrl);
+        editor.putString("CUSTOMER_CLIENT_ID", clientId);
         editor.apply();
     }
 

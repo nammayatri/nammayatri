@@ -514,3 +514,7 @@ export const getMockFollowerName = function() {
   }
   return currentMockName;
 }
+
+export const getAppName = function() {
+  return window.appName;
+}

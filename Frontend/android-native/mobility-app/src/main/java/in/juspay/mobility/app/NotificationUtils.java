@@ -524,10 +524,6 @@ public class NotificationUtils {
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
             if (key.equals("USER")){
                 Utils.logEvent("ny_user_ride_completed", context);
-                String rideTaken = sharedPref.getString("HAS_TAKEN_FIRST_RIDE", "false");
-                if(rideTaken.equals("false")){
-                    Utils.logEvent("ny_user_first_ride_completed", context);
-                }
             }
             else
                 Utils.logEvent("ride_completed",context);

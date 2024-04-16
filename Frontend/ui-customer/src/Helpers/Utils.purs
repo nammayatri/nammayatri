@@ -195,6 +195,8 @@ foreign import incrOrDecrTimeFrom :: Fn3 String Int Boolean String
 
 foreign import getMockFollowerName :: String -> String
 
+foreign import getAppName  :: String
+
 decodeGeoJson :: String -> Maybe CCT.GeoJson
 decodeGeoJson stringGeoJson = 
   case (AD.decodeJson =<< ADP.parseJson stringGeoJson) of

@@ -63,7 +63,7 @@ import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding)
 import JBridge as JB
-import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, zoneLabelIcon, transformGeoJsonFeature, getCityFromString, getMetroConfigFromAppConfig)
+import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, zoneLabelIcon, transformGeoJsonFeature, getCityFromString, getMetroConfigFromAppConfig, getAppName)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
 import Log (logInfo)
@@ -284,7 +284,8 @@ toggleSplash =
       liftFlowBT $ terminateUI $ Just "SplashScreen"
 
 currentFlowStatus :: FlowBT String Unit
-currentFlowStatus = do  
+currentFlowStatus = do
+  logField_ <- lift $ lift $ getLogFields
   liftFlowBT $ markPerformance "CURRENT_FLOW_STATUS"
   void $ lift $ lift $ toggleLoader false
   liftFlowBT $ markPerformance "VERIFY_PROFILE_CALL_API"
@@ -292,10 +293,30 @@ currentFlowStatus = do
   liftFlowBT $ markPerformance "FLOW_STATUS_CALL_API"
   flowStatus <- Remote.flowStatusBT "LazyCheck"
   liftFlowBT $ markPerformance "RIDE_LIST_CALL_API"
+  let appName = case getAppName of
+                  "Mana Yatri" -> "my_"
+                  "Yatri" -> "y_"
+                  _ -> "ny_"
   case flowStatus ^. _currentStatus of
     WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
     RIDE_ASSIGNED _                         -> checkRideStatus true
+    PENDING_RATING _                        -> do
+                                                let firstRideEventCheck = getValueToLocalStore CUSTOMER_FIRST_RIDE
+                                                if firstRideEventCheck == "false" then do
+                                                  let clientId = getValueToLocalStore CUSTOMER_CLIENT_ID
+                                                  (rideBookingListResponse) <- lift $ lift $ Remote.rideBookingListWithStatus "2" "0" "COMPLETED" (Just clientId)
+                                                  case rideBookingListResponse of
+                                                      Right (RideBookingListRes  listResp) -> do
+                                                        if ((Arr.length listResp.list) == 1) then do
+                                                          void $ liftFlowBT $ logEvent logField_ $ appName <> "user_first_ride_completed"
+                                                          setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
+                                                        else do
+                                                          setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
+                                                      Left (err) -> pure unit
+                                                else do
+                                                  pure unit
+                                                checkRideStatus false 
     _                                       -> checkRideStatus false
   liftFlowBT $ markPerformance "HIDE_LOADER_FLOW"
   hideLoaderFlow
@@ -946,6 +967,23 @@ homeScreenFlow = do
                                         (GetProfileRes response) <- Remote.getProfileBT ""
                                         setValueToLocalStore HAS_TAKEN_FIRST_RIDE ( show response.hasTakenRide)
                                         else pure unit
+                                      let appName = case getAppName of
+                                                    "Mana Yatri" -> "my_"
+                                                    "Yatri" -> "y_"
+                                                    _ -> "ny_"
+                                          firstRideEventCheck = getValueToLocalStore CUSTOMER_FIRST_RIDE
+                                      if firstRideEventCheck == "false" then do
+                                        let clientId = getValueToLocalStore CUSTOMER_CLIENT_ID
+                                        (rideBookingListResponse) <- lift $ lift $ Remote.rideBookingListWithStatus "2" "0" "COMPLETED" (Just clientId)
+                                        case rideBookingListResponse of
+                                          Right (RideBookingListRes  listResp) -> do
+                                            if ((Arr.length listResp.list) == 1) then do
+                                              void $ liftFlowBT $ logEvent logField_ $ appName <> "user_first_ride_completed"
+                                              setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
+                                            else do
+                                              setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
+                                          Left (err) -> pure unit
+                                      else pure unit
                                       let sourceSpecialTagIcon = zoneLabelIcon state.props.zoneType.sourceTag
                                           destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
                                       void $ pure $ metaLogEvent "ny_user_ride_completed"
@@ -1052,6 +1090,7 @@ homeScreenFlow = do
       void $ pure $ deleteValueFromLocalStore CUSTOMER_ID
       void $ pure $ deleteValueFromLocalStore CONTACTS
       void $ pure $ deleteValueFromLocalStore USER_EMAIL
+      void $ pure $ deleteValueFromLocalStore CUSTOMER_FIRST_RIDE
       void $ pure $ factoryResetApp ""
       void $ pure $ clearCache ""
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_logout"

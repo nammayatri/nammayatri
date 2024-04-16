@@ -2673,7 +2673,7 @@ updateRecentTrips action push response = do
       updateRecentTrips action push (Just resp)
 
     fetchAndHandleResponse = do
-      rideBookingListResponse <- Remote.rideBookingListWithStatus "30" "0" "COMPLETED"
+      rideBookingListResponse <- Remote.rideBookingListWithStatus "30" "0" "COMPLETED" Nothing
       void $ pure $ setValueToLocalStore UPDATE_REPEAT_TRIPS "false"
       case rideBookingListResponse of
         Right listResp -> do

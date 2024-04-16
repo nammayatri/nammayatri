@@ -122,6 +122,7 @@ android {
             resValue "string", "clevertap_account_id", properties.getProperty("CLEVERTAP_ACCOUNT_ID","")
             resValue "string", "clevertap_token", properties.getProperty("CLEVERTAP_TOKEN","")
             resValue "string", "clevertap_region", properties.getProperty("CLEVERTAP_REGION","")
+            resValue "string", "customer_clientId", properties.getProperty("CUSTOMER_CLIENT_ID","");
             dimension "mode"
         }
         dev {
@@ -137,6 +138,7 @@ android {
             resValue "string", "clevertap_account_id", properties.getProperty("CLEVERTAP_ACCOUNT_ID","")
             resValue "string", "clevertap_token", properties.getProperty("CLEVERTAP_TOKEN","")
             resValue "string", "clevertap_region", properties.getProperty("CLEVERTAP_REGION","")
+            resValue "string", "customer_clientId", properties.getProperty("CUSTOMER_CLIENT_ID","");
             dimension "mode"
         }
         nyUser {

@@ -92,7 +92,7 @@ checkAndStatus push state = do
   where
   getLastRide checkPastRide =
     if checkPastRide then do
-      listControl <- fork $ Remote.rideBookingListWithStatus "1" "0" "COMPLETED"
+      listControl <- fork $ Remote.rideBookingListWithStatus "1" "0" "COMPLETED" Nothing
       pure $ Just $ listControl
     else
       pure $ Nothing

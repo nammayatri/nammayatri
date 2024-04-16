@@ -69,7 +69,8 @@ getHeaders val isGzipCompressionEnabled = do
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
-                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS),
+                        Header "client-id" (getValueToLocalStore CUSTOMER_CLIENT_ID)
                     ] <> case regToken of
                         Nothing -> []
                         Just token -> [Header "token" token]
@@ -83,7 +84,8 @@ getHeaders' val isGzipCompressionEnabled = do
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
-                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS),
+                        Header "client-id" (getValueToLocalStore CUSTOMER_CLIENT_ID)
                     ] <> case regToken of
                         Nothing -> []
                         Just token -> [Header "token" token]
@@ -478,16 +480,16 @@ rideBookingBT bookingId = do
 
 rideBookingList limit offset onlyActive = do
         headers <- getHeaders "" true
-        withAPIResult (EP.rideBookingList limit offset onlyActive Nothing)  unwrapResponse $ callAPI headers (RideBookingListReq limit offset onlyActive Nothing)
+        withAPIResult (EP.rideBookingList limit offset onlyActive Nothing Nothing)  unwrapResponse $ callAPI headers (RideBookingListReq limit offset onlyActive Nothing Nothing)
     where
         unwrapResponse (x) = x
 
 
-rideBookingListWithStatus limit offset status = do
-        headers <- getHeaders "" true
-        withAPIResult (EP.rideBookingList limit offset "false" (Just status))  unwrapResponse $ callAPI headers (RideBookingListReq limit offset "false" (Just status))
-    where
-        unwrapResponse (x) = x
+rideBookingListWithStatus limit offset status maybeClientId = do
+    headers <- getHeaders "" true
+    withAPIResult (EP.rideBookingList limit offset "false" (Just status) maybeClientId) unwrapResponse $ callAPI headers (RideBookingListReq limit offset "false" (Just status) maybeClientId)
+  where
+    unwrapResponse (x) = x
 
 getProfileBT :: String -> FlowBT String GetProfileRes
 getProfileBT _  = do
