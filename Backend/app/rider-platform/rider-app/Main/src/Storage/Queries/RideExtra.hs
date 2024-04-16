@@ -3,6 +3,7 @@
 module Storage.Queries.RideExtra where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
+import qualified Data.Text.Encoding as TE
 import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
 import Database.Beam.Backend (autoSqlValueSyntax)
@@ -17,13 +18,15 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
-import EulerHS.Prelude (whenNothingM_)
+import EulerHS.Prelude (ByteString, whenNothingM_)
+import EulerHS.Types (KVDBAnswer)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common (distanceToHighPrecDistance, distanceToHighPrecMeters)
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime, logTagDebug, logTagError)
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
@@ -34,9 +37,10 @@ import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.OrphanInstances.Ride ()
 import Storage.Queries.Person ()
+import Tools.Metrics (CoreMetrics)
 
-createRide' :: (MonadFlow m, EsqDBFlow m r) => Ride -> m ()
-createRide' = createWithKV
+createRide' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ride -> m ()
+createRide' ride = createWithKV ride >> appendByDriverPhoneNumber ride
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ride -> m ()
 create ride = do
@@ -340,3 +344,59 @@ updateEditLocationAttempts rideId attempts = do
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+driverMobileNumberKey :: Text -> ByteString
+driverMobileNumberKey driverMobileNumber = TE.encodeUtf8 $ "Ride:DriverMobileNumber:" <> driverMobileNumber
+
+extractRideIds :: KVDBAnswer [ByteString] -> [Text]
+extractRideIds (Right value) = TE.decodeUtf8 <$> value
+extractRideIds _ = []
+
+findLatestByDriverPhoneNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Ride)
+findLatestByDriverPhoneNumber driverMobileNumber = do
+  let lookupKey = driverMobileNumberKey driverMobileNumber
+  rideIds_ <- L.runKVDB meshConfig.kvRedis $ L.smembers lookupKey
+  let rideIds = extractRideIds rideIds_
+  logTagDebug "findLatestByDriverPhoneNumber" $ "RideIds for driverMobileNumber:-" <> driverMobileNumber <> ", KVDBAnswer:-" <> show rideIds_ <> ", decoded rideIds:-" <> show rideIds
+  case rideIds of
+    [] -> do
+      logTagError "findLatestByDriverPhoneNumber" $ "Redis Lookup Empty, RideIds for driverMobileNumber:-" <> driverMobileNumber <> ", KVDBAnswer:-" <> show rideIds_ <> ", decoded rideIds:-" <> show rideIds
+      findLatestActiveByDriverNumber driverMobileNumber
+    _ -> findLatestActiveByRideIds rideIds
+  where
+    findLatestActiveByRideIds :: (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => [Text] -> m (Maybe Ride)
+    findLatestActiveByRideIds rideIds =
+      do
+        findAllWithKVAndConditionalDB
+          [ Se.And
+              [ Se.Is BeamR.id $ Se.In rideIds,
+                Se.Is BeamR.status $ Se.Eq Ride.NEW
+              ]
+          ]
+          (Just (Se.Desc BeamR.createdAt))
+        <&> listToMaybe
+
+    findLatestActiveByDriverNumber :: (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Ride)
+    findLatestActiveByDriverNumber driverNum =
+      do
+        let limit = 1
+        findAllWithOptionsKV
+          [ Se.And
+              [ Se.Is BeamR.driverMobileNumber $ Se.Eq driverNum,
+                Se.Is BeamR.status $ Se.Eq Ride.NEW
+              ]
+          ]
+          (Se.Desc BeamR.createdAt)
+          (Just limit)
+          Nothing
+        <&> listToMaybe
+
+appendByDriverPhoneNumber :: (MonadFlow m, Hedis.HedisFlow m r) => Ride -> m ()
+appendByDriverPhoneNumber ride = do
+  let lookupKey = driverMobileNumberKey ride.driverMobileNumber
+      rideId = [TE.encodeUtf8 $ getId ride.id]
+      expTime = 60 * 60 -- 60 minutes
+  void $
+    L.runKVDB meshConfig.kvRedis $ do
+      void $ L.sadd lookupKey rideId
+      L.expire lookupKey expTime
