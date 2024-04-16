@@ -89,7 +89,7 @@ instance loggableAction :: Loggable Action where
     
 data ScreenOutput = GoBack 
                   | GoToUploadDriverLicense RegistrationScreenState 
-                  | GoToUploadVehicleRegistration RegistrationScreenState
+                  | GoToUploadVehicleRegistration RegistrationScreenState (Array String)
                   | GoToPermissionScreen RegistrationScreenState
                   | LogoutAccount
                   | GoToOnboardSubscription
@@ -102,7 +102,7 @@ data ScreenOutput = GoBack
 data Action = BackPressed 
             | NoAction
             | AfterRender
-            | RegistrationAction RegisterationStep
+            | RegistrationAction ST.StepProgress
             | PopUpModalLogoutAction PopUpModal.Action
             | ChangeVehicleAC PopUpModal.Action
             | VehicleMismatchAC PopUpModal.Action
@@ -142,10 +142,11 @@ eval BackPressed state = do
       void $ pure $ JB.minimizeApp ""
       continue state
 
-eval (RegistrationAction item ) state = 
+eval (RegistrationAction step ) state = do
+       let item = step.stage
        case item of 
           DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state
-          VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state
+          VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step.rcNumberPrefixList
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
           SUBSCRIPTION_PLAN -> exit GoToOnboardSubscription
           PROFILE_PHOTO -> exit $ DocCapture state item -- Launch hyperverge
