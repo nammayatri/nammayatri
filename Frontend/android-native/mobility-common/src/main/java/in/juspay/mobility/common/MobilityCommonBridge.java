@@ -90,6 +90,7 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
+import android.webkit.URLUtil;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -118,6 +119,10 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.target.BitmapImageViewTarget;
+import com.bumptech.glide.request.target.SimpleTarget;
+import com.bumptech.glide.request.transition.Transition;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -165,6 +170,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -204,6 +210,7 @@ import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.mobility.common.services.MobilityCallAPI;
+import in.juspay.mobility.common.services.NetworkTaskManager;
 
 public class MobilityCommonBridge extends HyperBridge {
 
@@ -896,8 +903,24 @@ public class MobilityCommonBridge extends HyperBridge {
                                         MarkerConfig markerConfig = new MarkerConfig();
                                         markerConfig.locationName(zoneName, locationName);
                                         markerConfig.setLabelImage(labelImage);
-                                        Bitmap bitmap = getMarkerBitmapFromView(null, true, null, MarkerType.SPECIAL_ZONE_MARKER, markerConfig);
-                                        labelView.setImageBitmap(bitmap);
+//                                        markerConfig.setLabelImage("ny_ic_metro_white,https://assets.moving.tech/beckn/mobilityredbus/user/images/ny_ic_video_safety_center.png");
+//                                        markerConfig.setLabelActionImage("ny_ic_metro_white,https://assets.moving.tech/beckn/mobilityredbus/user/images/ny_ic_home_illustration_kochi.png");
+//                                        Bitmap bitmap = getMarkerBitmapFromView(null, true, null, MarkerType.SPECIAL_ZONE_MARKER, markerConfig);
+//                                        labelView.setImageBitmap(bitmap);
+//                                        RemoteImageRenderer remoteImageRenderer = new RemoteImageRenderer(labelView, bridgeComponents, null, true, null, MarkerType.SPECIAL_ZONE_MARKER, markerConfig);
+//                                        remoteImageRenderer.execute("https://assets.moving.tech/beckn/mobilityredbus/user/images/ny_ic_home_illustration_kochi.png");
+//                                        setMarkerBitmapToView(labelView, null, true, null, MarkerType.SPECIAL_ZONE_MARKER, markerConfig);
+                                        ArrayList<String> images = new ArrayList<>();
+                                        images.add(markerConfig.labelImage);
+                                        images.add(markerConfig.labelActionImage);
+                                        images.add(markerConfig.pointerIcon);
+//                                        images.add(pointerImage);
+//                                        images.add(actionImage);
+                                        NetworkTaskManager //.with(bridgeComponents.getContext())
+                                                .load(images, bridgeComponents).post(() -> {
+                                            Bitmap markerBitmap = getMarkerBitmapFromView(null, true, null, MarkerType.SPECIAL_ZONE_MARKER, markerConfig);
+                                            labelView.setImageBitmap(markerBitmap);
+                                        }).execute();
                                         labelView.setVisibility(View.VISIBLE);
                                     }
                                     String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeLocateOnMapCallBack, zoneName, lat1, lng);
@@ -1206,20 +1229,30 @@ public class MobilityCommonBridge extends HyperBridge {
     }
     public void addZoneMarker(double lat, double lng, String name, String icon, MarkerConfig markerConfig) {
             try {
-                MarkerOptions markerOptionsObj = new MarkerOptions()
-                        .title("")
-                        .position(new LatLng(lat, lng))
-                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(icon, false,null, MarkerType.SPECIAL_ZONE_MARKER, markerConfig)));
-                if (!markerConfig.primaryText.equals(""))
-                    markerOptionsObj.anchor(markerOptionsObj.getAnchorU(),0.88f);
-                else
-                    markerOptionsObj.anchor(0.5f,0.5f);
-                Marker m = googleMap.addMarker(markerOptionsObj);
-                if (m != null) {
-                    m.setTag(name);
-                    m.hideInfoWindow();
-                    zoneMarkers.put(name,m);
-                }
+                ArrayList<String> images = new ArrayList<>();
+                images.add(markerConfig.labelImage);
+                images.add(markerConfig.labelActionImage);
+                images.add(markerConfig.pointerIcon);
+                images.add(icon);
+                NetworkTaskManager //.with(bridgeComponents.getContext())
+                        .load(images, bridgeComponents).post(() -> {
+                            MarkerOptions markerOptionsObj = new MarkerOptions()
+                            .title("")
+                            .position(new LatLng(lat, lng))
+                            .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(icon, false,null, MarkerType.SPECIAL_ZONE_MARKER, markerConfig)));
+
+                            if (!markerConfig.primaryText.equals(""))
+                                markerOptionsObj.anchor(markerOptionsObj.getAnchorU(),0.88f);
+                            else
+                                markerOptionsObj.anchor(0.5f,0.5f);
+                            Marker m = googleMap.addMarker(markerOptionsObj);
+
+                            if (m != null) {
+                                m.setTag(name);
+                                m.hideInfoWindow();
+                                zoneMarkers.put(name,m);
+                            }
+                        }).execute();
 
                 googleMap.setOnMarkerClickListener(marker -> {
                     animateCamera(marker.getPosition().latitude, marker.getPosition().longitude, 20.0f, ZoomType.NO_ZOOM);
@@ -1502,6 +1535,13 @@ public class MobilityCommonBridge extends HyperBridge {
                 LatLng position = null;
                 MarkerConfig markerConfig = new MarkerConfig();
                 markerConfig.locationName(title);
+
+                ArrayList<String> images = new ArrayList<>();
+                images.add(markerConfig.labelImage);
+                images.add(markerConfig.labelActionImage);
+                images.add(markerConfig.pointerIcon);
+                images.add(actionImage);
+
                 if (point != null) {
                     double lat = point.optDouble("lat", lastLatitudeValue);
                     double lon = point.optDouble("lng", lastLongitudeValue);
@@ -1511,18 +1551,38 @@ public class MobilityCommonBridge extends HyperBridge {
                     Marker existingMarker = (Marker)markers.get(id);
                     if (position != null) existingMarker.setPosition(position);
                     existingMarker.setVisible(true);
-                    existingMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(null, markerImage.equals(""), actionImage, MarkerType.NORMAL_MARKER, markerConfig)));
+                    NetworkTaskManager //.with(bridgeComponents.getContext())
+                            .load(images, bridgeComponents).post(() -> {
+                                Bitmap markerBitmap = getMarkerBitmapFromView(null, markerImage.equals(""), actionImage, MarkerType.NORMAL_MARKER, markerConfig);
+                                existingMarker.setIcon(BitmapDescriptorFactory.fromBitmap(markerBitmap));
+                            }).execute();
+//                    setMarkerBitmapToView(existingMarker, null, markerImage.equals(""), actionImage, MarkerType.NORMAL_MARKER, markerConfig);
+//                    existingMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(null, markerImage.equals(""), actionImage, MarkerType.NORMAL_MARKER, markerConfig)));
                 } else {
-                    MarkerOptions markerObj = new MarkerOptions();
-                    if (position != null) markerObj.position(position);
-                    markerObj.title("")
-                            .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(null, markerImage.equals(""), actionImage, MarkerType.NORMAL_MARKER, markerConfig)));
-                    Marker marker = googleMap.addMarker(markerObj);
-                    if (!actionCallBack.equals("")) {
-                        if (marker != null) {
-                            marker.setTag(actionCallBack);
+                    LatLng finalPosition = position;
+                    NetworkTaskManager //.with(bridgeComponents.getContext())
+                            .load(images, bridgeComponents).post(() -> {
+                        try {
+//                        Bitmap markerBitmap = getMarkerBitmapFromView(null, markerImage.equals(""), actionImage, MarkerType.NORMAL_MARKER, markerConfig);
+//                        existingMarker.setIcon(BitmapDescriptorFactory.fromBitmap(markerBitmap));
+
+                            MarkerOptions markerObj = new MarkerOptions();
+                            if (finalPosition != null) markerObj.position(finalPosition);
+                            markerObj.title("")
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(null, markerImage.equals(""), actionImage, MarkerType.NORMAL_MARKER, markerConfig)));
+//                            setMarkerBitmapToView(markerObj, null, markerImage.equals(""), actionImage, MarkerType.NORMAL_MARKER, markerConfig);
+                            Marker marker = googleMap.addMarker(markerObj);
+                            if (!actionCallBack.equals("")) {
+                                if (marker != null) {
+                                    marker.setTag(actionCallBack);
+                                }
+                            }
+                            markers.put(id, marker);
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
-                    }
+                    }).execute();
+
                     googleMap.setOnMarkerClickListener(currMarker -> {
                         if (currMarker.getTag() != null) {
                             String js = String.format(Locale.ENGLISH, "window.callUICallback('%s');", currMarker.getTag());
@@ -1530,7 +1590,6 @@ public class MobilityCommonBridge extends HyperBridge {
                         }
                         return false;
                     });
-                    markers.put(id, marker);
                 }
             } catch (Exception e) {
                 Log.e(MAPS, "Marker config parse error for " + configString, e);
@@ -1634,6 +1693,15 @@ public class MobilityCommonBridge extends HyperBridge {
         Log.i(MAPS, "real width and height of " + title + b.getWidth() + " , " + b.getHeight());
         Log.i(MAPS, "after width and height of " + title + markerWidth + " , " + markerHeight);
         return Bitmap.createScaledBitmap(b, markerWidth, markerHeight, false);
+
+//        Context context = bridgeComponents.getContext();
+//        ImageView imageView = new ImageView(context);
+//        Glide.with(context)
+//                .asBitmap()
+//                .load("https://assets.moving.tech/beckn/mobilityredbus/user/images/ny_ic_home_illustration_kochi.png") // Load the drawable from URL
+//                .error(context.getResources().getDrawable(context.getResources().getIdentifier(title, "drawable", context.getPackageName()))) // Set fallback drawable resource ID
+//                .override(markerSize, markerSize) // Resize the loaded image or fallback
+//                .into(imageView);
     }
 
     @JavascriptInterface
@@ -2172,42 +2240,58 @@ public class MobilityCommonBridge extends HyperBridge {
 
                     checkAndAnimatePolyline(color, style, polylineWidth, polylineOptions, mapRouteConfigObject);
 
-                    if (!destinationIcon.equals("")) {
-                        List<LatLng> points = polylineOptions.getPoints();
-                        LatLng dest = points.get(0);
-                        markerConfig.locationName(destMarkerConfig.optString("primaryText", ""), destMarkerConfig.optString("secondaryText", ""));
-                        markerConfig.setLabelImage(destinationSpecialTagIcon);
-                        MarkerOptions markerObj = new MarkerOptions()
-                                .title("")
-                                .position(dest)
-                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationIcon, false,null, MarkerType.NORMAL_MARKER, markerConfig)));
+                    ArrayList<String> images = new ArrayList<>();
+                    images.add(markerConfig.labelImage);
+                    images.add(markerConfig.labelActionImage);
+                    images.add(markerConfig.pointerIcon);
+                    images.add(destinationIcon);
+                    images.add(sourceIcon);
+                    NetworkTaskManager //.with(bridgeComponents.getContext())
+                            .load(images, bridgeComponents).post(() -> {
+                        try {
+                            if (!destinationIcon.equals("")) {
+                                List<LatLng> points = polylineOptions.getPoints();
+                                LatLng dest = points.get(0);
+                                markerConfig.locationName(destMarkerConfig.optString("primaryText", ""), destMarkerConfig.optString("secondaryText", ""));
+                                markerConfig.setLabelImage(destinationSpecialTagIcon);
+                                MarkerOptions markerObj = new MarkerOptions()
+                                        .title("")
+                                        .position(dest)
+                                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationIcon, false, null, MarkerType.NORMAL_MARKER, markerConfig)));
+//                        setMarkerBitmapToView(markerObj, destinationIcon, false,null, MarkerType.NORMAL_MARKER, markerConfig);
 
-                        Marker tempmarker = googleMap.addMarker(markerObj);
-                        markers.put(destinationIcon, tempmarker);
-                    }
-                    if (!sourceIcon.equals("")) {
-                        List<LatLng> points = polylineOptions.getPoints();
-                        LatLng source = points.get(points.size() - 1);
-                        if (type.equals("DRIVER_LOCATION_UPDATE")) {
-                            int vehicleSizeTagIcon = mapRouteConfigObject.getInt("vehicleSizeTagIcon");
-                            upsertMarker(sourceIcon,String.valueOf(source.latitude),String.valueOf(source.longitude), vehicleSizeTagIcon, 0.5f, 0.5f);
-                            Marker currMarker = (Marker) markers.get(sourceIcon);
-                            int index = polyline.getPoints().size() - 1;
-                            float rotation = (float) SphericalUtil.computeHeading(polyline.getPoints().get(index), polyline.getPoints().get(index - 1));
-                            if (rotation != 0.0) currMarker.setRotation(rotation);
-                            currMarker.setAnchor(0.5f, 0.5f);
-                            markers.put(sourceIcon, currMarker);
-                        } else {
-                            markerConfig.locationName(sourceMarkerConfig.optString("primaryText", ""), sourceMarkerConfig.optString("secondaryText", ""));
-                            markerConfig.setLabelImage(sourceSpecialTagIcon);
-                            MarkerOptions markerObj = new MarkerOptions()
-                                    .title("")
-                                    .position(source)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceIcon, false,null, MarkerType.NORMAL_MARKER, markerConfig)));
-                            Marker tempmarker = googleMap.addMarker(markerObj);
-                            markers.put(sourceIcon, tempmarker);
+                                Marker tempmarker = googleMap.addMarker(markerObj);
+                                markers.put(destinationIcon, tempmarker);
+                            }
+                            if (!sourceIcon.equals("")) {
+                                List<LatLng> points = polylineOptions.getPoints();
+                                LatLng source = points.get(points.size() - 1);
+                                if (type.equals("DRIVER_LOCATION_UPDATE")) {
+                                    int vehicleSizeTagIcon = mapRouteConfigObject.getInt("vehicleSizeTagIcon");
+                                    upsertMarker(sourceIcon, String.valueOf(source.latitude), String.valueOf(source.longitude), vehicleSizeTagIcon, 0.5f, 0.5f);
+                                    Marker currMarker = (Marker) markers.get(sourceIcon);
+                                    int index = polyline.getPoints().size() - 1;
+                                    float rotation = (float) SphericalUtil.computeHeading(polyline.getPoints().get(index), polyline.getPoints().get(index - 1));
+                                    if (rotation != 0.0) currMarker.setRotation(rotation);
+                                    currMarker.setAnchor(0.5f, 0.5f);
+                                    markers.put(sourceIcon, currMarker);
+                                } else {
+                                    markerConfig.locationName(sourceMarkerConfig.optString("primaryText", ""), sourceMarkerConfig.optString("secondaryText", ""));
+                                    markerConfig.setLabelImage(sourceSpecialTagIcon);
+                                    MarkerOptions markerObj = new MarkerOptions()
+                                            .title("")
+                                            .position(source)
+                                            .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceIcon, false, null, MarkerType.NORMAL_MARKER, markerConfig)));
+//                            setMarkerBitmapToView(markerObj, sourceIcon, false,null, MarkerType.NORMAL_MARKER, markerConfig);
+                                    Marker tempmarker = googleMap.addMarker(markerObj);
+                                    markers.put(sourceIcon, tempmarker);
+                                }
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
-                    }
+                    }).execute();
+
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -2231,18 +2315,203 @@ public class MobilityCommonBridge extends HyperBridge {
                         markerConfig.setLabelImage(markerObject.optString("labelImage"));
                         markerConfig.setLabelActionImage(markerObject.optString("labelActionImage"));
 
-                        MarkerOptions markerObj = new MarkerOptions()
-                                .title("")
-                                .position(latLng)
-                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(markerObject.optString("pointerIcon"), !markerObject.optBoolean("showPointer", false),null, MarkerType.NORMAL_MARKER, markerConfig)));
-                        Marker marker = googleMap.addMarker(markerObj);
-                        markers.put(markerObject.optString("pointerIcon", ""), marker);
+                        ArrayList<String> images = new ArrayList<>();
+                        images.add(markerConfig.labelImage);
+                        images.add(markerConfig.labelActionImage);
+                        images.add(markerConfig.pointerIcon);
+                        images.add(markerObject.optString("pointerIcon"));
+                        NetworkTaskManager//.with(bridgeComponents.getContext())
+                                .load(images, bridgeComponents).post(() -> {
+                            try {
+                                Bitmap markerBitmap = getMarkerBitmapFromView(markerObject.optString("pointerIcon"), !markerObject.optBoolean("showPointer", false), null, MarkerType.NORMAL_MARKER, markerConfig);
+                                MarkerOptions markerObj = new MarkerOptions()
+                                        .title("")
+                                        .position(latLng)
+                                        .icon(BitmapDescriptorFactory.fromBitmap(markerBitmap));
+//                        setMarkerBitmapToView(markerObj, markerObject.optString("pointerIcon"), !markerObject.optBoolean("showPointer", false),null, MarkerType.NORMAL_MARKER, markerConfig);
+                                Marker marker = googleMap.addMarker(markerObj);
+                                markers.put(markerObject.optString("pointerIcon", ""), marker);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }).execute();
+
                     }
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
         });
+    }
+
+    public void setMarkerBitmapToView(MarkerOptions markerObj, Marker m, String pointerImage, boolean isInvisiblePointer, String actionImage, MarkerType markerType, MarkerConfig markerConfig) {
+        new Thread(() -> {
+            ArrayList<String> images = new ArrayList<>();
+            images.add(markerConfig.labelImage);
+            images.add(markerConfig.labelActionImage);
+            images.add(markerConfig.pointerIcon);
+            images.add(pointerImage);
+            images.add(actionImage);
+            fetchAndStoreImageFromUrl(images);
+            new Handler(Looper.getMainLooper()).post(() -> {
+                Bitmap markerBitmap = getMarkerBitmapFromView(pointerImage, isInvisiblePointer, actionImage, markerType, markerConfig);
+                markerObj.icon(BitmapDescriptorFactory.fromBitmap(markerBitmap));
+                markerObj.visible(true);
+                m.setIcon(markerObj.getIcon());
+//                m.setVisible(true);
+            });
+        }).start();
+    }
+
+    public void setMarkerBitmapToView(MarkerOptions markerObj, String pointerImage, boolean isInvisiblePointer, String actionImage, MarkerType markerType, MarkerConfig markerConfig) {
+        new Thread(() -> {
+            ArrayList<String> images = new ArrayList<>();
+            images.add(markerConfig.labelImage);
+            images.add(markerConfig.labelActionImage);
+            images.add(markerConfig.pointerIcon);
+            images.add(pointerImage);
+            images.add(actionImage);
+            fetchAndStoreImageFromUrl(images);
+            new Handler(Looper.getMainLooper()).post(() -> {
+                Bitmap markerBitmap = getMarkerBitmapFromView(pointerImage, isInvisiblePointer, actionImage, markerType, markerConfig);
+                markerObj.icon(BitmapDescriptorFactory.fromBitmap(markerBitmap));
+            });
+        }).start();
+    }
+
+    public void setMarkerBitmapToView(ImageView imageView, String pointerImage, boolean isInvisiblePointer, String actionImage, MarkerType markerType, MarkerConfig markerConfig) {
+        ArrayList<String> images = new ArrayList<>();
+        images.add(markerConfig.labelImage);
+        images.add(markerConfig.labelActionImage);
+        images.add(markerConfig.pointerIcon);
+        images.add(pointerImage);
+        images.add(actionImage);
+        NetworkTaskManager //.with(bridgeComponents.getContext())
+                .load(images, bridgeComponents).post(() -> {
+            Bitmap markerBitmap = getMarkerBitmapFromView(pointerImage, isInvisiblePointer, actionImage, markerType, markerConfig);
+            imageView.setImageBitmap(markerBitmap);
+        }).execute();
+//        task.execute();
+//        new Thread(() -> {
+//            ArrayList<String> images = new ArrayList<>();
+//            images.add(markerConfig.labelImage);
+//            images.add(markerConfig.labelActionImage);
+//            images.add(markerConfig.pointerIcon);
+//            images.add(pointerImage);
+//            images.add(actionImage);
+//            fetchAndStoreImageFromUrl(images);
+//            new Handler(Looper.getMainLooper()).post(() -> {
+//                Bitmap markerBitmap = getMarkerBitmapFromView(pointerImage, isInvisiblePointer, actionImage, markerType, markerConfig);
+//                imageView.setImageBitmap(markerBitmap);
+//            });
+//        }).start();
+//        RemoteImageRenderer remoteImageRenderer = new RemoteImageRenderer(imageView, bridgeComponents, null, true, null, MarkerType.SPECIAL_ZONE_MARKER, markerConfig);
+//        remoteImageRenderer.execute("https://assets.moving.tech/beckn/mobilityredbus/user/images/ny_ic_home_illustration_kochi.png");
+    }
+
+    public void fetchAndStoreImageFromUrl(ArrayList<String> images) {
+        try {
+            for (String image : images) {
+                String[] splitImage = image.split(",");
+                String url = splitImage.length > 1 ? splitImage[1] : "";
+                if (URLUtil.isHttpsUrl(url)) {
+                    int lastIndex = url.lastIndexOf('/') + 1;
+                    String imageName = url.substring(lastIndex);
+                    if (!isImagePresent(imageName)) {
+                        URL imageUrl = new URL(url);
+                        HttpURLConnection connection = (HttpURLConnection) imageUrl.openConnection();
+                        connection.setDoInput(true);
+                        connection.setConnectTimeout(500);
+                        connection.setReadTimeout(500);
+                        connection.connect();
+                        InputStream input = connection.getInputStream();
+                        Bitmap bitmap = BitmapFactory.decodeStream(input);
+                        writeImageToInternalStorage(bitmap, imageName);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void writeImageToInternalStorage(Bitmap bitmap, String imageName) {
+        Context context = bridgeComponents.getContext();
+        File directory = context.getDir("nammayatri", Context.MODE_PRIVATE);
+        File file = new File(directory, imageName);
+
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream(file);
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                fos.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public boolean isImagePresent(String imageName) {
+        Context context = bridgeComponents.getContext();
+        File directory = context.getDir("nammayatri", Context.MODE_PRIVATE);
+        File file = new File(directory, imageName);
+        return file.exists();
+    }
+
+    public Bitmap fetchImageFromInternalStorage(String image) {
+        try {
+            Context context = bridgeComponents.getContext();
+            File directory = context.getDir("nammayatri", Context.MODE_PRIVATE);
+            File file = new File(directory, image);
+            Bitmap bitmap = BitmapFactory.decodeStream(new FileInputStream(file));
+            return bitmap;
+
+//            String[] splitImage = image.split(",");
+//            String url = splitImage[1];
+//            int lastIndex = url.lastIndexOf('/') + 1;
+//            String urlImageName = url.substring(lastIndex);
+//            if (URLUtil.isHttpsUrl(url)) {
+//                if (!isImagePresent(urlImageName)) {
+//                    try {
+//                        File file = new File(path, "profile.jpg");
+//                        Bitmap bitmap = BitmapFactory.decodeStream(input);
+//                        return bitmap;
+////                        writeImageToInternalStorage(bitmap, urlImageName);
+//                    } catch (Exception e) {
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public Bitmap fetchImageWithFallback(String image) {
+        try {
+            Context context = bridgeComponents.getContext();
+            String[] splitImage = image.split(",");
+            String url = splitImage.length > 1 ? splitImage[1] : "";
+            int lastIndex = url.lastIndexOf('/') + 1;
+            String urlImageName = url.length() > lastIndex + 1 ? url.substring(lastIndex) : "";
+            if (!urlImageName.equals("") && isImagePresent(urlImageName)) {
+                return NetworkTaskManager //.with(bridgeComponents.getContext())
+                        .fetchImageFromInternalStorage(urlImageName, bridgeComponents);
+            } else {
+                String fallbackImageName = splitImage[0];
+                int imageID = context.getResources().getIdentifier(fallbackImageName, "drawable", bridgeComponents.getContext().getPackageName());
+                BitmapDrawable bitmapDrawable = (BitmapDrawable) context.getResources().getDrawable(imageID);
+                return bitmapDrawable.getBitmap();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n", "LongLogTag"})
@@ -2354,8 +2623,14 @@ public class MobilityCommonBridge extends HyperBridge {
         if (!labelActionImage.equals("")) {
             Context context = bridgeComponents.getContext();
             ImageView imageView = customMarkerView.findViewById(R.id.label_image_action);
-            imageView.setVisibility(View.VISIBLE);
-            imageView.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(labelActionImage, "drawable", context.getPackageName())));
+            Bitmap bitmap = NetworkTaskManager //.with(bridgeComponents.getContext())
+                    .fetchImageWithFallback(labelActionImage, bridgeComponents);
+            if (bitmap != null) {
+                imageView.setImageBitmap(bitmap);
+                imageView.setVisibility(View.VISIBLE);
+            }
+//            imageView.setVisibility(View.VISIBLE);
+//            imageView.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(labelActionImage, "drawable", context.getPackageName())));
         }
     }
 
@@ -2363,8 +2638,14 @@ public class MobilityCommonBridge extends HyperBridge {
         Context context = bridgeComponents.getContext();
         if (actionImage != null) {
             ImageView markerActionImage = customMarkerView.findViewById(R.id.marker_action_image);
-            markerActionImage.setVisibility(View.VISIBLE);
-            markerActionImage.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(actionImage, "drawable", context.getPackageName())));
+            Bitmap bitmap = NetworkTaskManager//.with(bridgeComponents.getContext())
+                .fetchImageWithFallback(actionImage, bridgeComponents);
+            if (bitmap != null) {
+                markerActionImage.setImageBitmap(bitmap);
+                markerActionImage.setVisibility(View.VISIBLE);
+            }
+//            markerActionImage.setVisibility(View.VISIBLE);
+//            markerActionImage.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(actionImage, "drawable", context.getPackageName())));
         }
         if (actionImage == null && primaryText.equals("")){
             View mainLableLayout = customMarkerView.findViewById(R.id.main_label_layout);
@@ -2375,8 +2656,15 @@ public class MobilityCommonBridge extends HyperBridge {
     private void setMarkerPointerImage(String pointerImage, Boolean isInvisiblePointer, MarkerType markerType, View customMarkerView) {
         Context context = bridgeComponents.getContext();
         ImageView pointer = customMarkerView.findViewById(R.id.pointer_img);
-        if (pointerImage != null)
-            pointer.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(pointerImage, "drawable", context.getPackageName())));
+        Bitmap bitmap = NetworkTaskManager//.with(bridgeComponents.getContext())
+             .fetchImageWithFallback(pointerImage, bridgeComponents);
+//        if (bitmap != null) {
+//            markerActionImage.setImageBitmap(bitmap);
+//            markerActionImage.setVisibility(View.VISIBLE);
+//        }
+        if (pointerImage != null && bitmap != null)
+            pointer.setImageBitmap(bitmap);
+//            pointer.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(pointerImage, "drawable", context.getPackageName())));
         if (isInvisiblePointer)
             pointer.setVisibility(View.INVISIBLE);
         if (markerType.equals(MarkerType.SPECIAL_ZONE_MARKER)) {
@@ -2399,13 +2687,20 @@ public class MobilityCommonBridge extends HyperBridge {
 
     private void setMarkerlabelImage(String labelImageName, View customMarkerView) {
         try {
-            Context context = bridgeComponents.getContext();
+//            Context context = bridgeComponents.getContext();
             if (labelImageName != null && !labelImageName.equals("")) {
                 ImageView labelImage = customMarkerView.findViewById(R.id.zone_image);
-                labelImage.setVisibility(View.VISIBLE);
-                int imageID = context.getResources().getIdentifier(labelImageName, "drawable", bridgeComponents.getContext().getPackageName());
-                BitmapDrawable bitmap = (BitmapDrawable) context.getResources().getDrawable(imageID);
-                labelImage.setImageDrawable(bitmap);
+                Bitmap bitmap = NetworkTaskManager//.with(bridgeComponents.getContext())
+                     .fetchImageWithFallback(labelImageName, bridgeComponents);
+                if (bitmap != null) {
+                    labelImage.setImageBitmap(bitmap);
+                    labelImage.setVisibility(View.VISIBLE);
+                }
+
+                // Glide.with(context)
+                //     .load("https://assets.moving.tech/beckn/mobilityredbus/user/images/ny_ic_home_illustration_kochi.png")
+                //     .placeholder(context.getResources().getDrawable(context.getResources().getIdentifier("ny_ic_metro_white", "drawable", context.getPackageName())))
+                //     .into(labelImage);
             }
         } catch (Exception e) {
             e.printStackTrace();
