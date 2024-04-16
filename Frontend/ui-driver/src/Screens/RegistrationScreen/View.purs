@@ -431,7 +431,7 @@ listItem push item state =
     , background $ compBg state item
     , clickable $ compClickable state item
     , alpha $ compAlpha state item
-    , onClick push (const (RegistrationAction item.stage))
+    , onClick push $ const $ RegistrationAction item
     , margin (MarginBottom 20)
     , gravity CENTER_VERTICAL
     ][  linearLayout

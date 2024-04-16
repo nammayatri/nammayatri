@@ -41,6 +41,7 @@ initData = {
       driverMobileNumber : "",
       cityConfig : dummyCityConfig,
       vehicleCategory : Nothing,
+      rcNumberPrefixList : [],
       config : getAppConfig appConfig
     },
     props: {

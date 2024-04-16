@@ -32,7 +32,6 @@ import Font.Size as FontSize
 import Language.Types (STR(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resource.Constants as Constant
-import Screens.AddVehicleDetailsScreen.Controller (validateRegistrationNumber)
 import Screens.Types (StageStatus(..))
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -42,6 +41,7 @@ import Font.Style as FontStyle
 import ConfigProvider
 import Mobility.Prelude
 import Components.OptionsMenu as OptionsMenuConfig
+import Data.Array as DA
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -52,7 +52,7 @@ primaryButtonConfig state = let
     activate = (( rcMatch || (not state.data.cityConfig.uploadRCandDL)) && 
                 -- (state.data.dateOfRegistration /= Just "") && 
                 state.data.vehicle_registration_number /= "" &&
-                ((DS.length state.data.vehicle_registration_number >= 2) && validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)))
+                ((DS.length state.data.vehicle_registration_number >= 2) && ((DS.take 2 state.data.vehicle_registration_number) `DA.elem` state.data.rcNumberPrefixList)))
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfRegistration then getString CONFIRM 
                            else if state.props.openHowToUploadManual then getString UPLOAD_PHOTO

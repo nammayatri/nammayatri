@@ -35,9 +35,9 @@ registration = do
     GoToUploadDriverLicense updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ UPLOAD_DRIVER_LICENSE updatedState)
-    GoToUploadVehicleRegistration updatedState -> do
+    GoToUploadVehicleRegistration updatedState rcNumberPrefixList -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ UPLOAD_VEHICLE_DETAILS updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ UPLOAD_VEHICLE_DETAILS updatedState rcNumberPrefixList)
     GoToPermissionScreen updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ PERMISSION_SCREEN updatedState)

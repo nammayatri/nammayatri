@@ -52,7 +52,7 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Types.DomAttributes as PTD
-import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput, validateRegistrationNumber)
+import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
 import Screens.Types (AddVehicleDetailsScreenState, StageStatus(..), ValidationStatus(..))
 import Styles.Colors as Color
@@ -414,6 +414,7 @@ vehicleRegistrationNumber state push =
           ]
         ]
       ]
+      where validateRegistrationNumber regNum = regNum `DA.elem` state.data.rcNumberPrefixList
 
 
 
