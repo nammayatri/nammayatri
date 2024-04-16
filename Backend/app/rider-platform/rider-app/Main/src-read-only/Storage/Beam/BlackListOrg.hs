@@ -13,11 +13,11 @@ import qualified Kernel.Types.Beckn.Domain
 import Tools.Beam.UtilsTH
 
 data BlackListOrgT f = BlackListOrgT
-  { createdAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    domain :: (B.C f Kernel.Types.Beckn.Domain.Domain),
-    id :: (B.C f Kernel.Prelude.Text),
-    subscriberId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime))
+  { createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    domain :: B.C f Kernel.Types.Beckn.Domain.Domain,
+    id :: B.C f Kernel.Prelude.Text,
+    subscriberId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -27,6 +27,6 @@ instance B.Table BlackListOrgT where
 
 type BlackListOrg = BlackListOrgT Identity
 
-$(enableKVPG (''BlackListOrgT) [('id)] [[('subscriberId)]])
+$(enableKVPG ''BlackListOrgT ['id] [['subscriberId]])
 
-$(mkTableInstancesWithTModifier (''BlackListOrgT) "black_list_org" [("subscriberId", "subscriber_id")])
+$(mkTableInstancesWithTModifier ''BlackListOrgT "black_list_org" [("subscriberId", "subscriber_id")])

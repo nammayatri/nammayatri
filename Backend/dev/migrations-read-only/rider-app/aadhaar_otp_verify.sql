@@ -9,3 +9,8 @@ ALTER TABLE atlas_app.aadhaar_otp_verify ADD COLUMN status_code text NOT NULL;
 ALTER TABLE atlas_app.aadhaar_otp_verify ADD COLUMN transaction_id text NOT NULL;
 ALTER TABLE atlas_app.aadhaar_otp_verify ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.aadhaar_otp_verify ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.aadhaar_otp_verify ALTER COLUMN updated_at DROP NOT NULL;

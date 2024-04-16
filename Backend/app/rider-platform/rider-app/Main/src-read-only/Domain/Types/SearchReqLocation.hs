@@ -4,6 +4,7 @@
 
 module Domain.Types.SearchReqLocation where
 
+import Data.Aeson (eitherDecode)
 import qualified Domain.Types.LocationAddress
 import qualified Kernel.External.Maps
 import Kernel.Prelude

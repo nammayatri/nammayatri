@@ -4,6 +4,7 @@
 
 module Domain.Types.BlackListOrg where
 
+import Data.Aeson (eitherDecode)
 import Domain.Types.Common (UsageSafety (..))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Domain
@@ -20,7 +21,7 @@ data BlackListOrgD (s :: UsageSafety) = BlackListOrg
   }
   deriving (Generic)
 
-type BlackListOrg = BlackListOrgD ('Safe)
+type BlackListOrg = BlackListOrgD 'Safe
 
 instance FromJSON (BlackListOrgD 'Unsafe)
 

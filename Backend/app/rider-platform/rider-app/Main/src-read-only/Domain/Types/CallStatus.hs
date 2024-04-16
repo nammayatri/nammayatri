@@ -4,6 +4,7 @@
 
 module Domain.Types.CallStatus where
 
+import Data.Aeson (eitherDecode)
 import qualified Domain.Types.Ride
 import qualified Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Call.Types

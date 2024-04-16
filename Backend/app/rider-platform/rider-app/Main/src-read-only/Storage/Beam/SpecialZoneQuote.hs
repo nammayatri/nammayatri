@@ -12,10 +12,10 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SpecialZoneQuoteT f = SpecialZoneQuoteT
-  { createdAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    id :: (B.C f Kernel.Prelude.Text),
-    quoteId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime))
+  { createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    id :: B.C f Kernel.Prelude.Text,
+    quoteId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -25,6 +25,6 @@ instance B.Table SpecialZoneQuoteT where
 
 type SpecialZoneQuote = SpecialZoneQuoteT Identity
 
-$(enableKVPG (''SpecialZoneQuoteT) [('id)] [])
+$(enableKVPG ''SpecialZoneQuoteT ['id] [])
 
-$(mkTableInstances (''SpecialZoneQuoteT) "special_zone_quote")
+$(mkTableInstances ''SpecialZoneQuoteT "special_zone_quote")

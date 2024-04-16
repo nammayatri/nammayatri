@@ -17,7 +17,6 @@ import qualified Kernel.Types.Registry
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.WhiteListOrg as Beam
-import Storage.Queries.OrphanInstances.WhiteListOrg as ReExport
 import Storage.Queries.Transformers.WhiteListOrg
 import Storage.Queries.WhiteListOrgExtra as ReExport
 

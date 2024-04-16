@@ -4,6 +4,7 @@
 
 module Domain.Types.WhiteListOrg where
 
+import Data.Aeson (eitherDecode)
 import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Merchant
 import Kernel.Prelude

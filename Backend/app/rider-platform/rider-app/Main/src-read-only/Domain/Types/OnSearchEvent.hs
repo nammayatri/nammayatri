@@ -4,6 +4,7 @@
 
 module Domain.Types.OnSearchEvent where
 
+import Data.Aeson (eitherDecode)
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH

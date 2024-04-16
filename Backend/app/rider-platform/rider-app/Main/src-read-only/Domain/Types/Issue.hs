@@ -4,6 +4,7 @@
 
 module Domain.Types.Issue where
 
+import Data.Aeson (eitherDecode)
 import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
 import qualified IssueManagement.Common

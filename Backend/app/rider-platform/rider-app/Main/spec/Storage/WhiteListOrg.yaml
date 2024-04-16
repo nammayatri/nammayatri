@@ -34,14 +34,17 @@ WhiteListOrg:
     id: PrimaryKey
     subscriberId: SecondaryKey
 
-  queries:        
+  queries:
     findBySubscriberIdAndDomainAndMerchantId:
       kvFunction: findOneWithKV
       where:
-        and: [subscriberId, domain, merchantId]    
+        and: [subscriberId, domain, merchantId]
   sqlType:
     subscriberId: character varying(255)
     domain: character varying(255)
+
+  default:
+    merchantId: ''
 
   extraOperations:
     - EXTRA_QUERY_FILE
