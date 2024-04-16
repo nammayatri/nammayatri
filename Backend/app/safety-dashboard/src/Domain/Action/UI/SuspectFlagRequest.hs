@@ -165,7 +165,7 @@ addOrUpdateSuspect req merchantShortId flaggedStatus = do
 
 updateSuspect :: Domain.Types.Suspect.Suspect -> Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> Text -> Domain.Types.Suspect.FlaggedStatus -> Environment.Flow Domain.Types.Suspect.Suspect
 updateSuspect suspect req merchantShortId flaggedStatus = do
-  let flaggedBy = Domain.Types.Suspect.FlaggedBy req.flaggedCategory (Just merchantShortId) : suspect.flaggedBy
+  let flaggedBy = Domain.Types.Suspect.FlaggedBy {flaggedCategory = req.flaggedCategory, partnerName = Just merchantShortId, flaggedReason = Just req.flaggedReason} : suspect.flaggedBy
   updateFlaggedCounterByKey (suspect.flaggedCounter + 1) flaggedStatus flaggedBy (getUpdateKey req)
   buildUpdatedSuspect (suspect.flaggedCounter + 1) flaggedBy flaggedStatus suspect
 
@@ -193,7 +193,7 @@ buildSuspect flaggedStatus' Domain.Types.SuspectFlagRequest.SuspectFlagRequest {
         voterId = voterId,
         flaggedStatus = flaggedStatus',
         flagUpdatedAt = now,
-        flaggedBy = [Domain.Types.Suspect.FlaggedBy flaggedCategory merchantShortId],
+        flaggedBy = [Domain.Types.Suspect.FlaggedBy {flaggedCategory = flaggedCategory, partnerName = merchantShortId, flaggedReason = Just flaggedReason}],
         statusChangedReason = Nothing,
         flaggedCounter = 1,
         createdAt = now,
