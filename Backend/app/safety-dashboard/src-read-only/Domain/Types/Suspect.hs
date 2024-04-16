@@ -26,7 +26,8 @@ data Suspect = Suspect
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FlaggedBy = FlaggedBy {flaggedCategory :: Kernel.Prelude.Text, partnerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read)
+data FlaggedBy = FlaggedBy {flaggedCategory :: Kernel.Prelude.Text, flaggedReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text, partnerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read)
 
 data FlaggedStatus = Flagged | Charged | Clean deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

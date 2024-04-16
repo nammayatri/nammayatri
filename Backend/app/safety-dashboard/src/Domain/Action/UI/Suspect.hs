@@ -257,7 +257,7 @@ buildSuspectStatusHistory tokenInfo approvedBy' approval flaggedStatus' Domain.T
         flaggedStatus = flaggedStatus',
         statusChangedReason = Just flaggedReason,
         voterId = voterId,
-        flaggedBy = Just [Domain.Types.Suspect.FlaggedBy flaggedCategory merchantShortId],
+        flaggedBy = Just [Domain.Types.Suspect.FlaggedBy {flaggedCategory = flaggedCategory, partnerName = merchantShortId, flaggedReason = Just flaggedReason}],
         createdAt = now,
         updatedAt = now,
         merchantId = Just tokenInfo.merchantId,

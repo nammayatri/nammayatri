@@ -45,6 +45,7 @@ Suspect:
     FlaggedBy:
       partnerName : Maybe Text
       flaggedCategory : Text
+      flaggedReason : Maybe Text
       derive: "Ord,Eq,Read,'ListInstance"
     FlaggedStatus:
       enum: "Flagged,Charged,Clean"
