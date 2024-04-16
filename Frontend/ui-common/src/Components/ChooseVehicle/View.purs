@@ -40,6 +40,8 @@ cardView push config =
     frameLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
+      , onClick push $ const $ OnSelect config
+      , clickable config.isEnabled
       ][  PrestoAnim.animationSet
             [ Anim.fadeInWithDuration 100 isActiveIndex
             , Anim.fadeOutWithDuration 100 $ not isActiveIndex
@@ -59,8 +61,6 @@ cardView push config =
           , id $ EHC.getNewIDWithTag config.id
           , margin $ config.layoutMargin
           , padding padding'
-          , clickable config.isEnabled
-          , onClick push $ const $ OnSelect config
           , afterRender push (const NoAction)
           ]
           [ linearLayout
