@@ -55,3 +55,7 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN toll_charges double precision
 ALTER TABLE atlas_driver_offer_bpp.ride ALTER COLUMN merchant_operating_city_id DROP NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN vehicle_service_tier_seating_capacity integer ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN vehicle_service_tier_air_conditioned double precision ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN ride_ended_by text ;

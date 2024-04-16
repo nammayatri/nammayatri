@@ -20,6 +20,8 @@ Ride:
   tableName: ride
   derives: "Generic,Show,Eq,ToJSON,FromJSON"
   types:
+    RideEndedBy:
+      enum: "Driver,Dashboard,CallBased,CronJob"
     OdometerReading:
       value: Centesimal
       fileId: Maybe (Id MediaFile)
@@ -69,6 +71,7 @@ Ride:
     enableFrequentLocationUpdates: Maybe Bool
     vehicleServiceTierSeatingCapacity: Maybe Int
     vehicleServiceTierAirConditioned: Maybe Double
+    rideEndedBy: Maybe RideEndedBy
 
   sqlType:
     id: character(36)
