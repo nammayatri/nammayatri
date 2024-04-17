@@ -99,6 +99,7 @@ initData =
       , totalRidesOfDay: 0
       , totalEarningsOfDay: 0
       , earningPerKm : Nothing
+      , totalValidRidesOfDay : 0
       , bonusEarned: 0
       , route: []
       , cancelRideConfirmationPopUp:
@@ -255,6 +256,7 @@ initData =
       , vehicleNSPopup: false
       , bgLocationPopup: false
       , specialZoneProps: { specialZonePopup: false, nearBySpecialZone: false, currentGeoHash: "" }
+      , coinPopupType : NO_COIN_POPUP
       , rideStartTimer: 0
       , odometerFileId: Nothing
       , odometerUploadAttempts: 0
@@ -272,4 +274,5 @@ dummyDriverRideStats =
     , bonusEarning: 0
     , coinBalance: 0
     , totalEarningsOfDayPerKm : Nothing
+    , totalValidRidesOfDay : Nothing
     }

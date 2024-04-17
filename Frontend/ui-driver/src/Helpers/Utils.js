@@ -420,6 +420,17 @@ export const isYesterday = function (dateString){
   return false;
 }
 
+export const isToday = function (dateString){
+  try {
+    const today = new Date()
+    const date = new Date(dateString);
+    return (today.toDateString() == date.toDateString());
+  }catch(error){
+    console.error(error);
+  } 
+  return false;
+}
+
 export const isDateGreaterThan = function(dateString){
   try {
     const currDate = new Date();

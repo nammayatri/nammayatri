@@ -25,7 +25,6 @@ import Locale.Utils
 import Log
 import Mobility.Prelude
 import Screens.SubscriptionScreen.Controller
-
 import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
 import Domain.Payments (APIPaymentStatus(..)) as PS
@@ -50,7 +49,7 @@ import Data.Ord (compare)
 import Data.Semigroup ((<>))
 import Data.Set (toggle)
 import Data.String (Pattern(..), split, toUpper, drop, indexOf, toLower, take)
-import Data.String (length, null) as STR
+import Data.String as STR
 import Data.String.CodeUnits (splitAt)
 import Data.String.Common (joinWith, split, toUpper, trim)
 import Data.Time.Duration (Milliseconds(..))
@@ -103,7 +102,7 @@ import Screens.DriverSavedLocationScreen.Transformer (getLocationArray)
 import Screens.Handlers (chooseCityScreen, homeScreen)
 import Screens.Handlers as UI
 import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
-import Screens.HomeScreen.Controller (activeRideDetail, getPreviousVersion)
+import Screens.HomeScreen.Controller (activeRideDetail, getPreviousVersion, getCoinPopupStatus)
 import Screens.HomeScreen.ScreenData (dummyDriverRideStats)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
 import Screens.DocumentCaptureScreen.ScreenData (initData) as DocumentCaptureData
@@ -119,6 +118,7 @@ import Screens.RideHistoryScreen.Transformer (getPaymentHistoryItemList)
 import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
+import Screens.DriverEarningsScreen.Transformer (checkPopupShowToday, isPopupShownToday)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
@@ -3236,6 +3236,7 @@ updateDriverDataToStates = do
           coinBalance = driverStats.coinBalance, 
           bonusEarned = driverStats.bonusEarning, 
           earningPerKm = driverStats.totalEarningsOfDayPerKm,
+          totalValidRidesOfDay = fromMaybe 0 driverStats.totalValidRidesOfDay,
           driverStats = true }})
       void $ pure $ setCleverTapUserProp [{key : "Driver Coin Balance", value : unsafeToForeign driverStats.coinBalance }]
     Nothing -> pure unit
@@ -3381,6 +3382,7 @@ updateBannerAndPopupFlags = do
   (GlobalState allState) <- getState
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState allState) false
   appConfig <- getAppConfigFlowBT Constants.appConfig
+  rideAndEarnPopup <- callGetPastDaysData appConfig allState.homeScreen
   let
     cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
     autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
@@ -3435,6 +3437,17 @@ updateBannerAndPopupFlags = do
         && (fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) /= 7)
         && isCoinPopupNotShownToday
 
+    hsState = allState.homeScreen
+    coinPopupType_ = case allState.homeScreen.data.totalValidRidesOfDay of
+                      8 -> checkPopupShowToday ST.EIGHT_RIDE_COMPLETED appConfig hsState
+                      7 -> checkPopupShowToday ST.ONE_MORE_RIDE appConfig hsState
+                      6 -> checkPopupShowToday ST.TWO_MORE_RIDES appConfig hsState
+                      _ -> rideAndEarnPopup
+
+    coinPopupType__ = if (coinPopupType_ == ST.NO_COIN_POPUP) then (checkPopupShowToday ST.CONVERT_COINS_TO_CASH appConfig hsState) else coinPopupType_
+
+    coinPopupType = if (coinPopupType__ == ST.NO_COIN_POPUP) then (checkPopupShowToday ST.REFER_AND_EARN_COIN appConfig hsState) else coinPopupType__
+
   when moveDriverToOffline $ do
       setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE (getCurrentUTC "")
       changeDriverStatus Offline
@@ -3462,6 +3475,7 @@ updateBannerAndPopupFlags = do
                 , subscriptionPopupType = subscriptionPopupType
                 , waitTimeStatus = RC.waitTimeConstructor $ getValueToLocalStore WAITING_TIME_STATUS
                 , showCoinsPopup = showCoinPopup
+                , coinPopupType = coinPopupType
                 , showAcWorkingPopup = if isNothing allState.homeScreen.props.showAcWorkingPopup
                                           then getDriverInfoResp.checkIfACWorking
                                        else allState.homeScreen.props.showAcWorkingPopup
@@ -3469,6 +3483,22 @@ updateBannerAndPopupFlags = do
               }
         )
 
+callGetPastDaysData :: AppConfig -> HomeScreenState -> FlowBT String ST.CoinEarnedPopupType
+callGetPastDaysData appConfig hsState = do
+  let cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+      coinPopupInfo = getValueFromCache "COIN_EARNED_POPUP_TYPE" getCoinPopupStatus
+      checkCoinIsEnabled = appConfig.feature.enableYatriCoins && cityConfig.enableYatriCoins
+      vehicleVariant = hsState.data.vehicleType 
+      isAutoRicksaw = RC.getCategoryFromVariant vehicleVariant == Just ST.AutoCategory
+  if (isPopupShownToday coinPopupInfo.rideMoreEarnCoin && checkCoinIsEnabled && isAutoRicksaw && withinTimeRange RC.rideMoreEarnMorePopupStartTime RC.dayEndTime (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss")) then do
+      resp <- lift $ lift $ Remote.getRideStatusPastDays ""
+      case resp of
+        Right (API.RideStatusPastDaysRes response) ->
+          if (response.rideCountPopupValue == false) 
+            then pure ST.RIDE_MORE_EARN_COIN 
+            else pure ST.NO_COIN_POPUP
+        Left err -> pure ST.NO_COIN_POPUP
+  else pure ST.NO_COIN_POPUP
 
 logoutFlow :: FlowBT String Unit
 logoutFlow = do
