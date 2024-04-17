@@ -13,10 +13,18 @@ import qualified Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
 data EstimateT f = EstimateT
-  { bppEstimateId :: (B.C f Kernel.Prelude.Text),
+  { backendAppVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    backendConfigVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    bppEstimateId :: (B.C f Kernel.Prelude.Text),
+    clientBundleVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    clientConfigVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    clientOsType :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType)),
+    clientOsVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    clientSdkVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     device :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     discount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),

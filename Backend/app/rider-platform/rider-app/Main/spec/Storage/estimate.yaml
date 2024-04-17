@@ -28,14 +28,14 @@ Estimate:
     FareRange:
       minFare: Price
       maxFare: Price
-      derive': "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"   
-      
+      derive': "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"
+
     EstimateBreakup:
       id : Id EstimateBreakup
       estimateId : Id Estimate
       title : Text
-      price : EstimateBreakupPrice  
-      derive': "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"   
+      price : EstimateBreakupPrice
+      derive': "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"
 
     EstimateBreakupPrice:
       recordType: NewType
@@ -47,10 +47,10 @@ Estimate:
       oldNightShiftCharge : Maybe Centesimal
       nightShiftStart : TimeOfDay
       nightShiftEnd : TimeOfDay
-      derive': "Generic, Show" 
+      derive': "Generic, Show"
 
     EstimateStatus:
-      enum: "NEW, DRIVER_QUOTE_REQUESTED, CANCELLED, GOT_DRIVER_QUOTE, DRIVER_QUOTE_CANCELLED, COMPLETED"  
+      enum: "NEW, DRIVER_QUOTE_REQUESTED, CANCELLED, GOT_DRIVER_QUOTE, DRIVER_QUOTE_CANCELLED, COMPLETED"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
     WaitingCharges:
@@ -99,11 +99,11 @@ Estimate:
   constraints:
     id: PrimaryKey
     requestId: SecondaryKey
-    bppEstimateId: SecondaryKey 
-  
+    bppEstimateId: SecondaryKey
+
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <EstimateStatus>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <EstimateStatus> 
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <EstimateStatus>
 
   beamFields:
     totalFareRange:
@@ -112,7 +112,7 @@ Estimate:
       currency: Maybe Currency
     clientDevice:
       clientOsType: Maybe DeviceType
-      clientOsVersion: Maybe Text  
+      clientOsVersion: Maybe Text
 
     vehicleServiceTierType:
       vehicleVariant: VehicleServiceTierType
@@ -120,11 +120,10 @@ Estimate:
     estimatedDistance:
       estimatedDistance: Maybe HighPrecMeters
       estimatedDistanceValue: Maybe HighPrecDistance
-      distanceUnit: Maybe DistanceUnit    
+      distanceUnit: Maybe DistanceUnit
 
-    
     tripTerms:
-      tripTermsId: Maybe Text 
+      tripTermsId: Maybe Text
 
     nightShiftInfo:
       nightShiftCharge : Maybe Money
@@ -135,9 +134,8 @@ Estimate:
 
     waitingCharges:
       waitingChargePerMin: Maybe Money
-      waitingChargePerMinAmount: Maybe HighPrecMoney    
-
-    estimateBreakupList: {}  
+      waitingChargePerMinAmount: Maybe HighPrecMoney
+    estimateBreakupList: {}
 
   beamType:
     discount: Maybe HighPrecMoney
@@ -194,6 +192,23 @@ Estimate:
     clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
     clientOsType:  (clientDevice <&> (.deviceType))|E
 
+  sqlType:
+    estimatedFare: numeric(30,10)
+    estimatedTotalFare: numeric(30,2)
+    providerId: character varying(255)
+    providerUrl: character varying(255)
+    providerName: character varying(255)
+    providerMobileNumber: character varying(255)
+    vehicleVariant: character varying(255)
+    tripTermsId: character varying(36)
+    minTotalFare: numeric(30,2)
+    maxTotalFare: numeric(30,2)
+    driversLocation: "text[]"
+    waitingChargePerMin: double precision
+    status: character varying(255)
+    nightShiftCharge: integer
+    currency: character varying(255)
+
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -218,12 +233,9 @@ Estimate:
       where: requestId
 
   extraOperations:
-    - EXTRA_QUERY_FILE    
+    - EXTRA_QUERY_FILE
 
   excludedDefaultQueries:
     - create
     - createMany
 
-
-
-      

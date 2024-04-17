@@ -4,6 +4,7 @@
 
 module Domain.Types.Estimate where
 
+import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest
@@ -14,14 +15,20 @@ import qualified Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import qualified Kernel.Utils.GenericPretty
 import qualified Kernel.Utils.TH
 import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
-import Data.Aeson
 
 data Estimate = Estimate
-  { bppEstimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.BPPEstimate,
+  { backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    bppEstimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.BPPEstimate,
+    clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
+    clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
     device :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,

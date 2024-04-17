@@ -36,8 +36,8 @@ BookingCancellationReason:
     driverCancellationLocation:
       driverCancellationLocationLat: Maybe Double
       driverCancellationLocationLon: Maybe Double
-    driverDistToPickup: 
-      driverDistToPickup: Maybe Meters 
+    driverDistToPickup:
+      driverDistToPickup: Maybe Meters
       driverDistToPickupValue : Maybe HighPrecDistance
       distanceUnit : Maybe DistanceUnit
 
@@ -46,8 +46,6 @@ BookingCancellationReason:
     createdAt: getCreatedAt|M
     updatedAt: getUpdatedAt|M
     driverDistToPickup: Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit driverDistToPickupValue <$> driverDistToPickup|E
-
-
 
   toTType:
     driverCancellationLocationLat: (driverCancellationLocation <&> (.lat))|E
@@ -60,6 +58,13 @@ BookingCancellationReason:
 
   constraints:
     bookingId: PrimaryKey
+
+  sqlType:
+    source: character varying(255)
+    reasonCode: character varying(255)
+    addtionalInfo: character varying(255)
+    reasonStage: character varying(255)
+    driverDistToPickup: bigint
 
   queries:
     findByRideBookingId:

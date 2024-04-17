@@ -25,7 +25,6 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.ValueAddNP as QNP

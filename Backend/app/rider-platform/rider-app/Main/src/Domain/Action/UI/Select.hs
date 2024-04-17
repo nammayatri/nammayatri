@@ -32,6 +32,8 @@ import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
 import qualified Domain.Action.UI.Estimate as UEstimate
+import Domain.Action.UI.Quote
+import qualified Domain.Action.UI.Quote as UQuote
 import Domain.Types.Booking.Type
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate

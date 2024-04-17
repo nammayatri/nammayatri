@@ -38,6 +38,6 @@ instance B.Table DriverOfferT where
 
 type DriverOffer = DriverOfferT Identity
 
-$(enableKVPG (''DriverOfferT) [('id)] [])
+$(enableKVPG (''DriverOfferT) [('id)] [[('bppQuoteId)], [('estimateId)]])
 
 $(mkTableInstances (''DriverOfferT) "driver_offer")

@@ -24,6 +24,10 @@ CancellationReason:
     createdAt: UTCTime
     updatedAt: UTCTime
 
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <CancellationStage>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CancellationStage>
+
   beamType:
     createdAt: Maybe UTCTime
     updatedAt: Maybe UTCTime
@@ -31,13 +35,21 @@ CancellationReason:
   fromTType:
     createdAt: getCreatedAt|M
     updatedAt: getUpdatedAt|M
+
   toTType:
     createdAt: Kernel.Prelude.Just|I
     updatedAt: Kernel.Prelude.Just|I
 
-  domainInstance:
-    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <CancellationStage>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CancellationStage>
+  sqlType:
+    reasonCode: character varying(255)
+    description: character varying(255)
+    priority: smallint
+
+  default:
+    onSearch: "true"
+    onConfirm: "true"
+    onAssign: "true"
+    priority: "0"
 
   constraints:
     reasonCode: PrimaryKey
@@ -45,3 +57,5 @@ CancellationReason:
   extraOperations:
     - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE
+
+

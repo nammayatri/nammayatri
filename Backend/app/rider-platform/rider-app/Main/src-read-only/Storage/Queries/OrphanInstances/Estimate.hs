@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.Estimate where
 
+import qualified Data.Text
 import qualified Domain.Types.Estimate
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -12,19 +13,30 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Version
 import qualified Storage.Beam.Estimate as Beam
 import qualified Storage.Queries.EstimateBreakup
 import Storage.Queries.Transformers.Estimate
 
 instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   fromTType' (Beam.EstimateT {..}) = do
+    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
+    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
+    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
+    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     estimateBreakupList' <- Storage.Queries.EstimateBreakup.findAllByEstimateIdT (Kernel.Types.Id.Id id)
     providerUrl' <- Kernel.Prelude.parseBaseUrl providerUrl
     tripTerms' <- mKTripTerms tripTermsId
     pure $
       Just
         Domain.Types.Estimate.Estimate
-          { bppEstimateId = Kernel.Types.Id.Id bppEstimateId,
+          { backendAppVersion = backendAppVersion,
+            backendConfigVersion = backendConfigVersion',
+            bppEstimateId = Kernel.Types.Id.Id bppEstimateId,
+            clientBundleVersion = clientBundleVersion',
+            clientConfigVersion = clientConfigVersion',
+            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion),
+            clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
             device = device,
             discount = Kernel.Types.Common.mkPrice currency <$> discount,
@@ -60,7 +72,14 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
 instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   toTType' (Domain.Types.Estimate.Estimate {..}) = do
     Beam.EstimateT
-      { Beam.bppEstimateId = Kernel.Types.Id.getId bppEstimateId,
+      { Beam.backendAppVersion = backendAppVersion,
+        Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
+        Beam.bppEstimateId = Kernel.Types.Id.getId bppEstimateId,
+        Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
+        Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
+        Beam.clientOsType = (clientDevice <&> (.deviceType)),
+        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
+        Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = createdAt,
         Beam.device = device,
         Beam.discount = (discount <&> (.amount)),
