@@ -650,8 +650,10 @@ tabView state push =
 tabImageView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 tabImageView state push =
   let
+    vc = getVehicleCategory state.data.vehicleDetails
     driverImage = case (fromMaybe "UNKNOWN" state.data.driverGender) of
-      "MALE" -> "ny_ic_new_avatar_profile"
+      "MALE" | vc == ST.AutoCategory -> "ny_ic_new_avatar_profile"
+      "MALE" | vc == ST.CarCategory -> "ny_ic_white_avatar_profile"
       "FEMALE" -> "ny_ic_profile_female"
       _ -> "ny_ic_generic_mascot"
   in

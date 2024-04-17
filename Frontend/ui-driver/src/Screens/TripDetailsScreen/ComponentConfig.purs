@@ -16,20 +16,22 @@
 module Screens.TripDetailsScreen.ComponentConfig where
 
 import Common.Types.App
-import Components.PrimaryButton as PrimaryButton
+import Language.Strings
+import PrestoDOM
+
+import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
+import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
+import Data.Maybe (Maybe(..), isJust)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Language.Strings
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Types (STR(..))
-import PrestoDOM
+import Prelude ((<>), ($))
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Common.Types.App (LazyCheck(..))
-import Prelude ((<>), ($))
-import Data.Maybe (Maybe(..))
+import Engineering.Helpers.Commons as EHC
 
 ---------------- genericHeaderConfig ----------------
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
@@ -60,6 +62,11 @@ genericHeaderConfig state= let
 sourceToDestinationConfig :: ST.TripDetailsScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state = let 
   config = SourceToDestination.config
+  formatTimeAndLocation maybeTime location = case maybeTime of
+    Just time -> ((EHC.convertUTCtoISC time "D MMM") <> " • " <> (EHC.convertUTCtoISC time "h:mm A")) <> "\n" <> location
+    Nothing -> location
+  source = formatTimeAndLocation state.data.tripStartTime state.data.source
+  destination = formatTimeAndLocation state.data.tripEndTime state.data.destination
   sourceToDestinationConfig' = config
     {
       margin = (Margin 0 13 0 0)
@@ -69,7 +76,7 @@ sourceToDestinationConfig state = let
       , margin = (MarginTop 3)
       }
     , sourceTextConfig {
-        text = state.data.source
+        text = source
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 12 0 15 0)
       }
@@ -79,11 +86,12 @@ sourceToDestinationConfig state = let
       }
     , destinationBackground = Color.blue600
     , destinationTextConfig {
-        text = state.data.destination
+        text = destination
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 12 0 15 0)
       , ellipsize = false
       }
+    , overrideSeparatorCount = 6
     }
   in sourceToDestinationConfig'
 

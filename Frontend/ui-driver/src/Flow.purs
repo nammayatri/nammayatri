@@ -112,7 +112,7 @@ import Screens.HomeScreen.View (rideRequestPollingData)
 import Screens.PaymentHistoryScreen.Controller (ScreenOutput(..))
 import Screens.PaymentHistoryScreen.Transformer (buildTransactionDetails)
 import Screens.PopUpScreen.Controller (transformAllocationData)
-import Screens.RegistrationScreen.Controller (getStatusValue, getCategoryFromVariant)
+import Screens.RegistrationScreen.Controller (getStatusValue)
 import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
 import Screens.ReportIssueChatScreen.ScreenData (initData) as ReportIssueScreenData
 import Screens.RideHistoryScreen.Transformer (getPaymentHistoryItemList)
@@ -480,7 +480,7 @@ updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) appCon
   if cityConfig.variantSubscriptionConfig.enableVariantBasedSubscription then do
     case vehicleVariant of
       Just (API.Vehicle vehicle) -> do
-        let category = getCategoryFromVariant vehicle.variant
+        let category = RC.getCategoryFromVariant vehicle.variant
         case category of
           Just categoryValue -> do
             setValueToLocalStore VEHICLE_CATEGORY $ show categoryValue

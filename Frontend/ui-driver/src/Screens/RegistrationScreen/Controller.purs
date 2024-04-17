@@ -290,11 +290,6 @@ getStatusValue value = case value of
   "MANUAL_VERIFICATION_REQUIRED" -> COMPLETED
   _ -> NOT_STARTED
 
-getCategoryFromVariant :: String -> Mb.Maybe ST.VehicleCategory
-getCategoryFromVariant variant = case variant of
-  "AUTO_RICKSHAW" -> Mb.Just ST.AutoCategory
-  _ -> Mb.Just ST.CarCategory
-
 getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus
 getStatus step state = 
   case step of

@@ -56,6 +56,7 @@ import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeS
 import Timers (clearTimerWithId)
 import Debug
 import Foreign (unsafeToForeign)
+import Resource.Constants as Const
 
 instance showAction :: Show Action where
   show _ = ""
@@ -493,8 +494,8 @@ rideHistoryItemTransformer (RidesInfo ride) =
     vehicleColor : ride.vehicleColor  ,
     id : ride.shortRideId,
     updatedAt : ride.updatedAt,
-    source : (decodeAddress (ride.fromLocation) false),
-    destination : maybe "" (\toLocation -> decodeAddress toLocation false) ride.toLocation,
+    source : (Const.decodeShortAddress ride.fromLocation),
+    destination : maybe "" (\toLocation -> Const.decodeShortAddress toLocation) ride.toLocation,
     vehicleType : ride.vehicleVariant,
     tripType : rideTypeConstructor ride.tripCategory,
     riderName : fromMaybe "" ride.riderName,
