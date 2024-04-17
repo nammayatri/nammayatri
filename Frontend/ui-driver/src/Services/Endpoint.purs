@@ -331,5 +331,8 @@ updateDriverVehicleServiceTier _ = (getBaseUrl "") <> "/driver/updateServiceTier
 uploadOdometerImage :: String -> String
 uploadOdometerImage rideId = (getBaseUrl "") <> "/driver/ride/"<>rideId<>"/uploadOdometer"
 
+getRideStatusPastDays :: String -> String
+getRideStatusPastDays _ = (getBaseUrl "") <> "/coins/rideStatusPastDays"
+
 updateAirConditioned :: String -> String
 updateAirConditioned _ = (getBaseUrl "") <> "/driver/updateAirCondition"

@@ -239,7 +239,9 @@ type CoinsConfig = {
   bookingCancelCoinEvent :: Boolean,
   fiveStarCoinEvent :: Boolean,
   oneTwoStarCoinEvent :: Boolean,
-  driverToCustomerRefCoinEvent :: Boolean
+  driverToCustomerRefCoinEvent :: Boolean,
+  coinConversionPopupLottie :: String,
+  driverToCustomerRefPopupEndDate :: String
 }
 
 type InAppKeyboardModalConfig = {

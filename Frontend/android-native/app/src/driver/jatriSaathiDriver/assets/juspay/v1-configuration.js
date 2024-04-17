@@ -47,7 +47,8 @@ window.getMerchantConfig = function () {
       "YATRI_COINS_FAQS_QUES4_ANS1",
       "YATRI_COINS_USAGE_POPUP",
       "EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS",
-      "NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS"
+      "NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS",
+      "REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_COINS"
     ],
     "leaderBoard": {
       "isMaskedName": false
@@ -123,7 +124,8 @@ window.getMerchantConfig = function () {
       "YATRI_COINS_FAQS_QUES4_ANS1" : "You can use the earned coins to pay your subscription dues free-of-cost within the validity period",
       "YATRI_COINS_USAGE_POPUP" : "Yatri Coins will be converted into discounts that you can avail against your ride charges.",
       "EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS" : "Coins kamane ke liye app par active rahein",
-      "NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS" : "Ab app par har kriya ke liye coins kamayein aur in coins ko bhugtan me use karein."
+      "NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS" : "Ab app par har kriya ke liye coins kamayein aur in coins ko bhugtan me use karein.",
+      "REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_COINS" : "Refer Yatri Sathi app to customers and earn coins"
     },
     "hindiStrings": {
       "NEED_IT_TO_ENABLE_LOCATION": "Yatri Sathi partner ड्राइवर के लोकेशन की निगरानी के लिए अपना स्थान साझा करने के लिए लोकेशन डेटा एकत्र करता है, तब भी जब ऐप बंद हो या उपयोग में न हो।",
@@ -162,7 +164,8 @@ window.getMerchantConfig = function () {
       "YATRI_COINS_FAQS_QUES4_ANS1" : "आप प्राप्त किए गए सिक्कों का उपयोग करके अपने सदस्यता के देयता का भुगतान मुफ्त में कर सकते हैं, जो योग्यता की अवधि के भीतर हो।",
       "YATRI_COINS_USAGE_POPUP" : "यात्री सिक्के छूटों में परिवर्तित किए जाएंगे जिन्हें आप अपने राइड शुल्क के खिलाफ लाभ उठा सकते हैं।",
       "EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS" : "सिक्के कमाने के लिए एप्लिकेशन पर सक्रिय रहें।",
-      "NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS" : "अब आप पर हर क्रिया के लीयते कॉइन कमाएं और इन साइंस को भुगतान में उसे करे।"
+      "NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS" : "अब आप पर हर क्रिया के लीयते कॉइन कमाएं और इन साइंस को भुगतान में उसे करे।",
+      "REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_COINS" : "ग्राहकों को यात्री साथी ऐप साझा करें और सिक्के अर्जित करें"
     },
     "bengaliStrings": {
       "NEED_IT_TO_ENABLE_LOCATION": "জাটি সাথি ড্রাইভার ড্রাইভারের বর্তমান অবস্থান নিরীক্ষণের জন্য আপনার অবস্থানটি ভাগ করে নিতে সক্ষম করতে অবস্থানের ডেটা সংগ্রহ করে, এমনকি অ্যাপটি বন্ধ থাকলেও বা ব্যবহার না করা হয়।",
@@ -201,7 +204,8 @@ window.getMerchantConfig = function () {
       "YATRI_COINS_FAQS_QUES5_ANS1" : "আপনার প্রথম ইউসাথী রাইড সম্পন্ন করতে হবে যাত্রী কয়েন উপার্জন করার জন্য।",
       "YATRI_COINS_USAGE_POPUP" : "আপনি অ্যাপে প্রতিটি কার্যের জন্য কয়েন অর্জন করতে পারেন এবং এই কয়েন গুলি অর্থ পরিশোধে ব্যবহার করতে পারেন।",
       "EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS" : "যাত্রী কয়েনগুলি ডিসকাউন্টে পরিণত হবে যা আপনি আপনার যাত্রার খরচের জন্য ব্যবহার করতে পারেন।",
-      "NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS" : "কয়েন আয় করতে অ্যাপ্লিকেশনে সক্রিয় থাকুন।"
+      "NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS" : "কয়েন আয় করতে অ্যাপ্লিকেশনে সক্রিয় থাকুন।",
+      "REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_COINS" : "গ্রাহকদেরকে যাত্রী সাথী অ্যাপ সুপারিশ করুন এবং কয়েন পেতে।"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"

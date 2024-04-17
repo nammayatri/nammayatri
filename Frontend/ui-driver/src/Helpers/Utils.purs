@@ -138,6 +138,8 @@ foreign import setValueToLocalStore :: Fn2 String String Unit
 foreign import getDeviceDefaultDensity ::Fn1 String Number
 foreign import isYesterday :: String -> Boolean
 
+foreign import isToday :: String -> Boolean
+
 -- -- ####### MAP FFI ######## -----
 foreign import currentPosition  :: String -> Effect Unit
 foreign import getPeriod :: String -> Period

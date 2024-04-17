@@ -560,7 +560,9 @@ config =
       bookingCancelCoinEvent : false,
       fiveStarCoinEvent : false,
       oneTwoStarCoinEvent : false,
-      driverToCustomerRefCoinEvent : false
+      driverToCustomerRefCoinEvent : false,
+      coinConversionPopupLottie : "",
+      driverToCustomerRefPopupEndDate : ""
   }
   , inAppKeyboardModalConfig : {
       enableDeviceKeyboard : true

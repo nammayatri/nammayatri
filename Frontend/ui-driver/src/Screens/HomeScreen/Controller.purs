@@ -70,7 +70,7 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion, getExpiryTime,liftFlow)
 import Engineering.Helpers.Commons as EHC
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig, getKeyInSharedPrefKeys)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion)
 import Engineering.Helpers.Utils (saveObject)
@@ -126,6 +126,8 @@ import Foreign (unsafeToForeign)
 import SessionCache (getValueFromWindow)
 import Timers as TF
 import Data.Ord (abs)
+import DecodeUtil
+import LocalStorage.Cache (getValueFromCache, setValueToCache)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -415,6 +417,7 @@ data Action = NoAction
             | SpecialZoneCardAC RequestInfoCard.Action
             | BgLocationAC
             | BgLocationPopupAC PopUpModal.Action
+            | CoinEarnedPopupAC PopUpModal.Action
             | IsAcWorkingPopUpAction PopUpModal.Action
             | OnAudioCompleted String
             | ACExpController PopUpModal.Action
@@ -1361,6 +1364,26 @@ eval (CoinsPopupAC PopUpModal.OptionWithHtmlClick) state = do
   void $ pure $ setValueToLocalNativeStore COINS_POPUP_SHOWN_DATE (getCurrentUTC "")
   continue state {props {showCoinsPopup = false}}
 
+eval (CoinEarnedPopupAC PopUpModal.OnButton1Click) state = do
+  void $ pure $ updateCoinPopupLocalStoreVal state
+  let newState = state { props { coinPopupType = ST.NO_COIN_POPUP}}
+  case state.props.coinPopupType of
+    ST.REFER_AND_EARN_COIN -> updateAndExit newState $ GoToReferralScreen
+    ST.CONVERT_COINS_TO_CASH -> updateAndExit newState $ EarningsScreen newState true 
+    _ -> continue newState
+
+eval (CoinEarnedPopupAC PopUpModal.OptionWithHtmlClick) state = do
+  void $ pure $ updateCoinPopupLocalStoreVal state
+  let newState = state { props { coinPopupType = ST.NO_COIN_POPUP}}
+  case state.props.coinPopupType of
+    ST.EIGHT_RIDE_COMPLETED -> updateAndExit newState $ EarningsScreen newState true 
+    ST.RIDE_MORE_EARN_COIN -> updateAndExit newState $ EarningsScreen newState true 
+    _ -> continue newState
+
+eval (CoinEarnedPopupAC PopUpModal.DismissPopup) state = do
+  let newState = state { props { coinPopupType = ST.NO_COIN_POPUP}}
+  continue newState
+
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
 
 eval (PaymentBannerAC (Banner.OnClick)) state = do
@@ -1648,3 +1671,19 @@ isSafetyPeriod :: ST.HomeScreenState -> String -> Boolean
 isSafetyPeriod state riseStartTime = 
   let timeStamp = EHC.convertUTCtoISC riseStartTime "HH:mm:ss"
   in JB.withinTimeRange state.data.config.safetyRide.startTime state.data.config.safetyRide.endTime timeStamp
+
+updateCoinPopupLocalStoreVal :: ST.HomeScreenState -> Effect Unit
+updateCoinPopupLocalStoreVal state = do
+  let popupInfo = getValueFromCache "COIN_EARNED_POPUP_TYPE" getCoinPopupStatus
+      newPopupInfo = case state.props.coinPopupType of
+        ST.RIDE_MORE_EARN_COIN -> popupInfo { rideMoreEarnCoin = getCurrentUTC "" }
+        ST.TWO_MORE_RIDES -> popupInfo { twoMoreRides = getCurrentUTC "" }
+        ST.ONE_MORE_RIDE -> popupInfo { oneMoreRide = getCurrentUTC "" }
+        ST.EIGHT_RIDE_COMPLETED -> popupInfo { eightRideCompleted = getCurrentUTC "" }
+        ST.REFER_AND_EARN_COIN -> popupInfo { referAndEarnCoin = getCurrentUTC "" }
+        ST.CONVERT_COINS_TO_CASH -> popupInfo { convertCoinsToCash = getCurrentUTC "" }
+        _ -> popupInfo
+  void $ pure $ setValueToCache "COIN_EARNED_POPUP_TYPE" newPopupInfo stringifyJSON
+
+getCoinPopupStatus :: String -> ST.CoinEarnedPopupTypeShown
+getCoinPopupStatus key = decodeForeignAny (parseJSON (getKeyInSharedPrefKeys key)) {rideMoreEarnCoin : "" , twoMoreRides : "", oneMoreRide : "", eightRideCompleted : "", referAndEarnCoin : "", convertCoinsToCash : ""}
