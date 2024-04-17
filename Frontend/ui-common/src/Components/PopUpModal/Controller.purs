@@ -84,6 +84,7 @@ type Config = {
     isTipEnabled :: Boolean,
     isVisible :: Boolean,
     isTipPopup :: Boolean,
+    coverLottieConfig :: LottieConfig,
     showRetry :: Boolean
 }
 
@@ -162,6 +163,18 @@ type ImageConfig =
   , width :: Length
   , margin :: Margin
   , padding :: Padding
+  }
+
+type LottieConfig = 
+  {
+    lottieUrl :: String
+  , visibility :: Visibility
+  , repeat :: Boolean
+  , height :: Length
+  , width :: Length
+  , margin :: Margin
+  , padding :: Padding
+  , id :: String
   }
 
 type OptionWithHtmlConfig = {
@@ -439,6 +452,17 @@ config = {
     {
       imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_ride_completed"
     , visibility : GONE
+    , height : WRAP_CONTENT
+    , width : WRAP_CONTENT
+    , margin : (Margin 0 0 0 0)
+    , padding : (Padding 0 0 0 0)
+    },
+    coverLottieConfig : 
+    {
+      lottieUrl : ""
+    , id : ""
+    , visibility : GONE
+    , repeat : false
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT
     , margin : (Margin 0 0 0 0)
