@@ -30,7 +30,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import Domain.Types.FeedbackForm
 import EulerHS.Prelude (newEmptyTMVarIO)
-import Kernel.Beam.Functions (getArtDbFunctions, getDBFunction)
+import Kernel.Beam.Functions (getArtDbFunctions, getDbFunctions)
 import Kernel.Beam.Lib.Utils (DbFunctions)
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Infobip.Types (InfoBIPConfig)
@@ -245,7 +245,7 @@ buildAppEnv cfg@AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
   isArtReplayerEnabled <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "IS_ART_REPLAYER_ENABLED"
-  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDBFunction
+  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDbFunctions
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let nonCriticalModifierFunc = ("ab:n_c:" <>)
   hedisEnv <- connectHedis hedisCfg riderAppPrefix

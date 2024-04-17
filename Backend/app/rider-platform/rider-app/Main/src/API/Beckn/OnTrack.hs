@@ -33,9 +33,10 @@ handler = onTrack
 
 onTrack ::
   SignatureAuthResult ->
+  Maybe Text ->
   OnTrack.OnTrackReqV2 ->
   FlowHandler AckResponse
-onTrack _ reqV2 = withFlowHandlerBecknAPI do
+onTrack _ _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.onTrackReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "onTrackAPIV2" $ "Received onTrack API call:-" <> show reqV2

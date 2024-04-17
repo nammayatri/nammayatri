@@ -34,9 +34,10 @@ handler = onStatus
 
 onStatus ::
   SignatureAuthResult ->
+  Maybe Text ->
   OnStatus.OnStatusReqV2 ->
   FlowHandler AckResponse
-onStatus _ reqV2 = withFlowHandlerBecknAPI do
+onStatus _ _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.onStatusReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "onStatusAPIV2" $ "Received onStatus API call:-" <> show reqV2

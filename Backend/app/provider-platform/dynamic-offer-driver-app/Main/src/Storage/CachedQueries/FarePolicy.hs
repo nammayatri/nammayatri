@@ -47,14 +47,14 @@ import qualified Storage.Queries.FarePolicy as Queries
 import qualified System.Environment as SE
 import System.Random
 
-findFarePolicyFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
+findFarePolicyFromDB :: KvDbFlow m r => Id FarePolicy -> m (Maybe FarePolicy)
 findFarePolicyFromDB id = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
     Nothing -> do
       flip whenJust cacheFarePolicy /=<< Queries.findById id
 
-findFarePolicyFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> String -> Int -> m (Maybe FarePolicy)
+findFarePolicyFromCACStrict :: KvDbFlow m r => Id FarePolicy -> String -> Int -> m (Maybe FarePolicy)
 findFarePolicyFromCACStrict id cond toss = do
   tenant <- liftIO $ SE.lookupEnv "TENANT"
   contextValue <- liftIO $ CM.evalExperimentAsString (fromMaybe "atlas_driver_offer_bpp_v2" tenant) cond toss
@@ -67,7 +67,7 @@ findFarePolicyFromCACStrict id cond toss = do
     (pure . Just)
     config
 
-findFarePolicyFromCACHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> String -> Int -> m (Maybe FarePolicy)
+findFarePolicyFromCACHelper :: KvDbFlow m r => Id FarePolicy -> String -> Int -> m (Maybe FarePolicy)
 findFarePolicyFromCACHelper id cond toss = do
   mbHost <- liftIO $ SE.lookupEnv "CAC_HOST"
   mbInterval <- liftIO $ SE.lookupEnv "CAC_INTERVAL"

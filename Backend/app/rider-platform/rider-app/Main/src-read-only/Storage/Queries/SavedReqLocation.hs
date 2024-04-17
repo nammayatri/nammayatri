@@ -11,16 +11,16 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SavedReqLocation as Beam
 import Storage.Queries.SavedReqLocationExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SavedReqLocation.SavedReqLocation -> m ())
+create :: KvDbFlow m r => (Domain.Types.SavedReqLocation.SavedReqLocation -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SavedReqLocation.SavedReqLocation] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.SavedReqLocation.SavedReqLocation] -> m ())
 createMany = traverse_ create
 
-deleteAllByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+deleteAllByRiderId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteAllByRiderId (Kernel.Types.Id.Id riderId) = do deleteWithKV [Se.Is Beam.riderId $ Se.Eq riderId]

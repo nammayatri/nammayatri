@@ -36,7 +36,7 @@ findPlaceByGeoHash geoHash =
 create :: KvDbFlow m r => PlaceNameCache -> m ()
 create = Queries.create
 
-delete :: (CacheFlow m r, Esq.EsqDBFlow m r) => PlaceNameCache -> m ()
+delete :: KvDbFlow m r => PlaceNameCache -> m ()
 delete obj = do
   whenJust obj.geoHash $ \geoH -> do
     Hedis.del $ makeGeoHashIdKey geoH

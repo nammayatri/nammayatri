@@ -1,8 +1,9 @@
 import json
-import re
 import os
-
-
+from kafka import KafkaConsumer # type: ignore
+import time
+import threading
+from kafka.admin import KafkaAdminClient, NewTopic # type: ignore
 
 def getFilePath(file_name):
     current_file_path = os.path.abspath(__file__)
@@ -10,22 +11,12 @@ def getFilePath(file_name):
     new_file_path = os.path.join(current_directory, file_name)
     return new_file_path
 
-
-
-
 def write_null_requestIds_to_file(nullRequestIds, output_file_path):
     with open(output_file_path, 'w') as output_file:
         lines = ""
         for line in nullRequestIds:
             lines += line
         output_file.write(lines.strip())
-
-def handleBecknCalls(requestDataBeckn):
-    becknQueries = []
-    for line in requestDataBeckn:
-        if "requestMethod" not in line[0] and "forkedTag" not in line[0]:
-            becknQueries.append(line)
-    return becknQueries
 
 def handleAPIdata(APIdata):
     handledData = []
@@ -80,19 +71,21 @@ def process_log_file(input_file_path):
     groupedRequestIdsForDiffChecker = {}
     nullRequestIds = []
     nullRequestIdsCheck = {}
-    becknCallsQueries = []
     with open(input_file_path, 'r') as file:
         for line in file:
             if "requestId" in line :
                 try:
                     parsableLine = json.loads(line)
                     requestId = parsableLine["requestId"]
-                    if requestId == "" and not "forkedTag" in line: #check for null requestIds and skip forkedTag for all the app startup logs
+                    if requestId == "" and not "forkedTag" in line and not "producerTimestampKey" in line: #check for null requestIds and skip forkedTag for all the app startup logs
                         nullReqIdLine = (line.split(',"timestamp"')[0]+"}")
                         if nullReqIdLine not in nullRequestIdsCheck:
                             nullRequestIdsCheck[nullReqIdLine] = True
                             nullRequestIds.append(line)
                         continue
+                    # redis_query = '"table":"redis"'
+                    # if redis_query in line:
+                    #     nullRequestIds.append(line)
                     if requestId not in requestIds:
                         requestIds[requestId] = []
                     # check if the line is not there corresponding to its requestId , get all the lines for that requestId not the list of line and timestamp
@@ -100,7 +93,7 @@ def process_log_file(input_file_path):
                         requestIds[requestId].append([line, parsableLine['timestamp']])
                     if "requestMethod" in line :
                         apiPath = parsableLine["request"]["rawPathInfo"].replace('"', "")
-                        if apiPath not in requestIdForAPI :
+                        if apiPath not in requestIdForAPI and "/beckn/" not in apiPath:
                             requestIdForAPI[apiPath] = [requestId,parsableLine['timestamp']]
 
                 except Exception as e:
@@ -113,28 +106,75 @@ def process_log_file(input_file_path):
 
         requestIdForAPI = {key: value[0] for key, value in sorted(requestIdForAPI.items(), key=lambda item: item[1][1])}
         for key, value in requestIdForAPI.items():
-            if "/beckn/" in key:
-                requestDataBeckn = requestIds[value]
-                requestDataBeckn = handleBecknCalls(requestDataBeckn)
-                # requestDataBeckn = [sublist[0] for sublist in sorted(requestDataBeckn, key=lambda x: x[1])]
-                becknCallsQueries+=(requestDataBeckn)
-
-            else:
-                requestData = requestIds[value]
-                requestData = [sublist[0] for sublist in sorted(requestData, key=lambda x: x[1])] # sort by timestamp
-                requestData = handleAPIdata(requestData)
-                groupedRequestIdsForDiffChecker[key] = requestData # will be used to for diff checker
-                groupedRequestIds[key]=(requestData+nullRequestIds)
-        #append beckn calls to each key in groupedRequestIds
-        # lets make the beckn calls unique by first element  and sort them by timestamp
-        becknCallsQueries = [sublist[0] for sublist in sorted(becknCallsQueries, key=lambda x: x[1])]
-        becknCallsQueries = list(set(becknCallsQueries))
-        groupedRequestIds = {key: value+becknCallsQueries for key, value in groupedRequestIds.items()}
+            requestData = requestIds[value]
+            requestData = [sublist[0] for sublist in sorted(requestData, key=lambda x: x[1])] # sort by timestamp
+            groupedRequestIdsForDiffChecker[key] = requestData # will be used to for diff checker
+            groupedRequestIds[key]=(requestData+nullRequestIds)
 
         return (groupedRequestIds, nullRequestIds, groupedRequestIdsForDiffChecker)
 
+def read_data_from_kafka(topic_name, output_file_path):
+    read_time_frame = 30
+    consumer = KafkaConsumer(
+        topic_name,
+        bootstrap_servers='localhost:29092',
+        group_id='my_consumer_group',
+        auto_offset_reset='earliest',
+        enable_auto_commit=False,
+        value_deserializer=lambda x: x.decode('utf-8')
+    )
+    print(f"Connecting to kafka topic -> {topic_name} to read data for {read_time_frame} seconds")
+    with open(output_file_path, 'w') as output_file:
+        start_time = time.time()
+        is_frist_time = True
+        for message in consumer:
+            if is_frist_time:
+                print(f"Reading data from kafka topic -> {topic_name} for {read_time_frame} seconds ... ")
+                start_time = time.time()
+                is_frist_time = False
+            output_file.write(f'{message.value}\n')
+            # Check if time limit has been reached
+            if time.time() - start_time >= read_time_frame:
+                break
+    print(f"Data is read from kafka topic -> {topic_name}  ✓")
+    print(f"Data is written to -> {output_file_path}  ✓\n\n")
+
+def consume_messages(consumer, empty_time_frame, stop_event):
+    start_time = time.time()
+    for _ in consumer:
+        if stop_event.is_set() or time.time() - start_time >= empty_time_frame:
+            break
+    if time.time() - start_time < empty_time_frame:
+        print(f"No messages received in kafka topic ✓\n\n")
+    consumer.close()
 
 
+def empty_kafka_topic(topic_name, empty_time_frame):
+    max_execution_time = empty_time_frame + 5
+    consumer = KafkaConsumer(
+        topic_name,
+        bootstrap_servers='localhost:29092',
+        group_id='my_consumer_group',
+        auto_offset_reset='earliest',
+        enable_auto_commit=True,
+        value_deserializer=lambda x: x.decode('utf-8')
+    )
+    print(f"Connecting to kafka topic -> {topic_name} to empty it for {empty_time_frame} seconds")
+    stop_event = threading.Event()
+    t = threading.Thread(target=consume_messages, args=(consumer, empty_time_frame, stop_event))
+    t.start()
+    threading.Timer(max_execution_time, lambda: stop_event.set()).start()
+    print(f"Kafka topic -> {topic_name} will be emptied in {empty_time_frame} seconds ... ")
+
+def delete_kafka_topic(topic_name):
+    try:
+        admin_client = KafkaAdminClient(bootstrap_servers='localhost:29092')
+        print(f"Deleting kafka topic -> {topic_name}")
+        admin_client.delete_topics([topic_name])
+        print(f"Kafka topic -> {topic_name} is deleted  ✓")
+    except Exception as e:
+        print(f"Error in deleting kafka topic -> {topic_name}")
+        print(f"Error -> {e}")
 
 def write_grouped_data_to_file(groupedRequestIds, nullRequestIds, output_file_path):
     write_null_requestIds_to_file(nullRequestIds, data_path) # write null requestIds to a file from where all the app startup logs can be fetched
@@ -145,6 +185,10 @@ def write_grouped_data_to_file(groupedRequestIds, nullRequestIds, output_file_pa
 
 
 def write_diff_checker_data_to_file(groupedRequestIdsForDiffChecker, output_file_path):
+    for _, value in groupedRequestIdsForDiffChecker.items():
+        for line in value:
+            if "system_configs" in line or "log_levels" in line:
+                value.remove(line)
     with open(output_file_path, 'w') as output_file:
         output_file.write(json.dumps(groupedRequestIdsForDiffChecker, indent=4,ensure_ascii=False))
     print(f"Total requestIds in the log file -> {len(groupedRequestIdsForDiffChecker)}  ✓")
@@ -152,8 +196,8 @@ def write_diff_checker_data_to_file(groupedRequestIdsForDiffChecker, output_file
 
 
 
-
-input_file_path = getFilePath("newlog.log")
+# --------------------------------- Paths ---------------------------------------#
+input_file_path = getFilePath("custom.log")
 output_file_path_api = getFilePath("APIdata.json")
 output_log_file_path_grouped = getFilePath("groupedRequestIds.log")
 diff_checker_file_path_mocker = getFilePath("groupedRequestIdsForDiffChecker.log")
@@ -161,9 +205,10 @@ data_path = getFilePath("data.log")
 input_path_mocked_data = getFilePath("artRunner.log")
 diff_checker_file_path_mocked_data = getFilePath("APIdataArtRunner.log")
 
+# =====================================================================================================#
 
 
-#--------------------------------- data for art Mocker ---------------------------------#
+#--------------------------------- data for art Mocker ------------------------------------------#
 
 def write_data_for_art_mocker(path):
     groupedRequestIds, nullRequestIds, groupedRequestIdsForDiffChecker = process_log_file(path)
@@ -173,8 +218,9 @@ def write_data_for_art_mocker(path):
 
 
 # process data for ART mocker
-write_data_for_art_mocker(input_file_path)
+# write_data_for_art_mocker(input_file_path)
 
+#====================================================================================================#
 
 
 #--------------------------------- data for art Diff Checker ---------------------------------#
@@ -185,9 +231,10 @@ def write_data_for_art_diff_checker(path):
 
 
 # process data for ART mocked diff checker
-write_data_for_art_diff_checker(input_path_mocked_data)
+# read_data_from_kafka("ART-Logs", input_path_mocked_data)
+# write_data_for_art_diff_checker(input_path_mocked_data)
 
-
+#====================================================================================================#
 
 
 

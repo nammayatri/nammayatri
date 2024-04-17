@@ -213,7 +213,7 @@ updateStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateRideEndedBy :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> RideEndedBy -> m ()
+updateRideEndedBy :: KvDbFlow m r => Id Ride -> RideEndedBy -> m ()
 updateRideEndedBy rideId rideEndedBy = do
   updateOneWithKV
     [ Se.Set BeamR.rideEndedBy $ Just rideEndedBy

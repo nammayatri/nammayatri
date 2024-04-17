@@ -20,7 +20,7 @@ import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
 import Kernel.Utils.Servant.JSONBS
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type InitReq = BecknReq InitMessage
 
@@ -30,17 +30,20 @@ type InitRes = AckResponse
 
 type InitAPI =
   "init"
+    :> Header "x-custom-request-id" Text
     -- :> ReqBody '[JSON] InitReq
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] InitRes
 
 type InitAPIV1 =
   "init"
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] InitReq
     :> Post '[JSON] InitRes
 
 type InitAPIV2 =
   "init"
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] InitReqV2
     :> Post '[JSON] InitRes
 

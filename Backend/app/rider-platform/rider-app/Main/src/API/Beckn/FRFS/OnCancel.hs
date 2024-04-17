@@ -36,9 +36,10 @@ handler = onCancel
 
 onCancel ::
   SignatureAuthResult ->
+  Maybe Text ->
   Spec.OnCancelReq ->
   FlowHandler Spec.AckResponse
-onCancel _ req = withFlowHandlerAPI $ do
+onCancel _ _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onCancelReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   case req.onCancelReqError of
     Just err -> whenJust err.errorCode $ \errorCode -> do

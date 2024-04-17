@@ -41,9 +41,10 @@ handler = select
 select ::
   Id DM.Merchant ->
   SignatureAuthResult ->
+  Maybe Text ->
   Select.SelectReqV2 ->
   FlowHandler AckResponse
-select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI $ do
+select transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandlerBecknAPI $ do
   transactionId <- Utils.getTransactionId reqV2.selectReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "SelectV2 API Flow" "Reached"

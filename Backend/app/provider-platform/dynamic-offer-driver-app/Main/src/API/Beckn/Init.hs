@@ -53,9 +53,10 @@ handler = init
 init ::
   Id DM.Merchant ->
   SignatureAuthResult ->
+  Maybe Text ->
   Init.InitReqV2 ->
   FlowHandler AckResponse
-init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI $ do
+init transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandlerBecknAPI $ do
   transactionId <- Utils.getTransactionId reqV2.initReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "Init APIV2 Flow" "Reached"

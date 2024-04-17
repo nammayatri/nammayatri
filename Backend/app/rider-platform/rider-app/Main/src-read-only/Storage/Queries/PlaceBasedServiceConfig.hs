@@ -9,11 +9,11 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import Storage.Queries.PlaceBasedServiceConfigExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PlaceBasedServiceConfig.PlaceBasedServiceConfig -> m ())
+create :: KvDbFlow m r => (Domain.Types.PlaceBasedServiceConfig.PlaceBasedServiceConfig -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PlaceBasedServiceConfig.PlaceBasedServiceConfig] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.PlaceBasedServiceConfig.PlaceBasedServiceConfig] -> m ())
 createMany = traverse_ create

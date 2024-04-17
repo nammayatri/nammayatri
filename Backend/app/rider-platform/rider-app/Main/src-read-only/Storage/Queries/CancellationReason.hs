@@ -11,22 +11,22 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as Beam
 import Storage.Queries.CancellationReasonExtra as ReExport
 import Storage.Queries.Transformers.CancellationReason
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CancellationReason.CancellationReason -> m ())
+create :: KvDbFlow m r => (Domain.Types.CancellationReason.CancellationReason -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.CancellationReason.CancellationReason] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.CancellationReason.CancellationReason] -> m ())
 createMany = traverse_ create
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Extra.CancellationReason.CancellationReasonCode -> m (Maybe Domain.Types.CancellationReason.CancellationReason))
+findByPrimaryKey :: KvDbFlow m r => (Domain.Types.Extra.CancellationReason.CancellationReasonCode -> m (Maybe Domain.Types.CancellationReason.CancellationReason))
 findByPrimaryKey reasonCode = do findOneWithKV [Se.And [Se.Is Beam.reasonCode $ Se.Eq reasonCode]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CancellationReason.CancellationReason -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.CancellationReason.CancellationReason -> m ())
 updateByPrimaryKey (Domain.Types.CancellationReason.CancellationReason {..}) = do
   _now <- getCurrentTime
   updateWithKV

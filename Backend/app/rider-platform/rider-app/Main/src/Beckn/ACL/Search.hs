@@ -37,6 +37,7 @@ buildSearchReqV2 ::
   m Spec.SearchReq
 buildSearchReqV2 DSearch.SearchRes {..} = do
   bapUri <- Utils.mkBapUri merchant.id
+  mbRequestId <- asks (.requestId)
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show merchant.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show AUTO_RICKSHAW) -- get Vehicle Variatnt here
   ttl <- bapConfig.searchTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   Search.buildBecknSearchReqV2
@@ -59,5 +60,6 @@ buildSearchReqV2 DSearch.SearchRes {..} = do
     multipleRoutes
     bapConfig
     ttl
+    mbRequestId
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)

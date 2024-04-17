@@ -17,7 +17,7 @@ module Beckn.Types.Core.Taxi.API.OnCancel where
 import qualified BecknV2.OnDemand.Types as Spec
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type OnCancelReqV2 = Spec.OnCancelReq
 
@@ -25,6 +25,7 @@ type OnCancelRes = AckResponse
 
 type OnCancelAPIV2 =
   "on_cancel"
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] OnCancelReqV2
     :> Post '[JSON] OnCancelRes
 

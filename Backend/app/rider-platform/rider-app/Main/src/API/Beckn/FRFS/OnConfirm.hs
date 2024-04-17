@@ -35,9 +35,10 @@ handler = onConfirm
 
 onConfirm ::
   SignatureAuthResult ->
+  Maybe Text ->
   Spec.OnConfirmReq ->
   FlowHandler Spec.AckResponse
-onConfirm _ req = withFlowHandlerAPI $ do
+onConfirm _ _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onConfirmReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   logDebug $ "Received OnConfirm request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do

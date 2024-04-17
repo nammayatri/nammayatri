@@ -41,9 +41,10 @@ handler = onInit
 
 onInit ::
   SignatureAuthResult ->
+  Maybe Text ->
   OnInit.OnInitReqV2 ->
   FlowHandler AckResponse
-onInit _ reqV2 = withFlowHandlerBecknAPI $ do
+onInit _ _ reqV2 = withFlowHandlerBecknAPI $ do
   transactionId <- Common.getTransactionId reqV2.onInitReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     mbDOnInitReq <- TaxiACL.buildOnInitReqV2 reqV2

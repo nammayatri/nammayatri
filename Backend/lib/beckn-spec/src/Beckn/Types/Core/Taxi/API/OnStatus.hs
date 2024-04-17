@@ -19,7 +19,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type OnStatusReq = BecknCallbackReq OnStatusMessage
 
@@ -29,6 +29,7 @@ type OnStatusRes = AckResponse
 
 type OnStatusAPIV1 =
   "on_status"
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] OnStatusReq
     :> Post '[JSON] OnStatusRes
 
@@ -37,6 +38,7 @@ onStatusAPIV1 = Proxy
 
 type OnStatusAPIV2 =
   "on_status"
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] OnStatusReqV2
     :> Post '[JSON] OnStatusRes
 

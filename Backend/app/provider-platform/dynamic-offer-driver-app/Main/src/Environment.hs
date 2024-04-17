@@ -20,7 +20,7 @@ import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import EulerHS.Prelude
-import Kernel.Beam.Functions (getArtDbFunctions, getDBFunction)
+import Kernel.Beam.Functions (getArtDbFunctions, getDbFunctions)
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude (NominalDiffTime, (>>>=))
@@ -249,7 +249,7 @@ buildAppEnv cfg@AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   isArtReplayerEnabled <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "IS_ART_REPLAYER_ENABLED"
-  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDBFunction
+  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDbFunctions
   eventRequestCounter <- registerEventRequestCounterMetric
   let modifierFunc = ("dynamic-offer-driver-app:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc -- will be depreciated once data is migrated to cluster

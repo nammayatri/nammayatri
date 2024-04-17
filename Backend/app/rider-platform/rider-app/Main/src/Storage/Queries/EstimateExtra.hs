@@ -12,7 +12,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (Id, getId))
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
 import qualified Storage.Queries.EstimateBreakup as QEB
@@ -21,17 +21,17 @@ import qualified Storage.Queries.TripTerms as QTT
 
 -- Extra code goes here --
 
-createEstimate :: (MonadFlow m, EsqDBFlow m r) => Estimate -> m ()
+createEstimate :: KvDbFlow m r => Estimate -> m ()
 createEstimate = createWithKV
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Estimate -> m ()
+create :: KvDbFlow m r => Estimate -> m ()
 create estimate = do
   _ <- traverse_ QTT.create estimate.tripTerms
   _ <- createEstimate estimate
   traverse_ QEB.create estimate.estimateBreakupList
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Estimate] -> m ()
+createMany :: KvDbFlow m r => [Estimate] -> m ()
 createMany = traverse_ create
 
-getStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> m (Maybe EstimateStatus)
+getStatus :: KvDbFlow m r => Id Estimate -> m (Maybe EstimateStatus)
 getStatus (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId] <&> (DE.status <$>)

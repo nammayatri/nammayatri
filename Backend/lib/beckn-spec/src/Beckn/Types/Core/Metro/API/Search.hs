@@ -19,12 +19,13 @@ import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
 import Kernel.Utils.Example
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type SearchReq = BecknReq SearchIntent
 
 type SearchAPI =
   "search"
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] SearchReq
     :> Post '[JSON] AckResponse
 

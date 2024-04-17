@@ -20,7 +20,7 @@ import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
 import Kernel.Utils.Servant.JSONBS
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type StatusReq = BecknReq StatusMessage
 
@@ -30,6 +30,7 @@ type StatusRes = AckResponse
 
 type StatusAPI =
   "status"
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] StatusRes
 
@@ -38,6 +39,7 @@ statusAPI = Proxy
 
 type StatusAPIV1 =
   "status"
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] StatusReq
     :> Post '[JSON] StatusRes
 
@@ -46,6 +48,7 @@ statusAPIV1 = Proxy
 
 type StatusAPIV2 =
   "status"
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] StatusReqV2
     :> Post '[JSON] StatusRes
 

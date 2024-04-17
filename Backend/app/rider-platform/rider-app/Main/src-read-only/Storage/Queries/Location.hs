@@ -11,20 +11,20 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Location as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Location.Location -> m ())
+create :: KvDbFlow m r => (Domain.Types.Location.Location -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Location.Location] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.Location.Location] -> m ())
 createMany = traverse_ create
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Location.Location -> m (Maybe Domain.Types.Location.Location))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Location.Location -> m (Maybe Domain.Types.Location.Location))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-updateAddress :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LocationAddress.LocationAddress -> Kernel.Types.Id.Id Domain.Types.Location.Location -> m ())
+updateAddress :: KvDbFlow m r => (Domain.Types.LocationAddress.LocationAddress -> Kernel.Types.Id.Id Domain.Types.Location.Location -> m ())
 updateAddress address (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -42,10 +42,10 @@ updateAddress address (Kernel.Types.Id.Id id) = do
     ]
     [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Location.Location -> m (Maybe Domain.Types.Location.Location))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Location.Location -> m (Maybe Domain.Types.Location.Location))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Location.Location -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.Location.Location -> m ())
 updateByPrimaryKey (Domain.Types.Location.Location {..}) = do
   _now <- getCurrentTime
   updateWithKV

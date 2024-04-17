@@ -52,9 +52,10 @@ search ::
   Id DM.Merchant ->
   SignatureAuthResult ->
   SignatureAuthResult ->
+  Maybe Text ->
   Search.SearchReqV2 ->
   FlowHandler AckResponse
-search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandlerBecknAPI $ do
+search transporterId (SignatureAuthResult _ subscriber) _ _ reqV2 = withFlowHandlerBecknAPI $ do
   transactionId <- Utils.getTransactionId reqV2.searchReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "SearchV2 API Flow" $ "Reached:-" <> TL.toStrict (A.encodeToLazyText reqV2)

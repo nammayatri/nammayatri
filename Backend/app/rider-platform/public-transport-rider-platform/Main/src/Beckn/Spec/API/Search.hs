@@ -18,10 +18,11 @@ import Beckn.Spec.Search
 import Kernel.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type SearchAPI =
   "search"
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] (BecknReq SearchMessage)
     :> Post '[JSON] AckResponse
 

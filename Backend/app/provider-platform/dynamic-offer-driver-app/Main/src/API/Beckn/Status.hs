@@ -44,9 +44,10 @@ handler = status
 status ::
   Id DM.Merchant ->
   SignatureAuthResult ->
+  Maybe Text ->
   Status.StatusReqV2 ->
   FlowHandler AckResponse
-status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI do
+status transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandlerBecknAPI do
   txnId <- Utils.getTransactionId reqV2.statusReqContext
   Utils.withTransactionIdLogTag txnId $ do
     logTagInfo "Status APIV2 Flow" $ "Reached:-" <> show reqV2

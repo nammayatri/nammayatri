@@ -17,11 +17,11 @@ import Storage.Queries.OrphanInstances.WhiteListOrg
 
 -- Extra code goes here --
 
-countTotalSubscribers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m Int
+countTotalSubscribers :: KvDbFlow m r => m Int
 countTotalSubscribers = findAllWithKV [Se.Is BeamBLO.id $ Se.Not $ Se.Eq ""] <&> length
 
 -- TODO:: remove it, For backward compatibility
-findBySubscriberIdAndDomain :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Domain -> m (Maybe WhiteListOrg)
+findBySubscriberIdAndDomain :: KvDbFlow m r => ShortId Subscriber -> Domain -> m (Maybe WhiteListOrg)
 findBySubscriberIdAndDomain subscriberId domain = do
   findOneWithKV
     [ Se.Is BeamBLO.subscriberId $ Se.Eq $ getShortId subscriberId,

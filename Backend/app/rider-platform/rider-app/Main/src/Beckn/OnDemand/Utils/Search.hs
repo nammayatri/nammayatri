@@ -24,9 +24,9 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.Common
 import qualified Tools.Maps as Maps
 
-mkSearchFulFillmentTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> Maybe Bool -> Maybe [Maps.RouteInfo] -> Maybe [Spec.TagGroup]
-mkSearchFulFillmentTags distance duration mbPoints mbIsReallocationEnabled mbMultipleRoutes =
-  mkRouteInfoTags distance duration mbPoints mbMultipleRoutes <> mkReallocationInfoTags mbIsReallocationEnabled
+mkSearchFulFillmentTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> Maybe Bool -> Maybe [Maps.RouteInfo] -> Maybe Text -> Maybe [Spec.TagGroup]
+mkSearchFulFillmentTags distance duration mbPoints mbIsReallocationEnabled mbMultipleRoutes mbRequestId =
+  mkRouteInfoTags distance duration mbPoints mbMultipleRoutes <> mkReallocationInfoTags mbIsReallocationEnabled <> mkCustomRequestIdTag mbRequestId
 
 mkRouteInfoTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> Maybe [Maps.RouteInfo] -> Maybe [Spec.TagGroup]
 mkRouteInfoTags distance duration mbPoints mbMultipleRoutes =
@@ -183,6 +183,36 @@ mkReallocationInfoTags (Just isReallocationEnabled) =
                           },
                     tagDisplay = Just False,
                     tagValue = Just $ show isReallocationEnabled
+                  }
+              ]
+        }
+    ]
+
+mkCustomRequestIdTag :: Maybe Text -> Maybe [Spec.TagGroup]
+mkCustomRequestIdTag Nothing = Nothing
+mkCustomRequestIdTag (Just customRequestId) =
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tag.CUSTOM_REQUEST_IDS,
+                  descriptorName = Just "Custom Request Ids",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tag.CUSTOM_REQUEST_ID,
+                            descriptorName = Just "Custom Request Id",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagDisplay = Just False,
+                    tagValue = Just customRequestId
                   }
               ]
         }

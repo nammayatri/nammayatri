@@ -101,6 +101,7 @@ confirm ::
     EventStreamFlow m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "version" ::: DeploymentVersion],
+    HasField "requestId" r (Maybe Text),
     EncFlow m r
   ) =>
   DConfirmReq ->

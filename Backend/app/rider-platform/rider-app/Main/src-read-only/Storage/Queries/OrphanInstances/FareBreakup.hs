@@ -10,7 +10,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.FareBreakup as Beam
 
 instance FromTType' Beam.FareBreakup Domain.Types.FareBreakup.FareBreakup where

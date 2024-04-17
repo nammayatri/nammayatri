@@ -23,7 +23,7 @@
     };
 
     beckn-gateway = {
-      url = "github:nammayatri/beckn-gateway";
+      url = "github:nammayatri/beckn-gateway/0036d8ed2dabf41cf1c5a6f472598e0e89683d7d";
       inputs = {
         common.follows = "common";
         haskell-flake.follows = "haskell-flake";

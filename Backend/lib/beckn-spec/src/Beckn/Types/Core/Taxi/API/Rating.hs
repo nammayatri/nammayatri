@@ -19,7 +19,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type RatingReq = BecknReq RatingMessage
 
@@ -29,6 +29,7 @@ type RatingRes = AckResponse
 
 type RatingAPIV1 =
   "rating"
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] RatingReq
     :> Post '[JSON] RatingRes
 
@@ -37,6 +38,7 @@ ratingAPIV1 = Proxy
 
 type RatingAPIV2 =
   "rating"
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] RatingReqV2
     :> Post '[JSON] RatingRes
 

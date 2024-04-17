@@ -19,7 +19,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type TrackReq = BecknReq TrackMessage
 
@@ -29,6 +29,7 @@ type TrackRes = AckResponse
 
 type TrackAPIV1 =
   "track"
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] TrackReq
     :> Post '[JSON] TrackRes
 
@@ -37,6 +38,7 @@ trackAPIV1 = Proxy
 
 type TrackAPIV2 =
   "track"
+    :> Header "x-custom-request-id" Text
     :> ReqBody '[JSON] TrackReqV2
     :> Post '[JSON] TrackRes
 

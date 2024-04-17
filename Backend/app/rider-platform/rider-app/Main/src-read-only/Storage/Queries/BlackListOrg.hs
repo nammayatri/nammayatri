@@ -13,26 +13,24 @@ import qualified Kernel.Types.Beckn.Domain
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Registry
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BlackListOrg as Beam
 import Storage.Queries.Transformers.BlackListOrg
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BlackListOrg.BlackListOrg -> m ())
+create :: KvDbFlow m r => (Domain.Types.BlackListOrg.BlackListOrg -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BlackListOrg.BlackListOrg] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.BlackListOrg.BlackListOrg] -> m ())
 createMany = traverse_ create
 
-findBySubscriberIdAndDomain ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber -> Kernel.Types.Beckn.Domain.Domain -> m (Maybe Domain.Types.BlackListOrg.BlackListOrg))
+findBySubscriberIdAndDomain :: KvDbFlow m r => (Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber -> Kernel.Types.Beckn.Domain.Domain -> m (Maybe Domain.Types.BlackListOrg.BlackListOrg))
 findBySubscriberIdAndDomain (Kernel.Types.Id.ShortId subscriberId) domain = do findOneWithKV [Se.And [Se.Is Beam.subscriberId $ Se.Eq subscriberId, Se.Is Beam.domain $ Se.Eq domain]]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BlackListOrg.BlackListOrg -> m (Maybe Domain.Types.BlackListOrg.BlackListOrg))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.BlackListOrg.BlackListOrg -> m (Maybe Domain.Types.BlackListOrg.BlackListOrg))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BlackListOrg.BlackListOrg -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.BlackListOrg.BlackListOrg -> m ())
 updateByPrimaryKey (Domain.Types.BlackListOrg.BlackListOrg {..}) = do
   _now <- getCurrentTime
   updateWithKV

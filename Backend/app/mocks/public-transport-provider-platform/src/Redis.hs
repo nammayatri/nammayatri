@@ -20,9 +20,9 @@ import Environment
 import GHC.Records.Extra
 import Kernel.Mock.App
 import Kernel.Mock.Exceptions (OrderError (OrderNotFound))
-import qualified Kernel.Storage.Hedis as Hed
+-- import qualified Kernel.Storage.Hedis as Hed
 import Kernel.Types.Beckn.Context
-import Kernel.Types.Cache
+-- import Kernel.Types.Cache
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging
 import Relude hiding (id, ord)
@@ -36,22 +36,23 @@ data OnConfirmContextOrder = OnConfirmContextOrder
 toTuple :: OnConfirmContextOrder -> (Context, Order)
 toTuple occo = (occo.context, occo.order)
 
-instance Cache OnConfirmContextOrder (MockM AppEnv) where
-  type CacheKey OnConfirmContextOrder = Text
-  getKey = Hed.get
-  setKey = Hed.set
-  delKey = Hed.del
+-- instance Cache OnConfirmContextOrder (MockM AppEnv) where
+--   type CacheKey OnConfirmContextOrder = Text
+--   getKey = Hed.get
+--   setKey = Hed.set
+--   delKey = Hed.del
 
 writeOrder :: Context -> Order -> MockM AppEnv ()
 writeOrder ctx order = do
   let val = OnConfirmContextOrder ctx order
       id = order.id
-  setKey id val
-  logOutput INFO $ "inserted context and order into cache; key = " <> id
+  -- setKey id val
+  logOutput INFO $ "inserted context and order into cache; key = " <> id <> " value = " <> show val
 
 readOrder :: Text -> MockM AppEnv (Context, Order)
 readOrder orderId = do
-  mRes <- fmap toTuple <$> getKey orderId
+  -- mRes <- fmap toTuple <$> getKey orderId
+  let mRes = Nothing
   fromMaybeM (OrderNotFound orderId) mRes
 
 editOrder :: (Order -> Order) -> Text -> MockM AppEnv ()
