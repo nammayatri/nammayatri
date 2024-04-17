@@ -3,7 +3,10 @@ import requests
 import json
 import re
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
+import ARTDataFromKafka as art_kafka_data
+import ARTDiffChecker as art_diff_checker
+
 
 def clean_file(filename):
     dummy_line ='{"dataTimestamp":"2024-03-14T07:10:25.215311256Z","whereClauseText":""}'
@@ -59,10 +62,7 @@ def replaceAllTimeInLine(line):
         if matches:
             timestamp = matches[0]
             pattern = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d*Z'
-            pattern_without_z = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d*'
-            # dataMatches = re.findall(pattern, line)
-            # dataMatches_without_z = re.findall(pattern_without_z, line)
-            # print("Data Matches:", dataMatches)
+            pattern_without_z = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d*'  # without Z
             new_line = re.sub(pattern, lambda x: calculate_new_time(x.group(), timestamp), line)
             new_line = re.sub(pattern_without_z, lambda x: calculate_new_time_without_z(x.group(), timestamp), new_line)
             new_line = re.sub(r'"timestamp":"([^"]+)"', f'"timestamp":"{timestamp}"', new_line)
@@ -154,6 +154,39 @@ def callApiForART (path):
                 else:
                     continue
 
+# --------------------------------- Paths ---------------------------------------#
+input_file_path = getFilePath("custom.log")
+input_path_mocked_data = getFilePath("artRunner.log")
+
+# =====================================================================================================#'
 
 
+# write data for art mocker
+art_kafka_data.write_data_for_art_mocker(input_file_path)
+print("Data written for ART Mocker")
+
+try:
+    art_kafka_data.empty_kafka_topic("ART-Logs")
+except Exception as e:
+    print(f"Error in emptying kafka topic please run your kafka server and try again")
+
+print("Reading data and calling API for ART")
 callApiForART(path)
+print("API called for ART")
+
+# write data for art runner mocker
+# get mocked logs from kafka 
+print("Reading data from Kafka")
+art_kafka_data.read_data_from_kafka("ART-Logs", input_path_mocked_data)
+print("Data read from Kafka")
+
+print("Writing data for ART Diff Checker")
+art_kafka_data.write_data_for_art_diff_checker(input_path_mocked_data)
+print("Data written for ART Diff Checker")
+
+
+# lets run diff checker here
+print("Running Diff Checker")
+art_diff_checker.main()
+
+

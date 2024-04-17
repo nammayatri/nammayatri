@@ -1,7 +1,7 @@
 import json
-import re
 import os
-
+from kafka import KafkaConsumer # type: ignore
+import time
 
 
 def getFilePath(file_name):
@@ -9,9 +9,6 @@ def getFilePath(file_name):
     current_directory = os.path.dirname(current_file_path)
     new_file_path = os.path.join(current_directory, file_name)
     return new_file_path
-
-
-
 
 def write_null_requestIds_to_file(nullRequestIds, output_file_path):
     with open(output_file_path, 'w') as output_file:
@@ -133,8 +130,56 @@ def process_log_file(input_file_path):
 
         return (groupedRequestIds, nullRequestIds, groupedRequestIdsForDiffChecker)
 
+def read_data_from_kafka(topic_name, output_file_path):
+    read_time_frame = 30
+    consumer = KafkaConsumer(
+        topic_name,
+        bootstrap_servers='localhost:29092',
+        group_id='my_consumer_group',
+        auto_offset_reset='earliest',
+        enable_auto_commit=False,
+        value_deserializer=lambda x: x.decode('utf-8')
+    )
+    print(f"Connecting to kafka topic -> {topic_name} to read data for {read_time_frame} seconds")
+    with open(output_file_path, 'w') as output_file:
+        start_time = time.time()
+        is_frist_time = True
+        for message in consumer:
+            if is_frist_time:
+                print(f"Reading data from kafka topic -> {topic_name} for {read_time_frame} seconds ... ")
+                start_time = time.time()
+                is_frist_time = False
+            output_file.write(f'{message.value}\n')
+            # Check if time limit has been reached
+            if time.time() - start_time >= read_time_frame:
+                break
+    print(f"Data is read from kafka topic -> {topic_name}  ✓")
+    print(f"Data is written to -> {output_file_path}  ✓\n\n")
 
 
+def empty_kafka_topic(topic_name):
+    empty_time_frame = 10
+    consumer = KafkaConsumer(
+        topic_name,
+        bootstrap_servers='localhost:29092',
+        group_id='my_consumer_group',
+        auto_offset_reset='earliest',
+        enable_auto_commit=True,
+        value_deserializer=lambda x: x.decode('utf-8')
+    )
+    print(f"Connecting to kafka topic -> {topic_name} to empty it for {empty_time_frame} seconds")
+    start_time = time.time()
+    is_frist_time = True
+    for _ in consumer:
+        if is_frist_time:
+            print(f"Emptying kafka topic -> {topic_name} ... ")
+            start_time = time.time()
+            is_frist_time = False
+        if time.time() - start_time >= empty_time_frame:
+            print(f"Kafka topic -> {topic_name} is emptied  ✓\n\n")
+            break
+
+    print(f"Kafka topic -> {topic_name} is emptied  ✓\n\n")
 
 def write_grouped_data_to_file(groupedRequestIds, nullRequestIds, output_file_path):
     write_null_requestIds_to_file(nullRequestIds, data_path) # write null requestIds to a file from where all the app startup logs can be fetched
@@ -152,7 +197,7 @@ def write_diff_checker_data_to_file(groupedRequestIdsForDiffChecker, output_file
 
 
 
-
+# --------------------------------- Paths ---------------------------------------#
 input_file_path = getFilePath("custom.log")
 output_file_path_api = getFilePath("APIdata.json")
 output_log_file_path_grouped = getFilePath("groupedRequestIds.log")
@@ -161,9 +206,10 @@ data_path = getFilePath("data.log")
 input_path_mocked_data = getFilePath("artRunner.log")
 diff_checker_file_path_mocked_data = getFilePath("APIdataArtRunner.log")
 
+# =====================================================================================================#
 
 
-#--------------------------------- data for art Mocker ---------------------------------#
+#--------------------------------- data for art Mocker ------------------------------------------#
 
 def write_data_for_art_mocker(path):
     groupedRequestIds, nullRequestIds, groupedRequestIdsForDiffChecker = process_log_file(path)
@@ -173,8 +219,9 @@ def write_data_for_art_mocker(path):
 
 
 # process data for ART mocker
-write_data_for_art_mocker(input_file_path)
+# write_data_for_art_mocker(input_file_path)
 
+#====================================================================================================#
 
 
 #--------------------------------- data for art Diff Checker ---------------------------------#
@@ -185,9 +232,10 @@ def write_data_for_art_diff_checker(path):
 
 
 # process data for ART mocked diff checker
-write_data_for_art_diff_checker(input_path_mocked_data)
+# read_data_from_kafka("ART-Logs", input_path_mocked_data)
+# write_data_for_art_diff_checker(input_path_mocked_data)
 
-
+#====================================================================================================#
 
 
 
