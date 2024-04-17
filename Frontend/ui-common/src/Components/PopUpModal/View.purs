@@ -14,9 +14,9 @@
 -}
 module Components.PopUpModal.View where
 
-import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map, when, mod)
+import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map, when, mod, void)
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor, lottieAnimationView)
 import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -34,7 +34,7 @@ import Engineering.Helpers.Commons (os, getNewIDWithTag)
 import Data.Array ((!!), mapWithIndex, null, length, findIndex)
 import Data.Maybe (Maybe(..),fromMaybe)
 import Control.Monad.Trans.Class (lift)
-import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer, addMediaPlayer)
+import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer, addMediaPlayer, startLottieProcess, lottieAnimationConfig)
 import Animation (fadeIn) as Anim
 import Data.String (replaceAll, Replacement(..), Pattern(..))
 import Data.Function.Uncurried (runFn5)
@@ -43,6 +43,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Timers
 import Mobility.Prelude (boolToVisibility)
 import Engineering.Helpers.Utils(splitIntoEqualParts)
+import Animation as Anim
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -120,6 +121,19 @@ view push state =
                 , onClick push $ const OnCoverImageClick
                 ]
             ]
+        ,   Anim.screenAnimationFadeInOut
+            $ lottieAnimationView
+                [ id state.coverLottieConfig.id
+                , onAnimationEnd
+                    ( \action -> void $ pure $ startLottieProcess lottieAnimationConfig { rawJson = state.coverLottieConfig.lottieUrl, lottieId = state.coverLottieConfig.id, scaleType = "FIT_CENTER", repeat =  state.coverLottieConfig.repeat }
+                    )
+                    (const NoAction)
+                , height state.coverLottieConfig.height
+                , width state.coverLottieConfig.width
+                , visibility state.coverLottieConfig.visibility
+                , margin state.coverLottieConfig.margin
+                , padding state.coverLottieConfig.padding
+                ]
         ,   linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
