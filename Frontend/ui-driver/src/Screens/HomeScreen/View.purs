@@ -92,6 +92,7 @@ import Components.BannerCarousel as BannerCarousel
 import CarouselHolder as CarouselHolder
 import PrestoDOM.List
 import Mobility.Prelude
+import Resource.Constants as RC
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -804,7 +805,8 @@ popupModelSilentAsk push state =
 driverDetail :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverDetail push state =
   let driverImage = case state.data.gender of
-                      "MALE" -> "ny_ic_new_avatar_profile"
+                      "MALE" | (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.AutoCategory -> "ny_ic_new_avatar_profile"
+                      "MALE" | (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.CarCategory -> "ny_ic_white_avatar_profile"
                       "FEMALE" -> "ny_ic_profile_female"
                       _ -> "ny_ic_generic_mascot"
   in

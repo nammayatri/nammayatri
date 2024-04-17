@@ -68,6 +68,13 @@ decodeAddress ( LocationInfo address) fullAddress =
                     else
                     (trim (fromMaybe "" address.street)) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country)
 
+decodeShortAddress :: LocationInfo -> String
+decodeShortAddress (LocationInfo loc) =
+  fromMaybe "" loc.area <> ", " <>
+  fromMaybe "" loc.city <> ", " <>
+  fromMaybe "" loc.country <> ", " <>
+  fromMaybe "" loc.areaCode
+
 
 tripDatesCount :: Int
 tripDatesCount = 15
@@ -222,3 +229,8 @@ verifiedVehicleOnly = true
 
 pendingVehicleOnly :: Boolean
 pendingVehicleOnly = false
+
+getCategoryFromVariant :: String -> Maybe ST.VehicleCategory -- check here if any new vehicle category is introduced
+getCategoryFromVariant variant = case variant of
+  "AUTO_RICKSHAW" -> Just ST.AutoCategory
+  _ -> Just ST.CarCategory
