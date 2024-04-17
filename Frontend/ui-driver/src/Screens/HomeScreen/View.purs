@@ -804,7 +804,7 @@ popupModelSilentAsk push state =
 driverDetail :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverDetail push state =
   let driverImage = case state.data.gender of
-                      "MALE" -> "ny_ic_new_avatar_profile"
+                      "MALE" -> if state.data.vehicleType == "AUTO_RICKSHAW" then "ny_ic_new_avatar_profile" else "ny_ic_white_avatar_profile"
                       "FEMALE" -> "ny_ic_profile_female"
                       _ -> "ny_ic_generic_mascot"
   in
