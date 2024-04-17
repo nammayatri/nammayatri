@@ -18,7 +18,6 @@ import Common.Types.Config
 import Data.List
 import Screens.DriverProfileScreen.ComponentConfig
 import Screens.SubscriptionScreen.Transformer
-import Screens.DriverProfileScreen.Transformer (fetchVehicles)
 import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
@@ -38,10 +37,12 @@ import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (length, mapWithIndex, null, any, (!!), take, range)
 import Data.Either (Either(..))
+import Data.Enum (enumFromThenTo)
+import Data.Int (toNumber)
 import Data.List (elem)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number (round)
-import Data.Int (toNumber)
+import Data.String as DS
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
@@ -51,7 +52,9 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleType, parseFloat, getCityConfig)
+import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -64,23 +67,18 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, scrollBarY)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resource.Constants (verifiedVehicleOnly, pendingVehicleOnly)
+import Resource.Constants as Const
 import Screens as ScreenNames
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName, optionList)
-import Screens.Types as ST
+import Screens.DriverProfileScreen.Transformer (fetchVehicles)
 import Screens.Types (MenuOptions(..), AutoPayStatus(..))
+import Screens.Types as ST
 import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..), DriverRegistrationStatusReq(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
-import Helpers.Utils as HU
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Resource.Constants as Const
-import Data.Either (Either(..))
-import Data.Enum (enumFromThenTo)
-import Data.String as DS
-
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -94,7 +92,7 @@ screen initialState =
             else do
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
                 $ do
-                    driverRegistrationStatusResp <- Remote.driverRegistrationStatusBT $ DriverRegistrationStatusReq{}
+                    driverRegistrationStatusResp <- Remote.driverRegistrationStatusBT $ DriverRegistrationStatusReq {}
                     lift $ lift $ doAff do liftEffect $ push $ RegStatusResponse driverRegistrationStatusResp
               void $ launchAff $ EHC.flowRunner defaultGlobalState
                 $ do
@@ -504,8 +502,10 @@ verifiedVehiclesView state push =
 
 pendingVehiclesVerificationList :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 pendingVehiclesVerificationList state push =
-  let pendingVehicleList = fetchVehicles pendingVehicleOnly state.data.vehicleDetails
-  in linearLayout
+  let
+    pendingVehicleList = fetchVehicles pendingVehicleOnly state.data.vehicleDetails
+  in
+    linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -522,8 +522,8 @@ pendingVehiclesVerificationList state push =
           , color Color.black900
           , margin $ MarginLeft 16
           , fontStyle $ FontStyle.semiBold LanguageStyle
-          ],
-        linearLayout
+          ]
+      , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation VERTICAL
@@ -603,7 +603,6 @@ headerView state push =
 --         ( map (\rcData -> additionalRcsView state push rcData) $ getRcNumDetails state.data.inactiveRCArray
 --         )
 --     ]
-
 getRcNumDetails :: Array ST.RcData -> Array { key :: String, idx :: Int, value :: String, action :: Action, model :: Maybe String, color :: Maybe String }
 getRcNumDetails config = do
   mapWithIndex (\index item -> { key: "RC", idx: index + 1, value: item.rcDetails.certificateNumber, action: NoAction, model: item.rcDetails.vehicleModel, color: item.rcDetails.vehicleColor }) config
@@ -712,31 +711,33 @@ tabImageView state push =
               ]
       ]
   where
-    getVehicleCategory :: Array ST.DriverVehicleDetails -> ST.VehicleCategory
-    getVehicleCategory vehicles = 
-      let mbVehicle = find (\item -> item.isActive == item.isVerified) vehicles
-      in case mbVehicle of
+  getVehicleCategory :: Array ST.DriverVehicleDetails -> ST.VehicleCategory
+  getVehicleCategory vehicles =
+    let
+      mbVehicle = find (\item -> item.isActive == item.isVerified) vehicles
+    in
+      case mbVehicle of
         Just vehicle -> fromMaybe ST.AutoCategory vehicle.verifiedVehicleCategory
         Nothing -> ST.AutoCategory
 
-    getVehicleImage :: ST.VehicleCategory -> String
-    getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  getVehicleImage :: ST.VehicleCategory -> String
+  getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
 
-    mkAsset :: ST.VehicleCategory -> CityConfig -> String
-    mkAsset category cityConfig =
-      if category == ST.AutoCategory then
-        (getAutoImage cityConfig)
-      else if category == ST.CarCategory then
-        "ny_ic_sedan"
-      else
-        "ny_ic_silhouette"
+  mkAsset :: ST.VehicleCategory -> CityConfig -> String
+  mkAsset category cityConfig =
+    if category == ST.AutoCategory then
+      (getAutoImage cityConfig)
+    else if category == ST.CarCategory then
+      "ny_ic_sedan"
+    else
+      "ny_ic_silhouette"
 
-    getAutoImage :: CityConfig -> String
-    getAutoImage cityConfig =
-      if cityConfig.cityCode == "std:040" then
-        "ny_ic_black_yellow_auto_side_view"
-      else
-        "ny_ic_auto_side_view"
+  getAutoImage :: CityConfig -> String
+  getAutoImage cityConfig =
+    if cityConfig.cityCode == "std:040" then
+      "ny_ic_black_yellow_auto_side_view"
+    else
+      "ny_ic_auto_side_view"
 
 ---------------------------------------------- DRIVER DETAILS VIEW ------------------------------------------------------------
 driverDetailsView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
@@ -1012,8 +1013,7 @@ vehicleDetailsView push state =
     , margin $ MarginHorizontal 16 16
     , visibility GONE
     ]
-    [ --vehicleAnalyticsView push state
-    ]
+    [] --vehicleAnalyticsView push state]
 
 --------------------------------------- VEHICLE ANALYTICS VIEW ------------------------------------------------------------
 vehicleAnalyticsView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
@@ -1226,17 +1226,18 @@ alternateNumberLayoutView state push =
 infoView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 infoView state push =
   linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , visibility $ MP.boolToVisibility $ state.props.screenType == ST.DRIVER_DETAILS 
-  , orientation VERTICAL
-  , margin $ MarginHorizontal 16 16
-  ][ detailsListViewComponent state push {
-                              backgroundColor : Color.white900
-                            , separatorColor : Color.grey700
-                            , isLeftKeyClickable : false
-                            , arrayList : driverDetailsArray state
-                            }
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , visibility $ MP.boolToVisibility $ state.props.screenType == ST.DRIVER_DETAILS
+    , orientation VERTICAL
+    , margin $ MarginHorizontal 16 16
+    ]
+    [ detailsListViewComponent state push
+        { backgroundColor: Color.white900
+        , separatorColor: Color.grey700
+        , isLeftKeyClickable: false
+        , arrayList: driverDetailsArray state
+        }
     ]
 
 ------------------------------ ENTER OTP MODAL -------------------------------------------------------
@@ -1430,67 +1431,94 @@ vehicleListItem state push vehicle =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , orientation HORIZONTAL
-    , onClick push if vehicle.isVerified then (const (ActivateRc vehicle.registrationNo (vehicle.isActive && vehicle.isVerified))) else const $ PendingVehicle vehicle.registrationNo vehicle.userSelectedVehicleCategory 
+    , orientation VERTICAL
+    , onClick push if vehicle.isVerified then (const (ActivateRc vehicle.registrationNo (vehicle.isActive && vehicle.isVerified))) else const $ PendingVehicle vehicle.registrationNo vehicle.userSelectedVehicleCategory
     , gravity CENTER_VERTICAL
     , clickable $ not $ vehicle.isActive && vehicle.isVerified
     , visibility $ MP.boolToVisibility $ not $ state.props.screenType == ST.DRIVER_DETAILS
     , background if vehicle.isVerified then Color.white900 else Color.blue600
     , cornerRadius 15.0
+    , padding $ Padding 16 16 16 16
     , margin $ Margin 16 12 16 0
     ]
-    [ imageView
-        [ width $ V 36
-        , height $ V 36
-        , margin $ Margin 16 0 16 0
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage vehicle.userSelectedVehicleCategory
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation HORIZONTAL
+        , gravity CENTER_VERTICAL
         ]
-    , linearLayout
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , orientation VERTICAL
-        , weight 1.0
-        ]
-        [ textView
+        [ imageView
+            [ width $ V 36
+            , height $ V 36
+            , margin $ MarginRight 16
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage vehicle.userSelectedVehicleCategory
+            ]
+        , linearLayout
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
-            , text vehicle.registrationNo
-            , margin $ MarginTop 16
-            , color Color.black900
-            , textSize FontSize.a_16
-            , fontStyle $ FontStyle.semiBold LanguageStyle
+            , orientation VERTICAL
+            , weight 1.0
             ]
-        , textView
-            ( [ width WRAP_CONTENT
-              , height WRAP_CONTENT
-              , text $ fromMaybe "" vehicle.vehicleModel
-              , textSize FontSize.a_14
-              , margin $ MarginBottom 16
-              , color Color.black700
-              ]
-                <> FontStyle.body3 TypoGraphy
-            )
+            [ textView
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , text vehicle.registrationNo
+                , color Color.black900
+                , textSize FontSize.a_16
+                , fontStyle $ FontStyle.semiBold LanguageStyle
+                ]
+            , textView
+                ( [ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , text $ fromMaybe "" vehicle.vehicleModel
+                  , textSize FontSize.a_14
+                  , color Color.black700
+                  ]
+                    <> FontStyle.body3 TypoGraphy
+                )
+            ]
+        , imageView
+            [ height $ V 21
+            , width $ V 21
+            , visibility $ MP.boolToVisibility $ (not vehicle.isActive) && vehicle.isVerified
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_radio_unselected"
+            ]
+        , imageView
+            [ width $ V 21
+            , height $ V 21
+            , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_radio_selected"
+            ]
+        , imageView
+            [ width $ V 21
+            , height $ V 21
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right_black"
+            , visibility $ MP.boolToVisibility $ not vehicle.isVerified
+            ]
         ]
-    , imageView
-        [ height $ V 21
-        , width $ V 21
-        , visibility $ MP.boolToVisibility $ (not vehicle.isActive) && vehicle.isVerified --if state.isSelected then GONE else VISIBLE
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_radio_unselected"
-        , margin $ MarginRight 16
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation HORIZONTAL
+        , background Color.blue600
+        , cornerRadius 8.0
+        , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified
+        , padding $ Padding 16 8 16 8
+        , margin $ MarginTop 16
+        , onClick push $ const $ OptionClick DRIVER_BOOKING_OPTIONS
         ]
-    , imageView
-        [ width $ V 21
-        , height $ V 21
-        , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified --if state.isSelected then VISIBLE else GONE
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_radio_selected"
-        , margin $ MarginRight 16
-        ]
-    , imageView
-        [ width $ V 21
-        , height $ V 21
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right_black"
-        , visibility $ MP.boolToVisibility $ not vehicle.isVerified --if state.isSelected then VISIBLE else GONE
-        , margin $ MarginRight 16
+        [ textView
+            [ text $ getString BOOKING_OPTIONS
+            , textSize FontSize.a_14
+            , color Color.black900
+            , fontStyle $ FontStyle.semiBold LanguageStyle
+            , weight 1.0
+            ]
+        , imageView
+            [ width $ V 21
+            , height $ V 21
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right_black"
+            ]
         ]
     ]
   where
