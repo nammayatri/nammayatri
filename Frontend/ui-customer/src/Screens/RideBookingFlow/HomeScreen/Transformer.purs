@@ -59,6 +59,7 @@ import Locale.Utils
 import Data.Either (Either(..))
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
 import Common.Types.App as CT
+import Debug
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -441,7 +442,7 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
   in ChooseVehicle.config {
         vehicleImage = getVehicleVariantImage estimate.vehicleVariant
       , vehicleVariant = estimate.vehicleVariant
-      , price = case estimate.totalFareRange of
+      , price = spy "totalFareRange" case estimate.totalFareRange of
                 Nothing -> currency <> (show estimate.estimatedTotalFare)
                 Just (FareRange fareRange) -> if fareRange.minFare == fareRange.maxFare then currency <> (show estimate.estimatedTotalFare)
                                               else  currency <> (show fareRange.minFare) <> " - " <> currency <> (show fareRange.maxFare)
@@ -454,8 +455,8 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
       , searchResultType = if isFareRange then ChooseVehicle.ESTIMATES else ChooseVehicle.QUOTES
       , pickUpCharges = pickUpCharges
       , tollCharge = fetchTollCharge estimateFareBreakup
-      , serviceTierName = estimate.serviceTierName
-      , serviceTierShortDesc = estimate.serviceTierShortDesc
+      , serviceTierName =  mapServiceTierName estimate.vehicleVariant estimate.isValueAddNP estimate.serviceTierName
+      , serviceTierShortDesc = mapServiceTierShortDesc estimate.vehicleVariant estimate.isValueAddNP estimate.serviceTierShortDesc
       , extraFare = extraFare
       , additionalFare = additionalFare
       , nightShiftMultiplier = nightShiftMultiplier
@@ -467,6 +468,28 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
       , maxPrice = extractFare _.maxFare
       , minPrice = extractFare _.minFare
       }
+
+mapServiceTierName :: String -> Maybe Boolean -> Maybe String -> Maybe String
+mapServiceTierName vehicleVariant isValueAddNP serviceTierName = 
+  case isValueAddNP of
+    Just true -> serviceTierName -- NY Service Tier Name
+    _ -> case vehicleVariant of
+      "HATCHBACK" -> Just "Non - AC Mini"
+      "SEDAN" -> Just "Sedan"
+      "SUV" -> Just "XL Cab"
+      "AUTO_RICKSHAW" -> Just "Auto"
+      _ -> serviceTierName
+
+mapServiceTierShortDesc :: String -> Maybe Boolean -> Maybe String -> Maybe String
+mapServiceTierShortDesc vehicleVariant isValueAddNP serviceTierShortDesc = 
+  case isValueAddNP of
+    Just true -> serviceTierShortDesc -- NY Service Tier Short Desc
+    _ -> case vehicleVariant of
+      "HATCHBACK" -> Just "Budget friendly"
+      "SEDAN" -> Just "AC, Premium Comfort"
+      "SUV" -> Just "AC, Extra Spacious"
+      "AUTO_RICKSHAW" -> Just "Easy Commute"
+      _ -> serviceTierShortDesc
 
 dummyFareRange :: FareRange
 dummyFareRange = FareRange{
