@@ -44,7 +44,7 @@ WhiteListOrg:
     domain: character varying(255)
 
   default:
-    merchantId: ''
+    merchantId: "''"
 
   extraOperations:
     - EXTRA_QUERY_FILE

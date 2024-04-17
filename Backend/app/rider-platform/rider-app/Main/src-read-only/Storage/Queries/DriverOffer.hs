@@ -41,9 +41,9 @@ updateByPrimaryKey (Domain.Types.DriverOffer.DriverOffer {..}) = do
   updateWithKV
     [ Se.Set Beam.bppQuoteId bppQuoteId,
       Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
-      Se.Set Beam.distanceToPickup (Kernel.Types.Common.distanceToHighPrecMeters <$> distanceToPickup),
-      Se.Set Beam.distanceToPickupValue (Kernel.Types.Common.distanceToHighPrecDistance (distanceToPickup <&> (.unit)) <$> distanceToPickup),
-      Se.Set Beam.distanceUnit (distanceToPickup <&> (.unit)),
+      Se.Set Beam.distanceToPickup ((Kernel.Types.Common.distanceToHighPrecMeters <$> distanceToPickup)),
+      Se.Set Beam.distanceToPickupValue ((Kernel.Types.Common.distanceToHighPrecDistance (distanceToPickup <&> (.unit)) <$> distanceToPickup)),
+      Se.Set Beam.distanceUnit ((distanceToPickup <&> (.unit))),
       Se.Set Beam.driverName driverName,
       Se.Set Beam.durationToPickup durationToPickup,
       Se.Set Beam.estimateId (Kernel.Types.Id.getId estimateId),

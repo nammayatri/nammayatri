@@ -100,12 +100,6 @@ ADD PRIMARY KEY (merchant_operating_city_id, message_key);
 ALTER TABLE atlas_app.search_request
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
 
-ALTER TABLE atlas_app.estimate
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
-
-ALTER TABLE atlas_app.driver_offer
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
-
 ALTER TABLE atlas_app.booking
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
 

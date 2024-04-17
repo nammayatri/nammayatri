@@ -5,7 +5,7 @@
 
 module Domain.Types.CancellationReason (module Domain.Types.CancellationReason, module ReExport) where
 
-import Data.Aeson (eitherDecode)
+import Data.Aeson
 import Domain.Types.Extra.CancellationReason as ReExport
 import qualified Domain.Types.Extra.CancellationReason
 import qualified Domain.Types.Merchant

@@ -30,9 +30,13 @@ import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.Cancel as DCancel
-import qualified Domain.Action.UI.Estimate as UEstimate
-import Domain.Types.Booking
+import qualified Domain.Action.UI.DriverOffer as UDriverOffer
+import Domain.Action.UI.Estimate as UEstimate
+import qualified Domain.Action.UI.SpecialZoneQuote as USpecialZoneQuote
+import Domain.Types.Booking as DBooking
+import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.CancellationReason
+import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Quote as DQuote
@@ -133,7 +137,7 @@ mkQuoteAPIDetails = \case
         distanceToPickupWithUnit' = distanceToPickup <|> Just (Distance 0 Meter) -- TODO::remove this default value
         durationToPickup' = durationToPickup <|> Just 0 -- TODO::remove this default value
         rating' = rating <|> Just (toCentesimal 500) -- TODO::remove this default value
-     in DQuote.DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickupWithUnit', durationToPickup = durationToPickup', rating = rating', ..}
+     in DQuote.DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickupWithUnit', durationToPickup = durationToPickup', rating = rating', ..}
   DQuote.OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> DQuote.OneWaySpecialZoneAPIDetails USpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
   DQuote.InterCityDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> DQuote.InterCityAPIDetails USpecialZoneQuote.InterCityQuoteAPIEntity {..}
 

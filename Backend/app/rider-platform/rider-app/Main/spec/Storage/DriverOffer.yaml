@@ -34,7 +34,7 @@ DriverOffer:
   beamFields:
     distanceToPickup:
       distanceToPickup: Maybe HighPrecMeters
-      distanceUnit: Maybe DistanceUnit  
+      distanceUnit: Maybe DistanceUnit
       distanceToPickupValue: Maybe HighPrecDistance
 
   fromTType:
@@ -48,10 +48,20 @@ DriverOffer:
     distanceToPickupValue: (Kernel.Types.Common.distanceToHighPrecDistance (distanceToPickup <&> (.unit)) <$> distanceToPickup)|E
     distanceUnit: (distanceToPickup <&> (.unit))|E
 
-  constriants:
+  constraints:
     id: PrimaryKey
     bppQuoteId: SecondaryKey
     estimateId: SecondaryKey
+
+  sqlType:
+    driverName: character varying(255)
+    distanceToPickup: double precision
+    rating: double precision
+    bppQuoteId: character(36)
+    status: character varying(255)
+
+  default:
+    status: "'ACTIVE'"
 
   queries:
     findById:
@@ -66,7 +76,5 @@ DriverOffer:
       kvFunction: updateWithKV
       params: [updatedAt, status]
       where: estimateId
-
-
 
 

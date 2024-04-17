@@ -14,6 +14,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as Beam
 import Storage.Queries.EstimateExtra as ReExport
@@ -43,25 +44,32 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.bppEstimateId (Kernel.Types.Id.getId bppEstimateId),
+    [ Se.Set Beam.backendAppVersion backendAppVersion,
+      Se.Set Beam.backendConfigVersion (fmap Kernel.Utils.Version.versionToText backendConfigVersion),
+      Se.Set Beam.bppEstimateId (Kernel.Types.Id.getId bppEstimateId),
+      Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
+      Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
+      Se.Set Beam.clientOsType ((clientDevice <&> (.deviceType))),
+      Se.Set Beam.clientOsVersion ((clientDevice <&> (.deviceVersion))),
+      Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.device device,
-      Se.Set Beam.discount (discount <&> (.amount)),
+      Se.Set Beam.discount ((discount <&> (.amount))),
       Se.Set Beam.driversLocation driversLocation,
-      Se.Set Beam.distanceUnit (estimatedDistance <&> (.unit)),
-      Se.Set Beam.estimatedDistance (Kernel.Types.Common.distanceToHighPrecMeters <$> estimatedDistance),
-      Se.Set Beam.estimatedDistanceValue (Kernel.Types.Common.distanceToHighPrecDistance (estimatedDistance <&> (.unit)) <$> estimatedDistance),
+      Se.Set Beam.distanceUnit ((estimatedDistance <&> (.unit))),
+      Se.Set Beam.estimatedDistance ((Kernel.Types.Common.distanceToHighPrecMeters <$> estimatedDistance)),
+      Se.Set Beam.estimatedDistanceValue ((Kernel.Types.Common.distanceToHighPrecDistance (estimatedDistance <&> (.unit)) <$> estimatedDistance)),
       Se.Set Beam.estimatedDuration estimatedDuration,
-      Se.Set Beam.estimatedFare ((.amount) estimatedFare),
-      Se.Set Beam.estimatedTotalFare ((.amount) estimatedTotalFare),
+      Se.Set Beam.estimatedFare (((.amount) estimatedFare)),
+      Se.Set Beam.estimatedTotalFare (((.amount) estimatedTotalFare)),
       Se.Set Beam.itemId itemId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.nightShiftCharge (mknightShiftCharge nightShiftInfo),
-      Se.Set Beam.nightShiftChargeAmount (mknightShiftChargeAmount nightShiftInfo),
-      Se.Set Beam.nightShiftEnd (nightShiftInfo <&> (.nightShiftEnd)),
-      Se.Set Beam.nightShiftStart (nightShiftInfo <&> (.nightShiftStart)),
-      Se.Set Beam.oldNightShiftCharge ((.oldNightShiftCharge) =<< nightShiftInfo),
+      Se.Set Beam.nightShiftCharge ((mknightShiftCharge nightShiftInfo)),
+      Se.Set Beam.nightShiftChargeAmount ((mknightShiftChargeAmount nightShiftInfo)),
+      Se.Set Beam.nightShiftEnd ((nightShiftInfo <&> (.nightShiftEnd))),
+      Se.Set Beam.nightShiftStart ((nightShiftInfo <&> (.nightShiftStart))),
+      Se.Set Beam.oldNightShiftCharge (((.oldNightShiftCharge) =<< nightShiftInfo)),
       Se.Set Beam.providerCompletedRidesCount providerCompletedRidesCount,
       Se.Set Beam.providerId providerId,
       Se.Set Beam.providerMobileNumber providerMobileNumber,
@@ -72,14 +80,14 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.serviceTierShortDesc serviceTierShortDesc,
       Se.Set Beam.specialLocationTag specialLocationTag,
       Se.Set Beam.status status,
-      Se.Set Beam.currency (Kernel.Prelude.Just $ (.currency) estimatedFare),
-      Se.Set Beam.maxTotalFare (mkMaxTotalFare totalFareRange),
-      Se.Set Beam.minTotalFare (mkMinTotalFare totalFareRange),
-      Se.Set Beam.tripTermsId (Kernel.Types.Id.getId <$> (tripTerms <&> (.id))),
+      Se.Set Beam.currency ((Kernel.Prelude.Just $ (.currency) estimatedFare)),
+      Se.Set Beam.maxTotalFare ((mkMaxTotalFare totalFareRange)),
+      Se.Set Beam.minTotalFare ((mkMinTotalFare totalFareRange)),
+      Se.Set Beam.tripTermsId ((Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))),
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleVariant vehicleServiceTierType,
-      Se.Set Beam.waitingChargePerMin ((.waitingChargePerMin) waitingCharges <&> (.amountInt)),
-      Se.Set Beam.waitingChargePerMinAmount ((.waitingChargePerMin) waitingCharges <&> (.amount))
+      Se.Set Beam.waitingChargePerMin (((.waitingChargePerMin) waitingCharges <&> (.amountInt))),
+      Se.Set Beam.waitingChargePerMinAmount (((.waitingChargePerMin) waitingCharges <&> (.amount)))
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

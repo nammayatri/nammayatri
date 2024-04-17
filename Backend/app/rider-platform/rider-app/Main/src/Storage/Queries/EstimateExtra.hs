@@ -24,13 +24,13 @@ import qualified Storage.Queries.TripTerms as QTT
 createEstimate :: (MonadFlow m, EsqDBFlow m r) => Estimate -> m ()
 createEstimate = createWithKV
 
-create :: (MonadFlow m, EsqDBFlow m r) => Estimate -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Estimate -> m ()
 create estimate = do
-  _ <- traverse_ QTT.createTripTerms estimate.tripTerms
+  _ <- traverse_ QTT.create estimate.tripTerms
   _ <- createEstimate estimate
   traverse_ QEB.create estimate.estimateBreakupList
 
-createMany :: (MonadFlow m, EsqDBFlow m r) => [Estimate] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Estimate] -> m ()
 createMany = traverse_ create
 
 getStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> m (Maybe EstimateStatus)

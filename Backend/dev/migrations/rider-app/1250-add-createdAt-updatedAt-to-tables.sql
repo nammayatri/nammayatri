@@ -18,3 +18,11 @@ ALTER TABLE atlas_app.person_disability ADD COLUMN created_at timestamp with tim
 
 ALTER TABLE atlas_app.special_zone_quote ADD COLUMN created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL;
 ALTER TABLE atlas_app.special_zone_quote ADD COLUMN updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL;
+
+ALTER TABLE atlas_app.driver_offer ADD COLUMN created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL;
+
+ALTER TABLE atlas_app.cancellation_reason ADD COLUMN created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL;
+ALTER TABLE atlas_app.cancellation_reason ADD COLUMN updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL;
+
+ALTER TABLE atlas_app.booking_cancellation_reason ADD COLUMN created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL;
+ALTER TABLE atlas_app.booking_cancellation_reason ADD COLUMN updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL;

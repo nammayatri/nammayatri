@@ -4,6 +4,7 @@
 
 module Domain.Types.DriverOffer where
 
+import Data.Aeson
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
