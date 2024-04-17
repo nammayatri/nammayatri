@@ -119,11 +119,6 @@ window.getMerchantConfig = function () {
       "customerAppId" : "net.openkochi.yatri",
       "driverAppId" : "net.openkochi.yatripartner"
     }
-    , "flowConfig" : {
-      "chooseCity" : {
-        "runFlow" : false
-      }
-    }
     , "permissions" : {
       "locationPermission" : true,
       "notification" : true

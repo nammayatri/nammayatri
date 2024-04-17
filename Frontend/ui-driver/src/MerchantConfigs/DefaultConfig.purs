@@ -427,6 +427,36 @@ config =
               waitingChargesConfig : defWaitingChargesConfig
             },
             {
+              cityName : "Kochi",
+              mapImage : "ny_ic_kochi_map",
+              cityCode :  "std:0484",
+              showSubscriptions : false,
+              cityLat : 9.9323,
+              cityLong : 76.2675,
+              supportNumber : "08069724899",
+              languageKey : "ML_IN",
+              showDriverReferral : true,
+              showCustomerReferral : true,
+              uploadRCandDL : false,
+              enableYatriCoins : false,
+              vehicleNSImg : "ny_ic_auto_image_old",
+              registration : registrationConfig,
+              variantSubscriptionConfig : {
+                enableVariantBasedSubscription : false,
+                variantList : [],
+                enableCabsSubscriptionView : false,
+                staticViewPlans : getStaticViewPlans
+              },
+              showEarningSection : false,
+              referral : {
+                  domain : "https://nammayatri.in"
+                , customerAppId : "in.juspay.nammayatri"
+                , driverAppId : "in.juspay.nammayatripartner"
+              },
+              waitingCharges : 1.50,
+              waitingChargesConfig : defWaitingChargesConfig
+            },
+            {
               cityName : "Kolkata",
               mapImage : "",
               cityCode : "std:033",

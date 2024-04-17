@@ -284,6 +284,41 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig
       },
       {
+        "cityName" : "Kochi",
+        "mapImage" : "ny_ic_Kochi_map",
+        "cityCode" : "std:0484",
+        "showSubscriptions" : true,
+        "cityLat" :  9.9323,
+        "cityLong" : 76.2675,
+        "supportNumber" : "",
+        "languageKey" : "ML_IN",
+        "showDriverReferral" : false,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : true,
+        "vehicleNSImg" : "ny_ic_auto_image",
+        "registration" : {
+            "supportWAN" : "918618963188",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : true,
+          "variantList" : ["AutoCategory"],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      },
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : defWaitingChargesConfig
+      },
+      
+      {
         "cityName" : "Delhi",
         "mapImage" : "ny_ic_delhi_map",
         "cityCode" : "std:011",
@@ -635,7 +670,7 @@ window.getMerchantConfig = function () {
       "lottieQRAnim" : true
   }
    , "vehicle" : {
-      "validationPrefix" : "KA|AP|TS|DL|TN|PY|UP|HR|TG"
+      "validationPrefix" : "KA|AP|TS|DL|TN|PY|UP|HR|TG|KL"
     }
   })
 }
