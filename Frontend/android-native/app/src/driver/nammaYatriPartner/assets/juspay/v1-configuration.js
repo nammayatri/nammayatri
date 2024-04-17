@@ -619,7 +619,9 @@ window.getMerchantConfig = function () {
     "howToRedeemYatriCoinFAQ" : "https://www.youtube.com/shorts/dU3XxAisGjo",
     "eightRideCoinEvent" : true,
     "prupleRideCoinEvent" : true,
-    "driverToCustomerRefCoinEvent" : true
+    "driverToCustomerRefCoinEvent" : true,
+    "coinConversionPopupLottie" : "ny_coin_conversion.json",
+    "driverToCustomerRefPopupEndDate" : "2024-06-01T00:00:00"
   }
   , "dashboard" : {
         "enable" : true,

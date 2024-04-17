@@ -1452,7 +1452,6 @@ getReelsVideo reelsKey language = do
   withAPIResult (EP.getReelsData reelsKey language) unwrapResponse $ callAPI headers (GetAllReelsVideosReq reelsKey language)
   where
     unwrapResponse x = x
-    
 ----------------------------------------------------------------------- specialLocation list -------------------------------------------------------------------------------
 
 getSpecialLocationListBT ::  SpecialLocationFullReq -> FlowBT String SpecialLocationFullRes
@@ -1493,3 +1492,10 @@ mkUpdateDriverVehiclesServiceTier ridePreferences =
             tiers : tierArray,
             airConditioned : Nothing
         }
+
+getRideStatusPastDays :: String -> Flow GlobalState (Either ErrorResponse RideStatusPastDaysRes)
+getRideStatusPastDays payload = do
+    headers <- getHeaders "" true
+    withAPIResult (EP.getRideStatusPastDays "")  unwrapResponse $ callAPI headers (RideStatusPastDaysReq)
+    where
+        unwrapResponse x = x
