@@ -256,7 +256,7 @@ config =
             apiTriggerRadius : 10.0,
             pickUpToSourceThreshold : 1.0,
             hotSpotConfig :
-              { goToNearestPointWithinRadius : 8.0
+              { goToNearestPointWithinRadius : 12.0
               , showHotSpotsWithinRadius : 150.0
               , enableHotSpot : JB.jBridgeMethodExists "locateOnMapV2"
               }
