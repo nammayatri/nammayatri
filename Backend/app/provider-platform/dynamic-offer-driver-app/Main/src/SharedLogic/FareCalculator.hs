@@ -169,7 +169,8 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     nightShiftOverlapChecking :: Bool,
     estimatedDistance :: Maybe Meters,
     timeDiffFromUtc :: Maybe Seconds,
-    tollCharges :: Maybe HighPrecMoney
+    tollCharges :: Maybe HighPrecMoney,
+    isScheduled :: Bool
   }
 
 calculateFareParameters ::
@@ -188,7 +189,7 @@ calculateFareParameters params = do
         baseFare
           + partOfNightShiftCharge
   let resultNightShiftCharge = (\isCoefIncluded -> if isCoefIncluded then countNightShiftCharge fullRideCost <$> nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded
-      resultWaitingCharge = countWaitingCharge =<< waitingChargeInfo
+      resultWaitingCharge = if params.isScheduled then Nothing else countWaitingCharge =<< waitingChargeInfo
       congestionChargeResult = fp.congestionChargeMultiplier <&> \congestionCharge -> roundToIntegral $ (fromIntegral fullRideCost * congestionCharge) - fromIntegral fullRideCost
       fullRideCostN {-without govtCharges and platformFee-} =
         fullRideCost

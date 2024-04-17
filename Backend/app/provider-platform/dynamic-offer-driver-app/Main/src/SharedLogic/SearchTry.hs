@@ -158,6 +158,7 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
               estimatedDistance = searchReq.estimatedDistance,
               estimatedRideDuration = searchReq.estimatedDuration,
               timeDiffFromUtc = Nothing,
+              isScheduled = searchReq.isScheduled,
               ..
             }
       let estimatedFare = fareSum fareParams

@@ -413,7 +413,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
           customerCancellationDues = booking.fareParams.customerCancellationDues,
           nightShiftOverlapChecking = DTC.isRentalTrip booking.tripCategory,
           timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
-          tollCharges = ride.tollCharges
+          tollCharges = ride.tollCharges,
+          isScheduled = booking.isScheduled
         }
   let finalFare = Fare.fareSum fareParams
       distanceDiff = recalcDistance - oldDistance

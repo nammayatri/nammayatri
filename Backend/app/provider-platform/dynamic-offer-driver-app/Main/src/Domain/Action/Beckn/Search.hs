@@ -405,7 +405,8 @@ buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDurat
           estimatedDistance = searchRequest.estimatedDistance,
           estimatedRideDuration = searchRequest.estimatedDuration,
           timeDiffFromUtc = Nothing,
-          tollCharges
+          tollCharges,
+          isScheduled
         }
   quoteId <- Id <$> generateGUID
   void $ cacheFarePolicyByQuoteId quoteId.getId fullFarePolicy
@@ -459,7 +460,8 @@ buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag to
           estimatedDistance = Nothing,
           estimatedRideDuration = Nothing,
           timeDiffFromUtc = Nothing,
-          tollCharges
+          tollCharges,
+          isScheduled
         }
   let baseFare = fareSum fareParams
   logDebug $ "baseFare: " <> show baseFare

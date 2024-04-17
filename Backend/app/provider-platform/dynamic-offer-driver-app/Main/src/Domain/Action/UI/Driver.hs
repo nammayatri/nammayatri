@@ -967,6 +967,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
               nightShiftOverlapChecking = DTC.isRentalTrip searchTry.tripCategory,
               estimatedDistance = Nothing,
               timeDiffFromUtc = Nothing,
+              isScheduled = searchTry.isScheduled,
               ..
             }
       QFP.updateFareParameters fareParams
