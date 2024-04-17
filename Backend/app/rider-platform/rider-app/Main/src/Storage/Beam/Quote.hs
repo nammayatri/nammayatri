@@ -47,6 +47,8 @@ data QuoteT f = QuoteT
     merchantOperatingCityId :: B.C f (Maybe Text),
     specialZoneQuoteId :: B.C f (Maybe Text),
     specialLocationTag :: B.C f (Maybe Text),
+    isCustomerPrefferedSearchRoute :: B.C f (Maybe Bool),
+    isBlockedRoute :: B.C f (Maybe Bool),
     createdAt :: B.C f UTCTime,
     validTill :: B.C f UTCTime
   }

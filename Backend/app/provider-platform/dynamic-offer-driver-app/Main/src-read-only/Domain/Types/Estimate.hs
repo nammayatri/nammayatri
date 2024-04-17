@@ -21,6 +21,8 @@ data Estimate = Estimate
     fareParams :: Kernel.Prelude.Maybe Domain.Types.FareParameters.FareParameters,
     farePolicy :: Kernel.Prelude.Maybe Domain.Types.FarePolicy.FarePolicy,
     id :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
+    isBlockedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isCustomerPrefferedSearchRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
     maxFare :: Kernel.Types.Common.Money,
     minFare :: Kernel.Types.Common.Money,

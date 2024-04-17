@@ -77,6 +77,8 @@ data Pricing = Pricing
     farePolicy :: Maybe Policy.FarePolicy,
     estimatedDistance :: Maybe Meters,
     specialLocationTag :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
     fulfillmentType :: Text,
     distanceToNearestDriver :: Maybe Meters
   }
@@ -920,6 +922,8 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       serviceTierDescription = serviceTier.shortDescription,
       vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = Nothing,
+      isCustomerPrefferedSearchRoute = Nothing,
+      isBlockedRoute = Nothing,
       ..
     }
 
@@ -937,7 +941,11 @@ mkGeneralInfoTagGroup pricing
                   descriptorName = Just "Information",
                   descriptorShortDesc = Nothing
                 },
-          tagGroupList = specialLocationTagSingleton pricing.specialLocationTag <> distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
+          tagGroupList =
+            specialLocationTagSingleton pricing.specialLocationTag
+              <> distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
+              <> isCustomerPrefferedSearchRouteSingleton pricing.isCustomerPrefferedSearchRoute
+              <> isBlockedRouteSingleton pricing.isBlockedRoute
         }
   where
     specialLocationTagSingleton specialLocationTag
@@ -969,6 +977,36 @@ mkGeneralInfoTagGroup pricing
                       descriptorShortDesc = Nothing
                     },
               tagValue = show . double2Int . realToFrac <$> distanceToNearestDriver
+            }
+    isCustomerPrefferedSearchRouteSingleton isCustomerPrefferedSearchRoute
+      | isNothing isCustomerPrefferedSearchRoute = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE,
+                      descriptorName = Just "Is Customer Preffered Search Route",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> isCustomerPrefferedSearchRoute
+            }
+    isBlockedRouteSingleton isBlockedRoute
+      | isNothing isBlockedRoute = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.IS_BLOCKED_SEARCH_ROUTE,
+                      descriptorName = Just "Is Blocked Search Route",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> isBlockedRoute
             }
 
 mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]

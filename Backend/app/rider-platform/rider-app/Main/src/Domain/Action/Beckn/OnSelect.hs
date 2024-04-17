@@ -72,6 +72,8 @@ data QuoteInfo = QuoteInfo
     serviceTierName :: Maybe Text,
     serviceTierType :: Maybe DVST.VehicleServiceTierType,
     serviceTierShortDesc :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
     quoteValidTill :: UTCTime
   }
 

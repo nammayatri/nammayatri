@@ -81,5 +81,7 @@ instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
         BeamQSZ.specialLocationTag = specialLocationTag,
         BeamQSZ.fareParametersId = getId fareParams.id,
         BeamQSZ.isScheduled = Just isScheduled,
+        BeamQSZ.isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
+        BeamQSZ.isBlockedRoute = isBlockedRoute,
         BeamQSZ.farePolicyId = getId . (.id) <$> farePolicy
       }

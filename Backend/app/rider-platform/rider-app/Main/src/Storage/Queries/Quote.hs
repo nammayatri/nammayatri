@@ -135,6 +135,8 @@ instance FromTType' BeamQ.Quote Quote where
             tripTerms = trip,
             specialLocationTag = specialLocationTag,
             createdAt = createdAt,
+            isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
+            isBlockedRoute = isBlockedRoute,
             validTill = validTill
           }
     where
@@ -191,6 +193,8 @@ instance ToTType' BeamQ.Quote Quote where
             BeamQ.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
             BeamQ.specialZoneQuoteId = specialZoneQuoteId,
             BeamQ.specialLocationTag = specialLocationTag,
+            BeamQ.isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
+            BeamQ.isBlockedRoute = isBlockedRoute,
             BeamQ.createdAt = createdAt,
             BeamQ.validTill = validTill
           }

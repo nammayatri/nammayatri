@@ -1,0 +1,6 @@
+ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ADD COLUMN is_customer_preffered_search_route boolean;
+ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ADD COLUMN is_blocked_route boolean;
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_customer_preffered_search_route boolean;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_blocked_route boolean;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN toll_names text[];

@@ -65,6 +65,7 @@ Ride:
     uiDistanceCalculationWithAccuracy: Maybe Int
     uiDistanceCalculationWithoutAccuracy: Maybe Int
     isFreeRide: Maybe Bool
+    estimatedTollCharges: Maybe HighPrecMoney
     tollCharges: Maybe HighPrecMoney
     driverGoHomeRequestId: Maybe (Id DriverGoHomeRequest)
     safetyAlertTriggered: Bool

@@ -61,6 +61,8 @@ data EstimateT f = EstimateT
     specialLocationTag :: B.C f (Maybe Text),
     serviceTierName :: B.C f (Maybe Text),
     serviceTierShortDesc :: B.C f (Maybe Text),
+    isCustomerPrefferedSearchRoute :: B.C f (Maybe Bool),
+    isBlockedRoute :: B.C f (Maybe Bool),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     validTill :: B.C f UTCTime

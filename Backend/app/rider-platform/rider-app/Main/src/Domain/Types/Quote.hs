@@ -51,6 +51,8 @@ data Quote = Quote
     merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     specialLocationTag :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
     createdAt :: UTCTime,
     validTill :: UTCTime
   }
@@ -89,6 +91,8 @@ data QuoteAPIEntity = QuoteAPIEntity
     agencyCompletedRidesCount :: Maybe Int,
     createdAt :: UTCTime,
     isValueAddNP :: Bool,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
     validTill :: UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

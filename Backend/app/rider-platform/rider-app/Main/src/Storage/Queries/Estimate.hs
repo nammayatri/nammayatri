@@ -118,6 +118,8 @@ instance FromTType' BeamE.Estimate Estimate where
             waitingCharges = DE.WaitingCharges $ mkPriceWithDefault waitingChargePerMinAmount currency <$> waitingChargePerMin,
             driversLocation = driversLocation,
             specialLocationTag = specialLocationTag,
+            isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
+            isBlockedRoute = isBlockedRoute,
             updatedAt = updatedAt,
             createdAt = createdAt,
             validTill = validTill
@@ -163,6 +165,8 @@ instance ToTType' BeamE.Estimate Estimate where
         BeamE.waitingChargePerMin = waitingCharges.waitingChargePerMin <&> (.amountInt),
         BeamE.waitingChargePerMinAmount = waitingCharges.waitingChargePerMin <&> (.amount),
         BeamE.specialLocationTag = specialLocationTag,
+        BeamE.isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
+        BeamE.isBlockedRoute = isBlockedRoute,
         BeamE.updatedAt = updatedAt,
         BeamE.createdAt = createdAt,
         BeamE.validTill = validTill

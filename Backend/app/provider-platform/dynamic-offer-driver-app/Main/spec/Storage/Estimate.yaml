@@ -28,6 +28,8 @@ Estimate:
       specialLocationTag: Maybe Text
       driverPickUpCharge: Maybe Money
       isScheduled: Bool
+      isCustomerPrefferedSearchRoute: Maybe Bool
+      isBlockedRoute: Maybe Bool
       createdAt: UTCTime
       updatedAt: UTCTime
 

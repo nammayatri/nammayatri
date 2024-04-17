@@ -40,6 +40,8 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     fareParametersId :: B.C f Text,
     farePolicyId :: B.C f (Maybe Text),
     isScheduled :: B.C f (Maybe Bool),
+    isCustomerPrefferedSearchRoute :: B.C f (Maybe Bool),
+    isBlockedRoute :: B.C f (Maybe Bool),
     createdAt :: B.C f LocalTime,
     updatedAt :: B.C f LocalTime
   }

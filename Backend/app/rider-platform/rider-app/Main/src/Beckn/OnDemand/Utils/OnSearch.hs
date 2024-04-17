@@ -259,3 +259,15 @@ makeLatLong provider vehicleVariant location = do
 buildSpecialLocationTag :: MonadFlow m => Spec.Item -> m (Maybe Text)
 buildSpecialLocationTag item =
   return $ Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_TAG item.itemTags
+
+getIsCustomerPrefferedSearchRoute :: Spec.Item -> Maybe Bool
+getIsCustomerPrefferedSearchRoute item = do
+  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE item.itemTags
+  parsedTagValue <- readMaybe tagValueStr :: Maybe Bool
+  return parsedTagValue
+
+getIsBlockedRoute :: Spec.Item -> Maybe Bool
+getIsBlockedRoute item = do
+  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.IS_BLOCKED_SEARCH_ROUTE item.itemTags
+  parsedTagValue <- readMaybe tagValueStr :: Maybe Bool
+  return parsedTagValue

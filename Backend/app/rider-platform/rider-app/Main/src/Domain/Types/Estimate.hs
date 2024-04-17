@@ -67,6 +67,8 @@ data Estimate = Estimate
     specialLocationTag :: Maybe Text,
     serviceTierName :: Maybe Text,
     serviceTierShortDesc :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
     updatedAt :: UTCTime,
     createdAt :: UTCTime,
     validTill :: UTCTime
@@ -180,6 +182,8 @@ data EstimateAPIEntity = EstimateAPIEntity
     providerDescription :: Maybe Text,
     providerId :: Text,
     isValueAddNP :: Bool,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
     validTill :: UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

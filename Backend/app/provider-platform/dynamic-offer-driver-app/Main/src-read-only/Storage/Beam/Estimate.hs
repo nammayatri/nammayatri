@@ -39,6 +39,6 @@ instance B.Table EstimateT where
 
 type Estimate = EstimateT Identity
 
-$(enableKVPG ''EstimateT ['id] [])
+$(enableKVPG (''EstimateT) [('id)] [])
 
-$(mkTableInstancesWithTModifier ''EstimateT "estimate" [])
+$(mkTableInstancesWithTModifier (''EstimateT) "estimate" [])

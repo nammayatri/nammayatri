@@ -110,7 +110,9 @@ data EstimateInfo = EstimateInfo
     validTill :: UTCTime,
     serviceTierName :: Maybe Text,
     serviceTierType :: Maybe DVST.VehicleServiceTierType,
-    serviceTierShortDesc :: Maybe Text
+    serviceTierShortDesc :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -145,7 +147,9 @@ data QuoteInfo = QuoteInfo
     validTill :: UTCTime,
     serviceTierName :: Maybe Text,
     serviceTierType :: Maybe DVST.VehicleServiceTierType,
-    serviceTierShortDesc :: Maybe Text
+    serviceTierShortDesc :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool
   }
 
 data QuoteDetails

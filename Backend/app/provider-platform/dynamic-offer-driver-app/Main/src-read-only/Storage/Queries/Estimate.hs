@@ -38,7 +38,9 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.driverPickUpCharge driverPickUpCharge,
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.fareParamsId ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
-      Se.Set Beam.farePolicyId ((Kernel.Types.Id.getId . (.id) <$>) farePolicy),
+      Se.Set Beam.farePolicyId (((Kernel.Types.Id.getId . (.id) <$>)) farePolicy),
+      Se.Set Beam.isBlockedRoute isBlockedRoute,
+      Se.Set Beam.isCustomerPrefferedSearchRoute isCustomerPrefferedSearchRoute,
       Se.Set Beam.isScheduled (Kernel.Prelude.Just isScheduled),
       Se.Set Beam.maxFare maxFare,
       Se.Set Beam.minFare minFare,
@@ -53,7 +55,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
 
 instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   fromTType' (Beam.EstimateT {..}) = do
-    farePolicy' <- maybe (pure Nothing) (Storage.CachedQueries.FarePolicy.findById Nothing Nothing . Kernel.Types.Id.Id) farePolicyId
+    farePolicy' <- (maybe (pure Nothing) ((Storage.CachedQueries.FarePolicy.findById Nothing Nothing) . Kernel.Types.Id.Id)) farePolicyId
     fareParams' <- maybe (pure Nothing) (Storage.Queries.FareParameters.findById . Kernel.Types.Id.Id) fareParamsId
     pure $
       Just
@@ -64,6 +66,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             fareParams = fareParams',
             farePolicy = farePolicy',
             id = Kernel.Types.Id.Id id,
+            isBlockedRoute = isBlockedRoute,
+            isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
             isScheduled = Kernel.Prelude.fromMaybe Kernel.Prelude.False isScheduled,
             maxFare = maxFare,
             minFare = minFare,
@@ -81,9 +85,11 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
       { Beam.createdAt = createdAt,
         Beam.driverPickUpCharge = driverPickUpCharge,
         Beam.estimatedDistance = estimatedDistance,
-        Beam.fareParamsId = (Kernel.Types.Id.getId . (.id) <$>) fareParams,
-        Beam.farePolicyId = (Kernel.Types.Id.getId . (.id) <$>) farePolicy,
+        Beam.fareParamsId = ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
+        Beam.farePolicyId = ((Kernel.Types.Id.getId . (.id) <$>)) farePolicy,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.isBlockedRoute = isBlockedRoute,
+        Beam.isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
         Beam.isScheduled = Kernel.Prelude.Just isScheduled,
         Beam.maxFare = maxFare,
         Beam.minFare = minFare,

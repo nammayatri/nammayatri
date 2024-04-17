@@ -43,6 +43,8 @@ data Quote = Quote
     fareParams :: Params.FareParameters,
     farePolicy :: Maybe Policy.FarePolicy,
     isScheduled :: Bool,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

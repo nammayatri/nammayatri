@@ -34,6 +34,7 @@ data Ride = Ride
     enableFrequentLocationUpdates :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     endOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
     endOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    estimatedTollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fare :: Kernel.Prelude.Maybe Kernel.Types.Common.Money,
     fareParametersId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FareParameters.FareParameters),
     fromLocation :: Domain.Types.Location.Location,
