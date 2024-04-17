@@ -741,7 +741,7 @@ homeScreenFlow = do
                   Just false -> "ny_user_auto_complete_api_trigger_dst"
                   Nothing -> ""
       void $ lift $ lift $ liftFlow $ logEvent logField_ event
-      case DHM.lookup input state.props.rideSearchProps.cachedPredictions of
+      case DHM.lookup (DS.toLower input) state.props.rideSearchProps.cachedPredictions of
         Just locationList' -> do
           logInfo "auto_complete_cached_predictions" input
           modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{locationList = locationList'}, props{searchLocationModelProps{isAutoComplete = true, showLoader = false}}})
@@ -782,7 +782,7 @@ homeScreenFlow = do
                                 locationItemType = item.locationItemType,
                                 postfixImageUrl = fetchImage FF_ASSET "ny_ic_fav" }
                 ) (filteredRecentsList <> filteredPredictionList)
-            cachedPredictions = DHM.insert input filteredLocationList state.props.rideSearchProps.cachedPredictions
+            cachedPredictions = DHM.insert (DS.toLower input) filteredLocationList state.props.rideSearchProps.cachedPredictions
           modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data {locationList = filteredLocationList}
                                                                       , props{ searchLocationModelProps{ isAutoComplete = true
                                                                                                       , showLoader = false }
@@ -1789,6 +1789,7 @@ rideSearchFlow flowType = do
       case searchWithoutConfirmPickup of
         false -> do
           pure $ removeAllPolylines ""
+          liftFlowBT $ setMapPadding 0 0 0 0
           if finalState.data.source == (getString STR.CURRENT_LOCATION) then void $ pure $ currentPosition "" else pure unit
           if os == "IOS" && finalState.props.currentStage == HomeScreen then 
             pure unit 
@@ -4001,6 +4002,7 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
       geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
       zoneType = getZoneType srcSpecialLocation.category
       canUpdateHotSpots = maybe true (\point -> (getDistanceBwCordinates lat lon point.lat point.lng) * 1000.0 > 150.0) state.props.hotSpot.centroidPoint
+      locationName = srcSpecialLocation.locationName
 
   if not (DS.null geoJson) && not (null pickUpPoints) then do
     if (geoJson /= state.data.polygonCoordinates || pickUpPoints /= state.data.nearByPickUpPoints) then do
@@ -4011,7 +4013,14 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
                                                                                 , confirmLocationCategory = zoneType
                                                                                 , hotSpot{ centroidPoint = Nothing } }})
       void $ pure $ removeAllPolylines ""
-      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" state.props.locateOnMapProps.sourceLocationName}
+      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat
+                                                              , lon = lon
+                                                              , geoJson = geoJson
+                                                              , points = pickUpPoints
+                                                              , zoomLevel = zoomLevel
+                                                              , labelId = getNewIDWithTag "LocateOnMapPin"
+                                                              , locationName = locationName
+                                                              , specialZoneMarkerConfig{ labelImage = zoneLabelIcon zoneType }}
       homeScreenFlow
     else pure unit
   else if not (null serviceabilityResp.hotSpotInfo) && canUpdateHotSpots && state.data.config.mapConfig.locateOnMapConfig.hotSpotConfig.enableHotSpot then do
