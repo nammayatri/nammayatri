@@ -215,11 +215,15 @@ calculateFareParameters ::
   m FareParameters
 calculateFareParameters params = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| params.farePolicy.merchantId ||+ " and vehicle service tier " +|| params.farePolicy.vehicleServiceTier ||+ ""
-  let fp = params.farePolicy
-  id <- generateGUID
   now <- getCurrentTime
+  let fp = params.farePolicy
+      rideEndTime = case (params.actualRideDuration, params.estimatedRideDuration) of
+        (Just duration, _) -> addUTCTime (secondsToNominalDiffTime duration) params.rideTime
+        (_, Just duration) -> addUTCTime (secondsToNominalDiffTime duration) params.rideTime
+        _ -> now
+  id <- generateGUID
   let localTimeZoneSeconds = fromMaybe 19800 params.timeDiffFromUtc
-  let isNightShiftChargeIncluded = if params.nightShiftOverlapChecking then Just $ isNightAllowanceApplicable fp.nightShiftBounds params.rideTime now localTimeZoneSeconds else isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
+  let isNightShiftChargeIncluded = if params.nightShiftOverlapChecking then Just $ isNightAllowanceApplicable fp.nightShiftBounds params.rideTime rideEndTime localTimeZoneSeconds else isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
       (baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
       (partOfNightShiftCharge, notPartOfNightShiftCharge, _) = countFullFareOfParamsDetails fareParametersDetails
       fullRideCost {-without govtCharges, serviceCharge, platformFee, waitingCharge, notPartOfNightShiftCharge and nightShift-} =
@@ -487,10 +491,10 @@ isTimeWithinBounds startTime endTime time =
     else startTime < time && time < endTime
 
 isNightAllowanceApplicable :: Maybe NightShiftBounds -> UTCTime -> UTCTime -> Seconds -> Bool
-isNightAllowanceApplicable nightShiftBounds tripStartTime now timeDiffFromUtc = do
-  let localRideEndDate = utctDay $ addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
+isNightAllowanceApplicable nightShiftBounds tripStartTime tripEndTime timeDiffFromUtc = do
+  let localRideEndDate = utctDay $ addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) tripEndTime
       localTripStartTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) tripStartTime
-      localRideEndTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
+      localRideEndTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) tripEndTime
   case nightShiftBounds of
     Nothing -> False
     Just bounds -> do
