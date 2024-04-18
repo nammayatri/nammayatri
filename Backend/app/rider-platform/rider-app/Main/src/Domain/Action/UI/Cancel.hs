@@ -13,8 +13,7 @@
 -}
 
 module Domain.Action.UI.Cancel
-  ( cancel,
-    softCancel,
+  ( softCancel,
     disputeCancellationDues,
     CancelReq (..),
     CancelRes (..),
@@ -35,37 +34,30 @@ import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonFlowStatus as DPFS
-import qualified Domain.Types.Ride as Ride
 import Domain.Types.SearchRequest (SearchRequest)
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
-import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Ride as QR
 import Tools.Error
-import qualified Tools.Maps as Maps
 
 data CancelReq = CancelReq
   { reasonCode :: SCR.CancellationReasonCode,
@@ -75,7 +67,7 @@ data CancelReq = CancelReq
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data CancelRes = CancelRes
-  { bppBookingId :: Id SRB.BPPBooking,
+  { bppBookingId :: Maybe (Id SRB.BPPBooking),
     bppId :: Text,
     bppUrl :: BaseUrl,
     cancellationSource :: SBCR.CancellationSource,
@@ -115,7 +107,7 @@ softCancel bookingId _ = do
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
   return $
     CancelRes
-      { bppBookingId = bppBookingId,
+      { bppBookingId = Just bppBookingId,
         bppId = booking.providerId,
         bppUrl = booking.providerUrl,
         cancellationSource = SBCR.ByUser,
@@ -125,83 +117,6 @@ softCancel bookingId _ = do
         vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType, -- TODO: fix it
         ..
       }
-
-cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
-cancel bookingId _ req = do
-  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  when (booking.status == SRB.CANCELLED) $ throwError (BookingInvalidStatus "This booking is already cancelled")
-  canCancelBooking <- isBookingCancellable booking
-  unless canCancelBooking $
-    throwError $ RideInvalidStatus "Cannot cancel this ride"
-  city <-
-    CQMOC.findById booking.merchantOperatingCityId
-      >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
-  mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
-  cancellationReason <-
-    case mRide of
-      Just ride -> do
-        res <- try @_ @SomeException (CallBPP.callGetDriverLocation ride.trackingUrl)
-        case res of
-          Right res' -> do
-            let merchantOperatingCityId = booking.merchantOperatingCityId
-            disToPickup <- driverDistanceToPickup booking.merchantId merchantOperatingCityId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
-            -- Temporary for debug issue with huge values
-            let disToPickupThreshold = Distance 1000000 Meter --1000km can be max valid distance
-            disToPickupUpd :: Maybe Distance <-
-              if abs disToPickup > disToPickupThreshold
-                then do
-                  logWarning $ "Invalid disToPickup received: " <> show disToPickup
-                  pure Nothing
-                else do
-                  logInfo $ "Valid disToPickup received: " <> show disToPickup
-                  pure $ Just disToPickup
-            buildBookingCancelationReason (Just res'.currPoint) disToPickupUpd (Just booking.merchantId)
-          Left err -> do
-            logTagInfo "DriverLocationFetchFailed" $ show err
-            buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
-      Nothing -> buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
-  QBCR.upsert cancellationReason
-  return $
-    CancelRes
-      { bppBookingId = bppBookingId,
-        bppId = booking.providerId,
-        bppUrl = booking.providerUrl,
-        cancellationSource = SBCR.ByUser,
-        transactionId = booking.transactionId,
-        merchant = merchant,
-        cancelStatus = show Enums.CONFIRM_CANCEL,
-        vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType, -- TODO: fix it
-        ..
-      }
-  where
-    buildBookingCancelationReason currentDriverLocation disToPickup merchantId = do
-      let CancelReq {..} = req
-      now <- getCurrentTime
-      return $
-        SBCR.BookingCancellationReason
-          { bookingId = bookingId,
-            rideId = Nothing,
-            merchantId = merchantId,
-            source = SBCR.ByUser,
-            reasonCode = Just reasonCode,
-            reasonStage = Just reasonStage,
-            additionalInfo = additionalInfo,
-            driverCancellationLocation = currentDriverLocation,
-            driverDistToPickup = disToPickup,
-            createdAt = now,
-            updatedAt = now,
-            ..
-          }
-
-isBookingCancellable :: (CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> m Bool
-isBookingCancellable booking
-  | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.NEW] = pure True
-  | booking.status == SRB.TRIP_ASSIGNED = do
-    ride <- QR.findActiveByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "BookingId: " <> booking.id.getId)
-    pure (ride.status == Ride.NEW)
-  | otherwise = pure False
 
 mkDomainCancelSearch ::
   (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) =>
@@ -255,28 +170,6 @@ cancelSearch personId dcr = do
         void $ QEstimate.updateStatus DEstimate.CANCELLED dcr.estimateId
         QDOffer.updateStatus DDO.INACTIVE dcr.estimateId
   QPFS.clearCache personId
-
-driverDistanceToPickup ::
-  ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    Maps.HasCoordinates tripStartPos,
-    Maps.HasCoordinates tripEndPos
-  ) =>
-  Id Merchant.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  tripStartPos ->
-  tripEndPos ->
-  m Distance
-driverDistanceToPickup merchantId merchantOperatingCityId tripStartPos tripEndPos = do
-  distRes <-
-    Maps.getDistanceForCancelRide merchantId merchantOperatingCityId $
-      Maps.GetDistanceReq
-        { origin = tripStartPos,
-          destination = tripEndPos,
-          travelMode = Just Maps.CAR
-        }
-  return $ metersToDistance distRes.distance
 
 disputeCancellationDues :: (Id Person.Person, Id Merchant.Merchant) -> Flow APISuccess
 disputeCancellationDues (personId, merchantId) = do

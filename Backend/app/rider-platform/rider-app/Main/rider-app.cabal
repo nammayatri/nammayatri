@@ -233,6 +233,7 @@ library
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.CallFRFSBPP
+      SharedLogic.Cancel
       SharedLogic.Confirm
       SharedLogic.GoogleTranslate
       SharedLogic.JobScheduler

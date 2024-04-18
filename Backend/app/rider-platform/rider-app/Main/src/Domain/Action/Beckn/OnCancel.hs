@@ -26,7 +26,6 @@ import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
 import Environment ()
 import Kernel.Beam.Functions
@@ -38,15 +37,14 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
+import qualified SharedLogic.Cancel as SHCancel
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.MerchantConfig as CMC
-import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
-import Tools.Event
 import Tools.Metrics (HasBAPMetrics)
 import qualified Tools.Notifications as Notify
 
@@ -91,21 +89,15 @@ onCancel ValidatedBookingCancelledReq {..} = do
     mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
   case mbRide of
-    Just ride -> do
+    Just _ -> do
       case cancellationSource_ of
         Just Enums.CONSUMER -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
         Just Enums.PROVIDER -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
         _ -> pure ()
-      triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = booking.riderId, merchantId = booking.merchantId}
     Nothing -> logDebug "No ride found for the booking."
-  triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}}
-  _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
-  unless (booking.status == SRB.CANCELLED) $ void $ QRB.updateStatus booking.id SRB.CANCELLED
-  whenJust mbRide $ \ride -> void $ do
-    unless (ride.status == SRide.CANCELLED) $ void $ QRide.updateStatus ride.id SRide.CANCELLED
+  void $ SHCancel.cancellationUpdates booking mbRide
   unless (cancellationSource_ == Just Enums.CONSUMER) $
     QBCR.upsert bookingCancellationReason
-  QPFS.clearCache booking.riderId
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:- " <> booking.providerId <> "and domain:- " <> show Context.MOBILITY)
   Notify.notifyOnBookingCancelled booking (castCancellatonSource cancellationSource_) bppDetails
@@ -127,14 +119,9 @@ validateRequest ::
 validateRequest BookingCancelledReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   mbRide <- QRide.findActiveByRBId booking.id
-  let isRideCancellable = maybe False (\ride -> ride.status `notElem` [SRide.INPROGRESS, SRide.CANCELLED]) mbRide
-      bookingAlreadyCancelled = booking.status == SRB.CANCELLED
-  unless (isBookingCancellable booking || (isRideCancellable && bookingAlreadyCancelled)) $
-    throwError (BookingInvalidStatus (show booking.status))
+  void $ SHCancel.bookingCancellationValidations booking mbRide
   return $ ValidatedBookingCancelledReq {..}
   where
-    isBookingCancellable booking =
-      booking.status `elem` [SRB.NEW, SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.TRIP_ASSIGNED]
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

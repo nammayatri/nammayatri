@@ -33,6 +33,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.Cancel as SHCancel
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
@@ -78,8 +79,7 @@ cancel ::
   FlowHandler APISuccess
 cancel bookingId (personId, merchantId) req =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
-    dCancelRes <- DCancel.cancel bookingId (personId, merchantId) req
-    void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes
+    void $ SHCancel.cancelHandler bookingId (personId, merchantId) req
     return Success
 
 softCancel ::

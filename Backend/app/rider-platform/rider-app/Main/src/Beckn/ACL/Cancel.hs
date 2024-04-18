@@ -23,8 +23,10 @@ import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
+import qualified Domain.Types.Booking as DRB
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import Tools.Error
@@ -40,17 +42,18 @@ buildCancelReqV2 res = do
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle res.merchant.id "MOBILITY" (Utils.mapVariantToVehicle res.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
   ttl <- bapConfig.cancelTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context <- ContextV2.buildContextV2 Context.CANCEL Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country (Just ttl)
+  bppBookingId <- res.bppBookingId & fromMaybeM (InternalError "Unable to cancel booking because bppBookingId is missing.") -- Should never happen as at top level we have check to not trigger cancel without bppBookingId.
   pure
     Spec.CancelReq
       { cancelReqContext = context,
-        cancelReqMessage = mkCancelMessageV2 res -- soft cancel and confirm cancel
+        cancelReqMessage = mkCancelMessageV2 res bppBookingId -- soft cancel and confirm cancel
       }
 
-mkCancelMessageV2 :: DCancel.CancelRes -> Spec.CancelReqMessage
-mkCancelMessageV2 res =
+mkCancelMessageV2 :: DCancel.CancelRes -> Id DRB.BPPBooking -> Spec.CancelReqMessage
+mkCancelMessageV2 res bppBookingId =
   Spec.CancelReqMessage
     { cancelReqMessageCancellationReasonId = Just (show Enums.CANCELLED_BY_CUSTOMER),
-      cancelReqMessageOrderId = res.bppBookingId.getId,
+      cancelReqMessageOrderId = bppBookingId.getId,
       cancelReqMessageDescriptor =
         Just $
           Spec.Descriptor

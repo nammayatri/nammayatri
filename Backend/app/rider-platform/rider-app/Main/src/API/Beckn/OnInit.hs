@@ -14,7 +14,6 @@
 
 module API.Beckn.OnInit (API, handler) where
 
-import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnInit as TaxiACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -31,6 +30,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.Cancel as SHCancel
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import TransactionLogs.PushLogs
@@ -77,9 +77,9 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
         errHandlerAction booking cancelReq
       | otherwise = throwM exc
 
-    errHandlerAction booking cancelReq = do
-      dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-      void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+    errHandlerAction booking cancelReq =
+      withPersonIdLogTag booking.riderId $ do
+        SHCancel.cancelHandler booking.id (booking.riderId, booking.merchantId) cancelReq
 
     buildCancelReq cancellationReason reasonStage =
       DCancel.CancelReq

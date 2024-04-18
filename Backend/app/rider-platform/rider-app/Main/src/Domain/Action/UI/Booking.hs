@@ -14,7 +14,6 @@
 
 module Domain.Action.UI.Booking where
 
-import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Status as StatusACL
 import qualified Beckn.ACL.Update as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -45,6 +44,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.Cancel as SHCancel
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -79,8 +79,7 @@ bookingStatus bookingId _ = do
       ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
       ttlUtcTime = addDurationToUTCTime booking.createdAt ttlToNominalDiffTime
   when (booking.status == SRB.NEW && (ttlUtcTime < now)) do
-    dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-    void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+    SHCancel.cancelHandler booking.id (booking.riderId, booking.merchantId) cancelReq
     throwError $ RideInvalidStatus "Booking Invalid"
   SRB.buildBookingAPIEntity booking booking.riderId
   where
