@@ -594,6 +594,7 @@ getScreenFromStage stage = case stage of
   FindingQuotes -> "finding_rides_screen"
   QuoteList -> "no_rides_screen"
   PreviousRating -> "previous_ride_rating_screen"
+  GoToConfirmLocation -> "confirm_location_screen"
   ConfirmingLocation -> "confirm_location_screen"
   RideRating -> "ride_rating_screen"
   FavouriteLocationModel -> "search_location_screen"

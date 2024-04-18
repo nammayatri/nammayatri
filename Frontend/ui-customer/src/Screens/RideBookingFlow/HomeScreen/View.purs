@@ -250,11 +250,12 @@ screen initialState =
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               ChatWithDriver -> if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction else pure unit
               ConfirmingLocation -> do
+                void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+              GoToConfirmLocation -> do
                 void $ pure $ enableMyLocation true
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                -- void $ setMapPadding 0 0 0 112
-                _ <- storeCallBackLocateOnMap push UpdatePickupLocation
-                pure unit
+                void $ storeCallBackLocateOnMap push UpdatePickupLocation
+                void $ push $ GoToConfirmingLocationStage
               TryAgain -> do
                 _ <- launchAff $ flowRunner defaultGlobalState $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState
                 pure unit
