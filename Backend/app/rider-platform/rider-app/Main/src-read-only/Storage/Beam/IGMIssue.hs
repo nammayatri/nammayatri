@@ -19,10 +19,12 @@ data IGMIssueT f = IGMIssueT
     internalIssueId :: (B.C f Data.Text.Text),
     issueStatus :: (B.C f Domain.Types.IGMIssue.Status),
     issueType :: (B.C f Data.Text.Text),
-    respondantEmail :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
-    respondantName :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
-    respondantPhone :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
+    respondentAction :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
+    respondentEmail :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
+    respondentName :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
+    respondentPhone :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
     respondingMerchantId :: (B.C f Data.Text.Text),
+    respondentEntityType :: (B.C f (Kernel.Prelude.Maybe Domain.Types.IGMIssue.Entity)),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime),
     merchantId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text)))
   }

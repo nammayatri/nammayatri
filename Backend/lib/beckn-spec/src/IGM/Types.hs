@@ -824,7 +824,7 @@ optionsIssueReq =
 -- |
 data IssueReqMessage = IssueReqMessage
   { -- |
-    issueReqMessageIssue :: Maybe Issue
+    issueReqMessageIssue :: Issue
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -1048,7 +1048,7 @@ data OnIssueReq = OnIssueReq
     -- |
     onIssueReqError :: Maybe IssuePost200ResponseError,
     -- |
-    onIssueReqMessage :: OnIssueReqMessage
+    onIssueReqMessage :: Maybe OnIssueReqMessage
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -1102,7 +1102,7 @@ data OnIssueStatusReq = OnIssueStatusReq
     -- |
     onIssueStatusReqError :: Maybe IssuePost200ResponseError,
     -- |
-    onIssueStatusReqMessage :: IssueReqMessage
+    onIssueStatusReqMessage :: Maybe IssueReqMessage
   }
   deriving (Show, Eq, Generic, Data)
 

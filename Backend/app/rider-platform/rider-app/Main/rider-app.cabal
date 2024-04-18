@@ -34,7 +34,8 @@ library
       API.Beckn.FRFS.OnInit
       API.Beckn.FRFS.OnSearch
       API.Beckn.FRFS.OnStatus
-      API.Beckn.IGM.Issue
+      API.Beckn.IGM.OnIssue
+      API.Beckn.IGM.OnIssueStatus
       API.Beckn.OnCancel
       API.Beckn.OnConfirm
       API.Beckn.OnInit
@@ -119,6 +120,8 @@ library
       Beckn.ACL.FRFS.Utils
       Beckn.ACL.IGM.Issue
       Beckn.ACL.IGM.IssueStatus
+      Beckn.ACL.IGM.OnIssue
+      Beckn.ACL.IGM.OnIssueStatus
       Beckn.ACL.IGM.Utils
       Beckn.ACL.Init
       Beckn.ACL.OnCancel
@@ -150,6 +153,8 @@ library
       Domain.Action.Beckn.FRFS.OnInit
       Domain.Action.Beckn.FRFS.OnSearch
       Domain.Action.Beckn.FRFS.OnStatus
+      Domain.Action.Beckn.IGM.OnIssue
+      Domain.Action.Beckn.IGM.OnIssueStatus
       Domain.Action.Beckn.OnCancel
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit

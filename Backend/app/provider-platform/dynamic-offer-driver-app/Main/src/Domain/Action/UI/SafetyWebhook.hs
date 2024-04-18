@@ -102,5 +102,6 @@ safetyWebhookHandler merchantShortId mbOpCity secret val = do
           personId = "SUSPECTED DRIVER LIST",
           classification = Ticket.DRIVER,
           rideDescription = Nothing,
-          queue = tConfig.kaptureQueue
+          queue = tConfig.kaptureQueue,
+          becknIssueId = Nothing
         }

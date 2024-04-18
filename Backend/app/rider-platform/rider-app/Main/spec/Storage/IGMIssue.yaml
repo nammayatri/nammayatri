@@ -8,16 +8,20 @@ IGMIssue:
 
   types:
     Status:
-      enum: "OPEN, CLOSED, ESCALATED"
+      enum: "OPEN, CLOSED, ESCALATED, RESOLVED"
+    Entity:
+      enum: "GRO, COUNTERPARTY"
 
   fields:
     id: Id IGMIssue
     internalIssueId: Text
     issueType: Text
     issueStatus: Status
-    respondantName: Maybe Text
-    respondantEmail: Maybe Text
-    respondantPhone: Maybe Text
+    respondentEntityType: Maybe Entity
+    respondentName: Maybe Text
+    respondentEmail: Maybe Text
+    respondentPhone: Maybe Text
+    respondentAction: Maybe Text
     respondingMerchantId: Id Merchant
     createdAt: UTCTime
     updatedAt: UTCTime

@@ -152,29 +152,29 @@ instance FromJSON IssueRating where
   parseJSON (String "THUMBS-DOWN") = return THUMBS_DOWN
   parseJSON wrongVal = typeMismatch "Invalid IssueRating" wrongVal
 
-data RespondantAction
-  = -- ..issue.issue_action.respondant_actions.respondant_action
+data RespondentAction
+  = -- ..issue.issue_action.respondent_actions.respondent_action
     PROCESSING
   | RESOLVED
   | CASCADED
   | NEED_MORE_INFO
   deriving (Eq, Generic)
 
-instance Show RespondantAction where
+instance Show RespondentAction where
   show PROCESSING = "PROCESSING"
   show RESOLVED = "RESOLVED"
   show CASCADED = "CASCADED"
   show NEED_MORE_INFO = "NEED-MORE-INFO"
 
-instance ToJSON RespondantAction where
+instance ToJSON RespondentAction where
   toJSON = genericToJSON constructorsWithHyphens
 
-instance FromJSON RespondantAction where
+instance FromJSON RespondentAction where
   parseJSON (String "PROCESSING") = return PROCESSING
   parseJSON (String "RESOLVED") = return RESOLVED
   parseJSON (String "CASCADED") = return CASCADED
   parseJSON (String "NEED-MORE-INFO") = return NEED_MORE_INFO
-  parseJSON wrongVal = typeMismatch "Invalid RespondantAction" wrongVal
+  parseJSON wrongVal = typeMismatch "Invalid RespondentAction" wrongVal
 
 data ResolutionAction
   = -- ..issues.resolution.action
@@ -235,23 +235,23 @@ instance FromJSON ErrorType where
   parseJSON (String "JSON-SCHEMA-ERROR") = return JSON_SCHEMA_ERROR
   parseJSON wrongVal = typeMismatch "Invalid ErrorType" wrongVal
 
-data RespondantInfo
-  = -- ..issue.resolution_provider.respondant_info
+data RespondentInfo
+  = -- ..issue.resolution_provider.respondent_info
     RESPONDING_INTERFACING_NP
   | TRANSACTION_COUNTERPARTY_NP
   | CASCADED_COUNTERPARTY_NP
   deriving (Eq, Generic)
 
-instance Show RespondantInfo where
+instance Show RespondentInfo where
   show RESPONDING_INTERFACING_NP = "INTERFACING-NP"
   show TRANSACTION_COUNTERPARTY_NP = "TRANSACTION-COUNTERPARTY-NP"
   show CASCADED_COUNTERPARTY_NP = "CASCADED-COUNTERPARTY-NP"
 
-instance ToJSON RespondantInfo where
+instance ToJSON RespondentInfo where
   toJSON = genericToJSON constructorsWithHyphens
 
-instance FromJSON RespondantInfo where
+instance FromJSON RespondentInfo where
   parseJSON (String "INTERFACING-NP") = return RESPONDING_INTERFACING_NP
   parseJSON (String "TRANSACTION-COUNTERPARTY-NP") = return TRANSACTION_COUNTERPARTY_NP
   parseJSON (String "CASCADED-COUNTERPARTY-NP") = return CASCADED_COUNTERPARTY_NP
-  parseJSON wrongVal = typeMismatch "Invalid RespondantInfo" wrongVal
+  parseJSON wrongVal = typeMismatch "Invalid RespondentInfo" wrongVal
