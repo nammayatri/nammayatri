@@ -1070,15 +1070,16 @@ expandedStatsModel push state =
       , height WRAP_CONTENT
       , margin $ MarginTop 10
       , gravity CENTER_VERTICAL
-      ][ commonTV push (getString TRIP_EARNINGS) Color.black700 FontStyle.body3 LEFT 0 NoAction true true
-        , commonTV push ("₹" <> formatCurrencyWithCommas (show (state.data.totalEarningsOfDay - state.data.bonusEarned))) Color.black800 FontStyle.subHeading1 RIGHT 0 NoAction false state.data.driverStats
+      ][ commonTV push (getString TRIPS) Color.black700 FontStyle.body3 LEFT 0 NoAction true true
+        , commonTV push (show state.data.totalRidesOfDay) Color.black800 FontStyle.subHeading1 RIGHT 0 NoAction false state.data.driverStats
       ]
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , gravity CENTER_VERTICAL
       , margin $ MarginTop 10
-      ][ commonTV push (getString BONUS_EARNED) Color.black700 FontStyle.body3 LEFT 0 NoAction false true
+      , visibility $ boolToVisibility $ isJust state.data.earningPerKm
+      ][ commonTV push (getString EARNINGS_PER_KM) Color.black700 FontStyle.body3 LEFT 0 NoAction false true
         , imageView 
           [ width $ V 12
           , height $ V 12
@@ -1086,18 +1087,20 @@ expandedStatsModel push state =
           , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_info_grey"
           , onClick push $ const $ ToggleBonusPopup
           ]
-        , commonTV push ("₹" <> formatCurrencyWithCommas (show state.data.bonusEarned)) Color.green900 FontStyle.subHeading1 RIGHT 0 NoAction true state.data.driverStats
+        , commonTV push ("₹" <> earningPerKm <> "/km") Color.black800 FontStyle.subHeading1 RIGHT 0 NoAction true state.data.driverStats
       ]
     , separatorView 10
-    , linearLayout
+    , textView $
       [ width MATCH_PARENT
       , height WRAP_CONTENT
+      , text $ getString VIEW_MORE
+      , color Color.blue900
+      , gravity CENTER
+      , onClick push $ const $ GoToEarningsScreen false
       , margin $ MarginTop 10
-      , gravity CENTER_VERTICAL
-      ][ commonTV push (show state.data.totalRidesOfDay <> " " <> getString TRIPS) Color.black700 FontStyle.tags LEFT 0 NoAction true state.data.driverStats
-        , commonTV push (getString VIEW_MORE) Color.blue900 FontStyle.body3 RIGHT 0 (GoToEarningsScreen false) false true
-      ]
+      ] <> FontStyle.body3 TypoGraphy
   ]
+  where earningPerKm = show $ fromMaybe 0 state.data.earningPerKm
 
 commonTV :: forall w .  (Action -> Effect Unit) -> String -> String -> (LazyCheck -> forall properties. (Array (Prop properties))) -> Gravity -> Int -> Action -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
 commonTV push text' color' theme gravity' marginTop action useWeight visible = 

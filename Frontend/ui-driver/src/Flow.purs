@@ -3170,7 +3170,14 @@ updateDriverDataToStates = do
   (GlobalState globalstate) <- getState  
   case globalstate.globalProps.driverRideStats of
     Just (DriverProfileStatsResp driverStats) -> do
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { totalRidesOfDay = driverStats.totalRidesOfDay, totalEarningsOfDay = driverStats.totalEarningsOfDay, coinBalance = driverStats.coinBalance, bonusEarned = driverStats.bonusEarning, driverStats = true }})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
+        { data { 
+          totalRidesOfDay = driverStats.totalRidesOfDay, 
+          totalEarningsOfDay = driverStats.totalEarningsOfDay, 
+          coinBalance = driverStats.coinBalance, 
+          bonusEarned = driverStats.bonusEarning, 
+          earningPerKm = driverStats.totalEarningsOfDayPerKm,
+          driverStats = true }})
       void $ pure $ setCleverTapUserProp [{key : "Driver Coin Balance", value : unsafeToForeign driverStats.coinBalance }]
     Nothing -> pure unit
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate) false

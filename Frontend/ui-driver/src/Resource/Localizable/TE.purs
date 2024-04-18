@@ -1367,3 +1367,6 @@ getTE stringKey =
         TRIP_TIME -> "ప్రయాణ సమయం"
         EARNINGS_PER_KM -> "కిమీకి సంపాదన"
         OPTIONAL_DOCUMENT -> "ఐచ్ఛిక పత్రం"
+        EARNINGS_PER_KM_DESC_1 -> "ఈరోజు మొత్తం ఆదాయాలు/మొత్తం రైడ్ దూరాన్ని సూచిస్తుంది."
+        EARNINGS_PER_KM_DESC_2 -> "ఈ మొత్తంలో పార్కింగ్ మరియు టోల్ ఛార్జీలు లేవు"
+        EARNINGS_P_KM -> "సంపాదన/కిమీ"

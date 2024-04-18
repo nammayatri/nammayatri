@@ -1366,3 +1366,6 @@ getKN stringKey =
         TRIP_TIME -> "ಪ್ರವಾಸ ಸಮಯ"
         EARNINGS_PER_KM -> "ಪ್ರತಿ ಕಿಮೀಗೆ ಗಳಿಕೆಗಳು"
         OPTIONAL_DOCUMENT -> "ಐಚ್ಛಿಕ ದಾಖಲೆ"
+        EARNINGS_PER_KM_DESC_1 -> "ಇಂದಿನ ಒಟ್ಟು ಗಳಿಕೆ/ಒಟ್ಟು ಸವಾರಿ ದೂರವನ್ನು ಸೂಚಿಸುತ್ತದೆ."
+        EARNINGS_PER_KM_DESC_2 -> "ಈ ಮೊತ್ತವು ಪಾರ್ಕಿಂಗ್ ಮತ್ತು ಟೋಲ್ ಶುಲ್ಕಗಳನ್ನು ಒಳಗೊಂಡಿಲ್ಲ"
+        EARNINGS_P_KM -> "ಗಳಿಕೆ/ಕಿಮೀ"

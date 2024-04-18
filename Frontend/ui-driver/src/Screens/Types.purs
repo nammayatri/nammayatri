@@ -956,6 +956,7 @@ type HomeScreenData =  {
   locationLastUpdatedTime :: String,
   totalRidesOfDay :: Int,
   totalEarningsOfDay :: Int,
+  earningPerKm :: Maybe Int,
   bonusEarned :: Int ,
   route :: Array Route,
   cancelRideConfirmationPopUp :: CancelRidePopUpData,
