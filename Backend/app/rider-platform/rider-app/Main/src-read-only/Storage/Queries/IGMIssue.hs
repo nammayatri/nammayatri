@@ -35,10 +35,12 @@ updateByPrimaryKey (Domain.Types.IGMIssue.IGMIssue {..}) = do
       Se.Set Beam.internalIssueId internalIssueId,
       Se.Set Beam.issueStatus issueStatus,
       Se.Set Beam.issueType issueType,
-      Se.Set Beam.respondantEmail respondantEmail,
-      Se.Set Beam.respondantName respondantName,
-      Se.Set Beam.respondantPhone respondantPhone,
+      Se.Set Beam.respondentAction respondentAction,
+      Se.Set Beam.respondentEmail respondentEmail,
+      Se.Set Beam.respondentName respondentName,
+      Se.Set Beam.respondentPhone respondentPhone,
       Se.Set Beam.respondingMerchantId (Kernel.Types.Id.getId respondingMerchantId),
+      Se.Set Beam.respondentEntityType respondentEntityType,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId)
     ]
@@ -54,10 +56,12 @@ instance FromTType' Beam.IGMIssue Domain.Types.IGMIssue.IGMIssue where
             internalIssueId = internalIssueId,
             issueStatus = issueStatus,
             issueType = issueType,
-            respondantEmail = respondantEmail,
-            respondantName = respondantName,
-            respondantPhone = respondantPhone,
+            respondentAction = respondentAction,
+            respondentEmail = respondentEmail,
+            respondentName = respondentName,
+            respondentPhone = respondentPhone,
             respondingMerchantId = Kernel.Types.Id.Id respondingMerchantId,
+            respondentEntityType = respondentEntityType,
             updatedAt = updatedAt,
             merchantId = Kernel.Types.Id.Id <$> merchantId
           }
@@ -70,10 +74,12 @@ instance ToTType' Beam.IGMIssue Domain.Types.IGMIssue.IGMIssue where
         Beam.internalIssueId = internalIssueId,
         Beam.issueStatus = issueStatus,
         Beam.issueType = issueType,
-        Beam.respondantEmail = respondantEmail,
-        Beam.respondantName = respondantName,
-        Beam.respondantPhone = respondantPhone,
+        Beam.respondentAction = respondentAction,
+        Beam.respondentEmail = respondentEmail,
+        Beam.respondentName = respondentName,
+        Beam.respondentPhone = respondentPhone,
         Beam.respondingMerchantId = Kernel.Types.Id.getId respondingMerchantId,
+        Beam.respondentEntityType = respondentEntityType,
         Beam.updatedAt = updatedAt,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId
       }

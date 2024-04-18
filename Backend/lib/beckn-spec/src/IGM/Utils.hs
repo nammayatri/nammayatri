@@ -58,3 +58,16 @@ validateCoreVersion context = do
 
 durationToText :: NominalDiffTime -> Text
 durationToText duration = T.pack $ iso8601Show $ calendarTimeTime duration
+
+ack :: Spec.AckResponse
+ack =
+  Spec.AckResponse
+    { ackResponseError = Nothing,
+      ackResponseMessage =
+        Spec.AckMessage
+          { ackMessageAck =
+              Spec.Ack
+                { ackStatus = Just "200"
+                }
+          }
+    }

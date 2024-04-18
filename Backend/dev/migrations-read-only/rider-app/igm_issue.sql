@@ -4,9 +4,9 @@ ALTER TABLE atlas_app.igm_issue ADD COLUMN created_at timestamp with time zone N
 ALTER TABLE atlas_app.igm_issue ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.igm_issue ADD COLUMN internal_issue_id text NOT NULL;
 ALTER TABLE atlas_app.igm_issue ADD COLUMN issue_status text NOT NULL default 'OPEN';
-ALTER TABLE atlas_app.igm_issue ADD COLUMN respondant_email text ;
-ALTER TABLE atlas_app.igm_issue ADD COLUMN respondant_name text ;
-ALTER TABLE atlas_app.igm_issue ADD COLUMN respondant_phone text ;
+ALTER TABLE atlas_app.igm_issue ADD COLUMN respondent_email text ;
+ALTER TABLE atlas_app.igm_issue ADD COLUMN respondent_name text ;
+ALTER TABLE atlas_app.igm_issue ADD COLUMN respondent_phone text ;
 ALTER TABLE atlas_app.igm_issue ADD COLUMN responding_merchant_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.igm_issue ADD COLUMN type text NOT NULL;
 ALTER TABLE atlas_app.igm_issue ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
@@ -23,3 +23,13 @@ ALTER TABLE atlas_app.igm_issue ALTER COLUMN issue_status DROP DEFAULT;
 
 ALTER TABLE atlas_app.igm_issue ADD COLUMN issue_type text NOT NULL;
 ALTER TABLE atlas_app.igm_issue DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.igm_issue ADD COLUMN respondent_action text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.igm_issue ADD COLUMN respondent_entity_type text ;

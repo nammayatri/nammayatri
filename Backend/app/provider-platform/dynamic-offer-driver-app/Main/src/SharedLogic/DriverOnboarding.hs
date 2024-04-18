@@ -98,7 +98,8 @@ notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
           phoneNo = driverPhone,
           personId = person.id.getId,
           classification = Ticket.DRIVER,
-          rideDescription = Nothing
+          rideDescription = Nothing,
+          becknIssueId = Nothing
         }
 
 throwImageError :: Id Domain.Image -> DriverOnboardingError -> Flow b

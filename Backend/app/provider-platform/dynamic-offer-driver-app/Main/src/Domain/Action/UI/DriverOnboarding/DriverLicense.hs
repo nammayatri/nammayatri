@@ -182,7 +182,8 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
           phoneNo = Nothing,
           personId = personId.getId,
           classification = Ticket.DRIVER,
-          rideDescription = Nothing
+          rideDescription = Nothing,
+          becknIssueId = Nothing
         }
 
 verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Maybe Text -> Maybe Category -> Flow ()
