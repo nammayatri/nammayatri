@@ -16,6 +16,7 @@
 module Storage.Queries.SearchRequestForDriver where
 
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Time as T
 import Domain.Types.Person
 import Domain.Types.SearchRequest (SearchRequest)
@@ -23,6 +24,8 @@ import Domain.Types.SearchRequestForDriver as Domain
 import Domain.Types.SearchTry
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Storage.Hedis
+import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -35,8 +38,31 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.SearchRequest as QR
 
-createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [SearchRequestForDriver] -> m ()
-createMany = traverse_ createWithKV
+searchReqestForDriverkey :: Text -> Text
+searchReqestForDriverkey prefix = "searchRequestForDriver_" <> prefix
+
+searchReqestForDriverkeyExpiry :: Integer
+searchReqestForDriverkeyExpiry = 5 * 60 -- 5 mins
+
+createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => [SearchRequestForDriver] -> m ()
+createMany = traverse_ createOne
+  where
+    createOne :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => SearchRequestForDriver -> m ()
+    createOne srd = do
+      now <- getCurrentTime
+      when (srd.status == Domain.Active) $ do
+        let driverId = getId $ Domain.driverId srd
+        clearOldSrfdIds driverId
+        void $
+          Hedis.zAddExp (searchReqestForDriverkey driverId) (getId $ Domain.id srd) (round $ utcToMilliseconds now) (fromInteger searchReqestForDriverkeyExpiry)
+      createWithKV srd
+
+    clearOldSrfdIds :: (MonadFlow m, HedisFlow m r) => Text -> m ()
+    clearOldSrfdIds driverId = do
+      now <- getCurrentTime
+      let startTime = T.addUTCTime (-1 * (fromIntegral $ searchReqestForDriverkeyExpiry + 1)) now -- sorted set key would expire beyond this anyways
+      let endTime = T.addUTCTime (-60) now -- conservative 1min lookback time to accomodate different configs for SearchRequestForDriver expiry
+      void $ Hedis.zRemRangeByScore (searchReqestForDriverkey driverId) (utcToMilliseconds startTime) (utcToMilliseconds endTime)
 
 findAllActiveBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchTry -> m [SearchRequestForDriver]
 findAllActiveBySTId (Id searchTryId) =
@@ -66,24 +92,32 @@ findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
         )
     ]
 
-findByDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [SearchRequestForDriver]
+findByDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => Id Person -> m [SearchRequestForDriver]
 findByDriver (Id driverId) = do
   now <- getCurrentTime
-  findAllWithOptionsKV [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]] (Se.Desc BeamSRFD.searchRequestValidTill) Nothing Nothing
+  let startTime = T.addUTCTime (-60) now -- conservative 1min lookback time to accomodate different configs for SearchRequestForDriver expiry
+  srfdIds <-
+    Hedis.zRangeByScore (searchReqestForDriverkey driverId) (utcToMilliseconds startTime) (utcToMilliseconds now)
+  findAllWithOptionsKV [Se.And [Se.Is BeamSRFD.id $ Se.In (map TE.decodeUtf8 srfdIds), Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]] (Se.Desc BeamSRFD.searchRequestValidTill) Nothing Nothing
 
-deleteByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
+deleteByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => Id Person -> m ()
 deleteByDriverId (Id personId) = do
+  void $ Hedis.del (searchReqestForDriverkey personId)
   deleteWithKV
     [Se.Is BeamSRFD.driverId (Se.Eq personId)]
 
-setInactiveBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchTry -> m ()
+setInactiveBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => Id SearchTry -> m ()
 setInactiveBySTId (Id searchTryId) = do
+  srfds <- findAllWithKV [Se.And [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]]
+  mapM_ (\s -> void $ Hedis.zRem (searchReqestForDriverkey $ getId $ Domain.driverId s) [getId $ Domain.id s]) srfds -- this will remove the key from redis
   updateWithKV
     [Se.Set BeamSRFD.status Domain.Inactive]
     [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId)]
 
 setInactiveAndPulledByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id SearchRequestForDriver] -> m ()
 setInactiveAndPulledByIds srdIds = do
+  srfd <- findAllWithKV [Se.And [Se.Is BeamSRFD.id (Se.In $ (.getId) <$> srdIds), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]]
+  mapM_ (\s -> void $ Hedis.zRem (searchReqestForDriverkey $ getId $ Domain.driverId s) [getId $ Domain.id s]) srfd -- this will remove the key from redis
   updateWithKV
     [ Se.Set BeamSRFD.status Domain.Inactive,
       Se.Set BeamSRFD.response (Just Domain.Pulled)
