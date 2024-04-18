@@ -11,4 +11,4 @@ INSERT INTO atlas_app.exophone (id, merchant_id, merchant_operating_city_id, pri
 
 ALTER TABLE atlas_app.merchant DROP COLUMN exo_phones;
 
-ALTER TABLE atlas_app.booking RENAME COLUMN provider_exo_phone TO primary_exophone;
+-- ALTER TABLE atlas_app.booking RENAME COLUMN provider_exo_phone TO primary_exophone;

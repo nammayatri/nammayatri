@@ -16,35 +16,35 @@ import qualified Kernel.Utils.Common
 import Tools.Beam.UtilsTH
 
 data SearchRequestT f = SearchRequestT
-  { autoAssignEnabled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    autoAssignEnabledV2 :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    availablePaymentMethods :: (B.C f [Kernel.Prelude.Text]),
-    bundleVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    clientId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    clientVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency)),
-    customerExtraFee :: (B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Money)),
-    customerExtraFeeAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    device :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    disabilityTag :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    distance :: (B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Centesimal)),
-    distanceUnit :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit)),
-    distanceValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance)),
-    estimatedRideDuration :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds)),
-    fromLocationId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    language :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Language)),
-    maxDistance :: (B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Centesimal)),
-    maxDistanceValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    riderId :: (B.C f Kernel.Prelude.Text),
-    riderPreferredOption :: (B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequest.RiderPreferredOption)),
-    selectedPaymentMethodId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    startTime :: (B.C f Kernel.Prelude.UTCTime),
-    toLocationId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    validTill :: (B.C f Kernel.Prelude.UTCTime)
+  { autoAssignEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    autoAssignEnabledV2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    availablePaymentMethods :: B.C f [Kernel.Prelude.Text],
+    bundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),
+    customerExtraFee :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Money),
+    customerExtraFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    device :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    distance :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Centesimal),
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
+    distanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
+    estimatedRideDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    language :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Language),
+    maxDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Centesimal),
+    maxDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    riderId :: B.C f Kernel.Prelude.Text,
+    riderPreferredOption :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequest.RiderPreferredOption),
+    selectedPaymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    startTime :: B.C f Kernel.Prelude.UTCTime,
+    toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    validTill :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -54,6 +54,6 @@ instance B.Table SearchRequestT where
 
 type SearchRequest = SearchRequestT Identity
 
-$(enableKVPG (''SearchRequestT) [('id)] [[('riderId)]])
+$(enableKVPG ''SearchRequestT ['id] [['riderId]])
 
-$(mkTableInstances (''SearchRequestT) "search_request")
+$(mkTableInstances ''SearchRequestT "search_request")

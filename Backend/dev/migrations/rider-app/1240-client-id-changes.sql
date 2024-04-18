@@ -1,1 +1,0 @@
-ALTER TABLE atlas_app.booking ADD COLUMN client_id character varying(36);

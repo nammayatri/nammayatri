@@ -71,6 +71,6 @@ data OdometerReading = OdometerReading {fileId :: Kernel.Prelude.Maybe (Kernel.T
 
 data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
-$(mkHttpInstancesForEnum (''RideStatus))
+$(mkHttpInstancesForEnum ''RideStatus)

@@ -1,1 +1,0 @@
-ALTER TABLE atlas_app.place_based_service_config ADD PRIMARY KEY (service_name);

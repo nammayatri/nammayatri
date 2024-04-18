@@ -19,7 +19,7 @@ ALTER TABLE atlas_app.booking ADD COLUMN fulfillment_id text ;
 ALTER TABLE atlas_app.booking ADD COLUMN id character varying(36) NOT NULL;
 
 ALTER TABLE atlas_app.booking ADD COLUMN is_scheduled boolean NOT NULL;
-ALTER TABLE atlas_app.booking ADD COLUMN item_id text NOT NULL;
+ALTER TABLE atlas_app.booking ADD COLUMN item_id text NOT NULL default '';
 ALTER TABLE atlas_app.booking ADD COLUMN merchant_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.booking ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.booking ADD COLUMN payment_method_id character varying(36) ;

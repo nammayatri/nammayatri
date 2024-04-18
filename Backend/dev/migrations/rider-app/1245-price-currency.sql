@@ -1,4 +1,4 @@
-ALTER TABLE atlas_app.booking ADD COLUMN currency character varying(255);
+-- ALTER TABLE atlas_app.booking ADD COLUMN currency character varying(255);
 
 ALTER TABLE atlas_app.estimate ADD COLUMN currency character varying(255);
 ALTER TABLE atlas_app.estimate ADD COLUMN night_shift_charge_amount double precision;

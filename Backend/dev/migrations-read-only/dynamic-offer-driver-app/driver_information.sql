@@ -49,3 +49,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN selected_servic
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information DROP COLUMN selected_service_tiers;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ALTER COLUMN can_switch_to_rental DROP NOT NULL;

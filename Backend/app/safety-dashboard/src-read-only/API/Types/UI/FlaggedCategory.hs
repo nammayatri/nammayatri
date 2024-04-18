@@ -11,18 +11,9 @@ import EulerHS.Prelude hiding (id)
 import Servant
 import "lib-dashboard" Tools.Auth
 
-data AddFlagCategoryReq = AddFlagCategoryReq
-  { name :: Data.Text.Text
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+data AddFlagCategoryReq = AddFlagCategoryReq {name :: Data.Text.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data DeleteFlagCategoryReq = DeleteFlagCategoryReq
-  { id :: Data.Text.Text
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+data DeleteFlagCategoryReq = DeleteFlagCategoryReq {id :: Data.Text.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data FlagCategoryList = FlagCategoryList
-  { flagCategoryList :: [Domain.Types.FlaggedCategory.FlaggedCategory],
-    summary :: API.Types.UI.Notification.Summary
-  }
+data FlagCategoryList = FlagCategoryList {flagCategoryList :: [Domain.Types.FlaggedCategory.FlaggedCategory], summary :: API.Types.UI.Notification.Summary}
   deriving (Generic, ToJSON, FromJSON, ToSchema)

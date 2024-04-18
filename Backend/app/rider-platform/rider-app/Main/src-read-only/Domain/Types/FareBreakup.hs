@@ -19,4 +19,4 @@ data FareBreakup = FareBreakup
   deriving (Show)
 
 data FareBreakupAPIEntity = FareBreakupAPIEntity {amount :: Kernel.Types.Common.HighPrecMoney, amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity, description :: Kernel.Prelude.Text}
-  deriving (Generic, (Show), (FromJSON), (ToJSON), (ToSchema))
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

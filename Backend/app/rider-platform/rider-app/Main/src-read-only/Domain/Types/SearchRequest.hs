@@ -45,16 +45,16 @@ data SearchRequest = SearchRequest
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     validTill :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
 data RiderPreferredOption = Rental | OneWay deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RiderPreferredOption))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RiderPreferredOption)
 
-$(mkHttpInstancesForEnum (''RiderPreferredOption))
+$(mkHttpInstancesForEnum ''RiderPreferredOption)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SearchRequestStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRequestStatus)
 
-$(mkHttpInstancesForEnum (''SearchRequestStatus))
+$(mkHttpInstancesForEnum ''SearchRequestStatus)

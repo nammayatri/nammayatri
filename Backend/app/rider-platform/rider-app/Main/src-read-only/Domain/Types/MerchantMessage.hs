@@ -39,10 +39,10 @@ data MessageKey
   | ADDED_AS_EMERGENCY_CONTACT
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-type MerchantMessage = MerchantMessageD ('Safe)
+type MerchantMessage = MerchantMessageD 'Safe
 
 instance FromJSON (MerchantMessageD 'Unsafe)
 
 instance ToJSON (MerchantMessageD 'Unsafe)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MessageKey))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageKey)

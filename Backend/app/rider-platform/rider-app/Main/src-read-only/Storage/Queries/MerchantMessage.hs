@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.MerchantMessage.MerchantMessage]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.MerchantMessage.MerchantMessage])
 findAllByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
 findByMerchantOperatingCityIdAndMessageKey ::
@@ -59,11 +59,11 @@ instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMess
     Beam.MerchantMessageT
       { Beam.containsUrlButton = containsUrlButton,
         Beam.createdAt = createdAt,
-        Beam.jsonData = (Just $ toJSON jsonData),
+        Beam.jsonData = Just $ toJSON jsonData,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.message = message,
         Beam.messageKey = messageKey,
-        Beam.templateId = (Just templateId),
+        Beam.templateId = Just templateId,
         Beam.updatedAt = updatedAt
       }

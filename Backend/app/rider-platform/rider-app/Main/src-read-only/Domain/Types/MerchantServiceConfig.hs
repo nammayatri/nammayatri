@@ -23,7 +23,7 @@ data MerchantServiceConfigD (s :: UsageSafety) = MerchantServiceConfig
   }
   deriving (Generic)
 
-type MerchantServiceConfig = MerchantServiceConfigD ('Safe)
+type MerchantServiceConfig = MerchantServiceConfigD 'Safe
 
 instance FromJSON (MerchantServiceConfigD 'Unsafe)
 

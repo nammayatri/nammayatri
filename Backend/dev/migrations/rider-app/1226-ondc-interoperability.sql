@@ -17,7 +17,7 @@ ALTER TABLE atlas_app.quote
 ALTER COLUMN provider_completed_rides_count DROP NOT NULL;
 
 ALTER TABLE atlas_app.booking
-ALTER COLUMN provider_mobile_number DROP NOT NULL;
+ADD COLUMN provider_mobile_number character varying(255);
 
 ALTER TABLE atlas_app.booking
-ALTER COLUMN provider_name DROP NOT NULL;
+ADD COLUMN provider_name character varying(255);

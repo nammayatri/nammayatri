@@ -32,7 +32,7 @@ instance ToTType' Beam.MerchantServiceConfig Domain.Types.MerchantServiceConfig.
       { Beam.createdAt = createdAt,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.configJSON = (snd $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig),
-        Beam.serviceName = (fst $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig),
+        Beam.configJSON = snd $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig,
+        Beam.serviceName = fst $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig,
         Beam.updatedAt = updatedAt
       }

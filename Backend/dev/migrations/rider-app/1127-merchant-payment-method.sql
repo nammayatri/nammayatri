@@ -1,5 +1,5 @@
-ALTER TABLE atlas_app.booking ADD COLUMN payment_method_id character(36) REFERENCES atlas_app.merchant_payment_method(id);
-ALTER TABLE atlas_app.booking ADD COLUMN payment_url text;
+--ALTER TABLE atlas_app.booking ADD COLUMN payment_method_id character(36) REFERENCES atlas_app.merchant_payment_method(id);
+--ALTER TABLE atlas_app.booking ADD COLUMN payment_url text;
 
 -- local testing data
 -- first three should intersect with bpp merchant_payment_method
