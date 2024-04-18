@@ -29,7 +29,8 @@ data PlaceNameCache = PlaceNameCache
     lon :: Double,
     placeId :: Maybe Text,
     addressComponents :: [AddressResp],
-    geoHash :: Maybe Text
+    geoHash :: Maybe Text,
+    createdAt :: UTCTime
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

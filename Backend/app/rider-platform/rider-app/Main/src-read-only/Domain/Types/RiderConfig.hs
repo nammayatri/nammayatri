@@ -23,6 +23,7 @@ data RiderConfig = RiderConfig
     isAvoidToll :: Kernel.Prelude.Bool,
     localPoliceNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     safetyCheckEndTime :: Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: Kernel.Types.Common.Seconds,
     specialZoneRadius :: Kernel.Prelude.Int,

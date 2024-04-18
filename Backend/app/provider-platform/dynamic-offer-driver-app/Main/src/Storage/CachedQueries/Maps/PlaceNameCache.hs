@@ -38,6 +38,14 @@ findPlaceByGeoHash geoHash =
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => PlaceNameCache -> m ()
 create = Queries.create
 
+delete :: (CacheFlow m r, Esq.EsqDBFlow m r) => PlaceNameCache -> m ()
+delete obj = do
+  whenJust obj.geoHash $ \geoH -> do
+    Hedis.del $ makeGeoHashIdKey geoH
+  whenJust obj.placeId $ \pId -> do
+    Hedis.del $ makePlaceIdKey pId
+  Queries.deleteById obj.id
+
 -- test with empty list
 cachedPlaceByPlaceId :: CacheFlow m r => Text -> [PlaceNameCache] -> m ()
 cachedPlaceByPlaceId placeId placeNameCached = do

@@ -29,6 +29,7 @@ where
 
 import qualified Data.Geohash as DG
 import Data.Text (pack)
+import qualified Data.Time as DT
 import Domain.Types.Maps.PlaceNameCache as DTM
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -115,6 +116,15 @@ getPlaceDetails (personId, merchantId) req = do
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
   Maps.getPlaceDetails merchantId merchantOperatingCityId req
 
+expirePlaceNameCache :: ServiceFlow m r => [PlaceNameCache] -> Id DMOC.MerchantOperatingCity -> m ()
+expirePlaceNameCache placeNameCache merchantOperatingCityId = do
+  riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  whenJust riderConfig.placeNameCacheExpiryDays $ \cacheExpiry -> do
+    currentTime <- liftIO DT.getCurrentTime
+    let expiryDate = DT.addUTCTime (DT.nominalDay * fromIntegral (- cacheExpiry)) currentTime
+    let toBeDeletedPlaceNameCache = filter (\obj -> obj.createdAt < expiryDate) placeNameCache
+    mapM_ CM.delete toBeDeletedPlaceNameCache
+
 getPlaceName :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
 getPlaceName (personId, merchantId) req = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -125,12 +135,14 @@ getPlaceName (personId, merchantId) req = do
       case myGeohash of
         Just geoHash -> do
           placeNameCache <- CM.findPlaceByGeoHash (pack geoHash)
+          fork "Place Name Cache Expiry" $ expirePlaceNameCache placeNameCache merchantOperatingCityId
           if null placeNameCache
             then callMapsApi merchantId merchantOperatingCityId req merchant.geoHashPrecisionValue
             else pure $ map convertToGetPlaceNameResp placeNameCache
         Nothing -> callMapsApi merchantId merchantOperatingCityId req merchant.geoHashPrecisionValue
     MIT.ByPlaceId placeId -> do
       placeNameCache <- CM.findPlaceByPlaceId placeId
+      fork "Place Name Cache Expiry" $ expirePlaceNameCache placeNameCache merchantOperatingCityId
       if null placeNameCache
         then callMapsApi merchantId merchantOperatingCityId req merchant.geoHashPrecisionValue
         else pure $ map convertToGetPlaceNameResp placeNameCache
@@ -146,15 +158,10 @@ callMapsApi merchantId merchantOperatingCityId req geoHashPrecisionValue = do
             _ -> (element.location.lat, element.location.lon)
       placeNameCache <- convertResultsRespToPlaceNameCache element latitude longitude geoHashPrecisionValue
       _ <- CM.create placeNameCache
-      case (placeNameCache.placeId, placeNameCache.geoHash) of
-        (Just placeId, Just geoHash) -> do
-          CM.cachedPlaceByPlaceId placeId [placeNameCache]
-          CM.cachedPlaceByGeoHash geoHash [placeNameCache]
-        (Just placeId, Nothing) -> do
-          CM.cachedPlaceByPlaceId placeId [placeNameCache]
-        (Nothing, Just geoHash) -> do
-          CM.cachedPlaceByGeoHash geoHash [placeNameCache]
-        _ -> pure ()
+      whenJust placeNameCache.placeId $ \placeid -> do
+        CM.cachedPlaceByPlaceId placeid [placeNameCache]
+      whenJust placeNameCache.geoHash $ \geohash -> do
+        CM.cachedPlaceByGeoHash geohash [placeNameCache]
     Nothing -> pure ()
   return res
 
@@ -168,9 +175,10 @@ convertToGetPlaceNameResp placeNameCache =
       placeId = placeNameCache.placeId
     }
 
-convertResultsRespToPlaceNameCache :: MonadGuid m => MIT.PlaceName -> Double -> Double -> Int -> m DTM.PlaceNameCache
+convertResultsRespToPlaceNameCache :: (MonadTime m, MonadGuid m) => MIT.PlaceName -> Double -> Double -> Int -> m DTM.PlaceNameCache
 convertResultsRespToPlaceNameCache resultsResp latitude longitude geoHashPrecisionValue = do
   id <- generateGUID
+  now <- getCurrentTime
   let res =
         DTM.PlaceNameCache
           { id,
@@ -180,6 +188,7 @@ convertResultsRespToPlaceNameCache resultsResp latitude longitude geoHashPrecisi
             lat = resultsResp.location.lat,
             lon = resultsResp.location.lon,
             placeId = resultsResp.placeId,
-            geoHash = pack <$> DG.encode geoHashPrecisionValue (latitude, longitude)
+            geoHash = pack <$> DG.encode geoHashPrecisionValue (latitude, longitude),
+            createdAt = now
           }
   return res

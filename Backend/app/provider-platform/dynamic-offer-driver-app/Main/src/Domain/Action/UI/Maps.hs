@@ -24,6 +24,7 @@ where
 
 import qualified Data.Geohash as DG
 import Data.Text (pack)
+import qualified Data.Time as DT
 import Domain.Types.Maps.PlaceNameCache as DTM
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -38,6 +39,7 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as TConfig
 import qualified Tools.Maps as Maps
 
 data AutoCompleteReq = AutoCompleteReq
@@ -51,6 +53,15 @@ data AutoCompleteReq = AutoCompleteReq
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
+expirePlaceNameCache :: ServiceFlow m r => [PlaceNameCache] -> Id DMOC.MerchantOperatingCity -> m ()
+expirePlaceNameCache placeNameCache merchantOpCityId = do
+  transporterConfig <- TConfig.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  whenJust transporterConfig.placeNameCacheExpiryDays $ \cacheExpiry -> do
+    currentTime <- liftIO DT.getCurrentTime
+    let expiryDate = DT.addUTCTime (DT.nominalDay * fromIntegral (- cacheExpiry)) currentTime
+    let toBeDeletedPlaceNameCache = filter (\obj -> obj.createdAt < expiryDate) placeNameCache
+    mapM_ CM.delete toBeDeletedPlaceNameCache
+
 getPlaceName :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
 getPlaceName merchantId merchantOpCityId req = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -60,12 +71,14 @@ getPlaceName merchantId merchantOpCityId req = do
       case myGeohash of
         Just geoHash -> do
           placeNameCache <- CM.findPlaceByGeoHash (pack geoHash)
+          fork "Place Name Cache Expiry" $ expirePlaceNameCache placeNameCache merchantOpCityId
           if null placeNameCache
             then callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue
             else pure $ map convertToGetPlaceNameResp placeNameCache
         Nothing -> callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue
     MIT.ByPlaceId placeId -> do
       placeNameCache <- CM.findPlaceByPlaceId placeId
+      fork "Place Name Cache Expiry" $ expirePlaceNameCache placeNameCache merchantOpCityId
       if null placeNameCache
         then callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue
         else pure $ map convertToGetPlaceNameResp placeNameCache
@@ -81,15 +94,10 @@ callMapsApi merchantId merchantOpCityId req geoHashPrecisionValue = do
             _ -> (element.location.lat, element.location.lon)
       placeNameCache <- convertResultsRespToPlaceNameCache element latitude longitude geoHashPrecisionValue
       _ <- CM.create placeNameCache
-      case (placeNameCache.placeId, placeNameCache.geoHash) of
-        (Just placeId, Just geoHash) -> do
-          CM.cachedPlaceByPlaceId placeId [placeNameCache]
-          CM.cachedPlaceByGeoHash geoHash [placeNameCache]
-        (Just placeId, Nothing) -> do
-          CM.cachedPlaceByPlaceId placeId [placeNameCache]
-        (Nothing, Just geoHash) -> do
-          CM.cachedPlaceByGeoHash geoHash [placeNameCache]
-        _ -> pure ()
+      whenJust placeNameCache.placeId $ \placeid -> do
+        CM.cachedPlaceByPlaceId placeid [placeNameCache]
+      whenJust placeNameCache.geoHash $ \geohash -> do
+        CM.cachedPlaceByGeoHash geohash [placeNameCache]
     Nothing -> pure ()
   return res
 

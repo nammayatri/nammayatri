@@ -151,7 +151,8 @@ data TransporterConfigT f = TransporterConfigT
     variantsToEnableForSubscription :: B.C f [Vehicle.Variant],
     considerDriversForSearch :: B.C f Bool,
     dlNumberVerification :: B.C f (Maybe Bool),
-    pastDaysRideCounter :: B.C f Int
+    pastDaysRideCounter :: B.C f Int,
+    placeNameCacheExpiryDays :: B.C f (Maybe Int)
   }
   deriving (Generic, B.Beamable)
 
