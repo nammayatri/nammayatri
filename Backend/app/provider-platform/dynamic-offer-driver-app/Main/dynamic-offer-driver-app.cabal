@@ -209,7 +209,6 @@ library
       Domain.Action.UI.Transporter
       Domain.Action.UI.Whatsapp
       Domain.Types.Beckn.Status
-      Domain.Types.BlackListOrg
       Domain.Types.Booking
       Domain.Types.Booking.BookingLocation
       Domain.Types.BookingCancellationReason
@@ -347,7 +346,6 @@ library
       SharedLogic.TollsDetector
       SharedLogic.VehicleServiceTier
       Storage.Beam.BecknRequest
-      Storage.Beam.BlackListOrg
       Storage.Beam.Booking
       Storage.Beam.Booking.BookingLocation
       Storage.Beam.BookingCancellationReason
@@ -464,7 +462,6 @@ library
       Storage.Clickhouse.DriverFee
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
-      Storage.Queries.BlackListOrg
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
       Storage.Queries.Booking.Internal
@@ -552,6 +549,7 @@ library
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
       Storage.Queries.Status
+      Storage.Queries.Transformers.BlackListOrg
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.DocumentVerificationConfig
       Storage.Queries.Transformers.QuestionInformation
@@ -598,6 +596,7 @@ library
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
       Domain.Types.BookingUpdateRequest
+      Domain.Types.BlackListOrg
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.DailyStats
@@ -644,6 +643,7 @@ library
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
       Storage.Beam.BookingUpdateRequest
+      Storage.Beam.BlackListOrg
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.DailyStats
@@ -690,6 +690,7 @@ library
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
       Storage.Queries.BookingUpdateRequest
+      Storage.Queries.BlackListOrg
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.DailyStats
