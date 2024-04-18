@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 import Servant hiding (throwError)
 import qualified SharedLogic.LocationMapping as SLM
+import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QR
@@ -50,7 +51,9 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId action = do
       dropLocMapRide <- SLM.buildDropLocationMapping dropLocMapping.locationId ride.id.getId DLM.RIDE (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
       QLM.create dropLocMapBooking
       QLM.create dropLocMapRide
-      --------------RITIKA --------UPDATE estimated fare , distance, fare params as well.
+      let estimatedDistance = highPrecMetersToMeters <$> bookingUpdateReq.estimatedDistance
+      QB.updateMultipleById bookingUpdateReq.estimatedFare bookingUpdateReq.maxEstimatedDistance estimatedDistance bookingUpdateReq.fareParamsId.getId bookingUpdateReq.bookingId
+      --------------RITIKA --------UPDATE for ride as well.
       return Success
     else do
       QBUR.updateStatusById DRIVER_REJECTED bookingUpdateReqId

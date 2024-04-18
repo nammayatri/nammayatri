@@ -135,7 +135,6 @@ recalcDistanceBatches ::
   (CacheFlow m r, Monad m, Log m) =>
   RideInterpolationHandler person m ->
   Bool ->
-  Bool ->
   Id person ->
   Meters ->
   Maybe HighPrecMoney ->
@@ -173,7 +172,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
         Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState 21600 -- 6 hours
   where
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
-    continueCondition = if ending || isSoftUpdate then pointsRemaining else atLeastBatchPlusOne
+    continueCondition = if ending then pointsRemaining else atLeastBatchPlusOne
     atLeastBatchPlusOne = (> batchSize) <$> getWaypointsNumber driverId
 
     recalcDistanceBatches' snapToRoad'@SnapToRoadState {..} snapToRoadCallFailed = do

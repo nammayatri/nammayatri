@@ -45,6 +45,7 @@ import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.TollsDetector
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.FareParameters as QFP
@@ -147,7 +148,11 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     Notify.notifyPickupOrDropLocationChange person.merchantOperatingCityId person.id person.deviceToken entityData
 
   whenJust destination $ \drop -> do
+    --------------------TO DO ----------------------- Dependency on other people changes
+    -----------1. Add a check for forward dispatch ride -----------------
+    -----------2. Add a check for last location timestamp of driver ----------------- LTS dependency
     booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+    now <- getCurrentTime
     dropLocation <- buildLocation drop
     QL.create dropLocation
     -- let (Common.Gps lat lon) = drop.gps
@@ -181,7 +186,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         -- let estimatedRideDuration = booking.startTime - now ----Need to correct this -----RITIKA
         fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id srcPt (Just dropLatLong) (Just booking.transactionId) (Just "transactionId") booking.tripCategory
         farePolicy <- getFarePolicy merchantOperatingCity.id booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.transactionId) (Just "transactionId")
-        tollCharges <- getTollChargesOnRoute merchantOperatingCity.id shortestRoute.points
+        tollCharges <- getTollChargesOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
         fareParameters <-
           calculateFareParameters
             CalculateFareParametersParams
@@ -202,7 +207,9 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                 tollCharges
               }
         QFP.create fareParameters
-        bookingUpdateReq <- buildbookingUpdateRequest booking merchantOperatingCity.merchantId bapBookingUpdateRequestId fareParameters farePolicy.id maxEstimatedDist currentPoint estimatedDistance
+        transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCity.id (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
+        let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now
+        bookingUpdateReq <- buildbookingUpdateRequest booking merchantOperatingCity.merchantId bapBookingUpdateRequestId fareParameters farePolicy.id maxEstimatedDist currentPoint estimatedDistance validTill
         QBUR.create bookingUpdateReq
         startLocMapping <- QLM.getLatestStartByEntityId bookingId.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> bookingId.getId)
         dropLocMapping <- QLM.getLatestEndByEntityId bookingId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingId: " <> bookingId.getId)
@@ -215,6 +222,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         sendUpdateEditDestToBAP booking ride bookingUpdateReq (Just dropLocation) currentPoint SOFT_UPDATE
       EditLocationU.CONFIRM_UPDATE -> do
         bookingUpdateReq <- QBUR.findByBAPBUReqId bapBookingUpdateRequestId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with BAPBookingUpdateRequestId" <> bapBookingUpdateRequestId)
+        when (bookingUpdateReq.validTill < now) $ throwError (InvalidRequest "BookingUpdateRequest is expired")
+        when (bookingUpdateReq.status /= DBUR.SOFT) $ throwError (InvalidRequest "BookingUpdateRequest is not in SOFT state")
         QBUR.updateStatusById DBUR.USER_CONFIRMED bookingUpdateReq.id
         let entityData = Notify.EditLocationReq {..}
         Notify.notifyPickupOrDropLocationChange person.merchantOperatingCityId person.id person.deviceToken entityData
@@ -330,8 +339,8 @@ validateStopReq booking isEdit = do
     then unless (isJust booking.stopLocationId) $ throwError (InvalidRequest $ "Can't find stop to be edited " <> booking.id.getId) -- should we throw error or just allow?
     else unless (isNothing booking.stopLocationId) $ throwError (InvalidRequest $ "Can't add next stop before reaching previous stop " <> booking.id.getId)
 
-buildbookingUpdateRequest :: MonadFlow m => DBooking.Booking -> Id DM.Merchant -> Text -> DFP.FareParameters -> Id DFP.FarePolicy -> Maybe Meters -> Maybe Maps.LatLong -> Meters -> m DBUR.BookingUpdateRequest
-buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParams farePolicyId maxEstimatedDistance currentPoint estimatedDistance = do
+buildbookingUpdateRequest :: MonadFlow m => DBooking.Booking -> Id DM.Merchant -> Text -> DFP.FareParameters -> Id DFP.FarePolicy -> Maybe Meters -> Maybe Maps.LatLong -> Meters -> UTCTime -> m DBUR.BookingUpdateRequest
+buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParams farePolicyId maxEstimatedDistance currentPoint estimatedDistance validTill = do
   guid <- generateGUID
   now <- getCurrentTime
   let (Money fare) = booking.estimatedFare
@@ -357,7 +366,7 @@ buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParam
         fareParamsId = fareParams.id,
         oldFareParamsId = booking.fareParams.id,
         oldMaxEstimatedDistance = booking.maxEstimatedDistance,
-        validTill = now, -------FIX ME____RITIKA
+        validTill,
         ..
       }
 
