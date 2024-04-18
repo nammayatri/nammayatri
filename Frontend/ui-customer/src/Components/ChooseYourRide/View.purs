@@ -586,7 +586,7 @@ quoteListView push config isSingleEstimate =
         [ height $ V 20
         , width MATCH_PARENT
         , accessibility DISABLE
-        , gradient $ Linear 180.0 [Color.transparent, Color.transparentMid, Color.white900] -- $ if EHC.os == "IOS" then (Linear 90.0 [Color.white900, Color.transparentMid , Color.transparent])
+        , gradient $ if EHC.os == "IOS" then (Linear 90.0 [Color.white900, Color.transparentMid , Color.transparent]) else Linear 180.0 [Color.transparent, Color.transparentMid, Color.white900] -- $ if EHC.os == "IOS" then (Linear 90.0 [Color.white900, Color.transparentMid , Color.transparent])
         ][]  
       ]
     ]
