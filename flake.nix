@@ -6,7 +6,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/e1692d8e923739b5c7b1e1153d15d82d2f849eb4";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
