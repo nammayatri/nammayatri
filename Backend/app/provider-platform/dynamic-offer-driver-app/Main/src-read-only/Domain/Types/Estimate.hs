@@ -16,6 +16,7 @@ import qualified Tools.Beam.UtilsTH
 
 data Estimate = Estimate
   { createdAt :: Kernel.Prelude.UTCTime,
+    driverPickUpCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.Money,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     fareParams :: Kernel.Prelude.Maybe Domain.Types.FareParameters.FareParameters,
     farePolicy :: Kernel.Prelude.Maybe Domain.Types.FarePolicy.FarePolicy,
@@ -27,6 +28,7 @@ data Estimate = Estimate
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tripCategory :: Domain.Types.Common.TripCategory,
     updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType
+    vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
+    vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show)

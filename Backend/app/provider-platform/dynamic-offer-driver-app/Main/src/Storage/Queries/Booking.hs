@@ -229,42 +229,24 @@ instance FromTType' BeamB.Booking Booking where
           Just
             Booking
               { id = Id id,
-                transactionId = transactionId,
-                quoteId = quoteId,
-                status = status,
                 tripCategory = tripCategory',
-                specialLocationTag = specialLocationTag,
-                specialZoneOtpCode = specialZoneOtpCode,
-                disabilityTag = disabilityTag,
-                area = area,
                 providerId = Id providerId,
                 merchantOperatingCityId = merchantOpCityId,
-                primaryExophone = primaryExophone,
-                bapId = bapId,
-                bapUri = pUrl,
-                bapCity = bapCity,
-                bapCountry = bapCountry,
-                startTime = startTime,
                 riderId = Id <$> riderId,
+                bapUri = pUrl,
                 fromLocation = fl,
                 toLocation = tl,
                 vehicleServiceTier = vehicleVariant,
                 vehicleServiceTierName = fromMaybe (show vehicleVariant) vehicleServiceTierName,
                 vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
                 vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
-                estimatedDistance = estimatedDistance,
-                maxEstimatedDistance = maxEstimatedDistance,
                 estimatedFare = roundToIntegral estimatedFare,
-                estimatedDuration = estimatedDuration,
                 fareParams = fromJust fp, -- This fromJust is safe because of the check above.
                 paymentMethodId = Id <$> paymentMethodId,
-                riderName = riderName,
-                paymentUrl = paymentUrl,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
                 stopLocationId = Id <$> stopLocationId,
                 isScheduled = fromMaybe False isScheduled,
-                distanceToPickup = roundToIntegral <$> distanceToPickup
+                distanceToPickup = roundToIntegral <$> distanceToPickup,
+                ..
               }
       else do
         logError $ "FareParameters not found for booking: " <> show id

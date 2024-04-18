@@ -32,6 +32,7 @@ data SearchTry = SearchTry
   { id :: Id SearchTry,
     requestId :: Id DSR.SearchRequest,
     estimateId :: Text,
+    estimateIds :: [Text],
     merchantId :: Maybe (Id DM.Merchant),
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     messageId :: Text,

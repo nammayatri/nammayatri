@@ -36,12 +36,14 @@ import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.Booking as SBooking
+import SharedLogic.DriverPool.Types
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -50,6 +52,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
+import Tools.Error
 
 data DConfirmReq = DConfirmReq
   { bookingId :: Id DRB.Booking,
@@ -117,7 +120,34 @@ handler merchant req validatedQuote = do
     handleStaticOfferFlow isNewRider quote booking riderDetails = do
       updateBookingDetails isNewRider booking riderDetails
       searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
-      initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq booking.tripCategory booking.vehicleServiceTier quote.id.getId Nothing booking.id.getId False
+      vehicleServiceTierName <-
+        case quote.vehicleServiceTierName of
+          Just name -> return name
+          _ -> do
+            item <- CQDVST.findByServiceTierTypeAndCityId quote.vehicleServiceTier booking.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show quote.vehicleServiceTier)
+            return item.name
+      let tripQuoteDetail =
+            TripQuoteDetail
+              { tripCategory = booking.tripCategory,
+                vehicleServiceTier = booking.vehicleServiceTier,
+                vehicleServiceTierName,
+                baseFare = booking.estimatedFare,
+                driverMinFee = quote.driverMinFee,
+                driverMaxFee = quote.driverMaxFee,
+                driverPickUpCharge = quote.driverPickUpCharge,
+                estimateOrQuoteId = quote.id.getId
+              }
+      let driverSearchBatchInput =
+            DriverSearchBatchInput
+              { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
+                merchant,
+                searchReq,
+                tripQuoteDetails = [tripQuoteDetail],
+                customerExtraFee = Nothing,
+                messageId = booking.id.getId,
+                isRepeatSearch = False
+              }
+      initiateDriverSearchBatch driverSearchBatchInput
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       return $ mkDConfirmResp Nothing uBooking riderDetails
 

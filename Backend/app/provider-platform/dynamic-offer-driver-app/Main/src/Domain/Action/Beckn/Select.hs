@@ -22,14 +22,17 @@ where
 import Data.Text as Text
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.SearchRequest as DSR
 import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
+import SharedLogic.DriverPool
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.RiderDetails as QRD
@@ -39,7 +42,7 @@ import Tools.Error
 data DSelectReq = DSelectReq
   { messageId :: Text,
     transactionId :: Text,
-    estimateId :: Id DEst.Estimate,
+    estimateIds :: [Id DEst.Estimate],
     bapId :: Text,
     bapUri :: BaseUrl,
     pickupTime :: UTCTime,
@@ -48,10 +51,10 @@ data DSelectReq = DSelectReq
     customerPhoneNum :: Maybe Text
   }
 
-handler :: DM.Merchant -> DSelectReq -> DEst.Estimate -> Flow ()
-handler merchant sReq estimate = do
+-- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
+handler :: DM.Merchant -> DSelectReq -> DSR.SearchRequest -> [DEst.Estimate] -> Flow ()
+handler merchant sReq searchReq estimates = do
   now <- getCurrentTime
-  searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
   case sReq.customerPhoneNum of
     Just number -> do
       (riderDetails, isNewRider) <- SRD.getRiderDetails merchant.id (fromMaybe "+91" merchant.mobileCountryCode) number now False
@@ -59,13 +62,46 @@ handler merchant sReq estimate = do
       QSR.updateRiderId searchReq.id riderDetails.id
     Nothing -> do
       logWarning "Failed to get rider details as BAP Phone Number is NULL"
-  QDQ.setInactiveAllDQByEstId sReq.estimateId now
   when sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id sReq.autoAssignEnabled
+  tripQuoteDetails <-
+    estimates `forM` \estimate -> do
+      QDQ.setInactiveAllDQByEstId estimate.id now
+      vehicleServiceTierName <-
+        case estimate.vehicleServiceTierName of
+          Just name -> return name
+          _ -> do
+            item <- CQDVST.findByServiceTierTypeAndCityId estimate.vehicleServiceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show estimate.vehicleServiceTier)
+            return item.name
+      return $
+        TripQuoteDetail
+          { tripCategory = estimate.tripCategory,
+            vehicleServiceTier = estimate.vehicleServiceTier,
+            estimateOrQuoteId = estimate.id.getId,
+            vehicleServiceTierName,
+            baseFare = estimate.minFare + fromMaybe 0 sReq.customerExtraFee, -- add customer extra fee to base fare
+            driverMinFee = Just 0,
+            driverMaxFee = Just $ estimate.maxFare - estimate.minFare,
+            driverPickUpCharge = estimate.driverPickUpCharge
+          }
+  let driverSearchBatchInput =
+        DriverSearchBatchInput
+          { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
+            merchant,
+            searchReq,
+            tripQuoteDetails,
+            customerExtraFee = sReq.customerExtraFee,
+            messageId = sReq.messageId,
+            isRepeatSearch = False
+          }
+  initiateDriverSearchBatch driverSearchBatchInput
 
-  initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq estimate.tripCategory estimate.vehicleServiceTier (getId estimate.id) sReq.customerExtraFee sReq.messageId False
-
-validateRequest :: Id DM.Merchant -> DSelectReq -> Flow (DM.Merchant, DEst.Estimate)
+validateRequest :: Id DM.Merchant -> DSelectReq -> Flow (DM.Merchant, DSR.SearchRequest, [DEst.Estimate])
 validateRequest merchantId sReq = do
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  estimate <- QEst.findById sReq.estimateId >>= fromMaybeM (EstimateDoesNotExist sReq.estimateId.getId)
-  return (merchant, estimate)
+  mbEstimates <- mapM QEst.findById sReq.estimateIds
+  let estimates = catMaybes mbEstimates
+  case estimates of
+    [] -> throwError $ InvalidRequest "User need to select at least one estimate"
+    (estimate : xs) -> do
+      searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
+      return (merchant, searchReq, [estimate] <> xs)

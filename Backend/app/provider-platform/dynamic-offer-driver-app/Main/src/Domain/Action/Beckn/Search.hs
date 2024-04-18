@@ -41,6 +41,7 @@ import qualified Domain.Types.Merchant.TransporterConfig as DTMT
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RideRoute
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchRequestForDriver as DTSRD
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
@@ -183,8 +184,8 @@ handler ValidatedDSearchReq {..} sReq = do
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
   void $ QSR.createDSReq searchReq
 
-  let buildEstimateHelper = buildEstimate searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled mbDistance specialLocationTag mbTollCharges
-  let buildQuoteHelper = buildQuote searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled mbDistance mbDuration specialLocationTag mbTollCharges
+  let buildEstimateHelper = buildEstimate merchantOpCityId searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled mbDistance specialLocationTag mbTollCharges
+  let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled mbDistance mbDuration specialLocationTag mbTollCharges
   (estimates, quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
   QEst.createMany estimates
   for_ quotes QQuote.create
@@ -301,13 +302,13 @@ selectDriversAndMatchFarePolicies :: Id DM.Merchant -> Id DMOC.MerchantOperating
 selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies = do
   driverPoolCfg <- getSearchDriverPoolConfig merchantOpCityId mbDistance area
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-  driverPoolNotOnRide <- calculateDriverPool cityServiceTiers Estimate driverPoolCfg Nothing fromLocation merchantId True Nothing False
+  driverPoolNotOnRide <- calculateDriverPool cityServiceTiers Estimate driverPoolCfg [] fromLocation merchantId True Nothing False
   logDebug $ "Driver Pool not on ride " <> show driverPoolNotOnRide
   driverPoolCurrentlyOnRide <-
     if null driverPoolNotOnRide
       then do
         if transporterConfig.includeDriverCurrentlyOnRide
-          then calculateDriverPoolCurrentlyOnRide cityServiceTiers Estimate driverPoolCfg Nothing fromLocation merchantId Nothing False
+          then calculateDriverPoolCurrentlyOnRide cityServiceTiers Estimate driverPoolCfg [] fromLocation merchantId Nothing False
           else pure []
       else pure []
   let driverPool =
@@ -375,6 +376,7 @@ buildQuote ::
     EsqDBReplicaFlow m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
+  Id DMOC.MerchantOperatingCity ->
   DSR.SearchRequest ->
   Id DM.Merchant ->
   UTCTime ->
@@ -386,7 +388,7 @@ buildQuote ::
   Bool ->
   DFP.FullFarePolicy ->
   m DQuote.Quote
-buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDuration specialLocationTag tollCharges nightShiftOverlapChecking fullFarePolicy = do
+buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled mbDistance mbDuration specialLocationTag tollCharges nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance
   fareParams <-
     calculateFareParameters
@@ -414,6 +416,9 @@ buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDurat
       estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
   -- Keeping quote expiry as search request expiry. Slack discussion: https://juspay.slack.com/archives/C0139KHBFU1/p1683349807003679
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+  let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance dist <$> fullFarePolicy.driverExtraFeeBounds
+  let driverPickUpCharge = DTSRD.extractDriverPickupCharges fullFarePolicy.farePolicyDetails
+  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId fullFarePolicy.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show fullFarePolicy.vehicleServiceTier))
   let validTill = searchRequestExpirationSeconds `addUTCTime` now
   pure
     DQuote.Quote
@@ -422,6 +427,9 @@ buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDurat
         providerId = transporterId,
         distance = mbDistance,
         vehicleServiceTier = fullFarePolicy.vehicleServiceTier,
+        vehicleServiceTierName = Just vehicleServiceTierItem.name,
+        driverMinFee = mbDriverExtraFeeBounds <&> (.minFee),
+        driverMaxFee = mbDriverExtraFeeBounds <&> (.maxFee),
         tripCategory = fullFarePolicy.tripCategory,
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
         createdAt = now,
@@ -431,6 +439,7 @@ buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDurat
 
 buildEstimate ::
   (EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
   Id DSR.SearchRequest ->
   UTCTime ->
   Bool ->
@@ -440,7 +449,7 @@ buildEstimate ::
   Bool ->
   DFP.FullFarePolicy ->
   m DEst.Estimate
-buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag tollCharges nightShiftOverlapChecking fullFarePolicy = do
+buildEstimate merchantOpCityId searchReqId startTime isScheduled mbDistance specialLocationTag tollCharges nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
   fareParams <-
     calculateFareParameters
@@ -467,11 +476,14 @@ buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag to
   now <- getCurrentTime
   void $ cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
   let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance dist <$> fullFarePolicy.driverExtraFeeBounds
+  let driverPickUpCharge = DTSRD.extractDriverPickupCharges fullFarePolicy.farePolicyDetails
+  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId fullFarePolicy.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show fullFarePolicy.vehicleServiceTier))
   pure
     DEst.Estimate
       { id = estimateId,
         requestId = searchReqId,
         vehicleServiceTier = fullFarePolicy.vehicleServiceTier,
+        vehicleServiceTierName = Just vehicleServiceTierItem.name,
         tripCategory = fullFarePolicy.tripCategory,
         estimatedDistance = mbDistance,
         minFare = baseFare + maybe 0 (.minFee) mbDriverExtraFeeBounds,
@@ -479,6 +491,7 @@ buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag to
         fareParams = Just fareParams,
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
         specialLocationTag = specialLocationTag,
+        driverPickUpCharge,
         isScheduled = isScheduled,
         createdAt = now,
         updatedAt = now

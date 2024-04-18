@@ -14,3 +14,12 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN trip_category text NOT NU
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN vehicle_variant text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ALTER COLUMN updated_at DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.estimate ALTER COLUMN trip_category DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.estimate ALTER COLUMN is_scheduled DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN vehicle_service_tier_name text ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN driver_pick_up_charge integer ;

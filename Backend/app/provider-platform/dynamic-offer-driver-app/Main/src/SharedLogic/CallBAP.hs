@@ -69,6 +69,7 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchRequestForDriver as DSRFD
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -111,10 +112,11 @@ callOnSelectV2 ::
   ) =>
   DM.Merchant ->
   DSR.SearchRequest ->
+  DSRFD.SearchRequestForDriver ->
   DST.SearchTry ->
   Spec.OnSelectReqMessage ->
   m ()
-callOnSelectV2 transporter searchRequest searchTry content = do
+callOnSelectV2 transporter searchRequest srfd searchTry content = do
   let bapId = searchRequest.bapId
       bapUri = searchRequest.bapUri
   let bppSubscriberId = getShortId $ transporter.subscriberId
@@ -123,7 +125,7 @@ callOnSelectV2 transporter searchRequest searchTry content = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
 
   msgId <- getMsgIdByTxnId searchRequest.transactionId
-  let vehicleCategory = Utils.mapServiceTierToCategory searchTry.vehicleServiceTier
+  let vehicleCategory = Utils.mapServiceTierToCategory srfd.vehicleServiceTier
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
   ttl <- bppConfig.onSelectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttl)
@@ -133,7 +135,7 @@ callOnSelectV2 transporter searchRequest searchTry content = do
     getMsgIdByTxnId :: CacheFlow m r => Text -> m Text
     getMsgIdByTxnId txnId = do
       Hedis.safeGet (mkTxnIdKey txnId) >>= \case
-        Nothing -> pure searchTry.estimateId
+        Nothing -> pure (fromMaybe searchTry.estimateId srfd.estimateId)
         Just a -> pure a
 
 mkTxnIdKey :: Text -> Text
@@ -446,16 +448,17 @@ sendDriverOffer ::
   ) =>
   DM.Merchant ->
   DSR.SearchRequest ->
+  DSRFD.SearchRequestForDriver ->
   DST.SearchTry ->
   DDQ.DriverQuote ->
   m ()
-sendDriverOffer transporter searchReq searchTry driverQuote = do
+sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
   logDebug $ "on_select ttl request driver:-" <> show driverQuote.validTill
   isValueAddNP <- CValueAddNP.isValueAddNP searchReq.bapId
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show transporter.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier))
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback driverQuote.id.getId
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
-  callOnSelectV2 transporter searchReq searchTry =<< (buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy)
+  callOnSelectV2 transporter searchReq srfd searchTry =<< (buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy)
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>

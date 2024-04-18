@@ -19,15 +19,13 @@ import qualified Data.Map as M
 import Domain.Types.Booking (BookingStatus (..))
 import Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
-import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
-import Domain.Types.Merchant (Merchant)
-import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry (SearchTry)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import qualified Lib.Types.SpecialLocation as SL
@@ -41,7 +39,10 @@ import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.SearchTry as SST
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Estimate as QEst
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
@@ -77,7 +78,59 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) jobData.estimatedRideDistance (Just searchReq.transactionId) (Just "transactionId")
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just searchReq.transactionId) (Just "transactionId")
-  (res, _, _) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.driverExtraFeeBounds jobData.driverPickUpCharges goHomeCfg
+  tripQuoteDetails <- do
+    let estimateIds = if length searchTry.estimateIds == 0 then [searchTry.estimateId] else searchTry.estimateIds
+    estimateIds `forM` \estimateId -> do
+      if DTC.isDynamicOfferTrip searchTry.tripCategory
+        then do
+          estimate <- B.runInReplica $ QEst.findById (Id estimateId) >>= fromMaybeM (EstimateNotFound estimateId)
+          vehicleServiceTierName <-
+            case estimate.vehicleServiceTierName of
+              Just name -> return name
+              _ -> do
+                item <- CQDVST.findByServiceTierTypeAndCityId estimate.vehicleServiceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show estimate.vehicleServiceTier)
+                return item.name
+          return $
+            TripQuoteDetail
+              { tripCategory = estimate.tripCategory,
+                vehicleServiceTier = estimate.vehicleServiceTier,
+                estimateOrQuoteId = estimate.id.getId,
+                vehicleServiceTierName,
+                baseFare = estimate.minFare,
+                driverMinFee = Just 0,
+                driverMaxFee = Just $ estimate.maxFare - estimate.minFare,
+                driverPickUpCharge = estimate.driverPickUpCharge
+              }
+        else do
+          quote <- B.runInReplica $ QQuote.findById (Id estimateId) >>= fromMaybeM (QuoteNotFound estimateId)
+          vehicleServiceTierName <-
+            case quote.vehicleServiceTierName of
+              Just name -> return name
+              _ -> do
+                item <- CQDVST.findByServiceTierTypeAndCityId quote.vehicleServiceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show quote.vehicleServiceTier)
+                return item.name
+          return $
+            TripQuoteDetail
+              { tripCategory = quote.tripCategory,
+                vehicleServiceTier = quote.vehicleServiceTier,
+                estimateOrQuoteId = quote.id.getId,
+                vehicleServiceTierName,
+                baseFare = quote.estimatedFare,
+                driverMinFee = quote.driverMinFee,
+                driverMaxFee = quote.driverMaxFee,
+                driverPickUpCharge = quote.driverPickUpCharge
+              }
+  let driverSearchBatchInput =
+        DriverSearchBatchInput
+          { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
+            merchant,
+            searchReq,
+            tripQuoteDetails,
+            customerExtraFee = searchTry.customerExtraFee,
+            messageId = searchTry.messageId,
+            isRepeatSearch = False
+          }
+  (res, _, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput goHomeCfg
   return res
 
 sendSearchRequestToDrivers' ::
@@ -100,14 +153,11 @@ sendSearchRequestToDrivers' ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   DriverPoolConfig ->
-  SearchRequest ->
   SearchTry ->
-  Merchant ->
-  Maybe DFP.DriverExtraFeeBounds ->
-  Maybe Money ->
+  DriverSearchBatchInput m ->
   GoHomeConfig ->
   m (ExecutionResult, PoolType, Maybe Seconds)
-sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds driverPickUpCharges goHomeCfg = do
+sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput goHomeCfg = do
   -- In case of static offer flow we will have booking created before driver ride request is sent
   mbBooking <- if DTC.isDynamicOfferTrip searchTry.tripCategory then pure Nothing else QRB.findByQuoteId searchTry.estimateId
   handler (handle mbBooking) goHomeCfg
@@ -116,19 +166,19 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driver
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
-          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchTry,
-          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPickUpCharges driverPoolConfig,
+          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails,
+          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.searchReq searchTry driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
           setBatchDurationLock = I.setBatchDurationLock searchTry.id driverPoolConfig.singleBatchProcessTime,
           createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTime,
           metrics =
             MetricsHandle
-              { incrementTaskCounter = Metrics.incrementTaskCounter merchant.name,
-                incrementFailedTaskCounter = Metrics.incrementFailedTaskCounter merchant.name,
-                putTaskDuration = Metrics.putTaskDuration merchant.name
+              { incrementTaskCounter = Metrics.incrementTaskCounter driverSearchBatchInput.merchant.name,
+                incrementFailedTaskCounter = Metrics.incrementFailedTaskCounter driverSearchBatchInput.merchant.name,
+                putTaskDuration = Metrics.putTaskDuration driverSearchBatchInput.merchant.name
               },
           isSearchTryValid = I.isSearchTryValid searchTry.id,
-          initiateDriverSearchBatch = SST.initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq searchTry.tripCategory searchTry.vehicleServiceTier searchTry.estimateId searchTry.customerExtraFee searchTry.messageId False,
+          initiateDriverSearchBatch = SST.initiateDriverSearchBatch driverSearchBatchInput,
           isScheduledBooking = searchTry.isScheduled,
           cancelSearchTry = I.cancelSearchTry searchTry.id,
           isBookingValid = do
@@ -137,5 +187,5 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driver
               Nothing -> True,
           cancelBookingIfApplies = do
             whenJust mbBooking $ \booking -> do
-              SBooking.cancelBooking booking Nothing merchant
+              SBooking.cancelBooking booking Nothing driverSearchBatchInput.merchant
         }

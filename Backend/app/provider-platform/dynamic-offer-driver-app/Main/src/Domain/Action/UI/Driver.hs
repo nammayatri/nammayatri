@@ -823,10 +823,10 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) = do
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       bapMetadata <- CQSM.findById (Id searchRequest.bapId)
       isValueAddNP <- CQVAN.isValueAddNP searchRequest.bapId
-      farePolicy <- getFarePolicyByEstOrQuoteId searchRequest.merchantOperatingCityId searchTry.tripCategory searchTry.vehicleServiceTier searchRequest.area searchTry.estimateId (Just searchRequest.transactionId) (Just "transactionId")
+      farePolicy <- getFarePolicyByEstOrQuoteId searchRequest.merchantOperatingCityId searchTry.tripCategory nearbyReq.vehicleServiceTier searchRequest.area (fromMaybe searchTry.estimateId nearbyReq.estimateId) (Just searchRequest.transactionId) (Just "transactionId")
       popupDelaySeconds <- DP.getPopupDelay merchantOpCityId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       let driverPickUpCharges = extractDriverPickupCharges farePolicy.farePolicyDetails
-      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) (castServiceTierToVariant searchTry.vehicleServiceTier) False isValueAddNP driverPickUpCharges -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) (castServiceTierToVariant nearbyReq.vehicleServiceTier) False isValueAddNP driverPickUpCharges -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -869,7 +869,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
           whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
           case searchTry.tripCategory of
             DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD
-            _ -> acceptStaticOfferDriverRequest searchTry driver
+            _ -> acceptStaticOfferDriverRequest searchTry driver sReqFD
         Reject -> pure []
     QSRD.updateDriverResponse sReqFD.id req.response
     DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id driverFCMPulledList
@@ -885,14 +885,13 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
     buildDriverQuote ::
       (MonadFlow m, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime) =>
       SP.Person ->
-      DST.SearchTry ->
       DSR.SearchRequest ->
       SearchRequestForDriver ->
       Text ->
       DTC.TripCategory ->
       Fare.FareParameters ->
       m DDrQuote.DriverQuote
-    buildDriverQuote driver searchTry searchReq sd estimateId tripCategory fareParams = do
+    buildDriverQuote driver searchReq sd estimateId tripCategory fareParams = do
       guid <- generateGUID
       now <- getCurrentTime
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
@@ -909,7 +908,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
             driverRating = SP.roundToOneDecimal <$> driver.rating,
             status = DDrQuote.Active,
             vehicleVariant = sd.vehicleVariant,
-            vehicleServiceTier = searchTry.vehicleServiceTier,
+            vehicleServiceTier = sd.vehicleServiceTier,
             distance = searchReq.estimatedDistance,
             distanceToPickup = sd.actualDistanceToPickup,
             durationToPickup = sd.durationToPickup,
@@ -933,17 +932,18 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
       driverPoolCfg <- DP.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory area dist (Just txnId) (Just "transactionId")
       pure driverPoolCfg.driverQuoteLimit
 
+    acceptDynamicOfferDriverRequest :: DM.Merchant -> DST.SearchTry -> DSR.SearchRequest -> SP.Person -> SearchRequestForDriver -> Flow [SearchRequestForDriver]
     acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD = do
+      let estimateId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
       when (searchReq.autoAssignEnabled == Just True) $ do
         whenM (CS.isSearchTryCancelled searchTry.id) $
           throwError (InternalError "SEARCH_TRY_CANCELLED")
         CS.markSearchTryAsAssigned searchTry.id
       logDebug $ "offered fare: " <> show req.offeredFare
-      quoteLimit <- getQuoteLimit searchReq.estimatedDistance searchTry.vehicleServiceTier searchTry.tripCategory searchReq.transactionId (fromMaybe SL.Default searchReq.area)
+      quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq.transactionId (fromMaybe SL.Default searchReq.area)
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
       when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-
-      farePolicy <- getFarePolicyByEstOrQuoteId merchantOpCityId searchTry.tripCategory searchTry.vehicleServiceTier searchReq.area searchTry.estimateId (Just searchReq.transactionId) (Just "transactionId")
+      farePolicy <- getFarePolicyByEstOrQuoteId merchantOpCityId searchTry.tripCategory sReqFD.vehicleServiceTier searchReq.area estimateId (Just searchReq.transactionId) (Just "transactionId")
       let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
       whenJust req.offeredFare $ \off ->
         whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
@@ -970,7 +970,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
               ..
             }
       QFP.updateFareParameters fareParams
-      driverQuote <- buildDriverQuote driver searchTry searchReq sReqFD searchTry.estimateId searchTry.tripCategory fareParams
+      driverQuote <- buildDriverQuote driver searchReq sReqFD estimateId searchTry.tripCategory fareParams
       void $ cacheFarePolicyByQuoteId driverQuote.id.getId farePolicy
       triggerQuoteEvent QuoteEventData {quote = driverQuote}
       void $ QDrQt.create driverQuote
@@ -979,12 +979,13 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
           then QSRD.findAllActiveWithoutRespBySearchTryId searchTry.id
           else pure []
       pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id driverQuote.estimatedFare
-      sendDriverOffer merchant searchReq searchTry driverQuote
+      sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
       return driverFCMPulledList
 
-    acceptStaticOfferDriverRequest searchTry driver = do
+    acceptStaticOfferDriverRequest searchTry driver sReqFD = do
+      let quoteId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
       whenJust req.offeredFare $ \_ -> throwError (InvalidRequest "Driver can't offer rental fare")
-      quote <- QQuote.findById (Id searchTry.estimateId) >>= fromMaybeM (QuoteNotFound searchTry.estimateId)
+      quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
       booking <- QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)
       isBookingAssignmentInprogress' <- CS.isBookingAssignmentInprogress booking.id
       when isBookingAssignmentInprogress' $ throwError RideRequestAlreadyAccepted

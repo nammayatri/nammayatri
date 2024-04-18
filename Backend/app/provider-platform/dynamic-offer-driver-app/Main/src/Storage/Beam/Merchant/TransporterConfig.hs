@@ -149,6 +149,7 @@ data TransporterConfigT f = TransporterConfigT
     scheduleRideBufferTime :: B.C f Seconds,
     fakeOtpMobileNumbers :: B.C f [Text],
     variantsToEnableForSubscription :: B.C f [Vehicle.Variant],
+    bookAnyVehicleDowngradeLevel :: B.C f Int,
     considerDriversForSearch :: B.C f Bool,
     dlNumberVerification :: B.C f (Maybe Bool),
     pastDaysRideCounter :: B.C f Int,

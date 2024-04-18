@@ -16,6 +16,7 @@ import Tools.Beam.UtilsTH
 
 data EstimateT f = EstimateT
   { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    driverPickUpCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     fareParamsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     farePolicyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -27,7 +28,8 @@ data EstimateT f = EstimateT
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    vehicleVariant :: B.C f Domain.Types.ServiceTierType.ServiceTierType
+    vehicleVariant :: B.C f Domain.Types.ServiceTierType.ServiceTierType,
+    vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 

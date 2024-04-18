@@ -29,6 +29,7 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.CallBAP as BP
+import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -40,11 +41,13 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.TransporterConfig as QMTC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
@@ -97,8 +100,37 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
                 && driverHasNotArrived
         if isRepeatSearch
           then do
+            estimate <- QEst.findById driverQuote.estimateId >>= fromMaybeM (EstimateNotFound driverQuote.estimateId.getId)
             DP.addDriverToSearchCancelledList searchReq.id ride.driverId
-            result <- try @_ @SomeException (initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq driverQuote.tripCategory searchTry.vehicleServiceTier searchTry.estimateId searchTry.customerExtraFee searchTry.messageId isRepeatSearch)
+            vehicleServiceTierName <-
+              case estimate.vehicleServiceTierName of
+                Just name -> return name
+                _ -> do
+                  item <- CQDVST.findByServiceTierTypeAndCityId estimate.vehicleServiceTier booking.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show estimate.vehicleServiceTier)
+                  return item.name
+            let tripQuoteDetails =
+                  [ TripQuoteDetail
+                      { tripCategory = booking.tripCategory,
+                        vehicleServiceTier = booking.vehicleServiceTier,
+                        vehicleServiceTierName,
+                        baseFare = booking.estimatedFare,
+                        driverMinFee = Just 0,
+                        driverMaxFee = Just $ estimate.maxFare - estimate.minFare,
+                        driverPickUpCharge = estimate.driverPickUpCharge,
+                        estimateOrQuoteId = estimate.id.getId
+                      }
+                  ]
+            let driverSearchBatchInput =
+                  DriverSearchBatchInput
+                    { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
+                      merchant,
+                      searchReq,
+                      tripQuoteDetails,
+                      customerExtraFee = searchTry.customerExtraFee,
+                      messageId = searchTry.messageId,
+                      isRepeatSearch
+                    }
+            result <- try @_ @SomeException (initiateDriverSearchBatch driverSearchBatchInput)
             case result of
               Right _ -> do
                 if isValueAddNP

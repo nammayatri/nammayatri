@@ -62,6 +62,7 @@ buildSelectReqV2 subscriber req = do
     _ -> throwError $ InvalidRequest "There should be only one item"
   let customerExtraFee = getCustomerExtraFeeV2 item.itemTags
       autoAssignEnabled = getAutoAssignEnabledV2 item.itemTags
+      bookAnyEstimates = getBookAnyEstimates item.itemTags
   fulfillment <- case order.orderFulfillments of
     Just [fulfillment] -> pure fulfillment
     _ -> throwError $ InvalidRequest "There should be only one fulfillment"
@@ -76,9 +77,14 @@ buildSelectReqV2 subscriber req = do
         pickupTime = now,
         autoAssignEnabled = autoAssignEnabled,
         customerExtraFee = customerExtraFee,
-        estimateId = Id estimateIdText,
+        estimateIds = [Id estimateIdText] <> (maybe [] (map Id) bookAnyEstimates),
         customerPhoneNum = customerPhoneNum
       }
+
+getBookAnyEstimates :: Maybe [Spec.TagGroup] -> Maybe [Text]
+getBookAnyEstimates tagGroups = do
+  tagValue <- Utils.getTagV2 Tag.ESTIMATIONS Tag.OTHER_SELECT_ESTIMATES tagGroups
+  readMaybe $ T.unpack tagValue
 
 getCustomerExtraFeeV2 :: Maybe [Spec.TagGroup] -> Maybe Money
 getCustomerExtraFeeV2 tagGroups = do

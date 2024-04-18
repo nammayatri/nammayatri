@@ -35,6 +35,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.driverPickUpCharge driverPickUpCharge,
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.fareParamsId ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
       Se.Set Beam.farePolicyId ((Kernel.Types.Id.getId . (.id) <$>) farePolicy),
@@ -45,7 +46,8 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.specialLocationTag specialLocationTag,
       Se.Set Beam.tripCategory (Kernel.Prelude.Just tripCategory),
       Se.Set Beam.updatedAt (Kernel.Prelude.Just updatedAt),
-      Se.Set Beam.vehicleVariant vehicleServiceTier
+      Se.Set Beam.vehicleVariant vehicleServiceTier,
+      Se.Set Beam.vehicleServiceTierName vehicleServiceTierName
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -57,6 +59,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
       Just
         Domain.Types.Estimate.Estimate
           { createdAt = createdAt,
+            driverPickUpCharge = driverPickUpCharge,
             estimatedDistance = estimatedDistance,
             fareParams = fareParams',
             farePolicy = farePolicy',
@@ -68,13 +71,15 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             specialLocationTag = specialLocationTag,
             tripCategory = Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer) tripCategory,
             updatedAt = Kernel.Prelude.fromMaybe createdAt updatedAt,
-            vehicleServiceTier = vehicleVariant
+            vehicleServiceTier = vehicleVariant,
+            vehicleServiceTierName = vehicleServiceTierName
           }
 
 instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   toTType' (Domain.Types.Estimate.Estimate {..}) = do
     Beam.EstimateT
       { Beam.createdAt = createdAt,
+        Beam.driverPickUpCharge = driverPickUpCharge,
         Beam.estimatedDistance = estimatedDistance,
         Beam.fareParamsId = (Kernel.Types.Id.getId . (.id) <$>) fareParams,
         Beam.farePolicyId = (Kernel.Types.Id.getId . (.id) <$>) farePolicy,
@@ -86,5 +91,6 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.specialLocationTag = specialLocationTag,
         Beam.tripCategory = Kernel.Prelude.Just tripCategory,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt,
-        Beam.vehicleVariant = vehicleServiceTier
+        Beam.vehicleVariant = vehicleServiceTier,
+        Beam.vehicleServiceTierName = vehicleServiceTierName
       }

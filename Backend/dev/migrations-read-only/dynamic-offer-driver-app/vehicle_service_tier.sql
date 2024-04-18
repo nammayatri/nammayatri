@@ -30,3 +30,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ALTER COLUMN seating_cap
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN default_for_vehicle_variant text[] NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN priority integer NOT NULL default 0;

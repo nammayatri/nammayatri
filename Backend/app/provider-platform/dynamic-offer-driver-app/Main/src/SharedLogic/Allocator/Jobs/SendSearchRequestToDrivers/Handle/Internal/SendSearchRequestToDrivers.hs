@@ -18,15 +18,16 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Sen
 where
 
 import Control.Monad.Extra (anyM)
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as M
 import Domain.Types.DriverPoolConfig
-import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -36,7 +37,7 @@ import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
-import SharedLogic.DriverPool
+import qualified SharedLogic.DriverPool as SDP
 import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -58,21 +59,21 @@ sendSearchRequestToDrivers ::
     EncFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
+  [SDP.TripQuoteDetail] ->
   DSR.SearchRequest ->
   DST.SearchTry ->
-  Maybe DFP.DriverExtraFeeBounds ->
-  Maybe Money ->
   DriverPoolConfig ->
-  [DriverPoolWithActualDistResult] ->
+  [SDP.DriverPoolWithActualDistResult] ->
   [Id Driver] ->
   GoHomeConfig ->
   m ()
-sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPickUpCharges driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
+sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   bapMetadata <- CQSM.findById (Id searchReq.bapId)
   validTill <- getSearchRequestValidTill
   batchNumber <- getPoolBatchNum searchTry.id
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
+  let tripQuoteDetailsHashMap = HashMap.fromList $ (\tqd -> (tqd.vehicleServiceTier, tqd)) <$> tripQuoteDetails
   DS.driverScoreEventHandler
     searchReq.merchantOperatingCityId
     DST.OnNewSearchRequestForDrivers
@@ -84,7 +85,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPickUp
         batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
       }
 
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber validTill) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
@@ -98,7 +99,8 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPickUp
             then fromMaybe searchReq $ M.lookup language languageDictionary
             else searchReq
     isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
-    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds (castServiceTierToVariant searchTry.vehicleServiceTier) needTranslation isValueAddNP driverPickUpCharges
+    tripQuoteDetail <- HashMap.lookup dPoolRes.driverPoolResult.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dPoolRes.driverPoolResult.serviceTier)
+    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds (SDP.castServiceTierToVariant tripQuoteDetail.vehicleServiceTier) needTranslation isValueAddNP tripQuoteDetail.driverPickUpCharge
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
     notificationData <- Notify.buildSendSearchRequestNotificationData sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData Notify.EmptyDynamicParam
     Notify.sendSearchRequestToDriverNotification searchReq.providerId searchReq.merchantOperatingCityId notificationData
@@ -113,28 +115,31 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPickUp
         EsqDBFlow m r,
         CacheFlow m r
       ) =>
+      HashMap.HashMap DVST.ServiceTierType SDP.TripQuoteDetail ->
       Int ->
       UTCTime ->
-      DriverPoolWithActualDistResult ->
+      SDP.DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver batchNumber defaultValidTill dpwRes = do
+    buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber defaultValidTill dpwRes = do
       guid <- generateGUID
       now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult
-      parallelSearchRequestCount <- Just <$> getValidSearchRequestCount searchReq.providerId dpRes.driverId now
+      tripQuoteDetail <- HashMap.lookup dpRes.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dpRes.serviceTier)
+      parallelSearchRequestCount <- Just <$> SDP.getValidSearchRequestCount searchReq.providerId dpRes.driverId now
       let searchRequestForDriver =
             SearchRequestForDriver
               { id = guid,
                 requestId = searchReq.id,
                 searchTryId = searchTry.id,
+                estimateId = Just tripQuoteDetail.estimateOrQuoteId,
                 startTime = searchTry.startTime,
                 merchantId = Just searchReq.providerId,
                 merchantOperatingCityId = searchReq.merchantOperatingCityId,
                 searchRequestValidTill = if dpwRes.pickupZone then addUTCTime (fromIntegral dpwRes.keepHiddenForSeconds) defaultValidTill else defaultValidTill,
                 driverId = cast dpRes.driverId,
                 vehicleVariant = dpRes.variant,
-                vehicleServiceTier = Just searchTry.vehicleServiceTier,
-                vehicleServiceTierName = Just searchTry.vehicleServiceTierName,
+                vehicleServiceTier = tripQuoteDetail.vehicleServiceTier,
+                vehicleServiceTierName = Just tripQuoteDetail.vehicleServiceTierName,
                 airConditioned = (> 0.0) <$> dpRes.airConditioned,
                 actualDistanceToPickup = dpwRes.actualDistanceToPickup,
                 straightLineDistanceToPickup = dpRes.distanceToPickup,
@@ -144,9 +149,10 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPickUp
                 lon = Just dpRes.lon,
                 createdAt = now,
                 response = Nothing,
-                driverMinExtraFee = driverExtraFeeBounds <&> (.minFee),
-                driverMaxExtraFee = driverExtraFeeBounds <&> (.maxFee),
+                driverMinExtraFee = tripQuoteDetail.driverMinFee,
+                driverMaxExtraFee = tripQuoteDetail.driverMaxFee,
                 rideRequestPopupDelayDuration = dpwRes.intelligentScores.rideRequestPopupDelayDuration,
+                baseFare = Just tripQuoteDetail.baseFare,
                 isPartOfIntelligentPool = dpwRes.isPartOfIntelligentPool,
                 acceptanceRatio = dpwRes.intelligentScores.acceptanceRatio,
                 cancellationRatio = dpwRes.intelligentScores.cancellationRatio,
@@ -212,7 +218,7 @@ addLanguageToDictionary ::
   ) =>
   DSR.SearchRequest ->
   LanguageDictionary ->
-  DriverPoolWithActualDistResult ->
+  SDP.DriverPoolWithActualDistResult ->
   m LanguageDictionary
 addLanguageToDictionary searchReq dict dPoolRes = do
   let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language

@@ -73,7 +73,8 @@ data DSelectReq = DSelectReq
     customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     autoAssignEnabled :: Bool,
     autoAssignEnabledV2 :: Maybe Bool,
-    paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod)
+    paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
+    otherSelectedEstimates :: Maybe [Id DEstimate.Estimate]
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -90,6 +91,7 @@ validateDSelectReq DSelectReq {..} =
 data DSelectRes = DSelectRes
   { searchRequest :: DSearchReq.SearchRequest,
     estimate :: DEstimate.Estimate,
+    remainingEstimateBppIds :: [Id DEstimate.BPPEstimate],
     providerId :: Text,
     providerUrl :: BaseUrl,
     variant :: VehicleVariant,
@@ -153,6 +155,9 @@ select2 personId estimateId req@DSelectReq {..} = do
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   let searchRequestId = estimate.requestId
+  remainingEstimates <- catMaybes <$> (QEstimate.findById `mapM` filter ((/=) estimate.id) (fromMaybe [] otherSelectedEstimates))
+  unless (all (\e -> e.requestId == searchRequestId) remainingEstimates) $ throwError (InvalidRequest "All selected estimate should belong to same search request")
+  let remainingEstimateBppIds = remainingEstimates <&> (.bppEstimateId)
   isValueAddNP <- CQVNP.isValueAddNP estimate.providerId
   phoneNumber <- bool (pure Nothing) getPhoneNo isValueAddNP
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
