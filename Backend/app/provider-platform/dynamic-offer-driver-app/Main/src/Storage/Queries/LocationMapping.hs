@@ -29,6 +29,9 @@ import qualified Storage.Beam.LocationMapping as BeamLM
 latestTag :: Text
 latestTag = "LATEST"
 
+softUpdateTag :: Text
+softUpdateTag = "SOFT_UPDATE"
+
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LocationMapping -> m ()
 create = createWithKV
 

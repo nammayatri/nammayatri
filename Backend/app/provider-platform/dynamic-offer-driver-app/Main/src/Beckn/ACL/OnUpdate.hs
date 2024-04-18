@@ -39,12 +39,13 @@ buildOnUpdateMessageV2 ::
   ) =>
   DM.Merchant ->
   DRB.Booking ->
+  Maybe Text ->
   OnUpdateBuildReq ->
   m Spec.OnUpdateReq
-buildOnUpdateMessageV2 merchant booking req = do
+buildOnUpdateMessageV2 merchant booking mbMessageId req = do
   msgId <- generateGUID
   let bppId = getShortId $ merchant.subscriberId
       city = fromMaybe merchant.city booking.bapCity
       country = fromMaybe merchant.country booking.bapCountry
   bppUri <- BUtils.mkBppUri merchant.id.getId
-  TFOU.buildOnUpdateReqV2 Context.ON_UPDATE Context.MOBILITY msgId bppId bppUri city country booking req
+  TFOU.buildOnUpdateReqV2 Context.ON_UPDATE Context.MOBILITY (fromMaybe msgId mbMessageId) bppId bppUri city country booking req

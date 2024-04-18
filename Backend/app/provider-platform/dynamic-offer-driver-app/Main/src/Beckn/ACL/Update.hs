@@ -40,10 +40,10 @@ buildUpdateReq subscriber req = do
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == req.context.bap_uri) $
     throwError (InvalidRequest "Invalid bap_uri")
-  pure $ parseEvent req.message.order
+  pure $ parseEvent req.message.order req.context.message_id
 
-parseEvent :: Update.UpdateEvent -> DUpdate.DUpdateReq
-parseEvent (Update.PaymentCompleted pcEvent) = do
+parseEvent :: Update.UpdateEvent -> Text -> DUpdate.DUpdateReq
+parseEvent (Update.PaymentCompleted pcEvent) _ = do
   DUpdate.UPaymentCompletedReq $
     DUpdate.PaymentCompletedReq
       { bookingId = Id pcEvent.id,
@@ -51,21 +51,29 @@ parseEvent (Update.PaymentCompleted pcEvent) = do
         paymentStatus = castPaymentStatus pcEvent.payment.status,
         paymentMethodInfo = mkPaymentMethodInfo pcEvent.payment
       }
-parseEvent (Update.EditLocation elEvent) = do
+parseEvent (Update.EditLocation elEvent) messageId = do
   DUpdate.UEditLocationReq $
+    -- DUpdate.EditLocationReq
+    --   { bookingId = Id elEvent.id,
+    --     rideId = Id elEvent.fulfillment.id,
+    --     origin = elEvent.fulfillment.origin.location,
+    --     destination = elEvent.fulfillment.destination >>= (.location)
+    --   }
     DUpdate.EditLocationReq
       { bookingId = Id elEvent.id,
         rideId = Id elEvent.fulfillment.id,
-        origin = elEvent.fulfillment.origin.location,
-        destination = elEvent.fulfillment.destination >>= (.location)
+        origin = elEvent.fulfillment.origin >>= (\origin -> Just origin.location),
+        destination = elEvent.fulfillment.destination >>= (\destination -> Just destination.location),
+        status = elEvent.fulfillment.status,
+        bapBookingUpdateRequestId = messageId
       }
-parseEvent (Update.AddStop asEvent) = do
+parseEvent (Update.AddStop asEvent) _ = do
   DUpdate.UAddStopReq $
     DUpdate.AddStopReq
       { bookingId = Id asEvent.id,
         stops = asEvent.fulfillment.stops
       }
-parseEvent (Update.EditStop esEvent) = do
+parseEvent (Update.EditStop esEvent) _ = do
   DUpdate.UEditStopReq $
     DUpdate.EditStopReq
       { bookingId = Id esEvent.id,

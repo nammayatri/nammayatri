@@ -1,0 +1,63 @@
+imports:
+  # FareParameters: Domain.Types.FareParameters
+  # FarePolicy: Domain.Types.FarePolicy
+  # TripCategory: Domain.Types.Common
+  # Variant: Domain.Types.Vehicle
+  SearchRequest: Domain.Types.SearchRequest
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  # Money: Kernel.Types.Common
+
+
+SearchRevised:
+    tableName: search_revised
+
+    derives: "Generic,Show"
+
+    beamInstance: MakeTableInstancesWithTModifier []
+
+    fields:
+      id: Id SearchRevised
+      parentSearchId: Id SearchRequest
+      createdAt: UTCTime
+      updatedAt: UTCTime
+      merchantId: Id Merchant
+      merchantOperatingCityId: Id MerchantOperatingCity
+
+    # excludedFields:
+    #   - merchantId
+    #   - merchantOperatingCityId
+
+    # beamFields:
+    #   farePolicy:
+    #     farePolicyId: Maybe Text
+
+    # sqlType:
+    #   farePolicyId: character varying(36)
+    # beamType:
+    #   updatedAt: Maybe UTCTime
+    #   isScheduled: Maybe Bool
+    #   tripCategory: Maybe TripCategory
+
+    # fromTType:
+    #   updatedAt: Kernel.Prelude.fromMaybe createdAt|I
+    #   isScheduled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    #   tripCategory: Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer)|I
+    #   farePolicy: maybe (pure Nothing) ((Storage.CachedQueries.FarePolicy.findById Nothing Nothing) . Kernel.Types.Id.Id)|IM
+
+
+    # toTType:
+    #   updatedAt: Kernel.Prelude.Just|I
+    #   isScheduled: Kernel.Prelude.Just|I
+    #   tripCategory: Kernel.Prelude.Just|I
+    #   farePolicyId: (Kernel.Types.Id.getId . (.id) <$>)
+
+    queries:
+      findById:
+        kvFunction: findOneWithKV
+        where:
+          and: [id]
+      findAllByParentSearchId:
+        kvFunction: findAllWithKV
+        where:
+          and: [parentSearchId]

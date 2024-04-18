@@ -38,6 +38,15 @@ getNewVersion mapping =
       pure $ "v-" <> T.pack (show (oldVersionInt + 1))
     _ -> pure "v-1"
 
+softUpdateTag :: Text
+softUpdateTag = "SOFT_UPDATE"
+
+confirmUpdateTag :: Text
+confirmUpdateTag = "CONFIRM_UPDATE"
+
+-- create :: (MonadFlow m, EsqDBFlow m r) => LocationMapping -> m ()
+-- create = createWithKV
+
 findAllByEntityIdAndOrder :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> m [LocationMapping]
 findAllByEntityIdAndOrder entityId order =
   findAllWithKVAndConditionalDB
@@ -65,6 +74,24 @@ getLatestEndByEntityId entityId =
     ]
     (Just (Se.Desc BeamLM.createdAt))
     <&> listToMaybe
+
+getSoftUpdateEndByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe LocationMapping)
+getSoftUpdateEndByEntityId entityId =
+  findAllWithKVAndConditionalDB
+    [ Se.And
+        [ Se.Is BeamLM.entityId $ Se.Eq entityId,
+          Se.Is BeamLM.order $ Se.Not $ Se.Eq 0,
+          Se.Is BeamLM.version $ Se.Eq softUpdateTag
+        ]
+    ]
+    (Just (Se.Desc BeamLM.createdAt))
+    <&> listToMaybe
+
+-- findAllByEntityIdAndOrder :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> m [LocationMapping]
+-- findAllByEntityIdAndOrder entityId order =
+--   findAllWithKVAndConditionalDB
+--     [Se.And [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order]]
+--     Nothing
 
 maxOrderByEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
 maxOrderByEntity entityId = do

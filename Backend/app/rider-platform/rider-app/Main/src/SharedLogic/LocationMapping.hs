@@ -46,3 +46,15 @@ buildDropLocationMapping locationId entityId tag merchantId merchantOperatingCit
       updatedAt = now
   QLM.updatePastMappingVersions entityId order
   return DLM.LocationMapping {..}
+
+buildSoftUpdateDropLocMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m DLM.LocationMapping
+buildSoftUpdateDropLocMapping locationId entityId tag merchantId merchantOperatingCityId = do
+  id <- generateGUID
+  noOfEntries <- QLM.countOrders entityId
+  let order = if noOfEntries == 0 then 1 else noOfEntries
+  now <- getCurrentTime
+  let version = QLM.softUpdateTag
+      createdAt = now
+      updatedAt = now
+  -- QLM.updatePastMappingVersions entityId order
+  return DLM.LocationMapping {..}

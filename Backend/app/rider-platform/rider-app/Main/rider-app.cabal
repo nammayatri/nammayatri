@@ -173,6 +173,7 @@ library
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Confirm
       Domain.Action.UI.Disability
+      Domain.Action.UI.EditLocation
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
       Domain.Action.UI.FollowRide
@@ -379,18 +380,19 @@ library
       Tools.Notifications
       Tools.Payment
       Tools.Schema
-      Tools.Search
       Tools.SignatureAuth
       Tools.SMS
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
       API.Action.UI.Cac
+      API.Action.UI.EditLocation
       API.Action.UI.FollowRide
       API.Action.UI.FRFSTicketService
       API.Action.UI.Invoice
       API.Action.UI.Sos
       API.Action.UI.TicketService
+      API.Types.UI.EditLocation
       API.Types.UI.FollowRide
       API.Types.UI.FRFSTicketService
       API.Types.UI.Invoice
@@ -401,6 +403,7 @@ library
       Domain.Types.AadhaarVerification
       Domain.Types.AppInstalls
       Domain.Types.BecknConfig
+      Domain.Types.BookingUpdateRequest
       Domain.Types.BppDetails
       Domain.Types.BusinessHour
       Domain.Types.CallbackRequest
@@ -428,6 +431,7 @@ library
       Domain.Types.Ride
       Domain.Types.RiderConfig
       Domain.Types.SearchReqLocation
+      Domain.Types.SearchRevised
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
@@ -446,6 +450,7 @@ library
       Storage.Beam.AadhaarVerification
       Storage.Beam.AppInstalls
       Storage.Beam.BecknConfig
+      Storage.Beam.BookingUpdateRequest
       Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
       Storage.Beam.CallbackRequest
@@ -473,6 +478,7 @@ library
       Storage.Beam.Ride
       Storage.Beam.RiderConfig
       Storage.Beam.SearchReqLocation
+      Storage.Beam.SearchRevised
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
@@ -491,6 +497,7 @@ library
       Storage.Queries.AadhaarVerification
       Storage.Queries.AppInstalls
       Storage.Queries.BecknConfig
+      Storage.Queries.BookingUpdateRequest
       Storage.Queries.BppDetails
       Storage.Queries.BusinessHour
       Storage.Queries.CallbackRequest
@@ -526,6 +533,7 @@ library
       Storage.Queries.Ride
       Storage.Queries.RiderConfig
       Storage.Queries.SearchReqLocation
+      Storage.Queries.SearchRevised
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory

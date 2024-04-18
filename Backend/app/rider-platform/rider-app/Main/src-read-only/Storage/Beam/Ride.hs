@@ -66,6 +66,6 @@ instance B.Table RideT where
 
 type Ride = RideT Identity
 
-$(enableKVPG ''RideT ['id] [['bookingId], ['bppRideId]])
+$(enableKVPG (''RideT) [('id)] [[('bookingId)], [('bppRideId)]])
 
-$(mkTableInstances ''RideT "ride")
+$(mkTableInstances (''RideT) "ride")

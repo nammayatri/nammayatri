@@ -67,7 +67,8 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     updateTollCharges :: Id person -> HighPrecMoney -> m (),
     updateRouteDeviation :: Id person -> [LatLong] -> m Bool,
     getTravelledDistance :: Id person -> Meters -> m Meters,
-    getRecomputeIfPickupDropNotOutsideOfThreshold :: Bool
+    getRecomputeIfPickupDropNotOutsideOfThreshold :: Bool --,
+    -- updateTravelledDistanceInBUR :: Id bookingUpdateReq -> HighPrecMeters -> m ()
   }
 
 --------------------------------------------------------------------------------
@@ -134,6 +135,7 @@ recalcDistanceBatches ::
   (CacheFlow m r, Monad m, Log m) =>
   RideInterpolationHandler person m ->
   Bool ->
+  Bool ->
   Id person ->
   Meters ->
   Maybe HighPrecMoney ->
@@ -171,7 +173,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
         Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState 21600 -- 6 hours
   where
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
-    continueCondition = if ending then pointsRemaining else atLeastBatchPlusOne
+    continueCondition = if ending || isSoftUpdate then pointsRemaining else atLeastBatchPlusOne
     atLeastBatchPlusOne = (> batchSize) <$> getWaypointsNumber driverId
 
     recalcDistanceBatches' snapToRoad'@SnapToRoadState {..} snapToRoadCallFailed = do
@@ -231,6 +233,7 @@ mkRideInterpolationHandler ::
     HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters],
     HasFlowEnv m r '["osrmMatchThreshold" ::: HighPrecMeters]
   ) =>
+  -- Bool ->
   Bool ->
   (Id person -> HighPrecMeters -> Int -> Int -> m ()) ->
   (Id person -> HighPrecMoney -> m ()) ->
@@ -262,6 +265,43 @@ mkRideInterpolationHandler isEndRide updateDistance updateTollCharges updateRout
       getTravelledDistance,
       getRecomputeIfPickupDropNotOutsideOfThreshold
     }
+
+-- mkRideInterpolationHandlerTemp ::
+--   ( HedisFlow m r,
+--     HasPrettyLogger m r,
+--     HasCallStack,
+--     Metrics.CoreMetrics m,
+--     EncFlow m r,
+--     HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters],
+--     HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters],
+--     HasFlowEnv m r '["osrmMatchThreshold" ::: HighPrecMeters]
+--   ) =>
+--   Bool ->
+--   (Id BookingUpdateRequest -> HighPrecMeters -> m ()) ->
+--   (Id person -> [LatLong] -> m Bool) ->
+--   (Id person -> Meters -> m Meters) ->
+--   (Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
+--   RideInterpolationHandler person m
+-- mkRideInterpolationHandlerTemp isEndRide updateDistance updateRouteDeviation getTravelledDistance snapToRoadCall =
+--   RideInterpolationHandler
+--     { batchSize = 98,
+--       addPoints = addPointsImplementation,
+--       clearLocationUpdates = clearLocationUpdatesImplementation,
+--       getWaypointsNumber = getWaypointsNumberImplementation,
+--       getFirstNwaypoints = getFirstNwaypointsImplementation,
+--       getAllWaypoints = getAllWaypointsImplementation,
+--       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
+--       addInterpolatedPoints = addInterpolatedPointsImplementation,
+--       clearInterpolatedPoints = clearInterpolatedPointsImplementation,
+--       getInterpolatedPoints = getInterpolatedPointsImplementation,
+--       expireInterpolatedPoints = expireInterpolatedPointsImplementation,
+--       interpolatePointsAndCalculateDistance = interpolatePointsAndCalculateDistanceImplementation isEndRide snapToRoadCall,
+--       updateDistance,
+--       updateRouteDeviation,
+--       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
+--       wrapDistanceCalculation = wrapDistanceCalculationImplementation,
+--       getTravelledDistance
+--     }
 
 makeWaypointsRedisKey :: Id person -> Text
 makeWaypointsRedisKey driverId = mconcat ["waypoints", ":", driverId.getId]

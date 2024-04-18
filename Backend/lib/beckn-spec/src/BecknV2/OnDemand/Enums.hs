@@ -123,6 +123,8 @@ data OrderStatus
   | ACTIVE
   | COMPLETE
   | CANCELLED
+  | SOFT_UPDATE
+  | CONFIRM_UPDATE
   deriving (Eq, Generic, Read, Show, FromJSON, ToJSON)
 
 data QuoteBreakupTitle

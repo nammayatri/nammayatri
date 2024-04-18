@@ -1,0 +1,130 @@
+-- {-# OPTIONS_GHC -Wno-orphans #-}
+-- {-# OPTIONS_GHC -Wno-unused-imports #-}
+-- module Domain.Action.UI.EditLocation where
+-- import qualified API.Types.UI.EditLocation
+-- import Data.OpenApi (ToSchema)
+-- import qualified Domain.Types.BookingUpdateRequest
+-- import qualified Domain.Types.Merchant
+-- import qualified Domain.Types.Person
+-- import qualified Environment
+-- import EulerHS.Prelude hiding (id)
+-- import qualified Kernel.Prelude
+-- import qualified Kernel.Types.APISuccess
+-- import qualified Kernel.Types.Id
+-- import Servant
+-- import Tools.Auth
+-- getEditResult ::
+--   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+--       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+--     ) ->
+--     Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest ->
+--     Environment.Flow API.Types.UI.EditLocation.EditLocationResultAPIResp
+--   )
+-- getEditResult = error "Logic yet to be decided"
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+module Domain.Action.UI.EditLocation where
+
+import API.Types.UI.EditLocation
+import qualified Beckn.ACL.Update as ACL
+import qualified Beckn.Types.Core.Taxi.Common.Location as Common
+import Data.OpenApi (ToSchema)
+import qualified Domain.Types.BookingUpdateRequest
+import qualified Domain.Types.Location as QL
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
+import qualified Environment
+import EulerHS.Prelude hiding (id)
+import qualified Kernel.Beam.Functions as B
+import qualified Kernel.Prelude
+import Kernel.Types.APISuccess
+import Kernel.Types.Error
+import qualified Kernel.Types.Id
+import Kernel.Utils.Error.Throwing
+import Kernel.Utils.Servant.Client
+import Servant
+import qualified SharedLogic.CallBPP as CallBPP
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Queries.Booking as QB
+import qualified Storage.Queries.BookingUpdateRequest as QBUR
+import qualified Storage.Queries.Location as QL
+import qualified Storage.Queries.LocationMapping as QLM
+import qualified Storage.Queries.Ride as QR
+import Tools.Auth
+
+getEditResult ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest ->
+    Environment.Flow API.Types.UI.EditLocation.EditLocationResultAPIResp
+  )
+getEditResult (mbPersonId, merchantId) bookingUpdateReqId = do
+  _ <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  _ <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+  bookingUpdateReq <- B.runInReplica $ QBUR.findById bookingUpdateReqId >>= fromMaybeM (InvalidRequest "Invalid booking update request id")
+  return $ EditLocationResultAPIResp bookingUpdateReq
+
+postEditResultConfirm ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postEditResultConfirm (mbPersonId, merchantId) bookingUpdateReqId = do
+  _ <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+  bookingUpdateReq <- B.runInReplica $ QBUR.findById bookingUpdateReqId >>= fromMaybeM (InvalidRequest "Invalid booking update request id")
+  dropLocMapping <- B.runInReplica $ QLM.getLatestEndByEntityId bookingUpdateReqId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateRequestId: " <> bookingUpdateReqId.getId)
+  destination' <- B.runInReplica $ QL.findById dropLocMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId: " <> dropLocMapping.locationId.getId)
+  booking <- B.runInReplica $ QB.findById bookingUpdateReq.bookingId >>= fromMaybeM (InternalError $ "Invalid booking id" <> bookingUpdateReq.bookingId.getId)
+  ride <- B.runInReplica $ QR.findByRBId booking.id >>= fromMaybeM (InvalidRequest $ "No Ride present for booking" <> booking.id.getId)
+  bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+  let dUpdateReq =
+        ACL.UpdateBuildReq
+          { --bppRideId = ride.bppRideId,
+            bppId = booking.providerId,
+            bppUrl = booking.providerUrl,
+            transactionId = booking.transactionId,
+            messageId = bookingUpdateReq.id.getId,
+            -- origin = Nothing,
+            -- destination = destination',
+            city = merchant.defaultCity, -- TODO: Correct during interoperability
+            -- status = ACL.SOFT_UPDATE,
+            details =
+              ACL.UEditLocationBuildReqDetails $
+                ACL.EditLocationBuildReqDetails
+                  { bppRideId = ride.bppRideId,
+                    origin = Nothing,
+                    status = ACL.CONFIRM_UPDATE,
+                    destination = Just $ mkLocation destination'
+                  },
+            ..
+          }
+  becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
+  void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
+  return Success
+
+mkLocation :: QL.Location -> Common.Location
+mkLocation QL.Location {..} =
+  Common.Location
+    { gps =
+        Common.Gps
+          { lat,
+            lon
+          },
+      address =
+        Common.Address
+          { locality = address.area,
+            area_code = address.areaCode,
+            state = address.state,
+            country = address.country,
+            building = address.building,
+            street = address.street,
+            city = address.city,
+            ward = address.ward,
+            door = address.door
+          }
+    }

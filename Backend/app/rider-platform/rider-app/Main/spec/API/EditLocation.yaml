@@ -1,0 +1,116 @@
+imports:
+  Text: Data.Text
+  Maybe: Data.Maybe
+  BookingUpdateRequest: Domain.Types.BookingUpdateRequest
+
+
+module: EditLocation
+types:
+  EditLocationResultAPIResp:
+    bookingUpdateRequestDetails : BookingUpdateRequest
+
+  # FRFSCanCancelStatus:
+  #   cancellationCharges : Maybe HighPrecMoney
+  #   refundAmount : Maybe HighPrecMoney
+  #   isCancellable : Maybe Bool
+
+  # FRFSCancelStatus:
+  #   cancellationCharges : Maybe HighPrecMoney
+  #   refundAmount : Maybe HighPrecMoney
+
+apis:
+  - GET:
+      endpoint: /edit/{bookingUpdateRequestId}/result
+      params:
+        bookingUpdateRequestId: Id BookingUpdateRequest
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.EditLocation.EditLocationResultAPIResp
+
+  # # Initiate search for metro tickets
+  - POST:
+      endpoint: /edit/result/{bookingUpdateRequestId}/confirm
+      params:
+        bookingUpdateRequestId: Id BookingUpdateRequest
+      auth: TokenAuth
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # # Get quotes for metro tickets
+  # - GET:
+  #     endpoint: /frfs/search/{searchId}/quote
+  #     params:
+  #       searchId: Id FRFSSearch
+  #     auth: TokenAuth
+  #     response:
+  #       type: "[API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]"
+
+  # # Confirm quote for metro tickets (return PP sdk params)
+  # - POST:
+  #     endpoint: /frfs/quote/{quoteId}/confirm
+  #     params:
+  #       quoteId: Id FRFSQuote
+  #     auth: TokenAuth
+  #     response:
+  #       type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+
+  # # Retry payment
+  # - POST:
+  #     endpoint: /frfs/quote/{quoteId}/payment/retry
+  #     params:
+  #       quoteId: Id FRFSQuote
+  #     auth: TokenAuth
+  #     response:
+  #       type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+
+  # # Get booking status
+  # - GET:
+  #     endpoint: /frfs/booking/{bookingId}/status
+  #     params:
+  #       bookingId: Id FRFSTicketBooking
+  #     auth: TokenAuth
+  #     response:
+  #       type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+
+  # # List metro tickets
+  # - GET:
+  #     endpoint: /frfs/booking/list
+  #     auth: TokenAuth
+  #     response:
+  #       type: "[API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]"
+
+  # # Booking Soft Cancel
+  # - POST:
+  #     endpoint: /frfs/booking/{bookingId}/canCancel
+  #     params:
+  #       bookingId: Id FRFSTicketBooking
+  #     auth: TokenAuth
+  #     response:
+  #       type: Kernel.Types.APISuccess.APISuccess
+
+  # # Booking Soft Cancel Status
+  # - GET:
+  #     endpoint: /frfs/booking/{bookingId}/canCancel/status
+  #     params:
+  #       bookingId: Id FRFSTicketBooking
+  #     auth: TokenAuth
+  #     response:
+  #       type: API.Types.UI.FRFSTicketService.FRFSCanCancelStatus
+
+  # # Booking Cancel
+  # - POST:
+  #     endpoint: /frfs/booking/{bookingId}/cancel
+  #     params:
+  #       bookingId: Id FRFSTicketBooking
+  #     auth: TokenAuth
+  #     response:
+  #       type: Kernel.Types.APISuccess.APISuccess
+
+  # # Booking Cancel Status
+  # - GET:
+  #     endpoint: /frfs/booking/cancel/{bookingId}/status
+  #     params:
+  #       bookingId: Id FRFSTicketBooking
+  #     auth: TokenAuth
+  #     response:
+  #       type: API.Types.UI.FRFSTicketService.FRFSCancelStatus

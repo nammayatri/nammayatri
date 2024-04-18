@@ -1,0 +1,104 @@
+imports:
+  FareParameters: Domain.Types.FareParameters
+  FarePolicy: Domain.Types.FarePolicy
+  # TripCategory: Domain.Types.Common
+  # Variant: Domain.Types.Vehicle
+  # SearchRequest: Domain.Types.SearchRequest
+  Booking: Domain.Types.Booking
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Price: Kernel.Types.Common
+  # Money: Kernel.Types.Common
+
+
+BookingUpdateRequest:
+  tableName: booking_update_request
+  derives: "Generic,Show"
+  types:
+    BookingUpdateRequestStatus:
+      enum: "SOFT, DRIVER_ACCEPTED, DRIVER_REJECTED, USER_CONFIRMED"
+      derive: "HttpInstance"
+
+  beamInstance: MakeTableInstancesWithTModifier []
+
+  fields:
+    id: Id BookingUpdateRequest
+    bookingId : Id Booking
+    bapBookingUpdateRequestId : Text
+    status : BookingUpdateRequestStatus
+    travelledDistance : Maybe HighPrecMeters
+    estimatedDistance : Maybe HighPrecMeters
+    maxEstimatedDistance : Maybe HighPrecMeters
+    estimatedFare : HighPrecMoney
+    totalDistance : Maybe HighPrecMeters
+    currentPointLat : Maybe Double
+    currentPointLon : Maybe Double
+    oldEstimatedFare : HighPrecMoney
+    oldEstimatedDistance : Maybe HighPrecMeters
+    oldMaxEstimatedDistance : Maybe HighPrecMeters
+    oldFareParamsId : Id FareParameters
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    validTill : UTCTime
+    fareParamsId : Id FareParameters
+    farePolicyId : Id FarePolicy
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+    # excludedFields:
+    #   - merchantId
+    #   - merchantOperatingCityId
+
+    # beamFields:
+    #   farePolicy:
+    #     farePolicyId: Maybe Text
+
+    # sqlType:
+    #   farePolicyId: character varying(36)
+    # beamType:
+    #   updatedAt: Maybe UTCTime
+    #   isScheduled: Maybe Bool
+    #   tripCategory: Maybe TripCategory
+
+    # fromTType:
+    #   updatedAt: Kernel.Prelude.fromMaybe createdAt|I
+    #   isScheduled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    #   tripCategory: Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer)|I
+    #   farePolicy: maybe (pure Nothing) ((Storage.CachedQueries.FarePolicy.findById Nothing Nothing) . Kernel.Types.Id.Id)|IM
+
+
+    # toTType:
+    #   updatedAt: Kernel.Prelude.Just|I
+    #   isScheduled: Kernel.Prelude.Just|I
+    #   tripCategory: Kernel.Prelude.Just|I
+    #   farePolicyId: (Kernel.Types.Id.getId . (.id) <$>)
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        and: [id]
+    findByBAPBUReqId:
+      kvFunction: findOneWithKV
+      where:
+        and: [bapBookingUpdateRequestId]
+    findAllByBookingId:
+      kvFunction: findAllWithKV
+      where:
+        and: [bookingId]
+    updateMultipleById:
+      kvFunction: updateOneWithKV
+      params: [travelledDistance, estimatedFare, totalDistance, currentPointLat, currentPointLon, updatedAt]
+      where: id
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id
+    updateTravelledDistanceById:
+      kvFunction: updateOneWithKV
+      params: [travelledDistance, updatedAt]
+      where: id
+    updateStatusByBAPBookingUpdateRequestId:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: bapBookingUpdateRequestId

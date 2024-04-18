@@ -21,6 +21,7 @@ module Beckn.ACL.Update
     EditLocationBuildReqDetails (..),
     AddStopBuildReqDetails (..),
     EditStopBuildReqDetails (..),
+    EditLocationU.UpdateStatus (..),
   )
 where
 
@@ -50,6 +51,7 @@ data UpdateBuildReq = UpdateBuildReq
     bppUrl :: BaseUrl,
     transactionId :: Text,
     merchant :: DM.Merchant,
+    messageId :: Text,
     city :: Context.City, -- Booking city, not merchant default city
     details :: UpdateBuildReqDetails
   }
@@ -68,7 +70,8 @@ data PaymentCompletedBuildReqDetails = PaymentCompletedBuildReqDetails
 data EditLocationBuildReqDetails = EditLocationBuildReqDetails
   { bppRideId :: Id DRide.BPPRide,
     origin :: Maybe Location,
-    destination :: Maybe Location
+    destination :: Maybe Location,
+    status :: EditLocationU.UpdateStatus
   }
 
 newtype AddStopBuildReqDetails = AddStopBuildReqDetails
@@ -122,14 +125,18 @@ mkUpdateMessage req (UEditLocationBuildReqDetails details) = do
             EditLocationU.FulfillmentInfo
               { id = details.bppRideId.getId,
                 origin =
-                  EditLocationU.StartInfo
-                    { location = details.origin
-                    },
+                  details.origin >>= \origin' ->
+                    Just
+                      EditLocationU.LocationInfo
+                        { location = origin'
+                        },
                 destination =
-                  Just $
-                    EditLocationU.EndInfo
-                      { location = details.destination
-                      }
+                  details.destination >>= \destination' ->
+                    Just
+                      EditLocationU.LocationInfo
+                        { location = destination'
+                        },
+                status = details.status
               }
         }
 mkUpdateMessage req (UAddStopBuildReqDetails details) = do

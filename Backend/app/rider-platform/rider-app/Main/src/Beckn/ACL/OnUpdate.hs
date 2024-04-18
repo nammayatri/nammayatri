@@ -25,9 +25,11 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.Utils as Utils
 import Data.Maybe (listToMaybe)
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import EulerHS.Prelude hiding (state)
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Tools.Error (GenericError (InvalidRequest))
@@ -61,36 +63,41 @@ handleErrorV2 req action = do
 
 parseEventV2 :: (MonadFlow m, CacheFlow m r) => Text -> Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
 parseEventV2 transactionId messageId order = do
-  eventType <-
-    order.orderFulfillments
-      >>= listToMaybe
-      >>= (.fulfillmentState)
-      >>= (.fulfillmentStateDescriptor)
-      >>= (.descriptorCode)
-      & fromMaybeM (InvalidRequest "Event type is not present in OnUpdateReq.")
+  case order.orderStatus of
+    Just "SOFT_UPDATE" -> do
+      editDestinationReq <- parseEditDestinationSoftUpdate order messageId
+      return editDestinationReq
+    _ -> do
+      eventType <-
+        order.orderFulfillments
+          >>= listToMaybe
+          >>= (.fulfillmentState)
+          >>= (.fulfillmentStateDescriptor)
+          >>= (.descriptorCode)
+          & fromMaybeM (InvalidRequest "Event type is not present in OnUpdateReq.")
 
-  -- TODO::Beckn, fix this codes after correct v2-spec mapping
-  case eventType of
-    "RIDE_ASSIGNED" -> do
-      assignedReq <- Common.parseRideAssignedEvent order messageId transactionId
-      return $ DOnUpdate.OURideAssignedReq assignedReq
-    "RIDE_ARRIVED_PICKUP" -> do
-      arrivedReq <- Common.parseDriverArrivedEvent order messageId
-      return $ DOnUpdate.OUDriverArrivedReq arrivedReq
-    "RIDE_STARTED" -> do
-      startedReq <- Common.parseRideStartedEvent order messageId
-      return $ DOnUpdate.OURideStartedReq startedReq
-    "RIDE_ENDED" -> do
-      completedReq <- Common.parseRideCompletedEvent order messageId
-      return $ DOnUpdate.OURideCompletedReq completedReq
-    "RIDE_CANCELLED" -> do
-      cancelledReq <- Common.parseBookingCancelledEvent order messageId
-      return $ DOnUpdate.OUBookingCancelledReq cancelledReq
-    "ESTIMATE_REPETITION" -> parseEstimateRepetitionEvent transactionId order
-    "NEW_MESSAGE" -> parseNewMessageEvent order
-    "SAFETY_ALERT" -> parseSafetyAlertEvent order
-    "STOP_ARRIVED" -> parseStopArrivedEvent order
-    _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
+      -- TODO::Beckn, fix this codes after correct v2-spec mapping
+      case eventType of
+        "RIDE_ASSIGNED" -> do
+          assignedReq <- Common.parseRideAssignedEvent order messageId transactionId
+          return $ DOnUpdate.OURideAssignedReq assignedReq
+        "RIDE_ARRIVED_PICKUP" -> do
+          arrivedReq <- Common.parseDriverArrivedEvent order messageId
+          return $ DOnUpdate.OUDriverArrivedReq arrivedReq
+        "RIDE_STARTED" -> do
+          startedReq <- Common.parseRideStartedEvent order messageId
+          return $ DOnUpdate.OURideStartedReq startedReq
+        "RIDE_ENDED" -> do
+          completedReq <- Common.parseRideCompletedEvent order messageId
+          return $ DOnUpdate.OURideCompletedReq completedReq
+        "RIDE_CANCELLED" -> do
+          cancelledReq <- Common.parseBookingCancelledEvent order messageId
+          return $ DOnUpdate.OUBookingCancelledReq cancelledReq
+        "ESTIMATE_REPETITION" -> parseEstimateRepetitionEvent transactionId order
+        "NEW_MESSAGE" -> parseNewMessageEvent order
+        "SAFETY_ALERT" -> parseSafetyAlertEvent order
+        "STOP_ARRIVED" -> parseStopArrivedEvent order
+        _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
 
 parseNewMessageEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
 parseNewMessageEvent order = do
@@ -145,4 +152,25 @@ parseStopArrivedEvent order = do
     DOnUpdate.OUStopArrivedReq $
       DOnUpdate.StopArrivedReq
         { bppRideId = Id bppRideId
+        }
+
+parseEditDestinationSoftUpdate :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m DOnUpdate.OnUpdateReq
+parseEditDestinationSoftUpdate order messageId = do
+  bookingDetails <- Common.parseBookingDetails order messageId
+  let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
+      personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
+      currentPoint = Common.getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
+  newEstimatedDistance :: HighPrecMeters <- (Utils.getTagV2 Tag.UPDATE_DETAILS Tag.UPDATED_ESTIMATED_DISTANCE tagGroups) >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "updated_estimated_distance tag is not present in Soft Update Event.")
+  fareBreakups' <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "Quote breakup is not present in Soft Update Event.")
+  fare :: DecimalValue.DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= DecimalValue.valueFromString & fromMaybeM (InvalidRequest "quote.price.value is not present in Soft Update Event.")
+  currency :: Currency <- order.orderQuote >>= (.quotationPrice) >>= (.priceCurrency) >>= (readMaybe . T.unpack) & fromMaybeM (InvalidRequest "quote.price.currency is not present in Soft Update Event.")
+  fareBreakups <- traverse Common.mkDFareBreakup fareBreakups'
+  return $
+    DOnUpdate.OUEditDestSoftUpdateReq $
+      DOnUpdate.EditDestSoftUpdateReq
+        { bookingUpdateRequestId = Id messageId,
+          newEstimatedDistance,
+          fareBreakups,
+          fare = Utils.decimalValueToPrice currency fare,
+          ..
         }

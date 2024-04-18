@@ -177,6 +177,7 @@ library
       Domain.Action.UI.DriverOnboardingV2
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
+      Domain.Action.UI.EditBooking
       Domain.Action.UI.ExotelEndRide
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
@@ -318,6 +319,7 @@ library
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.Types
       SharedLogic.EventTracking
+      SharedLogic.External.LocationTrackingService.API.DriverLocation
       SharedLogic.External.LocationTrackingService.API.DriversLocation
       SharedLogic.External.LocationTrackingService.API.EndRide
       SharedLogic.External.LocationTrackingService.API.NearBy
@@ -579,10 +581,12 @@ library
       Tools.Whatsapp
       API.Action.UI.Cac
       API.Action.UI.DriverOnboardingV2
+      API.Action.UI.EditBooking
       API.Action.UI.LmsModule
       API.Action.UI.Reels
       API.Action.UI.SpecialLocation
       API.Types.UI.DriverOnboardingV2
+      API.Types.UI.EditBooking
       API.Types.UI.LmsModule
       API.Types.UI.Reels
       Domain.Types.AadhaarOtpReq
@@ -590,6 +594,7 @@ library
       Domain.Types.AadhaarVerification
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
+      Domain.Types.BookingUpdateRequest
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.DailyStats
@@ -601,6 +606,7 @@ library
       Domain.Types.DriverRCAssociation
       Domain.Types.DriverReferral
       Domain.Types.Estimate
+      Domain.Types.EstimateRevised
       Domain.Types.Exophone
       Domain.Types.IdfyVerification
       Domain.Types.Image
@@ -618,6 +624,7 @@ library
       Domain.Types.Rating
       Domain.Types.ReelsData
       Domain.Types.Ride
+      Domain.Types.SearchRevised
       Domain.Types.SubscriptionConfig
       Domain.Types.Toll
       Domain.Types.Translations
@@ -635,6 +642,7 @@ library
       Storage.Beam.AadhaarVerification
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
+      Storage.Beam.BookingUpdateRequest
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.DailyStats
@@ -646,6 +654,7 @@ library
       Storage.Beam.DriverRCAssociation
       Storage.Beam.DriverReferral
       Storage.Beam.Estimate
+      Storage.Beam.EstimateRevised
       Storage.Beam.Exophone
       Storage.Beam.IdfyVerification
       Storage.Beam.Image
@@ -663,6 +672,7 @@ library
       Storage.Beam.Rating
       Storage.Beam.ReelsData
       Storage.Beam.Ride
+      Storage.Beam.SearchRevised
       Storage.Beam.SubscriptionConfig
       Storage.Beam.Toll
       Storage.Beam.Translations
@@ -680,6 +690,7 @@ library
       Storage.Queries.AadhaarVerification
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
+      Storage.Queries.BookingUpdateRequest
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.DailyStats
@@ -691,6 +702,7 @@ library
       Storage.Queries.DriverRCAssociation
       Storage.Queries.DriverReferral
       Storage.Queries.Estimate
+      Storage.Queries.EstimateRevised
       Storage.Queries.Exophone
       Storage.Queries.IdfyVerification
       Storage.Queries.Image
@@ -723,6 +735,7 @@ library
       Storage.Queries.Rating
       Storage.Queries.ReelsData
       Storage.Queries.Ride
+      Storage.Queries.SearchRevised
       Storage.Queries.SubscriptionConfig
       Storage.Queries.Toll
       Storage.Queries.Translations

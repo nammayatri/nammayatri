@@ -27,6 +27,8 @@ module Domain.Action.Beckn.OnUpdate
     NewMessageReq (..),
     SafetyAlertReq (..),
     StopArrivedReq (..),
+    EditDestSoftUpdateReq (..),
+    ValidatedEditDestSoftUpdateReq (..),
   )
 where
 
@@ -35,6 +37,7 @@ import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -49,9 +52,11 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
+-- import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
@@ -71,6 +76,7 @@ data OnUpdateReq
   | OUNewMessageReq NewMessageReq
   | OUSafetyAlertReq SafetyAlertReq
   | OUStopArrivedReq StopArrivedReq
+  | OUEditDestSoftUpdateReq EditDestSoftUpdateReq
 
 data ValidatedOnUpdateReq
   = OUValidatedRideAssignedReq Common.ValidatedRideAssignedReq
@@ -84,11 +90,33 @@ data ValidatedOnUpdateReq
   | OUValidatedNewMessageReq ValidatedNewMessageReq
   | OUValidatedSafetyAlertReq ValidatedSafetyAlertReq
   | OUValidatedStopArrivedReq ValidatedStopArrivedReq
+  | OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq
 
 data BookingReallocationReq = BookingReallocationReq
   { bppBookingId :: Id DRB.BPPBooking,
     bppRideId :: Id DRide.BPPRide,
     reallocationSource :: DBCR.CancellationSource
+  }
+
+data EditDestSoftUpdateReq = EditDestSoftUpdateReq
+  { bookingDetails :: Common.BookingDetails,
+    fare :: Price,
+    fareBreakups :: [Common.DFareBreakup],
+    newEstimatedDistance :: HighPrecMeters,
+    currentPoint :: Maybe LatLong,
+    bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest
+  }
+
+data ValidatedEditDestSoftUpdateReq = ValidatedEditDestSoftUpdateReq
+  { bookingDetails :: Common.BookingDetails,
+    fare :: Price,
+    fareBreakups :: [Common.DFareBreakup],
+    newEstimatedDistance :: HighPrecMeters,
+    currentPoint :: Maybe LatLong,
+    bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest,
+    booking :: DRB.Booking,
+    ride :: DRide.Ride,
+    bookingUpdateRequest :: DBUR.BookingUpdateRequest
   }
 
 data ValidatedBookingReallocationReq = ValidatedBookingReallocationReq
@@ -247,6 +275,13 @@ onUpdate = \case
   OUValidatedStopArrivedReq ValidatedStopArrivedReq {..} -> do
     QRB.updateStop booking Nothing
     Notify.notifyOnStopReached booking ride
+  -- _ -> return ()
+  OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq {..} -> do
+    let currentPointLat = (.lat) <$> currentPoint
+        currentPointLon = (.lon) <$> currentPoint
+    QBUR.updateMultipleById Nothing (Just newEstimatedDistance) (Just fare.amount) Nothing currentPointLat currentPointLon bookingUpdateRequestId
+
+-- updateMultipleById travelledDistance estimatedDistance estimatedFare totalDistance currentPointLat currentPointLon (Kernel.Types.Id.Id id) = do
 
 validateRequest ::
   ( CacheFlow m r,
@@ -311,6 +346,15 @@ validateRequest = \case
       DRB.RentalDetails DRB.RentalBookingDetails {..} -> do
         unless (isJust stopLocation) $ throwError (InvalidRequest $ "Can't find stop to be reached for bpp ride " <> bppRideId.getId)
         return $ OUValidatedStopArrivedReq ValidatedStopArrivedReq {..}
+  OUEditDestSoftUpdateReq EditDestSoftUpdateReq {..} -> do
+    let Common.BookingDetails {..} = bookingDetails
+    booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
+    ride <- runInReplica $ QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    when (ride.status == DRide.COMPLETED) $ throwError $ RideInvalidStatus "Can't edit the destination of a completed ride."
+    bookingUpdateRequest <- runInReplica $ QBUR.findById bookingUpdateRequestId >>= fromMaybeM (RideDoesNotExist $ "BookingUpdateRequestId:-" <> bookingUpdateRequestId.getId) -----FIX me RITIKA
+    return $ OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq {..}
+
+--throwError $ InvalidRequest "Invalid request"
 
 mkBookingCancellationReason ::
   Id DRB.Booking ->

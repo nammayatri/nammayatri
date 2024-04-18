@@ -21,6 +21,7 @@ module Lib.LocationUpdates
     addIntermediateRoutePoints,
     getInterpolatedPoints,
     clearInterpolatedPoints,
+    addIntermediateRoutePointsSoftUpdate,
   )
 where
 
@@ -61,3 +62,6 @@ addIntermediateRoutePoints ih rectifyDistantPointsFailureUsing rideId driverId =
 
 isDistanceCalculationFailed :: I.RideInterpolationHandler person m -> Id person -> m Bool
 isDistanceCalculationFailed ih = ih.isDistanceCalculationFailed
+
+addIntermediateRoutePointsSoftUpdate :: (CacheFlow m r, Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> NonEmpty LatLong -> m ()
+addIntermediateRoutePointsSoftUpdate ih rideId driverId = withRideIdLogTag rideId . I.processWaypoints ih driverId False 0 Nothing False True
