@@ -1367,3 +1367,6 @@ getTA stringKey =
         TRIP_TIME -> "பயண நேரம்"
         EARNINGS_PER_KM -> "ஒரு கிமீ வருவாய்"
         OPTIONAL_DOCUMENT -> "விருப்ப ஆவணம்"
+        EARNINGS_PER_KM_DESC_1 -> "இன்றைய மொத்த வருவாய்/மொத்த சவாரி தூரத்தைக் குறிக்கிறது."
+        EARNINGS_PER_KM_DESC_2 -> "இந்தத் தொகையில் பார்க்கிங் மற்றும் டோல் கட்டணங்கள் இல்லை"
+        EARNINGS_P_KM -> "வருவாய்கள்/கிமீ"

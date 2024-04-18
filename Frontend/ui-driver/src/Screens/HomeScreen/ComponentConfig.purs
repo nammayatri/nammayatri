@@ -847,18 +847,20 @@ requestInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
 requestInfoCardConfig _ = let
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{
+    bulletPoints = [getString EARNINGS_PER_KM_DESC_1 , getString EARNINGS_PER_KM_DESC_2],
     title {
-      text = getString $ WHAT_IS_NAMMA_YATRI_BONUS "WHAT_IS_NAMMA_YATRI_BONUS"
+      text = getString EARNINGS_P_KM
     }
   , primaryText {
-      text = getString $ BONUS_PRIMARY_TEXT "BONUS_PRIMARY_TEXT"
+      text = getString $ BONUS_PRIMARY_TEXT "BONUS_PRIMARY_TEXT",
+      visibility = GONE
     }
   , secondaryText {
       text = getString $ BONUS_SECONDARY_TEXT "BONUS_SECONDARY_TEXT",
-      visibility = VISIBLE
+      visibility = GONE
     }
   , imageConfig {
-      imageUrl = fetchImage FF_ASSET "ny_ic_bonus",
+      imageUrl = fetchImage FF_ASSET "ny_ic_rupee_per_km",
       height = V 122,
       width = V 116
     }
