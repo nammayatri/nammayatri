@@ -19,6 +19,8 @@ module SharedLogic.DriverPool.Types
     DriverPoolResultCurrentlyOnRide (..),
     DriverPoolWithActualDistResult (..),
     DriverPoolWithActualDistResultWithFlags (..),
+    DriverSearchBatchInput (..),
+    TripQuoteDetail (..),
     PoolType (..),
     PoolRadiusStep,
     PoolBatchNum,
@@ -27,6 +29,7 @@ module SharedLogic.DriverPool.Types
   )
 where
 
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
@@ -34,6 +37,8 @@ import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores)
 import Domain.Types.Person (Driver)
+import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
@@ -41,6 +46,7 @@ import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Scheduler.Types
 import Tools.Maps as Google
 
 type PoolBatchNum = Int
@@ -55,7 +61,7 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
   { poolStage :: PoolCalculationStage,
     driverPoolCfg :: DriverPoolConfig,
     goHomeCfg :: GoHomeConfig,
-    serviceTier :: Maybe DVST.ServiceTierType,
+    serviceTiers :: [DVST.ServiceTierType],
     fromLocation :: a,
     toLocation :: a,
     merchantId :: Id DM.Merchant,
@@ -70,6 +76,7 @@ data DriverPoolResult = DriverPoolResult
     -- durationToPickup :: Seconds,
     variant :: Vehicle.Variant,
     serviceTier :: DVST.ServiceTierType,
+    serviceTierDowngradeLevel :: Int,
     airConditioned :: Maybe Double,
     lat :: Double,
     lon :: Double,
@@ -83,6 +90,7 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
     variant :: Vehicle.Variant,
     serviceTier :: DVST.ServiceTierType,
+    serviceTierDowngradeLevel :: Int,
     airConditioned :: Maybe Double,
     lat :: Double,
     lon :: Double,
@@ -115,6 +123,27 @@ data DriverPoolWithActualDistResultWithFlags = DriverPoolWithActualDistResultWit
     poolType :: PoolType,
     prevBatchDrivers :: [Id Driver],
     nextScheduleTime :: Maybe Seconds
+  }
+
+data TripQuoteDetail = TripQuoteDetail
+  { tripCategory :: DTC.TripCategory,
+    vehicleServiceTier :: DVST.ServiceTierType,
+    vehicleServiceTierName :: Text,
+    baseFare :: Money,
+    driverMinFee :: Maybe Money,
+    driverMaxFee :: Maybe Money,
+    driverPickUpCharge :: Maybe Money,
+    estimateOrQuoteId :: Text
+  }
+
+data DriverSearchBatchInput m = DriverSearchBatchInput
+  { sendSearchRequestToDrivers :: DriverPoolConfig -> DST.SearchTry -> DriverSearchBatchInput m -> GoHomeConfig -> m (ExecutionResult, PoolType, Maybe Seconds),
+    merchant :: DM.Merchant,
+    searchReq :: DSR.SearchRequest,
+    tripQuoteDetails :: [TripQuoteDetail],
+    customerExtraFee :: Maybe Money,
+    messageId :: Text,
+    isRepeatSearch :: Bool
   }
 
 castServiceTierToVariant :: DVST.ServiceTierType -> Vehicle.Variant

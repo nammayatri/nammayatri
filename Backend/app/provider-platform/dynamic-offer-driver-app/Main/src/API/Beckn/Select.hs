@@ -50,10 +50,10 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
     dSelectReq <- ACL.buildSelectReqV2 subscriber reqV2
 
     Redis.whenWithLockRedis (selectLockKey dSelectReq.messageId) 60 $ do
-      (merchant, estimate) <- DSelect.validateRequest transporterId dSelectReq
+      (merchant, searchRequest, estimates) <- DSelect.validateRequest transporterId dSelectReq
       fork "select request processing" $ do
         Redis.whenWithLockRedis (selectProcessingLockKey dSelectReq.messageId) 60 $
-          DSelect.handler merchant dSelectReq estimate
+          DSelect.handler merchant dSelectReq searchRequest estimates
     pure Ack
 
 selectLockKey :: Text -> Text

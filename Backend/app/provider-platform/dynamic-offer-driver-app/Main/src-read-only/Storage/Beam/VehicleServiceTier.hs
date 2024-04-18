@@ -25,6 +25,7 @@ data VehicleServiceTierT f = VehicleServiceTierT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
+    priority :: B.C f Kernel.Prelude.Int,
     seatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     serviceTierType :: B.C f Domain.Types.ServiceTierType.ServiceTierType,
     shortDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

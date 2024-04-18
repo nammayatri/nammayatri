@@ -187,4 +187,6 @@ data Tag
     MESSAGE
   | -- Previous cancellation reasons tags
     CANCELLATION_REASON
+  | -- Book Any estimates
+    OTHER_SELECT_ESTIMATES
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

@@ -18,6 +18,7 @@ Estimate:
       id: Id Estimate
       requestId: Id SearchRequest
       vehicleServiceTier: ServiceTierType|NoRelation
+      vehicleServiceTierName: Maybe Text
       tripCategory: TripCategory
       minFare: Money
       maxFare: Money
@@ -25,6 +26,7 @@ Estimate:
       fareParams: Maybe FareParameters|WithIdCreate
       farePolicy: Maybe FarePolicy|NoRelation
       specialLocationTag: Maybe Text
+      driverPickUpCharge: Maybe Money
       isScheduled: Bool
       createdAt: UTCTime
       updatedAt: UTCTime

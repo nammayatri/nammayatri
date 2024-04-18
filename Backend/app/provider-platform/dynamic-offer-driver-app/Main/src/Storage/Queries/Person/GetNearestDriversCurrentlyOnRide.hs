@@ -5,7 +5,6 @@ module Storage.Queries.Person.GetNearestDriversCurrentlyOnRide
 where
 
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.List as List
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
@@ -37,6 +36,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     lon :: Double,
     variant :: DV.Variant,
     serviceTier :: DVST.ServiceTierType,
+    serviceTierDowngradeLevel :: Int,
     airConditioned :: Maybe Double,
     destinationLat :: Double,
     destinationLon :: Double,
@@ -49,7 +49,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
 getNearestDriversCurrentlyOnRide ::
   (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) =>
   [DVST.VehicleServiceTier] ->
-  Maybe ServiceTierType ->
+  [ServiceTierType] ->
   LatLong ->
   Meters ->
   Id Merchant ->
@@ -57,7 +57,7 @@ getNearestDriversCurrentlyOnRide ::
   Meters ->
   Bool ->
   m [NearestDriversResultCurrentlyOnRide]
-getNearestDriversCurrentlyOnRide cityServiceTiers mbServiceTier fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue isRental = do
+getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue isRental = do
   let onRideRadius = radiusMeters - reduceRadiusValue
   driverLocs <- Int.getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry fromLocLatLong onRideRadius
   driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental
@@ -97,24 +97,29 @@ getNearestDriversCurrentlyOnRide cityServiceTiers mbServiceTier fromLocLatLong r
 
       -- ideally should be there inside the vehicle.selectedServiceTiers but still to make sure we have a default service tier for the driver
       let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
-      let defaultServiceTierForDriver = (.serviceTierType) <$> (find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers)
+      let mbDefaultServiceTierForDriver = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
       let selectedDriverServiceTiers =
-            case defaultServiceTierForDriver of
-              Just defaultServiceTierForDriver' ->
-                if defaultServiceTierForDriver' `elem` vehicle.selectedServiceTiers
+            case mbDefaultServiceTierForDriver <&> (.serviceTierType) of
+              Just defaultServiceTierForDriver ->
+                if defaultServiceTierForDriver `elem` vehicle.selectedServiceTiers
                   then vehicle.selectedServiceTiers
-                  else [defaultServiceTierForDriver'] <> vehicle.selectedServiceTiers
+                  else [defaultServiceTierForDriver] <> vehicle.selectedServiceTiers
               Nothing -> vehicle.selectedServiceTiers
       if onRideRadiusValidity
         then do
-          case mbServiceTier of
-            Just serviceTier ->
-              if serviceTier `elem` selectedDriverServiceTiers
-                then List.singleton <$> mkDriverResult person info location bookingLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap serviceTier
-                else Nothing
-            Nothing -> Just (mapMaybe (mkDriverResult person info location bookingLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap) selectedDriverServiceTiers)
+          if null serviceTiers
+            then Just $ mapMaybe (mkDriverResult mbDefaultServiceTierForDriver person info location bookingLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap) selectedDriverServiceTiers
+            else do
+              Just $
+                mapMaybe
+                  ( \serviceTier -> do
+                      if serviceTier `elem` selectedDriverServiceTiers
+                        then mkDriverResult mbDefaultServiceTierForDriver person info location bookingLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap serviceTier
+                        else Nothing
+                  )
+                  serviceTiers
         else Nothing
       where
-        mkDriverResult person info location bookingLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap serviceTier = do
+        mkDriverResult mbDefaultServiceTierForDriver person info location bookingLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
-          Just $ NearestDriversResultCurrentlyOnRide (cast person.id) person.deviceToken person.language info.onRide location.lat location.lon vehicle.variant serviceTier serviceTierInfo.airConditioned bookingLocation.lat bookingLocation.lon (roundToIntegral $ distanceFromDriverToDestination + distanceFromDestinationToPickup) (roundToIntegral distanceFromDriverToDestination) info.mode
+          Just $ NearestDriversResultCurrentlyOnRide (cast person.id) person.deviceToken person.language info.onRide location.lat location.lon vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.airConditioned bookingLocation.lat bookingLocation.lon (roundToIntegral $ distanceFromDriverToDestination + distanceFromDestinationToPickup) (roundToIntegral distanceFromDriverToDestination) info.mode

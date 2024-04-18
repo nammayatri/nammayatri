@@ -27,6 +27,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
+import SharedLogic.DriverPool.Types
 import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -117,37 +118,13 @@ instance FromTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
             searchTryId = Id searchTryId,
             merchantId = Id <$> merchantId,
             merchantOperatingCityId = merchantOpCityId,
-            startTime = startTime,
             searchRequestValidTill = T.localTimeToUTC T.utc searchRequestValidTill,
             driverId = Id driverId,
-            actualDistanceToPickup = actualDistanceToPickup,
-            straightLineDistanceToPickup = straightLineDistanceToPickup,
-            durationToPickup = durationToPickup,
-            vehicleVariant = vehicleVariant,
-            vehicleServiceTier = vehicleServiceTier,
-            vehicleServiceTierName = vehicleServiceTierName,
-            airConditioned = airConditioned,
-            status = status,
-            batchNumber = batchNumber,
-            lat = lat,
-            lon = lon,
             createdAt = T.localTimeToUTC T.utc createdAt,
-            response = response,
-            driverMinExtraFee = driverMinExtraFee,
-            driverMaxExtraFee = driverMaxExtraFee,
-            rideRequestPopupDelayDuration = rideRequestPopupDelayDuration,
-            isPartOfIntelligentPool = isPartOfIntelligentPool,
-            pickupZone = pickupZone,
-            cancellationRatio = cancellationRatio,
-            acceptanceRatio = acceptanceRatio,
-            driverAvailableTime = driverAvailableTime,
-            parallelSearchRequestCount = parallelSearchRequestCount,
-            keepHiddenForSeconds = keepHiddenForSeconds,
-            driverSpeed = driverSpeed,
-            mode = mode,
+            vehicleServiceTier = fromMaybe (castVariantToServiceTier vehicleVariant) vehicleServiceTier,
             goHomeRequestId = Id <$> goHomeRequestId,
-            rideFrequencyScore = rideFrequencyScore,
-            customerCancellationDues = fromMaybe 0 customerCancellationDues
+            customerCancellationDues = fromMaybe 0 customerCancellationDues,
+            ..
           }
 
 instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
@@ -156,6 +133,8 @@ instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
       { BeamSRFD.id = getId id,
         BeamSRFD.requestId = getId requestId,
         BeamSRFD.searchTryId = getId searchTryId,
+        BeamSRFD.estimateId = estimateId,
+        BeamSRFD.baseFare = baseFare,
         BeamSRFD.merchantId = getId <$> merchantId,
         BeamSRFD.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
         BeamSRFD.startTime = startTime,
@@ -165,7 +144,7 @@ instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
         BeamSRFD.straightLineDistanceToPickup = straightLineDistanceToPickup,
         BeamSRFD.durationToPickup = durationToPickup,
         BeamSRFD.vehicleVariant = vehicleVariant,
-        BeamSRFD.vehicleServiceTier = vehicleServiceTier,
+        BeamSRFD.vehicleServiceTier = Just vehicleServiceTier,
         BeamSRFD.vehicleServiceTierName = vehicleServiceTierName,
         BeamSRFD.airConditioned = airConditioned,
         BeamSRFD.status = status,

@@ -273,6 +273,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.notificationRetryTimeGap = nominalDiffTimeToSeconds notificationRetryTimeGap,
         BeamTC.driverAutoPayExecutionTimeFallBack = nominalDiffTimeToSeconds driverAutoPayExecutionTimeFallBack,
         BeamTC.orderAndNotificationStatusCheckFallBackTime = nominalDiffTimeToSeconds orderAndNotificationStatusCheckFallBackTime,
+        BeamTC.bookAnyVehicleDowngradeLevel = bookAnyVehicleDowngradeLevel,
         BeamTC.scheduleRideBufferTime = nominalDiffTimeToSeconds scheduleRideBufferTime,
         BeamTC.considerDriversForSearch = considerDriversForSearch,
         BeamTC.arrivedStopThreshold = arrivedStopThreshold,

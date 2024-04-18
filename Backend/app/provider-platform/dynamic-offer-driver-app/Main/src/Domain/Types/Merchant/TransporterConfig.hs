@@ -170,6 +170,7 @@ data TransporterConfigD u = TransporterConfig
     notificationRetryTimeGap :: NominalDiffTime,
     driverAutoPayExecutionTimeFallBack :: NominalDiffTime,
     orderAndNotificationStatusCheckFallBackTime :: NominalDiffTime,
+    bookAnyVehicleDowngradeLevel :: Int,
     kaptureDisposition :: Text,
     dummyFromLocation :: DummyLocationInfo,
     dummyToLocation :: DummyLocationInfo,

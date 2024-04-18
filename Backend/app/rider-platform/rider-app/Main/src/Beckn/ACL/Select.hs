@@ -33,6 +33,7 @@ import qualified Domain.Types.Location as Location
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import Tools.Error
@@ -137,7 +138,8 @@ mkItemTags :: DSelect.DSelectRes -> [Spec.TagGroup]
 mkItemTags res =
   let itemTags = [mkAutoAssignEnabledTagGroup res]
       itemTags' = if isJust res.customerExtraFee then mkCustomerTipTagGroup res : itemTags else itemTags
-   in itemTags'
+      itemTags'' = if not (null res.remainingEstimateBppIds) then mkOtheEstimatesTagGroup res : itemTags' else itemTags'
+   in itemTags''
 
 mkCustomerTipTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
 mkCustomerTipTagGroup res =
@@ -162,6 +164,33 @@ mkCustomerTipTagGroup res =
                       },
                 tagDisplay = Just False,
                 tagValue = (\charges -> Just $ show charges.getMoney) =<< res.customerExtraFee
+              }
+          ]
+    }
+
+mkOtheEstimatesTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
+mkOtheEstimatesTagGroup res =
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just $ show Tags.ESTIMATIONS,
+              descriptorName = Just "Customer Tip Info",
+              descriptorShortDesc = Nothing
+            },
+      tagGroupList =
+        Just
+          [ Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.OTHER_SELECT_ESTIMATES,
+                        descriptorName = Just "Other selected estimates for book any",
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Just False,
+                tagValue = Just $ show (getId <$> res.remainingEstimateBppIds)
               }
           ]
     }

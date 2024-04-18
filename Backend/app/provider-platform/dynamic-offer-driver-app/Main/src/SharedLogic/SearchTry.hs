@@ -18,12 +18,8 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
-import qualified Domain.Types.FarePolicy as DFP
-import qualified Domain.Types.FarePolicy as DFarePolicy
-import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
-import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
@@ -37,10 +33,8 @@ import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool (getDriverPoolConfig)
-import SharedLogic.DriverPool.Types (PoolType)
+import SharedLogic.DriverPool.Types
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.FareCalculator
-import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -95,99 +89,73 @@ initiateDriverSearchBatch ::
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
-  (DriverPoolConfig -> DSR.SearchRequest -> DST.SearchTry -> DM.Merchant -> Maybe DFP.DriverExtraFeeBounds -> Maybe Money -> GoHomeConfig -> m (ExecutionResult, PoolType, Maybe Seconds)) ->
-  DM.Merchant ->
-  DSR.SearchRequest ->
-  DTC.TripCategory ->
-  DVST.ServiceTierType ->
-  Text ->
-  Maybe Money ->
-  Text ->
-  Bool ->
+  DriverSearchBatchInput m ->
   m ()
-initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCategory serviceTier estOrQuoteId customerExtraFee messageId isRepeatSearch = do
-  farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory serviceTier searchReq.area estOrQuoteId (Just searchReq.transactionId) (Just "transactionId")
-  searchTry <- createNewSearchTry farePolicy
+initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
+  searchTry <- createNewSearchTry
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance (Just searchReq.transactionId) (Just "transactionId")
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just searchReq.transactionId) (Just "transactionId")
-  let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
-  let driverPickUpCharges = extractDriverPickupCharges farePolicy.farePolicyDetails
   if not searchTry.isScheduled
     then do
-      (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds driverPickUpCharges goHomeCfg
+      (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchTry searchBatchInput goHomeCfg
       let inTime = maybe (fromIntegral driverPoolConfig.singleBatchProcessTime) fromIntegral mbNewScheduleTimeIn
       case res of
-        ReSchedule _ -> scheduleBatching searchTry driverExtraFeeBounds driverPickUpCharges inTime
+        ReSchedule _ -> scheduleBatching searchTry inTime
         _ -> return ()
     else do
       mbScheduleTime <- getNextScheduleTime driverPoolConfig searchReq
       case mbScheduleTime of
-        Just scheduleTime -> scheduleBatching searchTry driverExtraFeeBounds driverPickUpCharges scheduleTime
+        Just scheduleTime -> scheduleBatching searchTry scheduleTime
         Nothing -> do
-          booking <- QRB.findByQuoteId estOrQuoteId >>= fromMaybeM (BookingDoesNotExist estOrQuoteId)
+          booking <- QRB.findByQuoteId searchTry.estimateId >>= fromMaybeM (BookingDoesNotExist searchTry.estimateId)
           QST.updateStatus searchTry.id DST.CANCELLED
           SBooking.cancelBooking booking Nothing merchant
   where
-    scheduleBatching searchTry driverExtraFeeBounds driverPickUpCharges inTime = do
+    scheduleBatching searchTry inTime = do
       maxShards <- asks (.maxShards)
       JC.createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
         SendSearchRequestToDriverJobData
           { searchTryId = searchTry.id,
-            estimatedRideDistance = searchReq.estimatedDistance,
-            driverExtraFeeBounds = driverExtraFeeBounds,
-            driverPickUpCharges = driverPickUpCharges
+            estimatedRideDistance = searchReq.estimatedDistance
           }
 
-    createNewSearchTry farePolicy = do
+    createNewSearchTry = do
       mbLastSearchTry <- QST.findLastByRequestId searchReq.id
-      fareParams <-
-        calculateFareParameters
-          CalculateFareParametersParams
-            { farePolicy = farePolicy,
-              actualDistance = searchReq.estimatedDistance,
-              rideTime = searchReq.startTime,
-              waitingTime = Nothing,
-              actualRideDuration = Nothing,
-              avgSpeedOfVehicle = Nothing,
-              driverSelectedFare = Nothing,
-              customerExtraFee = customerExtraFee,
-              nightShiftCharge = Nothing,
-              customerCancellationDues = searchReq.customerCancellationDues,
-              tollCharges = searchReq.tollCharges,
-              nightShiftOverlapChecking = DTC.isRentalTrip farePolicy.tripCategory,
-              estimatedDistance = searchReq.estimatedDistance,
-              estimatedRideDuration = searchReq.estimatedDuration,
-              timeDiffFromUtc = Nothing,
-              ..
-            }
-      let estimatedFare = fareSum fareParams
-          pureEstimatedFare = pureFareSum fareParams
-      searchTry <- case mbLastSearchTry of
-        Nothing -> do
-          searchTry <- buildSearchTry merchant.id searchReq estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory customerExtraFee messageId serviceTier
-          _ <- QST.create searchTry
-          return searchTry
-        Just oldSearchTry -> do
-          let searchRepeatType
-                | isRepeatSearch = DST.REALLOCATION
-                | oldSearchTry.status == DST.ACTIVE = DST.CANCELLED_AND_RETRIED
-                | otherwise = DST.RETRIED
-          unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
-            throwError SearchTryEstimatedFareChanged
-          searchTry <- buildSearchTry merchant.id searchReq estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory customerExtraFee messageId serviceTier
-          when (oldSearchTry.status == DST.ACTIVE) $ do
-            QST.updateStatus oldSearchTry.id DST.CANCELLED
-            void $ QDQ.setInactiveBySTId oldSearchTry.id
-          _ <- QST.create searchTry
-          return searchTry
+      case tripQuoteDetails of
+        [] -> throwError $ InternalError "No trip quote details found"
+        (firstQuoteDetail : _) -> do
+          let estimatedFare = firstQuoteDetail.baseFare + fromMaybe 0 customerExtraFee
+          let tripCategory = firstQuoteDetail.tripCategory -- for fallback case
+          let serviceTier = firstQuoteDetail.vehicleServiceTier -- for fallback case
+          let estOrQuoteId = firstQuoteDetail.estimateOrQuoteId -- for fallback case
+          let estimateOrQuoteIds = tripQuoteDetails <&> (.estimateOrQuoteId)
+          searchTry <- case mbLastSearchTry of
+            Nothing -> do
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory customerExtraFee messageId serviceTier
+              _ <- QST.create searchTry
+              return searchTry
+            Just oldSearchTry -> do
+              let searchRepeatType
+                    | isRepeatSearch = DST.REALLOCATION
+                    | oldSearchTry.status == DST.ACTIVE = DST.CANCELLED_AND_RETRIED
+                    | otherwise = DST.RETRIED
+              -- TODO : Fix this
+              -- unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
+              --   throwError SearchTryEstimatedFareChanged
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory customerExtraFee messageId serviceTier
+              when (oldSearchTry.status == DST.ACTIVE) $ do
+                QST.updateStatus oldSearchTry.id DST.CANCELLED
+                void $ QDQ.setInactiveBySTId oldSearchTry.id
+              _ <- QST.create searchTry
+              return searchTry
 
-      logDebug $
-        "search try id=" <> show searchTry.id
-          <> "; estimated distance = "
-          <> show searchReq.estimatedDistance
-          <> "; estimated base fare:"
-          <> show estimatedFare
-      return searchTry
+          logDebug $
+            "search try id=" <> show searchTry.id
+              <> "; estimated distance = "
+              <> show searchReq.estimatedDistance
+              <> "; estimated base fare:"
+              <> show estimatedFare
+          return searchTry
 
 buildSearchTry ::
   ( MonadFlow m,
@@ -197,6 +165,7 @@ buildSearchTry ::
   ) =>
   Id DM.Merchant ->
   DSR.SearchRequest ->
+  [Text] ->
   Text ->
   Money ->
   Int ->
@@ -206,7 +175,7 @@ buildSearchTry ::
   Text ->
   DVST.ServiceTierType ->
   m DST.SearchTry
-buildSearchTry merchantId searchReq estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory customerExtraFee messageId serviceTier = do
+buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory customerExtraFee messageId serviceTier = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId serviceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))
@@ -216,6 +185,7 @@ buildSearchTry merchantId searchReq estOrQuoteId baseFare searchRepeatCounter se
         vehicleServiceTier = serviceTier,
         vehicleServiceTierName = vehicleServiceTierItem.name,
         requestId = searchReq.id,
+        estimateIds = estimateOrQuoteIds,
         estimateId = estOrQuoteId,
         merchantId = Just merchantId,
         merchantOperatingCityId = searchReq.merchantOperatingCityId,

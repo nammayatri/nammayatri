@@ -6,7 +6,6 @@ module Storage.Queries.Person.GetNearestGoHomeDrivers
 where
 
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.List as List
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
@@ -29,7 +28,7 @@ import qualified Storage.Queries.Vehicle.Internal as Int
 
 data NearestGoHomeDriversReq = NearestGoHomeDriversReq
   { cityServiceTiers :: [DVST.VehicleServiceTier],
-    serviceTier :: Maybe ServiceTierType,
+    serviceTiers :: [ServiceTierType],
     fromLocation :: LatLong,
     nearestRadius :: Meters,
     homeRadius :: Meters,
@@ -46,6 +45,7 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     distanceToDriver :: Meters,
     variant :: DV.Variant,
     serviceTier :: DVST.ServiceTierType,
+    serviceTierDowngradeLevel :: Int,
     airConditioned :: Maybe Double,
     lat :: Double,
     lon :: Double,
@@ -82,21 +82,26 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
       let dist = (realToFrac $ distanceBetweenInMeters fromLocation $ LatLong {lat = location.lat, lon = location.lon}) :: Double
       -- ideally should be there inside the vehicle.selectedServiceTiers but still to make sure we have a default service tier for the driver
       let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
-      let defaultServiceTierForDriver = (.serviceTierType) <$> (find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers)
+      let mbDefaultServiceTierForDriver = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
       let selectedDriverServiceTiers =
-            case defaultServiceTierForDriver of
-              Just defaultServiceTierForDriver' ->
-                if defaultServiceTierForDriver' `elem` vehicle.selectedServiceTiers
+            case mbDefaultServiceTierForDriver <&> (.serviceTierType) of
+              Just defaultServiceTierForDriver ->
+                if defaultServiceTierForDriver `elem` vehicle.selectedServiceTiers
                   then vehicle.selectedServiceTiers
-                  else [defaultServiceTierForDriver'] <> vehicle.selectedServiceTiers
+                  else [defaultServiceTierForDriver] <> vehicle.selectedServiceTiers
               Nothing -> vehicle.selectedServiceTiers
-      case serviceTier of
-        Just serviceTier' ->
-          if serviceTier' `elem` selectedDriverServiceTiers
-            then List.singleton <$> mkDriverResult person vehicle info dist cityServiceTiersHashMap serviceTier'
-            else Nothing
-        Nothing -> Just (mapMaybe (mkDriverResult person vehicle info dist cityServiceTiersHashMap) selectedDriverServiceTiers)
+      if null serviceTiers
+        then Just $ mapMaybe (mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap) selectedDriverServiceTiers
+        else do
+          Just $
+            mapMaybe
+              ( \serviceTier -> do
+                  if serviceTier `elem` selectedDriverServiceTiers
+                    then mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier
+                    else Nothing
+              )
+              serviceTiers
       where
-        mkDriverResult person vehicle info dist cityServiceTiersHashMap serviceTier' = do
-          serviceTierInfo <- HashMap.lookup serviceTier' cityServiceTiersHashMap
-          Just $ NearestGoHomeDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier' serviceTierInfo.airConditioned location.lat location.lon info.mode
+        mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier = do
+          serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
+          Just $ NearestGoHomeDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.airConditioned location.lat location.lon info.mode
