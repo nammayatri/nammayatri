@@ -41,7 +41,6 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.TransporterConfig as QMTC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as QDI
@@ -102,30 +101,13 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
           then do
             estimate <- QEst.findById driverQuote.estimateId >>= fromMaybeM (EstimateNotFound driverQuote.estimateId.getId)
             DP.addDriverToSearchCancelledList searchReq.id ride.driverId
-            vehicleServiceTierName <-
-              case estimate.vehicleServiceTierName of
-                Just name -> return name
-                _ -> do
-                  item <- CQDVST.findByServiceTierTypeAndCityId estimate.vehicleServiceTier booking.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show estimate.vehicleServiceTier)
-                  return item.name
-            let tripQuoteDetails =
-                  [ TripQuoteDetail
-                      { tripCategory = booking.tripCategory,
-                        vehicleServiceTier = booking.vehicleServiceTier,
-                        vehicleServiceTierName,
-                        baseFare = booking.estimatedFare,
-                        driverMinFee = Just 0,
-                        driverMaxFee = Just $ estimate.maxFare - estimate.minFare,
-                        driverPickUpCharge = estimate.driverPickUpCharge,
-                        estimateOrQuoteId = estimate.id.getId
-                      }
-                  ]
+            tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier estimate.vehicleServiceTierName booking.estimatedFare (Just 0) (Just $ estimate.maxFare - estimate.minFare) estimate.driverPickUpCharge estimate.id.getId
             let driverSearchBatchInput =
                   DriverSearchBatchInput
                     { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
                       merchant,
                       searchReq,
-                      tripQuoteDetails,
+                      tripQuoteDetails = [tripQuoteDetail],
                       customerExtraFee = searchTry.customerExtraFee,
                       messageId = searchTry.messageId,
                       isRepeatSearch

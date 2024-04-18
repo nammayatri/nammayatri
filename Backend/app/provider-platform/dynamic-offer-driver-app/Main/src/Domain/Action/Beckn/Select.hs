@@ -32,7 +32,6 @@ import SharedLogic.DriverPool
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import qualified Storage.CachedQueries.Merchant as QMerch
-import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.RiderDetails as QRD
@@ -66,23 +65,7 @@ handler merchant sReq searchReq estimates = do
   tripQuoteDetails <-
     estimates `forM` \estimate -> do
       QDQ.setInactiveAllDQByEstId estimate.id now
-      vehicleServiceTierName <-
-        case estimate.vehicleServiceTierName of
-          Just name -> return name
-          _ -> do
-            item <- CQDVST.findByServiceTierTypeAndCityId estimate.vehicleServiceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show estimate.vehicleServiceTier)
-            return item.name
-      return $
-        TripQuoteDetail
-          { tripCategory = estimate.tripCategory,
-            vehicleServiceTier = estimate.vehicleServiceTier,
-            estimateOrQuoteId = estimate.id.getId,
-            vehicleServiceTierName,
-            baseFare = estimate.minFare + fromMaybe 0 sReq.customerExtraFee, -- add customer extra fee to base fare
-            driverMinFee = Just 0,
-            driverMaxFee = Just $ estimate.maxFare - estimate.minFare,
-            driverPickUpCharge = estimate.driverPickUpCharge
-          }
+      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee) (Just 0) (Just $ estimate.maxFare - estimate.minFare) estimate.driverPickUpCharge estimate.id.getId
   let driverSearchBatchInput =
         DriverSearchBatchInput
           { sendSearchRequestToDrivers = sendSearchRequestToDrivers',

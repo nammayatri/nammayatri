@@ -39,7 +39,6 @@ import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.SearchTry as SST
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Quote as QQuote
@@ -84,42 +83,10 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
       if DTC.isDynamicOfferTrip searchTry.tripCategory
         then do
           estimate <- B.runInReplica $ QEst.findById (Id estimateId) >>= fromMaybeM (EstimateNotFound estimateId)
-          vehicleServiceTierName <-
-            case estimate.vehicleServiceTierName of
-              Just name -> return name
-              _ -> do
-                item <- CQDVST.findByServiceTierTypeAndCityId estimate.vehicleServiceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show estimate.vehicleServiceTier)
-                return item.name
-          return $
-            TripQuoteDetail
-              { tripCategory = estimate.tripCategory,
-                vehicleServiceTier = estimate.vehicleServiceTier,
-                estimateOrQuoteId = estimate.id.getId,
-                vehicleServiceTierName,
-                baseFare = estimate.minFare,
-                driverMinFee = Just 0,
-                driverMaxFee = Just $ estimate.maxFare - estimate.minFare,
-                driverPickUpCharge = estimate.driverPickUpCharge
-              }
+          SST.buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee) (Just 0) (Just $ estimate.maxFare - estimate.minFare) estimate.driverPickUpCharge estimate.id.getId
         else do
           quote <- B.runInReplica $ QQuote.findById (Id estimateId) >>= fromMaybeM (QuoteNotFound estimateId)
-          vehicleServiceTierName <-
-            case quote.vehicleServiceTierName of
-              Just name -> return name
-              _ -> do
-                item <- CQDVST.findByServiceTierTypeAndCityId quote.vehicleServiceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show quote.vehicleServiceTier)
-                return item.name
-          return $
-            TripQuoteDetail
-              { tripCategory = quote.tripCategory,
-                vehicleServiceTier = quote.vehicleServiceTier,
-                estimateOrQuoteId = quote.id.getId,
-                vehicleServiceTierName,
-                baseFare = quote.estimatedFare,
-                driverMinFee = quote.driverMinFee,
-                driverMaxFee = quote.driverMaxFee,
-                driverPickUpCharge = quote.driverPickUpCharge
-              }
+          SST.buildTripQuoteDetail searchReq quote.tripCategory quote.vehicleServiceTier quote.vehicleServiceTierName (quote.estimatedFare + fromMaybe 0 searchTry.customerExtraFee) quote.driverMinFee quote.driverMaxFee quote.driverPickUpCharge quote.id.getId
   let driverSearchBatchInput =
         DriverSearchBatchInput
           { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
