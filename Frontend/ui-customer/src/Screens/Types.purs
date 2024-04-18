@@ -513,6 +513,7 @@ data Stage = HomeScreen
            | FindingQuotes
            | QuoteList
            | PreviousRating
+           | GoToConfirmLocation
            | ConfirmingLocation
            | DistanceOutsideLimits
            | ShortDistance
@@ -2233,6 +2234,7 @@ type LocateOnMapProps = {
   , sourceGeoJson :: Maybe String
   , sourceGates :: Maybe (Array Location)
   , isSpecialPickUpGate :: Boolean
+  , cameraAnimatedToSource :: Boolean
 }
 
 data NavigationMode = WALK | DRIVE

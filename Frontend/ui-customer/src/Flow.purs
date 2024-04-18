@@ -1603,6 +1603,15 @@ homeScreenFlow = do
     REPEAT_SEARCH state -> do
       cancelEstimate state.props.estimateId
       findEstimates state
+    GOTO_CONFIRMING_LOCATION_STAGE finalState -> do
+      if os == "IOS" && finalState.props.currentStage == HomeScreen then 
+        pure unit 
+      else do
+        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = finalState.props.sourceLat, lon = finalState.props.sourceLong, geoJson = finalState.data.polygonCoordinates, points = finalState.data.nearByPickUpPoints, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" finalState.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon finalState.props.confirmLocationCategory }}
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true, locateOnMapLocation{sourceLat = finalState.props.sourceLat, sourceLng = finalState.props.sourceLong, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress }, locateOnMapProps{ cameraAnimatedToSource = false } }})
+        void $ pure $ updateLocalStage ConfirmingLocation
+        void $ lift $ lift $ toggleLoader false
+      homeScreenFlow
     _ -> homeScreenFlow
 
 findEstimates :: HomeScreenState -> FlowBT String Unit
@@ -1791,13 +1800,8 @@ rideSearchFlow flowType = do
           pure $ removeAllPolylines ""
           liftFlowBT $ setMapPadding 0 0 0 0
           if finalState.data.source == (getString STR.CURRENT_LOCATION) then void $ pure $ currentPosition "" else pure unit
-          if os == "IOS" && finalState.props.currentStage == HomeScreen then 
-            pure unit 
-          else 
-            liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = finalState.props.sourceLat, lon = finalState.props.sourceLong, geoJson = finalState.data.polygonCoordinates, points = finalState.data.nearByPickUpPoints, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" finalState.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon finalState.props.confirmLocationCategory }}
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true, locateOnMapLocation{sourceLat = finalState.props.sourceLat, sourceLng = finalState.props.sourceLong, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress}}})
-          void $ pure $ updateLocalStage ConfirmingLocation
-          void $ lift $ lift $ toggleLoader false
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = GoToConfirmLocation}})
+          void $ pure $ updateLocalStage GoToConfirmLocation
         true -> do
           let currentTime = (convertUTCtoISC (getCurrentUTC "") "h:mm:ss A")
               currentDate =  getCurrentDate ""

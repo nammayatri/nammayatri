@@ -218,5 +218,8 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ REPEAT_SEARCH updatedState)
     ChangeVehicleVarient updatedState -> do
-      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ CHANGE_VEHICLE_VARIANT updatedState)
+    ExitToConfirmingLocationStage updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GOTO_CONFIRMING_LOCATION_STAGE updatedState)

@@ -320,7 +320,7 @@ initData = {
     , selectedEstimateHeight : 0
     , isSafetyCenterDisabled : false
     , suggestedRideFlow : false
-    , locateOnMapProps : { sourceLocationName : Nothing, sourceGeoJson : Nothing, sourceGates : Nothing, isSpecialPickUpGate : false }
+    , locateOnMapProps : { sourceLocationName : Nothing, sourceGeoJson : Nothing, sourceGates : Nothing, isSpecialPickUpGate : false, cameraAnimatedToSource : true }
     , showSpecialZoneInfoPopup : false
     , hotSpot : { selectedSpot : Nothing, centroidPoint : Nothing }
     , isBannerDataComputed : false

@@ -723,6 +723,7 @@ data ScreenOutput = LogoutUser
                   | GoToSafetyEducation HomeScreenState
                   | RepeatSearch HomeScreenState
                   | ChangeVehicleVarient HomeScreenState
+                  | ExitToConfirmingLocationStage HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -891,8 +892,13 @@ data Action = NoAction
             | AllChatsLoaded
             | GoToSafetyEducationScreen
             | SpecialZoneInfoTag
+            | GoToConfirmingLocationStage
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+
+eval GoToConfirmingLocationStage state = 
+  exit $ ExitToConfirmingLocationStage state
+
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
   continue state 
     { props 
@@ -1518,34 +1524,49 @@ eval OpenSearchLocation state = do
 eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = continueWithCmd state [ do pure $ OpenSearchLocation ]
 
 eval (UpdateLocation key lat lon) state = do
-  let sourceManuallyMoved = if state.props.isSource == Just true then true else state.props.rideSearchProps.sourceManuallyMoved
-      destManuallyMoved = if state.props.isSource == Just false then true else state.props.rideSearchProps.destManuallyMoved
-      latitude = fromMaybe 0.0 (NUM.fromString lat)
+  let latitude = fromMaybe 0.0 (NUM.fromString lat)
       longitude = fromMaybe 0.0 (NUM.fromString lon)
-  case key of
-    "LatLon" -> do
-      let selectedSpot = head (filter (\spots -> (getDistanceBwCordinates (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon)) spots.lat spots.lng) * 1000.0 < 1.0 ) state.data.nearByPickUpPoints)
-      exit $ UpdateLocationName state{props{defaultPickUpPoint = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved }, hotSpot{ selectedSpot = selectedSpot }, locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude
-    _ ->  case (filter(\item -> item.place == key) state.data.nearByPickUpPoints) !! 0 of
-            Just spot -> exit $ UpdateLocationName state{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot.lat spot.lng
-            Nothing -> continue state
+  if os == "IOS" && not state.props.locateOnMapProps.cameraAnimatedToSource && (getDistanceBwCordinates latitude longitude state.props.sourceLat state.props.sourceLong) > 5.0 then do
+    continueWithCmd state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } } [do
+      void $ animateCamera state.props.sourceLat state.props.sourceLong 25.0 "NO_ZOOM"
+      pure NoAction
+    ]
+  else do
+    let updatedState = state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } }
+        sourceManuallyMoved = if updatedState.props.isSource == Just true then true else updatedState.props.rideSearchProps.sourceManuallyMoved
+        destManuallyMoved = if updatedState.props.isSource == Just false then true else updatedState.props.rideSearchProps.destManuallyMoved
+    case key of
+      "LatLon" -> do
+        let selectedSpot = head (filter (\spots -> (getDistanceBwCordinates latitude longitude spots.lat spots.lng) * 1000.0 < 1.0 ) updatedState.data.nearByPickUpPoints)
+        exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved }, hotSpot{ selectedSpot = selectedSpot }, locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude
+      _ ->  case (filter(\item -> item.place == key) updatedState.data.nearByPickUpPoints) !! 0 of
+              Just spot -> exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot.lat spot.lng
+              Nothing -> continue updatedState
+    
 
-eval (UpdatePickupLocation  key lat lon) state = do
-  let sourceManuallyMoved = true
-      latitude = fromMaybe 0.0 (NUM.fromString lat)
+eval (UpdatePickupLocation key lat lon) state = do
+  let latitude = fromMaybe 0.0 (NUM.fromString lat)
       longitude = fromMaybe 0.0 (NUM.fromString lon)
-  case key of
-    "LatLon" -> do
-      let selectedSpot = head (filter (\spots -> (getDistanceBwCordinates (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon)) spots.lat spots.lng) * 1000.0 < 1.0 ) state.data.nearByPickUpPoints)
-      exit $ UpdatePickupName state{props{defaultPickUpPoint = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, hotSpot{ selectedSpot = selectedSpot }, locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude
-    _ -> do
-      let focusedIndex = findIndex (\item -> item.place == key) state.data.nearByPickUpPoints
-          spot = (filter(\item -> item.place == key) state.data.nearByPickUpPoints) !! 0
-      case focusedIndex, spot of
-        Just index, Just spot' -> do
-          _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
-          exit $ UpdatePickupName state{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot'.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot'.lat spot'.lng
-        _, _ -> continue state
+  if os == "IOS" && not state.props.locateOnMapProps.cameraAnimatedToSource && (getDistanceBwCordinates latitude longitude state.props.sourceLat state.props.sourceLong) > 5.0 then do
+    continueWithCmd state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } } [do
+      void $ animateCamera state.props.sourceLat state.props.sourceLong 25.0 "NO_ZOOM"
+      pure NoAction
+    ]
+  else do
+    let updatedState = state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } }
+        sourceManuallyMoved = true
+    case key of
+      "LatLon" -> do
+        let selectedSpot = head (filter (\spots -> (getDistanceBwCordinates (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon)) spots.lat spots.lng) * 1000.0 < 1.0 ) updatedState.data.nearByPickUpPoints)
+        exit $ UpdatePickupName updatedState{props{defaultPickUpPoint = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, hotSpot{ selectedSpot = selectedSpot }, locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude
+      _ -> do
+        let focusedIndex = findIndex (\item -> item.place == key) updatedState.data.nearByPickUpPoints
+            spot = (filter(\item -> item.place == key) updatedState.data.nearByPickUpPoints) !! 0
+        case focusedIndex, spot of
+          Just index, Just spot' -> do
+            _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
+            exit $ UpdatePickupName updatedState{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot'.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot'.lat spot'.lng
+          _, _ -> continue updatedState
 
 eval (CheckBoxClick autoAssign) state = do
   _ <- pure $ performHapticFeedback unit
