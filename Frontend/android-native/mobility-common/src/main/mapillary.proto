@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+message ImageLayer {
+  message Image {
+    int64 captured_at = 1;
+    int32 compass_angle = 2;
+    int32 creator_id = 3;
+    int32 id = 4;
+    string sequence_id = 5;
+    int32 organization_id = 6;
+    bool is_pano = 7;
+  }
+
+  repeated Image images = 1;
+}

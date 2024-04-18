@@ -15,6 +15,8 @@
 */
 
 import { callbackMapper } from "presto-ui";
+import { Viewer } from 'mapillary-js';
+// const VectorTile = require('@mapbox/vector-tile').VectorTile;
 
 const JBridge = window.JBridge;
 const notificationCallBacks = {};
@@ -513,4 +515,81 @@ export const getMockFollowerName = function() {
     currentMockName = msg.split(" ")[0];
   }
   return currentMockName;
+}
+
+
+function getImageCloseTo(latitude, longitude, options = {}) {
+  // return get_image_close_to_controller(latitude,longitude,options);
+  return get_image_close_to_controller(latitude,longitude);
+}
+
+function imageCheck(options) {
+  return kwargCheck(kwargs, [
+    "min_captured_at",
+    "max_captured_at",
+    "radius",
+    "image_type",
+    "organization_id",
+    "fields"
+  ], "image_check");
+}
+
+async function get_image_close_to_controller(longitude, latitude) {
+  // imageCheck (kwargs);
+  // const zoom = kwargs.hasOwnProperty("zoom") ? kwargs["zoom"] : 14;
+  const zoom = 14;
+  fetchLayer ("image", longitude, latitude, zoom);
+}
+
+function kwargCheck(kwargs, options, callback) {
+  if (kwargs !== undefined && kwargs !== null) {
+      for (const key in kwargs) {
+          if (!options.includes(key)) {
+             console.log("error");
+          }
+      }
+  }
+  if (kwargs && kwargs.zoom !== undefined && (kwargs.zoom < 14 || kwargs.zoom > 17)) {
+    console.log("error");
+  }
+  if (kwargs && kwargs.image_type !== undefined && !["pano", "flat", "all"].includes(kwargs.image_type)) {
+    console.log("error");
+  }
+  return true;
+}
+
+
+function fetchLayer(layer, longitude, latitude, zoom) {
+  if (longitude <= -180 || longitude >= 180) {
+    console.log("error");
+  }
+
+  if (latitude <= -90 || latitude >= 90) {
+    console.log("error");
+  }
+  if (zoom !== 14) {
+    console.log("error");
+  }
+  const tile = latLongToTile(latitude,longitude,zoom);
+  const mapillaryURL = constructMapillaryURL(tile[2], tile[0], tile[1]);
+  apiCall (mapillaryURL);
+
+}
+export const apiCall = function (url) {
+  if (window.JBridge.mapillaryApiCall) {
+    return window.JBridge.mapillaryApiCall(url);
+  }
+}
+
+function latLongToTile(latitude, longitude, zoom) {
+  const n = Math.pow(2, zoom);
+  const xtile = Math.floor(n * ((longitude + 180) / 360));
+  const latRad = latitude * Math.PI / 180;
+  const ytile = Math.floor(n * (1 - (Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI)) / 2);
+  
+  return [xtile, ytile, zoom];
+}
+
+function constructMapillaryURL([x, y, z]) {
+  return "https://tiles.mapillary.com/maps/vtp/mly1_public/2/${z}/${x}/${y}/";
 }

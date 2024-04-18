@@ -53,4 +53,7 @@ dependencies {
     implementation 'com.google.android.play:review:2.0.1'
     compileOnly 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
     implementation 'androidx.browser:browser:1.2.0'
+    implementation "com.google.protobuf:protobuf-java:3.18.0"
+    implementation "com.google.protobuf:protobuf-java-util:3.18.0"
+
 }

@@ -73,6 +73,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.ContactsContract;
@@ -174,6 +175,8 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
+import com.google.protobuf.util.*;
+import com.google.protobuf.MessageOrBuilder;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -3582,6 +3585,37 @@ public class MobilityCommonBridge extends HyperBridge {
                 effect = VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE);
                 vibrator.vibrate(effect);
             }
+        }
+    }
+
+    @JavascriptInterface
+    public String mapillaryApiCall(String url) {
+        try {
+            URL apiurl = new URL(url);
+            HttpURLConnection connection = (HttpURLConnection) (new URL(url).openConnection());
+            connection.setRequestMethod("GET");
+            int responseCode = connection.getResponseCode();
+            System.out.println("Response Code: " + responseCode);
+            InputStream responseStream = connection.getInputStream();
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            String inputLine;
+
+            StringBuffer response = new StringBuffer();
+
+//            Message builder = YourProtobufMessage.newBuilder();
+            while ((inputLine = reader.readLine()) != null) {
+                response.append(inputLine);
+            }
+
+            reader.close();
+
+            // Print response
+            System.out.println("Response Body: " + response.toString());
+            return response.toString();
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Catch in mapillaryApiCall : " + e);
+            return "null";
         }
     }
 
