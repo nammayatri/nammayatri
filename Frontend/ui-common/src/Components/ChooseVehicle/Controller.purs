@@ -76,7 +76,7 @@ config =
   , price: ""
   , isCheckBox: false
   , isEnabled: true
-  , activeIndex: 2
+  , activeIndex: 0
   , index: 0
   , id: ""
   , maxPrice : Nothing

@@ -943,7 +943,13 @@ eval ShowPref state = continue state { data{ iopState { providerPrefInfo = false
 
 eval (ShowMultipleProvider showMultiProvider) state = do
   let customerTip = if showMultiProvider then HomeScreenData.initData.props.customerTip else state.props.customerTip
-  continueWithCmd state { data { iopState { showMultiProvider = showMultiProvider, providerPrefVisible = false}}, props { customerTip = customerTip}} [pure NoAction]
+      topProvider = filter (\element -> element.providerType == CTP.ONUS) state.data.specialZoneQuoteList
+      firstTopProvider = fromMaybe ChooseVehicleController.config $ head topProvider 
+
+      firstAllProvider = fromMaybe ChooseVehicleController.config $ head state.data.specialZoneQuoteList
+
+      selectedEstimate' = if showMultiProvider then firstAllProvider else firstTopProvider
+  continueWithCmd state { data { iopState { showMultiProvider = showMultiProvider, providerPrefVisible = false}, selectedEstimatesObject = selectedEstimate' {activeIndex = 0}}, props { customerTip = customerTip}} [pure NoAction]
 
 eval (ShowProviderInfo showProviderInfo) state = continue state { data { iopState { providerPrefInfo = showProviderInfo, providerPrefVisible = false}}}
 
@@ -2596,10 +2602,10 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
     _ <- pure $ spy "ChooseYourRideAction 2" config.activeIndex 
     continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
   else do
-    _ <- pure $ spy "ChooseYourRideAction 3" config.activeIndex 
-    _ <- pure $ spy "ChooseYourRideAction 4" config.index 
-    _ <- pure $ spy "ChooseYourRideAction 5" config 
-    continueWithCmd newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}} [pure NoAction]
+    -- _ <- pure $ spy "ChooseYourRideAction 3" config.activeIndex 
+    -- _ <- pure $ spy "ChooseYourRideAction 4" config.index 
+    -- _ <- pure $ spy "ChooseYourRideAction 5" config 
+    continueWithCmd newState{props{estimateId = config.id }, data {selectedEstimatesObject = config{activeIndex = config.index}}} [pure NoAction]
     -- continue newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state = do
@@ -2688,6 +2694,8 @@ eval (ChooseYourRideAction ChooseYourRideController.PreferencesDropDown) state =
 
 eval (ChooseYourRideAction ChooseYourRideController.SpecialZoneInfoTag) state = do
   continue state{ props{ showSpecialZoneInfoPopup = true } }
+
+eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.NoAction))) state = continueWithCmd state{data {triggerPatchCounter = state.data.triggerPatchCounter + 1}} [pure NoAction]
 
 eval (ChooseYourRideAction (ChooseYourRideController.TipBtnClick index value)) state = do
   let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
@@ -3113,8 +3121,9 @@ estimatesListFlow estimates state count = do
         , selectedEstimatesObject = estimatesInfo.defaultQuote
         , nearByDrivers = if nearByDriversLength > 0 then Just nearByDriversLength else Nothing
         , iopState 
-          { showMultiProvider = if state.data.currentCityConfig.iopConfig.enable then null topProvider else false -- This need to be removed if we always get quotes irrespective of driver availability
-          , showPrefButton = state.data.currentCityConfig.iopConfig.enable && (not (null topProvider)) && (not state.props.isRepeatRide)
+          { 
+            -- showMultiProvider = if state.data.currentCityConfig.iopConfig.enable then null topProvider else false -- This need to be removed if we always get quotes irrespective of driver availability
+          showPrefButton = state.data.currentCityConfig.iopConfig.enable && (not (null topProvider)) && (not state.props.isRepeatRide)
           , providerPrefInfo = state.data.iopState.providerPrefInfo
           }
         }

@@ -27,7 +27,6 @@ import Data.Tuple (Tuple(..))
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
   let
-    _ = spy "ChooseVehicle" config
     isActiveIndex = config.index == config.activeIndex
     stroke' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then "2," <> Color.blue800 else "1," <> Color.white900
     background' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then Color.blue600 else Color.white900

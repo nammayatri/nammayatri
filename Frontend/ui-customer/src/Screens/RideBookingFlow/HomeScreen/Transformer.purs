@@ -421,7 +421,6 @@ getEstimates :: EstimateAPIEntity -> Int -> Boolean -> Int -> Int -> ChooseVehic
 getEstimates (EstimateAPIEntity estimate) index isFareRange count activeIndex  =
   -- void $ pure $ spy "activeIndex" (show activeIndex)
   let currency = getCurrency appConfig
-      _ = spy "activeIndex" (show activeIndex)
       estimateAndQuoteConfig = (getAppConfig appConfig).estimateAndQuoteConfig
       config = getCityConfig (getAppConfig appConfig).cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
       estimateFareBreakup = fromMaybe [] estimate.estimateFareBreakup
@@ -448,7 +447,7 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange count activeIndex  =
   in ChooseVehicle.config {
         vehicleImage = getVehicleVariantImage estimate.vehicleVariant
       , vehicleVariant = estimate.vehicleVariant
-      , price = spy "totalFareRange" case estimate.totalFareRange of
+      , price = case estimate.totalFareRange of
                 Nothing -> currency <> (show estimate.estimatedTotalFare)
                 Just (FareRange fareRange) -> if fareRange.minFare == fareRange.maxFare then currency <> (show estimate.estimatedTotalFare)
                                               else  currency <> (show fareRange.minFare) <> " - " <> currency <> (show fareRange.maxFare)
