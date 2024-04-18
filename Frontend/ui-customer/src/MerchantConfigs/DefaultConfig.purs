@@ -292,6 +292,8 @@ config =
     , metroStationTtl : 10080 -- in Minutes
     , bookingStartTime : "04:30:00"
     , bookingEndTime : "22:30:00"
+    , metroHomeBannerImage : "ny_ic_chennai_metro_discount_banner"
+    , metroBookingBannerImage : "ny_ic_chennai_metro_banner"
     , ticketLimit : {
         roundTrip : 6
       , oneWay : 6
@@ -303,6 +305,8 @@ config =
     , customEndTime : "23:59:59" 
     , customDates : ["03/05/2024", "04/05/2024", "05/05/2024", "06/05/2024", "07/05/2024", "08/05/2024", "09/05/2024", "10/05/2024","11/05/2024"]
     , metroStationTtl : 10080
+    , metroHomeBannerImage : "ny_ic_kochi_metro_banner"
+    , metroBookingBannerImage : "ny_ic_kochi_metro_banner"
     , bookingStartTime : "00:00:00"
     , bookingEndTime : "23:59:59"
     , ticketLimit : {

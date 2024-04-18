@@ -911,6 +911,8 @@ getMetroConfigFromAppConfig config city = do
       , customEndTime : "01:00:00" 
       , customDates : ["23/04/2024","28/04/2024","01/05/2024","12/05/2024"] 
       , metroStationTtl : 10080
+      , metroHomeBannerImage : ""
+      , metroBookingBannerImage : ""
       , bookingStartTime : "04:30:00"
       , bookingEndTime : "22:30:00"
       , ticketLimit : {

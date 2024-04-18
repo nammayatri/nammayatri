@@ -7,7 +7,7 @@ import Language.Strings (getString)
 import PrestoDOM (Length(..), Margin(..), Padding(..))
 import Components.BannerCarousel as BannerCarousel
 import Data.Maybe (Maybe(..), isJust, fromMaybe)
-import Helpers.Utils (FetchImageFrom(..), fetchImage, getAssetLink, getCommonAssetLink, getMetroConfigFromCity, CityMetroConfig(..), getCityConfig)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, getAssetLink, getCommonAssetLink, getMetroConfigFromCity, CityMetroConfig(..), getCityConfig, getMetroConfigFromAppConfig)
 import Language.Types (STR(..))
 import Screens.Types (City, HomeScreenState)
 import Screens.Types as ST
@@ -29,6 +29,7 @@ import DecodeUtil (getAnyFromWindow)
 
 import Components.RideCompletedCard as RideCompletedCard
 import Data.Foldable
+import ConfigProvider (getAppConfig)
 
 getBannerConfigs :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
 getBannerConfigs state action =
@@ -141,6 +142,8 @@ metroBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config 
 metroBannerConfig state action =
   let
     config = BannerCarousel.config action
+    appConfig' = state.data.config
+    cityMetroAppConfig = getMetroConfigFromAppConfig appConfig' (show state.props.city)
     (CityMetroConfig cityConfig) = getMetroConfigFromCity state.props.city 
     appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
     config' = config
@@ -151,7 +154,7 @@ metroBannerConfig state action =
       , actionText = getString BOOK_NOW
       , actionTextBackgroundColour = Color.blue800
       , actionTextColor = Color.white900
-      , imageUrl = (getCommonAssetLink FunctionCall) <> (cityConfig.bannerImage <> ".png")
+      , imageUrl = (getCommonAssetLink FunctionCall) <> (cityMetroAppConfig.metroHomeBannerImage <> ".png")
       , margin = MarginTop 0
       , imageHeight = V 100
       , imageWidth = V 120
