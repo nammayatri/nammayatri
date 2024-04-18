@@ -301,6 +301,8 @@ type MetroConfig = {
 , customEndTime :: String
 , customDates :: Array String 
 , metroStationTtl :: Int
+, metroHomeBannerImage :: String
+, metroBookingBannerImage :: String
 , bookingStartTime :: String
 , bookingEndTime :: String
 , ticketLimit :: {
