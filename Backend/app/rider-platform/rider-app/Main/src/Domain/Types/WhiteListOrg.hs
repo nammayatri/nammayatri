@@ -18,6 +18,7 @@ module Domain.Types.WhiteListOrg where
 
 import Data.Aeson
 import Domain.Types.Common
+import Domain.Types.Merchant
 import Kernel.Prelude
 import Kernel.Types.Beckn.Domain (Domain (..))
 import Kernel.Types.Id
@@ -26,9 +27,10 @@ import Kernel.Types.Registry (Subscriber)
 data WhiteListOrgD (s :: UsageSafety) = WhiteListOrg
   { id :: Id WhiteListOrg,
     subscriberId :: ShortId Subscriber,
+    merchantId :: Id Merchant,
     domain :: Domain
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 type WhiteListOrg = WhiteListOrgD 'Safe
 

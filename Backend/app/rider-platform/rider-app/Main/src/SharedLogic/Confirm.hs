@@ -146,7 +146,7 @@ confirm DConfirmReq {..} = do
   riderPhone <-
     if isValueAddNP
       then mapM decrypt person.mobileNumber
-      else pure $ Just booking.primaryExophone
+      else pure . Just $ prependZero booking.primaryExophone
   let riderName = person.firstName
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   details <- mkConfirmQuoteDetails quote.quoteDetails fulfillmentId
@@ -179,6 +179,8 @@ confirm DConfirmReq {..} = do
         ..
       }
   where
+    prependZero :: Text -> Text
+    prependZero str = "0" <> str
     mkConfirmQuoteDetails quoteDetails fulfillmentId = do
       case quoteDetails of
         DQuote.OneWayDetails _ -> pure ConfirmOneWayDetails
