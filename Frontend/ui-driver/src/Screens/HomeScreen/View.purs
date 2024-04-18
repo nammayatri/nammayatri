@@ -206,8 +206,8 @@ screen initialState (GlobalState globalState) =
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY 
                                         $ if initialState.data.activeRide.enableFrequentLocationUpdates
                                           then "2000"
-                                          else "50000"
-                                _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
+                                          else "10000"
+                                _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "20.0"
 
                                 when (initialState.data.activeRide.tripType /= ST.Rental) $ void $ push RemoveChat
                                 when (initialState.data.activeRide.tripType == ST.Rental && not initialState.props.chatcallbackInitiated) $ do
