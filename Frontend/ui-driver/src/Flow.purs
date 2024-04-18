@@ -535,6 +535,9 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               liftFlowBT hideSplash
               modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen {props{subView = ST.YATRI_COINS_VIEW}})
               driverEarningsFlow
+            "online" -> do
+              changeDriverStatus Online
+              pure unit
             _ -> pure unit
         Nothing -> pure unit
   (GlobalState allState) <- getState
