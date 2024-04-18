@@ -41,6 +41,7 @@ type API =
            :<|> Common.CurrentActiveRideAPI
            :<|> Common.RideCancelAPI
            :<|> Common.BookingWithVehicleNumberAndPhoneAPI
+           :<|> Common.FareBreakUpAPI
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -50,6 +51,7 @@ handler merchantId city =
     :<|> currentActiveRide merchantId city
     :<|> rideCancel merchantId city
     :<|> bookingWithVehicleNumberAndPhone merchantId city
+    :<|> fareBreakUp merchantId city
 
 rideStart :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Common.StartRideReq -> FlowHandler APISuccess
 rideStart merchantShortId opCity reqRideId Common.StartRideReq {point, odometerReadingValue} = withFlowHandlerAPI $ do
@@ -93,3 +95,6 @@ bookingWithVehicleNumberAndPhone merchantShortId opCity req = withFlowHandlerAPI
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   DRide.bookingWithVehicleNumberAndPhone merchant merchantOpCityId req
+
+fareBreakUp :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> FlowHandler Common.FareBreakUpRes
+fareBreakUp merchantShortId opCity reqRideId = withFlowHandlerAPI $ DRide.fareBreakUp merchantShortId opCity reqRideId
