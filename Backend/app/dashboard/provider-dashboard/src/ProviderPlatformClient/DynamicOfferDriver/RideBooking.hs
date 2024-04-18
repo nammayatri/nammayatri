@@ -65,7 +65,8 @@ data RidesAPIs = RidesAPIs
     rideEnd :: Id Ride.Ride -> Ride.EndRideReq -> Euler.EulerClient APISuccess,
     currentActiveRide :: Text -> Euler.EulerClient (Id Ride.Ride),
     rideCancel :: Id Ride.Ride -> Ride.CancelRideReq -> Euler.EulerClient APISuccess,
-    bookingWithVehicleNumberAndPhone :: Ride.BookingWithVehicleAndPhoneReq -> Euler.EulerClient Ride.BookingWithVehicleAndPhoneRes
+    bookingWithVehicleNumberAndPhone :: Ride.BookingWithVehicleAndPhoneReq -> Euler.EulerClient Ride.BookingWithVehicleAndPhoneRes,
+    fareBreakUp :: Id Ride.Ride -> Euler.EulerClient Ride.FareBreakUpRes
   }
 
 data DriverRegistrationAPIs = DriverRegistrationAPIs
@@ -114,7 +115,8 @@ mkDriverRideBookingAPIs merchantId city token = do
       :<|> rideEnd
       :<|> currentActiveRide
       :<|> rideCancel
-      :<|> bookingWithVehicleNumberAndPhone = ridesClient
+      :<|> bookingWithVehicleNumberAndPhone
+      :<|> fareBreakUp = ridesClient
 
     auth
       :<|> verify = driverRegistrationClient

@@ -22,6 +22,7 @@ module Domain.Action.Dashboard.Ride
     bookingWithVehicleNumberAndPhone,
     mkLocationFromLocationMapping,
     ticketRideList,
+    fareBreakUp,
   )
 where
 
@@ -36,6 +37,7 @@ import Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.Common as DTC
+import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -58,11 +60,13 @@ import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.DriverQuote as DQ
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
+import qualified Storage.Queries.FareParameters as SQFP
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
@@ -244,7 +248,7 @@ rideInfo merchantId merchantOpCityId reqRideId = do
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
   mQuote <- runInReplica $ DQ.findById (Id booking.quoteId)
   let driverId = ride.driverId
-
+  city <- CQMOC.findById ride.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOpCityId: " <> ride.merchantOperatingCityId.getId)
   -- merchant access checking
   unless (merchantId == booking.providerId && merchantOpCityId == booking.merchantOperatingCityId) $ throwError (RideDoesNotExist rideId.getId)
 
@@ -265,6 +269,13 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         DRide.CANCELLED -> Just ride.updatedAt
         _ -> Nothing
   customerPhoneNo <- decrypt riderDetails.mobileNumber
+  vehicleDetails <- runInReplica $ VQuery.findByRegistrationNo rideDetails.vehicleNumber
+  mbDefaultServiceTierName <-
+    case vehicleDetails of
+      Nothing -> return Nothing
+      Just vehicle -> do
+        cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
+        return $ (.name) <$> find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   (nextStopLoc, lastStopLoc) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
@@ -315,7 +326,9 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         nextStopLocation = mkLocationAPIEntity <$> nextStopLoc,
         lastStopLocation = mkLocationAPIEntity <$> lastStopLoc,
         vehicleServiceTierName = booking.vehicleServiceTierName,
-        endOtp = ride.endOtp
+        endOtp = ride.endOtp,
+        mbDefaultServiceTierName = mbDefaultServiceTierName,
+        rideCity = Just $ show city.city
       }
 
 calculateLocations ::
@@ -514,3 +527,37 @@ endActiveRide rideId merchantId merchantOperatingCityId = do
   let dashboardReq = EHandler.DashboardEndRideReq {point = Nothing, merchantId, merchantOperatingCityId, odometer = Nothing}
   shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId
   void $ EHandler.dashboardEndRide shandle rideId dashboardReq
+
+fareBreakUp :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.FareBreakUpRes
+fareBreakUp merchantShortId opCity reqRideId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let rideId = cast @Common.Ride @DRide.Ride reqRideId
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
+  unless (merchant.id == booking.providerId && merchantOpCityId == booking.merchantOperatingCityId) $ throwError (RideDoesNotExist rideId.getId)
+  actualFareBreakUp <- case ride.fareParametersId of
+    Just fareParamsId -> runInReplica $ SQFP.findById fareParamsId
+    Nothing -> pure Nothing
+  return
+    Common.FareBreakUpRes
+      { estimatedFareBreakUp = Just $ buildFareBreakUp booking.fareParams,
+        actualFareBreakUp = case actualFareBreakUp of
+          Just fareParams -> Just $ buildFareBreakUp fareParams
+          Nothing -> Nothing
+      }
+
+buildFareBreakUp :: DFP.FareParameters -> Common.FareBreakUp
+buildFareBreakUp DFP.FareParameters {..} = do
+  Common.FareBreakUp
+    { fareParametersDetails = buildFareParametersDetails fareParametersDetails,
+      ..
+    }
+
+buildFareParametersDetails :: DFP.FareParametersDetails -> Common.FareParametersDetails
+buildFareParametersDetails = makeFareParam
+
+makeFareParam :: DFP.FareParametersDetails -> Common.FareParametersDetails
+makeFareParam (DFP.ProgressiveDetails DFP.FParamsProgressiveDetails {..}) = Common.ProgressiveDetails Common.FParamsProgressiveDetails {..}
+makeFareParam (DFP.SlabDetails DFP.FParamsSlabDetails {..}) = Common.SlabDetails Common.FParamsSlabDetails {..}
+makeFareParam (DFP.RentalDetails DFP.FParamsRentalDetails {..}) = Common.RentalDetails Common.FParamsRentalDetails {..}

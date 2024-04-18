@@ -51,6 +51,7 @@ type API =
            :<|> RideRouteAPI
            :<|> BookingWithVehicleNumberAndPhoneAPI
            :<|> TicketRideListAPI
+           :<|> FareBreakUpAPI
        )
 
 type RideListAPI =
@@ -105,6 +106,10 @@ type BookingWithVehicleNumberAndPhoneAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'BOOKING_WITH_VEHICLE_NUMBER_AND_PHONE
     :> Common.BookingWithVehicleNumberAndPhoneAPI
 
+type FareBreakUpAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'RIDES 'FARE_BREAKUP
+    :> Common.FareBreakUpAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   rideList merchantId city
@@ -120,6 +125,7 @@ handler merchantId city =
     :<|> rideRoute merchantId city
     :<|> bookingWithVehicleNumberAndPhone merchantId city
     :<|> ticketRideList merchantId city
+    :<|> fareBreakUp merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -247,3 +253,8 @@ ticketRideList merchantShortId opCity apiTokenInfo mbRideShortId mbCountryCode m
   transaction <- buildManagementServerTransaction Common.TicketRideListEndpoint apiTokenInfo Nothing T.emptyRequest
   T.withResponseTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.rides.ticketRideList) mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber
+
+fareBreakUp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Ride -> FlowHandler Common.FareBreakUpRes
+fareBreakUp merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDriverOfferBPP checkedMerchantId opCity (.rides.fareBreakUp) rideId
