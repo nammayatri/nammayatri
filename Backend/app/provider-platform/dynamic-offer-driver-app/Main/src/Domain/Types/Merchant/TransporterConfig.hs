@@ -178,7 +178,8 @@ data TransporterConfigD u = TransporterConfig
     variantsToEnableForSubscription :: [Vehicle.Variant],
     considerDriversForSearch :: Bool,
     dlNumberVerification :: Maybe Bool,
-    pastDaysRideCounter :: Int
+    pastDaysRideCounter :: Int,
+    placeNameCacheExpiryDays :: Maybe Int
   }
   deriving (Generic, Show)
 

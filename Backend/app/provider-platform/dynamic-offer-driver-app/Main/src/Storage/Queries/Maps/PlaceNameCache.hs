@@ -32,6 +32,9 @@ import qualified Storage.Beam.Maps.PlaceNameCache as BeamPNC
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => PlaceNameCache -> m ()
 create = createWithKV
 
+deleteById :: (MonadFlow m, EsqDBFlow m r) => Id PlaceNameCache -> m ()
+deleteById (Id placeNameCacheId) = deleteWithKV [Se.Is BeamPNC.id (Se.Eq placeNameCacheId)]
+
 findPlaceByPlaceId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [PlaceNameCache]
 findPlaceByPlaceId placeId = findAllWithKV [Se.Is BeamPNC.placeId $ Se.Eq (Just placeId)]
 

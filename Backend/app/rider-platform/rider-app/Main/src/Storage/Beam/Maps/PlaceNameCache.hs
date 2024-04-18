@@ -16,6 +16,7 @@
 
 module Storage.Beam.Maps.PlaceNameCache where
 
+import qualified Data.Time as Time
 import qualified Database.Beam as B
 import qualified Domain.Types.Maps.PlaceNameCache as Domain
 import Kernel.Prelude
@@ -29,7 +30,8 @@ data PlaceNameCacheT f = PlaceNameCacheT
     lon :: B.C f Double,
     placeId :: B.C f (Maybe Text),
     geoHash :: B.C f (Maybe Text),
-    addressComponents :: B.C f [Domain.AddressResp]
+    addressComponents :: B.C f [Domain.AddressResp],
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

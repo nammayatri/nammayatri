@@ -23,6 +23,7 @@ RiderConfig:
     collectMMIRouteData: Maybe Bool
     isAvoidToll: Bool
     autoUnblockSafetyCenterAfterDays: Int
+    placeNameCacheExpiryDays: Maybe Int
 
   constraints:
     merchantOperatingCityId: PrimaryKey

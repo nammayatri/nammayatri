@@ -287,5 +287,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.dummyToLocation = Just $ toJSON dummyToLocation,
         BeamTC.variantsToEnableForSubscription = variantsToEnableForSubscription,
         BeamTC.dlNumberVerification = dlNumberVerification,
-        BeamTC.pastDaysRideCounter = pastDaysRideCounter
+        BeamTC.pastDaysRideCounter = pastDaysRideCounter,
+        BeamTC.placeNameCacheExpiryDays = placeNameCacheExpiryDays
       }
