@@ -23,11 +23,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQMTC
+import Tools.Auth
 import Tools.Error
 
 listCities :: Id DM.Merchant -> Flow [DTC.CityRes]
 listCities mId = do
-  merchantOperatingCities <- CQMOC.findAllByMerchantId mId
+  merchantOperatingCities <- CQMOC.findAllByMerchantId (merchantIdFallback mId)
   mapM mkCityRes merchantOperatingCities
   where
     mkCityRes MerchantOperatingCity {..} = do
