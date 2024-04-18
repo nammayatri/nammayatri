@@ -295,7 +295,7 @@ instance Registry Flow where
       then do
         Registry.checkBlacklisted isBlackListed mbSubscriber
       else do
-        Registry.checkWhitelisted isNotWhiteListed mbSubscriber
+        Registry.checkWhitelisted isNotWhiteListed req.merchant_id mbSubscriber
     where
       performLookup sub =
         fetchFromDB sub.subscriber_id sub.unique_key_id sub.merchant_id >>>= \registryUrl ->
@@ -309,7 +309,7 @@ instance Registry Flow where
               mbMerchant <- CM.findById (Id merchantId)
               pure ((\merchant -> Just merchant.registryUrl) =<< mbMerchant)
       isBlackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isJust
-      isNotWhiteListed subscriberId domain = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
+      isNotWhiteListed subscriberId domain _merchantId = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
 
 cacheRegistryKey :: Text
 cacheRegistryKey = "dynamic-offer-driver-app:registry:"

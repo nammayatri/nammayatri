@@ -24,6 +24,7 @@ import Tools.Beam.UtilsTH
 data WhiteListOrgT f = WhiteListOrgT
   { id :: B.C f Text,
     subscriberId :: B.C f Text,
+    merchantId :: B.C f Text,
     domain :: B.C f Domain
   }
   deriving (Generic, B.Beamable)

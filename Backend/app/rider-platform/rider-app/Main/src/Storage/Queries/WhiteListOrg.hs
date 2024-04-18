@@ -20,6 +20,7 @@ module Storage.Queries.WhiteListOrg
     #-}
 where
 
+import Domain.Types.Merchant
 import Domain.Types.WhiteListOrg
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -30,8 +31,22 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.WhiteListOrg as BeamBLO
 
+findBySubscriberIdAndDomainAndMerchantId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Domain -> Id Merchant -> m (Maybe WhiteListOrg)
+findBySubscriberIdAndDomainAndMerchantId subscriberId domain merchantId = do
+  findOneWithKV
+    [ Se.Is BeamBLO.subscriberId $ Se.Eq $ getShortId subscriberId,
+      Se.Is BeamBLO.domain $ Se.Eq domain,
+      Se.Is BeamBLO.merchantId $ Se.Eq $ getId merchantId
+    ]
+
+-- TODO:: remove it, For backward compatibility
 findBySubscriberIdAndDomain :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Domain -> m (Maybe WhiteListOrg)
-findBySubscriberIdAndDomain subscriberId domain = findOneWithKV [Se.Is BeamBLO.subscriberId $ Se.Eq $ getShortId subscriberId, Se.Is BeamBLO.domain $ Se.Eq domain]
+findBySubscriberIdAndDomain subscriberId domain = do
+  findOneWithKV
+    [ Se.Is BeamBLO.subscriberId $ Se.Eq $ getShortId subscriberId,
+      Se.Is BeamBLO.domain $ Se.Eq domain,
+      Se.Is BeamBLO.merchantId $ Se.Eq ""
+    ]
 
 countTotalSubscribers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m Int
 countTotalSubscribers = findAllWithKV [Se.Is BeamBLO.id $ Se.Not $ Se.Eq ""] <&> length
@@ -43,6 +58,7 @@ instance FromTType' BeamBLO.WhiteListOrg WhiteListOrg where
         WhiteListOrg
           { id = Id id,
             subscriberId = ShortId subscriberId,
+            merchantId = Id merchantId,
             domain = domain
           }
 
@@ -51,5 +67,6 @@ instance ToTType' BeamBLO.WhiteListOrg WhiteListOrg where
     BeamBLO.WhiteListOrgT
       { BeamBLO.id = getId id,
         BeamBLO.subscriberId = getShortId subscriberId,
+        BeamBLO.merchantId = getId merchantId,
         BeamBLO.domain = domain
       }

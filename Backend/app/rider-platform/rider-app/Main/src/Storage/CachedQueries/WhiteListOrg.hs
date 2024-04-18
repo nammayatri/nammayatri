@@ -14,13 +14,14 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.WhiteListOrg
-  ( findBySubscriberIdAndDomain,
+  ( findBySubscriberIdAndDomainAndMerchantId,
     countTotalSubscribers,
   )
 where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
+import Domain.Types.Merchant
 import Domain.Types.WhiteListOrg
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -30,13 +31,21 @@ import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
 import qualified Storage.Queries.WhiteListOrg as Queries
 
-findBySubscriberIdAndDomain :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Domain -> m (Maybe WhiteListOrg)
-findBySubscriberIdAndDomain subscriberId domain =
-  Hedis.safeGet (makeShortIdKey subscriberId domain) >>= \case
+findBySubscriberIdAndDomainAndMerchantId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Domain -> Id Merchant -> m (Maybe WhiteListOrg)
+findBySubscriberIdAndDomainAndMerchantId subscriberId domain merchantId =
+  Hedis.safeGet (makeShortIdAndDomainAndMerchantIdKey subscriberId domain merchantId) >>= \case
     Just a -> return . Just $ coerce @(WhiteListOrgD 'Unsafe) @WhiteListOrg a
-    Nothing -> findAndCache
+    Nothing ->
+      findAndCacheWithMerchantId >>= \case
+        Just a' -> return $ Just a'
+        -- TODO:: remove it, For backward compatibility
+        Nothing -> do
+          Hedis.safeGet (makeShortIdKey subscriberId domain) >>= \case
+            Just a'' -> return . Just $ coerce @(WhiteListOrgD 'Unsafe) @WhiteListOrg a''
+            Nothing -> findAndCache
   where
     findAndCache = flip whenJust cacheOrganization /=<< Queries.findBySubscriberIdAndDomain subscriberId domain
+    findAndCacheWithMerchantId = flip whenJust cacheOrganizationWithMerchantId /=<< Queries.findBySubscriberIdAndDomainAndMerchantId subscriberId domain merchantId
 
 cacheOrganization :: (CacheFlow m r) => WhiteListOrg -> m ()
 cacheOrganization org = do
@@ -45,6 +54,15 @@ cacheOrganization org = do
 
 makeShortIdKey :: ShortId Subscriber -> Domain -> Text
 makeShortIdKey subscriberId domain = "CachedQueries:WhiteListOrg:SubscriberId-" <> subscriberId.getShortId <> "-Domain-" <> show domain
+
+cacheOrganizationWithMerchantId :: (CacheFlow m r) => WhiteListOrg -> m ()
+cacheOrganizationWithMerchantId org = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp (makeShortIdAndDomainAndMerchantIdKey org.subscriberId org.domain org.merchantId) (coerce @WhiteListOrg @(WhiteListOrgD 'Unsafe) org) expTime
+
+makeShortIdAndDomainAndMerchantIdKey :: ShortId Subscriber -> Domain -> Id Merchant -> Text
+makeShortIdAndDomainAndMerchantIdKey subscriberId domain merchantId =
+  "CachedQueries:WhiteListOrg:SubscriberId-" <> subscriberId.getShortId <> "-Domain-" <> show domain <> "-MerchantId-" <> merchantId.getId
 
 countTotalSubscribers :: (CacheFlow m r, EsqDBFlow m r) => m Int
 countTotalSubscribers = do
