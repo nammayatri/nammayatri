@@ -264,7 +264,9 @@ data RideInfoRes = RideInfoRes
     vehicleVariant :: Maybe Variant,
     nextStopLocation :: Maybe LocationAPIEntity,
     lastStopLocation :: Maybe LocationAPIEntity,
-    endOtp :: Maybe Text
+    endOtp :: Maybe Text,
+    mbDefaultServiceTierName :: Maybe Text,
+    rideCity :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -492,3 +494,67 @@ instance FromJSON RideInfo where
 
 instance ToJSON RideInfo where
   toJSON = genericToJSON constructorsWithLowerCase
+
+--- fare breakup -------------------------------
+
+type FareBreakUpAPI =
+  Capture "rideId" (Id Ride)
+    :> "fareBreakUp"
+    :> Get '[JSON] FareBreakUpRes
+
+data FareBreakUpRes = FareBreakUpRes
+  { estimatedFareBreakUp :: Maybe FareBreakUp,
+    actualFareBreakUp :: Maybe FareBreakUp
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets FareBreakUpRes where
+  hideSecrets = identity
+
+data FareBreakUp = FareBreakUp
+  { driverSelectedFare :: Maybe Money,
+    customerExtraFee :: Maybe Money,
+    serviceCharge :: Maybe Money,
+    govtCharges :: Maybe Money,
+    baseFare :: Money,
+    waitingCharge :: Maybe Money,
+    rideExtraTimeFare :: Maybe Money,
+    nightShiftCharge :: Maybe Money,
+    nightShiftRateIfApplies :: Maybe Double,
+    fareParametersDetails :: FareParametersDetails,
+    customerCancellationDues :: Maybe HighPrecMoney,
+    tollCharges :: Maybe HighPrecMoney,
+    congestionCharge :: Maybe Money,
+    updatedAt :: UTCTime
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalDetails FParamsRentalDetails
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FParamsProgressiveDetails = FParamsProgressiveDetails
+  { deadKmFare :: Money,
+    extraKmFare :: Maybe Money
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FParamsSlabDetails = FParamsSlabDetails
+  { platformFee :: Maybe HighPrecMoney,
+    sgst :: Maybe HighPrecMoney,
+    cgst :: Maybe HighPrecMoney
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FParamsRentalDetails = FParamsRentalDetails
+  { timeBasedFare :: Money,
+    distBasedFare :: Money,
+    extraDistance :: Meters,
+    extraDuration :: Seconds
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
