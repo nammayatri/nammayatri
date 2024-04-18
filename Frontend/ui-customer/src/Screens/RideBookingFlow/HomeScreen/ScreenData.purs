@@ -20,7 +20,7 @@ import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), BookingTime, InvalidBookingPopUpConfig)
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -180,6 +180,9 @@ initData = {
     , hotSpotInfo : []
     , rentalsInfo : Nothing 
     , startTimeUTC : ""
+    , invalidBookingId : Nothing
+    , maxEstimatedDuration : 0
+    , invalidBookingPopUpConfig : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -630,3 +633,20 @@ dummyRentalBookingConfig =
   , finalDuration : 0
   , finalDistance : 0
   }
+
+dummyBookingTime :: BookingTime
+dummyBookingTime = {
+  bookingId : "0",
+  rideStartTime : "",
+  estimatedDuration : 0
+}
+
+dummyInvalidBookingPopUpConfig :: InvalidBookingPopUpConfig
+dummyInvalidBookingPopUpConfig = {
+  fromLocation : "",
+  toLocation : "",
+  bookingId : "",
+  rideScheduledTime : "",
+  maxEstimatedDuration : 0,
+  fareProductType : FPT.ONE_WAY
+}

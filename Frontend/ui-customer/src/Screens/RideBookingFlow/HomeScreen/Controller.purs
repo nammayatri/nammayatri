@@ -76,12 +76,12 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, compareDate, getCurrentDatev2, getDateAfterNDaysv2, zoneLabelIcon, decodeBookingTimeList, encodeBookingTimeList)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, compareDate, getCurrentDatev2, getDateAfterNDaysv2, zoneLabelIcon, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<), (*>))
 import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (BottomSheetState(..), Eval, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
@@ -1782,8 +1782,13 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState 
       HomeScreen   -> do
         _ <- pure $ performHapticFeedback unit
         let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.DestinationSearch" "true"
-        let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-        exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= state.data.source}}
+            _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
+            maybeInvalidBookingDetails = invalidBookingTime (getCurrentUTC "") Nothing
+        if (isJust maybeInvalidBookingDetails) then do
+          continue state {data{invalidBookingId = maybe Nothing (\invalidBookingTime -> Just invalidBookingTime.bookingId) maybeInvalidBookingDetails}, props{showScheduledRideExistsPopUp = true}}
+        else do
+          void $ pure $ updateLocalStage SearchLocationModel
+          exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= state.data.source}}
       ConfirmingLocation -> do
         _ <- pure $ performHapticFeedback unit
         _ <- pure $ exitLocateOnMap ""
@@ -1803,9 +1808,13 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState 
 eval WhereToClick state = do
   _ <- pure $ performHapticFeedback unit
   let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.DestinationSearch" "true"
-  _ <- pure $ updateLocalStage SearchLocationModel
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-  exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }, rideSearchProps{sessionId = generateSessionId unit}}, data{source= if state.data.source == "" then getString CURRENT_LOCATION else state.data.source}}
+      _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
+      maybeInvalidBookingDetails = invalidBookingTime (getCurrentUTC "") Nothing
+  if (isJust maybeInvalidBookingDetails) then do
+    continue state {data{invalidBookingId = maybe Nothing (\invalidBookingTime -> Just invalidBookingTime.bookingId) maybeInvalidBookingDetails}, props{showScheduledRideExistsPopUp = true}}
+  else do
+    void $ pure $ updateLocalStage SearchLocationModel
+    exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= state.data.source}}
   
 eval (RideCompletedAC RideCompletedCard.GoToSOS) state = exit $ GoToNammaSafety state true false 
 
@@ -2839,8 +2848,13 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
                         && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
         updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
         newState = if validDate && isAfterThirtyMinutes then state { data { selectedDateTimeConfig = updatedDateTime, startTimeUTC = selectedUTC}} else state
-    in if validDate && isAfterThirtyMinutes then continue newState
-       else 
+    in 
+      if validDate && isAfterThirtyMinutes then do
+        let maybeInvalidBookingDetails = invalidBookingTime selectedUTC Nothing
+        if (isJust maybeInvalidBookingDetails) then do
+          continue state {data{invalidBookingId = maybe Nothing (\invalidBookingTime -> Just invalidBookingTime.bookingId) maybeInvalidBookingDetails}, props{showScheduledRideExistsPopUp = true}}
+        else continue newState
+      else 
         if isAfterThirtyMinutes then do 
           void $ pure $ toast $ getVarString DATE_INVALID_MESSAGE $ singleton $ show state.props.maxDateBooking
           continue state
@@ -2914,7 +2928,7 @@ eval (UpdateBookingDetails (RideBookingRes response)) state = do
   
 eval (DriverInfoCardActionController (DriverInfoCardController.ShowEndOTP)) state = continue state { props { showEndOTP = true } }
 
-eval (ScheduledRideExistsAction (PopUpModal.OnButton2Click)) state = continue state{props{ showScheduledRideExistsPopUp = false}}
+eval (ScheduledRideExistsAction (PopUpModal.OnButton2Click)) state = continue state{data{ startedAt = "", invalidBookingId = Nothing, maxEstimatedDuration = 0}, props{showScheduledRideExistsPopUp = false}}
 
 eval _ state = continue state
 

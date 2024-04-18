@@ -153,4 +153,5 @@ dummyIndividualCard = {
   , estimatedDuration : 0
   , estimatedFare : 0
   , showDestination : ""
+  , rideScheduledTime : ""
 }

@@ -464,6 +464,7 @@ type IndividualRideCardState =
   , estimatedDuration :: Int
   , estimatedFare :: Int
   , showDestination :: String
+  , rideScheduledTime :: String
   }
 
 
@@ -639,13 +640,26 @@ type HomeScreenStateData =
   , startTimeUTC :: String
   , selectedDateTimeConfig :: DateTimeConfig
   , fareProductType :: FareProductType
+  , invalidBookingId :: Maybe String
+  , maxEstimatedDuration :: Int
+  , invalidBookingPopUpConfig :: Maybe InvalidBookingPopUpConfig
   }
+
+type InvalidBookingPopUpConfig = {
+    fromLocation :: String
+  , toLocation :: String
+  , bookingId :: String
+  , rideScheduledTime :: String
+  , maxEstimatedDuration :: Int
+  , fareProductType :: FareProductType
+}
 
 type RentalsInfo = 
   { rideScheduledAtUTC :: String 
   , bookingId :: String
   , multipleScheduled :: Boolean
   , fareProductType :: FareProductType
+  , nearestRideScheduledAtUTC :: String
   }
   
 type Followers = {
@@ -850,8 +864,9 @@ type HomeScreenStateProps =
 data BottomNavBarIcon = TICKETING | MOBILITY
 
 type BookingTime = {
-  scheduledTime :: String,
-  bookingId :: String
+  rideStartTime :: String,
+  bookingId :: String,
+  estimatedDuration :: Int
 }
 
 derive instance genericBottomNavBarIcon :: Generic BottomNavBarIcon _

@@ -232,7 +232,7 @@ myRideListTransformerProp listRes =
         showDestination : toPropValue if (decodeAddress $ Booking destination) == "" then "gone" else "visible",
         variantImage : toPropValue $ PrestoList.renderImageSource $ PrestoList.ImageUrl imageUrl imageName,
         showVariantImage : toPropValue $ (if isScheduled then "gone" else "visible")
-      }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
+      }) $ reverse $ sortWith (\(RideBookingRes ride) -> fromMaybe ride.createdAt ride.rideScheduledTime) listRes)
 
 
 myRideListTransformer :: MyRidesScreenState -> Array RideBookingRes -> Array IndividualRideCardState
@@ -305,7 +305,8 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , estimatedDuration : fromMaybe 0 ride.estimatedDuration
   , estimatedFare : ride.estimatedFare
   , showDestination : if (decodeAddress $ Booking destination) == "" then "gone" else "visible" 
-}) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
+  , rideScheduledTime : fromMaybe "" ride.rideScheduledTime
+}) $ reverse $ sortWith (\(RideBookingRes ride) -> fromMaybe ride.createdAt ride.rideScheduledTime) listRes)
 
 dummyFareBreakUp :: FareBreakupAPIEntity
 dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}

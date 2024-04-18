@@ -22,6 +22,7 @@ module Screens.RentalBookingFlow.RentalScreen.Controller
   )
   where
 
+import Common.Types.App (LazyCheck(..))
 import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.IncrementDecrementModel.Controller as IncrementDecrementModelController
@@ -30,26 +31,27 @@ import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.PopUpModal.Controller as PopUpModalController
 import Components.RateCard.Controller as RateCardController
 import Components.RequestInfoCard.Controller as RequestInfoCardController
+import Screens.HomeScreen.ScreenData as HomeScreenData
 import Data.Array as DA
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe, isJust)
 import Data.Show.Generic (genericShow)
 import Effect.Aff (launchAff)
 import Effect.Uncurried (runEffectFn2, runEffectFn6)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons as EHC
-import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2)
+import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, rideStartingInBetweenPrevRide)
 import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote)
 import JBridge (showDateTimePicker, toast, updateSliderValue)
 import Language.Strings (getVarString)
 import Language.Types (STR(..)) as STR
 import Log (trackAppActionClick)
-import Prelude (class Eq, class Show, bind, map, negate, pure, show, unit, ($), (&&), (*), (+), (<), (<>), (==), (>), (/=), (<=), (>=), discard, void, (||), not, min, (-), max, compare, Ordering(..), when)
+import Prelude (class Eq, class Show, bind, map, negate, pure, show, unit, ($), (&&), (*), (+), (<), (<>), (==), (>), (/=), (<=), (>=), discard, void, (||), not, min, (-), max, compare, Ordering(..), when, (/))
 import PrestoDOM (class Loggable, Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Core (getPushFn)
 import Screens (getScreen, ScreenName(..))
-import Screens.Types (RentalScreenStage(..), RentalScreenState)
+import Screens.Types (RentalScreenStage(..), RentalScreenState, BookingTime)
 import Services.API (GetQuotesRes(..), RideBookingRes(..), OfferRes(..), QuoteAPIEntity(..), QuoteAPIContents(..), RentalQuoteAPIDetails(..))
 import Data.Number (fromString)
 import Data.Lens
@@ -93,7 +95,7 @@ data Action =
   | UpdateSliderValue Int
 
 data ScreenOutput = NoScreen
-                  | GoToHomeScreen
+                  | GoToHomeScreen RentalScreenState (Maybe BookingTime)
                   | SearchLocationForRentals RentalScreenState String
                   | GoToRideScheduledScreen RentalScreenState
                   | OnRentalRideConfirm RentalScreenState
@@ -140,9 +142,24 @@ eval (UpdateSliderValue value) state = do
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = 
   case state.data.currentStage of
-    RENTAL_SELECT_PACKAGE -> updateAndExit state{props{showPrimaryButton = false}} $ DoRentalSearch state{props{showPrimaryButton = false}}
+    RENTAL_SELECT_PACKAGE -> do
+      let maybeOverLappingBookingDetails = invalidBookingTime state.data.startTimeUTC $ Just $ state.data.rentalBookingData.baseDuration * 60
+      if (isJust maybeOverLappingBookingDetails) then exit $ GoToHomeScreen state maybeOverLappingBookingDetails
+      else updateAndExit state{props{showPrimaryButton = false}} $ DoRentalSearch state{props{showPrimaryButton = false}}
     RENTAL_CONFIRMATION -> exit $ OnRentalRideConfirm state
     _ -> continue state
+  where
+    rideScheduledStartingOrEndingTime :: BookingTime -> String
+    rideScheduledStartingOrEndingTime bookingDetails = 
+      let diffInMins = (EHC.compareUTCDate bookingDetails.rideStartTime state.data.startTimeUTC) / 60
+      in
+        if rideStartingInBetweenPrevRide diffInMins bookingDetails (state.data.rentalBookingData.baseDuration * 60)
+          then EHC.getUTCAfterNSeconds bookingDetails.rideStartTime $ (bookingDetails.estimatedDuration - 30) * 60
+        else bookingDetails.rideStartTime
+
+    formatTimeInHHMM :: String -> String
+    formatTimeInHHMM rideTime = EHC.convertUTCtoISC rideTime "hh" <> ":" <> EHC.convertUTCtoISC rideTime "mm"
+
 
 eval (DurationIncrementDecrementAC (IncrementDecrementModelController.OnIncrement)) state = 
   continue $ incrementDecrementDuration true state
@@ -176,7 +193,11 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
                         && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
         updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
         newState = if validDate && isAfterThirtyMinutes then state { data { selectedDateTimeConfig = updatedDateTime, startTimeUTC = selectedUTC}} else state
-    in if validDate && isAfterThirtyMinutes then continue newState {props{showPrimaryButton = true}}
+    in if validDate && isAfterThirtyMinutes then do 
+      let maybeInvalidBookingId = invalidBookingTime selectedUTC Nothing
+      if (isJust maybeInvalidBookingId) then do
+        exit $ GoToHomeScreen state maybeInvalidBookingId
+      else continue newState {props{showPrimaryButton = true}}
        else 
         if validDate then do 
           void $ pure $ toast $ getString STR.SCHEDULE_RIDE_AVAILABLE
@@ -215,7 +236,7 @@ genericBackPressed :: RentalScreenState -> Eval Action ScreenOutput RentalScreen
 genericBackPressed state = case state.data.currentStage of
   RENTAL_SELECT_PACKAGE -> do 
     if state.props.showRentalPolicy then continue state { props {showRentalPolicy = false}}
-    else exit GoToHomeScreen
+    else exit $ GoToHomeScreen state Nothing
   RENTAL_SELECT_VARIANT -> do 
     if state.props.showRateCard then continue state { props {showRateCard = false}}
     else exit $ GoToSelectPackage state { data { currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}, props { showPrimaryButton = true}}

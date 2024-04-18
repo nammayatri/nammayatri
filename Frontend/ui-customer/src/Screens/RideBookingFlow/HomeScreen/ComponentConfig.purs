@@ -92,6 +92,9 @@ import Screens.Types as ST
 import Services.API as API
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
+import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig)
+import Effect.Unsafe (unsafePerformEffect)
+import Debug (spy)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -2262,7 +2265,6 @@ intercityInSpecialZonePopupConfig state = let
 
 scheduledRideExistsPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
 scheduledRideExistsPopUpConfig state = let
-  bookingTime = ""
   config' = PopUpModal.config
   popUpConfig' = config'{
     gravity = CENTER,
@@ -2278,7 +2280,7 @@ scheduledRideExistsPopUpConfig state = let
       margin = MarginTop 16
       },
     secondaryText { 
-      text = getString $ YOU_HAVE_AN_ACTIVE_RIDE bookingTime,
+      text = maybe "" textDetails $ DA.head $ DA.filter (\bookingDetail -> Just bookingDetail.bookingId == state.data.invalidBookingId) $ HU.decodeBookingTimeList FunctionCall,
       margin = MarginTop 4
       },
     option1 {
@@ -2298,3 +2300,13 @@ scheduledRideExistsPopUpConfig state = let
     }
   }
   in popUpConfig'
+  where
+    textDetails :: ST.BookingTime -> String
+    textDetails bookingDetails = 
+      let invalidBookingPopUpConfig = fromMaybe dummyInvalidBookingPopUpConfig state.data.invalidBookingPopUpConfig
+          rideType = if invalidBookingPopUpConfig.fareProductType == FPT.RENTAL then "rental" else "intercity"
+          rideEndTime = formatDateInHHMM $ EHC.getUTCAfterNSeconds invalidBookingPopUpConfig.rideScheduledTime $ (invalidBookingPopUpConfig.maxEstimatedDuration + 30) * 60
+      in getVarString YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL [rideType, invalidBookingPopUpConfig.fromLocation, invalidBookingPopUpConfig.toLocation, formatDateInHHMM invalidBookingPopUpConfig.rideScheduledTime, rideEndTime]
+
+    formatDateInHHMM :: String -> String
+    formatDateInHHMM timeUTC = EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"
