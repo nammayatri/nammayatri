@@ -18,8 +18,10 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
+import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchRequestForDriver as DTSRD
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
@@ -35,8 +37,10 @@ import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool (getDriverPoolConfig)
 import SharedLogic.DriverPool.Types
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
+import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -198,3 +202,38 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
         updatedAt = now,
         ..
       }
+
+buildTripQuoteDetail ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r
+  ) =>
+  DSR.SearchRequest ->
+  DTC.TripCategory ->
+  DVST.ServiceTierType ->
+  Maybe Text ->
+  Money ->
+  Maybe Money ->
+  Maybe Money ->
+  Maybe Money ->
+  Text ->
+  m TripQuoteDetail
+buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare mbDriverMinFee mbDriverMaxFee mDriverPickUpCharge estimateOrQuoteId = do
+  vehicleServiceTierName <-
+    case mbVehicleServiceTierName of
+      Just name -> return name
+      _ -> do
+        item <- CQDVST.findByServiceTierTypeAndCityId vehicleServiceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
+        return item.name
+  (driverPickUpCharge, driverMinFee, driverMaxFee) <-
+    case (mDriverPickUpCharge, mbDriverMinFee, mbDriverMaxFee) of
+      (Just charge, Just minFee, Just maxFee) -> return (Just charge, Just minFee, Just maxFee)
+      _ -> do
+        farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId (Just searchReq.transactionId) (Just "transactionId")
+        let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
+        return $
+          ( DTSRD.extractDriverPickupCharges farePolicy.farePolicyDetails,
+            mbDriverExtraFeeBounds <&> (.minFee),
+            mbDriverExtraFeeBounds <&> (.maxFee)
+          )
+  return $ TripQuoteDetail {..}
