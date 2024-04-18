@@ -175,7 +175,8 @@ screen initialState =
                   pure unit
               FindingEstimate -> do
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                _ <- launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState
+                void $ launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState
+                -- void $ launchAff $ flowRunner defaultGlobalState $ getEstimatePolling (getValueToLocalStore TRACKING_ID) GetEstimates CheckFlowStatusAction 25 10000.0 push initialState
                 pure unit
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
@@ -439,7 +440,7 @@ view push state =
             -- , buttonLayoutParentView push state
             , if (not state.props.rideRequestFlow) || any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, HomeScreen] then emptyTextView state else topLeftIconView state push
             , rideRequestFlowView push state
-            , if (any (_ == state.props.currentStage) [SettingPrice]) then preferenceView push state else emptyTextView state
+            , if (any (_ == state.props.currentStage) [FindingEstimate, SettingPrice]) then preferenceView push state else emptyTextView state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
             , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && onUsRide) then messageWidgetView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then
@@ -2445,7 +2446,7 @@ lottieLoaderView state push =
     , width $ V state.data.config.searchLocationConfig.lottieWidth
     ]
 
-getEstimate :: forall action. (GetQuotesRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+getEstimate :: forall action. (GetQuotesRes -> Int -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
 getEstimate action flowStatusAction count duration push state = do
   if (isLocalStageOn FindingEstimate) || (isLocalStageOn TryAgain) then
     if (count > 0) then do
@@ -2456,12 +2457,12 @@ getEstimate action flowStatusAction count duration push state = do
           _ <- pure $ printLog "api Results " response
           let (GetQuotesRes resp) = response
           if not (null resp.quotes) || not (null resp.estimates) then do
-            doAff do liftEffect $ push $ action response
+            doAff do liftEffect $ push $ action response count
             pure unit
           else do
             if (count == 1) then do
               _ <- pure $ updateLocalStage SearchLocationModel
-              doAff do liftEffect $ push $ action response
+              doAff do liftEffect $ push $ action response count
             else do
               void $ delay $ Milliseconds duration
               getEstimate action flowStatusAction (count - 1) duration push state
@@ -2477,7 +2478,7 @@ getEstimate action flowStatusAction count duration push state = do
             if (count == 1) then do
               let response = GetQuotesRes { quotes: [], estimates: [], fromLocation: SearchReqLocationAPIEntity { lat: 0.0, lon: 0.0 }, toLocation: Nothing }
               _ <- pure $ updateLocalStage SearchLocationModel
-              doAff do liftEffect $ push $ action response
+              doAff do liftEffect $ push $ action response count
             else do
               getEstimate action flowStatusAction (count - 1) duration push state
     else
@@ -2516,6 +2517,57 @@ getQuotesPolling pollingId action retryAction count duration push state = do
         let response = SelectListRes { selectedQuotes: Nothing, bookingId : Nothing }
         _ <- pure $ updateLocalStage QuoteList
         doAff do liftEffect $ push $ action response
+
+getEstimatePolling :: forall action. String -> (GetQuotesRes -> Int -> action) -> action  -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+getEstimatePolling pollingId action flowStatusAction count duration push state = do
+    -- when (pollingId == (getValueToLocalStore TRACKING_ID) && (isLocalStageOn FindingEstimate)) $ do
+    -- when (pollingId == (getValueToLocalStore TRACKING_ID) && ((isLocalStageOn FindingEstimate) || isLocalStageOn SettingPrice )) $ do
+    when (((isLocalStageOn FindingEstimate) || isLocalStageOn SettingPrice )) $ do
+        _ <- pure $ printLog "pollingId new" (pollingId)
+        _ <- pure $ printLog "pollingId newwwww" ((getValueToLocalStore TRACKING_ID))
+        if (count > 0) then do
+            resp <- getQuotes (state.props.searchId)
+            _ <- pure $ printLog "caseId new" (state.props.searchId)
+            _ <- pure $ printLog "count" count
+            case resp of
+                Right response -> do
+                    _ <- pure $ printLog "api Results new" response
+                    let (GetQuotesRes resp) = response
+                    if not (null resp.quotes) || not (null resp.estimates) then do
+                        _ <- pure $ printLog "action if arr not null" response
+                        -- _ <- pure $ updateLocalStage SettingPrice
+                        doAff do liftEffect $ push $ action response count
+                        -- pure unit
+                    else do
+                        if (count == 1) then do
+                          _ <- pure $ updateLocalStage SearchLocationModel
+                          doAff do liftEffect $ push $ action response count
+                        else do
+                          void $ delay $ Milliseconds duration
+                          pure unit
+                        -- getEstimate action flowStatusAction (count - 1) duration push state
+                    _ <- pure $ printLog "Estimate api polling continued after a estimate " response
+                    void $ delay $ Milliseconds duration
+                    _ <- pure $ spy "getEstimatePolling inside right state " state
+                    getEstimatePolling pollingId action flowStatusAction (count - 1) duration push state
+                Left err -> do
+                    let errResp = err.response
+                        codeMessage = decodeError errResp.errorMessage "errorMessage"
+                    if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_ALREADY_PRESENT" ) then do
+                        -- _ <- pure $ logEvent state.data.logField "ny_fs_active_booking_found_on_search"
+                        void $ pure $ toast "ACTIVE BOOKING ALREADY PRESENT"
+                        doAff do liftEffect $ push $ flowStatusAction
+                    else do
+                        void $ delay $ Milliseconds duration
+                        if (count == 1) then do
+                          let response = GetQuotesRes { quotes: [], estimates: [], fromLocation: SearchReqLocationAPIEntity { lat: 0.0, lon: 0.0 }, toLocation: Nothing }
+                          _ <- pure $ updateLocalStage SearchLocationModel
+                          doAff do liftEffect $ push $ action response count
+                        else do
+                          getEstimatePolling pollingId action flowStatusAction (count - 1) duration push state
+            else do
+              _ <- pure $ printLog "count < 0" count
+              pure unit
 
 updateRecentTrips :: forall action. (RideBookingListRes -> action) -> (action -> Effect Unit) -> Maybe RideBookingListRes -> Flow GlobalState Unit
 updateRecentTrips action push response = do
@@ -3957,7 +4009,7 @@ preferenceView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> Presto
 preferenceView push state = 
   let dimLayout = state.data.iopState.providerPrefVisible || state.data.iopState.providerPrefInfo
       providerPrefVisibility = state.data.iopState.showPrefButton
-      bookingPrefVisibility = (not state.data.currentCityConfig.iopConfig.enable) && state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city == Bangalore
+      bookingPrefVisibility = (not state.data.currentCityConfig.iopConfig.enable) && state.data.config.estimateAndQuoteConfig.enableBookingPreference
       isProviderPrefView = state.data.currentCityConfig.iopConfig.enable
       followerBar = (showFollowerBar (fromMaybe [] state.data.followers) state) && (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver])
   in  linearLayout

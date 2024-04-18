@@ -345,8 +345,12 @@ getSpecialZoneQuote quote index =
     Metro body -> ChooseVehicle.config
     Public body -> ChooseVehicle.config
 
-getEstimateList :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Array ChooseVehicle.Config
-getEstimateList quotes estimateAndQuoteConfig = mapWithIndex (\index item -> getEstimates item index (isFareRangePresent quotes)) (getFilteredEstimate quotes estimateAndQuoteConfig)
+getEstimateList :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Maybe Int -> Int -> Array ChooseVehicle.Config
+getEstimateList quotes estimateAndQuoteConfig count activeIndex = 
+  let mbCount = fromMaybe 0 count
+      isFareRange = isFareRangePresent quotes
+  in
+  mapWithIndex (\index item -> getEstimates item index isFareRange mbCount activeIndex) (getFilteredEstimate quotes estimateAndQuoteConfig)
 
 isFareRangePresent :: Array EstimateAPIEntity -> Boolean
 isFareRangePresent estimates = DA.length (DA.filter (\(EstimateAPIEntity estimate) ->
@@ -413,9 +417,11 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
                                                                                                       _ -> false
                                                                                           ) quotes) variant)
 
-getEstimates :: EstimateAPIEntity -> Int -> Boolean -> ChooseVehicle.Config
-getEstimates (EstimateAPIEntity estimate) index isFareRange =
+getEstimates :: EstimateAPIEntity -> Int -> Boolean -> Int -> Int -> ChooseVehicle.Config
+getEstimates (EstimateAPIEntity estimate) index isFareRange count activeIndex  =
+  -- void $ pure $ spy "activeIndex" (show activeIndex)
   let currency = getCurrency appConfig
+      _ = spy "activeIndex" (show activeIndex)
       estimateAndQuoteConfig = (getAppConfig appConfig).estimateAndQuoteConfig
       config = getCityConfig (getAppConfig appConfig).cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
       estimateFareBreakup = fromMaybe [] estimate.estimateFareBreakup
@@ -446,7 +452,7 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
                 Nothing -> currency <> (show estimate.estimatedTotalFare)
                 Just (FareRange fareRange) -> if fareRange.minFare == fareRange.maxFare then currency <> (show estimate.estimatedTotalFare)
                                               else  currency <> (show fareRange.minFare) <> " - " <> currency <> (show fareRange.maxFare)
-      , activeIndex = 0
+      , activeIndex = activeIndex
       , index = index
       , id = trim estimate.id
       , capacity = getVehicleCapacity estimate.vehicleVariant
@@ -467,6 +473,7 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
       , providerType = maybe CT.ONUS (\valueAdd -> if valueAdd then CT.ONUS else CT.OFFUS) estimate.isValueAddNP
       , maxPrice = extractFare _.maxFare
       , minPrice = extractFare _.minFare
+      , priceShimmer = if count == 1 then false else true
       }
 
 mapServiceTierName :: String -> Maybe Boolean -> Maybe String -> Maybe String
@@ -566,8 +573,8 @@ getNearByDrivers estimates = DA.nub (getCoordinatesFromEstimates [] estimates)
       in
         map (\(LatLong item) -> { lat : item.lat, lng : item.lon }) latLngs
 
-getEstimatesInfo :: Array EstimateAPIEntity -> String -> HomeScreenState -> EstimateInfo
-getEstimatesInfo estimates vehicleVariant state =
+getEstimatesInfo :: Array EstimateAPIEntity -> String -> HomeScreenState -> Int -> EstimateInfo
+getEstimatesInfo estimates vehicleVariant state count =
   { additionalFare: additionalFare
   , estimatedPrice: estimatedPrice
   , quoteList: quoteList
@@ -584,16 +591,16 @@ getEstimatesInfo estimates vehicleVariant state =
       if null vehicleVariant 
       then estimates 
       else filter (\estimate -> estimate ^. _vehicleVariant == vehicleVariant) estimates
-
+-- fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
     estimatedPrice = maybe 0 (view _estimatedFare) (head estimatedVariant)
-    quoteList = getEstimateList estimates state.data.config.estimateAndQuoteConfig
+    quoteList = getEstimateList estimates state.data.config.estimateAndQuoteConfig (Just count) state.data.selectedEstimatesObject.activeIndex
     defaultQuote = fromMaybe ChooseVehicle.config $ if state.props.isRepeatRide 
                     then do 
                       let defaultQuote_ = find (\item -> isJust item.serviceTierName && item.serviceTierName == state.props.repeatRideServiceTierName) quoteList
                       if isJust defaultQuote_ 
                         then defaultQuote_
-                        else (head quoteList)
-                    else (head quoteList)
+                        else (quoteList DA.!! state.data.selectedEstimatesObject.activeIndex)
+                    else (quoteList DA.!! state.data.selectedEstimatesObject.activeIndex)
     estimateId = maybe "" (view _estimateId) (head estimatedVariant)
     estimateFareBreakup = maybe [] identity (head estimatedVariant >>= view _estimateFareBreakup)
     pickUpCharges = fetchPickupCharges estimateFareBreakup 

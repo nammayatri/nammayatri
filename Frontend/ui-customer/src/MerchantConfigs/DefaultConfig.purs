@@ -201,7 +201,7 @@ config =
       }
       , enableOnlyAuto : false
       , showNearByDrivers: false
-      , enableBookingPreference: false
+      , enableBookingPreference: true
       , textColor: "#6D7280"
       , showInfoIcon : true 
       , genericLoaderLottie : "https://assets.juspay.in/beckn/nammayatri/user/lottie/ny_ic_generic_loader.json"
@@ -390,6 +390,25 @@ config =
             }
         , iopConfig : {
             enable : false,
+            autoSelectTime : 8
+          }
+        , enableCabs : true
+        , estimateAndQuoteConfig : {
+          showInfoIcon : false
+          }
+        , featureConfig : {
+            enableCabBanner : false,
+            enableChangeRideVariant : false
+          }
+        }
+      , { cityCode :"std:080"
+        , cityName : "Hyderabad"
+        , geoCodeConfig :
+            { radius : 50000
+            , strictBounds : true
+            }
+        , iopConfig : {
+            enable : true,
             autoSelectTime : 8
           }
         , enableCabs : true

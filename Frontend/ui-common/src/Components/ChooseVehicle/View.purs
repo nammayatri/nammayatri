@@ -6,7 +6,7 @@ import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
 import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), negate, (*), (/))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout, onAnimationEnd)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout, onAnimationEnd, shimmerFrameLayout)
 import Common.Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -106,8 +106,10 @@ view push config =
                                   [ width WRAP_CONTENT
                                   , height WRAP_CONTENT
                                   , gravity RIGHT
+                                  , orientation VERTICAL
                                   , afterRender push (const NoAction)
                                   ][ priceDetailsView push config ]
+                                  -- ][if config.priceShimmer then shimmerView config else priceDetailsView push config ] -- TODO: Shimmer
                               ]
                           , linearLayout
                               [ width WRAP_CONTENT
@@ -230,6 +232,39 @@ priceDetailsView push config =
         , margin $ MarginLeft 4
         , visibility $ boolToVisibility $ config.showInfo && (isActiveIndex || config.singleVehicle)
         ]
+    ]
+
+shimmerView :: forall w. Config -> PrestoDOM (Effect Unit) w
+shimmerView state =
+  shimmerFrameLayout
+    [ width $ V 100
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , background Color.transparent
+    , cornerRadius 6.0
+    ] 
+    [ 
+      linearLayout
+    [ height MATCH_PARENT
+    , width $ V 100
+    , orientation HORIZONTAL
+    , padding $ PaddingLeft 8
+    , gravity CENTER_VERTICAL
+    , cornerRadius 6.0
+    , background Color.greyDark
+    ]
+    [ textView
+        [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , color Color.black800
+          ]
+      , imageView
+        [ width $ V 15
+        , height $ V 15
+        , gravity CENTER_VERTICAL
+        , margin $ MarginLeft 4
+        ]
+    ]
     ]
 
 capacityView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w

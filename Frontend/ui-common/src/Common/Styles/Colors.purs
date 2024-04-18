@@ -347,3 +347,6 @@ azureine = "#0157D8"
 
 lightCyan :: Color
 lightCyan = "#EEF3FF"
+
+greyDark :: Color
+greyDark = "#D8D8D8"

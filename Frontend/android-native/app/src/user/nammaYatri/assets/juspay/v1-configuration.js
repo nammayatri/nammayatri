@@ -307,7 +307,6 @@ window.getMerchantConfig = function () {
       "domain" : "https://nammayatri.in/"
     , "customerAppId" : "in.juspay.nammayatri"
   },
-    },
     "cityConfig" : [
         {   "cityCode" : "std:080",
             "cityName" : "Bangalore",

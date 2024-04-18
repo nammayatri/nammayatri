@@ -54,6 +54,7 @@ type Config
     , providerId :: String
     , providerType :: CT.ProviderType
     , singleVehicle :: Boolean
+    , priceShimmer :: Boolean
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -75,7 +76,7 @@ config =
   , price: ""
   , isCheckBox: false
   , isEnabled: true
-  , activeIndex: 0
+  , activeIndex: 2
   , index: 0
   , id: ""
   , maxPrice : Nothing
@@ -102,4 +103,5 @@ config =
   , providerId : ""
   , providerType : CT.ONUS
   , singleVehicle : false
+  , priceShimmer : true
   }

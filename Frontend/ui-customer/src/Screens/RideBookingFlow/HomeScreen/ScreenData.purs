@@ -108,7 +108,7 @@ initData = {
       , price: ""
       , isCheckBox: false
       , isEnabled: true
-      , activeIndex: 0
+      , activeIndex: 3
       , index: 0
       , id: ""
       , maxPrice : Nothing
@@ -135,6 +135,7 @@ initData = {
       , providerId : ""
       , providerType : CT.ONUS
       , singleVehicle : false
+      , priceShimmer : true
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -344,6 +345,7 @@ initData = {
     , repeatRideVariant : ""
     , hasToll : false
     , repeatRideServiceTierName : Nothing
+    -- , chooseVehiclePriceShimmer : true
   }
 }
 
