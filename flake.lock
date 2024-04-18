@@ -3818,11 +3818,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1713509285,
-        "narHash": "sha256-S8m4g1q/Yg7xhOADAQygjx73UfCV//9IhnjnVDQmHcM=",
+        "lastModified": 1713522274,
+        "narHash": "sha256-7KbF+cAwjPvJ45lWsnDf0Q3I3iIM7rVgbQTL7YqgWJ8=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "a3a31ac011dcee61be25c8026372859c161ececb",
+        "rev": "5bde26aca8980206f6850701a9b05823185e5b1c",
         "type": "github"
       },
       "original": {

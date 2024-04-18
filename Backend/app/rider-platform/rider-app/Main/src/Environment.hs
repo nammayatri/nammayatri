@@ -296,7 +296,7 @@ instance Registry Flow where
       then do
         Registry.checkBlacklisted isBlackListed mbSubscriber
       else do
-        Registry.checkWhitelisted isNotWhiteListed mbSubscriber
+        Registry.checkWhitelisted isNotWhiteListed req.merchant_id mbSubscriber
     where
       performLookup sub = do
         fetchFromDB sub.merchant_id >>= \registryUrl -> do
@@ -305,7 +305,7 @@ instance Registry Flow where
         merchant <- CM.findById (Id merchantId) >>= fromMaybeM (MerchantDoesNotExist merchantId)
         pure $ merchant.registryUrl
       isBlackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isJust
-      isNotWhiteListed subscriberId domain = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
+      isNotWhiteListed subscriberId domain merchantId = QWhiteList.findBySubscriberIdAndDomainAndMerchantId (ShortId subscriberId) domain (Id merchantId) <&> isNothing
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest
