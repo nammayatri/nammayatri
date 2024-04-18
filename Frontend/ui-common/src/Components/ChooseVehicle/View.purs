@@ -6,7 +6,7 @@ import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
 import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), negate, (*), (/))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout, onAnimationEnd)
 import Common.Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -32,26 +32,27 @@ view push config =
     stroke' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then "2," <> Color.blue800 else "1," <> Color.white900
     background' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then Color.blue600 else Color.white900
     padding' = PaddingVertical 16 16
-    bounds = JB.getLayoutBounds $ EHC.getNewIDWithTag config.id
+    bounds = JB.getLayoutBounds $ EHC.getNewIDWithTag config.id 
   in
-    Keyed.relativeLayout
+    relativeLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       ][  
-        Tuple "ChooseVehicleBG" $ PrestoAnim.animationSet
+       PrestoAnim.animationSet
             [ Anim.fadeInWithDuration 100 isActiveIndex
             , Anim.fadeOutWithDuration 100 $ not isActiveIndex
             ]
             $ 
             linearLayout
                 [ width MATCH_PARENT
-                , height $ V bounds.height
+                , height $ V  $ spy "Boundsss" bounds.height
                 , background background'
                 , cornerRadius 6.0
                 , stroke stroke'
                 , gravity RIGHT
+                , onAnimationEnd push (const NoAction)
                 ][]
-      , Tuple "ChooseVehicleBody" $ linearLayout
+      , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , cornerRadius 6.0
@@ -122,19 +123,19 @@ view push config =
                   ]
               ]
           ]
-      , Tuple "ChooseVehicleRC" $ linearLayout
-        [ height $ V bounds.height
-        , width $ MATCH_PARENT
-        , gravity RIGHT
-        ][linearLayout
-          [ height $ V bounds.height
-          , width $ V ((EHC.screenWidth unit) * 3/10)
-          , clickable true
-          , onClick push $ const $ case isActiveIndex of
-                                    false -> OnSelect config
-                                    true  -> if config.showInfo then ShowRateCard config else NoAction
-          ][]
-       ]
+      -- , Tuple "ChooseVehicleRC" $ linearLayout
+      --   [ height $ V bounds.height
+      --   , width $ MATCH_PARENT
+      --   , gravity RIGHT
+      --   ][linearLayout
+      --     [ height $ V bounds.height
+      --     , width $ V ((EHC.screenWidth unit) * 3/10)
+      --     , clickable true
+      --     , onClick push $ const $ case isActiveIndex of
+      --                               false -> OnSelect config
+      --                               true  -> if config.showInfo then ShowRateCard config else NoAction
+      --     ][]
+      --  ]
     ]
 
 vehicleDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w

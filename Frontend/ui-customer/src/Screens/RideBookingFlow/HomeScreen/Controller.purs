@@ -943,7 +943,7 @@ eval ShowPref state = continue state { data{ iopState { providerPrefInfo = false
 
 eval (ShowMultipleProvider showMultiProvider) state = do
   let customerTip = if showMultiProvider then HomeScreenData.initData.props.customerTip else state.props.customerTip
-  continue state { data { iopState { showMultiProvider = showMultiProvider, providerPrefVisible = false}}, props { customerTip = customerTip}}
+  continueWithCmd state { data { iopState { showMultiProvider = showMultiProvider, providerPrefVisible = false}}, props { customerTip = customerTip}} [pure NoAction]
 
 eval (ShowProviderInfo showProviderInfo) state = continue state { data { iopState { providerPrefInfo = showProviderInfo, providerPrefVisible = false}}}
 
@@ -2577,7 +2577,7 @@ eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = 
     ]
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC ChooseVehicleController.NoAction)) state = do
   let height = (runFn1 getLayoutBounds $ getNewIDWithTag state.props.estimateId).height
-  continue state{ props{ defaultPickUpPoint = "", selectedEstimateHeight = height } }
+  continueWithCmd state{ data {triggerPatchCounter = state.data.triggerPatchCounter + 1 }, props{ defaultPickUpPoint = "", selectedEstimateHeight = height} } [pure NoAction]
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".ChooseVehicle") "true"
