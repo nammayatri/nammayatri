@@ -21,30 +21,29 @@ import Mobility.Prelude (boolToInvisibility)
 import Data.Maybe (isJust, Maybe (..), fromMaybe)
 import Engineering.Helpers.Utils as EHU
 import JBridge as JB
+import PrestoDOM.Elements.Keyed as Keyed
+import Data.Tuple (Tuple(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view push config =
-  cardView push config
-  where
-    isActiveIndex = config.index == config.activeIndex
-
-cardView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-cardView push config =
+view push config = 
   let
+    _ = spy "ChooseVehicle" config
     isActiveIndex = config.index == config.activeIndex
-    stroke' = if isActiveIndex && (not config.showEditButton) then "2," <> Color.blue800 else "1," <> Color.white900
-    background' = if isActiveIndex && (not config.showEditButton) then Color.blue600 else Color.white900
+    stroke' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then "2," <> Color.blue800 else "1," <> Color.white900
+    background' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then Color.blue600 else Color.white900
     padding' = PaddingVertical 16 16
     bounds = JB.getLayoutBounds $ EHC.getNewIDWithTag config.id
   in
-    frameLayout
+    Keyed.relativeLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      ][  PrestoAnim.animationSet
+      ][  
+        Tuple "ChooseVehicleBG" $ PrestoAnim.animationSet
             [ Anim.fadeInWithDuration 100 isActiveIndex
             , Anim.fadeOutWithDuration 100 $ not isActiveIndex
             ]
-            $ linearLayout
+            $ 
+            linearLayout
                 [ width MATCH_PARENT
                 , height $ V bounds.height
                 , background background'
@@ -52,11 +51,11 @@ cardView push config =
                 , stroke stroke'
                 , gravity RIGHT
                 ][]
-      , linearLayout
+      , Tuple "ChooseVehicleBody" $ linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , cornerRadius 6.0
-          , id $ EHC.getNewIDWithTag config.id
+          , id $  EHC.getNewIDWithTag  config.id
           , margin $ config.layoutMargin
           , padding padding'
           , clickable config.isEnabled
@@ -123,7 +122,7 @@ cardView push config =
                   ]
               ]
           ]
-      , linearLayout
+      , Tuple "ChooseVehicleRC" $ linearLayout
         [ height $ V bounds.height
         , width $ MATCH_PARENT
         , gravity RIGHT
@@ -228,7 +227,7 @@ priceDetailsView push config =
         , height $ V 15
         , gravity CENTER_VERTICAL
         , margin $ MarginLeft 4
-        , visibility $ boolToVisibility $ config.showInfo && isActiveIndex
+        , visibility $ boolToVisibility $ config.showInfo && (isActiveIndex || config.singleVehicle)
         ]
     ]
 

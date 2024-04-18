@@ -919,7 +919,19 @@ eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) s
       }
     }
 
-eval (ChooseSingleVehicleAction (ChooseVehicleController.OnEditClick)) state =  exit $ ChangeVehicleVarient state{ props{isRepeatRide = false }}
+eval (ChooseSingleVehicleAction (ChooseVehicleController.OnEditClick)) state =  do
+  let topProvider = filter (\element -> element.providerType == CTP.ONUS) state.data.specialZoneQuoteList
+  exit $ ChangeVehicleVarient state{
+    data{
+      iopState { 
+        showMultiProvider = if state.data.currentCityConfig.iopConfig.enable then null topProvider else false -- This need to be removed if we always get quotes irrespective of driver availability
+      , showPrefButton = state.data.currentCityConfig.iopConfig.enable && (not (null topProvider))
+      } 
+    }
+  , props{
+      isRepeatRide = false 
+    }
+  }
 
 eval ShowMoreSuggestions state = do
   void $ pure $ map (\item -> startLottieProcess lottieAnimationConfig{ rawJson =  (getAssetsBaseUrl FunctionCall) <> "lottie/right_arrow.json" , speed = 1.0,lottieId = (getNewIDWithTag $ "movingArrowView" <> show item), minProgress = 0.0 }) [0,1]
@@ -2569,16 +2581,16 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC ChooseVehic
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".ChooseVehicle") "true"
-  if config.activeIndex == config.index then 
-    continue state
-  else do
-      let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
-          props = if config.activeIndex == config.index then state.props else state.props{customerTip = HomeScreenData.initData.props.customerTip, tipViewProps = HomeScreenData.initData.props.tipViewProps}
-          newState = state{data{specialZoneQuoteList = updatedQuotes}, props = props}
-      void $ pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
-      if state.data.currentSearchResultType == QUOTES then
-      continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
-      else continue newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
+  -- if config.activeIndex == config.index then 
+  --   continue state
+  -- else do
+  let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
+      props = if config.activeIndex == config.index then state.props else state.props{customerTip = HomeScreenData.initData.props.customerTip, tipViewProps = HomeScreenData.initData.props.tipViewProps}
+      newState = state{data{specialZoneQuoteList = updatedQuotes}, props = props}
+  void $ pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
+  if state.data.currentSearchResultType == QUOTES then
+  continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
+  else continue newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state = do
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".RateCard") "true"
@@ -3089,7 +3101,7 @@ estimatesListFlow estimates state = do
         , nearByDrivers = if nearByDriversLength > 0 then Just nearByDriversLength else Nothing
         , iopState 
           { showMultiProvider = if state.data.currentCityConfig.iopConfig.enable then null topProvider else false -- This need to be removed if we always get quotes irrespective of driver availability
-          , showPrefButton = state.data.currentCityConfig.iopConfig.enable && (not (null topProvider))
+          , showPrefButton = state.data.currentCityConfig.iopConfig.enable && (not (null topProvider)) && (not state.props.isRepeatRide)
           }
         }
       , props

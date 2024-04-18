@@ -38,6 +38,8 @@ import Data.Traversable (traverse)
 import Data.Foldable (minimumBy, maximumBy)
 import Data.Ord (compare)
 import Data.Function (on)
+import PrestoDOM.Elements.Keyed as Keyed
+import Data.Tuple (Tuple(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -576,30 +578,24 @@ quoteListView push config isSingleEstimate =
     [ scrollView
       [ height $ viewHeight
       , width MATCH_PARENT
-      ][  linearLayout
+      ][  Keyed.linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , padding $ PaddingBottom 10
           , margin $ MarginHorizontal 16 16
           , orientation VERTICAL
           ][  if config.showMultiProvider  then 
-                linearLayout
+                Tuple "MultiProvider" $ linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
-                ]( map( \item -> do
-                    let vehicleImage = if isSingleEstimate then (HU.fetchImage HU.FF_ASSET "ny_ic_single_estimate_auto") else item.vehicleImage 
-                    ChooseVehicle.view (push <<< ChooseVehicleAC) item{isSingleEstimate = isSingleEstimate, vehicleImage = vehicleImage}) variantBasedList
-                  )
+                ] $ map( \item -> ChooseVehicle.view (push <<< ChooseVehicleAC)  item {singleVehicle = (length variantBasedList == 1)}) ( variantBasedList)
               else 
-                linearLayout
+                Tuple "TopProvider" $ linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
-                ]( map (\item -> do
-                    let vehicleImage = if isSingleEstimate then (HU.fetchImage HU.FF_ASSET "ny_ic_single_estimate_auto") else item.vehicleImage 
-                    ChooseVehicle.view (push <<< ChooseVehicleAC) item{isSingleEstimate = isSingleEstimate, vehicleImage = vehicleImage}) topProviderList 
-                  )
+                ] $ map (\item -> ChooseVehicle.view (push <<< ChooseVehicleAC) item{showInfo = true, singleVehicle = (length topProviderList == 1)}) topProviderList 
           ]]]
 
 getQuoteListViewHeight :: Config -> Boolean -> Int -> Length
@@ -639,5 +635,5 @@ filterVariantAndEstimate configArray = fromMaybe [] $ do
       minBPItem <- minimumBy (compare `on` _.basePrice) group
       maxBPItem <- maximumBy (compare `on` _.basePrice) group
       case minPriceItem.minPrice, maxPriceItem.maxPrice of 
-        Just minP, Just maxP -> pure $ first { showInfo = false, price = "₹" <> show minP <> " - ₹" <> show maxP }
-        _ , _ -> pure $ first { showInfo = false, price =  "₹" <> show minBPItem.basePrice <> " - ₹" <>  show maxBPItem.basePrice }
+        Just minP, Just maxP -> pure $ first { showInfo = false, price = if minP == maxP then "₹" <> show minP else "₹" <> show minP <> " - ₹" <> show maxP }
+        _ , _ -> pure $ first { showInfo = false, price = if minBPItem.basePrice == maxBPItem.basePrice then  "₹" <> show minBPItem.basePrice else  "₹" <> show minBPItem.basePrice <> " - ₹" <>  show maxBPItem.basePrice }

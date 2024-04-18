@@ -53,6 +53,7 @@ type Config
     , providerName :: String
     , providerId :: String
     , providerType :: CT.ProviderType
+    , singleVehicle :: Boolean
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -100,4 +101,5 @@ config =
   , providerName : ""
   , providerId : ""
   , providerType : CT.ONUS
+  , singleVehicle : false
   }

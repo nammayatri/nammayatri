@@ -134,6 +134,7 @@ initData = {
       , providerName : ""
       , providerId : ""
       , providerType : CT.ONUS
+      , singleVehicle : false
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
