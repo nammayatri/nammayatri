@@ -29,6 +29,7 @@ data IssueReport = IssueReport
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     ticketId :: Maybe Text,
-    chats :: [Chat]
+    chats :: [Chat],
+    becknIssueId :: Maybe Text
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, BP.ToSchema)

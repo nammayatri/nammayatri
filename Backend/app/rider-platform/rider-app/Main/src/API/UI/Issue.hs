@@ -3,9 +3,11 @@
 module API.UI.Issue where
 
 import qualified Data.HashMap.Strict as HM
-import Beckn.ACL.IGM.Issue
+import qualified Beckn.ACL.IGM.Issue as ACL
+import qualified Beckn.ACL.IGM.IssueStatus as ACL
 import qualified Domain.Action.Dashboard.Ride as DRide
 import Domain.Action.UI.IGM
+import qualified Domain.Types.IGMIssue as DIGM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import Environment
@@ -33,7 +35,9 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.IGMConfig as QIGMConfig
+import qualified Storage.Queries.IGMIssue as QIGM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
@@ -59,6 +63,7 @@ handler = externalHandler
         :<|> updateIssueOption (personId, merchantId)
         :<|> deleteIssue (personId, merchantId)
         :<|> updateIssueStatus (personId, merchantId)
+        :<|> igmIssueStatus (personId, merchantId)
 
 customerIssueHandle :: Common.ServiceHandle Flow
 customerIssueHandle =
@@ -196,7 +201,8 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       igmConfig <- QIGMConfig.findByMerchantId merchantId >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchantId)
       merchantOperatingCity <- CQMOC.findById igmReq.booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show igmReq.booking.merchantOperatingCityId)
-      (becknIssueReq, issueId) <- buildIssueReq igmReq.booking igmReq.ride req merchant person igmConfig merchantOperatingCity
+      (becknIssueReq, issueId, igmIssue) <- ACL.buildIssueReq igmReq.booking igmReq.ride req merchant person igmConfig merchantOperatingCity
+      QIGM.create igmIssue
       fork "sending beckn issue" . withShortRetry $ do
         void $ CallBPP.issue igmReq.booking.providerUrl becknIssueReq
       return $ Just issueId
@@ -223,3 +229,15 @@ updateIssueStatus :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> 
 updateIssueStatus (personId, merchantId) issueReportId language req = withFlowHandlerAPI $ do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   Common.updateIssueStatus (cast personId, cast merchantId, cast person.merchantOperatingCityId) issueReportId language req customerIssueHandle CUSTOMER
+
+igmIssueStatus :: (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
+igmIssueStatus (_, merchantId) = withFlowHandlerAPI $ do
+  issues <- QIGM.findAllByStatus DIGM.OPEN
+  forM_ issues $ \issue -> do
+    merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+    merchantOperatingCity <- CQMOC.findById issue.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show issue.merchantOperatingCityId)
+    booking <- QB.findById issue.bookingId >>= fromMaybeM (BookingNotFound issue.bookingId.getId)
+    becknIssueStatusReq <- ACL.buildIssueStatusReq merchant merchantOperatingCity booking issue.id.getId
+    fork "sending beckn issue_status" . withShortRetry $ do
+      void $ CallBPP.issueStatus booking.providerUrl becknIssueStatusReq
+  return Success

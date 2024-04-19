@@ -33,3 +33,35 @@ ALTER TABLE atlas_app.igm_issue ADD COLUMN respondent_action text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.igm_issue ADD COLUMN respondent_entity_type text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.igm_issue DROP COLUMN internal_issue_id;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.igm_issue ADD COLUMN rider_id character varying(36) NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.igm_issue ADD COLUMN transaction_id text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.igm_issue ADD COLUMN booking_id character varying(36) NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.igm_issue ALTER COLUMN responding_merchant_id TYPE text;
+ALTER TABLE atlas_app.igm_issue ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.igm_issue DROP COLUMN merchant_id;

@@ -223,3 +223,8 @@ newtype IssueStatusUpdateRes = IssueStatusUpdateRes
   { messages :: [Message]
   }
   deriving (Generic, Show, ToJSON, ToSchema, Eq, FromJSON)
+
+-------------------------------------------------------------------------
+
+type IgmStatusAPI =
+  Post '[JSON] APISuccess

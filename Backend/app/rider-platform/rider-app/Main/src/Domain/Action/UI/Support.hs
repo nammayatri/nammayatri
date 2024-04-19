@@ -158,8 +158,7 @@ buildDBIssue (Id customerId) SendIssueReq {..} = do
         status = Domain.OPEN,
         nightSafety = fromMaybe False nightSafety,
         createdAt = time,
-        updatedAt = time,
-        becknIssueId = Nothing
+        updatedAt = time
       }
 
 mkTicket :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DIssue.Issue -> Person.Person -> Maybe Text -> Text -> Text -> m Ticket.CreateTicketReq

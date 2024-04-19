@@ -13,8 +13,7 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data IssueT f = IssueT
-  { becknIssueId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    bookingId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+  { bookingId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     contactEmail :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     customerId :: (B.C f Kernel.Prelude.Text),

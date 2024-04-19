@@ -21,6 +21,7 @@ where
 import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
 import qualified API.FRFS as FRFS
+import qualified API.IGM as IGM
 import qualified API.Internal as Internal
 import qualified API.UI as UI
 import qualified Data.ByteString as BS
@@ -42,6 +43,7 @@ import qualified Tools.Payment as TPayment
 
 type API =
   MainAPI
+    :<|> IGM.APIM
     :<|> FRFS.APIM
     :<|> Beckn.API -- TODO : Revert after 2.x release
     :<|> Beckn.APIV2 -- TODO : Revert after 2.x release
@@ -66,6 +68,7 @@ type MainAPI =
 handler :: FlowServer API
 handler =
   mainServer
+    :<|> const IGM.handler
     :<|> const FRFS.handler
     :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> const Beckn.handler -- TODO : Revert after 2.x release

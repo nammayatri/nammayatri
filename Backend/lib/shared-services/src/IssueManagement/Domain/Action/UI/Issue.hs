@@ -314,7 +314,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             createdAt = now,
             updatedAt = now,
             description,
-            chats = updatedChats
+            chats = updatedChats,
+            becknIssueId
           }
 
     buildTicket :: (EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Person -> Id Merchant -> Id MerchantOperatingCity -> MerchantConfig -> [Text] -> UTCTime -> ServiceHandle m -> m TIT.CreateTicketReq

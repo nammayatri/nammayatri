@@ -6,6 +6,7 @@ module Storage.Queries.IGMIssue where
 
 import qualified Data.Text
 import qualified Domain.Types.IGMIssue
+import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -21,8 +22,14 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.IGMIssue.IGMIssue] -> m ())
 createMany = traverse_ create
 
-findByinternalIssueId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m (Maybe Domain.Types.IGMIssue.IGMIssue))
-findByinternalIssueId internalIssueId = do findOneWithKV [Se.Is Beam.internalIssueId $ Se.Eq internalIssueId]
+findAllByRiderIdandStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.IGMIssue.Status -> m ([Domain.Types.IGMIssue.IGMIssue]))
+findAllByRiderIdandStatus (Kernel.Types.Id.Id riderId) issueStatus = do findAllWithKV [Se.And [Se.Is Beam.riderId $ Se.Eq riderId, Se.Is Beam.issueStatus $ Se.Eq issueStatus]]
+
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.IGMIssue.Status -> m ([Domain.Types.IGMIssue.IGMIssue]))
+findAllByStatus issueStatus = do findAllWithKV [Se.Is Beam.issueStatus $ Se.Eq issueStatus]
+
+findByTransactionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m (Maybe Domain.Types.IGMIssue.IGMIssue))
+findByTransactionId transactionId = do findOneWithKV [Se.Is Beam.transactionId $ Se.Eq transactionId]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IGMIssue.IGMIssue -> m (Maybe Domain.Types.IGMIssue.IGMIssue))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
@@ -31,18 +38,20 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.IGMIssue.IGMIssue {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.internalIssueId internalIssueId,
+    [ Se.Set Beam.bookingId (Kernel.Types.Id.getId bookingId),
+      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.issueStatus issueStatus,
       Se.Set Beam.issueType issueType,
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.respondentAction respondentAction,
       Se.Set Beam.respondentEmail respondentEmail,
+      Se.Set Beam.respondentEntityType respondentEntityType,
       Se.Set Beam.respondentName respondentName,
       Se.Set Beam.respondentPhone respondentPhone,
-      Se.Set Beam.respondingMerchantId (Kernel.Types.Id.getId respondingMerchantId),
-      Se.Set Beam.respondentEntityType respondentEntityType,
-      Se.Set Beam.updatedAt _now,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId)
+      Se.Set Beam.respondingMerchantId respondingMerchantId,
+      Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
+      Se.Set Beam.transactionId transactionId,
+      Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -51,35 +60,39 @@ instance FromTType' Beam.IGMIssue Domain.Types.IGMIssue.IGMIssue where
     pure $
       Just
         Domain.Types.IGMIssue.IGMIssue
-          { createdAt = createdAt,
+          { bookingId = Kernel.Types.Id.Id bookingId,
+            createdAt = createdAt,
             id = Kernel.Types.Id.Id id,
-            internalIssueId = internalIssueId,
             issueStatus = issueStatus,
             issueType = issueType,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             respondentAction = respondentAction,
             respondentEmail = respondentEmail,
+            respondentEntityType = respondentEntityType,
             respondentName = respondentName,
             respondentPhone = respondentPhone,
-            respondingMerchantId = Kernel.Types.Id.Id respondingMerchantId,
-            respondentEntityType = respondentEntityType,
-            updatedAt = updatedAt,
-            merchantId = Kernel.Types.Id.Id <$> merchantId
+            respondingMerchantId = respondingMerchantId,
+            riderId = Kernel.Types.Id.Id riderId,
+            transactionId = transactionId,
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.IGMIssue Domain.Types.IGMIssue.IGMIssue where
   toTType' (Domain.Types.IGMIssue.IGMIssue {..}) = do
     Beam.IGMIssueT
-      { Beam.createdAt = createdAt,
+      { Beam.bookingId = Kernel.Types.Id.getId bookingId,
+        Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.internalIssueId = internalIssueId,
         Beam.issueStatus = issueStatus,
         Beam.issueType = issueType,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.respondentAction = respondentAction,
         Beam.respondentEmail = respondentEmail,
+        Beam.respondentEntityType = respondentEntityType,
         Beam.respondentName = respondentName,
         Beam.respondentPhone = respondentPhone,
-        Beam.respondingMerchantId = Kernel.Types.Id.getId respondingMerchantId,
-        Beam.respondentEntityType = respondentEntityType,
-        Beam.updatedAt = updatedAt,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId
+        Beam.respondingMerchantId = respondingMerchantId,
+        Beam.riderId = Kernel.Types.Id.getId riderId,
+        Beam.transactionId = transactionId,
+        Beam.updatedAt = updatedAt
       }

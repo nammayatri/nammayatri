@@ -1,6 +1,9 @@
 imports:
   Merchant: Domain.Types.Merchant
   UTCTime: Kernel.Prelude
+  Person: Domain.Types.Person
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Booking: Domain.Types.Booking
   Text: Data.Text
 
 IGMIssue:
@@ -14,7 +17,8 @@ IGMIssue:
 
   fields:
     id: Id IGMIssue
-    internalIssueId: Text
+    riderId: Id Person
+    bookingId: Id Booking
     issueType: Text
     issueStatus: Status
     respondentEntityType: Maybe Entity
@@ -22,16 +26,28 @@ IGMIssue:
     respondentEmail: Maybe Text
     respondentPhone: Maybe Text
     respondentAction: Maybe Text
-    respondingMerchantId: Id Merchant
+    respondingMerchantId: Text
+    merchantOperatingCityId: Id MerchantOperatingCity
+    transactionId: Text
     createdAt: UTCTime
     updatedAt: UTCTime
 
-  excludedFields: [merchantOperatingCityId]
+  excludedFields: [merchantId]
 
   queries:
-    findByinternalIssueId:
+    findAllByRiderIdandStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [riderId, issueStatus]
+
+    findAllByStatus:
+      kvFunction: findAllWithKV
+      where: issueStatus
+
+    findByTransactionId:
       kvFunction: findOneWithKV
-      where: internalIssueId
+      where: transactionId
+
 
   constraints:
     id: PrimaryKey
