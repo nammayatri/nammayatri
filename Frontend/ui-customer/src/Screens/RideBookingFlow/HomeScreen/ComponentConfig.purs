@@ -1489,7 +1489,7 @@ chooseYourRideConfig state =
   {
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
-    activeIndex = state.data.selectedEstimatesObject.activeIndex,
+    activeIndex = state.data.selectedEstimatesObject.index,
     quoteList = state.data.specialZoneQuoteList,
     showTollExtraCharges = state.props.hasToll,
     nearByDrivers = state.data.nearByDrivers,

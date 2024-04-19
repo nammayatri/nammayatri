@@ -138,6 +138,7 @@ import Mobility.Prelude
 import Screens.Types as ST
 import Common.Types.App as CTP
 import JBridge as JB
+import Common.Types.App as CT
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -175,8 +176,10 @@ screen initialState =
                   pure unit
               FindingEstimate -> do
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                void $ launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState
-                -- void $ launchAff $ flowRunner defaultGlobalState $ getEstimatePolling (getValueToLocalStore TRACKING_ID) GetEstimates CheckFlowStatusAction 25 10000.0 push initialState
+                if initialState.data.currentCityConfig.iopConfig.enable then 
+                  void $ launchAff $ flowRunner defaultGlobalState $ getEstimatePolling (getValueToLocalStore TRACKING_ID) GetEstimates CheckFlowStatusAction 5 3000.0 push initialState
+                  else 
+                    void $ launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState
                 pure unit
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
@@ -2533,7 +2536,8 @@ getEstimatePolling pollingId action flowStatusAction count duration push state =
                 Right response -> do
                     _ <- pure $ printLog "api Results new" response
                     let (GetQuotesRes resp) = response
-                    if not (null resp.quotes) || not (null resp.estimates) then do
+                        topProvider = filter (\(EstimateAPIEntity estimate) -> maybe false (\valueAdd -> valueAdd) estimate.isValueAddNP) resp.estimates
+                    if not (null resp.quotes) || not (null topProvider) then do
                         _ <- pure $ printLog "action if arr not null" response
                         -- _ <- pure $ updateLocalStage SettingPrice
                         doAff do liftEffect $ push $ action response count

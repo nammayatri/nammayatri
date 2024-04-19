@@ -3122,8 +3122,8 @@ estimatesListFlow estimates state count = do
         , nearByDrivers = if nearByDriversLength > 0 then Just nearByDriversLength else Nothing
         , iopState 
           { 
-            -- showMultiProvider = if state.data.currentCityConfig.iopConfig.enable then null topProvider else false -- This need to be removed if we always get quotes irrespective of driver availability
-          showPrefButton = state.data.currentCityConfig.iopConfig.enable && (not (null topProvider)) && (not state.props.isRepeatRide)
+            showMultiProvider = if state.data.iopState.showMultiProvider then state.data.iopState.showMultiProvider else if  state.data.currentCityConfig.iopConfig.enable && count == 1 then null topProvider else false -- This need to be removed if we always get quotes irrespective of driver availability
+          , showPrefButton = state.data.currentCityConfig.iopConfig.enable && (not (null topProvider)) && (not state.props.isRepeatRide)
           , providerPrefInfo = state.data.iopState.providerPrefInfo
           }
         }

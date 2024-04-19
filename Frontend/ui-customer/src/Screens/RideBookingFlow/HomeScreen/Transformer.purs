@@ -469,7 +469,7 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange count activeIndex  =
       , baseFare = baseFare
       , providerName = fromMaybe "" estimate.providerName
       , providerId = fromMaybe "" estimate.providerId
-      , providerType = maybe CT.ONUS (\valueAdd -> if valueAdd then CT.ONUS else CT.OFFUS) estimate.isValueAddNP
+      , providerType = maybe CT.OFFUS (\valueAdd -> if valueAdd then CT.ONUS else CT.OFFUS) estimate.isValueAddNP
       , maxPrice = extractFare _.maxFare
       , minPrice = extractFare _.minFare
       , priceShimmer = if count == 1 then false else true

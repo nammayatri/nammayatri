@@ -108,7 +108,7 @@ view push config =
                                   , orientation VERTICAL
                                   , afterRender push (const NoAction)
                                   ][ priceDetailsView push config ]
-                                  -- ][if config.priceShimmer then shimmerView config else priceDetailsView push config ] -- TODO: Shimmer
+                                  -- ][if config.priceShimmer then shimmerView config else priceDetailsView push config ] -- TODO: Enable when Shimmer is required for price
                               ]
                           , linearLayout
                               [ width WRAP_CONTENT
