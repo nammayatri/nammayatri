@@ -6,13 +6,13 @@ if (typeof __VERSION__ !== "undefined") {
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "RC_VALIDATION_TEXT": "KL|KA|AP|TS|DL|TN|PY|UP|HR|TG",
-    "DOCUMENT_LINK": "https://docs.google.com/document/d/17fnfcDCd2KNKSJjFQmEwm7TqsBIOt7kA/edit?usp=sharing&ouid=115428839751313950285&rtpof=true&sd=true",
-    "APP_LINK": "https://play.google.com/store/apps/details?id=net.openkochi.yatripartner",
-    "USER_APP_LINK": "https://yatricustomer.page.link/pcJb",
-    "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1j7REROF75Rpgx65if5guFpqtEKXqCY9O/edit?usp=sharing&ouid=115428839751313950285&rtpof=true&sd=true",
+    "RC_VALIDATION_TEXT": "KA|AP|TS|DL|TN|PY|UP|HR|TG",
+    "DOCUMENT_LINK": "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc",
+    "APP_LINK": "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner",
+    "USER_APP_LINK": "https://nammayatri.in/link/rider/mvnw",
+    "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9",
     "SPECIAL_ZONE_OTP_VIEW": "false",
-    "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER", "CORPORATE_ADDRESS", "CORPORATE_ADDRESS_DESCRIPTION", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "REGISTERED_ADDRESS", "REGISTERED_ADDRESS_DESCRIPTION", "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL", "REFERRED_DRIVERS_INFO", "REFERRED_CUSTOMERS_INFO", "DOWNLOAD_NAMMA_YATRI", "SHARE_NAMMA_YATRI"],
+    "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "WHAT_IS_NAMMA_YATRI_BONUS", "EARNED_ON_APP", "TRAVELLED_ON_APP", "GUARANTEED_FIXED_PRICE", "GET_READY_FOR_YS_SUBSCRIPTION"],
     "fontType": "Assets",
     "currency": "₹",
     "isGradient" : "false",
@@ -22,122 +22,199 @@ window.getMerchantConfig = function () {
     "apiLoaderLottie": "primary_button_loader.json",
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
-    "showCorporateAddress" : false,
-    "imageUploadOptional" : true,
-    "showPaymentDetails" : false,
-    "enableDriverReferral": false,
-    "enableCustomerReferral": true,
-    "BONUS_EARNED" : "false",
-    "clientName" : "Yatri",
-    "languageList": [{
-      "name": "English",
-      "value": "EN_US",
-      "subtitle": "ഇംഗ്ലീഷ്"
-    },
-    {
-      "name": "മലയാളം",
-      "value": "ML_IN",
-      "subtitle": "Malayalam"
-    },
-    {"name":"हिंदी","value":"HI_IN", "subtitle": "Hindi"},
+    "showCorporateAddress" : true,
+    "imageUploadOptional" : false,
+    "BONUS_EARNED" : "true",
+    "clientName" : "Namma Yatri",
+    "languageList" : [
+      {"name":"English","value":"EN_US", "subtitle": "ಆಂಗ್ಲ"}, 
+      {"name":"ಕನ್ನಡ","value":"KN_IN", "subtitle": "Kannada"},
+      {"name":"हिंदी","value":"HI_IN", "subtitle": "Hindi"},
+      {"name":"தமிழ்","value":"TA_IN", "subtitle": "Tamil"},
+      {"name":"తెలుగు","value":"TE_IN", "subtitle": "Telugu"}
     ],
-    "engilshInNative" : "ഇംഗ്ലീഷ്",
+    "engilshInNative" : "ಆಂಗ್ಲ",
     "englishStrings": {
-      "NEED_IT_TO_ENABLE_LOCATION": "Yatri Driver collect location data to enable share your location to monitor driver current location, even when the app is closed or not in use.",
-      "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "Currently,We allow only Kerala registered number",
-      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "You are about to place a call to the Yatri Support Team. Do you want to proceed?",
-      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by taxis and get you the quickest ride possible.",
-      "EARNED_ON_APP" : "Earned on Yatri",
-      "TRAVELLED_ON_APP" : "Travelled On Yatri",
-      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri will try to resolve it in under 24 hours.",
-      "CORPORATE_ADDRESS" : "Corporate Address",
-      "CORPORATE_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Girija Building, Number 817, Ganapathi Temple Rd, 8th Block, Koramangala, Bengaluru, Karnataka 560095, India.",
-      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" :  "Website: <u>https://www.getyatri.com</u>",
-      "REGISTERED_ADDRESS" : "Registered Address",
-      "REGISTERED_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
-      "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://www.getyatri.com</u>",
-      "DOWNLOAD_NAMMA_YATRI": "Download Yatri",
-      "REFERRED_DRIVERS_INFO" : "Referred Drivers who have registered on Yatri",
-      "REFERRED_CUSTOMERS_INFO" : "Referred Customers who have registered on Yatri",
-      "SHARE_NAMMA_YATRI" : "Share Yatri"
+      "NEED_IT_TO_ENABLE_LOCATION": "Namma Yatri Partner collect location data to enable share your location to monitor driver current location, even when the app is closed or not in use.",
+      "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "Currently, We aren't operating with this vehicle registration number",
+      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "You are about to place a call to the Namma Yatri Support Team. Do you want to proceed?",
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
+      "WHAT_IS_NAMMA_YATRI_BONUS" : "What is Namma Yatri Bonus?",
+      "EARNED_ON_APP" : "Earned on NY",
+      "TRAVELLED_ON_APP" : "Travelled On Namma Yatri",
+      "GUARANTEED_FIXED_PRICE" : "Guaranteed fixed price until \nApr 1, 2025",
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\nNamma Yatri Plans!"
     },
-    "malayalamStrings": {
-      "NEED_IT_TO_ENABLE_LOCATION": "ആപ്പ് അടച്ചിരിക്കുമ്പോഴും ഉപയോഗത്തിലില്ലെങ്കിലും ഡ്രൈവർ നിലവിലെ ലൊക്കേഷൻ നിരീക്ഷിക്കാൻ നിങ്ങളുടെ ലൊക്കേഷൻ പങ്കിടുന്നത് പ്രവർത്തനക്ഷമമാക്കാൻ യാത്രി പങ്കാളി ലൊക്കേഷൻ ഡാറ്റ ശേഖരിക്കുന്നു.",
-      "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "നിലവിൽ കേരളത്തിൽ രജിസ്റ്റർ ചെയ്ത നമ്പർ മാത്രമേ ഞങ്ങൾ അനുവദിക്കൂ",
-      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "നിങ്ങൾ യാത്രി സപ്പോർട്ട് ടീമിലേക്ക് ഒരു കോൾ ചെയ്യാൻ പോകുകയാണ്. നിങ്ങൾക്ക് തുടരണോ?",
-      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "നിങ്ങളുടെ ലൊക്കേഷൻ ഞങ്ങളുടെ സിസ്റ്റത്തെ ടാക്സികൾ വഴി മാപ്പ് ചെയ്യാൻ സഹായിക്കുന്നു.",
-      "EARNED_ON_APP" : "Y-ൽ നേടിയ വില",
-      "TRAVELLED_ON_APP" : "യാത്രയിൽ യാത്ര ചെയ്ത ദൂരം",
-      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "നിങ്ങളുടെ പ്രശ്നം വിവരിക്കുക. 24 മണിക്കൂറിനുള്ളിൽ അത് പരിഹരിക്കാൻ യാത്രി ശ്രമിക്കും.",
-      "CORPORATE_ADDRESS" : "കോർപ്പറേറ്റ് വിലാസം",
-      "CORPORATE_ADDRESS_DESCRIPTION" : "ജസ്‌പേ ടെക്‌നോളജീസ് പ്രൈവറ്റ് ലിമിറ്റഡ് <br> ഗിരിജ ബിൽഡിംഗ്, നമ്പർ 817, ഗണപതി ടെംപിൾ റോഡ്, എട്ടാം ബ്ലോക്ക്, കോറമംഗല, ബെംഗളൂരു, കർണാടക 560095, ഇന്ത്യ",
-      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" :  "വെബ്സൈറ്റ്: <u>https://www.getyatri.com</u>",
-      "REGISTERED_ADDRESS" : "രേഖപ്പെടുത്തിയ വിലാസം",
-      "REGISTERED_ADDRESS_DESCRIPTION" : "ജസ്‌പേ ടെക്‌നോളജീസ് പ്രൈവറ്റ് ലിമിറ്റഡ് <br> സ്റ്റാലിയൻ ബിസിനസ് സെന്റർ, നമ്പർ 444, 3rd & 4th നിലകൾ, 18th മെയിൻ, 6th ബ്ലോക്ക്, കോറമംഗല ബെംഗളൂരു, കർണാടക- 560095, ഇന്ത്യ.",
-      "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "വെബ്സൈറ്റ്: <u>https://www.getyatri.com</u>",
-      "DOWNLOAD_NAMMA_YATRI": "യാത്രാ ഡൗൺലോഡുചെയ്യുക",
-      "REFERRED_DRIVERS_INFO": "യാത്രിയിൽ രജിസ്റ്റർ ചെയ്ത പരാമർശിച്ച ഡ്രൈവേഴ്സ്",
-      "REFERRED_CUSTOMERS_INFO": "യാത്രിയിൽ രജിസ്റ്റർ ചെയ്ത പരാമർശിച്ച കസ്റ്റമേഴ്സ്",
-      "SHARE_NAMMA_YATRI" : "യാത്രാ പങ്കിടുക"
+    "hindiStrings": {
+      "NEED_IT_TO_ENABLE_LOCATION": "नम्मा यात्री पार्टनर ड्राइवर के लोकेशन की निगरानी के लिए अपना स्थान साझा करने के लिए लोकेशन डेटा एकत्र करता है, तब भी जब ऐप बंद हो या उपयोग में न हो।",
+      "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "वर्तमान में, हम इन वाहन पंजीकरण संख्या के साथ नहीं चल रहे हैं",
+      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "आप नम्मा यात्री सपोर्ट टीम को कॉल करने वाले हैं। क्या आप आगे बढ़ना चाहते हैं?",
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "आपका स्थान हमारे सिस्टम को आस पास के सभी ऑटो को मैप करने में सहायता कर्ता है और आपको सबसे तेज सवारी प्रदान करता है",
+      "WHAT_IS_NAMMA_YATRI_BONUS" : "नम्मा यात्री बोनस क्या है?",
+      "EARNED_ON_APP" : "NY पर अर्जित मूल्य",
+      "TRAVELLED_ON_APP" : "नम्मा यात्री पर तय की गई दूरी",
+      "GUARANTEED_FIXED_PRICE" : "अप्रैल 1, 2025 तक निश्चित मूल्य गारंटी",
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "नम्मा यात्री योजनाओं के लिए\nतैयार हो जाइए!"
+    },
+    "kannadaStrings": {
+      "NEED_IT_TO_ENABLE_LOCATION": "ಅಪ್ಲಿಕೇಶನ್ ಮುಚ್ಚಿದಾಗ ಅಥವಾ ಬಳಕೆಯಲ್ಲಿಲ್ಲದಿದ್ದರೂ ಸಹ ಚಾಲಕ ಪ್ರಸ್ತುತ ಸ್ಥಳವನ್ನು ಮೇಲ್ವಿಚಾರಣೆ ಮಾಡಲು ನಿಮ್ಮ ಸ್ಥಳವನ್ನು ಹಂಚಿಕೊಳ್ಳಲು ಸಕ್ರಿಯಗೊಳಿಸಲು ನಮ್ಮ ಯಾತ್ರಿ ಪಾಲುದಾರರು ಸ್ಥಳ ಡೇಟಾವನ್ನು ಸಂಗ್ರಹಿಸುತ್ತಾರೆ.",
+      "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "ಪ್ರಸ್ತುತ, ನಾವು ಈ ವಾಹನ ನೋಂದಣಿ ಸಂಖ್ಯೆಯೊಂದಿಗೆ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತಿಲ್ಲ",
+      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "ನೀವು ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲ ತಂಡಕ್ಕೆ ಕರೆ ಮಾಡಲಿರುವಿರಿ. ನೀವು ಮುಂದುವರೆಯಲು ಬಯಸುವಿರಾ?",
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "ನಿಮ್ಮ ಸ್ಥಳವು ನಮ್ಮ ಸಿಸ್ಟಂ ಅನ್ನು ಆಟೋಗಳ ಮೂಲಕ ನಕ್ಷೆ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ ಮತ್ತು ನಿಮಗೆ ಸಾಧ್ಯವಿರುವ ವೇಗದ ಸವಾರಿಯನ್ನು ನೀಡುತ್ತದೆ.",
+      "WHAT_IS_NAMMA_YATRI_BONUS" : "ನಮ್ಮ ಯಾತ್ರಿ ಬೋನಸ್ ಎಂದರೇನು?",
+      "EARNED_ON_APP" : "NY ನಲ್ಲಿ ಗಳಿಸಿದ ಬೆಲೆ",
+      "TRAVELLED_ON_APP" : "ನಮ್ಮ ಯಾತ್ರಿಯಲ್ಲಿ ಪ್ರಯಾಣಿಸಿದೆ",
+      "GUARANTEED_FIXED_PRICE" : "ಅಪ್ರೈಲ್ 1, 2025 ವರೆಗೆ ಖಚಿತ ಬೆಲೆಯ ಗ್ಯಾರಂಟಿ",
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "ನಮ್ಮ ಯಾತ್ರಿ ಯೋಜನೆಗಳಿಗೆ\nಸಿದ್ಧತೆ ಪಡೆಯಲು ಸಿದ್ಧವಾಗಿರಿ!"
+    },
+    "tamilStrings": {
+      "NEED_IT_TO_ENABLE_LOCATION": "பயன்பாடு மூடப்பட்டிருந்தாலும் கூட, இயக்கி தற்போதைய இருப்பிடத்தை கண்காணிக்க உங்கள் இருப்பிடத்தைப் பகிர்வதற்கு நம்மா யாத்ரி கூட்டாளர் இருப்பிடத் தரவை சேகரிக்கவும்",
+      "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "தற்போது நாங்கள் இந்த வாகன பதிவு எண்களுடன் செயல்படவில்லை",
+      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "நீங்கள் நம்ம யாத்ரி ஆதரவுக் குழுவிற்கு அழைப்பு விடுக்க உள்ளீர்கள். தொடர வேண்டுமா?",
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "உங்கள் இருப்பிடம் எங்கள் கணினியை ஆட்டோக்கள் மூலம் அருகிலுள்ள அனைத்து வரைபடத்தையும், விரைவாக சவாரி செய்ய உதவுகிறது.",
+      "WHAT_IS_NAMMA_YATRI_BONUS" : "நம்ம யாத்ரி போனஸ் என்றால் என்ன?",
+      "EARNED_ON_APP" : "NY இல் பெறப்பட்ட விலை",
+      "TRAVELLED_ON_APP" : "நம்ம யாத்ரியில் நடந்த தூரம்",
+      "GUARANTEED_FIXED_PRICE" : "ஏப்ரல் 1, 2025 வரை உத்தரவாதமான நிலையான விலை",
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "நம்ம யாத்ரி திட்டங்களுக்கு தயாராகுங்கள்!"
+    },
+    "teluguStrings": {
+      "NEED_IT_TO_ENABLE_LOCATION": "నమ్మ యాత్రి పార్ట్‌నెర్ లొకేషన్ డేటాను కలెక్ట్ చేస్తుంది, డ్రైవర్ ప్రస్తుత స్థానాన్ని మానిటర్ చేసేందుకు, ఆప్ మూసివేయబడినా లేదా అనావరణలో ఉండకుండా.",
+      "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "ప్రస్తుతం, ఈ వాహన నమ్బర్‌తో మాకు పనిచేయడం లేదు",
+      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "మీరు నమ్మ యాత్రి సపోర్ట్ టీమ్‌కు ఫోన్ చేయాలనుకుంటున్నారు. మీరు కొనసాగాలా?",
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "మీ స్థానం మా సిస్టమ్‌ను అన్వయించడంతో అన్ని చికిత్సాలను నక్షారూపం చేసుకోవడం సాధారణం.",
+      "WHAT_IS_NAMMA_YATRI_BONUS" : "నమ్మ యాత్రి బోనస్ అంటే ఏమిటి?",
+      "EARNED_ON_APP" : "యొక్క ఆర్జి",
+      "TRAVELLED_ON_APP" : "నమ్మ యాత్రిలో పయణించినది",
+      "GUARANTEED_FIXED_PRICE" : "ఏప్రిల్ 1, 2025 వరకు స్థిర ధరకు హామీ ఇవ్వబడుతుంది",
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "నమ్మ యాత్రి ప్రణాళికల కోసం సిద్ధంగా ఉండండి!"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
-    , "showGenderBanner" : false
+    , "showGenderBanner" : true
     , "defaultLanguage" : "EN_US"
-    , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
-    , "termsLink" : "https://docs.google.com/document/d/17fnfcDCd2KNKSJjFQmEwm7TqsBIOt7kA/edit?usp=drive_link&ouid=115428839751313950285&rtpof=true&sd=true"
-    , "termsVersion" : 1.0
-    , "privacyLink" : "https://docs.google.com/document/d/1j7REROF75Rpgx65if5guFpqtEKXqCY9O/edit?usp=sharing&ouid=115428839751313950285&rtpof=true&sd=true"
-    , "feature" : {
-      "enableBonus" : false
-      , "enableImageUpload" : true
-      , "enableGender" : false
-      , "enableOtpRide" : false
-    }
+    , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "leaderBoard": {
       "isMaskedName": false
     }
-    , "appData" : {
-      "link" : "https://play.google.com/store/apps/details?id=net.openkochi.yatripartner"
-      , "name" : "Yatri"
+    , "subscriptionConfig" : {
+          "enableBlocking" : true,
+          "onBoardingSubscription" : true,
+          "showDUOfferBanner" : true,
+          "offerBannerValidTill" : "2024-01-01T00:00:00",
+          "offerBannerDeadline" : "December 31-*$*-ಡಿಸೆಂಬರ್ 31-*$*-31 दिसंबर-*$*-டிசம்பர் 31",
+          "offerBannerConfig" : {
+            "showDUOfferBanner" : true,
+            "offerBannerValidTill" : "2024-01-16T00:00:00",
+            "offerBannerDeadline" : "January 15-*$*-ಜನವರಿ 15-*$*-15 जनवरी-*$*-ஜனவரி 15",
+            "offerBannerPlans" : ["a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d"],
+          },
+          "lowDuesLimit" : 25.0,
+          "maxDuesLimit" : 100.0,
+          "highDueWarningLimit" : 75.0,
+          "moveDriverToOfflineInHighDueDaily" : true,
+          "enableSubscriptionPopups" : true,
+          "faqLink" : "https://nammayatri.in/plans/",
+          "supportNumber" : "08069724800",
+          "whatsappSupportLink" : "https://wa.me/917483117936?text=Hello%2C%20I%20need%20help%20with%20setting%20up%20Autopay%20Subscription%0A%E0%B2%B8%E0%B3%8D%E0%B2%B5%E0%B2%AF%E0%B2%82%20%E0%B2%AA%E0%B2%BE%E0%B2%B5%E0%B2%A4%E0%B2%BF%20%E0%B2%9A%E0%B2%82%E0%B2%A6%E0%B2%BE%E0%B2%A6%E0%B2%BE%E0%B2%B0%E0%B2%BF%E0%B2%95%E0%B3%86%E0%B2%AF%E0%B2%A8%E0%B3%8D%E0%B2%A8%E0%B3%81%20%E0%B2%B9%E0%B3%8A%E0%B2%82%E0%B2%A6%E0%B2%BF%E0%B2%B8%E0%B2%B2%E0%B3%81%20%E0%B2%A8%E0%B2%A8%E0%B2%97%E0%B3%86%20%E0%B2%B8%E0%B2%B9%E0%B2%BE%E0%B2%AF%E0%B2%A6%20%E0%B2%85%E0%B2%97%E0%B2%A4%E0%B3%8D%E0%B2%AF%E0%B2%B5%E0%B2%BF%E0%B2%A6%E0%B3%86",
+          "myPlanYoutubeLink" : "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK",
+          "overlayYoutubeLink" : "https://www.youtube.com/shorts/x9cJN78j9V8",
+          "optionsMenuItems" : {
+            "managePlan" : true,
+            "paymentHistory" : true,
+            "viewFaqs" : true,
+          },
     }
-    , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
-    , "autoPayBanner" : false
-    , "referralType" : "QRScreen"
-    , "enableMockLocation" : false
-    , "vehicle" : {
-      "validationPrefix" :  "KL"
+    , "rideActionModelConfig" : {
+      "showVehicleVariant" : false
     }
-    , "banners" :{
-      "autoPay" : false
-    }
+    , "referralType" : "LeaderBoard"
     , "referral": {
-      "type": "LeaderBoard",
-      "link" : "https://yatricustomer.page.link/pcJb",
-      "customerAppId" : "net.openkochi.yatri",
-      "driverAppId" : "net.openkochi.yatripartner"
+      "type" : "LeaderBoard"
+      , "link" : "https://nammayatri.in/link/rider/mvnw"
     }
-    , "flowConfig" : {
-      "chooseCity" : {
-        "runFlow" : false
-      }
-    }
-    , "permissions" : {
-      "locationPermission" : true,
-      "notification" : true
+    , "gotoConfig" : {
+      "maxGotoLocations" : 5,
+      "enableGoto" : true
     }
     , "bottomNavConfig" : {
-      "subscription" :
-        { "isVisible" : false
+      "subscription" : 
+            { "isVisible" : true
+            },
+      "referral" : 
+      { 
+        "showNew" : true
+      }
+    }
+    , "purpleRideConfig" : {
+      "showPurpleVideos" : false,
+      "visualImpairmentVideo" : "https://www.youtube.com/watch?v=2qYXl03N6Jg",
+      "physicalImpairmentVideo" : "https://www.youtube.com/watch?v=B0C6SZTQO6k",
+      "hearingImpairmentVideo" : "https://www.youtube.com/watch?v=udkWOt0serg",
+      "genericAccessibilityVideo" : "https://youtu.be/5s21p2rI58c"
+    }
+    , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+    , "termsLink" : "https://docs.google.com/document/d/1K68xvtReD9FVpx-IshtKNMt4baQNgKXt"
+    , "termsVersion" : 2.0
+    , "privacyLink" : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9"
+    , "feature" : {
+      "enableBonus" : true
+      , "enableImageUpload" : false
+      , "enableGender" : true
+      , "enableOtpRide" : false
+      , "enableYatriCoins" : true
+    }
+    , "appData" : {
+      "link" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"
+      , "name" : "Namma Yatri"
+    }
+    , "enableMockLocation" : false
+    , "cityConfig" : [
+      {
+        "cityName" : "Kochi",
+        "mapImage" : "ny_ic_hyderabad_map",
+        "cityCode" : "std:0484",
+        "showSubscriptions" : false,
+        "cityLat" : 9.931233,
+        "cityLong" : 76.267303,
+        "supportNumber" : "+918069724900",
+        "languageKey" : "ML_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
+        "registration" : {
+            "supportWAN" : "919392636637",
+            "callSupport" : true,
+            "whatsappSupport" : true
         },
-        "referral" : 
-        { 
-          "showNew" : true
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : true,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : true,
+        "referral" : {
+            "domain" : "https://www.manayatri.in"
+          , "customerAppId" : "in.mobility.manayatri"
+          , "driverAppId" : "in.mobility.manayatripartner"
+        },
+        "waitingCharges" : 2.00,
+        "waitingChargesConfig" : {
+          "cab" : {
+            "freeSeconds" : 300,
+            "perMinCharges" : 1.0
+          },
+          "auto" : {
+            "freeSeconds" : 180,
+            "perMinCharges" : 2.00
+          }
         }
-    },
-    "cityConfig" : [
+      },
       {
         "cityName" : "Bangalore",
         "mapImage" : "ny_ic_bangalore_map",
@@ -161,7 +238,7 @@ window.getMerchantConfig = function () {
           "enableVariantBasedSubscription" : true,
           "variantList" : ["AutoCategory"],
           "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : []
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -192,10 +269,10 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : []
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -205,15 +282,15 @@ window.getMerchantConfig = function () {
         },
         "waitingCharges" : 2.00,
         "waitingChargesConfig" : {
-             "cab" : {
-               "freeSeconds" : 300,
-               "perMinCharges" : 1.0
-             },
-             "auto" : {
-               "freeSeconds" : 180,
-               "perMinCharges" : 2.00
-             }
-           }
+          "cab" : {
+            "freeSeconds" : 300,
+            "perMinCharges" : 1.0
+          },
+          "auto" : {
+            "freeSeconds" : 180,
+            "perMinCharges" : 2.00
+          }
+        }
       },
       {
         "cityName" : "Mysore",
@@ -235,10 +312,10 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : []
+          "enableVariantBasedSubscription" : true,
+          "variantList" : ["AutoCategory"],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -269,10 +346,10 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : []
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -282,15 +359,15 @@ window.getMerchantConfig = function () {
       },
       "waitingCharges" : 0.75,
       "waitingChargesConfig" : {
-           "cab" : {
-             "freeSeconds" : 300,
-             "perMinCharges" : 1.0
-           },
-           "auto" : {
-             "freeSeconds" : 180,
-             "perMinCharges" : 0.75
-           }
-         }
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 0.75
+        }
+      }
       },
       {
         "cityName" : "Chennai",
@@ -312,10 +389,10 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : []
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : false,
         "referral" : {
@@ -325,15 +402,15 @@ window.getMerchantConfig = function () {
       },
       "waitingCharges" : 1.00,
       "waitingChargesConfig" : {
-           "cab" : {
-             "freeSeconds" : 300,
-             "perMinCharges" : 1.0
-           },
-           "auto" : {
-             "freeSeconds" : 180,
-             "perMinCharges" : 1.00
-           }
-         }
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 1.0
+        }
+      }
       },
       {
         "cityName" : "Coimbatore",
@@ -355,10 +432,10 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : false
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : []
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -389,10 +466,10 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : []
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : false,
         "referral" : {
@@ -422,10 +499,10 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : []
+          "enableVariantBasedSubscription" : true,
+          "variantList" : ["AutoCategory"],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -456,10 +533,10 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : []
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -489,10 +566,10 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : []
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
         "referral" : {
@@ -523,10 +600,43 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : []
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : false,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      },
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : defWaitingChargesConfig
+      },
+      {
+        "cityName" : "Minneapolis",
+        "mapImage" : "ny_ic_minneapolis_map",
+        "cityCode" : "std:01189",
+        "showSubscriptions" : false,
+        "cityLat" : 44.977753,
+        "cityLong" : -93.2650108,
+        "supportNumber" : "+918069724848",
+        "languageKey" : "EN_US",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "registration" : {
+          "supportWAN" : "919625724848",
+          "callSupport" : true,
+          "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : true,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : false,
         "referral" : {
@@ -538,12 +648,46 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig
       }
   ]
+  , "coinsConfig" : {
+    "minCoinSliderValue" : 250,
+    "stepFunctionForCoinConversion" : 250,
+    "eightPlusRidesCoins" : "+25",
+    "purpleRideCoins" : "+5",
+    "customerReferralCoins" : "+200",
+    "whatAreYatriCoinFAQ" : "https://www.youtube.com/shorts/vt_Z4wu4otY",
+    "howToEarnYatriCoinFAQ" : "https://www.youtube.com/shorts/teQyPdP1fRc",
+    "howToRedeemYatriCoinFAQ" : "https://www.youtube.com/shorts/dU3XxAisGjo",
+    "eightRideCoinEvent" : true,
+    "prupleRideCoinEvent" : true,
+    "driverToCustomerRefCoinEvent" : true
+  }
+  , "dashboard" : {
+        "enable" : true,
+        "url" : "https://nammayatri.in/open?source=in-app"
+    }
   , "profile" : {
-      "checkRCStatusForBookingOption" : false
+    "showBookingOption" : true
+  }
+  , "waitTimeConfig" : {
+    "thresholdDist" : 0.03,
+    "routeDistance" : 30,
+    "diffBtwTwoHeartBeats" : 10,
+    "straightLineDist" : 0.015
+  }
+  , "rideCompletedCardConfig" : {
+      "lottieQRAnim" : true
+  }
+   , "vehicle" : {
+      "validationPrefix" : "KA|AP|TS|DL|TN|PY|UP|HR|TG"
     }
   })
 }
 
+let staticSubscriptionConfig = [
+  {"price" : 90.0, "frequency" : "PER_DAY", "variantCategory" : "CarCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" :  "FREE_RIDE_OFFER", "showSelected" : false, "planDesc" : "CAB_DAILY_UNLIMITED_OFFER"},
+  {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of ₹99 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹99-*$*-प्रति दिन अधिकतम ₹99 तक-*$*-প্রতিদিন সর্বোচ্চ ₹99 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹99 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹99 வரை-*$*-రోజుకు గరిష్టంగా ₹99 వరకు"},
+  {"price" : 25.0, "frequency" : "PER_DAY", "variantCategory" : "AutoCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" : "NO_CHARGES_TILL", "showSelected" : true, "planDesc" : ""}
+]
 
 let defWaitingChargesConfig = {
     "cab" : {
