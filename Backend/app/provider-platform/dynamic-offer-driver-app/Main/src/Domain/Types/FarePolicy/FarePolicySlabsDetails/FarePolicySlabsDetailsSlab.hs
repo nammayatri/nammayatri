@@ -72,7 +72,7 @@ parseFromCACMiddleware key' k1 = do
     Object config -> do
       let waitingCharge = DAKM.lookup "waitingCharge" config >>= fromJSONHelper
           freeWaitingTime = DAKM.lookup "freeWatingTime" config >>= fromJSONHelper
-          waitingChargeInfo = WaitingChargeInfo <$> waitingCharge <*> freeWaitingTime
+          waitingChargeInfo = WaitingChargeInfo <$> freeWaitingTime <*> waitingCharge
           platformFeeCharge = DAKM.lookup "platformFeeCharge" config >>= fromJSONHelper
           platformFeeCgst = DAKM.lookup "platformFeeCgst" config >>= fromJSONHelper
           platformFeeSgst = DAKM.lookup "platformFeeSgst" config >>= fromJSONHelper
