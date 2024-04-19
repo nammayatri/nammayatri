@@ -241,7 +241,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
               logDebug $ "NormalDriverPoolBatch-" <> show normalDriverPoolBatch
               if length normalDriverPoolBatch < batchSize
                 then do
-                  filledBatch <- fillBatch mOCityId normalDriverPool normalDriverPoolBatch intelligentPoolConfig blockListedDrivers
+                  filledBatch <- fillBatch transporterConfig mOCityId normalDriverPool normalDriverPoolBatch intelligentPoolConfig blockListedDrivers
                   logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
                   pure filledBatch
                 else do
@@ -252,7 +252,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
         filterBookAnyDrivers :: Int -> [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
         filterBookAnyDrivers config dpResp = map DL.head . DL.groupBy ((==) `on` (.driverPoolResult.driverId)) . sortOn (.driverPoolResult.serviceTierDowngradeLevel) $ filtered
           where
-            filtered = filter (\d -> d.driverPoolResult.serviceTierDowngradeLevel < config) dpResp
+            filtered = filter (\d -> d.driverPoolResult.serviceTierDowngradeLevel >= config) dpResp
 
         mkDriverPoolBatch mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig = do
           case sortingType of
@@ -260,7 +260,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
             Random -> makeRandomDriverPool onlyNewDrivers
 
         makeIntelligentDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig = do
-          let sortWithDriverScore' = sortWithDriverScore mOCityId (Just transporterConfig) intelligentPoolConfig driverPoolCfg
+          let sortWithDriverScore' = sortWithDriverScore mOCityId transporterConfig intelligentPoolConfig driverPoolCfg
           (sortedDriverPool, randomizedDriverPool) <-
             bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed, ActualPickupDistance, RideFrequency] True) (sortWithDriverScore' [AvailableTime, DriverSpeed, ActualPickupDistance] False)
               =<< splitDriverPoolForSorting mOCityId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool onlyNewDrivers
@@ -330,25 +330,28 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
               let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
               calculateDriverCurrentlyOnRideWithActualDist DriverSelection poolType driverPoolCfg serviceTiers pickupLatLong merchantId merchantOpCityId (Just $ radiusStep - 1) (isRentalTrip searchTry.tripCategory)
             else pure []
-        fillBatch merchantOpCityId allNearbyDrivers batch intelligentPoolConfig blockListedDrivers = do
+        fillBatch transporterConfig merchantOpCityId allNearbyDrivers batch intelligentPoolConfig blockListedDrivers = do
           let batchDriverIds = batch <&> (.driverPoolResult.driverId)
           let driversNotInBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) allNearbyDrivers
           driversWithValidReqAmount <- filterM (\dpr -> checkRequestCount searchTry.id (isBookAny $ tripQuoteDetails <&> (.vehicleServiceTier)) dpr.driverPoolResult.driverId dpr.driverPoolResult.serviceTier dpr.driverPoolResult.serviceTierDowngradeLevel driverPoolCfg) driversNotInBatch
           nonGoHomeDriversWithValidReqCount <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId merchantOpCityId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) driversWithValidReqAmount
           let nonGoHomeNormalDriversWithValidReqCount = filter (\ngd -> ngd.driverPoolResult.driverId `notElem` blockListedDrivers) nonGoHomeDriversWithValidReqCount
+          let nonGoHomeNormalDriversWithValidReqCountWithServiceTier =
+                if isBookAny (tripQuoteDetails <&> (.vehicleServiceTier))
+                  then do filterBookAnyDrivers transporterConfig.bookAnyVehicleDowngradeLevel nonGoHomeNormalDriversWithValidReqCount
+                  else do nonGoHomeNormalDriversWithValidReqCount
           let fillSize = batchSize - length batch
-          transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId Nothing Nothing
           (batch <>)
             <$> case sortingType of
               Intelligent -> do
                 let sortWithDriverScore' = sortWithDriverScore merchantOpCityId transporterConfig intelligentPoolConfig driverPoolCfg
                 (sortedDriverPool, randomizedDriverPool) <-
                   bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed, ActualPickupDistance, RideFrequency] True) (sortWithDriverScore' [AvailableTime, DriverSpeed, ActualPickupDistance] False)
-                    =<< splitDriverPoolForSorting merchantOpCityId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool nonGoHomeNormalDriversWithValidReqCount -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
+                    =<< splitDriverPoolForSorting merchantOpCityId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool nonGoHomeNormalDriversWithValidReqCountWithServiceTier -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
                 let sortedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance sortedDriverPool
                 let randomizedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance randomizedDriverPool
                 takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) fillSize intelligentPoolConfig
-              Random -> pure $ take fillSize nonGoHomeNormalDriversWithValidReqCount
+              Random -> pure $ take fillSize nonGoHomeNormalDriversWithValidReqCountWithServiceTier
         cacheBatch batch = do
           logDebug $ "Caching batch-" <> show batch
           batches <- previouslyAttemptedDrivers searchTry.id
@@ -407,15 +410,14 @@ sortWithDriverScore ::
     MonadFlow m
   ) =>
   Id MerchantOperatingCity ->
-  Maybe TransporterConfig ->
+  TransporterConfig ->
   DriverIntelligentPoolConfig ->
   DriverPoolConfig ->
   [IntelligentFactors] ->
   Bool ->
   [DriverPoolWithActualDistResult] ->
   m [DriverPoolWithActualDistResult]
-sortWithDriverScore _ Nothing _ _ _ _ dp = logInfo "Weightages not available in DB, going with random selection" *> randomizeAndLimitSelection dp
-sortWithDriverScore merchantOpCityId (Just transporterConfig) intelligentPoolConfig driverPoolCfg factorsToCalculate isPartOfIntelligentPool dp = do
+sortWithDriverScore merchantOpCityId transporterConfig intelligentPoolConfig driverPoolCfg factorsToCalculate isPartOfIntelligentPool dp = do
   logTagInfo "Weightage config for intelligent driver pool" $ show transporterConfig
   let driverIds = map (.driverPoolResult.driverId) dp
   let driverActualDistances = map ((.driverPoolResult.driverId) &&& (.driverPoolResult.distanceToPickup)) dp
