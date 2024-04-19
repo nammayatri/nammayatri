@@ -230,6 +230,7 @@ window.getMerchantConfig = function () {
       }
     ]
     , "callOptions" : ["ANONYMOUS", "DIRECT"]
+    , "tipDisplayDuration" : 30
     , "termsVersion" : 2.0
     , "showDisabilityBanner" : false
     , "enableContactSupport" : false
