@@ -40,6 +40,19 @@ issue providerUrl req = do
   bapId <- req.context.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
   callBecknAPIWithSignature bapId "issue" Spec.issueAPI providerUrl internalEndPointHashMap req
 
+issueStatus ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  BaseUrl ->
+  Spec.IssueStatusReq ->
+  m Spec.AckResponse
+issueStatus providerUrl req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  bapId <- req.issueStatusReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
+  callBecknAPIWithSignature bapId "issueStatus" Spec.issueStatusAPI providerUrl internalEndPointHashMap req
+
 callBecknAPIWithSignature ::
   ( MonadFlow m,
     CoreMetrics m,

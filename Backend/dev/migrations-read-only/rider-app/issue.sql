@@ -23,3 +23,8 @@ ALTER TABLE atlas_app.issue ADD COLUMN backn_issue_id text ;
 
 ALTER TABLE atlas_app.issue ADD COLUMN beckn_issue_id text ;
 ALTER TABLE atlas_app.issue DROP COLUMN backn_issue_id;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.issue DROP COLUMN beckn_issue_id;

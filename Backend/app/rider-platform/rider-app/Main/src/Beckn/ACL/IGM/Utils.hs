@@ -18,7 +18,10 @@ module Beckn.ACL.IGM.Utils where
 import Control.Lens ((%~))
 import Data.Aeson as A
 import qualified Data.Text as T
+import Domain.Types.Booking
+import qualified Domain.Types.IGMIssue as DIGM
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.Person
 import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec
 import IssueManagement.Domain.Types.Issue.IssueCategory
@@ -95,3 +98,23 @@ mapIssueCategory _ = Just $ show Spec.FULFILLMENT
 
 timeToText :: UTCTime -> Text
 timeToText = T.pack . show
+
+buildIGMIssue :: UTCTime -> Text -> Booking -> Person -> Text -> DIGM.IGMIssue
+buildIGMIssue now issueId booking rider transactionId = do
+  DIGM.IGMIssue
+    { createdAt = now,
+      riderId = show rider.id,
+      id = Id issueId,
+      issueStatus = DIGM.OPEN,
+      issueType = show Spec.TYPE_ISSUE,
+      respondentAction = Nothing,
+      respondentEmail = Nothing,
+      respondentName = Nothing,
+      respondentPhone = Nothing,
+      respondingMerchantId = booking.providerId,
+      respondentEntityType = Nothing,
+      transactionId = transactionId,
+      merchantOperatingCityId = booking.merchantOperatingCityId,
+      bookingId = booking.id,
+      updatedAt = now
+    }

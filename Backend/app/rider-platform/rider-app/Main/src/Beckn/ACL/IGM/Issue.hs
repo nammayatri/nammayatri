@@ -17,6 +17,7 @@ module Beckn.ACL.IGM.Issue (buildIssueReq) where
 import qualified Beckn.ACL.IGM.Utils as Utils
 import Domain.Types.Booking
 import Domain.Types.IGMConfig
+import Domain.Types.IGMIssue
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
@@ -37,7 +38,7 @@ buildIssueReq ::
   Person ->
   IGMConfig ->
   MerchantOperatingCity ->
-  m (Spec.IssueReq, Text)
+  m (Spec.IssueReq, Text, IGMIssue)
 buildIssueReq booking ride issueReport merchant rider igmConfig merchantOperatingCity = do
   now <- getCurrentTime
   let validTill = addUTCTime (intToNominalDiffTime 30) now
@@ -46,12 +47,14 @@ buildIssueReq booking ride issueReport merchant rider igmConfig merchantOperatin
   messageId <- generateGUID
   issueId <- generateGUID
   context <- Utils.buildContext Spec.ISSUE Spec.ON_DEMAND merchant transactionId messageId merchantOperatingCity.city (Just $ Utils.BppData booking.providerId (show booking.providerUrl)) (Just $ Utils.durationToText ttl)
+  let igmIssue = Utils.buildIGMIssue now issueId booking rider transactionId
   pure $
     ( Spec.IssueReq
         { context,
           issueReqMessage = tfIssueReqMessage issueReport now issueId merchant booking ride rider igmConfig
         },
-      issueId
+      issueId,
+      igmIssue
     )
 
 tfIssueReqMessage :: Common.IssueReportReq -> UTCTime -> Text -> DM.Merchant -> Booking -> Ride -> Person -> IGMConfig -> Spec.IssueReqMessage

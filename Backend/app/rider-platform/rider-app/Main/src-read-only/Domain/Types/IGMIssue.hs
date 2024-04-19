@@ -5,25 +5,29 @@
 module Domain.Types.IGMIssue where
 
 import qualified Data.Text
-import qualified Domain.Types.Merchant
+import qualified Domain.Types.Booking
+import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data IGMIssue = IGMIssue
-  { createdAt :: Kernel.Prelude.UTCTime,
+  { bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
+    createdAt :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.IGMIssue.IGMIssue,
-    internalIssueId :: Data.Text.Text,
     issueStatus :: Domain.Types.IGMIssue.Status,
     issueType :: Data.Text.Text,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     respondentAction :: Kernel.Prelude.Maybe Data.Text.Text,
     respondentEmail :: Kernel.Prelude.Maybe Data.Text.Text,
+    respondentEntityType :: Kernel.Prelude.Maybe Domain.Types.IGMIssue.Entity,
     respondentName :: Kernel.Prelude.Maybe Data.Text.Text,
     respondentPhone :: Kernel.Prelude.Maybe Data.Text.Text,
-    respondingMerchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    respondentEntityType :: Kernel.Prelude.Maybe Domain.Types.IGMIssue.Entity,
-    updatedAt :: Kernel.Prelude.UTCTime,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)
+    respondingMerchantId :: Data.Text.Text,
+    riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    transactionId :: Data.Text.Text,
+    updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

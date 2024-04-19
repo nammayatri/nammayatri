@@ -19,7 +19,6 @@ Issue:
     nightSafety : Bool
     createdAt : UTCTime
     updatedAt : UTCTime
-    becknIssueId : Maybe Text
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
