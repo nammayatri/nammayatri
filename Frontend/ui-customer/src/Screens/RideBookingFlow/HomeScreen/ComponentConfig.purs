@@ -1418,7 +1418,8 @@ chooseYourRideConfig state =
     tipForDriver = state.props.customerTip.tipForDriver,
     customerTipArray = tipConfig.customerTipArray,
     customerTipArrayWithValues = tipConfig.customerTipArrayWithValues,
-    enableTips = state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities)
+    enableTips = state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities),
+    currentSheetState = state.props.chooseVehicleSheetState
   }
 
 specialLocationConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
