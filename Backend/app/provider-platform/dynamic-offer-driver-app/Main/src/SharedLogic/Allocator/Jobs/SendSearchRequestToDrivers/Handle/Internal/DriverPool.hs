@@ -250,7 +250,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
         filterSpecialDrivers specialDrivers = filter (\dpr -> not ((getId dpr.driverPoolResult.driverId) `elem` specialDrivers))
 
         filterBookAnyDrivers :: Int -> [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
-        filterBookAnyDrivers config dpResp = map DL.head . DL.groupBy ((==) `on` (.driverPoolResult.serviceTierDowngradeLevel)) . sortOn (.driverPoolResult.serviceTierDowngradeLevel) $ filtered
+        filterBookAnyDrivers config dpResp = map DL.head . DL.groupBy ((==) `on` (.driverPoolResult.driverId)) . sortOn (.driverPoolResult.serviceTierDowngradeLevel) $ filtered
           where
             filtered = filter (\d -> d.driverPoolResult.serviceTierDowngradeLevel < config) dpResp
 

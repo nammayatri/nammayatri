@@ -14,6 +14,7 @@
 
 module Storage.Queries.DriverLocation.Internal where
 
+import qualified Data.List as DL
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant
 import Kernel.External.Maps as Maps
@@ -31,5 +32,6 @@ getDriverLocsWithCond ::
   LatLong ->
   Meters ->
   m [DriverLocation]
-getDriverLocsWithCond merchantId _mbDriverPositionInfoExpiry LatLong {..} radiusMeters =
-  LF.nearBy lat lon Nothing Nothing radiusMeters.getMeters merchantId
+getDriverLocsWithCond merchantId _mbDriverPositionInfoExpiry LatLong {..} radiusMeters = do
+  locations <- LF.nearBy lat lon Nothing Nothing radiusMeters.getMeters merchantId
+  return $ DL.nubBy (\x y -> x.driverId == y.driverId) locations
