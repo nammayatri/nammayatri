@@ -2594,7 +2594,8 @@ getEstimate action flowStatusAction count duration push state = do
         Right response -> do
           _ <- pure $ printLog "api Results " response
           let (GetQuotesRes resp) = response
-          if not (null resp.quotes) || not (null resp.estimates) then do
+              valueAddNp = filter (\(EstimateAPIEntity estimate) -> maybe false (\valueAdd -> valueAdd) estimate.isValueAddNP) resp.estimates
+          if not (null resp.quotes) || not (null valueAddNp) then do
             doAff do liftEffect $ push $ action response
             pure unit
           else do
