@@ -629,8 +629,8 @@ export const drawRoute = function (data, style, trackColor, isActual, sourceMark
   console.log("I AM HERE ------------------ IN DRAW ROUTE");
   try {
     if (window.__OS == "IOS" || methodArgumentCount("drawRoute") == 11) {
-      if (window.__OS == "IOS" && window.JBridge.drawRouteV2)
-        return window.JBridge.drawRouteV2(JSON.stringify(data), style, trackColor, isActual, JSON.stringify(sourceMarkerConfig), JSON.stringify(destMarkerConfig), polylineWidth, type, JSON.stringify(mapRouteConfig));  
+      if (window.__OS == "IOS" && window.JBridge.drawRouteV1)
+        return window.JBridge.drawRouteV1(JSON.stringify(data), style, trackColor, isActual, JSON.stringify(sourceMarkerConfig), JSON.stringify(destMarkerConfig), polylineWidth, type, JSON.stringify(mapRouteConfig));  
       return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarkerConfig.pointerIcon, destMarkerConfig.pointerIcon, polylineWidth, type, sourceMarkerConfig.primaryText, destMarkerConfig.primaryText, JSON.stringify(mapRouteConfig));  
     } else {
       return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, JSON.stringify(sourceMarkerConfig), JSON.stringify(destMarkerConfig), polylineWidth, type, JSON.stringify(mapRouteConfig));
