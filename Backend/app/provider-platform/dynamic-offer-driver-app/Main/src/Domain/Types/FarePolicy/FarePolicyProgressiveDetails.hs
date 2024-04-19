@@ -98,7 +98,7 @@ parsingMiddleware config configS key' = do
   perExtraKmRateSections <- jsonToFPProgressiveDetailsPerExtraKmRateSection configS key'
   let waitingCharge = KM.lookup "waitingCharge" config >>= fromJSONHelper
       freeWaitingTime = KM.lookup "freeWatingTime" config >>= fromJSONHelper
-      waitingChargeInfo = WaitingChargeInfo <$> waitingCharge <*> freeWaitingTime
+      waitingChargeInfo = WaitingChargeInfo <$> freeWaitingTime <*> waitingCharge
   pure $ KP.foldr (\(k, v) acc -> KM.insert k v acc) config [("perExtraKmRateSections", toJSON perExtraKmRateSections), ("waitingChargeInfo", DA.toJSON waitingChargeInfo)]
 
 jsonToFPProgressiveDetails :: MonadFlow m => String -> String -> m (Maybe FPProgressiveDetails)
