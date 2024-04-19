@@ -1818,6 +1818,8 @@ export const showKeyboard = function (id) {
 
 export const locateOnMap = (configObj) => {
   if (JBridge.locateOnMapV2) {
+    configObj.lat = configObj.lat == 0.0 ? "0.0" : configObj.lat.toString();
+    configObj.lon = configObj.lon == 0.0 ? "0.0" : configObj.lon.toString();
     return JBridge.locateOnMapV2(JSON.stringify(configObj));
   } else {
     try {
