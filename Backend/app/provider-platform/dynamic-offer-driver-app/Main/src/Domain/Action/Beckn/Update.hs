@@ -55,6 +55,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as Maps
+-- import qualified Kernel.Utils.Time as Time
 import qualified Tools.Notifications as Notify
 
 -- import Domain.Action.UI.Ride.EndRide.Internal
@@ -167,9 +168,9 @@ handler (UEditLocationReq EditLocationReq {..}) = do
               locationPts <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId
               let (currentPoint :: Maps.LatLong) = last locationPts.loc
               pts <- getInterpolatedPointsImplementation ride.driverId
-              return (srcPt :| ((pickWaypoints pts) ++ [currentPoint, dropLatLong]), Just currentPoint)
+              return (srcPt :| (pickWaypoints pts ++ [currentPoint, dropLatLong]), Just currentPoint)
             else return (srcPt :| [dropLatLong], Nothing)
-        logTagInfo "endRide" $ "pickedWaypoints: " <> show pickedWaypoints
+        logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show pickedWaypoints
         routeResponse <-
           Maps.getRoutes merchantOperatingCity.merchantId merchantOperatingCity.id $
             Maps.GetRoutesReq
@@ -181,9 +182,15 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         let maxEstimatedDist = maybe Nothing (\route -> route.distance) (Maps.getLongestRouteDistance routeResponse)
         -- let routePoints = shortestRoute.points
         estimatedDistance <- shortestRoute.distance & fromMaybeM (InternalError "No distance found for new destination")
-        -- duration <- shortestRoute.duration & fromMaybeM (InternalError "No duration found for new destination")
-        -- now <- getCurrentTime
-        -- let estimatedRideDuration = booking.startTime - now ----Need to correct this -----RITIKA
+        (duration :: Seconds) <- shortestRoute.duration & fromMaybeM (InternalError "No duration found for new destination")
+        logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show duration
+        -- estimatedRideDuration <- if ride.status == DRide.INPROGRESS then do
+        --   now <- getCurrentTime
+        --   tripStart <- ride.tripStartTime & fromMaybeM (InternalError "No trip start time found for Inprogress ride")
+        --   let estimatedDuration = duration - Time.nominalDiffTimeToSeconds $ Time.diffUTCTime now tripStart ----Need to correct this -----RITIKA
+        --   -- let estimatedDuration' = duration - alreadyTravelledDuration
+        --   return (Just estimatedDuration)
+        --   else return (Just duration)
         fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id srcPt (Just dropLatLong) (Just booking.transactionId) (Just "transactionId") booking.tripCategory
         farePolicy <- getFarePolicy merchantOperatingCity.id booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.transactionId) (Just "transactionId")
         tollCharges <- getTollChargesOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points

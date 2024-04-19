@@ -67,6 +67,9 @@ parseEventV2 transactionId messageId order = do
     Just "SOFT_UPDATE" -> do
       editDestinationReq <- parseEditDestinationSoftUpdate order messageId
       return editDestinationReq
+    Just "CONFIRM_UPDATE" -> do
+      confirmUpdateReq <- parseEditDestinationConfirmUpdate order messageId
+      return confirmUpdateReq
     _ -> do
       eventType <-
         order.orderFulfillments
@@ -160,7 +163,7 @@ parseEditDestinationSoftUpdate order messageId = do
   let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
       personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
       currentPoint = Common.getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
-  newEstimatedDistance :: HighPrecMeters <- (Utils.getTagV2 Tag.UPDATE_DETAILS Tag.UPDATED_ESTIMATED_DISTANCE tagGroups) >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "updated_estimated_distance tag is not present in Soft Update Event.")
+  newEstimatedDistance :: HighPrecMeters <- Utils.getTagV2 Tag.UPDATE_DETAILS Tag.UPDATED_ESTIMATED_DISTANCE tagGroups >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "updated_estimated_distance tag is not present in Soft Update Event.")
   fareBreakups' <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "Quote breakup is not present in Soft Update Event.")
   fare :: DecimalValue.DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= DecimalValue.valueFromString & fromMaybeM (InvalidRequest "quote.price.value is not present in Soft Update Event.")
   currency :: Currency <- order.orderQuote >>= (.quotationPrice) >>= (.priceCurrency) >>= (readMaybe . T.unpack) & fromMaybeM (InvalidRequest "quote.price.currency is not present in Soft Update Event.")
@@ -172,5 +175,15 @@ parseEditDestinationSoftUpdate order messageId = do
           newEstimatedDistance,
           fareBreakups,
           fare = Utils.decimalValueToPrice currency fare,
+          ..
+        }
+
+parseEditDestinationConfirmUpdate :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m DOnUpdate.OnUpdateReq
+parseEditDestinationConfirmUpdate order messageId = do
+  bookingDetails <- Common.parseBookingDetails order messageId
+  return $
+    DOnUpdate.OUEditDestConfirmUpdateReq $
+      DOnUpdate.EditDestConfirmUpdateReq
+        { bookingUpdateRequestId = Id messageId,
           ..
         }

@@ -1,0 +1,35 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Location: Domain.Types.Booking
+
+FareBreakupV2:
+  tableName: fare_breakup_v2
+
+  types:
+    FareBreakupV2Tags:
+      enum: "BOOKING_UPDATE_REQUEST"
+
+  fields:
+    id : Id FareBreakupV2
+    tag : FareBreakupV2Tags
+    description : Text
+    amount : HighPrecMoney
+    entityId : Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+    entityId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        and: [id]
+    findAllByEntityIdAndTag:
+      kvFunction: findAllWithKV
+      where:
+        and: [entityId, tag]
+

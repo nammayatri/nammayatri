@@ -53,7 +53,6 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId action = do
       QLM.create dropLocMapRide
       let estimatedDistance = highPrecMetersToMeters <$> bookingUpdateReq.estimatedDistance
       QB.updateMultipleById bookingUpdateReq.estimatedFare bookingUpdateReq.maxEstimatedDistance estimatedDistance bookingUpdateReq.fareParamsId.getId bookingUpdateReq.bookingId
-      --------------RITIKA --------UPDATE for ride as well.
       return Success
     else do
       QBUR.updateStatusById DRIVER_REJECTED bookingUpdateReqId

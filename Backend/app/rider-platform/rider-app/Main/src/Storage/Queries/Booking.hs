@@ -244,7 +244,7 @@ updateStop booking mbStopLoc = do
   -- QLM.create locationMapping
 
   updateOneWithKV
-    [ Se.Set BeamB.stopLocationId ((getId . (.id)) <$> mbStopLoc),
+    [ Se.Set BeamB.stopLocationId (getId . (.id) <$> mbStopLoc),
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId booking.id)]
@@ -427,7 +427,7 @@ instance ToTType' BeamB.Booking Booking where
   toTType' DRB.Booking {..} =
     let (fareProductType, toLocationId, distance, stopLocationId, otpCode) = case bookingDetails of
           DRB.OneWayDetails details -> (DQuote.ONE_WAY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
-          DRB.RentalDetails rentalDetails -> (DQuote.RENTAL, Nothing, Nothing, (getId . (.id)) <$> rentalDetails.stopLocation, Nothing)
+          DRB.RentalDetails rentalDetails -> (DQuote.RENTAL, Nothing, Nothing, getId . (.id) <$> rentalDetails.stopLocation, Nothing)
           DRB.DriverOfferDetails details -> (DQuote.DRIVER_OFFER, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
           DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode)
           DRB.InterCityDetails details -> (DQuote.INTER_CITY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
@@ -500,3 +500,16 @@ upsertToLocationAndMappingForOldData toLocationId bookingId merchantId merchantO
   dropLoc <- buildLocation toLocation
   toLocationMapping <- SLM.buildDropLocationMapping dropLoc.id bookingId DLM.BOOKING (Just $ Id merchantId) (Id <$> merchantOperatingCityId)
   void $ QL.create dropLoc >> QLM.create toLocationMapping
+
+updateMultipleById :: (MonadFlow m, EsqDBFlow m r) => HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMeters -> Id Booking -> m ()
+updateMultipleById estimatedFare estimatedTotalFare estimatedDistance bookingId = do
+  let estimatedDistanceValue = (.value) <$> highPrecMetersToDistance <$> estimatedDistance
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.estimatedFare estimatedFare,
+      Se.Set BeamB.estimatedTotalFare estimatedTotalFare,
+      Se.Set BeamB.estimatedDistance estimatedDistance,
+      Se.Set BeamB.estimatedDistanceValue estimatedDistanceValue,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
