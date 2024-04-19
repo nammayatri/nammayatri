@@ -325,7 +325,7 @@ addTipView state push =
             , width MATCH_PARENT
             , gravity CENTER
             ]
-              <> if state.tipViewProps.onlyPrimaryText then [ clickable true, onClick push $ const $ ChangeTip ] else []
+              -- []-- <> if state.tipViewProps.onlyPrimaryText then [ clickable true, onClick push $ const $ ChangeTip ] else []
           ) $ 
           [ textView
             [ height WRAP_CONTENT
@@ -344,7 +344,7 @@ addTipView state push =
                   , height $ WRAP_CONTENT
                   , width $ WRAP_CONTENT
                   , color Color.blue900
-                  , visibility $ boolToVisibility state.tipViewProps.onlyPrimaryText
+                  , visibility GONE-- $ boolToVisibility state.tipViewProps.onlyPrimaryText
                   ] <> FontStyle.body20 LanguageStyle
                   ] else [])
       , tipsView state push
