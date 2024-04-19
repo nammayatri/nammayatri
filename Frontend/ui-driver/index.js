@@ -2,9 +2,6 @@ console.log("APP_PERF INDEX_BUNDLE_START : ", new Date().getTime());
 import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
-import * as purescript from "./output/Main";
-import { loadAppConfig } from "./output/ConfigProvider/index.js";
-import { handleLogStream } from "./output/Engineering.Helpers.LogEvent/index.js";
 
 window.events = {};
 try {
@@ -53,6 +50,11 @@ function guid() {
     s4() + "-" + s4() + s4() + s4();
 }
 
+function loadConfig() {
+  const config = require("./output/ConfigProvider/index.js");
+  config.loadAppConfig("");
+}
+
 window.session_id = guid();
 window.version = window.version || {};
 window.version["app"] = __VERSION__;
@@ -63,7 +65,7 @@ const JBridge = window.JBridge;
 const JOS = window.JOS;
 
 console.log("APP_PERF INDEX_LOAD_CONFIG_START : ", new Date().getTime());
-loadAppConfig("");
+loadConfig();
 console.log("APP_PERF INDEX_LOAD_CONFIG_END : ", new Date().getTime());
 
 window.isObject = function (object) {
@@ -127,6 +129,8 @@ if (!window.__OS) {
   window.__OS = getOS();
 }
 console.log("APP_PERF INDEX_BUNDLE_OS_END : ", new Date().getTime());
+
+const purescript = require("./output/Main");
 
 function callInitiateResult () {
   const payload = {
@@ -415,7 +419,8 @@ window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyp
       if (window.processCallBack) window.processCallBack(0)(jsonPayload)();
       break;
     case "log_stream":      
-      handleLogStream(payload.payload);
+      const logs = require("./output/Engineering.Helpers.LogEvent/index.js");
+      logs.handleLogStream(payload.payload);
       break;
     default:
       console.log("Unknown Event");
