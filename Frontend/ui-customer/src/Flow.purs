@@ -4037,6 +4037,6 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
                                                                                 , defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (points!!0)).place
                                                                                 , confirmLocationCategory = zoneType
                                                                                 , hotSpot{ centroidPoint = Just { lat : lat, lng : lon } } }})
-      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, points = points, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
+      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { points = points, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
     else pure unit
   else pure unit
