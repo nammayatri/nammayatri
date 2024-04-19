@@ -551,7 +551,8 @@ getEstimatesInfo estimates vehicleVariant state =
       else filter (\estimate -> estimate ^. _vehicleVariant == vehicleVariant) estimates
 
     estimatedPrice = maybe 0 (view _estimatedFare) (head estimatedVariant)
-    quoteList = getEstimateList estimates state.data.config.estimateAndQuoteConfig
+    valueAddNp = filter (\(EstimateAPIEntity estimate) -> maybe false (\valueAdd -> valueAdd) estimate.isValueAddNP) estimates
+    quoteList = getEstimateList valueAddNp state.data.config.estimateAndQuoteConfig
     defaultQuote = fromMaybe ChooseVehicle.config $ if state.props.isRepeatRide 
                     then do 
                       let defaultQuote_ = find (\item -> isJust item.serviceTierName && item.serviceTierName == state.props.repeatRideServiceTierName) quoteList
@@ -598,6 +599,7 @@ dummyEstimateEntity =
     , serviceTierShortDesc: Nothing
     , serviceTierName : Nothing
     , airConditioned : Nothing
+    , isValueAddNP : Nothing
     }
 
 getSpecialTag :: Maybe String -> SpecialTags

@@ -593,7 +593,8 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   driversLatLong :: Array LatLong,
   serviceTierName :: Maybe String,
   serviceTierShortDesc :: Maybe String,
-  airConditioned :: Maybe Boolean
+  airConditioned :: Maybe Boolean,
+  isValueAddNP :: Maybe Boolean 
 }
 
 newtype NightShiftRate = NightShiftRate {
