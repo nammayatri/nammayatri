@@ -22,9 +22,9 @@ import Tools.Auth
 
 type API =
   ( TokenAuth :> "edit" :> "result" :> Capture "bookingUpdateRequestId" (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest)
-      :> MandatoryQueryParam
-           "action"
-           API.Types.UI.EditBooking.EditBookingRespondAction
+      :> ReqBody
+           ('[JSON])
+           API.Types.UI.EditBooking.EditBookingRespondAPIReq
       :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
   )
 
@@ -37,7 +37,7 @@ postEditResult ::
       Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest ->
-    API.Types.UI.EditBooking.EditBookingRespondAction ->
+    API.Types.UI.EditBooking.EditBookingRespondAPIReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postEditResult a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.EditBooking.postEditResult (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

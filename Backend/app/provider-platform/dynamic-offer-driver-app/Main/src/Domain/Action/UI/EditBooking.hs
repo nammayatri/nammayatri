@@ -33,10 +33,10 @@ postEditResult ::
       Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest ->
-    API.Types.UI.EditBooking.EditBookingRespondAction ->
+    API.Types.UI.EditBooking.EditBookingRespondAPIReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postEditResult (mbPersonId, _, _) bookingUpdateReqId action = do
+postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {..} = do
   _ <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   now <- getCurrentTime
   bookingUpdateReq <- B.runInReplica $ QBUR.findById bookingUpdateReqId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with id:" <> bookingUpdateReqId.getId)

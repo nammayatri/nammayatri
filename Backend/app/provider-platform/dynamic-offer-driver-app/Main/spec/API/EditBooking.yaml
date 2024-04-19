@@ -1,13 +1,15 @@
 imports:
   BookingUpdateRequest: Domain.Types.BookingUpdateRequest
+  ToParamSchema: Data.OpenApi
 
 
 module: EditBooking
 types:
   EditBookingRespondAction:
     enum: "ACCEPT, REJECT"
-  # EditBookingRespondAPIResp:
-  #   bookingUpdateRequestDetails : BookingUpdateRequest
+    # derives: "Eq,Show,Generic,ToJSON,FromJSON,ToSchema,ToParamSchema"
+  EditBookingRespondAPIReq:
+    action : EditBookingRespondAction
 
   # FRFSCanCancelStatus:
   #   cancellationCharges : Maybe HighPrecMoney
@@ -32,8 +34,10 @@ apis:
       endpoint: /edit/result/{bookingUpdateRequestId}
       params:
         bookingUpdateRequestId: Id BookingUpdateRequest
-      mandatoryQuery:
-        action:  API.Types.UI.EditBooking.EditBookingRespondAction
+      request:
+        type: API.Types.UI.EditBooking.EditBookingRespondAPIReq
+      # mandatoryQuery:
+      #   action:  API.Types.UI.EditBooking.EditBookingRespondAction EditBookingRespondAPIReq
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: Kernel.Types.APISuccess.APISuccess
