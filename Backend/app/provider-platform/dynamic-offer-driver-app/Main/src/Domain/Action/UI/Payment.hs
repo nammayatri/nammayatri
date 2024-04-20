@@ -294,7 +294,7 @@ notifyPaymentSuccessIfNotNotified :: (CacheFlow m r, EsqDBFlow m r) => DP.Person
 notifyPaymentSuccessIfNotNotified driver orderId = do
   let key = "driver-offer:SuccessNotif-" <> orderId.getId
   sendNotificationIfNotSent key 86400 $ do
-    notifyPaymentSuccess driver.merchantOperatingCityId driver.id driver.deviceToken orderId
+    notifyPaymentSuccess driver.merchantOperatingCityId driver orderId
 
 shouldSendSuccessNotification :: Payment.MandateStatus -> Bool
 shouldSendSuccessNotification mandateStatus = mandateStatus `notElem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]
@@ -463,12 +463,12 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
             QDF.updateAllExecutionPendingToManualOverdueByDriverIdForServiceName (cast driver.id) serviceName
             QIN.inActivateAllAutopayActiveInvoices (cast driver.id) serviceName
             when (subsConfig.sendInAppFcmNotifications) $ do
-              PaymentNudge.notifyMandatePaused driver.id driver.merchantId driver.deviceToken driver.language
+              PaymentNudge.notifyMandatePaused driver
           when (mandateStatus == Payment.REVOKED) $ do
             QDF.updateAllExecutionPendingToManualOverdueByDriverIdForServiceName (cast driver.id) serviceName
             QIN.inActivateAllAutopayActiveInvoices (cast driver.id) serviceName
             when (subsConfig.sendInAppFcmNotifications) $ do
-              PaymentNudge.notifyMandateCancelled driver.id driver.merchantId driver.deviceToken driver.language
+              PaymentNudge.notifyMandateCancelled driver
           fork "track autopay status" $ SEVT.trackAutoPayStatusChange driverPlan $ show (castAutoPayStatus mandateStatus)
         Nothing -> do
           (autoPayStatus, mbDriverPlanByDriverId) <- ADPlan.getSubcriptionStatusWithPlan serviceName driverId

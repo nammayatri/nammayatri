@@ -120,7 +120,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     pickupMapForRide <- SLM.buildPickUpLocationMapping startLocation.id rideId.getId DLM.RIDE (Just person.merchantId) (Just person.merchantOperatingCityId)
     QLM.create pickupMapForRide
     let entityData = Notify.EditLocationReq {..}
-    Notify.notifyPickupOrDropLocationChange person.merchantOperatingCityId person.id person.deviceToken entityData
+    Notify.notifyPickupOrDropLocationChange person entityData
 
 -- handler _ = throwError (InvalidRequest "Not Implemented")
 
@@ -202,7 +202,7 @@ processStop booking loc isEdit = do
   whenJust mbRide $ \ride -> do
     person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     let entityData = Notify.StopReq {bookingId = booking.id, stop = Just (mkLocationAPIEntity loc), ..}
-    when (ride.status == DRide.INPROGRESS) $ Notify.notifyStopModification person.merchantOperatingCityId person.id person.deviceToken entityData
+    when (ride.status == DRide.INPROGRESS) $ Notify.notifyStopModification person entityData
 
 validateStopReq :: DBooking.Booking -> Bool -> Flow ()
 validateStopReq booking isEdit = do
