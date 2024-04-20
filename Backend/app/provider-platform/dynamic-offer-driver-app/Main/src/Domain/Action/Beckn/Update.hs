@@ -144,7 +144,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     pickupMapForRide <- SLM.buildPickUpLocationMapping startLocation.id rideId.getId DLM.RIDE (Just person.merchantId) (Just person.merchantOperatingCityId)
     QLM.create pickupMapForRide
     let entityData = Notify.EditLocationReq {..}
-    Notify.notifyPickupOrDropLocationChange person.merchantOperatingCityId person.id person.deviceToken entityData
+    Notify.notifyPickupOrDropLocationChange person entityData
 
   whenJust destination $ \dropLocation -> do
     --------------------TO DO ----------------------- Dependency on other people changes
@@ -223,7 +223,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         if transporterConfig.editLocDriverPermissionNeeded
           then do
             let entityData = Notify.EditLocationReq {..}
-            Notify.notifyPickupOrDropLocationChange person.merchantOperatingCityId person.id person.deviceToken entityData
+            Notify.notifyPickupOrDropLocationChange person entityData
           else void $ EditBooking.postEditResult (Just person.id, merchantOperatingCity.merchantId, merchantOperatingCity.id) bookingUpdateReq.id (EditBooking.EditBookingRespondAPIReq {action = EditBooking.ACCEPT})
       _ -> throwError (InvalidRequest "Invalid status for edit location request")
 
@@ -306,7 +306,7 @@ processStop booking location isEdit = do
   whenJust mbRide $ \ride -> do
     person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     let entityData = Notify.StopReq {bookingId = booking.id, stop = Just (DL.makeLocationAPIEntity location), ..}
-    when (ride.status == DRide.INPROGRESS) $ Notify.notifyStopModification person.merchantOperatingCityId person.id person.deviceToken entityData
+    when (ride.status == DRide.INPROGRESS) $ Notify.notifyStopModification person entityData
 
 validateStopReq :: DBooking.Booking -> Bool -> Flow ()
 validateStopReq booking isEdit = do

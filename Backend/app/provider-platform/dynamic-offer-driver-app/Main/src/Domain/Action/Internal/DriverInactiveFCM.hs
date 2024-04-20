@@ -46,5 +46,5 @@ driverInactiveFCM req = do
   where
     pingDriver driver = do
       case driver.deviceToken of
-        Just token -> notifyDevice driver.merchantOperatingCityId FCM.TRIGGER_SERVICE "You were inactive" "Please check the app" (driver.id) (Just token)
+        Just token -> notifyDevice driver.merchantOperatingCityId FCM.TRIGGER_SERVICE "You were inactive" "Please check the app" driver (Just token)
         Nothing -> log INFO $ "Active drivers with no token" <> show driver.id
