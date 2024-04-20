@@ -220,7 +220,7 @@ sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue (DCT.BulkUpl
           case T.splitOn " | " coinsMessage.message of
             [title, description] -> do
               let descriptionReplaced = replaceAmountValue amount' $ replaceCoinsValue description
-              Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS title descriptionReplaced driverId (driver.deviceToken)
+              Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS title descriptionReplaced driver (driver.deviceToken)
             _ -> logDebug "Invalid message format."
         Nothing -> logDebug "Could not find Translations."
     replaceCoinsValue = T.replace "{#coinsValue#}" (T.pack $ show coinsValue)
@@ -239,7 +239,7 @@ sendCoinsNotification merchantOpCityId driverId coinsValue =
         Just coinsMessage ->
           case T.splitOn " | " coinsMessage.message of
             [title, description] ->
-              Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS title (replaceCoinsValue description) driverId (driver.deviceToken)
+              Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS title (replaceCoinsValue description) driver (driver.deviceToken)
             _ -> logDebug "Invalid message format."
         Nothing -> logDebug "Could not find Translations."
     replaceCoinsValue = T.replace "{#coinsValue#}" (T.pack $ show coinsValue)

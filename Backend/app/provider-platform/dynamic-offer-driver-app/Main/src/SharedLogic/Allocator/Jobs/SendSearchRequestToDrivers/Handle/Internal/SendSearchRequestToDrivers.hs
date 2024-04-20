@@ -103,7 +103,8 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
     let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds (SDP.castServiceTierToVariant tripQuoteDetail.vehicleServiceTier) needTranslation isValueAddNP tripQuoteDetail.driverPickUpCharge
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
     notificationData <- Notify.buildSendSearchRequestNotificationData sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData Notify.EmptyDynamicParam
-    Notify.sendSearchRequestToDriverNotification searchReq.providerId searchReq.merchantOperatingCityId notificationData
+    let fallBackCity = Notify.getNewMerchantOpCityId sReqFD.clientSdkVersion sReqFD.merchantOperatingCityId
+    Notify.sendSearchRequestToDriverNotification searchReq.providerId fallBackCity notificationData
   where
     getSearchRequestValidTill = do
       now <- getCurrentTime
@@ -220,6 +221,7 @@ translateSearchReq DSR.SearchRequest {..} language = do
 addLanguageToDictionary ::
   ( TranslateFlow m r,
     CacheFlow m r,
+    EncFlow m r,
     EsqDBFlow m r
   ) =>
   DSR.SearchRequest ->
