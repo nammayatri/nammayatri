@@ -306,7 +306,9 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     now <- getCurrentTime
     thresholdConfig <- findConfig (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (InternalError "TransportConfigNotFound")
     let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix later with rentals
-    let estimatedTollCharges = booking.fareParams.tollCharges
+        estimatedTollCharges = rideOld.estimatedTollCharges <|> booking.fareParams.tollCharges
+        estimatedTollNames = rideOld.estimatedTollNames
+        shouldRectifyDistantPointsSnapToRoadFailure = DTC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory
     tripEndPoints <- do
       res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId
       pure $ toList res.loc
@@ -331,15 +333,15 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
               pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking rideOld tripEndPoint thresholdConfig
               whenJust (nonEmpty tripEndPoints) \tripEndPoints' -> do
                 rectificationMapsConfig <-
-                  if (DTC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory)
+                  if shouldRectifyDistantPointsSnapToRoadFailure
                     then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
                     else pure Nothing
-                withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges pickupDropOutsideOfThreshold
+                withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges estimatedTollNames pickupDropOutsideOfThreshold
 
               distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed driverId
               when distanceCalculationFailed $ do
                 logWarning $ "Failed to calculate distance for this ride: " <> rideId.getId
-                whenJust estimatedTollCharges $ \tollCharges -> void (QRide.updateTollCharges driverId tollCharges) -- If distance calculation fails, then we will fallback to estimated tollCharges
+                (QRide.updateTollChargesAndNames driverId) <$> estimatedTollCharges <*> estimatedTollNames -- If distance calculation fails, then we will fallback to estimated tollCharges
               ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
 
               (chargeableDistance, finalFare, mbUpdatedFareParams) <-
@@ -357,7 +359,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                fareParametersId = Just newFareParams.id,
                distanceCalculationFailed = distanceCalculationFailed,
                pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
-               endOdometerReading = mbOdometer
+               endOdometerReading = mbOdometer,
+               shouldRectifyDistantPointsSnapToRoadFailure = Just shouldRectifyDistantPointsSnapToRoadFailure
               }
     -- we need to store fareParams only when they changed
     withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId newFareParams thresholdConfig

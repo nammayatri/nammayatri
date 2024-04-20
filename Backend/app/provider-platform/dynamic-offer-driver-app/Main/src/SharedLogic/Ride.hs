@@ -172,7 +172,8 @@ buildRide driverId booking ghrId otp enableFrequentLocationUpdates clientId = do
         numberOfOsrmSnapToRoadCalls = Nothing,
         numberOfDeviation = Nothing,
         tollCharges = Nothing,
-        estimatedTollCharges = booking.fareParams.tollCharges,
+        estimatedTollCharges = booking.tollCharges <|> booking.fareParams.tollCharges,
+        estimatedTollNames = booking.tollNames,
         uiDistanceCalculationWithAccuracy = Nothing,
         uiDistanceCalculationWithoutAccuracy = Nothing,
         isFreeRide = Just ((getId driverId) `elem` transporterConfig.specialDrivers),
@@ -180,7 +181,8 @@ buildRide driverId booking ghrId otp enableFrequentLocationUpdates clientId = do
         safetyAlertTriggered = False,
         enableFrequentLocationUpdates = enableFrequentLocationUpdates,
         vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
-        vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned
+        vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
+        shouldRectifyDistantPointsSnapToRoadFailure = Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

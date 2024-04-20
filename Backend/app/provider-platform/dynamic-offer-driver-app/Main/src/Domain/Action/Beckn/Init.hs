@@ -176,6 +176,8 @@ handler merchantId req validatedReq = do
             distanceToPickup = distanceToPickup,
             stopLocationId = (.id) <$> toLocation,
             startTime = searchRequest.startTime,
+            tollCharges = searchRequest.tollCharges,
+            tollNames = searchRequest.tollNames,
             ..
           }
 

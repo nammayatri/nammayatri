@@ -84,7 +84,7 @@ successFlow appEnv config eps expectedDistance rideId route = runFlow "" appEnv 
   initializeDistanceCalculation ih rideId testDriverId origin
   forM_ (NE.toList route) $ \updatesBatch ->
     addIntermediateRoutePoints ih Nothing rideId testDriverId updatesBatch
-  finalDistanceCalculation ih Nothing rideId testDriverId destination 0 Nothing True
+  finalDistanceCalculation ih Nothing rideId testDriverId destination 0 Nothing Nothing True
   failed <- API.isDistanceCalculationFailed ih testDriverId
   liftIO $ failed `shouldBe` False
   totalDistance <- checkTraveledDistance testDriverId

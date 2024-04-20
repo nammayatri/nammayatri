@@ -927,8 +927,8 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       ..
     }
 
-mkGeneralInfoTagGroup :: Pricing -> Maybe Spec.TagGroup
-mkGeneralInfoTagGroup pricing
+mkGeneralInfoTagGroup :: Pricing -> Bool -> Maybe Spec.TagGroup
+mkGeneralInfoTagGroup pricing isValueAddNP
   | isNothing pricing.specialLocationTag && isNothing pricing.distanceToNearestDriver = Nothing
   | otherwise =
     Just $
@@ -979,7 +979,7 @@ mkGeneralInfoTagGroup pricing
               tagValue = show . double2Int . realToFrac <$> distanceToNearestDriver
             }
     isCustomerPrefferedSearchRouteSingleton isCustomerPrefferedSearchRoute
-      | isNothing isCustomerPrefferedSearchRoute = Nothing
+      | isNothing isCustomerPrefferedSearchRoute || not isValueAddNP = Nothing
       | otherwise =
         Just . List.singleton $
           Spec.Tag
@@ -994,7 +994,7 @@ mkGeneralInfoTagGroup pricing
               tagValue = show <$> isCustomerPrefferedSearchRoute
             }
     isBlockedRouteSingleton isBlockedRoute
-      | isNothing isBlockedRoute = Nothing
+      | isNothing isBlockedRoute || not isValueAddNP = Nothing
       | otherwise =
         Just . List.singleton $
           Spec.Tag

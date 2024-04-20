@@ -50,10 +50,12 @@ data Ride = Ride
     rideEndedBy :: Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy,
     safetyAlertTriggered :: Kernel.Prelude.Bool,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
+    shouldRectifyDistantPointsSnapToRoadFailure :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     startOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
     status :: Domain.Types.Ride.RideStatus,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     trackingUrl :: Kernel.Types.Common.BaseUrl,
     traveledDistance :: Kernel.Types.Common.HighPrecMeters,
     tripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
@@ -75,8 +77,8 @@ data RideEndedBy = Driver | Dashboard | CallBased | CronJob deriving (Eq, Ord, S
 
 data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
 
-$(mkHttpInstancesForEnum ''RideStatus)
+$(mkHttpInstancesForEnum (''RideStatus))

@@ -77,6 +77,8 @@ data Booking = Booking
     fareParams :: FareParameters,
     riderName :: Maybe Text,
     paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
+    tollCharges :: Maybe HighPrecMoney,
+    tollNames :: Maybe [Text],
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     paymentUrl :: Maybe Text,

@@ -67,12 +67,14 @@ Ride:
     isFreeRide: Maybe Bool
     estimatedTollCharges: Maybe HighPrecMoney
     tollCharges: Maybe HighPrecMoney
+    tollNames: Maybe [Text]
     driverGoHomeRequestId: Maybe (Id DriverGoHomeRequest)
     safetyAlertTriggered: Bool
     enableFrequentLocationUpdates: Maybe Bool
     vehicleServiceTierSeatingCapacity: Maybe Int
     vehicleServiceTierAirConditioned: Maybe Double
     rideEndedBy: Maybe RideEndedBy
+    shouldRectifyDistantPointsSnapToRoadFailure: Maybe Bool
 
   sqlType:
     id: character(36)

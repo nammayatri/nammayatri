@@ -64,3 +64,9 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN ride_ended_by text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_toll_charges double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN toll_names text[] ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN should_rectify_distant_points_snap_to_road_failure boolean ;

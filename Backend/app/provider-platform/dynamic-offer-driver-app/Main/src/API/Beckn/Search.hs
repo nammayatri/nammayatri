@@ -82,7 +82,7 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
           let dSearchRes = bool dSearchResWihoutQuotes dSearchResWithQuotes isValueAddNP
 
           when ((notNull dSearchRes.quotes && isValueAddNP) || null dSearchRes.quotes) $ do
-            onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri (Just bppId) (Just bppUri) city country
+            onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri (Just bppId) (Just bppUri) city country isValueAddNP
             let context' = onSearchReq.onSearchReqContext
             logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
             void $

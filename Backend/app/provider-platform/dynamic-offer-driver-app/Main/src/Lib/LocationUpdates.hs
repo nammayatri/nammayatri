@@ -220,7 +220,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
     mkRideInterpolationHandler
       isEndRide
       (\driverId dist googleSnapCalls osrmSnapCalls -> void (QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls))
-      (\driverId tollCharges -> void (QRide.updateTollCharges driverId tollCharges))
+      (\driverId tollCharges tollNames -> void (QRide.updateTollChargesAndNames driverId tollCharges tollNames))
       ( \driverId batchWaypoints -> do
           ride <- QRide.getActiveByDriverId driverId
           updateDeviation transportConfig enableNightSafety ride batchWaypoints

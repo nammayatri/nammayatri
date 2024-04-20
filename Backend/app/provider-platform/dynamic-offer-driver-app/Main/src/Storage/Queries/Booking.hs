@@ -293,6 +293,8 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.paymentMethodId = getId <$> paymentMethodId,
         BeamB.paymentUrl = paymentUrl,
         BeamB.riderName = riderName,
+        BeamB.tollCharges = tollCharges,
+        BeamB.tollNames = tollNames,
         BeamB.createdAt = createdAt,
         BeamB.updatedAt = updatedAt,
         BeamB.distanceToPickup = realToFrac <$> distanceToPickup,
