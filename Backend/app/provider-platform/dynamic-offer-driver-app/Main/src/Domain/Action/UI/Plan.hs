@@ -442,7 +442,7 @@ planSuspendGeneric serviceName isDashboard (driverId, _merchantId, merchantOpCit
         updateSubscriptionStatus serviceName (driverId, _merchantId, merchantOpCityId) (Just DI.SUSPENDED) Nothing
         QDF.updateAllExecutionPendingToManualOverdueByDriverIdForServiceName (cast driverId) serviceName
         QINV.inActivateAllAutopayActiveInvoices (cast driverId) serviceName
-      when isDashboard $ notifyPaymentModeManualOnSuspend merchantOpCityId driverId driver.deviceToken
+      when isDashboard $ notifyPaymentModeManualOnSuspend merchantOpCityId driver
     (Just _, Just _) -> throwError InvalidAutoPayStatus
     (_, _) -> throwError $ NoCurrentPlanForDriver driverId.getId
   return Success
