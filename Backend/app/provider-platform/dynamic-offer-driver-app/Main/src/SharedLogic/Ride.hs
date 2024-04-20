@@ -92,7 +92,7 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
 
-  Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver.id driver.deviceToken
+  Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken
 
   fork "DriverScoreEventHandler OnNewRideAssigned" $
     DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId}
@@ -221,7 +221,7 @@ pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDrive
       DP.removeSearchReqIdFromMap merchantId driverId driverReq.searchTryId
       void $ QSRD.updateDriverResponse driverReq.id SReqD.Pulled SReqD.Inactive
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      Notify.notifyDriverClearedFare merchantOpCityId driverId driverReq.searchTryId estimatedFare driver_.deviceToken
+      Notify.notifyDriverClearedFare merchantOpCityId driver_ driverReq.searchTryId estimatedFare
 
 searchRequestKey :: Text -> Text
 searchRequestKey sId = "Driver:Search:Request:" <> sId
