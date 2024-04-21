@@ -19,10 +19,11 @@
 module Domain.Types.Common where
 
 import qualified Data.List as List
+import EulerHS.Prelude hiding (length)
 import Kernel.Prelude
 import Kernel.Utils.GenericPretty
 import qualified Text.Show
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForEnumAndList)
 
 data UsageSafety = Safe | Unsafe
 
@@ -91,6 +92,20 @@ instance Read TripCategory where
       app_prec = 10
       stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
 
+data ServiceTierType
+  = COMFY
+  | ECO
+  | PREMIUM
+  | SUV
+  | AUTO_RICKSHAW
+  | HATCHBACK
+  | SEDAN
+  | TAXI
+  | TAXI_PLUS
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Hashable, Enum, Bounded)
+
+$(mkBeamInstancesForEnumAndList ''ServiceTierType)
+
 isRideOtpBooking :: TripCategory -> Bool
 isRideOtpBooking (OneWay OneWayRideOtp) = True
 isRideOtpBooking (Rental RideOtp) = True
@@ -127,3 +142,7 @@ isRentalTrip tripCategory = case tripCategory of
 isDynamicOfferTrip :: TripCategory -> Bool
 isDynamicOfferTrip (OneWay OneWayOnDemandDynamicOffer) = True
 isDynamicOfferTrip _ = False
+
+isTollApplicable :: ServiceTierType -> Bool
+isTollApplicable AUTO_RICKSHAW = False
+isTollApplicable _ = True

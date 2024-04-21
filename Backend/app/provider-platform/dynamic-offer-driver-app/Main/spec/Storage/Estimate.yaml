@@ -30,6 +30,7 @@ Estimate:
       isScheduled: Bool
       isCustomerPrefferedSearchRoute: Maybe Bool
       isBlockedRoute: Maybe Bool
+      tollNames: Maybe [Text]
       createdAt: UTCTime
       updatedAt: UTCTime
 

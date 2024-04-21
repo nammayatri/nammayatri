@@ -61,6 +61,7 @@ data Estimate = Estimate
     tripTerms :: Maybe DTripTerms.TripTerms,
     estimateBreakupList :: [EstimateBreakup],
     nightShiftInfo :: Maybe NightShiftInfo,
+    tollChargesInfo :: Maybe TollChargesInfo,
     status :: EstimateStatus,
     waitingCharges :: WaitingCharges,
     driversLocation :: [LatLong],
@@ -91,6 +92,18 @@ data NightShiftInfoAPIEntity = NightShiftInfoAPIEntity
     oldNightShiftCharge :: Maybe Centesimal, -- TODO: this field works wrong, value in it not always make sense, it have to be removed later
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data TollChargesInfo = TollChargesInfo
+  { tollCharges :: Price,
+    tollNames :: [Text]
+  }
+  deriving (Generic, Show)
+
+data TollChargesInfoAPIEntity = TollChargesInfoAPIEntity
+  { tollChargesWithCurrency :: PriceAPIEntity,
+    tollNames :: [Text]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -173,6 +186,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     estimateFareBreakup :: [EstimateBreakupAPIEntity],
     nightShiftRate :: Maybe NightShiftRateAPIEntity, -- TODO: doesn't make sense, to be removed
     nightShiftInfo :: Maybe NightShiftInfoAPIEntity,
+    tollChargesInfo :: Maybe TollChargesInfoAPIEntity,
     waitingCharges :: WaitingChargesAPIEntity,
     driversLatLong :: [LatLong],
     specialLocationTag :: Maybe Text,
@@ -207,6 +221,11 @@ mkNightShiftInfoAPIEntity NightShiftInfo {..} = do
   let nightShiftChargeWithCurrency = mkPriceAPIEntity nightShiftCharge
   NightShiftInfoAPIEntity {nightShiftCharge = nightShiftCharge.amountInt, ..}
 
+mkTollChargesInfoAPIEntity :: TollChargesInfo -> TollChargesInfoAPIEntity
+mkTollChargesInfoAPIEntity TollChargesInfo {..} = do
+  let tollChargesWithCurrency = mkPriceAPIEntity tollCharges
+  TollChargesInfoAPIEntity {..}
+
 mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Estimate -> m EstimateAPIEntity
 mkEstimateAPIEntity Estimate {..} = do
   valueAddNPRes <- QNP.isValueAddNP providerId
@@ -234,6 +253,7 @@ mkEstimateAPIEntity Estimate {..} = do
         estimatedTotalFareWithCurrency = mkPriceAPIEntity estimatedTotalFare,
         discountWithCurrency = mkPriceAPIEntity <$> discount,
         nightShiftInfo = mkNightShiftInfoAPIEntity <$> nightShiftInfo,
+        tollChargesInfo = mkTollChargesInfoAPIEntity <$> tollChargesInfo,
         waitingCharges = mkWaitingChargesAPIEntity waitingCharges,
         totalFareRange = mkFareRangeAPIEntity totalFareRange,
         vehicleVariant = DVST.castServiceTierToVariant vehicleServiceTierType,

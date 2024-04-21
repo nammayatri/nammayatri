@@ -46,6 +46,8 @@ data SearchTry = SearchTry
     searchRepeatCounter :: Int,
     searchRepeatType :: SearchRepeatType,
     tripCategory :: DTC.TripCategory,
+    tollCharges :: Maybe HighPrecMoney,
+    tollNames :: Maybe [Text],
     isScheduled :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

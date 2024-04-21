@@ -85,10 +85,11 @@ tfQuotesInfo provider fulfillments validTill item = do
       let bppEstimateId_ = Id quoteOrEstId_
       driversLocation_ <- Beckn.OnDemand.Utils.OnSearch.getProviderLocation provider vehicleVariant_
       let nightShiftInfo_ = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
+          tollChargesInfo_ = Beckn.OnDemand.Utils.OnSearch.buildTollChargesInfo item currency
       totalFareRange_ <- Beckn.OnDemand.Utils.OnSearch.getTotalFareRange item currency
       waitingCharges_ <- Beckn.OnDemand.Utils.OnSearch.buildWaitingChargeInfo item currency
       estimateBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildEstimateBreakupList item currency
-      pure $ Left $ Domain.Action.Beckn.OnSearch.EstimateInfo {bppEstimateId = bppEstimateId_, descriptions = descriptions_, discount = discount_, driversLocation = driversLocation_, estimateBreakupList = estimateBreakupList_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, nightShiftInfo = nightShiftInfo_, specialLocationTag = specialLocationTag_, totalFareRange = totalFareRange_, vehicleVariant = vehicleVariant_, waitingCharges = waitingCharges_, validTill, serviceTierName = mbServiceTierName, serviceTierType = mbServiceTierType, serviceTierShortDesc = mbServiceTierShortDesc, isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_, isBlockedRoute = isBlockedRoute_}
+      pure $ Left $ Domain.Action.Beckn.OnSearch.EstimateInfo {bppEstimateId = bppEstimateId_, descriptions = descriptions_, discount = discount_, driversLocation = driversLocation_, estimateBreakupList = estimateBreakupList_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, nightShiftInfo = nightShiftInfo_, specialLocationTag = specialLocationTag_, totalFareRange = totalFareRange_, vehicleVariant = vehicleVariant_, waitingCharges = waitingCharges_, validTill, serviceTierName = mbServiceTierName, serviceTierType = mbServiceTierType, serviceTierShortDesc = mbServiceTierShortDesc, isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_, isBlockedRoute = isBlockedRoute_, tollChargesInfo = tollChargesInfo_}
 
 getCurrency :: Kernel.Types.App.MonadFlow m => BecknV2.OnDemand.Types.Item -> m Currency
 getCurrency item =

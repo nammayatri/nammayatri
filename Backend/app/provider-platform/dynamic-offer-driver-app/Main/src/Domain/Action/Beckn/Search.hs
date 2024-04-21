@@ -194,8 +194,8 @@ handler ValidatedDSearchReq {..} sReq = do
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
   void $ QSR.createDSReq searchReq
 
-  let buildEstimateHelper = buildEstimate merchantOpCityId searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled mbDistance specialLocationTag mbTollCharges mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
-  let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled mbDistance mbDuration specialLocationTag mbTollCharges mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
+  let buildEstimateHelper = buildEstimate merchantOpCityId searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled mbDistance specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
+  let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled mbDistance mbDuration specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
   (estimates, quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
   QEst.createMany estimates
   for_ quotes QQuote.create
@@ -398,12 +398,13 @@ buildQuote ::
   Maybe Seconds ->
   Maybe Text ->
   Maybe HighPrecMoney ->
+  Maybe [Text] ->
   Maybe Bool ->
   Maybe Bool ->
   Bool ->
   DFP.FullFarePolicy ->
   m DQuote.Quote
-buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled mbDistance mbDuration specialLocationTag tollCharges isCustomerPrefferedSearchRoute isBlockedRoute nightShiftOverlapChecking fullFarePolicy = do
+buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled mbDistance mbDuration specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance
   fareParams <-
     calculateFareParameters
@@ -435,6 +436,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled m
   let driverPickUpCharge = DTSRD.extractDriverPickupCharges fullFarePolicy.farePolicyDetails
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId fullFarePolicy.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show fullFarePolicy.vehicleServiceTier))
   let validTill = searchRequestExpirationSeconds `addUTCTime` now
+      isTollApplicableForServiceTier = DTC.isTollApplicable fullFarePolicy.vehicleServiceTier
   pure
     DQuote.Quote
       { id = quoteId,
@@ -447,6 +449,8 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled m
         driverMaxFee = mbDriverExtraFeeBounds <&> (.maxFee),
         tripCategory = fullFarePolicy.tripCategory,
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
+        tollNames = if isTollApplicableForServiceTier then tollNames else Nothing,
+        tollCharges = if isTollApplicableForServiceTier then tollCharges else Nothing,
         createdAt = now,
         updatedAt = now,
         ..
@@ -461,12 +465,13 @@ buildEstimate ::
   Maybe Meters ->
   Maybe Text ->
   Maybe HighPrecMoney ->
+  Maybe [Text] ->
   Maybe Bool ->
   Maybe Bool ->
   Bool ->
   DFP.FullFarePolicy ->
   m DEst.Estimate
-buildEstimate merchantOpCityId searchReqId startTime isScheduled mbDistance specialLocationTag tollCharges isCustomerPrefferedSearchRoute isBlockedRoute nightShiftOverlapChecking fullFarePolicy = do
+buildEstimate merchantOpCityId searchReqId startTime isScheduled mbDistance specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
   fareParams <-
     calculateFareParameters
@@ -495,6 +500,7 @@ buildEstimate merchantOpCityId searchReqId startTime isScheduled mbDistance spec
   let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance dist <$> fullFarePolicy.driverExtraFeeBounds
   let driverPickUpCharge = DTSRD.extractDriverPickupCharges fullFarePolicy.farePolicyDetails
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId fullFarePolicy.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show fullFarePolicy.vehicleServiceTier))
+  let isTollApplicableForServiceTier = DTC.isTollApplicable fullFarePolicy.vehicleServiceTier
   pure
     DEst.Estimate
       { id = estimateId,
@@ -510,6 +516,7 @@ buildEstimate merchantOpCityId searchReqId startTime isScheduled mbDistance spec
         specialLocationTag = specialLocationTag,
         driverPickUpCharge,
         isScheduled = isScheduled,
+        tollNames = if isTollApplicableForServiceTier then tollNames else Nothing,
         createdAt = now,
         updatedAt = now,
         ..

@@ -13,23 +13,9 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 
-module Domain.Types.ServiceTierType where
+module Domain.Types.ServiceTierType
+  ( module Reexport,
+  )
+where
 
-import Data.Aeson
-import qualified EulerHS.Prelude
-import Kernel.Prelude
-import qualified Tools.Beam.UtilsTH
-
-data ServiceTierType
-  = COMFY
-  | ECO
-  | PREMIUM
-  | SUV
-  | AUTO_RICKSHAW
-  | HATCHBACK
-  | SEDAN
-  | TAXI
-  | TAXI_PLUS
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierType)
+import Domain.Types.Common as Reexport

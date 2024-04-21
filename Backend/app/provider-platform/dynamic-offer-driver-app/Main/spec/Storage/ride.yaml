@@ -66,6 +66,7 @@ Ride:
     uiDistanceCalculationWithoutAccuracy: Maybe Int
     isFreeRide: Maybe Bool
     estimatedTollCharges: Maybe HighPrecMoney
+    estimatedTollNames: Maybe [Text]
     tollCharges: Maybe HighPrecMoney
     tollNames: Maybe [Text]
     driverGoHomeRequestId: Maybe (Id DriverGoHomeRequest)

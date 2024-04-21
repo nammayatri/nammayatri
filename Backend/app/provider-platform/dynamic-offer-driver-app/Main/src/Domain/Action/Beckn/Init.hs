@@ -123,6 +123,8 @@ handler merchantId req validatedReq = do
       ( CacheFlow m r,
         EsqDBFlow m r,
         HasField "vehicleServiceTier" q DVST.ServiceTierType,
+        HasField "tollCharges" q (Maybe HighPrecMoney),
+        HasField "tollNames" q (Maybe [Text]),
         HasField "distance" q (Maybe Meters),
         HasField "estimatedFare" q Money,
         HasField "fareParams" q DFP.FareParameters,
@@ -176,8 +178,8 @@ handler merchantId req validatedReq = do
             distanceToPickup = distanceToPickup,
             stopLocationId = (.id) <$> toLocation,
             startTime = searchRequest.startTime,
-            tollCharges = searchRequest.tollCharges,
-            tollNames = searchRequest.tollNames,
+            tollCharges = driverQuote.tollCharges,
+            tollNames = driverQuote.tollNames,
             ..
           }
 

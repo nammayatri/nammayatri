@@ -130,7 +130,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     customerCancellationDues :: HighPrecMoney,
     isValueAddNP :: Bool,
     driverPickUpCharges :: Maybe Money,
-    tollCharges :: Maybe HighPrecMoney
+    tollCharges :: Maybe HighPrecMoney,
+    tollNames :: Maybe [Text]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -165,7 +166,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       keepHiddenForSeconds = keepHiddenForSeconds,
       goHomeRequestId = nearbyReq.goHomeRequestId,
       customerCancellationDues = nearbyReq.customerCancellationDues,
-      tollCharges = searchRequest.tollCharges,
+      tollCharges = searchTry.tollCharges,
+      tollNames = searchTry.tollNames,
       tripCategory = searchTry.tripCategory,
       duration = searchRequest.estimatedDuration,
       pickupZone = nearbyReq.pickupZone,

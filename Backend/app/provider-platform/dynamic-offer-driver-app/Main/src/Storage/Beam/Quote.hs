@@ -42,6 +42,8 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     isScheduled :: B.C f (Maybe Bool),
     isCustomerPrefferedSearchRoute :: B.C f (Maybe Bool),
     isBlockedRoute :: B.C f (Maybe Bool),
+    tollCharges :: B.C f (Maybe Common.HighPrecMoney),
+    tollNames :: B.C f (Maybe [Text]),
     createdAt :: B.C f LocalTime,
     updatedAt :: B.C f LocalTime
   }

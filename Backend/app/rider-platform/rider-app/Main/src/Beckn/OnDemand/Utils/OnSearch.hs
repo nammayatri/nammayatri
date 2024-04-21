@@ -151,6 +151,26 @@ buildEstimateBreakUpItem currency tag = do
             }
       }
 
+buildTollChargesInfo :: Spec.Item -> Currency -> Maybe OnSearch.TollChargesInfo
+buildTollChargesInfo item currency = do
+  let itemTags = item.itemTags
+  tollCharges <- getTollCharges itemTags currency
+  tollNames <- getTollNames item
+  Just $
+    OnSearch.TollChargesInfo {..}
+
+getTollCharges :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getTollCharges tagGroup currency = do
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.TOLL_CHARGES tagGroup
+  tollCharges <- DecimalValue.valueFromString tagValue
+  Just $ decimalValueToPrice currency tollCharges
+
+getTollNames :: Spec.Item -> Maybe [Text]
+getTollNames item = do
+  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.TOLL_NAMES item.itemTags
+  parsedTagValue <- readMaybe tagValueStr :: Maybe [Text]
+  return parsedTagValue
+
 buildNightShiftInfo :: Spec.Item -> Currency -> Maybe OnSearch.NightShiftInfo
 buildNightShiftInfo item currency = do
   let itemTags = item.itemTags

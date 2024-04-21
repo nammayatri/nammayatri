@@ -105,6 +105,13 @@ instance FromTType' BeamE.Estimate Estimate where
             serviceTierShortDesc = serviceTierShortDesc,
             tripTerms = trip,
             estimateBreakupList = etB,
+            tollChargesInfo =
+              ((,) <$> tollCharges <*> tollNames)
+                <&> \(tollCharges', tollNames') ->
+                  DE.TollChargesInfo
+                    { tollNames = tollNames',
+                      tollCharges = mkPriceWithDefault (Just tollCharges') currency (round tollCharges' :: Money)
+                    },
             nightShiftInfo =
               ((,,) <$> nightShiftCharge <*> nightShiftStart <*> nightShiftEnd)
                 <&> \(nightShiftCharge', nightShiftStart', nightShiftEnd') ->
@@ -167,6 +174,8 @@ instance ToTType' BeamE.Estimate Estimate where
         BeamE.specialLocationTag = specialLocationTag,
         BeamE.isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
         BeamE.isBlockedRoute = isBlockedRoute,
+        BeamE.tollCharges = tollChargesInfo <&> (.tollCharges.amount),
+        BeamE.tollNames = tollChargesInfo <&> (.tollNames),
         BeamE.updatedAt = updatedAt,
         BeamE.createdAt = createdAt,
         BeamE.validTill = validTill

@@ -62,6 +62,8 @@ data DriverQuote = DriverQuote
     providerId :: Id DMerchant.Merchant,
     specialLocationTag :: Maybe Text,
     goHomeRequestId :: Maybe (Id DDGR.DriverGoHomeRequest),
+    tollCharges :: Maybe HighPrecMoney,
+    tollNames :: Maybe [Text],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

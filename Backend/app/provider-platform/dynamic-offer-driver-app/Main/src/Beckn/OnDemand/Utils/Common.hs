@@ -80,7 +80,8 @@ data Pricing = Pricing
     isCustomerPrefferedSearchRoute :: Maybe Bool,
     isBlockedRoute :: Maybe Bool,
     fulfillmentType :: Text,
-    distanceToNearestDriver :: Maybe Meters
+    distanceToNearestDriver :: Maybe Meters,
+    tollNames :: Maybe [Text]
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
@@ -946,6 +947,7 @@ mkGeneralInfoTagGroup pricing isValueAddNP
               <> distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
               <> isCustomerPrefferedSearchRouteSingleton pricing.isCustomerPrefferedSearchRoute
               <> isBlockedRouteSingleton pricing.isBlockedRoute
+              <> tollNamesSingleton pricing.tollNames
         }
   where
     specialLocationTagSingleton specialLocationTag
@@ -1007,6 +1009,21 @@ mkGeneralInfoTagGroup pricing isValueAddNP
                       descriptorShortDesc = Nothing
                     },
               tagValue = show <$> isBlockedRoute
+            }
+    tollNamesSingleton tollNames
+      | isNothing tollNames || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.TOLL_NAMES,
+                      descriptorName = Just "Toll Names",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> tollNames
             }
 
 mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]

@@ -135,8 +135,8 @@ parseBookingDetails order msgId = do
       registeredAt :: Maybe UTCTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.REGISTERED_AT tagGroups
   let driverImage = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personImage) >>= (.imageUrl)
   let vehicleColor = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleColor)
-  vehicleModel <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleModel) & fromMaybeM (InvalidRequest "vehicleModel is not present in RideAssigned Event.")
-  vehicleNumber <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleRegistration) & fromMaybeM (InvalidRequest "vehicleNumber is not present in RideAssigned Event.")
+      vehicleModel = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleModel)
+      vehicleNumber = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleRegistration)
   pure $
     Common.BookingDetails
       { bppBookingId = Id bppBookingId,
@@ -144,6 +144,8 @@ parseBookingDetails order msgId = do
         driverMobileCountryCode = Just "+91", -----------TODO needs to be added in agent Tags------------
         driverRating = realToFrac <$> rating,
         driverRegisteredAt = registeredAt,
+        vehicleModel = fromMaybe "UNKWOWN" vehicleModel,
+        vehicleNumber = fromMaybe "UNKWOWN" vehicleNumber,
         ..
       }
 

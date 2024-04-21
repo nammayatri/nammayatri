@@ -28,6 +28,7 @@ data Estimate = Estimate
     minFare :: Kernel.Types.Common.Money,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     tripCategory :: Domain.Types.Common.TripCategory,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,

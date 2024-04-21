@@ -149,6 +149,8 @@ instance ToTType' BeamST.SearchTry SearchTry where
         searchRepeatType = searchRepeatType,
         tripCategory = Just tripCategory,
         isScheduled = Just isScheduled,
+        tollCharges = tollCharges,
+        tollNames = tollNames,
         createdAt = createdAt,
         updatedAt = updatedAt
       }

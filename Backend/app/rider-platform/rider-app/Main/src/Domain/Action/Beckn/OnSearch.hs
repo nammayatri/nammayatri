@@ -16,6 +16,7 @@ module Domain.Action.Beckn.OnSearch
   ( DOnSearchReq (..),
     ProviderInfo (..),
     EstimateInfo (..),
+    TollChargesInfo (..),
     DEstimate.FareRange (..),
     QuoteInfo (..),
     QuoteDetails (..),
@@ -104,6 +105,7 @@ data EstimateInfo = EstimateInfo
     descriptions :: [Text],
     estimateBreakupList :: [EstimateBreakupInfo],
     nightShiftInfo :: Maybe NightShiftInfo,
+    tollChargesInfo :: Maybe TollChargesInfo,
     waitingCharges :: Maybe WaitingChargesInfo,
     driversLocation :: [LatLong],
     specialLocationTag :: Maybe Text,
@@ -120,6 +122,11 @@ data NightShiftInfo = NightShiftInfo
     oldNightShiftCharge :: Maybe Centesimal,
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
+  }
+
+data TollChargesInfo = TollChargesInfo
+  { tollCharges :: Price,
+    tollNames :: [Text]
   }
 
 newtype WaitingChargesInfo = WaitingChargesInfo
@@ -300,6 +307,12 @@ buildEstimate providerInfo now searchRequest EstimateInfo {..} = do
                 oldNightShiftCharge = nightShiftInfo'.oldNightShiftCharge, -- TODO: Doesn't make sense, to be removed
                 nightShiftStart = nightShiftInfo'.nightShiftStart,
                 nightShiftEnd = nightShiftInfo'.nightShiftEnd
+              },
+        tollChargesInfo =
+          tollChargesInfo <&> \tollChargesInfo' ->
+            DEstimate.TollChargesInfo
+              { tollCharges = tollChargesInfo'.tollCharges,
+                tollNames = tollChargesInfo'.tollNames
               },
         waitingCharges =
           DEstimate.WaitingCharges

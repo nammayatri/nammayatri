@@ -83,5 +83,7 @@ instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
         BeamQSZ.isScheduled = Just isScheduled,
         BeamQSZ.isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
         BeamQSZ.isBlockedRoute = isBlockedRoute,
+        BeamQSZ.tollCharges = tollCharges,
+        BeamQSZ.tollNames = tollNames,
         BeamQSZ.farePolicyId = getId . (.id) <$> farePolicy
       }

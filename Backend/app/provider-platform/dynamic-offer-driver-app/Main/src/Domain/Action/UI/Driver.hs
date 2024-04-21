@@ -886,12 +886,12 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
       (MonadFlow m, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime) =>
       SP.Person ->
       DSR.SearchRequest ->
+      DST.SearchTry ->
       SearchRequestForDriver ->
       Text ->
-      DTC.TripCategory ->
       Fare.FareParameters ->
       m DDrQuote.DriverQuote
-    buildDriverQuote driver searchReq sd estimateId tripCategory fareParams = do
+    buildDriverQuote driver searchReq searchTry sd estimateId fareParams = do
       guid <- generateGUID
       now <- getCurrentTime
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
@@ -920,8 +920,10 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
             fareParams,
             specialLocationTag = searchReq.specialLocationTag,
             goHomeRequestId = sd.goHomeRequestId,
-            tripCategory = tripCategory,
-            estimateId = Id estimateId
+            tripCategory = searchTry.tripCategory,
+            estimateId = Id estimateId,
+            tollCharges = searchTry.tollCharges,
+            tollNames = searchTry.tollNames
           }
     thereAreActiveQuotes = do
       driverUnlockDelay <- asks (.driverUnlockDelay)
@@ -962,7 +964,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
               customerExtraFee = searchTry.customerExtraFee,
               nightShiftCharge = Nothing,
               customerCancellationDues = searchReq.customerCancellationDues,
-              tollCharges = searchReq.tollCharges,
+              tollCharges = searchTry.tollCharges,
               estimatedRideDuration = Nothing,
               nightShiftOverlapChecking = DTC.isRentalTrip searchTry.tripCategory,
               estimatedDistance = Nothing,
@@ -970,7 +972,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
               ..
             }
       QFP.updateFareParameters fareParams
-      driverQuote <- buildDriverQuote driver searchReq sReqFD estimateId searchTry.tripCategory fareParams
+      driverQuote <- buildDriverQuote driver searchReq searchTry sReqFD estimateId fareParams
       void $ cacheFarePolicyByQuoteId driverQuote.id.getId farePolicy
       triggerQuoteEvent QuoteEventData {quote = driverQuote}
       void $ QDrQt.create driverQuote

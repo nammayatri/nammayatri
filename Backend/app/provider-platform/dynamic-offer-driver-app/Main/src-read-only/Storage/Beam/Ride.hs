@@ -28,6 +28,7 @@ data RideT f = RideT
     endOdometerReadingValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal)),
     endOtp :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     estimatedTollCharges :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    estimatedTollNames :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
     fare :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money)),
     fareParametersId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     id :: (B.C f Kernel.Prelude.Text),

@@ -43,6 +43,8 @@ data SearchTryT f = SearchTryT
     tripCategory :: B.C f (Maybe DTC.TripCategory),
     searchRepeatType :: B.C f Domain.SearchRepeatType,
     isScheduled :: B.C f (Maybe Bool),
+    tollCharges :: B.C f (Maybe HighPrecMoney),
+    tollNames :: B.C f (Maybe [Text]),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

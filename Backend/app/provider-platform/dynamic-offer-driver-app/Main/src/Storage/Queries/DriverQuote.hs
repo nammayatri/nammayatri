@@ -119,7 +119,9 @@ instance FromTType' BeamDQ.DriverQuote DriverQuote where
             fareParams = fp,
             providerId = Id providerId,
             goHomeRequestId = Id <$> goHomeRequestId,
-            specialLocationTag = specialLocationTag
+            specialLocationTag = specialLocationTag,
+            tollCharges = tollCharges,
+            tollNames = tollNames
           }
 
 instance ToTType' BeamDQ.DriverQuote DriverQuote where
@@ -148,5 +150,7 @@ instance ToTType' BeamDQ.DriverQuote DriverQuote where
         BeamDQ.fareParametersId = getId fareParams.id,
         BeamDQ.providerId = getId providerId,
         BeamDQ.goHomeRequestId = getId <$> goHomeRequestId,
-        BeamDQ.specialLocationTag = specialLocationTag
+        BeamDQ.specialLocationTag = specialLocationTag,
+        BeamDQ.tollCharges = tollCharges,
+        BeamDQ.tollNames = tollNames
       }

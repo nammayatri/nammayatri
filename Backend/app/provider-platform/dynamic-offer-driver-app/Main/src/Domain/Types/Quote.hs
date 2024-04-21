@@ -45,6 +45,8 @@ data Quote = Quote
     isScheduled :: Bool,
     isCustomerPrefferedSearchRoute :: Maybe Bool,
     isBlockedRoute :: Maybe Bool,
+    tollCharges :: Maybe HighPrecMoney,
+    tollNames :: Maybe [Text],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

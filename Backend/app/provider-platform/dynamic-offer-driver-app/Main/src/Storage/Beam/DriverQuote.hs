@@ -48,6 +48,8 @@ data DriverQuoteT f = DriverQuoteT
     fareParametersId :: B.C f Text,
     providerId :: B.C f Text,
     specialLocationTag :: B.C f (Maybe Text),
+    tollCharges :: B.C f (Maybe HighPrecMoney),
+    tollNames :: B.C f (Maybe [Text]),
     createdAt :: B.C f LocalTime,
     updatedAt :: B.C f LocalTime
   }

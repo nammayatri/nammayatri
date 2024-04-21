@@ -286,7 +286,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         autoPayStatus = driverInfo >>= (.autoPayStatus),
         isFreeRide = ride.isFreeRide,
         customerCancellationDues = fromMaybe 0 fareParams.customerCancellationDues,
-        estimatedTollCharges = fareParams.tollCharges,
+        estimatedTollCharges = booking.tollCharges,
         tollCharges = ride.tollCharges,
         startOdometerReading = ride.startOdometerReading,
         endOdometerReading = ride.endOdometerReading,

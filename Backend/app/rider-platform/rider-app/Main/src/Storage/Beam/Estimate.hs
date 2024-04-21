@@ -50,6 +50,8 @@ data EstimateT f = EstimateT
     vehicleVariant :: B.C f DVST.VehicleServiceTierType,
     driversLocation :: B.C f [LatLong],
     tripTermsId :: B.C f (Maybe Text),
+    tollCharges :: B.C f (Maybe HighPrecMoney),
+    tollNames :: B.C f (Maybe [Text]),
     nightShiftCharge :: B.C f (Maybe Money),
     nightShiftChargeAmount :: B.C f (Maybe HighPrecMoney),
     oldNightShiftCharge :: B.C f (Maybe Centesimal),

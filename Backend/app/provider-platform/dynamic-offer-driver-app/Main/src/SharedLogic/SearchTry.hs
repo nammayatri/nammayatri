@@ -180,6 +180,7 @@ buildSearchTry ::
   DVST.ServiceTierType ->
   m DST.SearchTry
 buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory customerExtraFee messageId serviceTier = do
+  let isTollApplicableForServiceTier = DTC.isTollApplicable serviceTier
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId serviceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))
@@ -198,6 +199,8 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
         isScheduled = searchReq.isScheduled,
         validTill = searchReq.validTill,
         status = DST.ACTIVE,
+        tollCharges = if isTollApplicableForServiceTier then searchReq.tollCharges else Nothing,
+        tollNames = if isTollApplicableForServiceTier then searchReq.tollNames else Nothing,
         createdAt = now,
         updatedAt = now,
         ..
