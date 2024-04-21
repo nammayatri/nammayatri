@@ -51,10 +51,8 @@ withCallback' doWithCallback transporter action api cbUrl internalEndPointHashMa
   let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
   fork ("sending " <> show action <> ", pushing ondc logs") do
-    ondcTokenHashMap <- asks (.ondcTokenHashMap)
-    let tokenConfig = HMS.lookup (KeyConfig transporter.id.getId "MOBILITY") ondcTokenHashMap
     req <- f
-    void $ pushLogs action (toJSON req) tokenConfig
+    void $ pushLogs action (toJSON req) transporter.id.getId
   withBecknCallback doWithCallback (Just $ ET.ManagerSelector authKey) action api cbUrl internalEndPointHashMap fromError f
 
 type Action = Text

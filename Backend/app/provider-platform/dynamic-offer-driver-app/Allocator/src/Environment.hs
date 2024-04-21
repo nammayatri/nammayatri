@@ -130,7 +130,6 @@ buildHandlerEnv HandlerCfg {..} = do
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
-  -- let tokenMap :: (M.Map KeyConfig (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
   return HandlerEnv {..}
 

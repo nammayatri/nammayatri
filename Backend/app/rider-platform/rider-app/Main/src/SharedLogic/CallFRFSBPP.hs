@@ -143,7 +143,5 @@ callBecknAPIWithSignature' ::
   m res
 callBecknAPIWithSignature' merchantId a b c d e req' = do
   fork ("sending " <> show b <> ", pushing ondc logs") $ do
-    ondcTokenHashMap <- asks (.ondcTokenHashMap)
-    let tokenConfig = HM.lookup (KeyConfig merchantId.getId "PUBLIC_TRANSPORT") ondcTokenHashMap
-    void $ pushLogs b (toJSON req') tokenConfig
+    void $ pushLogs b (toJSON req') merchantId.getId
   callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'

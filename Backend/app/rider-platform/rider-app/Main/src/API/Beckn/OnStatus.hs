@@ -18,7 +18,6 @@ import qualified Beckn.ACL.OnStatus as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified BecknV2.OnDemand.Utils.Common as Utils
-import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import Environment
 import Kernel.Prelude
@@ -30,7 +29,6 @@ import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import TransactionLogs.PushLogs
-import TransactionLogs.Types
 
 type API = OnStatus.OnStatusAPIV2
 
@@ -55,9 +53,7 @@ onStatus _ reqV2 = withFlowHandlerBecknAPI do
             DOnStatus.onStatus validatedOnStatusReq
           fork "on status received pushing ondc logs" do
             booking <- QRB.findByBPPBookingId onStatusReq.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> onStatusReq.bppBookingId.getId)
-            ondcTokenHashMap <- asks (.ondcTokenHashMap)
-            let tokenConfig = HM.lookup (KeyConfig booking.merchantId.getId "MOBILITY") ondcTokenHashMap
-            void $ pushLogs "on_status" (toJSON reqV2) tokenConfig
+            void $ pushLogs "on_status" (toJSON reqV2) booking.merchantId.getId
   pure Ack
 
 onStatusLockKey :: Text -> Text

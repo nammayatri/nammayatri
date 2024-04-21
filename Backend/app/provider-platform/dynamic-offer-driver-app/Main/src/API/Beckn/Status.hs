@@ -21,7 +21,6 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified Beckn.Types.Core.Taxi.API.Status as Status
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified Data.HashMap.Strict as HMS
 import qualified Domain.Action.Beckn.Status as DStatus
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -34,7 +33,6 @@ import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import TransactionLogs.PushLogs
-import TransactionLogs.Types
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -58,9 +56,7 @@ status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
     callbackUrl <- Utils.getContextBapUri context
     dStatusRes <- DStatus.handler transporterId dStatusReq
     fork "status received pushing ondc logs" do
-      ondcTokenHashMap <- asks (.ondcTokenHashMap)
-      let tokenConfig = HMS.lookup (KeyConfig dStatusRes.booking.providerId.getId "MOBILITY") ondcTokenHashMap
-      void $ pushLogs "status" (toJSON reqV2) tokenConfig
+      void $ pushLogs "status" (toJSON reqV2) dStatusRes.booking.providerId.getId
     internalEndPointHashMap <- asks (.internalEndPointHashMap)
     msgId <- Utils.getMessageId context
     onStatusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info (Just msgId)
