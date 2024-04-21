@@ -18,7 +18,6 @@ import qualified Beckn.ACL.OnSearch as TaxiACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified BecknV2.OnDemand.Utils.Common as Utils
-import qualified Data.HashMap.Strict as HM
 import Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Environment
@@ -28,7 +27,6 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import TransactionLogs.PushLogs
-import TransactionLogs.Types
 
 type API = OnSearch.OnSearchAPIV2
 
@@ -51,9 +49,7 @@ onSearch _ reqV2 = withFlowHandlerBecknAPI do
       Redis.whenWithLockRedis (onSearchLockKey messageId bppSubId) 60 $ do
         validatedRequest <- DOnSearch.validateRequest request
         fork "on search received pushing ondc logs" do
-          ondcTokenHashMap <- asks (.ondcTokenHashMap)
-          let tokenConfig = HM.lookup (KeyConfig validatedRequest.merchant.id.getId "MOBILITY") ondcTokenHashMap
-          void $ pushLogs "on_search" (toJSON reqV2) tokenConfig
+          void $ pushLogs "on_search" (toJSON reqV2) validatedRequest.merchant.id.getId
         fork "on search processing" $ do
           Redis.whenWithLockRedis (onSearchProcessingLockKey messageId bppSubId) 60 $
             DOnSearch.onSearch messageId validatedRequest

@@ -16,6 +16,7 @@ module TransactionLogs.PushLogs where
 
 import BecknV2.Utils
 import qualified Data.Aeson as A
+import qualified Data.HashMap.Strict as HM
 import EulerHS.Prelude hiding (state)
 import KafkaLogs.TransactionLogs
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
@@ -25,8 +26,18 @@ import Kernel.Utils.Common
 import TransactionLogs.Interface
 import TransactionLogs.Interface.Types
 
-pushLogs :: (CoreMetrics m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]) => Text -> A.Value -> Maybe TokenConfig -> m ()
-pushLogs requestType requestData mLogsTokenConfig = do
+pushLogs ::
+  ( CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]
+  ) =>
+  Text ->
+  A.Value ->
+  Text ->
+  m ()
+pushLogs requestType requestData merchantId = do
+  ondcTokenHashMap <- asks (.ondcTokenHashMap)
+  let mLogsTokenConfig = HM.lookup (KeyConfig merchantId "MOBILITY") ondcTokenHashMap
   let kafkaLog = TransactionLog requestType requestData
   pushBecknLogToKafka kafkaLog
   let transactionLog = TransactionLogReq requestType (maskSensitiveData requestData)

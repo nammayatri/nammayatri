@@ -25,7 +25,6 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Aeson as A
-import qualified Data.HashMap.Strict as HMS
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Cancel as DCancel
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -48,7 +47,6 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.Queries.Booking as QRB
 import Tools.Error
 import TransactionLogs.PushLogs
-import TransactionLogs.Types
 
 type API =
   Capture "merchantId" (Id Merchant)
@@ -85,9 +83,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
       merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
       booking <- QRB.findById cancelReq.bookingId >>= fromMaybeM (BookingDoesNotExist cancelReq.bookingId.getId)
       fork "cancel received pushing ondc logs" do
-        ondcTokenHashMap <- asks (.ondcTokenHashMap)
-        let tokenConfig = HMS.lookup (KeyConfig merchant.id.getId "MOBILITY") ondcTokenHashMap
-        void $ pushLogs "cancel" (toJSON reqV2) tokenConfig
+        void $ pushLogs "cancel" (toJSON reqV2) merchant.id.getId
       let onCancelBuildReq =
             OC.DBookingCancelledReqV2
               { booking = booking,

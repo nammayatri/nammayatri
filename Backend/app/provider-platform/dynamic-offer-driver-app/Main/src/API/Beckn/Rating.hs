@@ -17,7 +17,6 @@ module API.Beckn.Rating (API, handler) where
 import qualified Beckn.ACL.Rating as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
-import Data.HashMap.Strict as HMS
 import qualified Domain.Action.Beckn.Rating as DRating
 import Domain.Types.Merchant (Merchant)
 import Environment
@@ -34,7 +33,6 @@ import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import TransactionLogs.PushLogs
-import TransactionLogs.Types
 
 type API =
   Capture "merchantId" (Id Merchant)
@@ -62,9 +60,7 @@ rating merchantId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBeck
           DRating.handler merchantId dRatingReq ride
       fork "rating received pushing ondc logs" do
         booking <- B.runInReplica $ QRB.findById dRatingReq.bookingId >>= fromMaybeM (BookingDoesNotExist dRatingReq.bookingId.getId)
-        ondcTokenHashMap <- asks (.ondcTokenHashMap)
-        let tokenConfig = HMS.lookup (KeyConfig booking.providerId.getId "MOBILITY") ondcTokenHashMap
-        void $ pushLogs "rating" (toJSON reqV2) tokenConfig
+        void $ pushLogs "rating" (toJSON reqV2) booking.providerId.getId
     pure Ack
 
 ratingLockKey :: Text -> Text

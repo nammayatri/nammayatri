@@ -41,16 +41,3 @@ ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_track_ttl_sec inte
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_status_ttl_sec integer ;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_cancel_ttl_sec integer ;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_update_ttl_sec integer ;
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN logs_url text NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN logs_token text;
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.beckn_config ALTER COLUMN logs_url SET DEFAULT 'https://analytics-api.aws.ondc.org/v1/api/push-txn-logs';

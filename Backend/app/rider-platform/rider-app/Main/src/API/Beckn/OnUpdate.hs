@@ -18,7 +18,6 @@ import qualified Beckn.ACL.OnUpdate as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as OnUpdate
 import qualified BecknV2.OnDemand.Utils.Common as Utils
-import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import Environment
 import Kernel.Prelude
@@ -29,7 +28,6 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import Tools.Error
 import TransactionLogs.PushLogs
-import TransactionLogs.Types
 
 type API = OnUpdate.OnUpdateAPIV2
 
@@ -66,9 +64,7 @@ onUpdate _ reqV2 = withFlowHandlerBecknAPI do
             DOnUpdate.OUValidatedSafetyAlertReq req -> return req.booking
             DOnUpdate.OUValidatedStopArrivedReq req -> return req.booking
             DOnUpdate.OUValidatedFarePaidReq req -> return req.booking
-          ondcTokenHashMap <- asks (.ondcTokenHashMap)
-          let tokenConfig = HM.lookup (KeyConfig booking.merchantId.getId "MOBILITY") ondcTokenHashMap
-          void $ pushLogs "on_update" (toJSON reqV2) tokenConfig
+          void $ pushLogs "on_update" (toJSON reqV2) booking.merchantId.getId
   pure Ack
 
 onUpdateLockKey :: Text -> Text

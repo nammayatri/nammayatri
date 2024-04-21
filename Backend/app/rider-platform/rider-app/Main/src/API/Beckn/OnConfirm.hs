@@ -18,7 +18,6 @@ import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
 import qualified BecknV2.OnDemand.Utils.Common as Utils
-import qualified Data.HashMap.Strict as HM
 import Data.Text as T
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
 import Environment
@@ -32,7 +31,6 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import TransactionLogs.PushLogs
-import TransactionLogs.Types
 
 type API = OnConfirm.OnConfirmAPIV2
 
@@ -57,9 +55,7 @@ onConfirm _ reqV2 = withFlowHandlerBecknAPI do
         validatedReq <- DOnConfirm.validateRequest onConfirmReq transactionId
         fork "on confirm received pushing ondc logs" do
           booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
-          ondcTokenHashMap <- asks (.ondcTokenHashMap)
-          let tokenConfig = HM.lookup (KeyConfig booking.merchantId.getId "MOBILITY") ondcTokenHashMap
-          void $ pushLogs "on_confirm" (toJSON reqV2) tokenConfig
+          void $ pushLogs "on_confirm" (toJSON reqV2) booking.merchantId.getId
         fork "onConfirm request processing" $
           Redis.whenWithLockRedis (onConfirmProcessingLockKey bppBookingId.getId) 60 $
             DOnConfirm.onConfirm validatedReq

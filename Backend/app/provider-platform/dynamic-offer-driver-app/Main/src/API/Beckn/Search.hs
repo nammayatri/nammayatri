@@ -22,7 +22,6 @@ import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson.Text as A
-import qualified Data.HashMap.Strict as HMS
 import Data.List.Extra (notNull)
 import qualified Data.Text.Lazy as TL
 import qualified Domain.Action.Beckn.Search as DSearch
@@ -40,7 +39,6 @@ import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as VNP
 import TransactionLogs.PushLogs
-import TransactionLogs.Types
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -73,9 +71,7 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
     Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
       validatedSReq <- DSearch.validateRequest transporterId dSearchReq
       fork "search received pushing ondc logs" do
-        ondcTokenHashMap <- asks (.ondcTokenHashMap)
-        let tokenConfig = HMS.lookup (KeyConfig validatedSReq.merchant.id.getId "MOBILITY") ondcTokenHashMap
-        void $ pushLogs "search" (toJSON reqV2) tokenConfig
+        void $ pushLogs "search" (toJSON reqV2) validatedSReq.merchant.id.getId
       let bppId = validatedSReq.merchant.subscriberId.getShortId
       bppUri <- Utils.mkBppUri transporterId.getId
       fork "search request processing" $
