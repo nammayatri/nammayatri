@@ -1,0 +1,52 @@
+pipeline {
+  agent {
+      kubernetes {
+            label 'dind-agent'
+      }
+  }
+  environment {
+      APP_NAME = "in.yatri.consumer"
+      PLATFORMS = "android,ios"
+      GIT_AUTHOR_NAME = "Jenkins User"
+      GIT_COMMITTER_NAME = "Jenkins User"
+      GIT_BRANCH = "main"
+  }
+
+  stages {
+
+    stage("checkout and clone") {
+      steps {
+        script {
+          env.FAILED_STAGE = env.STAGE_NAME
+          sh ("git clone -b ${GIT_BRANCH} https://github.com/nammayatri/nammayatri.git")
+        //   sh ("npm config set package-lock=false; npm i") // npm config is update so as to ignore package-lock.json
+        }
+      }
+    }
+
+    stage("PS compilation") {
+      steps {
+        script {
+          env.FAILED_STAGE = env.STAGE_NAME
+          sh ("npm run compile:purs")
+        }
+      }
+    }
+
+    stage("Bundle Generation") {
+      when {
+        anyOf {
+          branch "main"
+        }
+      }
+      steps {
+        script {
+          env.FAILED_STAGE = env.STAGE_NAME
+          PLATFORMS.tokenize(",").each { platform ->
+            sh ("npm run bundle:${platform}")
+          }
+        }
+      }
+    }
+  }
+}
