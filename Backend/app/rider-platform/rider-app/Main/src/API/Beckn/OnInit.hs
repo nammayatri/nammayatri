@@ -20,7 +20,6 @@ import qualified Beckn.ACL.OnInit as TaxiACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified BecknV2.OnDemand.Utils.Common as Common
-import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.UI.Cancel as DCancel
 import Domain.Types.CancellationReason (CancellationReasonCode (..), CancellationStage (..))
@@ -35,7 +34,6 @@ import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import TransactionLogs.PushLogs
-import TransactionLogs.Types
 
 type API = OnInit.OnInitAPIV2
 
@@ -57,9 +55,7 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
           fork "on_init request processing" $ do
             (onInitRes, booking) <- DOnInit.onInit onInitReq
             fork "on init received pushing ondc logs" do
-              ondcTokenHashMap <- asks (.ondcTokenHashMap)
-              let tokenConfig = HM.lookup (KeyConfig onInitRes.merchant.id.getId "MOBILITY") ondcTokenHashMap
-              void $ pushLogs "on_init" (toJSON reqV2) tokenConfig
+              void $ pushLogs "on_init" (toJSON reqV2) onInitRes.merchant.id.getId
             handle (errHandler booking) . void . withShortRetry $ do
               confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
               CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq onInitRes.merchant.id
