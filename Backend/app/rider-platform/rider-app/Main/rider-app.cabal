@@ -172,6 +172,7 @@ library
       Domain.Action.UI.Cancel
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Confirm
+      Domain.Action.UI.CustomerReferral
       Domain.Action.UI.Disability
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
@@ -386,11 +387,13 @@ library
       Tools.Ticket
       Tools.Whatsapp
       API.Action.UI.Cac
+      API.Action.UI.CustomerReferral
       API.Action.UI.FollowRide
       API.Action.UI.FRFSTicketService
       API.Action.UI.Invoice
       API.Action.UI.Sos
       API.Action.UI.TicketService
+      API.Types.UI.CustomerReferral
       API.Types.UI.FollowRide
       API.Types.UI.FRFSTicketService
       API.Types.UI.Invoice
