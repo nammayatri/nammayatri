@@ -382,7 +382,7 @@ notifyDriverClearedFare ::
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
   Id SearchTry ->
-  Money ->
+  Price ->
   Maybe FCM.FCMRecipientToken ->
   m ()
 notifyDriverClearedFare merchantOpCityId driverId sReqId fare mbToken = do
@@ -394,7 +394,7 @@ notifyDriverClearedFare merchantOpCityId driverId sReqId fare mbToken = do
       FCM.FCMNotificationBody $
         unwords
           [ "Clearing fare - ",
-            show fare.getMoney <> "."
+            show fare.amount <> " " <> show fare.currency <> "."
           ]
     notificationData =
       FCM.FCMData

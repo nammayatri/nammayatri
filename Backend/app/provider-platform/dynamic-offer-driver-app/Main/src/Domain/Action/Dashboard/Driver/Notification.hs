@@ -90,6 +90,7 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAdd
       toLocation = Just $ mkDummySearchReqToLocation now toLocData
       newFromLocation = mkDummyFromLocation now fromLocData
       newToLocation = Just $ mkDummyToLocation now toLocData
+      mkDummyPrice (amountInt :: Int) = PriceAPIEntity (toHighPrecMoney amountInt) INR
    in DSearchReq.SearchRequestForDriverAPIEntity
         { searchRequestId = Id fromLocData.dummyId,
           searchTryId = Id fromLocData.dummyId,
@@ -98,9 +99,12 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAdd
           distanceToPickup = Meters 149,
           durationToPickup = Seconds 65,
           baseFare = Money fromLocData.baseFare,
+          baseFareWithCurrency = mkDummyPrice fromLocData.baseFare,
           driverLatLong = LatLong {lat = fromLocData.lat, lon = fromLocData.lon},
           driverMinExtraFee = Just (Money 0),
+          driverMinExtraFeeWithCurrency = Just $ mkDummyPrice 0,
           driverMaxExtraFee = Just (Money 20),
+          driverMaxExtraFeeWithCurrency = Just $ mkDummyPrice 20,
           rideRequestPopupDelayDuration = Seconds 0,
           keepHiddenForSeconds = Seconds 0,
           requestedVehicleVariant = driverVehicle,
@@ -109,17 +113,22 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAdd
           bapName = Nothing,
           bapLogo = Nothing,
           customerExtraFee = Nothing,
+          customerExtraFeeWithCurrency = Nothing,
           specialLocationTag = Nothing,
           tollCharges = Nothing,
+          tollChargesWithCurrency = Nothing,
           disabilityTag = Nothing,
           goHomeRequestId = Nothing,
           isTranslated = False,
           customerCancellationDues = 0,
+          customerCancellationDuesWithCurrency = mkDummyPrice 0,
           tripCategory = DTC.OneWay DTC.OneWayOnDemandDynamicOffer,
           duration = Just (Seconds 300),
           pickupZone = False, -- TODO: make it dynamic ?
           specialZoneExtraTip = Nothing,
+          specialZoneExtraTipWithCurrency = Nothing,
           driverPickUpCharges = Nothing,
+          driverPickUpChargesWithCurrency = Nothing,
           ..
         }
 

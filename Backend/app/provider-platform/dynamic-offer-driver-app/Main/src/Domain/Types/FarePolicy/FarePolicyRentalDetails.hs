@@ -30,13 +30,14 @@ import Kernel.Types.Common
 import Kernel.Utils.Logging
 
 data FPRentalDetailsD (s :: UsageSafety) = FPRentalDetails
-  { baseFare :: Money,
-    perHourCharge :: Money,
+  { baseFare :: HighPrecMoney,
+    perHourCharge :: HighPrecMoney,
     distanceBuffers :: NonEmpty (FPRentalDetailsDistanceBuffersD s),
-    perExtraKmRate :: Money,
-    perExtraMinRate :: Money,
+    perExtraKmRate :: HighPrecMoney,
+    perExtraMinRate :: HighPrecMoney,
     includedKmPerHr :: Kilometers,
-    plannedPerKmRate :: Money,
+    plannedPerKmRate :: HighPrecMoney,
+    currency :: Currency,
     maxAdditionalKmsLimit :: Kilometers,
     totalAdditionalKmsLimit :: Kilometers,
     nightShiftCharge :: Maybe NightShiftCharge

@@ -174,6 +174,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
   now <- getCurrentTime
   let driverId = cast personId
   mbDriverLicense <- runInReplica $ QDL.findByDriverId driverId
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   let driverInfo =
         DriverInfo.DriverInformation
           { driverId = personId,
@@ -211,7 +212,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             airConditionScore = Nothing,
             merchantOperatingCityId = Just merchantOpCityId
           }
-  QDriverStats.createInitialDriverStats driverId
+  QDriverStats.createInitialDriverStats merchantOperatingCity.currency driverId
   QD.create driverInfo
   pure ()
 

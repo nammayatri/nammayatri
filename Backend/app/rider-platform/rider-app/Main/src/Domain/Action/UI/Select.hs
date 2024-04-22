@@ -168,7 +168,11 @@ select2 personId estimateId req@DSelectReq {..} = do
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
   _ <- QEstimate.updateStatus estimateId DEstimate.DRIVER_QUOTE_REQUESTED
   _ <- QDOffer.updateStatus estimateId DDO.INACTIVE
-  let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney <$> req.customerExtraFee) -- TODO check for correct currency
+  let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee)
+  Kernel.Prelude.whenJust req.customerExtraFeeWithCurrency $ \reqWithCurrency -> do
+    unless (estimate.estimatedFare.currency == reqWithCurrency.currency) $
+      throwError $ InvalidRequest "Invalid currency"
+
   when (isJust mbCustomerExtraFee || isJust req.paymentMethodId) $ do
     void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee req.paymentMethodId
   QPFS.clearCache searchRequest.riderId

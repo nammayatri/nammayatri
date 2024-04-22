@@ -41,8 +41,8 @@ data DriverFeeByInvoice = DriverFeeByInvoice
     platformFee :: PlatformFee,
     numRides :: Int,
     payBy :: UTCTime,
-    totalEarnings :: Money,
-    totalFee :: Money,
+    totalEarnings :: HighPrecMoney,
+    totalFee :: HighPrecMoney,
     startTime :: UTCTime,
     endTime :: UTCTime,
     status :: DDF.DriverFeeStatus
@@ -140,12 +140,12 @@ groupDriverFeeByInvoices driverFees_ = do
           startTime = DL.minimum (invoiceDriverFees <&> (.startTime))
           endTime = DL.maximum (invoiceDriverFees <&> (.endTime))
           totalEarnings = sum (invoiceDriverFees <&> (.totalEarnings))
-          govtCharges = sum (invoiceDriverFees <&> fromIntegral . (.govtCharges))
+          govtCharges = sum (invoiceDriverFees <&> (.govtCharges))
           fee = sum (invoiceDriverFees <&> (.platformFee.fee))
           cgst = sum (invoiceDriverFees <&> (.platformFee.cgst))
           sgst = sum (invoiceDriverFees <&> (.platformFee.sgst))
           platformFee = PlatformFee {..}
-          totalFee = round $ govtCharges + platformFee.fee + platformFee.cgst + platformFee.sgst
+          totalFee = govtCharges + platformFee.fee + platformFee.cgst + platformFee.sgst
           status =
             case mStatus of
               (Just status_) -> status_

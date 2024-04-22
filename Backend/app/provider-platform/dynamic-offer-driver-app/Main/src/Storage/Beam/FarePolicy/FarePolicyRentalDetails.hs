@@ -25,9 +25,15 @@ data FarePolicyRentalDetailsT f = FarePolicyRentalDetailsT
     perHourCharge :: B.C f Money,
     perExtraMinRate :: B.C f Money,
     perExtraKmRate :: B.C f Money,
+    baseFareAmount :: B.C f (Maybe HighPrecMoney),
+    perHourChargeAmount :: B.C f (Maybe HighPrecMoney),
+    perExtraMinRateAmount :: B.C f (Maybe HighPrecMoney),
+    perExtraKmRateAmount :: B.C f (Maybe HighPrecMoney),
     nightShiftCharge :: B.C f (Maybe DPM.NightShiftCharge),
     includedKmPerHr :: B.C f Kilometers,
     plannedPerKmRate :: B.C f Money,
+    plannedPerKmRateAmount :: B.C f (Maybe HighPrecMoney),
+    currency :: B.C f (Maybe Currency),
     maxAdditionalKmsLimit :: B.C f Kilometers,
     totalAdditionalKmsLimit :: B.C f Kilometers
   }

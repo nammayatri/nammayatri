@@ -23,15 +23,16 @@ data DriverStats = DriverStats
   { driverId :: Id Driver,
     idleSince :: UTCTime,
     totalRides :: Int,
-    totalEarnings :: Money,
-    bonusEarned :: Money,
+    totalEarnings :: HighPrecMoney,
+    bonusEarned :: HighPrecMoney,
     lateNightTrips :: Int,
-    earningsMissed :: Money,
+    earningsMissed :: HighPrecMoney,
     totalDistance :: Meters,
     ridesCancelled :: Maybe Int,
     totalRidesAssigned :: Maybe Int,
     coinCovertedToCashLeft :: HighPrecMoney,
     totalCoinsConvertedCash :: HighPrecMoney,
+    currency :: Currency,
     updatedAt :: UTCTime
   }
   deriving (Generic)

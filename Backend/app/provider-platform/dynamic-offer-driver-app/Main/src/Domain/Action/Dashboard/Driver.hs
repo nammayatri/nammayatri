@@ -324,6 +324,8 @@ getDriverDue merchantShortId _ mbMobileCountryCode phone = do
           platformFee = platformFee_,
           status = status_,
           driverId = driverId_,
+          totalFee = roundToIntegral totalFee,
+          totalEarnings = roundToIntegral totalEarnings,
           ..
         }
 
@@ -519,7 +521,7 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   driverFees <- findPendingFeesByDriverIdAndServiceName driverId serviceName
-  let totalFee = sum $ map (\fee -> fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
+  let totalFee = sum $ map (\fee -> fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   QDriverInfo.updatePendingPayment False driverId
@@ -1794,7 +1796,7 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
       return $
         if null filteredDriverFees
           then 0
-          else sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
+          else sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
 
     templateText txt = "{#" <> txt <> "#}"
 

@@ -22,7 +22,7 @@ import Database.Beam.MySQL ()
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common (HighPrecMoney)
+import Kernel.Types.Common (Currency, HighPrecMoney)
 
 data PurchaseHistoryT f = PurchaseHistoryT
   { id :: B.C f Text,
@@ -33,7 +33,8 @@ data PurchaseHistoryT f = PurchaseHistoryT
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     title :: B.C f Text,
-    cash :: B.C f HighPrecMoney -- money converted that can be used
+    cash :: B.C f HighPrecMoney, -- money converted that can be used
+    currency :: B.C f (Maybe Currency)
   }
   deriving (Generic, B.Beamable)
 

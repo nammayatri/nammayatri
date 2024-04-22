@@ -650,7 +650,8 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     supportNumber :: Maybe Text,
     enableForMerchant :: Bool,
     exophone :: Text,
-    rcNumberPrefixList :: Maybe [Text]
+    rcNumberPrefixList :: Maybe [Text],
+    currency :: Maybe Currency
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -670,6 +671,7 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> parseInput "enableForMerchant" form
       <*> parseInput "exophone" form
       <*> parseMaybeInput "rcNumberPrefixList" form
+      <*> parseMaybeInput "currency" form
 
 parseInput :: Read b => Text -> MultipartData tag -> Either String b
 parseInput fieldName form = case lookupInput fieldName form of
@@ -705,7 +707,8 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     supportNumber :: Maybe Text,
     enableForMerchant :: Bool,
     exophone :: Text,
-    rcNumberPrefixList :: Maybe [Text]
+    rcNumberPrefixList :: Maybe [Text],
+    currency :: Maybe Currency
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

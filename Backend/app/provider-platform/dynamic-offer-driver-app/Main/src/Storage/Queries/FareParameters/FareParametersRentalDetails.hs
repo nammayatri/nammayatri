@@ -31,10 +31,11 @@ instance FromTType' BeamFPRD.FareParametersRentalDetails Domain.FullFareParamete
       Just
         ( KTI.Id fareParametersId,
           Domain.FParamsRentalDetails
-            { timeBasedFare = timeBasedFare,
-              distBasedFare = distBasedFare,
+            { timeBasedFare = mkAmountWithDefault timeBasedFareAmount timeBasedFare,
+              distBasedFare = mkAmountWithDefault distBasedFareAmount distBasedFare,
               extraDistance = fromMaybe 0 extraDistance,
-              extraDuration = fromMaybe 0 extraDuration
+              extraDuration = fromMaybe 0 extraDuration,
+              currency = fromMaybe INR currency
             }
         )
 
@@ -42,8 +43,11 @@ instance ToTType' FareParametersRentalDetails Domain.FullFareParametersRentalDet
   toTType' (KTI.Id fareParametersId, fParamsRentalDetails) =
     FareParametersRentalDetailsT
       { fareParametersId = fareParametersId,
-        timeBasedFare = Domain.timeBasedFare fParamsRentalDetails,
-        distBasedFare = Domain.distBasedFare fParamsRentalDetails,
+        timeBasedFare = roundToIntegral $ Domain.timeBasedFare fParamsRentalDetails,
+        distBasedFare = roundToIntegral $ Domain.distBasedFare fParamsRentalDetails,
+        timeBasedFareAmount = Just $ Domain.timeBasedFare fParamsRentalDetails,
+        distBasedFareAmount = Just $ Domain.distBasedFare fParamsRentalDetails,
+        currency = Just $ (Domain.currency :: Domain.FParamsRentalDetails -> Currency) fParamsRentalDetails,
         extraDistance = Just $ Domain.extraDistance fParamsRentalDetails,
         extraDuration = Just $ Domain.extraDuration fParamsRentalDetails
       }

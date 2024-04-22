@@ -63,6 +63,7 @@ import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
+import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Ride
 import SharedLogic.TollsDetector
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -179,12 +180,12 @@ handler ValidatedDSearchReq {..} sReq = do
   (mbSpecialZoneGateId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
   logDebug $ "Pickingup Gate info result : " <> show (mbSpecialZoneGateId, mbDefaultDriverExtra)
   let specialLocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
-  searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag allFarePoliciesProduct.area mbTollCharges
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+  searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag allFarePoliciesProduct.area mbTollCharges currency
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
   void $ QSR.createDSReq searchReq
-
-  let buildEstimateHelper = buildEstimate merchantOpCityId searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled mbDistance specialLocationTag mbTollCharges
+  let buildEstimateHelper = buildEstimate merchantOpCityId currency searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled mbDistance specialLocationTag mbTollCharges
   let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled mbDistance mbDuration specialLocationTag mbTollCharges
   (estimates, quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
   QEst.createMany estimates
@@ -195,12 +196,12 @@ handler ValidatedDSearchReq {..} sReq = do
   driverInfoEstimates <- addNearestDriverInfo merchantOpCityId driverPool estimates
   buildDSearchResp sReq.pickupLocation sReq.dropLocation specialLocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates
   where
-    getSpecialPickupZoneInfo :: Maybe Text -> DLoc.Location -> Flow (Maybe Text, Maybe Money)
+    getSpecialPickupZoneInfo :: Maybe Text -> DLoc.Location -> Flow (Maybe Text, Maybe HighPrecMoney)
     getSpecialPickupZoneInfo Nothing _ = pure (Nothing, Nothing)
     getSpecialPickupZoneInfo (Just _) fromLocation = do
       mbPickupZone <- findGateInfoByLatLongWithoutGeoJson (LatLong fromLocation.lat fromLocation.lon)
       if ((.canQueueUpOnGate) <$> mbPickupZone) == Just True
-        then pure $ ((.id.getId) <$> mbPickupZone, fmap Money . (.defaultDriverExtra) =<< mbPickupZone)
+        then pure $ ((.id.getId) <$> mbPickupZone, fmap (toHighPrecMoney . Money) . (.defaultDriverExtra) =<< mbPickupZone) -- FIXME
         else pure (Nothing, Nothing)
 
     combineFarePoliciesProducts :: [FarePoliciesProduct] -> FarePoliciesProduct
@@ -332,7 +333,7 @@ buildSearchRequest ::
   DSearchReq ->
   Context.City ->
   Maybe Text ->
-  Maybe Money ->
+  Maybe HighPrecMoney ->
   UTCTime ->
   Bool ->
   Id DM.Merchant ->
@@ -344,8 +345,9 @@ buildSearchRequest ::
   Maybe Text ->
   SL.Area ->
   Maybe HighPrecMoney ->
+  Currency ->
   m DSR.SearchRequest
-buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area tollCharges = do
+buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area tollCharges currency = do
   uuid <- generateGUID
   now <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -367,6 +369,7 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         driverDefaultExtraFee = mbDefaultDriverExtra,
         pickupZoneGateId = mbSpecialZoneGateId,
         customerCancellationDues = Nothing,
+        currency,
         ..
       }
 
@@ -407,7 +410,8 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled m
           estimatedDistance = searchRequest.estimatedDistance,
           estimatedRideDuration = searchRequest.estimatedDuration,
           timeDiffFromUtc = Nothing,
-          tollCharges
+          tollCharges = tollCharges,
+          currency = searchRequest.currency
         }
   quoteId <- Id <$> generateGUID
   void $ cacheFarePolicyByQuoteId quoteId.getId fullFarePolicy
@@ -434,12 +438,14 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled m
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
         createdAt = now,
         updatedAt = now,
+        currency = searchRequest.currency,
         ..
       }
 
 buildEstimate ::
   (EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
+  Currency ->
   Id DSR.SearchRequest ->
   UTCTime ->
   Bool ->
@@ -449,7 +455,7 @@ buildEstimate ::
   Bool ->
   DFP.FullFarePolicy ->
   m DEst.Estimate
-buildEstimate merchantOpCityId searchReqId startTime isScheduled mbDistance specialLocationTag tollCharges nightShiftOverlapChecking fullFarePolicy = do
+buildEstimate merchantOpCityId currency searchReqId startTime isScheduled mbDistance specialLocationTag tollCharges nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
   fareParams <-
     calculateFareParameters
@@ -468,7 +474,8 @@ buildEstimate merchantOpCityId searchReqId startTime isScheduled mbDistance spec
           estimatedDistance = Nothing,
           estimatedRideDuration = Nothing,
           timeDiffFromUtc = Nothing,
-          tollCharges
+          tollCharges = tollCharges,
+          currency
         }
   let baseFare = fareSum fareParams
   logDebug $ "baseFare: " <> show baseFare
@@ -486,8 +493,9 @@ buildEstimate merchantOpCityId searchReqId startTime isScheduled mbDistance spec
         vehicleServiceTierName = Just vehicleServiceTierItem.name,
         tripCategory = fullFarePolicy.tripCategory,
         estimatedDistance = mbDistance,
-        minFare = baseFare + maybe 0 (.minFee) mbDriverExtraFeeBounds,
-        maxFare = baseFare + maybe 0 (.maxFee) mbDriverExtraFeeBounds,
+        minFare = baseFare + maybe 0.0 (.minFee) mbDriverExtraFeeBounds,
+        maxFare = baseFare + maybe 0.0 (.maxFee) mbDriverExtraFeeBounds,
+        currency,
         fareParams = Just fareParams,
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
         specialLocationTag = specialLocationTag,

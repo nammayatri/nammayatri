@@ -18,12 +18,13 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common (HighPrecMoney)
+import Kernel.Utils.Common (Currency, HighPrecMoney)
 
 data CancellationCharges = CancellationCharges
   { id :: Id CancellationCharges,
     driverId :: Id Person.Person,
     rideId :: Maybe (Id Ride.Ride),
-    cancellationCharges :: HighPrecMoney
+    cancellationCharges :: HighPrecMoney,
+    currency :: Currency
   }
   deriving (Generic)

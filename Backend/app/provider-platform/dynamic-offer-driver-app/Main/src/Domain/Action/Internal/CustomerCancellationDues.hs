@@ -42,6 +42,7 @@ data CancellationDuesReq = CancellationDuesReq
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
   { customerCancellationDues :: HighPrecMoney,
+    customerCancellationDuesWithCurrency :: PriceAPIEntity,
     disputeChancesUsed :: Int,
     canBlockCustomer :: Maybe Bool
   }
@@ -51,6 +52,7 @@ data CustomerCancellationDuesSyncReq = CustomerCancellationDuesSyncReq
   { customerMobileNumber :: Text,
     customerMobileCountryCode :: Text,
     cancellationCharges :: Maybe HighPrecMoney,
+    cancellationChargesWithCurrency :: Maybe PriceAPIEntity,
     disputeChancesUsed :: Maybe Int,
     paymentMadeToDriver :: Bool
   }
@@ -74,7 +76,7 @@ disputeCancellationDues merchantId merchantCity apiKey CancellationDuesReq {..} 
   numberHash <- getDbHash customerMobileNumber
   riderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id >>= fromMaybeM (RiderDetailsDoNotExist "Mobile Number" customerMobileNumber)
 
-  when (riderDetails.cancellationDues == 0) $ do
+  when (riderDetails.cancellationDues == 0.0) $ do
     throwError $ InvalidRequest $ "Cancellation Due Amount is 0 for riderId " <> riderDetails.id.getId
   merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchantId merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchantCity)
 
@@ -84,7 +86,7 @@ disputeCancellationDues merchantId merchantCity apiKey CancellationDuesReq {..} 
   let disputeChancesLeft = transporterConfig.cancellationFeeDisputeLimit - riderDetails.disputeChancesUsed
       disputeAmount = min (transporterConfig.cancellationFee * fromIntegral disputeChancesLeft) riderDetails.cancellationDues
   disputeChances <-
-    if transporterConfig.cancellationFee == 0
+    if transporterConfig.cancellationFee == 0.0
       then do
         logWarning "Unable to calculate dispute chances used"
         return 0
@@ -114,10 +116,16 @@ getCancellationDuesDetails merchantId merchantCity apiKey CancellationDuesReq {.
   numberHash <- getDbHash customerMobileNumber
   riderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id >>= fromMaybeM (RiderDetailsDoNotExist "Mobile Number" customerMobileNumber)
   let numOfChargableCancellations =
-        if transporterConfig.cancellationFee == 0
+        if transporterConfig.cancellationFee == 0.0
           then 0
           else round $ riderDetails.cancellationDues / transporterConfig.cancellationFee
-  return $ CancellationDuesDetailsRes {customerCancellationDues = riderDetails.cancellationDues, disputeChancesUsed = riderDetails.disputeChancesUsed, canBlockCustomer = Just (numOfChargableCancellations == transporterConfig.numOfCancellationsAllowed)}
+  return $
+    CancellationDuesDetailsRes
+      { customerCancellationDues = riderDetails.cancellationDues,
+        customerCancellationDuesWithCurrency = PriceAPIEntity riderDetails.cancellationDues riderDetails.currency,
+        disputeChancesUsed = riderDetails.disputeChancesUsed,
+        canBlockCustomer = Just (numOfChargableCancellations == transporterConfig.numOfCancellationsAllowed)
+      }
 
 customerCancellationDuesSync ::
   ( MonadFlow m,
@@ -135,15 +143,18 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   numberHash <- getDbHash req.customerMobileNumber
-
-  when (isJust req.cancellationCharges && isJust req.disputeChancesUsed) $ do
+  let reqCancellationCharges = (req.cancellationChargesWithCurrency <&> (.amount)) <|> req.cancellationCharges
+  when (isJust reqCancellationCharges && isJust req.disputeChancesUsed) $ do
     throwError DisputeChancesOrCancellationDuesHasToBeNull
   merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchantId merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchantCity)
+  Kernel.Prelude.whenJust req.cancellationChargesWithCurrency $ \reqWithCurrency -> do
+    unless (merchantOperatingCity.currency == reqWithCurrency.currency) $
+      throwError $ InvalidRequest "Invalid currency"
   transporterConfig <- SCT.findByMerchantOpCityId merchantOperatingCity.id Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
   riderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id >>= fromMaybeM (RiderDetailsDoNotExist "Mobile Number" req.customerMobileNumber)
-  case (req.cancellationCharges, req.disputeChancesUsed) of
+  case (reqCancellationCharges, req.disputeChancesUsed) of
     (Just amountPaid, Nothing) -> do
-      when (amountPaid > riderDetails.cancellationDues || amountPaid < 0) $ do
+      when (amountPaid > riderDetails.cancellationDues || amountPaid < 0.0) $ do
         throwError (CustomerCancellationDuesLimitNotMet riderDetails.id.getId)
 
       when (req.paymentMadeToDriver) $ do
@@ -155,12 +166,13 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
                 { driverId = ride.driverId,
                   rideId = Just ride.id,
                   cancellationCharges = amountPaid,
+                  currency = riderDetails.currency,
                   ..
                 }
         QCC.create cancellationCharges
 
       disputeChances <-
-        if transporterConfig.cancellationFee == 0
+        if transporterConfig.cancellationFee == 0.0
           then do
             logWarning "Unable to calculate dispute chances used"
             return 0

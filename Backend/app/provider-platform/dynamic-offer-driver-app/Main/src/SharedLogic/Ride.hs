@@ -94,7 +94,7 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
   Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver.id driver.deviceToken
 
   fork "DriverScoreEventHandler OnNewRideAssigned" $
-    DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId}
+    DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency}
 
   return (ride, rideDetails, vehicle)
   where
@@ -151,6 +151,7 @@ buildRide driverId booking ghrId otp enableFrequentLocationUpdates clientId = do
         endOtp = Nothing,
         trackingUrl = trackingUrl,
         fare = Nothing,
+        currency = booking.currency,
         traveledDistance = 0,
         chargeableDistance = Nothing,
         driverArrivalTime = Nothing,
@@ -192,7 +193,7 @@ buildTrackingUrl rideId = do
         baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
       }
 
-deactivateExistingQuotes :: Id DTMM.MerchantOperatingCity -> Id Merchant -> Id Person -> Id SearchTry -> Money -> Flow [SearchRequestForDriver]
+deactivateExistingQuotes :: Id DTMM.MerchantOperatingCity -> Id Merchant -> Id Person -> Id SearchTry -> Price -> Flow [SearchRequestForDriver]
 deactivateExistingQuotes merchantOpCityId merchantId quoteDriverId searchTryId estimatedFare = do
   driverSearchReqs <- QSRD.findAllActiveBySTId searchTryId
   QDQ.setInactiveBySTId searchTryId
@@ -200,7 +201,7 @@ deactivateExistingQuotes merchantOpCityId merchantId quoteDriverId searchTryId e
   pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare
   return driverSearchReqs
 
-pullExistingRideRequests :: Id DTMM.MerchantOperatingCity -> [SearchRequestForDriver] -> Id Merchant -> Id Person -> Money -> Flow ()
+pullExistingRideRequests :: Id DTMM.MerchantOperatingCity -> [SearchRequestForDriver] -> Id Merchant -> Id Person -> Price -> Flow ()
 pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare = do
   for_ driverSearchReqs $ \driverReq -> do
     let driverId = driverReq.driverId

@@ -18,7 +18,7 @@ imports:
 
 Ride:
   tableName: ride
-  derives: "Generic,Show,Eq,ToJSON,FromJSON"
+  derives: "Generic,Show"
   types:
     RideEndedBy:
       enum: "Driver,Dashboard,CallBased,CronJob"
@@ -41,7 +41,8 @@ Ride:
     otp: Text
     endOtp: Maybe Text
     trackingUrl: BaseUrl
-    fare: Maybe Money
+    fare: Maybe HighPrecMoney
+    currency: Currency
     traveledDistance: HighPrecMeters
     chargeableDistance: Maybe Meters
     driverArrivalTime: Maybe UTCTime
@@ -89,7 +90,6 @@ Ride:
     startOdometerReadingFileId: character varying(36)
     endOdometerReadingFileId: character varying(36)
 
-
   default:
     traveledDistance: '0'
     tripStartTime: 'CURRENT_TIMESTAMP'
@@ -111,6 +111,11 @@ Ride:
     endOdometerReading:
       endOdometerReadingValue: Maybe Centesimal
       endOdometerReadingFileId:  Maybe Text
+    fare:
+      fare: Maybe Money
+      fareAmount: Maybe HighPrecMoney
+    currency:
+      currency: Maybe Currency
 
   fromTType:
     toLocation: Storage.Queries.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
@@ -121,6 +126,8 @@ Ride:
     tripEndPos: Storage.Queries.Transformers.Ride.mkLatLong|I
     startOdometerReading: Storage.Queries.Transformers.Ride.mkOdometerReading|I
     endOdometerReading: Storage.Queries.Transformers.Ride.mkOdometerReading|I
+    fare: fmap (Kernel.Types.Common.mkAmountWithDefault fareAmount) fare|E
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
@@ -133,6 +140,8 @@ Ride:
     endOdometerReadingValue: Kernel.Prelude.fmap Domain.Types.Ride.value|I
     endOdometerReadingFileId: getEndOdometerReadingFileId
     merchantOperatingCityId: Kernel.Prelude.Just $ Kernel.Types.Id.getId|I
+    fare: Kernel.Prelude.fmap roundToIntegral|I
+    currency: Kernel.Prelude.Just|I
 
   beamType:
     trackingUrl: Text

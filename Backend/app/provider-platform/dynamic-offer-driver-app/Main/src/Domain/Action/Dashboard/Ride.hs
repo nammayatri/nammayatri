@@ -87,7 +87,7 @@ rideList ::
   Maybe (ShortId Common.Ride) ->
   Maybe Text ->
   Maybe Text ->
-  Maybe Money ->
+  Maybe Money -> -- FIXME
   Maybe UTCTime ->
   Maybe UTCTime ->
   Flow Common.RideListRes
@@ -105,7 +105,7 @@ rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbReqShortRideI
   case (mbfrom, mbto) of
     (Just from, Just to) -> when (from > to) $ throwError $ InvalidRequest "from date should be less than to date"
     _ -> pure ()
-  rideItems <- runInReplica $ QRide.findAllRideItems merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now mbfrom mbto
+  rideItems <- runInReplica $ QRide.findAllRideItems merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash (toHighPrecMoney <$> mbFareDiff) now mbfrom mbto
   logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems
@@ -131,7 +131,7 @@ buildRideListItem QRide.RideItem {..} = do
         driverPhoneNo,
         vehicleNo = rideDetails.vehicleNumber,
         tripCategory = castTripCategory tripCategory,
-        fareDiff,
+        fareDiff = roundToIntegral <$> fareDiff,
         bookingStatus,
         rideCreatedAt = rideCreatedAt
       }
@@ -307,9 +307,9 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         chargeableDistance = ride.chargeableDistance,
         maxEstimatedDistance = highPrecMetersToMeters <$> booking.maxEstimatedDistance,
         estimatedRideDuration = secondsToMinutes <$> booking.estimatedDuration,
-        estimatedFare = booking.estimatedFare,
-        actualFare = ride.fare,
-        driverOfferedFare = (.fareParams.driverSelectedFare) =<< mQuote,
+        estimatedFare = roundToIntegral booking.estimatedFare,
+        actualFare = roundToIntegral <$> ride.fare,
+        driverOfferedFare = roundToIntegral <$> ((.fareParams.driverSelectedFare) =<< mQuote),
         pickupDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just ride.createdAt),
         rideDuration = timeDiffInMinutes <$> ride.tripEndTime <*> ride.tripStartTime,
         bookingStatus = mkBookingStatus ride now,
@@ -551,6 +551,15 @@ buildFareBreakUp :: DFP.FareParameters -> Common.FareBreakUp
 buildFareBreakUp DFP.FareParameters {..} = do
   Common.FareBreakUp
     { fareParametersDetails = buildFareParametersDetails fareParametersDetails,
+      driverSelectedFare = roundToIntegral <$> driverSelectedFare, -- FIXME
+      customerExtraFee = roundToIntegral <$> customerExtraFee,
+      serviceCharge = roundToIntegral <$> serviceCharge,
+      govtCharges = roundToIntegral <$> govtCharges,
+      baseFare = roundToIntegral baseFare,
+      waitingCharge = roundToIntegral <$> waitingCharge,
+      rideExtraTimeFare = roundToIntegral <$> rideExtraTimeFare,
+      nightShiftCharge = roundToIntegral <$> nightShiftCharge,
+      congestionCharge = roundToIntegral <$> congestionCharge,
       ..
     }
 
@@ -558,6 +567,8 @@ buildFareParametersDetails :: DFP.FareParametersDetails -> Common.FareParameters
 buildFareParametersDetails = makeFareParam
 
 makeFareParam :: DFP.FareParametersDetails -> Common.FareParametersDetails
-makeFareParam (DFP.ProgressiveDetails DFP.FParamsProgressiveDetails {..}) = Common.ProgressiveDetails Common.FParamsProgressiveDetails {..}
+makeFareParam (DFP.ProgressiveDetails DFP.FParamsProgressiveDetails {..}) = Common.ProgressiveDetails Common.FParamsProgressiveDetails {deadKmFare = roundToIntegral deadKmFare, extraKmFare = roundToIntegral <$> extraKmFare}
 makeFareParam (DFP.SlabDetails DFP.FParamsSlabDetails {..}) = Common.SlabDetails Common.FParamsSlabDetails {..}
-makeFareParam (DFP.RentalDetails DFP.FParamsRentalDetails {..}) = Common.RentalDetails Common.FParamsRentalDetails {..}
+makeFareParam (DFP.RentalDetails DFP.FParamsRentalDetails {..}) = Common.RentalDetails Common.FParamsRentalDetails {timeBasedFare = roundToIntegral timeBasedFare, distBasedFare = roundToIntegral distBasedFare, ..}
+
+-- FIXME

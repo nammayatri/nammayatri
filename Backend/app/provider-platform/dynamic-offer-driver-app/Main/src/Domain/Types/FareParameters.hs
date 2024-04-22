@@ -23,19 +23,20 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data FareParameters = FareParameters
   { id :: Id FareParameters,
-    driverSelectedFare :: Maybe Money,
-    customerExtraFee :: Maybe Money,
-    serviceCharge :: Maybe Money,
-    govtCharges :: Maybe Money,
-    baseFare :: Money,
-    waitingCharge :: Maybe Money,
-    rideExtraTimeFare :: Maybe Money,
-    nightShiftCharge :: Maybe Money,
+    driverSelectedFare :: Maybe HighPrecMoney,
+    customerExtraFee :: Maybe HighPrecMoney,
+    serviceCharge :: Maybe HighPrecMoney,
+    govtCharges :: Maybe HighPrecMoney,
+    baseFare :: HighPrecMoney,
+    waitingCharge :: Maybe HighPrecMoney,
+    rideExtraTimeFare :: Maybe HighPrecMoney,
+    nightShiftCharge :: Maybe HighPrecMoney,
     nightShiftRateIfApplies :: Maybe Double,
     fareParametersDetails :: FareParametersDetails,
     customerCancellationDues :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
-    congestionCharge :: Maybe Money,
+    congestionCharge :: Maybe HighPrecMoney,
+    currency :: Currency,
     updatedAt :: UTCTime
   }
   deriving (Generic, Show, Eq, PrettyShow)
@@ -44,8 +45,9 @@ data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | Slab
   deriving (Generic, Show, Eq, PrettyShow)
 
 data FParamsProgressiveDetails = FParamsProgressiveDetails
-  { deadKmFare :: Money,
-    extraKmFare :: Maybe Money
+  { deadKmFare :: HighPrecMoney,
+    extraKmFare :: Maybe HighPrecMoney,
+    currency :: Currency
   }
   deriving (Generic, Show, Eq, PrettyShow)
 
@@ -57,8 +59,9 @@ data FParamsSlabDetails = FParamsSlabDetails
   deriving (Generic, Show, Eq, PrettyShow)
 
 data FParamsRentalDetails = FParamsRentalDetails
-  { timeBasedFare :: Money,
-    distBasedFare :: Money,
+  { timeBasedFare :: HighPrecMoney,
+    distBasedFare :: HighPrecMoney,
+    currency :: Currency,
     extraDistance :: Meters,
     extraDuration :: Seconds
   }

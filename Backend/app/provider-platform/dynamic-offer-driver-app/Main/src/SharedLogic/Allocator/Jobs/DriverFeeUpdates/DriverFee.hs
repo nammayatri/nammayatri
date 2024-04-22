@@ -53,6 +53,7 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, roundToHalf, setCoinToCashUsedAmount, setCreateDriverFeeForServiceInSchedulerKey, toCreateDriverFeeForService)
+import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -123,7 +124,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               (mandateSetupDate, mandateId) = case mbDriverPlan of
                 Nothing -> (now, Nothing)
                 Just driverPlan -> (fromMaybe now driverPlan.mandateSetupDate, driverPlan.mandateId)
-              coinCashLeft = if plan.eligibleForCoinDiscount then max 0 $ maybe 0 (.coinCovertedToCashLeft) mbDriverStat else 0
+              coinCashLeft = if plan.eligibleForCoinDiscount then max 0.0 $ maybe 0.0 (.coinCovertedToCashLeft) mbDriverStat else 0.0
 
           driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
           let numRidesForPlanCharges = calcNumRides driverFee transporterConfig - plan.freeRideCount
@@ -155,7 +156,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             -- driverFeeUpdateWithPlanAndOffer <- QDF.findById driverFee.id >>= fromMaybeM (InternalError $ "driverFee not found with driverFee id : " <> driverFee.id.getId)
             if coinCashLeft >= totalFee
               then do
-                void $ QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1 * totalFee)
+                void $ QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1.0 * totalFee)
                 setCoinToCashUsedAmount driverFeeUpdateWithPlanAndOffer totalFee
                 QDF.updateStatusByIds CLEARED_BY_YATRI_COINS [driverFeeUpdateWithPlanAndOffer.id] now
                 driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId Nothing subscriptionConfigs now
@@ -164,7 +165,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                 QINV.create invoice
               else do
                 when (coinCashLeft > 0) $ do
-                  QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1 * coinCashLeft)
+                  QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1.0 * coinCashLeft)
                   setCoinToCashUsedAmount driverFeeUpdateWithPlanAndOffer coinCashLeft
                 driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId (Just coinCashLeft) subscriptionConfigs now
                 updatePendingPayment True (cast driverFeeUpdateWithPlanAndOffer.driverId)
@@ -172,7 +173,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           -- blocking
           dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverFee.driverId) serviceName -- Problem with lazy evaluation?
           let driverFeeIds = map (.id) dueDriverFees
-              due = sum $ map (\fee -> roundToHalf $ fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
+              due = sum $ map (\fee -> roundToHalf $ fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
           if roundToHalf (due + totalFee - min coinCashLeft totalFee) >= plan.maxCreditLimit
             then do
               mapM_ updateDriverFeeToManual driverFeeIds
@@ -401,7 +402,8 @@ getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merch
                   mbExistingDFee <- QDF.findFeeByDriverIdAndServiceNameInRange (cast dPlan.driverId) serviceName startTime endTime
                   if isNothing mbExistingDFee
                     then do
-                      driverFee <- mkDriverFee serviceName now mbStartTime mbEndTime merchantId dPlan.driverId Nothing 0 0.0 0.0 0.0 transporterConfig Nothing
+                      currency <- SMerchant.getCurrencyByMerchantOpCity merchantOperatingCityId
+                      driverFee <- mkDriverFee serviceName now mbStartTime mbEndTime merchantId dPlan.driverId Nothing 0 0.0 0.0 0.0 currency transporterConfig Nothing
                       QDF.create driverFee
                       return $ Just driverFee
                     else return Nothing

@@ -56,6 +56,9 @@ let defaultTypeImportMapper =
       , { _1 = "Kilometers", _2 = "Kernel.Types.Common" }
       , { _1 = "HighPrecMoney", _2 = "Kernel.Types.Common" }
       , { _1 = "Seconds", _2 = "Kernel.Types.Common" }
+      , { _1 = "Currency", _2 = "Kernel.Types.Common" }
+      , { _1 = "Price", _2 = "Kernel.Types.Common" }
+      , { _1 = "PriceAPIEntity", _2 = "Kernel.Types.Common" }
       ]
 
 let extraDefaultFields =
@@ -85,6 +88,7 @@ let sqlMapper =
       , { _1 = "Seconds", _2 = "integer" }
       , { _1 = "Kilometers", _2 = "integer" }
       , { _1 = "Meters", _2 = "integer" }
+      , { _1 = "Currency", _2 = "character varying(255)" }
       ]
 
 let defaultImports =

@@ -27,6 +27,9 @@ data FarePolicyProgressiveDetailsT f = FarePolicyProgressiveDetailsT
     baseDistance :: B.C f Meters,
     baseFare :: B.C f Money,
     deadKmFare :: B.C f Money,
+    baseFareAmount :: B.C f (Maybe HighPrecMoney),
+    deadKmFareAmount :: B.C f (Maybe HighPrecMoney),
+    currency :: B.C f (Maybe Currency),
     waitingCharge :: B.C f (Maybe DPM.WaitingCharge),
     freeWatingTime :: B.C f (Maybe Minutes), -- FIXME typo
     nightShiftCharge :: B.C f (Maybe DPM.NightShiftCharge)

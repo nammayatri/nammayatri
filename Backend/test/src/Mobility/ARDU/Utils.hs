@@ -42,7 +42,7 @@ import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Common (Currency (INR), Money, PriceAPIEntity (..))
+import Kernel.Types.Common (Currency (INR), Money, PriceAPIEntity (..), toHighPrecMoney)
 import Kernel.Types.Id
 import qualified Mobility.ARDU.APICalls as API
 import Mobility.ARDU.Fixtures as Fixtures
@@ -172,19 +172,19 @@ getNearbySearchRequestForDriver driver estimateId =
 
 respondQuote :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM ()
 respondQuote driver fare bppSearchRequestId response =
-  void $ callBPP $ API.ui.driver.respondQuote driver.token Nothing $ TDriver.DriverRespondReq (Just fare) Nothing (Just bppSearchRequestId) response
+  void $ callBPP $ API.ui.driver.respondQuote driver.token Nothing $ TDriver.DriverRespondReq (Just fare) (Just $ PriceAPIEntity (toHighPrecMoney fare) INR) Nothing (Just bppSearchRequestId) response
 
 offerQuote :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> ClientsM ()
 offerQuote driver fare bppSearchRequestId =
-  void $ callBPP $ API.ui.driver.offerQuote driver.token Nothing $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
+  void $ callBPP $ API.ui.driver.offerQuote driver.token Nothing $ TDriver.DriverOfferReq (Just fare) (Just $ PriceAPIEntity (toHighPrecMoney fare) INR) bppSearchRequestId
 
 respondQuoteEither :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM (Either ClientError APISuccess)
 respondQuoteEither driver fare bppSearchRequestId response =
-  callBppEither $ API.ui.driver.respondQuote driver.token Nothing $ TDriver.DriverRespondReq (Just fare) Nothing (Just bppSearchRequestId) response
+  callBppEither $ API.ui.driver.respondQuote driver.token Nothing $ TDriver.DriverRespondReq (Just fare) (Just $ PriceAPIEntity (toHighPrecMoney fare) INR) Nothing (Just bppSearchRequestId) response
 
 offerQuoteEither :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> ClientsM (Either ClientError APISuccess)
 offerQuoteEither driver fare bppSearchRequestId =
-  callBppEither $ API.ui.driver.offerQuote driver.token Nothing $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
+  callBppEither $ API.ui.driver.offerQuote driver.token Nothing $ TDriver.DriverOfferReq (Just fare) (Just $ PriceAPIEntity (toHighPrecMoney fare) INR) bppSearchRequestId
 
 getQuotesByEstimateId :: Text -> Id AppEstimate.Estimate -> ClientsM (NonEmpty AppQuote.QuoteAPIEntity)
 getQuotesByEstimateId appToken estimateId =

@@ -28,6 +28,7 @@ import qualified Storage.Queries.DailyStats as SQDS
 
 data DriverRideSummaryResp = DriverRideSummaryResp
   { earnings :: Money,
+    earningsWithCurrency :: PriceAPIEntity,
     rideDistance :: Meters,
     rideDate :: Day,
     noOfRides :: Int
@@ -50,7 +51,8 @@ mkRideSummaryList =
   map
     ( \x ->
         DriverRideSummaryResp
-          { earnings = x.totalEarnings,
+          { earnings = roundToIntegral x.totalEarnings,
+            earningsWithCurrency = PriceAPIEntity x.totalEarnings x.currency,
             rideDistance = x.totalDistance,
             rideDate = x.merchantLocalDate,
             noOfRides = x.numRides

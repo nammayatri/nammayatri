@@ -34,12 +34,13 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 
 data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
-    baseFare :: Money,
+    baseFare :: HighPrecMoney,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
     platformFeeInfo :: Maybe PlatformFeeInfo,
-    nightShiftCharge :: Maybe NightShiftCharge
+    nightShiftCharge :: Maybe NightShiftCharge,
+    currency :: Currency
   }
-  deriving (Generic, Show, Eq, ToSchema)
+  deriving (Generic, Show, Eq)
 
 type FPSlabsDetailsSlab = FPSlabsDetailsSlabD 'Safe
 
@@ -100,16 +101,19 @@ jsonToFPSlabsDetailsSlab config key' = do
 data FPSlabsDetailsSlabAPIEntity = FPSlabsDetailsSlabAPIEntity
   { startDistance :: Meters,
     baseFare :: Money,
+    baseFareWithCurrency :: PriceAPIEntity,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
     platformFeeInfo :: Maybe PlatformFeeInfo,
     nightShiftCharge :: Maybe NightShiftCharge
   }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 makeFPSlabsDetailsSlabAPIEntity :: FPSlabsDetailsSlab -> FPSlabsDetailsSlabAPIEntity
 makeFPSlabsDetailsSlabAPIEntity FPSlabsDetailsSlab {..} =
   FPSlabsDetailsSlabAPIEntity
-    { ..
+    { baseFare = roundToIntegral baseFare,
+      baseFareWithCurrency = PriceAPIEntity baseFare currency,
+      ..
     }
 
 $(mkBeamInstancesForJSON ''PlatformFeeCharge)

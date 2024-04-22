@@ -39,9 +39,10 @@ instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyP
         ( KTI.Id farePolicyId,
           Domain.FPProgressiveDetails
             { baseDistance = baseDistance,
-              baseFare = baseFare,
+              baseFare = mkAmountWithDefault baseFareAmount baseFare,
               perExtraKmRateSections = snd <$> fPPDP,
-              deadKmFare = deadKmFare,
+              deadKmFare = mkAmountWithDefault deadKmFareAmount deadKmFare,
+              currency = fromMaybe INR currency,
               waitingChargeInfo =
                 ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
                   DPM.WaitingChargeInfo
@@ -57,9 +58,12 @@ instance ToTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyPro
     BeamFPPD.FarePolicyProgressiveDetailsT
       { farePolicyId = farePolicyId,
         baseDistance = baseDistance,
-        baseFare = baseFare,
+        baseFare = roundToIntegral baseFare,
+        baseFareAmount = Just baseFare,
         freeWatingTime = (.freeWaitingTime) <$> waitingChargeInfo,
-        deadKmFare = deadKmFare,
+        deadKmFare = roundToIntegral deadKmFare,
+        deadKmFareAmount = Just deadKmFare,
+        currency = Just currency,
         waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge
       }

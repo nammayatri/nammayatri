@@ -16,7 +16,7 @@ module Domain.Types.Coins.PurchaseHistory where
 
 import Data.Time
 import EulerHS.Prelude hiding (id, state)
-import Kernel.Types.Common (HighPrecMoney)
+import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id
 
 data PurchaseHistory = PurchaseHistory
@@ -26,8 +26,9 @@ data PurchaseHistory = PurchaseHistory
     merchantOptCityId :: Text,
     numCoins :: Int,
     cash :: HighPrecMoney,
+    currency :: Currency,
     title :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+  deriving (Generic, Show) --, Eq, FromJSON, ToJSON)

@@ -54,7 +54,7 @@ bookingInfo merchantShortId opCity otpCode = do
           fromLocation = buildBookingLocation fromLocation,
           toLocation = buildBookingLocation <$> toLocation,
           estimatedDistance,
-          estimatedFare,
+          estimatedFare = roundToIntegral estimatedFare,
           estimatedDuration,
           riderName,
           vehicleVariant = convertVehicleVariant vehicleServiceTier

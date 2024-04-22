@@ -110,7 +110,7 @@ buildOnStatusMessage (DStatus.RideCompletedReq Common.DRideCompletedReq {..}) = 
               { id = booking.id.getId,
                 state = RideCompletedOS.orderState,
                 quote,
-                payment = Just $ Common.mkRideCompletedPayment paymentMethodInfo paymentUrl,
+                payment = Just $ Common.mkRideCompletedPayment ride.currency paymentMethodInfo paymentUrl,
                 fulfillment = fulfillment
               }
       }

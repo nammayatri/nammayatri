@@ -200,6 +200,7 @@ coinHistoryHandler merchantShortId opCity driverId mbLimit mbOffset = do
       Common.CoinBurnHistoryItem
         { numCoins = numCoins,
           cash = cash,
+          cashWithCurrency = PriceAPIEntity cash currency,
           title = title,
           createdAt = createdAt,
           updatedAt = updatedAt

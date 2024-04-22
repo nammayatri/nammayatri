@@ -17,6 +17,8 @@ DriverInformation:
     DriverSummary:
       totalEarnings: Money
       bonusEarned: Money
+      totalEarningsWithCurrency: PriceAPIEntity
+      bonusEarnedWithCurrency: PriceAPIEntity
       totalCompletedTrips: Int
       lateNightTrips: Int
       lastRegistered: UTCTime
@@ -25,6 +27,7 @@ DriverInformation:
       ridesCancelled: Int
       totalRides: Int
       missedEarnings: Money
+      missedEarningsWithCurrency: PriceAPIEntity
     Badges:
       badgeName: Text
       badgeCount: Int

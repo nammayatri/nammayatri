@@ -129,10 +129,10 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
-import Kernel.External.Payment.Interface
+import Kernel.External.Payment.Interface hiding (Currency)
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
-import Kernel.Prelude (NominalDiffTime)
+import Kernel.Prelude (NominalDiffTime, roundToIntegral)
 import Kernel.Serviceability (rideServiceable)
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -164,6 +164,7 @@ import SharedLogic.DriverOnboarding
 import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
+import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Ride
@@ -246,6 +247,8 @@ data DriverInformationRes = DriverInformationRes
     maskedDeviceToken :: Maybe Text,
     currentDues :: Maybe HighPrecMoney,
     manualDues :: Maybe HighPrecMoney,
+    currentDuesWithCurrency :: Maybe PriceAPIEntity,
+    manualDuesWithCurrency :: Maybe PriceAPIEntity,
     blockStateModifier :: Maybe Text,
     isVehicleSupported :: Bool,
     frontendConfigHash :: Maybe Text
@@ -327,6 +330,7 @@ newtype GetNearbySearchRequestsRes = GetNearbySearchRequestsRes
 
 data DriverOfferReq = DriverOfferReq
   { offeredFare :: Maybe Money,
+    offeredFareWithCurrency :: Maybe PriceAPIEntity,
     searchRequestId :: Id DST.SearchTry
   }
   deriving stock (Generic)
@@ -334,6 +338,7 @@ data DriverOfferReq = DriverOfferReq
 
 data DriverRespondReq = DriverRespondReq
   { offeredFare :: Maybe Money,
+    offeredFareWithCurrency :: Maybe PriceAPIEntity,
     searchRequestId :: Maybe (Id DST.SearchTry), -- TODO: Deprecated, to be removed
     searchTryId :: Maybe (Id DST.SearchTry),
     response :: SearchRequestForDriverResponse
@@ -346,6 +351,8 @@ data DriverStatsRes = DriverStatsRes
     totalEarningsOfDay :: Money,
     totalRidesDistanceOfDay :: Meters,
     bonusEarning :: Money,
+    totalEarningsOfDayWithCurrency :: PriceAPIEntity,
+    bonusEarningWithCurrency :: PriceAPIEntity,
     coinBalance :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
@@ -389,6 +396,8 @@ data DriverPaymentHistoryResp = DriverPaymentHistoryResp
     totalRides :: Int,
     totalEarnings :: Money,
     charges :: Money,
+    totalEarningsWithCurrency :: PriceAPIEntity,
+    chargesWithCurrency :: PriceAPIEntity,
     chargesBreakup :: [DriverPaymentBreakup],
     txnInfo :: [DriverTxnInfo]
   }
@@ -396,7 +405,8 @@ data DriverPaymentHistoryResp = DriverPaymentHistoryResp
 
 data DriverPaymentBreakup = DriverPaymentBreakup
   { component :: Text,
-    amount :: HighPrecMoney
+    amount :: HighPrecMoney,
+    amountWithCurrency :: PriceAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -465,8 +475,8 @@ getInformation (personId, merchantId, merchantOpCityId) mbToss = do
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
   driverEntity <- buildDriverEntityRes (person, driverInfo)
   dues <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName driverId YATRI_SUBSCRIPTION
-  let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
-  let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
+  let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
+  let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
@@ -799,6 +809,8 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} org referralCode 
           isGoHomeEnabled = cfg.enableGoHome,
           operatingCity = merchantOperatingCity.city,
           frontendConfigHash = md5DigestHash,
+          currentDuesWithCurrency = flip PriceAPIEntity merchantOperatingCity.currency <$> currentDues,
+          manualDuesWithCurrency = flip PriceAPIEntity merchantOperatingCity.currency <$> manualDues,
           ..
         }
 
@@ -830,7 +842,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) = do
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
-isAllowedExtraFee :: DriverExtraFeeBounds -> Money -> Bool
+isAllowedExtraFee :: DriverExtraFeeBounds -> HighPrecMoney -> Bool
 isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFee
 
 offerQuoteLockKey :: Id Person -> Text
@@ -845,8 +857,12 @@ offerQuote (driverId, merchantId, merchantOpCityId) clientId DriverOfferReq {..}
 respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> DriverRespondReq -> Flow APISuccess
 respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
   Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
+    let reqOfferedValue = (req.offeredFareWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.offeredFare)
     searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
     searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
+    whenJust req.offeredFareWithCurrency $ \reqWithCurrency -> do
+      unless (searchTry.currency == reqWithCurrency.currency) $
+        throwError $ InvalidRequest "Invalid currency"
     now <- getCurrentTime
     when (searchTry.validTill < now) $ throwError SearchRequestExpired
     searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
@@ -868,8 +884,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
         Accept -> do
           whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
           case searchTry.tripCategory of
-            DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD
-            _ -> acceptStaticOfferDriverRequest searchTry driver sReqFD
+            DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD reqOfferedValue
+            _ -> acceptStaticOfferDriverRequest searchTry driver sReqFD reqOfferedValue
         Reject -> pure []
     QSRD.updateDriverResponse sReqFD.id req.response
     DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id driverFCMPulledList
@@ -912,6 +928,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
             distance = searchReq.estimatedDistance,
             distanceToPickup = sd.actualDistanceToPickup,
             durationToPickup = sd.durationToPickup,
+            currency = sd.currency,
             createdAt = now,
             updatedAt = now,
             validTill = addUTCTime driverQuoteExpirationSeconds now,
@@ -932,20 +949,20 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
       driverPoolCfg <- DP.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory area dist (Just txnId) (Just "transactionId")
       pure driverPoolCfg.driverQuoteLimit
 
-    acceptDynamicOfferDriverRequest :: DM.Merchant -> DST.SearchTry -> DSR.SearchRequest -> SP.Person -> SearchRequestForDriver -> Flow [SearchRequestForDriver]
-    acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD = do
+    acceptDynamicOfferDriverRequest :: DM.Merchant -> DST.SearchTry -> DSR.SearchRequest -> SP.Person -> SearchRequestForDriver -> Maybe HighPrecMoney -> Flow [SearchRequestForDriver]
+    acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD reqOfferedValue = do
       let estimateId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
       when (searchReq.autoAssignEnabled == Just True) $ do
         whenM (CS.isSearchTryCancelled searchTry.id) $
           throwError (InternalError "SEARCH_TRY_CANCELLED")
         CS.markSearchTryAsAssigned searchTry.id
-      logDebug $ "offered fare: " <> show req.offeredFare
+      logDebug $ "offered fare: " <> show reqOfferedValue
       quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq.transactionId (fromMaybe SL.Default searchReq.area)
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
       when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
       farePolicy <- getFarePolicyByEstOrQuoteId merchantOpCityId searchTry.tripCategory sReqFD.vehicleServiceTier searchReq.area estimateId (Just searchReq.transactionId) (Just "transactionId")
       let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
-      whenJust req.offeredFare $ \off ->
+      whenJust reqOfferedValue $ \off ->
         whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
           unless (isAllowedExtraFee driverExtraFeeBounds' off) $
             throwError $ NotAllowedExtraFee $ show off
@@ -958,7 +975,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
               waitingTime = Nothing,
               actualRideDuration = Nothing,
               avgSpeedOfVehicle = Nothing,
-              driverSelectedFare = req.offeredFare,
+              driverSelectedFare = reqOfferedValue,
               customerExtraFee = searchTry.customerExtraFee,
               nightShiftCharge = Nothing,
               customerCancellationDues = searchReq.customerCancellationDues,
@@ -967,6 +984,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
               nightShiftOverlapChecking = DTC.isRentalTrip searchTry.tripCategory,
               estimatedDistance = Nothing,
               timeDiffFromUtc = Nothing,
+              currency = searchReq.currency,
               ..
             }
       QFP.updateFareParameters fareParams
@@ -978,13 +996,13 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
         if (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
           then QSRD.findAllActiveWithoutRespBySearchTryId searchTry.id
           else pure []
-      pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id driverQuote.estimatedFare
+      pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id $ mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
       sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
       return driverFCMPulledList
 
-    acceptStaticOfferDriverRequest searchTry driver sReqFD = do
+    acceptStaticOfferDriverRequest searchTry driver sReqFD reqOfferedValue = do
       let quoteId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
-      whenJust req.offeredFare $ \_ -> throwError (InvalidRequest "Driver can't offer rental fare")
+      whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer rental fare")
       quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
       booking <- QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)
       isBookingAssignmentInprogress' <- CS.isBookingAssignmentInprogress booking.id
@@ -995,7 +1013,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
       unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
       QST.updateStatus searchTry.id DST.COMPLETED
       (ride, _, vehicle) <- initializeRide merchantId driver booking Nothing Nothing clientId
-      driverFCMPulledList <- deactivateExistingQuotes merchantOpCityId merchantId driver.id searchTry.id quote.estimatedFare
+      driverFCMPulledList <- deactivateExistingQuotes merchantOpCityId merchantId driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
       void $ sendRideAssignedUpdateToBAP booking ride driver vehicle
       CS.markBookingAssignmentCompleted booking.id
       return driverFCMPulledList
@@ -1011,27 +1029,29 @@ getStats (driverId, _, merchantOpCityId) date = do
   let fareParamId = mapMaybe (.fareParametersId) rides
   fareParameters <- (runInReplica . QFP.findAllIn) fareParamId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
+
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+
+  let (driverSelFares, customerExtFees) = (mapMaybe (.driverSelectedFare) fareParameters, mapMaybe (.customerExtraFee) fareParameters)
+      deadKmFares =
+        mapMaybe
+          ( \x -> case fareParametersDetails x of
+              ProgressiveDetails det -> Just (deadKmFare det)
+              SlabDetails _ -> Nothing
+              RentalDetails _ -> Nothing
+          )
+          fareParameters
+  let bonusEarning = GHCL.sum driverSelFares + GHCL.sum customerExtFees + GHCL.sum deadKmFares
+  let totalEarningsOfDay = sum (mapMaybe (.fare) rides) - sum (mapMaybe (.tollCharges) rides)
   return $
     DriverStatsRes
       { coinBalance = coinBalance_,
         totalRidesOfDay = length rides,
-        totalEarningsOfDay = sum (mapMaybe (.fare) rides) - (round $ sum (mapMaybe (.tollCharges) rides) :: Money),
+        totalEarningsOfDay = roundToIntegral totalEarningsOfDay,
+        totalEarningsOfDayWithCurrency = PriceAPIEntity totalEarningsOfDay currency,
         totalRidesDistanceOfDay = sum (mapMaybe (.chargeableDistance) rides),
-        bonusEarning =
-          let (driverSelFares, customerExtFees) = (mapMaybe (.driverSelectedFare) fareParameters, mapMaybe (.customerExtraFee) fareParameters)
-              driverSelFares' = getMoney <$> driverSelFares
-              customerExtFees' = getMoney <$> customerExtFees
-              deadKmFare' =
-                ( (getMoney <$>)
-                    . mapMaybe
-                      ( \x -> case fareParametersDetails x of
-                          ProgressiveDetails det -> Just (deadKmFare det)
-                          SlabDetails _ -> Nothing
-                          RentalDetails _ -> Nothing
-                      )
-                )
-                  fareParameters
-           in Money $ GHCL.sum driverSelFares' + GHCL.sum customerExtFees' + GHCL.sum deadKmFare'
+        bonusEarning = roundToIntegral bonusEarning,
+        bonusEarningWithCurrency = PriceAPIEntity bonusEarning currency
       }
 
 driverPhotoUploadHitsCountKey :: Id SP.Person -> Text
@@ -1299,6 +1319,7 @@ getDriverPayments (personId, _, merchantOpCityId) mbFrom mbTo mbStatus mbLimit m
       offset = fromMaybe 0 mbOffset
       defaultFrom = fromMaybe (fromGregorian 2020 1 1) mbFrom
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let today = utctDay now
       from = fromMaybe defaultFrom mbFrom
@@ -1311,39 +1332,49 @@ getDriverPayments (personId, _, merchantOpCityId) mbFrom mbTo mbStatus mbLimit m
     [] -> pure []
     _ -> SLDriverFee.groupDriverFeeByInvoices driverFees
 
-  mapM buildPaymentHistory driverFeeByInvoices
+  mapM (buildPaymentHistory currency) driverFeeByInvoices
   where
     maxLimit = 20
     defaultLimit = 10
 
-    buildPaymentHistory SLDriverFee.DriverFeeByInvoice {..} = do
+    buildPaymentHistory currency SLDriverFee.DriverFeeByInvoice {..} = do
       let charges = totalFee
-          chargesBreakup = mkChargesBreakup govtCharges platformFee.fee platformFee.cgst platformFee.sgst
+          chargesBreakup = mkChargesBreakup currency govtCharges platformFee.fee platformFee.cgst platformFee.sgst
           totalRides = numRides
           driverFeeId = cast invoiceId
-
       transactionDetails <- findAllByOrderId (cast invoiceId)
       let txnInfo = map mkDriverTxnInfo transactionDetails
-      return DriverPaymentHistoryResp {..}
+      return
+        DriverPaymentHistoryResp
+          { totalEarnings = roundToIntegral totalEarnings,
+            totalEarningsWithCurrency = PriceAPIEntity totalEarnings currency,
+            charges = roundToIntegral charges,
+            chargesWithCurrency = PriceAPIEntity charges currency,
+            ..
+          }
 
     mkDriverTxnInfo PaymentTransaction {..} = DriverTxnInfo {..}
 
-    mkChargesBreakup govtCharges platformFee cgst sgst =
+    mkChargesBreakup currency govtCharges platformFee cgst sgst =
       [ DriverPaymentBreakup
           { component = "Government Charges",
-            amount = govtCharges
+            amount = govtCharges,
+            amountWithCurrency = PriceAPIEntity govtCharges currency
           },
         DriverPaymentBreakup
           { component = "Platform Fee",
-            amount = platformFee
+            amount = platformFee,
+            amountWithCurrency = PriceAPIEntity platformFee currency
           },
         DriverPaymentBreakup
           { component = "CGST",
-            amount = cgst
+            amount = cgst,
+            amountWithCurrency = PriceAPIEntity cgst currency
           },
         DriverPaymentBreakup
           { component = "SGST",
-            amount = sgst
+            amount = sgst,
+            amountWithCurrency = PriceAPIEntity sgst currency
           }
       ]
 
@@ -1470,7 +1501,7 @@ mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' transporterConfig
             }
     Nothing -> return Nothing
   where
-    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
+    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
 
 mkAutoPayPaymentEntity :: MonadFlow m => Map (Id DDF.DriverFee) DDF.DriverFee -> TransporterConfig -> INV.Invoice -> m (Maybe AutoPayInvoiceHistory)
 mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice = do
@@ -1494,7 +1525,7 @@ mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice 
                 }
     Nothing -> return Nothing
   where
-    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
+    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
 
 data HistoryEntryDetailsEntityV2 = HistoryEntryDetailsEntityV2
   { invoiceId :: Text,
@@ -1555,7 +1586,7 @@ getHistoryEntryDetailsEntityV2 (driverId, _, merchantOpCityId) invoiceShortId se
   driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus)) transporterConfig serviceName
   return $ HistoryEntryDetailsEntityV2 {invoiceId = invoiceShortId, amount, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
   where
-    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
+    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
 
 mkDriverFeeInfoEntity ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -1574,8 +1605,8 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
           DriverFeeInfoEntity
             { autoPayStage = driverFee.autopayPaymentStage,
               paymentStatus = invoiceStatus,
-              totalEarnings = fromIntegral driverFee.totalEarnings,
-              driverFeeAmount = (\dueDfee -> SLDriverFee.roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)) driverFee,
+              totalEarnings = driverFee.totalEarnings,
+              driverFeeAmount = (\dueDfee -> SLDriverFee.roundToHalf (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)) driverFee,
               totalRides = SLDriverFee.calcNumRides driverFee transporterConfig,
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
               isSplit = length driverFeesInWindow > 1,
@@ -1633,7 +1664,7 @@ getDownloadInvoiceData (personId, _merchantId, merchantOpCityId) from mbTo = do
       mbInvoice <- QINV.findLatestByDriverFeeId id
       return
         DriverFeeResp
-          { chargesBreakup = mkChargesBreakup govtCharges platformFee.fee platformFee.cgst platformFee.sgst,
+          { chargesBreakup = mkChargesBreakup currency govtCharges platformFee.fee platformFee.cgst platformFee.sgst,
             totalRides = numRides,
             driverFeeId = id,
             debitedOn = mbInvoice <&> (.updatedAt),
@@ -1641,22 +1672,26 @@ getDownloadInvoiceData (personId, _merchantId, merchantOpCityId) from mbTo = do
             ..
           }
 
-    mkChargesBreakup _ platformFee cgst sgst =
+    mkChargesBreakup currency _ platformFee cgst sgst =
       [ DriverPaymentBreakup
           { component = "Final Platform Fee",
-            amount = platformFee + cgst + sgst
+            amount = platformFee + cgst + sgst,
+            amountWithCurrency = PriceAPIEntity (platformFee + cgst + sgst) currency
           },
         DriverPaymentBreakup
           { component = "Platform Fee",
-            amount = platformFee
+            amount = platformFee,
+            amountWithCurrency = PriceAPIEntity platformFee currency
           },
         DriverPaymentBreakup
           { component = "CGST",
-            amount = cgst
+            amount = cgst,
+            amountWithCurrency = PriceAPIEntity cgst currency
           },
         DriverPaymentBreakup
           { component = "SGST",
-            amount = sgst
+            amount = sgst,
+            amountWithCurrency = PriceAPIEntity sgst currency
           }
       ]
 

@@ -22,7 +22,7 @@ import Domain.Types.Person (Driver)
 import Domain.Types.Plan (PaymentMode, Plan)
 import qualified Domain.Types.Plan as Plan
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMoney, Money)
+import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
@@ -31,11 +31,11 @@ data DriverFee = DriverFee
   { id :: Id DriverFee,
     merchantId :: Id Merchant,
     driverId :: Id Driver,
-    govtCharges :: Money,
+    govtCharges :: HighPrecMoney,
     platformFee :: PlatformFee,
     numRides :: Int,
     payBy :: UTCTime,
-    totalEarnings :: Money,
+    totalEarnings :: HighPrecMoney,
     startTime :: UTCTime,
     endTime :: UTCTime,
     status :: DriverFeeStatus,
@@ -62,7 +62,8 @@ data DriverFee = DriverFee
     planId :: Maybe (Id Plan),
     planMode :: Maybe PaymentMode,
     serviceName :: Plan.ServiceNames,
-    vehicleNumber :: Maybe Text
+    vehicleNumber :: Maybe Text,
+    currency :: Currency
   }
   deriving (Generic, Show, Eq)
 
@@ -71,7 +72,7 @@ data PlatformFee = PlatformFee
     cgst :: HighPrecMoney,
     sgst :: HighPrecMoney
   }
-  deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Eq, Show)
 
 data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE | CLEARED_BY_YATRI_COINS | MANUAL_REVIEW_NEEDED deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 

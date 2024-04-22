@@ -46,6 +46,7 @@ import Kernel.Utils.Common hiding (id)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, roundToHalf)
+import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.CachedQueries.Plan as QPD
@@ -86,6 +87,10 @@ data PlanEntity = PlanEntity
     currentDues :: HighPrecMoney,
     autopayDues :: HighPrecMoney,
     dueBoothCharges :: HighPrecMoney,
+    totalPlanCreditLimitWithCurrency :: PriceAPIEntity,
+    currentDuesWithCurrency :: PriceAPIEntity,
+    autopayDuesWithCurrency :: PriceAPIEntity,
+    dueBoothChargesWithCurrency :: PriceAPIEntity,
     dues :: [DriverDuesEntity],
     bankErrors :: [ErrorEntity]
   }
@@ -94,13 +99,15 @@ data PlanEntity = PlanEntity
 data ErrorEntity = ErrorEntity
   { message :: Text,
     code :: Text,
-    amount :: HighPrecMoney
+    amount :: HighPrecMoney,
+    amountWithCurrency :: PriceAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data PlanFareBreakup = PlanFareBreakup
   { component :: Text,
-    amount :: HighPrecMoney
+    amount :: HighPrecMoney,
+    amountWithCurrency :: PriceAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -144,6 +151,7 @@ data MandateDetailsEntity = MandateDetails
     payerApp :: Maybe Text,
     frequency :: Text,
     maxAmount :: Money,
+    maxAmountWithCurrency :: PriceAPIEntity,
     autopaySetupDate :: UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -155,17 +163,22 @@ data DriverDuesEntity = DriverDuesEntity
     autoPayStage :: Maybe DF.AutopayPaymentStage,
     paymentStatus :: Maybe INV.InvoiceStatus,
     totalEarnings :: HighPrecMoney,
+    totalEarningsWithCurrency :: PriceAPIEntity,
     rideTakenOn :: UTCTime,
     driverFeeAmount :: HighPrecMoney,
+    driverFeeAmountWithCurrency :: PriceAPIEntity,
     totalRides :: Int,
     planAmount :: HighPrecMoney,
+    planAmountWithCurrency :: PriceAPIEntity,
     isSplit :: Bool,
     offerAndPlanDetails :: Maybe Text,
     isCoinCleared :: Bool,
     maxRidesEligibleForCharge :: Maybe Int,
     coinDiscountAmount :: Maybe HighPrecMoney,
+    coinDiscountAmountWithCurrency :: Maybe PriceAPIEntity,
     specialZoneRideCount :: Int,
-    totalSpecialZoneCharges :: HighPrecMoney
+    totalSpecialZoneCharges :: HighPrecMoney,
+    totalSpecialZoneChargesWithCurrency :: PriceAPIEntity
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
@@ -495,6 +508,7 @@ createMandateInvoiceAndOrder ::
   Flow (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
 createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData = do
   transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   let allowAtMerchantLevel = isJust transporterConfig.driverFeeCalculationTime
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
@@ -519,7 +533,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
     (Just registerFee, Nothing) -> do
       createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName
     (Nothing, _) -> do
-      driverFee <- mkDriverFee currentDues
+      driverFee <- mkDriverFee currentDues currency
       QDF.create driverFee
       createOrderForDriverFee driverManualDuesFees driverFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName
   where
@@ -567,7 +581,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
         then SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName (driverFee : driverManualDuesFees, []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple mbDeepLinkData
         else do
           SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([driverFee], []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple mbDeepLinkData
-    mkDriverFee currentDues = do
+    mkDriverFee currentDues currency = do
       let (fee, cgst, sgst) = if currentDues > 0 then (0.0, 0.0, 0.0) else calculatePlatformFeeAttr plan.registrationAmount plan
       id <- generateGUID
       now <- getCurrentTime
@@ -607,9 +621,10 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
             vehicleNumber = Nothing,
             badDebtRecoveryDate = Nothing,
             merchantOperatingCityId = merchantOpCityId,
-            serviceName
+            serviceName,
+            currency
           }
-    calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees
+    calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees
     checkIfInvoiceIsReusable invoice newDriverFees = do
       allDriverFeeClubedToInvoice <- QINV.findById invoice.id
       let oldLinkedDriverFeeIds = allDriverFeeClubedToInvoice <&> (.driverFeeId)
@@ -622,11 +637,16 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
   dueDriverFees <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName driverId serviceName
   pendingRegistrationDfee <- B.runInReplica $ QDF.findAllPendingRegistrationDriverFeeByDriverIdForServiceName driverId serviceName
   transporterConfig_ <- QTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  offers <- SPayment.offerListCache merchantId merchantOpCityId plan.serviceName =<< makeOfferReq applicationDate plan.paymentMode transporterConfig_
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+  paymentCurrency <- case currency of
+    INR -> pure Payment.INR
+    _ -> throwError $ InvalidRequest "Invalid currency" -- is it correct?
+  offers <- SPayment.offerListCache merchantId merchantOpCityId plan.serviceName =<< makeOfferReq paymentCurrency applicationDate plan.paymentMode transporterConfig_
   let allPendingAndOverDueDriverfee = dueDriverFees <> pendingRegistrationDfee
   invoicesForDfee <- QINV.findByDriverFeeIds (map (.id) allPendingAndOverDueDriverfee)
   now <- getCurrentTime
-  let planFareBreakup = mkPlanFareBreakup offers.offerResp
+
+  let planFareBreakup = mkPlanFareBreakup currency offers.offerResp
   driver <- B.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   mbtranslation <- CQPTD.findByPlanIdAndLanguage plan.id (fromMaybe ENGLISH driver.language)
   let translatedName = maybe plan.name (.name) mbtranslation
@@ -652,7 +672,11 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
         currentDues,
         autopayDues,
         totalPlanCreditLimit = round maxCreditLimit,
-        bankErrors = if isCurrentPlanEntity then calcBankError allPendingAndOverDueDriverfee transporterConfig_ now invoicesForDfee else [],
+        bankErrors = if isCurrentPlanEntity then calcBankError currency allPendingAndOverDueDriverfee transporterConfig_ now invoicesForDfee else [],
+        totalPlanCreditLimitWithCurrency = PriceAPIEntity maxCreditLimit currency,
+        currentDuesWithCurrency = PriceAPIEntity currentDues currency,
+        autopayDuesWithCurrency = PriceAPIEntity autopayDues currency,
+        dueBoothChargesWithCurrency = PriceAPIEntity dueBoothCharges currency,
         ..
       }
   where
@@ -663,7 +687,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
           tnc = offer.offerDescription.tnc,
           offerId = offer.offerId
         }
-    makeOfferReq date paymentMode_ transporterConfig = do
+    makeOfferReq paymentCurrency date paymentMode_ transporterConfig = do
       let baseAmount = case plan.planBaseAmount of
             PERRIDE_BASE amount -> amount
             DAILY_BASE amount -> amount
@@ -671,7 +695,8 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
             MONTHLY_BASE amount -> amount
       driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       now <- getCurrentTime
-      let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = baseAmount, currency = Payment.INR}
+
+      let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = baseAmount, currency = paymentCurrency}
           customerReq = Payment.OfferCustomer {customerId = driverId.getId, email = driver.email, mobile = Nothing}
       return
         Payment.OfferListReq
@@ -684,7 +709,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
             numOfRides = if paymentMode_ == AUTOPAY then 0 else -1,
             offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_VISIBLE else Nothing
           }
-    mkPlanFareBreakup offers = do
+    mkPlanFareBreakup currency offers = do
       let baseAmount = case plan.planBaseAmount of
             PERRIDE_BASE amount -> amount
             DAILY_BASE amount -> amount
@@ -696,13 +721,13 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
               else do
                 let bestOffer = DL.minimumBy (comparing (.finalOrderAmount)) offers
                 (bestOffer.discountAmount, bestOffer.finalOrderAmount)
-      [ PlanFareBreakup {component = "INITIAL_BASE_FEE", amount = baseAmount},
-        PlanFareBreakup {component = "REGISTRATION_FEE", amount = plan.registrationAmount},
-        PlanFareBreakup {component = "MAX_FEE_LIMIT", amount = plan.maxAmount},
-        PlanFareBreakup {component = "DISCOUNTED_FEE", amount = discountAmount},
-        PlanFareBreakup {component = "FINAL_FEE", amount = finalOrderAmount}
+      [ PlanFareBreakup {component = "INITIAL_BASE_FEE", amount = baseAmount, amountWithCurrency = PriceAPIEntity baseAmount currency},
+        PlanFareBreakup {component = "REGISTRATION_FEE", amount = plan.registrationAmount, amountWithCurrency = PriceAPIEntity plan.registrationAmount currency},
+        PlanFareBreakup {component = "MAX_FEE_LIMIT", amount = plan.maxAmount, amountWithCurrency = PriceAPIEntity plan.maxAmount currency},
+        PlanFareBreakup {component = "DISCOUNTED_FEE", amount = discountAmount, amountWithCurrency = PriceAPIEntity discountAmount currency},
+        PlanFareBreakup {component = "FINAL_FEE", amount = finalOrderAmount, amountWithCurrency = PriceAPIEntity finalOrderAmount currency}
         ]
-    driverFeeAndInvoiceIdsWithValidError transporterConfig mapDfee now =
+    driverFeeAndInvoiceIdsWithValidError currency transporterConfig mapDfee now =
       mapMaybe
         ( \invoice -> do
             let isExpiredError = now > maybe now (addUTCTime transporterConfig.bankErrorExpiry) invoice.bankErrorUpdatedAt
@@ -712,14 +737,15 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
                   ErrorEntity
                     { message = message,
                       code = code,
-                      amount = fromIntegral dfee.govtCharges + dfee.platformFee.fee + dfee.platformFee.cgst + dfee.platformFee.sgst
+                      amount = dfee.govtCharges + dfee.platformFee.fee + dfee.platformFee.cgst + dfee.platformFee.sgst,
+                      amountWithCurrency = PriceAPIEntity (dfee.govtCharges + dfee.platformFee.fee + dfee.platformFee.cgst + dfee.platformFee.sgst) currency
                     }
               (_, _, _, _) -> Nothing
         )
     getLatestInvoice = map (maximumBy (compare `on` INV.createdAt)) . groupBy (\a b -> a.driverFeeId == b.driverFeeId) . sortBy (compare `on` INV.driverFeeId)
-    calcBankError allPendingAndOverDueDriverfee transporterConfig_ now invoicesForDfee = do
+    calcBankError currency allPendingAndOverDueDriverfee transporterConfig_ now invoicesForDfee = do
       let mapDriverFeeByDriverFeeId = M.fromList (map (\df -> (df.id, df)) allPendingAndOverDueDriverfee)
-      driverFeeAndInvoiceIdsWithValidError transporterConfig_ mapDriverFeeByDriverFeeId now (getLatestInvoice invoicesForDfee)
+      driverFeeAndInvoiceIdsWithValidError currency transporterConfig_ mapDriverFeeByDriverFeeId now (getLatestInvoice invoicesForDfee)
 
 getPlanBaseFrequency :: PlanBaseAmount -> Text
 getPlanBaseFrequency planBaseAmount = case planBaseAmount of
@@ -743,6 +769,7 @@ mkMandateDetailEntity mandateId = do
               payerVpa = mandate.payerVpa,
               frequency = "Aspresented",
               maxAmount = round mandate.maxAmount,
+              maxAmountWithCurrency = PriceAPIEntity mandate.maxAmount mandate.currency,
               payerApp = mandate.payerApp,
               autopaySetupDate = mandate.createdAt
             }
@@ -774,25 +801,32 @@ mkDueDriverFeeInfoEntity serviceName driverFees transporterConfig = do
               | (\dfee -> dfee.feeType == DF.MANDATE_REGISTRATION) driverFee = DF.MANDATE_REGISTRATION
               | invoiceType == Just INV.AUTOPAY_INVOICE = DF.RECURRING_EXECUTION_INVOICE
               | otherwise = DF.RECURRING_INVOICE
+        -- FIXME should we round to half?
+        let driverFeeAmount = roundToHalf (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst)
         return
           DriverDuesEntity
             { autoPayStage = driverFee.autopayPaymentStage,
               paymentStatus = invoice <&> (.invoiceStatus),
-              totalEarnings = fromIntegral driverFee.totalEarnings,
+              totalEarnings = driverFee.totalEarnings,
               totalRides = calcNumRides driverFee transporterConfig,
-              planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
+              planAmount = fromMaybe 0.0 driverFee.feeWithoutDiscount,
+              planAmountWithCurrency = PriceAPIEntity (fromMaybe 0.0 driverFee.feeWithoutDiscount) driverFee.currency,
               isSplit = length driverFeesInWindow > 1,
               offerAndPlanDetails = driverFee.planOfferTitle,
               rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) driverFee.createdAt, --- when we fix ist issue we will remove this
-              driverFeeAmount = (\dueDfee -> roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)) driverFee,
+              driverFeeAmount,
+              driverFeeAmountWithCurrency = PriceAPIEntity driverFeeAmount driverFee.currency,
               createdAt,
               executionAt,
               feeType,
               maxRidesEligibleForCharge,
               isCoinCleared = driverFee.status == DF.CLEARED_BY_YATRI_COINS,
               coinDiscountAmount = driverFee.amountPaidByCoin,
+              coinDiscountAmountWithCurrency = flip PriceAPIEntity driverFee.currency <$> driverFee.amountPaidByCoin,
               specialZoneRideCount = driverFee.specialZoneRideCount,
-              totalSpecialZoneCharges = driverFee.specialZoneAmount
+              totalSpecialZoneCharges = driverFee.specialZoneAmount,
+              totalSpecialZoneChargesWithCurrency = PriceAPIEntity driverFee.specialZoneAmount driverFee.currency,
+              totalEarningsWithCurrency = PriceAPIEntity driverFee.totalEarnings driverFee.currency
             }
     )
     driverFees

@@ -17,14 +17,15 @@ module Storage.Beam.CancellationCharges where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMoney)
+import Kernel.Types.Common (Currency, HighPrecMoney)
 import Tools.Beam.UtilsTH
 
 data CancellationChargesT f = CancellationChargesT
   { id :: B.C f Text,
     driverId :: B.C f Text,
     rideId :: B.C f (Maybe Text),
-    cancellationCharges :: B.C f HighPrecMoney
+    cancellationCharges :: B.C f HighPrecMoney,
+    currency :: B.C f (Maybe Currency)
   }
   deriving (Generic, B.Beamable)
 

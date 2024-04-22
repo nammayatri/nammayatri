@@ -671,7 +671,7 @@ type UpdateFarePolicy =
     :> Post '[JSON] APISuccess
 
 data UpdateFarePolicyReq = UpdateFarePolicyReq
-  { serviceCharge :: Maybe Money,
+  { serviceCharge :: Maybe Money, -- FIXME fix all dashboard requests and responses
     nightShiftBounds :: Maybe NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
@@ -698,11 +698,11 @@ data WaitingChargeInfo = WaitingChargeInfo
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
 
-data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharge Money
+data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharge Money -- FIXME HighPrecMoney
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-data NightShiftCharge = ProgressiveNightShiftCharge Float | ConstantNightShiftCharge Money
+data NightShiftCharge = ProgressiveNightShiftCharge Float | ConstantNightShiftCharge Money -- FIXME HighPrecMoney
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 

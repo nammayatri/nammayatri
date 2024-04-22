@@ -778,8 +778,8 @@ createFPDriverExtraFee _ _ farePolicyId startDistance req = do
       let driverExtraFeeBounds =
             DFPEFB.DriverExtraFeeBounds
               { startDistance = strtDistance,
-                minFee = request.minFee,
-                maxFee = request.maxFee
+                minFee = toHighPrecMoney request.minFee, -- FIXME
+                maxFee = toHighPrecMoney request.maxFee -- FIXME
               }
       return (fpId, driverExtraFeeBounds)
 
@@ -810,7 +810,7 @@ updateFarePolicy _ _ farePolicyId req = do
       fPDetails <- mkFarePolicyDetails farePolicyDetails
       pure $
         FarePolicy.FarePolicy
-          { serviceCharge = req.serviceCharge <|> serviceCharge,
+          { serviceCharge = (toHighPrecMoney <$> req.serviceCharge) <|> serviceCharge, -- FIXME
             nightShiftBounds = req.nightShiftBounds <|> nightShiftBounds,
             allowedTripDistanceBounds = req.allowedTripDistanceBounds <|> allowedTripDistanceBounds,
             govtCharges = req.govtCharges <|> govtCharges,
@@ -830,9 +830,9 @@ updateFarePolicy _ _ farePolicyId req = do
 
     mkUpdatedFPProgressiveDetails FarePolicy.FPProgressiveDetails {..} =
       FarePolicy.FPProgressiveDetails
-        { baseFare = fromMaybe baseFare req.baseFare,
+        { baseFare = fromMaybe baseFare (toHighPrecMoney <$> req.baseFare), -- FIXME
           baseDistance = fromMaybe baseDistance req.baseDistance,
-          deadKmFare = fromMaybe deadKmFare req.deadKmFare,
+          deadKmFare = fromMaybe deadKmFare (toHighPrecMoney <$> req.deadKmFare), -- FIXME
           waitingChargeInfo = req.waitingChargeInfo <|> waitingChargeInfo,
           nightShiftCharge = req.nightShiftCharge <|> nightShiftCharge,
           ..
@@ -1041,7 +1041,8 @@ createMerchantOperatingCity merchantShortId city req = do
             state = req.state,
             country = req.country,
             supportNumber = req.supportNumber <|> baseCity.supportNumber,
-            language = fromMaybe baseCity.language req.primaryLanguage
+            language = fromMaybe baseCity.language req.primaryLanguage,
+            currency = fromMaybe baseCity.currency req.currency
           }
 
     buildIntelligentPoolConfig newCityId DDIPC.DriverIntelligentPoolConfig {..} = do

@@ -15,7 +15,6 @@
 module Beckn.OnDemand.Utils.OnUpdate where
 
 import qualified Beckn.ACL.Common as Common
-import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified BecknV2.OnDemand.Enums as Enums
@@ -33,6 +32,7 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id, (%~))
 import Kernel.Types.Common hiding (mkPrice)
+import qualified Kernel.Types.Common as Common
 import Kernel.Utils.Common hiding (mkPrice)
 import SharedLogic.FareCalculator as Fare
 import Tools.Error
@@ -47,8 +47,8 @@ showPaymentCollectedBy = show . maybe OnUpdate.BPP (Common.castDPaymentCollector
 mkRideCompletedQuote :: MonadFlow m => DRide.Ride -> DFParams.FareParameters -> m Spec.Quotation
 mkRideCompletedQuote ride fareParams = do
   fare' <- ride.fare & fromMaybeM (InternalError "Ride fare is not present in RideCompletedReq ride.")
-  let fare = Utils.rationaliseMoney fare'
-  let currency = "INR"
+  let fare = highPrecMoneyToText fare'
+  let currency = show ride.currency
       price =
         Spec.Price
           { priceCurrency = Just currency,
@@ -71,7 +71,7 @@ mkRideCompletedQuote ride fareParams = do
     mkPrice currency val =
       Spec.Price
         { priceCurrency = Just currency,
-          priceValue = Just $ Utils.rationaliseMoney val,
+          priceValue = Just $ highPrecMoneyToText val,
           priceComputedValue = Nothing,
           priceMaximumValue = Nothing,
           priceMinimumValue = Nothing,
@@ -136,7 +136,7 @@ mkRideCompletedQuote ride fareParams = do
 
 mkPaymentParams :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> DRB.Booking -> Spec.Payment
 mkPaymentParams _paymentMethodInfo _paymentUrl merchant bppConfig booking = do
-  let mPrice = Just $ mkPriceFromMoney booking.estimatedFare -- FIXME
+  let mPrice = Just $ Common.mkPrice (Just booking.currency) booking.estimatedFare
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
   mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 

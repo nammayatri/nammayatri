@@ -124,7 +124,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       congestionChargePercentageItem = farePolicy.congestionChargeMultiplier <&> \congestionChargeMultiplier -> mkBreakupItem congestionChargePercentageCaption (mkValue $ show ((congestionChargeMultiplier - 1) * 100))
 
       serviceChargeCaption = show Tags.SERVICE_CHARGE
-      serviceChargeItem = mkBreakupItem serviceChargeCaption . (mkValue . show . (.getMoney)) <$> farePolicy.serviceCharge
+      serviceChargeItem = mkBreakupItem serviceChargeCaption . (mkValue . highPrecMoneyToText) <$> farePolicy.serviceCharge
 
       governmentChargeCaption = show Tags.GOVERNMENT_CHARGE
       governmentChargeItem = mkBreakupItem governmentChargeCaption . (mkValue . show) <$> farePolicy.govtCharges
@@ -135,11 +135,11 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
 
       driverMinExtraFee = driverExtraFeeBounds <&> (.minFee)
       driverMinExtraFeeCaption = show Tags.DRIVER_MIN_EXTRA_FEE
-      driverMinExtraFeeItem = mkBreakupItem driverMinExtraFeeCaption . (mkValue . show . (.getMoney)) <$> driverMinExtraFee
+      driverMinExtraFeeItem = mkBreakupItem driverMinExtraFeeCaption . (mkValue . highPrecMoneyToText) <$> driverMinExtraFee
 
       driverMaxExtraFee = driverExtraFeeBounds <&> (.maxFee)
       driverMaxExtraFeeCaption = show Tags.DRIVER_MAX_EXTRA_FEE
-      driverMaxExtraFeeItem = mkBreakupItem driverMaxExtraFeeCaption . (mkValue . show . (.getMoney)) <$> driverMaxExtraFee
+      driverMaxExtraFeeItem = mkBreakupItem driverMaxExtraFeeCaption . (mkValue . highPrecMoneyToText) <$> driverMaxExtraFee
 
       nightShiftStart = nightShiftBounds <&> (.nightShiftStart)
       nightShiftStartInSecondsCaption = show Tags.NIGHT_SHIFT_START_TIME_IN_SECONDS
@@ -329,7 +329,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       driverExtraFeeBoundsMinFeeItems <> [driverExtraFeeBoundMinFeeItem]
     mkDriverExtraFeeBoundsMinFeeItem driverExtraFeeBoundsMinFeeItems (s1 : s2 : ss) startDistance = do
       let driverExtraFeeBoundMinFeeCaption = show $ Tags.DRIVER_EXTRA_FEE_BOUNDS_STEP_MIN_FEE startDistance (Just s2.startDistance.getMeters)
-          driverExtraFeeBoundMinFeeItem = mkBreakupItem driverExtraFeeBoundMinFeeCaption (mkValue $ show s1.minFee.getMoney)
+          driverExtraFeeBoundMinFeeItem = mkBreakupItem driverExtraFeeBoundMinFeeCaption (mkValue $ highPrecMoneyToText s1.minFee)
       mkDriverExtraFeeBoundsMinFeeItem (driverExtraFeeBoundsMinFeeItems <> [driverExtraFeeBoundMinFeeItem]) (s2 : ss) s2.startDistance.getMeters
 
     mkDriverExtraFeeBoundsMaxFeeItem driverExtraFeeBoundsMaxFeeItems [] _ = driverExtraFeeBoundsMaxFeeItems
@@ -339,5 +339,5 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       driverExtraFeeBoundsMaxFeeItems <> [driverExtraFeeBoundMaxFeeItem]
     mkDriverExtraFeeBoundsMaxFeeItem driverExtraFeeBoundsMaxFeeItems (s1 : s2 : ss) startDistance = do
       let driverExtraFeeBoundMaxFeeCaption = show $ Tags.DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE startDistance (Just s2.startDistance.getMeters)
-          driverExtraFeeBoundMaxFeeItem = mkBreakupItem driverExtraFeeBoundMaxFeeCaption (mkValue $ show s1.maxFee.getMoney)
+          driverExtraFeeBoundMaxFeeItem = mkBreakupItem driverExtraFeeBoundMaxFeeCaption (mkValue $ highPrecMoneyToText s1.maxFee)
       mkDriverExtraFeeBoundsMaxFeeItem (driverExtraFeeBoundsMaxFeeItems <> [driverExtraFeeBoundMaxFeeItem]) (s2 : ss) s2.startDistance.getMeters

@@ -92,7 +92,7 @@ handler merchant req validatedQuote = do
   unless (booking.status == DRB.NEW) $ throwError (BookingInvalidStatus $ show booking.status)
   now <- getCurrentTime
 
-  (riderDetails, isNewRider) <- SRD.getRiderDetails merchant.id req.customerMobileCountryCode req.customerPhoneNumber now req.nightSafetyCheck
+  (riderDetails, isNewRider) <- SRD.getRiderDetails booking.currency merchant.id req.customerMobileCountryCode req.customerPhoneNumber now req.nightSafetyCheck
   unless isNewRider $ QRD.updateNightSafetyChecks riderDetails.id req.nightSafetyCheck
 
   case validatedQuote of
@@ -104,7 +104,7 @@ handler merchant req validatedQuote = do
       updateBookingDetails isNewRider booking riderDetails
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       (ride, _, vehicle) <- initializeRide merchant.id driver uBooking Nothing (Just req.enableFrequentLocationUpdates) driverQuote.clientId
-      void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId driverQuote.estimatedFare
+      void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId $ mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       return $ mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
 

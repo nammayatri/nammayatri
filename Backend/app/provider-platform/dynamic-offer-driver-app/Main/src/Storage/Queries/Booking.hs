@@ -169,7 +169,7 @@ cancelBookings bookingIds now =
     [Se.Set BeamB.status CANCELLED, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
 
-findFareForCancelledBookings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booking] -> m Money
+findFareForCancelledBookings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booking] -> m HighPrecMoney
 findFareForCancelledBookings bookingIds = findAllWithKV [Se.And [Se.Is BeamB.status $ Se.Eq CANCELLED, Se.Is BeamB.id $ Se.In $ getId <$> bookingIds]] <&> sum . map Domain.Types.Booking.estimatedFare
 
 findLastCancelledByRiderId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id RiderDetails -> m (Maybe Booking)
@@ -238,9 +238,7 @@ instance FromTType' BeamB.Booking Booking where
                 toLocation = tl,
                 vehicleServiceTier = vehicleVariant,
                 vehicleServiceTierName = fromMaybe (show vehicleVariant) vehicleServiceTierName,
-                vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
-                vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
-                estimatedFare = roundToIntegral estimatedFare,
+                currency = fromMaybe INR currency,
                 fareParams = fromJust fp, -- This fromJust is safe because of the check above.
                 paymentMethodId = Id <$> paymentMethodId,
                 stopLocationId = Id <$> stopLocationId,
@@ -287,7 +285,8 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
         BeamB.estimatedDistance = estimatedDistance,
         BeamB.maxEstimatedDistance = maxEstimatedDistance,
-        BeamB.estimatedFare = realToFrac estimatedFare,
+        BeamB.estimatedFare = estimatedFare,
+        BeamB.currency = Just currency,
         BeamB.estimatedDuration = estimatedDuration,
         BeamB.fareParametersId = getId fareParams.id,
         BeamB.paymentMethodId = getId <$> paymentMethodId,

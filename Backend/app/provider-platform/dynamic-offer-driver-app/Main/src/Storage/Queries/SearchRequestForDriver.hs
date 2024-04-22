@@ -123,7 +123,11 @@ instance FromTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
             createdAt = T.localTimeToUTC T.utc createdAt,
             vehicleServiceTier = fromMaybe (castVariantToServiceTier vehicleVariant) vehicleServiceTier,
             goHomeRequestId = Id <$> goHomeRequestId,
-            customerCancellationDues = fromMaybe 0 customerCancellationDues,
+            baseFare = mkAmountWithDefault baseFareAmount <$> baseFare,
+            driverMinExtraFee = mkAmountWithDefault driverMinExtraFeeAmount <$> driverMinExtraFee,
+            driverMaxExtraFee = mkAmountWithDefault driverMaxExtraFeeAmount <$> driverMaxExtraFee,
+            customerCancellationDues = fromMaybe 0.0 customerCancellationDues,
+            currency = fromMaybe INR currency, -- FIXME use default currency in migration
             ..
           }
 
@@ -134,7 +138,8 @@ instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
         BeamSRFD.requestId = getId requestId,
         BeamSRFD.searchTryId = getId searchTryId,
         BeamSRFD.estimateId = estimateId,
-        BeamSRFD.baseFare = baseFare,
+        BeamSRFD.baseFare = roundToIntegral <$> baseFare,
+        BeamSRFD.baseFareAmount = baseFare,
         BeamSRFD.merchantId = getId <$> merchantId,
         BeamSRFD.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
         BeamSRFD.startTime = startTime,
@@ -153,8 +158,11 @@ instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
         BeamSRFD.lon = lon,
         BeamSRFD.createdAt = T.utcToLocalTime T.utc createdAt,
         BeamSRFD.response = response,
-        BeamSRFD.driverMinExtraFee = driverMinExtraFee,
-        BeamSRFD.driverMaxExtraFee = driverMaxExtraFee,
+        BeamSRFD.driverMinExtraFee = roundToIntegral <$> driverMinExtraFee,
+        BeamSRFD.driverMaxExtraFee = roundToIntegral <$> driverMaxExtraFee,
+        BeamSRFD.driverMinExtraFeeAmount = driverMinExtraFee,
+        BeamSRFD.driverMaxExtraFeeAmount = driverMaxExtraFee,
+        BeamSRFD.currency = Just currency,
         BeamSRFD.rideRequestPopupDelayDuration = rideRequestPopupDelayDuration,
         BeamSRFD.isPartOfIntelligentPool = isPartOfIntelligentPool,
         BeamSRFD.pickupZone = pickupZone,

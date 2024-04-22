@@ -37,12 +37,13 @@ import Kernel.Types.Common
 import Kernel.Utils.Logging
 
 data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
-  { baseFare :: Money,
+  { baseFare :: HighPrecMoney,
     baseDistance :: Meters,
     perExtraKmRateSections :: NonEmpty (FPProgressiveDetailsPerExtraKmRateSectionD s),
-    deadKmFare :: Money,
+    deadKmFare :: HighPrecMoney,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
-    nightShiftCharge :: Maybe NightShiftCharge
+    nightShiftCharge :: Maybe NightShiftCharge,
+    currency :: Currency
   }
   deriving (Generic, Show)
 
@@ -62,9 +63,11 @@ instance ToJSON (FPProgressiveDetailsD 'Safe)
 
 data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
   { baseFare :: Money,
+    baseFareWithCurrency :: PriceAPIEntity,
     baseDistance :: Meters,
     perExtraKmRateSections :: NonEmpty FPProgressiveDetailsPerExtraKmRateSectionAPIEntity,
     deadKmFare :: Money,
+    deadKmFareWithCurrency :: PriceAPIEntity,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
     nightShiftCharge :: Maybe NightShiftCharge
   }
@@ -114,5 +117,9 @@ makeFPProgressiveDetailsAPIEntity :: FPProgressiveDetails -> FPProgressiveDetail
 makeFPProgressiveDetailsAPIEntity FPProgressiveDetails {..} =
   FPProgressiveDetailsAPIEntity
     { perExtraKmRateSections = makeFPProgressiveDetailsPerExtraKmRateSectionAPIEntity <$> perExtraKmRateSections,
+      baseFare = roundToIntegral baseFare,
+      baseFareWithCurrency = PriceAPIEntity baseFare currency,
+      deadKmFare = roundToIntegral deadKmFare,
+      deadKmFareWithCurrency = PriceAPIEntity deadKmFare currency,
       ..
     }

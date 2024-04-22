@@ -313,7 +313,8 @@ updateAll rideId ride = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamR.chargeableDistance ride.chargeableDistance,
-      Se.Set BeamR.fare ride.fare,
+      Se.Set BeamR.fare $ roundToIntegral <$> ride.fare,
+      Se.Set BeamR.fareAmount $ ride.fare,
       Se.Set BeamR.tripEndTime ride.tripEndTime,
       Se.Set BeamR.tripEndLat (ride.tripEndPos <&> (.lat)),
       Se.Set BeamR.tripEndLon (ride.tripEndPos <&> (.lon)),
@@ -368,10 +369,18 @@ data RideItem = RideItem
     rideDetails :: RideDetails,
     riderDetails :: RiderDetails,
     customerName :: Maybe Text,
-    fareDiff :: Maybe Money,
+    fareDiff :: Maybe HighPrecMoney,
     bookingStatus :: Common.BookingStatus,
     tripCategory :: DTC.TripCategory
   }
+
+instance Num (Maybe HighPrecMoney) where
+  (-) = liftA2 (-)
+  (+) = liftA2 (+)
+  (*) = liftA2 (*)
+  abs = fmap abs
+  signum = fmap signum
+  fromInteger = Just . fromInteger
 
 instance Num (Maybe Money) where
   (-) = liftA2 (-)
@@ -409,7 +418,7 @@ findAllRideItems ::
   Maybe (ShortId Ride) ->
   Maybe DbHash ->
   Maybe DbHash ->
-  Maybe Money ->
+  Maybe HighPrecMoney ->
   UTCTime ->
   Maybe UTCTime ->
   Maybe UTCTime ->
@@ -431,7 +440,16 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fareDiff_ -> B.sqlBool_ $ (ride.fare - B.just_ (B.floor_ booking.estimatedFare)) B.>. B.val_ (Just fareDiff_) B.||. (ride.fare - B.just_ (B.floor_ booking.estimatedFare)) B.<. B.val_ (Just fareDiff_)) mbFareDiff
+                    -- TODO test
+                    B.&&?. maybe
+                      (B.sqlBool_ $ B.val_ True)
+                      ( \fareDiff_ -> do
+                          -- is it correct? fare - estimatedFare > fareDiff_ || fare - estimatedFare < fareDiff_
+                          let oldCond = B.sqlBool_ $ (ride.fare - B.just_ (B.floor_ booking.estimatedFare)) B.>. B.val_ (Just $ roundToIntegral fareDiff_) B.||. (ride.fare - B.just_ (B.floor_ booking.estimatedFare)) B.<. B.val_ (Just $ roundToIntegral fareDiff_)
+                          let newCond = B.sqlBool_ $ (ride.fareAmount - B.just_ booking.estimatedFare) B.>. B.val_ (Just fareDiff_) B.||. (ride.fareAmount - B.just_ booking.estimatedFare) B.<. B.val_ (Just fareDiff_)
+                          B.bool_ newCond oldCond (B.isNothing_ ride.fareAmount)
+                      )
+                      mbFareDiff
               )
               do
                 booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)

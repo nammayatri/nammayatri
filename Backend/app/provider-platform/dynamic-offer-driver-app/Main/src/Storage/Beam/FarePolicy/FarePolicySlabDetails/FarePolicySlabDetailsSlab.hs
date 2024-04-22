@@ -29,6 +29,8 @@ data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
     farePolicyId :: B.C f Text,
     startDistance :: B.C f Meters,
     baseFare :: B.C f Money,
+    baseFareAmount :: B.C f (Maybe HighPrecMoney),
+    currency :: B.C f (Maybe Currency),
     platformFeeCharge :: B.C f (Maybe Domain.PlatformFeeCharge),
     platformFeeCgst :: B.C f (Maybe Double),
     platformFeeSgst :: B.C f (Maybe Double),

@@ -59,3 +59,9 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN vehicle_service_tier_air_cond
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN ride_ended_by text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN fare_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN currency character varying(255) ;
