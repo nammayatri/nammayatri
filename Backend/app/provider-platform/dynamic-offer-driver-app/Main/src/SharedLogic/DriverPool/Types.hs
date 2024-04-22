@@ -45,6 +45,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Kernel.Utils.Common
 import Lib.Scheduler.Types
 import Tools.Maps as Google
@@ -80,7 +81,13 @@ data DriverPoolResult = DriverPoolResult
     airConditioned :: Maybe Double,
     lat :: Double,
     lon :: Double,
-    mode :: Maybe DI.DriverMode
+    mode :: Maybe DI.DriverMode,
+    clientSdkVersion :: Maybe Version,
+    clientBundleVersion :: Maybe Version,
+    clientConfigVersion :: Maybe Version,
+    clientDevice :: Maybe Device,
+    backendConfigVersion :: Maybe Version,
+    backendAppVersion :: Maybe Text
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
@@ -98,7 +105,13 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     destinationLon :: Double,
     distanceToPickup :: Meters,
     distanceFromDriverToDestination :: Meters,
-    mode :: Maybe DI.DriverMode
+    mode :: Maybe DI.DriverMode,
+    clientSdkVersion :: Maybe Version,
+    clientBundleVersion :: Maybe Version,
+    clientConfigVersion :: Maybe Version,
+    clientDevice :: Maybe Device,
+    backendConfigVersion :: Maybe Version,
+    backendAppVersion :: Maybe Text
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 

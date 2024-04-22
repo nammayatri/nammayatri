@@ -17,6 +17,8 @@ module Tools.Beam.UtilsTH (module Reexport, module Tools.Beam.UtilsTH) where
 import Kernel.Beam.Lib.UtilsTH as Reexport hiding (mkTableInstances, mkTableInstancesWithTModifier)
 import qualified Kernel.Beam.Lib.UtilsTH as TH
 import Kernel.Prelude
+import Kernel.Types.Version as Reexport
+import Kernel.Utils.Version as Reexport
 import Language.Haskell.TH
 
 currentSchemaName :: String

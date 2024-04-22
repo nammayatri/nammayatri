@@ -33,6 +33,7 @@ import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -126,7 +127,13 @@ handler merchantId req validatedReq = do
         HasField "distance" q (Maybe Meters),
         HasField "estimatedFare" q Money,
         HasField "fareParams" q DFP.FareParameters,
-        HasField "specialLocationTag" q (Maybe Text)
+        HasField "specialLocationTag" q (Maybe Text),
+        HasField "clientSdkVersion" q (Maybe Version),
+        HasField "clientBundleVersion" q (Maybe Version),
+        HasField "clientDevice" q (Maybe Device),
+        HasField "clientConfigVersion" q (Maybe Version),
+        HasField "backendConfigVersion" q (Maybe Version),
+        HasField "backendAppVersion" q (Maybe Text)
       ) =>
       DSR.SearchRequest ->
       q ->
@@ -176,6 +183,12 @@ handler merchantId req validatedReq = do
             distanceToPickup = distanceToPickup,
             stopLocationId = (.id) <$> toLocation,
             startTime = searchRequest.startTime,
+            clientSdkVersion = driverQuote.clientSdkVersion,
+            clientBundleVersion = driverQuote.clientBundleVersion,
+            clientDevice = driverQuote.clientDevice,
+            clientConfigVersion = driverQuote.clientConfigVersion,
+            backendConfigVersion = driverQuote.backendConfigVersion,
+            backendAppVersion = driverQuote.backendAppVersion,
             ..
           }
 

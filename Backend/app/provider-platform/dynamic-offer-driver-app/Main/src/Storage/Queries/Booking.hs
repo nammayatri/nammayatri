@@ -33,6 +33,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
@@ -189,6 +190,11 @@ instance FromTType' BeamB.Booking Booking where
   fromTType' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => BeamB.Booking -> m (Maybe Booking)
   fromTType' BeamB.BookingT {..} = do
     mappings <- QLM.findByEntityId id
+    clientSdkVersion' <- mapM readVersion (T.strip <$> clientSdkVersion)
+    clientBundleVersion' <- mapM readVersion (T.strip <$> clientBundleVersion)
+    clientConfigVersion' <- mapM readVersion (T.strip <$> clientConfigVersion)
+    backendConfigVersion' <- mapM readVersion (T.strip <$> backendConfigVersion)
+    let clientDevice' = mkClientDevice clientOsType clientOsVersion
     let tripCategory' = case tripCategory of
           Just cat -> cat
           Nothing -> do
@@ -246,6 +252,11 @@ instance FromTType' BeamB.Booking Booking where
                 stopLocationId = Id <$> stopLocationId,
                 isScheduled = fromMaybe False isScheduled,
                 distanceToPickup = roundToIntegral <$> distanceToPickup,
+                clientSdkVersion = clientSdkVersion',
+                clientBundleVersion = clientBundleVersion',
+                clientConfigVersion = clientConfigVersion',
+                backendConfigVersion = backendConfigVersion',
+                clientDevice = clientDevice',
                 ..
               }
       else do
@@ -297,7 +308,14 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.updatedAt = updatedAt,
         BeamB.distanceToPickup = realToFrac <$> distanceToPickup,
         BeamB.isScheduled = Just isScheduled,
-        BeamB.stopLocationId = getId <$> stopLocationId
+        BeamB.stopLocationId = getId <$> stopLocationId,
+        BeamB.clientSdkVersion = versionToText <$> clientSdkVersion,
+        BeamB.clientBundleVersion = versionToText <$> clientBundleVersion,
+        BeamB.clientConfigVersion = versionToText <$> clientConfigVersion,
+        BeamB.backendConfigVersion = versionToText <$> backendConfigVersion,
+        BeamB.clientOsVersion = clientDevice <&> (.deviceVersion),
+        BeamB.clientOsType = clientDevice <&> (.deviceType),
+        ..
       }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME

@@ -30,6 +30,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.App
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Servant hiding (Context)
 import Servant.Client
 
@@ -49,7 +50,7 @@ data DriverAPIs = DriverAPIs
   { getDriverInfo :: Text -> Maybe Int -> ClientM DriverAPI.DriverInformationRes,
     getNearbySearchRequests :: RegToken -> ClientM DriverAPI.GetNearbySearchRequestsRes,
     offerQuote :: RegToken -> Maybe (Id DC.Client) -> DriverAPI.DriverOfferReq -> ClientM APISuccess,
-    respondQuote :: RegToken -> Maybe (Id DC.Client) -> DriverAPI.DriverRespondReq -> ClientM APISuccess,
+    respondQuote :: RegToken -> Maybe (Id DC.Client) -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> DriverAPI.DriverRespondReq -> ClientM APISuccess,
     setDriverOnline :: Text -> Bool -> Maybe TDI.DriverMode -> ClientM APISuccess,
     updateMetaData :: RegToken -> DriverAPI.MetaDataReq -> ClientM APISuccess,
     validate :: Text -> DriverAPI.DriverAlternateNumberReq -> ClientM DriverAPI.DriverAlternateNumberRes,

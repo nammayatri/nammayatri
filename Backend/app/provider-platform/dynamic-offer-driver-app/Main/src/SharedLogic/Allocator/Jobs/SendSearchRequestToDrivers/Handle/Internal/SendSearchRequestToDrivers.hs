@@ -164,6 +164,12 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 goHomeRequestId = dpwRes.goHomeReqId,
                 rideFrequencyScore = dpwRes.intelligentScores.rideFrequency,
                 customerCancellationDues = fromMaybe 0 searchReq.customerCancellationDues,
+                clientSdkVersion = dpwRes.driverPoolResult.clientSdkVersion,
+                clientBundleVersion = dpwRes.driverPoolResult.clientBundleVersion,
+                clientConfigVersion = dpwRes.driverPoolResult.clientConfigVersion,
+                clientDevice = dpwRes.driverPoolResult.clientDevice,
+                backendConfigVersion = dpwRes.driverPoolResult.backendConfigVersion,
+                backendAppVersion = dpwRes.driverPoolResult.backendAppVersion,
                 ..
               }
       pure searchRequestForDriver

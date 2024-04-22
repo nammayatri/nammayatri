@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.Ride where
 
+import qualified Data.Text
 import qualified Domain.Types.Ride
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -11,12 +12,17 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Version
 import qualified Storage.Beam.Ride as Beam
 import Storage.Queries.Transformers.Ride
 import qualified Storage.Queries.Transformers.Ride
 
 instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
   fromTType' (Beam.RideT {..}) = do
+    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
+    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
+    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     fromLocation' <- Storage.Queries.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId
     merchantOperatingCityId' <- Storage.Queries.Transformers.Ride.getMerchantOperatingCityId bookingId merchantId merchantOperatingCityId
     toLocation' <- Storage.Queries.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId
@@ -24,9 +30,15 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
     pure $
       Just
         Domain.Types.Ride.Ride
-          { bookingId = Kernel.Types.Id.Id bookingId,
+          { backendAppVersion = backendAppVersion,
+            backendConfigVersion = backendConfigVersion',
+            bookingId = Kernel.Types.Id.Id bookingId,
             chargeableDistance = chargeableDistance,
+            clientBundleVersion = clientBundleVersion',
+            clientConfigVersion = clientConfigVersion',
+            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion,
             clientId = Kernel.Types.Id.Id <$> clientId,
+            clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
             distanceCalculationFailed = distanceCalculationFailed,
             driverArrivalTime = driverArrivalTime,
@@ -71,9 +83,16 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
 instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
   toTType' (Domain.Types.Ride.Ride {..}) = do
     Beam.RideT
-      { Beam.bookingId = Kernel.Types.Id.getId bookingId,
+      { Beam.backendAppVersion = backendAppVersion,
+        Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
+        Beam.bookingId = Kernel.Types.Id.getId bookingId,
         Beam.chargeableDistance = chargeableDistance,
+        Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
+        Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
+        Beam.clientOsType = clientDevice <&> (.deviceType),
+        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
         Beam.clientId = Kernel.Types.Id.getId <$> clientId,
+        Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = createdAt,
         Beam.distanceCalculationFailed = distanceCalculationFailed,
         Beam.driverArrivalTime = driverArrivalTime,

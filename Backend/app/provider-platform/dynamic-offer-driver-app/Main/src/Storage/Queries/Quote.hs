@@ -15,6 +15,7 @@
 
 module Storage.Queries.Quote where
 
+import Data.Text (strip)
 import qualified Data.Time as T
 import qualified Domain.Types.Common as DTC
 import Domain.Types.Quote
@@ -23,6 +24,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.Quote as BeamQSZ
 import Storage.CachedQueries.FarePolicy as BeamFPolicy
@@ -44,6 +46,11 @@ findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
 instance FromTType' BeamQSZ.QuoteSpecialZone Quote where
   fromTType' BeamQSZ.QuoteSpecialZoneT {..} = do
     farePolicy <- maybe (pure Nothing) (BeamFPolicy.findById Nothing Nothing . Id) farePolicyId
+    clientBundleVersion' <- mapM readVersion (strip <$> clientBundleVersion)
+    clientSdkVersion' <- mapM readVersion (strip <$> clientSdkVersion)
+    clientConfigVersion' <- mapM readVersion (strip <$> clientConfigVersion)
+    backendConfigVersion' <- mapM readVersion (strip <$> backendConfigVersion)
+    let clientDevice' = mkClientDevice clientOsType clientOsVersion
     fareParams <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError $ "FareParameters not found in Quote for id: " <> show fareParametersId)
     return $
       Just
@@ -57,6 +64,11 @@ instance FromTType' BeamQSZ.QuoteSpecialZone Quote where
             createdAt = T.localTimeToUTC T.utc createdAt,
             updatedAt = T.localTimeToUTC T.utc updatedAt,
             validTill = T.localTimeToUTC T.utc validTill,
+            clientBundleVersion = clientBundleVersion',
+            clientSdkVersion = clientSdkVersion',
+            clientConfigVersion = clientConfigVersion',
+            backendConfigVersion = backendConfigVersion',
+            clientDevice = clientDevice',
             ..
           }
 
@@ -81,5 +93,12 @@ instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
         BeamQSZ.specialLocationTag = specialLocationTag,
         BeamQSZ.fareParametersId = getId fareParams.id,
         BeamQSZ.isScheduled = Just isScheduled,
-        BeamQSZ.farePolicyId = getId . (.id) <$> farePolicy
+        BeamQSZ.farePolicyId = getId . (.id) <$> farePolicy,
+        BeamQSZ.clientSdkVersion = versionToText <$> clientSdkVersion,
+        BeamQSZ.clientBundleVersion = versionToText <$> clientBundleVersion,
+        BeamQSZ.clientOsVersion = clientDevice <&> (.deviceVersion),
+        BeamQSZ.clientOsType = clientDevice <&> (.deviceType),
+        BeamQSZ.clientConfigVersion = versionToText <$> clientConfigVersion,
+        BeamQSZ.backendConfigVersion = versionToText <$> backendConfigVersion,
+        BeamQSZ.backendAppVersion = backendAppVersion
       }

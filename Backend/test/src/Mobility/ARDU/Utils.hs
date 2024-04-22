@@ -172,7 +172,7 @@ getNearbySearchRequestForDriver driver estimateId =
 
 respondQuote :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM ()
 respondQuote driver fare bppSearchRequestId response =
-  void $ callBPP $ API.ui.driver.respondQuote driver.token Nothing $ TDriver.DriverRespondReq (Just fare) Nothing (Just bppSearchRequestId) response
+  void $ callBPP $ API.ui.driver.respondQuote driver.token Nothing Nothing Nothing Nothing Nothing $ TDriver.DriverRespondReq (Just fare) Nothing (Just bppSearchRequestId) response
 
 offerQuote :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> ClientsM ()
 offerQuote driver fare bppSearchRequestId =
@@ -180,7 +180,7 @@ offerQuote driver fare bppSearchRequestId =
 
 respondQuoteEither :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM (Either ClientError APISuccess)
 respondQuoteEither driver fare bppSearchRequestId response =
-  callBppEither $ API.ui.driver.respondQuote driver.token Nothing $ TDriver.DriverRespondReq (Just fare) Nothing (Just bppSearchRequestId) response
+  callBppEither $ API.ui.driver.respondQuote driver.token Nothing Nothing Nothing Nothing Nothing $ TDriver.DriverRespondReq (Just fare) Nothing (Just bppSearchRequestId) response
 
 offerQuoteEither :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> ClientsM (Either ClientError APISuccess)
 offerQuoteEither driver fare bppSearchRequestId =
