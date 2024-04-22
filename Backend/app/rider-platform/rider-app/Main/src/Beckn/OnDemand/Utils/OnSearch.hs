@@ -251,10 +251,35 @@ makeLatLong provider vehicleVariant location = do
 
     parseLatLongHelper locId gps providerItems = do
       let providerItem = filter (\item -> maybe False (\locIds -> locId `elem` locIds) item.itemLocationIds) providerItems
-      currVehicleVariant <- maybe (pure Nothing) (fmap Just . getVehicleVariant provider) (listToMaybe providerItem)
-      if currVehicleVariant == Just vehicleVariant
+          vehicleVariants = traverse extractVehicleVariants providerItem
+      if maybe False (\vehVars -> Just vehicleVariant `elem` vehVars) (listToMaybe vehicleVariants)
         then Just <$> Common.parseLatLong gps
         else return Nothing
+
+    extractVehicleVariants item = do
+      fromMaybe
+        []
+        ( item.itemFulfillmentIds
+            >>= ( \itemfullfillment ->
+                    provider.providerFulfillments
+                      >>= ( \provFul ->
+                              Just (filterFulfillmentsByFulfillmentId provFul itemfullfillment)
+                          )
+                )
+        )
+
+    filterFulfillmentsByFulfillmentId providerFulfillments arrFullFIllment = do
+      let result = find (\fulf -> maybe False (`elem` arrFullFIllment) fulf.fulfillmentId) providerFulfillments
+      [ result
+          >>= ( \fulf ->
+                  fulf.fulfillmentVehicle
+                    >>= ( \fVehicle ->
+                            Common.parseVehicleVariant
+                              fVehicle.vehicleCategory
+                              (map T.toUpper (fVehicle.vehicleVariant))
+                        )
+              )
+        ]
 
 buildSpecialLocationTag :: MonadFlow m => Spec.Item -> m (Maybe Text)
 buildSpecialLocationTag item =
