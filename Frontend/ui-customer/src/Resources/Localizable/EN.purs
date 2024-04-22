@@ -1093,3 +1093,5 @@ getEN stringKey =
         BOOK name -> "Book " <> name
         FARE_FOR limit -> "Fare for " <> limit
         WAITING_CHARGE_LIMIT timeLimit -> "Waiting Charges (after " <> timeLimit <> " mins)"
+        TIME_TAKEN -> "Time Taken"
+        TRIP_DISTANCE -> "Trip Distance"

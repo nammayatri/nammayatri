@@ -1100,3 +1100,5 @@ data STR
   | BOOK String
   | FARE_FOR String
   | WAITING_CHARGE_LIMIT String
+  | TIME_TAKEN
+  | TRIP_DISTANCE

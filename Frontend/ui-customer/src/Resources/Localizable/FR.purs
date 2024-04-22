@@ -1096,3 +1096,5 @@ getFR stringKey =
         BOOK name -> "Réserver " <> name
         FARE_FOR limit -> "Tarif pour " <> limit
         WAITING_CHARGE_LIMIT timeLimit -> "Frais d'attente après " <> timeLimit
+        TIME_TAKEN -> "Temps pris"
+        TRIP_DISTANCE -> "Distance du trajet"

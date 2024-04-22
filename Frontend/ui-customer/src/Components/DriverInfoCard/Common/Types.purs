@@ -4,6 +4,7 @@ import Prelude
 
 import MerchantConfig.Types (AppConfig)
 import Screens.Types (City, SearchResultType)
+import Data.Maybe (Maybe(..))
 
 type DriverDetailsType
   = { searchType :: SearchResultType
@@ -16,7 +17,10 @@ type DriverDetailsType
   , config :: AppConfig
   , rideStarted :: Boolean
   , enablePaddingBottom :: Boolean
-    }
+  , vehicleModel :: String
+  , vehicleColor :: String
+  , serviceTierName :: Maybe String
+  }
 
 type TripDetails a
   = { rideStarted :: Boolean

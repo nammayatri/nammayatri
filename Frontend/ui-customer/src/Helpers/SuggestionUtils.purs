@@ -119,10 +119,11 @@ addOrUpdateSuggestedTrips ::
   Boolean ->
   SuggestionsMap ->
   SuggestedDestinationAndTripsConfig ->
+  Boolean ->
   SuggestionsMap
-addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config =
+addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config isBackFilling =
     if member sourceGeohash suggestionsMap
-    then update updateSuggestions sourceGeohash suggestionsMap
+    then update (\item -> updateSuggestions isBackFilling item) sourceGeohash suggestionsMap
     else insertSuggestionInMap 
           sourceGeohash 
           { destinationSuggestions:[],
@@ -137,24 +138,23 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config =
           suggestionsMap 
           config.geohashLimitForMap
     where
-      updateSuggestions :: Suggestions -> Maybe Suggestions
-      updateSuggestions suggestion = Just $ suggestion {tripSuggestions = updateTrips suggestion.tripSuggestions} 
+      updateSuggestions :: Boolean -> Suggestions -> Maybe Suggestions
+      updateSuggestions isBackFilling suggestion = Just $ suggestion {tripSuggestions = updateTrip suggestion.tripSuggestions isBackFilling} 
 
-      updateTrips ::  Array Trip -> Array Trip
-      updateTrips trips = updateTrip trips
-
-      updateTrip :: Array Trip -> Array Trip
-      updateTrip trips =
+      updateTrip :: Array Trip -> Boolean -> Array Trip
+      updateTrip trips isBackFilling =
         let
           updateExisting :: Trip -> Trip
           updateExisting existingTrip = do
             if (getDistanceBwCordinates trip.sourceLat trip.sourceLong existingTrip.sourceLat existingTrip.sourceLong) < config.tripDistanceThreshold
             && (getDistanceBwCordinates trip.destLat trip.destLong existingTrip.destLat existingTrip.destLong) < config.tripDistanceThreshold
-            && (existingTrip.serviceTierNameV2 == trip.serviceTierNameV2)
+            && (existingTrip.serviceTierNameV2 == trip.serviceTierNameV2 || isNothing existingTrip.serviceTierNameV2)
             then existingTrip
                   { frequencyCount = Just $ (fromMaybe 0 existingTrip.frequencyCount) +  1
                   , recencyDate = if isPastTrip then existingTrip.recencyDate else Just $ getCurrentUTC ""
                   , locationScore = Just $ calculateScore (toNumber ((fromMaybe 0 existingTrip.frequencyCount) +  1)) (getCurrentUTC "") config.frequencyWeight
+                  , serviceTierNameV2 = if isBackFilling || isJust existingTrip.serviceTierNameV2 then existingTrip.serviceTierNameV2 else trip.serviceTierNameV2
+                  , vehicleVariant = if isBackFilling || isJust existingTrip.vehicleVariant then existingTrip.vehicleVariant else trip.vehicleVariant
                   }
             else existingTrip
                   { locationScore = Just $ calculateScore (toNumber (fromMaybe 0 existingTrip.frequencyCount)) (fromMaybe (getCurrentUTC "") existingTrip.recencyDate) config.frequencyWeight
@@ -285,7 +285,7 @@ rideListToTripsTransformer listRes =
              vehicleVariant : case (head ride.rideList) of
                                 Just rideEntity -> Just $ rideEntity^._vehicleVariant
                                 Nothing -> Nothing,
-             serviceTierNameV2 : ride.serviceTierName
+             serviceTierNameV2 : correctServiceTierName ride.serviceTierName
          }
 
 updateMapWithPastTrips :: Array Trip -> HomeScreenState -> SuggestionsMap
@@ -300,7 +300,7 @@ updateMapWithPastTrips trips state = foldl updateMap (getSuggestionsMapFromLocal
     updateMap :: SuggestionsMap -> Trip -> SuggestionsMap
     updateMap suggestionsMap trip =
       let geohash = encodeTripGeohash trip geohashPrecision
-      in addOrUpdateSuggestedTrips geohash trip true suggestionsMap config
+      in addOrUpdateSuggestedTrips geohash trip true suggestionsMap config true
 
 getLocationTitle :: String -> String
 getLocationTitle singleLineAddress = 
@@ -346,3 +346,12 @@ getLocationFromTrip locationType trip sourceLat sourceLong =
     , recencyDate : trip.recencyDate
     , locationScore : trip.locationScore
     }
+
+correctServiceTierName :: Maybe String -> Maybe String
+correctServiceTierName serviceTierName = 
+  case serviceTierName of
+    Just "SUV" -> Just "SUV"
+    Just "SEDAN" -> Just "Sedan"
+    Just "AUTO_RICKSHAW" -> Just "Auto"
+    Just "HATCHBACK" -> Just "Hatchback"
+    _ -> serviceTierName

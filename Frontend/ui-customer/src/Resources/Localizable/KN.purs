@@ -1094,4 +1094,5 @@ getKN stringKey =
         BOOK name -> name <> " ಬುಕ್ ಮಾಡಿ"
         FARE_FOR limit -> limit <> " ಗಾಗಿ ಶುಲ್ಕ"
         WAITING_CHARGE_LIMIT timeLimit -> "ಕಾಯಿದಾರಿ ಶುಲ್ಕಗಳು ("<> timeLimit <>" ನಿಮಿಷಗಳ ನಂತರ)"
-        
+        TIME_TAKEN -> "ಒಟ್ಟು ಸಮಯ"
+        TRIP_DISTANCE -> "ಪ್ರಯಾಣ ದೂರವು"

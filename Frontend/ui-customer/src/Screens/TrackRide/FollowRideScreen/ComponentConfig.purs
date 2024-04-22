@@ -104,6 +104,9 @@ getDriverDetails state =
     , config: state.data.config
     , rideStarted: true
     , enablePaddingBottom: true
+    , vehicleModel : ride.vehicleModel
+    , vehicleColor : ride.vehicleColor
+    , serviceTierName : ride.serviceTierName
     }
 
 

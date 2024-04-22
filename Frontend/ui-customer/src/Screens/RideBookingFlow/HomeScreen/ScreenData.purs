@@ -327,6 +327,7 @@ initData = {
     , repeatRideVariant : ""
     , hasToll : false
     , repeatRideServiceTierName : Nothing
+    , isSearchCancelled : false
   }
 }
 
@@ -430,6 +431,8 @@ dummyDriverInfo =
   , destinationAddress : dummyAddress
   , status : ""
   , serviceTierName : Nothing
+  , vehicleModel : ""
+  , vehicleColor : ""
   }
 
 dummySettingBar :: SettingSideBarState

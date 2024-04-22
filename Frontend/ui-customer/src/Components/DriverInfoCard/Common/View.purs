@@ -97,21 +97,28 @@ driverDetailsView config uid nid =
           , gravity LEFT
           ] <> FontStyle.body27 TypoGraphy
         , textView (
-          [ text $ config.vehicleDetails <> " " 
-                    <> case getMerchant FunctionCall of
-                          YATRISATHI -> "· " <> getVariantRideType config.vehicleVariant
-                          _          -> case config.vehicleVariant of
-                                          "TAXI_PLUS" -> " (" <> (getString AC_TAXI) <> ")"
-                                          "TAXI" -> " (" <> (getString NON_AC_TAXI) <> ")"
-                                          _ -> ""
+          [ text $ config.vehicleColor <> " " <> config.vehicleModel
           , color Color.black700
-          , accessibilityHint $ "Driver : " <> config.driverName <> " : Vehicle : " <> getVehicleType
+          , accessibilityHint $ "Driver : " <> config.driverName <> " : Vehicle : " <>  config.vehicleModel
           , accessibility ENABLE
           , width $ V ((screenWidth unit) /2 - 64)
           , maxLines 2
           , ellipsize true
           , height WRAP_CONTENT
           , gravity LEFT
+          ] <> FontStyle.captions TypoGraphy)
+        , textView (
+          [ text $ fromMaybe "" config.serviceTierName
+          , color Color.black700
+          , accessibilityHint $ "Driver : " <> config.driverName <> " : Vehicle : " <> getVehicleType
+          , accessibility ENABLE
+          , width WRAP_CONTENT
+          , visibility $ boolToVisibility $ isJust config.serviceTierName
+          , gravity LEFT
+          , background Color.blue600
+          , margin $ MarginTop 6
+          , padding $ Padding 6 4 6 4
+          , cornerRadius 4.0
           ] <> FontStyle.captions TypoGraphy)
       ]
     , linearLayout

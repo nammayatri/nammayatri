@@ -95,17 +95,16 @@ rideTierAndCapacity push config =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
-  , background Color.white800
+  , background if config.isDriver then Color.white800 else Color.tealBlue
   , gravity CENTER
   , padding $ Padding 8 8 8 8
   , margin $ MarginVertical 12 12
   , cornerRadius 4.0
-  , visibility $ boolToVisibility config.isDriver
   ][ textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , text config.serviceTierAndAC
-      , color Color.black700
+      , color if config.isDriver then Color.black700 else Color.white800
       ] <> FontStyle.body1 TypoGraphy
     , imageView
       [ height $ V 16

@@ -79,7 +79,7 @@ import Data.Either (Either(..))
 import Font.Style (Style(..))
 import Services.API as API
 import Data.Lens ((^.))
-import Accessor (_fareBreakup, _description, _rideEndTime, _amount)
+import Accessor (_fareBreakup, _description, _rideEndTime, _amount, _serviceTierName)
 import Resources.Localizable.EN(getEN)
 import Engineering.Helpers.Utils as EHU
 import Mobility.Prelude
@@ -1154,6 +1154,9 @@ driverInfoTransformer state =
     , bottomSheetState : state.props.currentSheetState
     , bannerData : state.data.bannerData
     , bannerArray : getDriverInfoCardBanners state DriverInfoCard.BannerCarousel
+    , vehicleModel : cardState.vehicleModel
+    , vehicleColor : cardState.vehicleColor
+    , serviceTierName : cardState.serviceTierName
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1615,6 +1618,7 @@ rideCompletedCardConfig state =
       appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
       isRecentRide = EHC.getExpiryTime (fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
       actualTollCharge =  maybe 0 (\obj ->  obj^._amount) $ DA.find (\entity  -> entity ^._description == "TOLL_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
+      serviceTier = fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _serviceTierName)
   in RideCompletedCard.config {
         isDriver = false,
         customerIssueCard{
@@ -1661,7 +1665,8 @@ rideCompletedCardConfig state =
         enableContactSupport = state.data.config.feature.enableSupport,
         showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled,
         safetyTitle = getString SAFETY_CENTER,
-        needHelpText = getString NEED_HELP
+        needHelpText = getString NEED_HELP,
+        serviceTierAndAC = serviceTier
       }
   where 
     mkHeaderConfig :: Boolean -> Boolean -> {title :: String, subTitle :: String}

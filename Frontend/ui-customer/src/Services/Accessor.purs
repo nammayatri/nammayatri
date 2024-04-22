@@ -299,3 +299,6 @@ _rideEndTime = lens (unwrap >>> _.rideEndTime) (\oldRec newVal -> wrap ((unwrap 
 
 _customerReferralCode :: forall a b c. Newtype a { customerReferralCode :: b | c } => Lens' a b
 _customerReferralCode = lens (unwrap >>> _.customerReferralCode) (\oldRec newVal -> wrap ((unwrap oldRec) { customerReferralCode = newVal }))
+
+_serviceTierName :: forall a b c. Newtype a { serviceTierName :: b | c } => Lens' a b
+_serviceTierName = lens (unwrap >>> _.serviceTierName) (\oldRec newVal -> wrap ((unwrap oldRec) { serviceTierName = newVal }))

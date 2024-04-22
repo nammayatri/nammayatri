@@ -1093,3 +1093,5 @@ getHI stringKey =
         BOOK name -> name <> " बुक करें"
         FARE_FOR limit -> limit <> " के लिए किराया"
         WAITING_CHARGE_LIMIT timeLimit -> "इंतजार शुल्क ("<> timeLimit <>" मिनट के बाद)"
+        TIME_TAKEN -> "सवारी की अवधि"
+        TRIP_DISTANCE -> "यात्रा की दूरी"
