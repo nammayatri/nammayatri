@@ -12,12 +12,15 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wwarn=identities #-}
 
 module Domain.Types.Estimate where
 
 import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson
+import qualified Data.OpenApi as OpenApi
 import Domain.Types.BppDetails
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -35,6 +38,7 @@ import Kernel.Utils.GenericPretty
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.ValueAddNP as QNP
+import qualified Text.Show as T
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 import Tools.Error
 
@@ -103,7 +107,8 @@ data EstimateBreakup = EstimateBreakup
 newtype EstimateBreakupPrice = EstimateBreakupPrice
   { value :: Price
   }
-  deriving (Generic, Show, PrettyShow)
+  deriving (Generic, Show)
+  deriving anyclass (PrettyShow)
 
 data EstimateBreakupPriceAPIEntity = EstimateBreakupPriceAPIEntity
   { currency :: Currency,
@@ -191,10 +196,40 @@ data NightShiftRateAPIEntity = NightShiftRateAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data PropertyUnit = PriceUnit Currency | DistanceUnit DistanceUnit
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+newtype PropertyValue = PropertyValue
+  { getPropertyValue :: Rational
+  }
+  deriving stock (Generic)
+  deriving newtype (Num, Real, Fractional, RealFrac, Ord, Eq, Enum, PrettyShow)
+
+instance Show PropertyValue where
+  show = T.show @Double . realToFrac
+
+instance Read PropertyValue where
+  readsPrec d s = do
+    (dobuleVal, s1) :: (Double, String) <- readsPrec d s
+    return (realToFrac dobuleVal, s1)
+
+instance ToJSON PropertyValue where
+  toJSON = toJSON @Double . realToFrac
+
+instance FromJSON PropertyValue where
+  parseJSON = fmap realToFrac . parseJSON @Double
+
+instance ToSchema PropertyValue where
+  declareNamedSchema _ = do
+    aSchema <- OpenApi.declareSchema (Proxy :: Proxy Double)
+    return $ OpenApi.NamedSchema (Just "PropertyValue") aSchema
+
 data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
   { title :: Text,
-    price :: Money,
-    priceWithCurrency :: PriceAPIEntity
+    price :: Maybe Money, -- to be deprecated
+    priceWithCurrency :: Maybe PriceAPIEntity, -- to be deprecated
+    unit :: PropertyUnit,
+    value :: PropertyValue
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -248,11 +283,24 @@ mkNightShiftRateAPIEntity NightShiftInfo {..} = do
 
 mkEstimateBreakupAPIEntity :: EstimateBreakup -> EstimateBreakupAPIEntity
 mkEstimateBreakupAPIEntity EstimateBreakup {..} = do
-  EstimateBreakupAPIEntity
-    { title = title,
-      price = price.value.amountInt,
-      priceWithCurrency = mkPriceAPIEntity price.value
-    }
+  -- TODO remove this temp fix, when we will receive distance units from beckn request
+  case title of
+    "BASE_DISTANCE" ->
+      EstimateBreakupAPIEntity
+        { title = title,
+          price = Nothing,
+          priceWithCurrency = Nothing,
+          unit = DistanceUnit Meter,
+          value = PropertyValue price.value.amount.getHighPrecMoney
+        }
+    _ ->
+      EstimateBreakupAPIEntity
+        { title = title,
+          price = Just price.value.amountInt,
+          priceWithCurrency = Just $ mkPriceAPIEntity price.value,
+          unit = PriceUnit price.value.currency,
+          value = PropertyValue price.value.amount.getHighPrecMoney
+        }
 
 data EstimateStatus = NEW | DRIVER_QUOTE_REQUESTED | CANCELLED | GOT_DRIVER_QUOTE | DRIVER_QUOTE_CANCELLED | COMPLETED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
