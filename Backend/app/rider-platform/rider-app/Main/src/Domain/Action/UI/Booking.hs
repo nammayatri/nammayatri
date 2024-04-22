@@ -15,11 +15,13 @@
 module Domain.Action.UI.Booking where
 
 import qualified Beckn.ACL.Cancel as CancelACL
+import qualified Beckn.ACL.Status as StatusACL
 import qualified Beckn.ACL.Update as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import BecknV2.Utils
 import Data.OpenApi (ToSchema (..))
+import qualified Data.Time as DT
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.CancellationReason
@@ -38,13 +40,14 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude (intToNominalDiffTime)
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
@@ -87,9 +90,27 @@ bookingStatus bookingId _ = do
           additionalInfo = Nothing
         }
 
-bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> m BookingListRes
+checkBookingsForStatus :: [SRB.Booking] -> Flow ()
+checkBookingsForStatus (currBooking : bookings) = do
+  whenJust currBooking.estimatedDuration $ \estimatedEndDuration -> do
+    now <- getCurrentTime
+    let estimatedEndTime = DT.addUTCTime (fromIntegral estimatedEndDuration.getSeconds) currBooking.createdAt
+    let diff = DT.diffUTCTime now estimatedEndTime
+    let callStatusCondition = currBooking.status /= SRB.CANCELLED && currBooking.status /= SRB.COMPLETED && diff > 3600
+    when callStatusCondition $ do
+      merchant <- CQMerchant.findById currBooking.merchantId >>= fromMaybeM (MerchantNotFound currBooking.merchantId.getId)
+      city <- CQMOC.findById currBooking.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound currBooking.merchantOperatingCityId.getId)
+      let dStatusReq = StatusACL.DStatusReq currBooking merchant city
+      becknStatusReq <- StatusACL.buildStatusReqV2 dStatusReq
+      void $ withShortRetry $ CallBPP.callStatusV2 currBooking.providerUrl becknStatusReq
+      checkBookingsForStatus bookings
+  pure ()
+checkBookingsForStatus [] = pure ()
+
+bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Flow BookingListRes
 bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId = do
   rbList <- runInReplica $ QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId
+  fork "booking list status update" $ checkBookingsForStatus rbList
   logInfo $ "rbList: test " <> show rbList
   BookingListRes <$> traverse (`SRB.buildBookingAPIEntity` personId) rbList
 
