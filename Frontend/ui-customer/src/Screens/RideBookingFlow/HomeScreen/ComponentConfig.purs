@@ -43,7 +43,7 @@ import Components.LocationTagBarV2 as LocationTagBar
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except (runExcept)
-import Data.Array ((!!), sortBy, mapWithIndex, elem)
+import Data.Array ((!!), sortBy, mapWithIndex, elem, length)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3)
@@ -1418,7 +1418,7 @@ chooseYourRideConfig state =
     tipForDriver = state.props.customerTip.tipForDriver,
     customerTipArray = tipConfig.customerTipArray,
     customerTipArrayWithValues = tipConfig.customerTipArrayWithValues,
-    enableTips = state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities)
+    enableTips = state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities) && (DA.length tipConfig.customerTipArray) > 0
   }
 
 specialLocationConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
@@ -2036,35 +2036,35 @@ getTips arr = mapWithIndex (\index item -> if item == 0 then (getString NO_TIP)
 bangaloreConfig :: String -> TipConfig
 bangaloreConfig variant = 
   case variant of
-    "SEDAN" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "SUV" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "HATCHBACK" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI_PLUS" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    _ -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "SEDAN" -> mkTipConfig []
+    "SUV" -> mkTipConfig []
+    "HATCHBACK" -> mkTipConfig []
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "TAXI" -> mkTipConfig []
+    "TAXI_PLUS" -> mkTipConfig []
+    _ -> mkTipConfig []
 
 hyderabadConfig :: String -> TipConfig
 hyderabadConfig variant = 
   case variant of
-    "SEDAN" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "SUV" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "HATCHBACK" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "AUTO_RICKSHAW" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "TAXI" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "TAXI_PLUS" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    _ -> mkTipConfig [0, 20, 30, 40, 50, 60]
+    "SEDAN" -> mkTipConfig []
+    "SUV" -> mkTipConfig []
+    "HATCHBACK" -> mkTipConfig []
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "TAXI" -> mkTipConfig []
+    "TAXI_PLUS" -> mkTipConfig []
+    _ -> mkTipConfig []
 
 defaultTipConfig :: String -> TipConfig
 defaultTipConfig variant = 
   case variant of
-    "SEDAN" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "SUV" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "HATCHBACK" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI_PLUS" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    _ -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "SEDAN" -> mkTipConfig []
+    "SUV" -> mkTipConfig []
+    "HATCHBACK" -> mkTipConfig []
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "TAXI" -> mkTipConfig []
+    "TAXI_PLUS" -> mkTipConfig []
+    _ -> mkTipConfig []
 
 specialZoneInfoPopupConfig :: HU.SpecialZoneInfoPopUp -> RequestInfoCard.Config
 specialZoneInfoPopupConfig infoConfig = let

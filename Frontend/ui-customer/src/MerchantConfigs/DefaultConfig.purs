@@ -403,9 +403,9 @@ config =
     homeScreenSafety : false,
     homeScreenCabLaunch : true
   }
-  , tipDisplayDuration : 10
+  , tipDisplayDuration : 30
   , tipsEnabled : true
-  , tipEnabledCities : []
+  , tipEnabledCities : ["Bangalore", "Hyderabad"]
   , referral : {
           domain : "https://nammayatri.in/"
         , customerAppId : "in.juspay.nammayatri"
