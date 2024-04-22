@@ -234,6 +234,7 @@ data DriverInformationRes = DriverInformationRes
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     canSwitchToRental :: Bool,
+    canSwitchToInterCity :: Bool,
     mode :: Maybe DriverInfo.DriverMode,
     payerVpa :: Maybe Text,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
@@ -276,6 +277,7 @@ data DriverEntityRes = DriverEntityRes
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     canSwitchToRental :: Bool,
+    canSwitchToInterCity :: Bool,
     payerVpa :: Maybe Text,
     mode :: Maybe DriverInfo.DriverMode,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
@@ -301,6 +303,7 @@ data UpdateDriverReq = UpdateDriverReq
     canDowngradeToHatchback :: Maybe Bool,
     canDowngradeToTaxi :: Maybe Bool,
     canSwitchToRental :: Maybe Bool,
+    canSwitchToInterCity :: Maybe Bool,
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
     gender :: Maybe SP.Gender,
@@ -661,6 +664,7 @@ buildDriverEntityRes (person, driverInfo) = do
         canDowngradeToHatchback = driverInfo.canDowngradeToHatchback,
         canDowngradeToTaxi = driverInfo.canDowngradeToTaxi,
         canSwitchToRental = driverInfo.canSwitchToRental,
+        canSwitchToInterCity = driverInfo.canSwitchToInterCity,
         mode = driverInfo.mode,
         payerVpa = driverPlan >>= (.payerVpa),
         blockStateModifier = driverInfo.blockStateModifier,
@@ -731,15 +735,16 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   mVehicle <- QVehicle.findById personId
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   whenJust mVehicle $ \vehicle -> do
-    when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental) $ do
+    when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity) $ do
       -- deprecated logic, moved to driver service tier options
       checkIfCanDowngrade vehicle
       let canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan
-      let canDowngradeToHatchback = fromMaybe driverInfo.canDowngradeToHatchback req.canDowngradeToHatchback
-      let canDowngradeToTaxi = fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi
-      let canSwitchToRental = fromMaybe driverInfo.canSwitchToRental req.canSwitchToRental
-      let availableUpiApps = req.availableUpiApps <|> driverInfo.availableUpiApps
-      let selectedServiceTiers =
+          canDowngradeToHatchback = fromMaybe driverInfo.canDowngradeToHatchback req.canDowngradeToHatchback
+          canDowngradeToTaxi = fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi
+          canSwitchToRental = fromMaybe driverInfo.canSwitchToRental req.canSwitchToRental
+          canSwitchToInterCity = fromMaybe driverInfo.canSwitchToInterCity req.canSwitchToInterCity
+          availableUpiApps = req.availableUpiApps <|> driverInfo.availableUpiApps
+          selectedServiceTiers =
             case vehicle.variant of
               SV.AUTO_RICKSHAW -> [DVST.AUTO_RICKSHAW]
               SV.TAXI -> [DVST.TAXI, DVST.ECO]
@@ -748,7 +753,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               SV.SUV -> [DVST.SUV] <> [DVST.SEDAN | canDowngradeToSedan] <> [DVST.COMFY | canDowngradeToSedan] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToTaxi]
               SV.TAXI_PLUS -> [DVST.TAXI_PLUS]
 
-      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental availableUpiApps person.id
+      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity availableUpiApps person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
         QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
 

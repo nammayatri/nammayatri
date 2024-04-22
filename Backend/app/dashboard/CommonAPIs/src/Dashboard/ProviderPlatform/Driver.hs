@@ -485,6 +485,7 @@ data DriverInfoRes = DriverInfoRes
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     canSwitchToRental :: Bool,
+    canSwitchToInterCity :: Bool,
     vehicleNumber :: Maybe Text,
     selectedServiceTiers :: [Text],
     driverLicenseDetails :: Maybe DriverLicenseAPIEntity,

@@ -225,6 +225,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.canDowngradeToSedan = canDowngradeToSedan,
         BeamTC.canDowngradeToHatchback = canDowngradeToHatchback,
         BeamTC.canSwitchToRental = canSwitchToRental,
+        BeamTC.canSwitchToInterCity = canSwitchToInterCity,
         BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,
         BeamTC.canSuvDowngradeToTaxi = canSuvDowngradeToTaxi,
         BeamTC.canSuvDowngradeToHatchback = Just canSuvDowngradeToHatchback,

@@ -201,6 +201,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             canDowngradeToHatchback = transporterConfig.canDowngradeToHatchback,
             canDowngradeToTaxi = transporterConfig.canDowngradeToTaxi,
             canSwitchToRental = transporterConfig.canSwitchToRental,
+            canSwitchToInterCity = transporterConfig.canSwitchToInterCity,
             aadhaarVerified = False,
             blockedReason = Nothing,
             blockExpiryTime = Nothing,
