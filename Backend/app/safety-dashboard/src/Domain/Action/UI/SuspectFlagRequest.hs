@@ -69,7 +69,8 @@ data SuspectBody = SuspectBody
     voterId :: Maybe Text,
     flaggedCategory :: Text,
     flaggedReason :: Text,
-    flaggedBy :: Text
+    flaggedBy :: Text,
+    flaggedStatus :: Domain.Types.Suspect.FlaggedStatus
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -219,5 +220,6 @@ buildSuspectBody merchantshortId req =
       voterId = req.voterId,
       flaggedCategory = req.flaggedCategory,
       flaggedReason = req.flaggedReason,
-      flaggedBy = merchantshortId
+      flaggedBy = merchantshortId,
+      flaggedStatus = Domain.Types.Suspect.Flagged
     }

@@ -6,6 +6,7 @@ module Domain.Action.UI.Suspect where
 import API.Types.UI.Suspect
 import qualified API.Types.UI.Suspect
 import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
+import qualified Data.List as DL
 import Data.OpenApi (ToSchema)
 import Data.Text as T hiding (concat, elem, filter, length, map, null)
 import qualified "lib-dashboard" Domain.Types.Merchant as Merchant
@@ -18,7 +19,7 @@ import qualified Domain.Types.SuspectStatusChangeRequest as Domain.Types.Suspect
 import qualified Domain.Types.SuspectStatusHistory as Domain.Types.SuspectStatusHistory
 import qualified Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
-import EulerHS.Prelude hiding (concatMap, elem, filter, id, length, map, mapM_, null, readMaybe, whenJust)
+import EulerHS.Prelude hiding (concatMap, elem, filter, groupBy, id, length, map, mapM_, maximumBy, null, readMaybe, whenJust)
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess
@@ -67,7 +68,7 @@ postUploadSuspectBulk tokenInfo req = do
     validateUploadCount (length req.suspects)
     (suspectsNeedToFlag, suspectAlreadyFlagged) <- getValidSuspectsToFlagAndAlreadyFlagged tokenInfo.merchantId req.suspects
     case suspectsNeedToFlag.suspects of
-      [] -> return $ SuspectBulkUploadResp {dlList = map (\suspect -> suspect.dl) suspectAlreadyFlagged, voterIdList = map (\suspect -> suspect.voterId) suspectAlreadyFlagged, message = getSuspectUploadMessage 0}
+      [] -> return $ SuspectBulkUploadResp {dlList = map (\suspect -> suspect.dl) suspectAlreadyFlagged.suspects, voterIdList = map (\suspect -> suspect.voterId) suspectAlreadyFlagged.suspects, message = getSuspectUploadMessage 0}
       _ -> do
         person <- findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
         merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
@@ -77,7 +78,7 @@ postUploadSuspectBulk tokenInfo req = do
         let notificationMetadata = encodeToText $ suspectFlagRequest
         merchantAdminIdList <- getAllMerchantAdminIdList tokenInfo.merchantId
         sendNotification tokenInfo merchant notificationMetadata (length suspectFlagRequest) Domain.Types.Notification.FLAG_REQUEST_UPLOAD merchantAdminIdList
-        return $ SuspectBulkUploadResp {dlList = map (\suspect -> suspect.dl) suspectAlreadyFlagged, voterIdList = map (\suspect -> suspect.voterId) suspectAlreadyFlagged, message = getSuspectUploadMessage (length suspectsNeedToFlag.suspects)}
+        return $ SuspectBulkUploadResp {dlList = map (\suspect -> suspect.dl) suspectAlreadyFlagged.suspects, voterIdList = map (\suspect -> suspect.voterId) suspectAlreadyFlagged.suspects, message = getSuspectUploadMessage (length suspectsNeedToFlag.suspects)}
 
 createSuspectFlagRequest :: TokenInfo -> API.Types.UI.Suspect.SuspectBulkUploadReq -> Text -> Text -> Domain.Types.SuspectFlagRequest.AdminApproval -> Environment.Flow [Domain.Types.SuspectFlagRequest.SuspectFlagRequest]
 createSuspectFlagRequest tokenInfo req merchantShortId flaggedBy approval = do
@@ -90,19 +91,50 @@ getSuspectUploadMessage cnt = case cnt of
   0 -> "All DLs or VoterIds are already flagged before"
   _ -> "Dl and VoterId List provided who were already Flagged before"
 
-getValidSuspectsToFlagAndAlreadyFlagged :: Id Merchant.Merchant -> [API.Types.UI.Suspect.SuspectUploadReq] -> Environment.Flow (API.Types.UI.Suspect.SuspectBulkUploadReq, [Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
+getValidSuspectsToFlagAndAlreadyFlagged :: Id Merchant.Merchant -> [API.Types.UI.Suspect.SuspectUploadReq] -> Environment.Flow (API.Types.UI.Suspect.SuspectBulkUploadReq, API.Types.UI.Suspect.SuspectBulkUploadReq)
 getValidSuspectsToFlagAndAlreadyFlagged merchantId suspects = do
   let validSuspects = filter (\suspect -> isJust (suspect.dl) || isJust (suspect.voterId)) suspects
-      dlList = mapMaybe (\suspect -> suspect.dl) $ validSuspects
-      voterIdList = mapMaybe (\suspect -> suspect.voterId) $ validSuspects
-  suspectAlreadyFlagged <- findAllByDlAndVoterIdAndMerchantId dlList voterIdList (Just merchantId)
-  let dlListForAlreadyFlagged = mapMaybe (\suspect -> suspect.dl) suspectAlreadyFlagged
-      voterIdListForAlreadyFlagged = mapMaybe (\suspect -> suspect.voterId) suspectAlreadyFlagged
-  suspectCleanedByAdmin <- findAllByDlOrVoterIdAndFlaggedStatus dlListForAlreadyFlagged voterIdListForAlreadyFlagged Domain.Types.Suspect.Clean
-  let suspectNeedToFlagAgain = filter (\suspect -> (suspect.dl, suspect.voterId) `elem` (map (\suspect' -> (suspect'.dl, suspect'.voterId)) suspectCleanedByAdmin)) validSuspects
-      suspectNotFlagged = filter (\suspect -> not ((suspect.dl, suspect.voterId) `elem` (map (\suspect' -> (suspect'.dl, suspect'.voterId)) suspectAlreadyFlagged))) validSuspects
-      suspectNeedToFlagged = API.Types.UI.Suspect.SuspectBulkUploadReq {suspects = suspectNotFlagged <> suspectNeedToFlagAgain}
+      dlList = mapMaybe (.dl) validSuspects
+      voterIdList = mapMaybe (.voterId) validSuspects
+  suspectAlreadyFlaggedAndApproved <- findAllByDlAndVoterIdAndMerchantIdAndAdminApproval dlList voterIdList (Just merchantId) Domain.Types.SuspectFlagRequest.Approved
+  suspectAlreadyFlaggedAndPending <- findAllByDlAndVoterIdAndMerchantIdAndAdminApproval dlList voterIdList (Just merchantId) Domain.Types.SuspectFlagRequest.Pending
+  let latestApprovedRequest = filterLatestApprovedSuspectFlagRequest suspectAlreadyFlaggedAndApproved
+  let dlListForAlreadyPending = mapMaybe (.dl) suspectAlreadyFlaggedAndPending
+      voterIdListForAlreadyPending = mapMaybe (.voterId) suspectAlreadyFlaggedAndPending
+      onlyApproved = filter (\suspect -> not ((isSearchParamPresent suspect.dl dlListForAlreadyPending) || (isSearchParamPresent suspect.voterId voterIdListForAlreadyPending))) latestApprovedRequest
+      onlyApprovedDlList = mapMaybe (.dl) onlyApproved
+      onlyApprovedVoterIdList = mapMaybe (.voterId) onlyApproved
+  let validSuspectAlreadyApproved = filter (\suspect -> (isSearchParamPresent suspect.dl onlyApprovedDlList) || (isSearchParamPresent suspect.voterId onlyApprovedVoterIdList)) validSuspects
+  suspectCleanedByAdmin <- findAllByDlOrVoterIdAndFlaggedStatus onlyApprovedDlList onlyApprovedVoterIdList Domain.Types.Suspect.Clean
+  let dlListForCleaned = mapMaybe (.dl) suspectCleanedByAdmin
+      voterIdListForCleaned = mapMaybe (.voterId) suspectCleanedByAdmin
+      suspectNeedToFlagAgain = filter (\suspect -> (isSearchParamPresent suspect.dl dlListForCleaned) || (isSearchParamPresent suspect.voterId voterIdListForCleaned)) validSuspectAlreadyApproved
+      newSuspect = filter (\suspect -> not ((isSearchParamPresent suspect.dl (dlListForAlreadyPending <> onlyApprovedDlList)) || (isSearchParamPresent suspect.voterId (voterIdListForAlreadyPending <> onlyApprovedVoterIdList)))) validSuspects
+      suspectNeedToFlagged = API.Types.UI.Suspect.SuspectBulkUploadReq {suspects = newSuspect <> suspectNeedToFlagAgain}
+      dlListForNeedToFlag = mapMaybe (.dl) $ newSuspect <> suspectNeedToFlagAgain
+      voterIdListForNeedToFlag = mapMaybe (.voterId) $ newSuspect <> suspectNeedToFlagAgain
+      alreadyFlagged = filter (\suspect -> not (isSearchParamPresent suspect.dl dlListForNeedToFlag || isSearchParamPresent suspect.voterId voterIdListForNeedToFlag)) validSuspects
+      suspectAlreadyFlagged = API.Types.UI.Suspect.SuspectBulkUploadReq {suspects = alreadyFlagged}
   return $ (suspectNeedToFlagged, suspectAlreadyFlagged)
+
+isSearchParamPresent :: Maybe Text -> [Text] -> Bool
+isSearchParamPresent (Just param) list = param `elem` list
+isSearchParamPresent Nothing _ = False
+
+filterLatestApprovedSuspectFlagRequest :: [Domain.Types.SuspectFlagRequest.SuspectFlagRequest] -> [Domain.Types.SuspectFlagRequest.SuspectFlagRequest]
+filterLatestApprovedSuspectFlagRequest suspects =
+  let groupedSuspects = groupByDlAndVoterId suspects
+   in map (DL.maximumBy (comparing (Domain.Types.SuspectFlagRequest.createdAt))) groupedSuspects
+
+groupByDlAndVoterId :: [Domain.Types.SuspectFlagRequest.SuspectFlagRequest] -> [[Domain.Types.SuspectFlagRequest.SuspectFlagRequest]]
+groupByDlAndVoterId = DL.groupBy isEqual
+  where
+    isEqual :: Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> Bool
+    isEqual x y = maybeEqual x.dl y.dl || maybeEqual x.voterId y.voterId
+
+    maybeEqual :: Maybe Text -> Maybe Text -> Bool
+    maybeEqual (Just a) (Just b) = a == b
+    maybeEqual _ _ = False
 
 validateUploadCount :: Int -> Environment.Flow ()
 validateUploadCount cnt = do
