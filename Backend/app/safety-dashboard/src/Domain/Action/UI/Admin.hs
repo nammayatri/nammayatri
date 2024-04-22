@@ -10,7 +10,7 @@ import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
 import Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import Data.OpenApi (ToSchema)
-import Data.Text as T hiding (concat, elem, filter, length, map)
+import Data.Text as T hiding (concat, elem, filter, length, map, null)
 import qualified Domain.Action.UI.Suspect as DS
 import qualified Domain.Action.UI.SuspectFlagRequest as SAF
 import Domain.Action.UI.Webhook as Webhook
@@ -22,7 +22,7 @@ import Domain.Types.SuspectFlagRequest as Domain.Types.SuspectFlagRequest
 import qualified Domain.Types.SuspectStatusHistory as Domain.Types.SuspectStatusHistory
 import qualified Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
-import EulerHS.Prelude hiding (concatMap, elem, filter, id, length, map, mapM_, readMaybe, whenJust)
+import EulerHS.Prelude hiding (concatMap, elem, filter, id, length, map, mapM_, null, readMaybe, whenJust)
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
@@ -88,7 +88,7 @@ postChangeSuspectFlag tokenInfo req = do
     merchantAdminIdList <- DS.getRecieverIdListByAcessType MERCHANT_ADMIN
     DS.sendNotification tokenInfo merchant (encodeToText updatedSuspectList) (length updatedSuspectList) Domain.Types.Notification.ADMIN_CHANGE_SUSPECT_STATUS (adminIdList <> merchantAdminIdList)
     DS.updateSuspectStatusHistoryBySuspect tokenInfo merchant.shortId.getShortId updatedSuspectList (Just Domain.Types.SuspectFlagRequest.Approved)
-    webhookBody <- buildAdminCleanSuspectWebhookBody updatedSuspectList
+    webhookBody <- buildAdminSuspectWebhookBody merchant.shortId.getShortId updatedSuspectList
     merchantConfigs <- SQMC.findByRequestWebHook True
     fork "Sending webhook to partners" $ do
       Webhook.sendWebHook merchantConfigs webhookBody
@@ -101,7 +101,7 @@ postAdminUploadSuspectBulk tokenInfo mbFlaggedStatus req = do
     DS.validateUploadCount (length req.suspects)
     (suspectsNeedToFlag, suspectAlreadyFlagged) <- DS.getValidSuspectsToFlagAndAlreadyFlagged tokenInfo.merchantId req.suspects
     case suspectsNeedToFlag.suspects of
-      [] -> return $ API.Types.UI.Suspect.SuspectBulkUploadResp {dlList = map (\suspect -> suspect.dl) suspectAlreadyFlagged, voterIdList = map (\suspect -> suspect.voterId) suspectAlreadyFlagged, message = DS.getSuspectUploadMessage 0}
+      [] -> return $ API.Types.UI.Suspect.SuspectBulkUploadResp {dlList = map (\suspect -> suspect.dl) suspectAlreadyFlagged.suspects, voterIdList = map (\suspect -> suspect.voterId) suspectAlreadyFlagged.suspects, message = DS.getSuspectUploadMessage 0}
       _ -> do
         person <- findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
         merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
@@ -116,7 +116,7 @@ postAdminUploadSuspectBulk tokenInfo mbFlaggedStatus req = do
         DS.sendNotification tokenInfo merchant notificationMetadata (length suspectList) notificationType (adminIdList <> merchantAdminIdList)
         SAF.sendingWebhookToPartners merchant.shortId.getShortId suspectFlagRequest
         DS.updateSuspectStatusHistoryByRequest tokenInfo Domain.Types.SuspectFlagRequest.Approved flaggedBy (fromMaybe Domain.Types.Suspect.Flagged mbFlaggedStatus) suspectFlagRequest
-        return $ API.Types.UI.Suspect.SuspectBulkUploadResp {dlList = map (\suspect -> suspect.dl) suspectAlreadyFlagged, voterIdList = map (\suspect -> suspect.voterId) suspectAlreadyFlagged, message = DS.getSuspectUploadMessage (length suspectsNeedToFlag.suspects)}
+        return $ API.Types.UI.Suspect.SuspectBulkUploadResp {dlList = map (\suspect -> suspect.dl) suspectAlreadyFlagged.suspects, voterIdList = map (\suspect -> suspect.voterId) suspectAlreadyFlagged.suspects, message = DS.getSuspectUploadMessage (length suspectsNeedToFlag.suspects)}
 
 postMerchantAdminUploadSuspectBulk :: (TokenInfo -> API.Types.UI.Suspect.SuspectBulkUploadReq -> Environment.Flow API.Types.UI.Suspect.SuspectBulkUploadResp)
 postMerchantAdminUploadSuspectBulk tokenInfo req = do
@@ -145,6 +145,8 @@ deleteMerchantUserDelete tokenInfo req = do
   QAccess.deleteAllByMerchantIdAndPersonId tokenInfo.merchantId person.id
   Auth.cleanCachedTokensByMerchantId person.id tokenInfo.merchantId
   QReg.deleteAllByPersonIdAndMerchantId person.id tokenInfo.merchantId
+  findMerchantAccess <- QAccess.findAllByPersonId person.id
+  when (null findMerchantAccess) $ QP.deletePerson person.id
   return Kernel.Types.APISuccess.Success
 
 buildUpdateSuspectRequest :: API.Types.UI.Admin.SuspectFlagChangeRequestList -> Domain.Types.Suspect.Suspect -> Environment.Flow Domain.Types.Suspect.Suspect
@@ -161,25 +163,28 @@ buildUpdateSuspectRequest req Domain.Types.Suspect.Suspect {..} = do
           }
   return suspect
 
-buildAdminCleanSuspectWebhookBody :: [Domain.Types.Suspect.Suspect] -> Environment.Flow LBS.ByteString
-buildAdminCleanSuspectWebhookBody suspectList = do
-  let adminCleanSuspectList =
+buildAdminSuspectWebhookBody :: Text -> [Domain.Types.Suspect.Suspect] -> Environment.Flow LBS.ByteString
+buildAdminSuspectWebhookBody merchantShortId suspectList = do
+  let adminSuspectList =
         map
           ( \suspect ->
-              AdminCleanSuspect
-                { id = suspect.id.getId,
-                  dl = suspect.dl,
+              SAF.SuspectBody
+                { dl = suspect.dl,
                   voterId = suspect.voterId,
                   flaggedStatus = suspect.flaggedStatus,
-                  flagUpdatedAt = suspect.flagUpdatedAt,
-                  statusChangedReason = suspect.statusChangedReason,
-                  flaggedCounter = suspect.flaggedCounter,
-                  createdAt = suspect.createdAt,
-                  updatedAt = suspect.updatedAt
+                  flaggedReason = fromMaybe "Admin" suspect.statusChangedReason,
+                  flaggedBy = merchantShortId,
+                  flaggedCategory = getFlaggedCategory suspect
                 }
           )
           suspectList
-  return $ A.encode adminCleanSuspectList
+  return $ A.encode SAF.WebhookReqBody {suspectList = adminSuspectList}
+
+getFlaggedCategory :: Domain.Types.Suspect.Suspect -> Text
+getFlaggedCategory suspect = do
+  case suspect.flaggedBy of
+    [] -> "Admin" ---- this case will never be hit as we are always passing the flaggedBy
+    (fb : _) -> fb.flaggedCategory
 
 selectNotificationType :: Text -> Domain.Types.Suspect.FlaggedStatus -> Domain.Types.Notification.NotificationCategory
 selectNotificationType roleName flaggedStatus = do
