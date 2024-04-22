@@ -109,4 +109,7 @@ dummyIndividualCard = {
   , optionsVisibility : false
   , merchantExoPhone : ""
   , serviceTierName : Nothing
+  , totalTime : ""
+  , vehicleModel : ""
+  , rideStartTimeUTC : ""
 }

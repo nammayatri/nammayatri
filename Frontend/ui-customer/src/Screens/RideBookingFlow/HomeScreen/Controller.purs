@@ -1357,12 +1357,12 @@ eval BackPressed state = do
   case state.props.currentStage of
     SearchLocationModel -> do
       if state.props.isSaveFavourite then 
-        continueWithCmd state [pure $ (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose))]
+        continueWithCmd state{props{isSearchCancelled = false}} [pure $ (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose))]
       else do
         if state.props.isSearchLocation == LocateOnMap then do
           void $ pure $ exitLocateOnMap ""
           void $ pure $ hideKeyboardOnNavigation true
-          continue state{props{isSearchLocation = SearchLocation, locateOnMap = false}}
+          continue state{props{isSearchLocation = SearchLocation, locateOnMap = false, isSearchCancelled = false}}
         else do
           if (getSearchType unit) == "direct_search" then
             pure $ terminateApp state.props.currentStage false
@@ -1402,7 +1402,7 @@ eval BackPressed state = do
     SettingPrice -> do
       _ <- pure $ performHapticFeedback unit
       void $ pure $ clearTimerWithId state.props.repeatRideTimerId
-      let updatedState = state{props{repeatRideTimer = "", repeatRideTimerId = ""}}
+      let updatedState = state{props{repeatRideTimer = "", repeatRideTimerId = "", isSearchCancelled = false}}
       if updatedState.props.showRateCard then 
         if updatedState.data.rateCard.currentRateCardType /= DefaultRateCard then
           continue updatedState{data{rateCard {currentRateCardType = DefaultRateCard}}}

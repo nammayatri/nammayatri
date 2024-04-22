@@ -1359,7 +1359,7 @@ rideRequestFlowView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadii $ Corners 24.0 true true false false
-    , visibility $ boolToVisibility $ isStageInList state.props.currentStage [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain, RideRating, ReAllocated] 
+    , visibility $ boolToVisibility $ isStageInList state.props.currentStage [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain, RideRating, ReAllocated, LoadMap] 
     , alignParentBottom "true,-1"
     ]
     [ -- TODO Add Animations
@@ -1375,7 +1375,7 @@ rideRequestFlowView push state =
         , accessibility DISABLE
         ]
         [ PrestoAnim.animationSet [fadeIn true] $ getViewBasedOnStage push state
-        , if isStageInList state.props.currentStage [ FindingEstimate, ConfirmingRide, TryAgain, FindingQuotes, ReAllocated] then
+        , if isStageInList state.props.currentStage [ FindingEstimate, ConfirmingRide, TryAgain, FindingQuotes, ReAllocated, LoadMap] then
             (loaderView push state)
           else
             emptyTextView state
@@ -1443,7 +1443,7 @@ topLeftIconView state push =
     $ []
     <> ( case state.data.followers of
           Nothing -> []
-          Just followers -> if followerBar then [ followRideBar push followers (MATCH_PARENT) true] else []
+          Just followers -> if followerBar then [ followRideBar push followers (MATCH_PARENT) true false] else []
       )
     <> ( [ linearLayout
             [ width MATCH_PARENT
@@ -2245,6 +2245,7 @@ loaderView push state =
                           TryAgain -> getString LET_TRY_THAT_AGAIN
                           ReAllocated -> getString LOOKING_FOR_ANOTHER_RIDE
                           _ -> getString GETTING_ESTIMATES_FOR_YOU
+      loaderVisibility = (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, TryAgain, ReAllocated]) || (state.props.currentStage == LoadMap && state.props.isRepeatRide)
   in  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
@@ -2255,7 +2256,7 @@ loaderView push state =
       , stroke ("1," <> Color.grey900)
       , clickable true
       , gravity CENTER_HORIZONTAL
-      , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, TryAgain, ReAllocated ]) then VISIBLE else GONE
+      , visibility $ boolToVisibility $ loaderVisibility
       ]
       [ PrestoAnim.animationSet [ scaleAnim $ autoAnimConfig ]
           $ lottieLoaderView state push
@@ -2286,7 +2287,7 @@ loaderView push state =
       , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
-          , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, TryAgain]) then VISIBLE else GONE
+          , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, TryAgain, LoadMap]) then VISIBLE else GONE
           , orientation VERTICAL
           , gravity CENTER
           ]
@@ -3184,6 +3185,11 @@ homeScreenViewV2 push state =
                             [locationUnserviceableView push state]
                           else 
                             []
+                            <> (case state.data.followers of
+                                      Nothing -> []
+                                      Just followers -> if (showFollowerBar followers state) && state.props.currentStage == HomeScreen 
+                                                          then [followView push followers] 
+                                                          else [])
                             <> (if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else [])
                             <> (if isHomeScreenView state then contentView state else [])
                             -- <> if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else []
@@ -3222,6 +3228,16 @@ homeScreenViewV2 push state =
           ([]) 
           (\item -> [bannersCarousal item state push]) 
           state.data.bannerData.bannerItem)
+      
+    followView :: forall w. (Action -> Effect Unit) -> Array Followers -> PrestoDOM (Effect Unit) w
+    followView push followers = 
+      linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , padding $ Padding 16 16 16 16
+        , visibility $ boolToVisibility $ not state.props.showShimmer
+        ][ followRideBar push followers MATCH_PARENT false true
+        ]
 
 showMapOnHomeScreen :: HomeScreenState -> Boolean
 showMapOnHomeScreen state = isHomeScreenView state && isNothing state.data.bannerData.bannerItem
@@ -3234,10 +3250,10 @@ footerView push state =
   let headerBounds = (runFn1 getLayoutBounds (getNewIDWithTag "homescreenHeader"))
       contentBounds = (runFn1 getLayoutBounds (getNewIDWithTag "homescreenContent")) 
       contentHeight = contentBounds.height
-      dynamicMargin = screenHeight unit - getDefaultPixelSize (headerBounds.height + contentHeight ) 
-      marginTop = if state.props.suggestionsListExpanded 
+      dynamicMargin =  screenHeight unit - getDefaultPixelSize (headerBounds.height + contentHeight ) 
+      marginTop = if state.props.suggestionsListExpanded || (os /= "IOS" && not state.props.suggestionsListExpanded && length state.data.tripSuggestions >= 3)
                       then getDefaultPixelSize 150 
-                  else if dynamicMargin > 150 
+                  else if dynamicMargin > getDefaultPixelSize 150 
                       then dynamicMargin 
                   else getDefaultPixelSize 150
   in
@@ -3513,23 +3529,23 @@ mapView push state idTag =
             ]
 
         ]
-    ] <> case state.data.followers of
-          Nothing -> []
-          Just followers -> if (showFollowerBar followers state) && state.props.currentStage == HomeScreen then [followRideBar push followers (MATCH_PARENT) false] else []
+    ]
 
 showFollowerBar :: Array Followers -> HomeScreenState -> Boolean
 showFollowerBar followers state = state.props.followsRide && followers /= []
 
-followRideBar :: forall w. (Action -> Effect Unit) -> Array Followers -> Length -> Boolean -> PrestoDOM (Effect Unit) w
-followRideBar push followers customWidth addSafePadding =
+followRideBar :: forall w. (Action -> Effect Unit) -> Array Followers -> Length -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
+followRideBar push followers customWidth addSafePadding useCornerRadius =
   linearLayout
-    [ height WRAP_CONTENT
+    ([ height WRAP_CONTENT
     , width customWidth
     , background Color.blue800
     , gravity CENTER
     , padding $ Padding 16 (if addSafePadding then safeMarginTopWithDefault 8 else 8) 16 8
     , onClick push (const GoToFollowRide)
-    ]
+    ] <> if useCornerRadius 
+          then [cornerRadius 9.0]
+          else [])
     [ textView
         [ text $ getFollowersTitle
         , color Color.white900
@@ -3999,7 +4015,7 @@ locationUnserviceableView push state =
                     , height WRAP_CONTENT
                     , gravity CENTER
                     ]
-                    [ followRideBar push followers (V 328) false]
+                    [ followRideBar push followers (V 328) false false]
                 ]
               else
                 []

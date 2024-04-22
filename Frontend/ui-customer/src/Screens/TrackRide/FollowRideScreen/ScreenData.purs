@@ -200,4 +200,6 @@ mockDriverInfo =
   , destinationAddress: dummyAddress
   , status : ""
   , serviceTierName : Nothing
+  , vehicleModel : ""
+  , vehicleColor : ""
   }

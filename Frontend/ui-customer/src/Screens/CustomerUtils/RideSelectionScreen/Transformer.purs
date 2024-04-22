@@ -36,6 +36,8 @@ import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
 import Data.Ord (abs)
 import ConfigProvider
 import Screens.RideSelectionScreen.ScreenData 
+import JBridge (differenceBetweenTwoUTCInMinutes)
+import Data.Function.Uncurried (runFn2)
 
 myRideListTransformerProp :: Array RideBookingRes  -> Array ItemState
 myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropValue "COMPLETED") || item.status == (toPropValue "CANCELLED"))) (map (\(RideBookingRes ride) -> 
@@ -88,6 +90,8 @@ myRideListTransformer isSrcServiceable listRes = filter (\item -> (item.status =
                         <> (if isHaveFare "EARLY_END_RIDE_PENALTY" updatedFareList then "\n\n" <> getEN EARLY_END_RIDE_CHARGES_DESCRIPTION else "")
                         <> (if isHaveFare "CUSTOMER_SELECTED_FARE" updatedFareList then "\n\n" <> getEN CUSTOMER_TIP_DESCRIPTION else "")
                         <> (if isHaveFare "TOLL_CHARGES" updatedFareList then "\n\n" <> "⁺" <> getEN TOLL_CHARGES_DESC else "")
+    startTime = fromMaybe "" ride.rideStartTime
+    endTime = fromMaybe "" ride.rideEndTime
   in {
     date : (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") ,
     time :  convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A",
@@ -101,8 +105,8 @@ myRideListTransformer isSrcServiceable listRes = filter (\item -> (item.status =
     isSuccessfull :  if ride.status == "COMPLETED" then "visible" else "gone",
     rating : fromMaybe 0 rideDetails.rideRating,
     driverName : rideDetails.driverName,
-    rideStartTime : convertUTCtoISC (fromMaybe "" ride.rideStartTime) "h:mm A",
-    rideEndTime : convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A",
+    rideStartTime : convertUTCtoISC startTime "h:mm A",
+    rideEndTime : convertUTCtoISC endTime "h:mm A",
     vehicleNumber : rideDetails.vehicleNumber,
     rideId : rideDetails.id,
     status : ride.status,
@@ -129,6 +133,9 @@ myRideListTransformer isSrcServiceable listRes = filter (\item -> (item.status =
   , vehicleVariant : fetchVehicleVariant rideDetails.vehicleVariant
   , merchantExoPhone : ride.merchantExoPhone
   , serviceTierName : ride.serviceTierName
+  , totalTime : show (runFn2 differenceBetweenTwoUTCInMinutes endTime startTime) <> " min"
+  , vehicleModel : rideDetails.vehicleModel
+  , rideStartTimeUTC : fromMaybe "" ride.rideStartTime
   }) listRes)
 
 matchRidebyId :: IndividualRideCardState -> IndividualRideCardState -> Boolean

@@ -48,7 +48,8 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 import ConfigProvider
 import PrestoDOM.List as PrestoList
-import JBridge (toast)
+import JBridge (toast, differenceBetweenTwoUTCInMinutes)
+import Data.Function.Uncurried (runFn2)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -234,6 +235,8 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
     nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
     nightChargeTill = "5 AM"
+    startTime = fromMaybe "" ride.rideStartTime
+    endTime = fromMaybe "" ride.rideEndTime
      in {
     date : (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
     time :  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
@@ -247,8 +250,8 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
     isSuccessfull :  (if ride.status == "COMPLETED" then "visible" else "gone"),
     rating : (fromMaybe 0 rideDetails.rideRating),
     driverName : (rideDetails.driverName),
-    rideStartTime : (convertUTCtoISC (fromMaybe "" ride.rideStartTime) "h:mm A"),
-    rideEndTime : (convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A"),
+    rideStartTime : (convertUTCtoISC startTime "h:mm A"),
+    rideEndTime : (convertUTCtoISC endTime "h:mm A"),
     vehicleNumber : (rideDetails.vehicleNumber),
     rideId : (rideDetails.id),
     status : if ride.status == "REALLOCATED" then "CANCELLED" else ride.status,
@@ -280,6 +283,9 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , optionsVisibility : false
   , merchantExoPhone : ride.merchantExoPhone
   , serviceTierName : ride.serviceTierName
+  , totalTime : show (runFn2 differenceBetweenTwoUTCInMinutes endTime startTime) <> " min"
+  , vehicleModel : rideDetails.vehicleModel
+  , rideStartTimeUTC : fromMaybe "" ride.rideStartTime
 }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
 dummyFareBreakUp :: FareBreakupAPIEntity

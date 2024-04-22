@@ -934,7 +934,7 @@ homeScreenFlow = do
                                                         }
                                             currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
                                             currentMap = getSuggestionsMapFromLocal FunctionCall
-                                            updatedMap = addOrUpdateSuggestedTrips currentSourceGeohash currTrip false currentMap state.data.config.suggestedTripsAndLocationConfig
+                                            updatedMap = addOrUpdateSuggestedTrips currentSourceGeohash currTrip false currentMap state.data.config.suggestedTripsAndLocationConfig false
                                         void $ pure $ setSuggestionsMap updatedMap
                                         modifyScreenState $ HomeScreenStateType (\homeScreen -> newState{data{suggestionsData{suggestionsMap = getSuggestionsMapFromLocal FunctionCall }}})
                                         lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
@@ -1664,7 +1664,7 @@ findEstimates updatedState = do
       --   updateLocalStage DistanceOutsideLimits
       --   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation, findingQuotesProgress = 0.0, isShorterTrip = false}})
       --   homeScreenFlow
-      if ( (response.distance < 500  || isDistMoreThanThreshold )&& Arr.all (_ == false ) [ isLocalStageOn PickUpFarFromCurrentLocation , isLocalStageOn ShortDistance]) then do 
+      if ( (response.distance < 500  || isDistMoreThanThreshold )&& Arr.all (_ == false )  [ isLocalStageOn PickUpFarFromCurrentLocation , isLocalStageOn ShortDistance]) && not state.props.isSearchCancelled then do 
           let currentStage = if isDistMoreThanThreshold then PickUpFarFromCurrentLocation else ShortDistance
           updateLocalStage currentStage
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = currentStage ,rideRequestFlow = true, isSearchLocation = SearchLocation, distance = response.distance, isShorterTrip = response.distance < 500, findingQuotesProgress = 0.0}})
@@ -2761,6 +2761,7 @@ cancelEstimate bookingId = do
                 else do
                   void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_cancel_waiting_for_quotes"
                   pure unit
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isSearchCancelled = true}})
             "BookingAlreadyCreated" -> do
               void $ pure $ toast $ getString STR.IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_
               void $ liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_booking_exists_right"

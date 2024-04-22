@@ -1108,3 +1108,5 @@ getTE stringKey =
     BOOK name -> "బుక్ " <> name
     FARE_FOR limit -> limit <> " కోసం ధర" 
     WAITING_CHARGE_LIMIT timeLimit -> "వైటింగ్ ఛార్జీలు ("<> timeLimit <>" నిమిషాల తర్వాత)"
+    TIME_TAKEN -> "మొత్తం సమయం"
+    TRIP_DISTANCE -> "ప్రయాణ దూరం"

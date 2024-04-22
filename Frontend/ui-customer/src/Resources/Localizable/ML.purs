@@ -1095,3 +1095,5 @@ getML stringKey =
         BOOK name -> "ബുക്ക് " <> name
         FARE_FOR limit -> limit <> " കോടതി"
         WAITING_CHARGE_LIMIT timeLimit -> "കാത്തിരിക്കൽ ചാർജുകൾ ("<> timeLimit <>" മിനിറ്റ് ശേഷം)"
+        TIME_TAKEN -> "മൊത്തം സമയം"
+        TRIP_DISTANCE -> "യാത്ര ദൂരം"
