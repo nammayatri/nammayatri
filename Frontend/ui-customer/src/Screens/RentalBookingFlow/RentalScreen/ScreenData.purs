@@ -34,9 +34,9 @@ initData =
         , finalDistance : 0
         , startOdometer : ""
         , endOdometer : ""
-        , estimatedFare : 0
-        , finalFare : 0
         , nightCharge : "250"
+        , rideStartedAt : ""
+        , rideEndedAt : ""
       }
     , selectedQuote : Nothing
     , config : getAppConfig appConfig

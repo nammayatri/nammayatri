@@ -76,12 +76,12 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, compareDate, getCurrentDatev2, getDateAfterNDaysv2, zoneLabelIcon, decodeBookingTimeList, encodeBookingTimeList)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, compareDate, getCurrentDatev2, getDateAfterNDaysv2, zoneLabelIcon, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<), (*>))
 import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (BottomSheetState(..), Eval, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
@@ -105,7 +105,7 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
-import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions, metersToKm, safetyIssueOptions)
+import Screens.RideBookingFlow.HomeScreen.Config (reportIssueOptions, metersToKm, safetyIssueOptions)
 import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..), SuggestionsMap(..), SosBannerType(..))
 import Screens.Types (AutoCompleteReqType(..), LocationSelectType(..)) as ST
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
@@ -135,6 +135,7 @@ import DecodeUtil (getAnyFromWindow)
 import JBridge as JB
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.Types (FareProductType(..)) as FPT
+import Helpers.TipConfig
 
 instance showAction :: Show Action where
   show _ = ""
@@ -1782,8 +1783,13 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState 
       HomeScreen   -> do
         _ <- pure $ performHapticFeedback unit
         let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.DestinationSearch" "true"
-        let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-        exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= state.data.source}}
+            _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
+            maybeInvalidBookingDetails = invalidBookingTime (getCurrentUTC "") Nothing
+        if (isJust maybeInvalidBookingDetails) then do
+          continue state {data{invalidBookingId = maybe Nothing (\invalidBookingTime -> Just invalidBookingTime.bookingId) maybeInvalidBookingDetails}, props{showScheduledRideExistsPopUp = true}}
+        else do
+          void $ pure $ updateLocalStage SearchLocationModel
+          exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= state.data.source}}
       ConfirmingLocation -> do
         _ <- pure $ performHapticFeedback unit
         _ <- pure $ exitLocateOnMap ""
@@ -1803,9 +1809,13 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState 
 eval WhereToClick state = do
   _ <- pure $ performHapticFeedback unit
   let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.DestinationSearch" "true"
-  _ <- pure $ updateLocalStage SearchLocationModel
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-  exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }, rideSearchProps{sessionId = generateSessionId unit}}, data{source= if state.data.source == "" then getString CURRENT_LOCATION else state.data.source}}
+      _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
+      maybeInvalidBookingDetails = invalidBookingTime (getCurrentUTC "") Nothing
+  if (isJust maybeInvalidBookingDetails) then do
+    continue state {data{invalidBookingId = maybe Nothing (\invalidBookingTime -> Just invalidBookingTime.bookingId) maybeInvalidBookingDetails}, props{showScheduledRideExistsPopUp = true}}
+  else do
+    void $ pure $ updateLocalStage SearchLocationModel
+    exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= state.data.source}}
   
 eval (RideCompletedAC RideCompletedCard.GoToSOS) state = exit $ GoToNammaSafety state true false 
 
@@ -1865,7 +1875,7 @@ eval (SearchExpireCountDown seconds status timerID) state = do
     _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
     continue state { props { searchExpire = seconds } }
   else do
-    let enableTips = isTipEnabled state
+    let enableTips = isTipEnabled state.data.config.customerTip state.data.selectedEstimatesObject.vehicleVariant
     if any ( _ == state.props.currentStage) [FindingQuotes , QuoteList] then continue state { props { searchExpire = seconds ,timerId = timerID , tipViewProps {isVisible = enableTips && (seconds <= (getSearchExpiryTime true)-state.data.config.tipDisplayDuration || state.props.tipViewProps.isVisible || state.props.tipViewProps.activeIndex >= 0)}, customerTip{enableTips = enableTips}} }
       else do
         _ <- pure $ clearTimerWithId timerID
@@ -2458,7 +2468,7 @@ eval (GetQuotesList (SelectListRes resp)) state = do
               else pure unit
               let newState = state{data{quoteListModelState = quoteListModelState },props{isSearchLocation = NoView, isSource = Nothing,currentStage = QuoteList}}
               if isLocalStageOn QuoteList then do
-                let updatedState = if isTipEnabled state then tipEnabledState newState{props{isPopUp = TipsPopUp, findingQuotesProgress = 0.0}} else newState{props{isPopUp = ConfirmBack, findingQuotesProgress = 0.0}}
+                let updatedState = if isTipEnabled state.data.config.customerTip state.data.selectedEstimatesObject.vehicleVariant then tipEnabledState newState{props{isPopUp = TipsPopUp, findingQuotesProgress = 0.0}} else newState{props{isPopUp = ConfirmBack, findingQuotesProgress = 0.0}}
                 exit $ GetSelectList updatedState
               else if(state.props.selectedQuote == Nothing && (getValueToLocalStore AUTO_SELECTING) /= "CANCELLED_AUTO_ASSIGN") then do
                 let id = (fromMaybe dummyQuoteList (newState.data.quoteListModelState!!0)).id
@@ -2480,7 +2490,7 @@ eval (ContinueWithoutOffers (SelectListRes resp)) state = do
           exit $ ConfirmRide state{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp, selectedQuote = Nothing}}
     Nothing -> do
       if isLocalStageOn QuoteList then do
-        let updatedState = if isTipEnabled state then tipEnabledState state{props{isPopUp = TipsPopUp, customerTip{enableTips = true}}} else state{props{isPopUp = ConfirmBack}}
+        let updatedState = if isTipEnabled state.data.config.customerTip state.data.selectedEstimatesObject.vehicleVariant then tipEnabledState state{props{isPopUp = TipsPopUp, customerTip{enableTips = true}}} else state{props{isPopUp = ConfirmBack}}
         continue updatedState
         else continue state
 
@@ -2805,7 +2815,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.TipBtnClick index value)) s
       tip = fromMaybe 0 (customerTipArrayWithValues !! index)
       isTipSelected = tip > 0
       customerTip = if isTipSelected then 
-                      state.props.customerTip {isTipSelected = isTipSelected, enableTips = isTipEnabled state, tipForDriver = tip, tipActiveIndex = index}
+                      state.props.customerTip {isTipSelected = isTipSelected, enableTips = isTipEnabled state.data.config.customerTip state.data.selectedEstimatesObject.vehicleVariant, tipForDriver = tip, tipActiveIndex = index}
                       else HomeScreenData.initData.props.customerTip
       tipViewProps = if isTipSelected then 
                       state.props.tipViewProps{ stage = RETRY_SEARCH_WITH_TIP, activeIndex = index, onlyPrimaryText = true}
@@ -2839,8 +2849,13 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
                         && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
         updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
         newState = if validDate && isAfterThirtyMinutes then state { data { selectedDateTimeConfig = updatedDateTime, startTimeUTC = selectedUTC}} else state
-    in if validDate && isAfterThirtyMinutes then continue newState
-       else 
+    in 
+      if validDate && isAfterThirtyMinutes then do
+        let maybeInvalidBookingDetails = invalidBookingTime selectedUTC Nothing
+        if (isJust maybeInvalidBookingDetails) then do
+          continue state {data{invalidBookingId = maybe Nothing (\invalidBookingTime -> Just invalidBookingTime.bookingId) maybeInvalidBookingDetails}, props{showScheduledRideExistsPopUp = true}}
+        else continue newState
+      else 
         if isAfterThirtyMinutes then do 
           void $ pure $ toast $ getVarString DATE_INVALID_MESSAGE $ singleton $ show state.props.maxDateBooking
           continue state
@@ -2914,7 +2929,7 @@ eval (UpdateBookingDetails (RideBookingRes response)) state = do
   
 eval (DriverInfoCardActionController (DriverInfoCardController.ShowEndOTP)) state = continue state { props { showEndOTP = true } }
 
-eval (ScheduledRideExistsAction (PopUpModal.OnButton2Click)) state = continue state{props{ showScheduledRideExistsPopUp = false}}
+eval (ScheduledRideExistsAction (PopUpModal.OnButton2Click)) state = continue state{data{ startedAt = "", invalidBookingId = Nothing, maxEstimatedDuration = 0}, props{showScheduledRideExistsPopUp = false}}
 
 eval _ state = continue state
 
@@ -3159,14 +3174,6 @@ tipEnabledState state = do
       tipActiveIndex = if state.props.customerTip.tipActiveIndex == -1 then 1 else state.props.customerTip.tipActiveIndex
   state { props{customerTip {isTipSelected= true, tipForDriver= (fromMaybe 10 (customerTipArrayWithValues !! tipActiveIndex)), tipActiveIndex = tipActiveIndex}}}
 
-isTipEnabled :: HomeScreenState -> Boolean
-isTipEnabled state =
-    let tipConfig = state.data.config.customerTip
-    in 
-    case state.data.selectedEstimatesObject.vehicleVariant of 
-      "AUTO_RICKSHAW" -> tipConfig.auto
-      _ -> tipConfig.cabs
-
 quoteListFlow :: FPT.FareProductType -> Array OfferRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 quoteListFlow flowType estimatedQuotes state = do
   let quoteList = getQuotesTransformer estimatedQuotes state.data.config.estimateAndQuoteConfig
@@ -3326,7 +3333,7 @@ getInfoCardPeekHeight state =
   let bottomSheetLayout = (runFn1 getLayoutBounds $ getNewIDWithTag (if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then "driverInfoViewSpecialZone" else "driverInfoView"))
       brandingBanner = runFn1 getLayoutBounds $ getNewIDWithTag "BrandingBanner"
       actionsView = runFn1 getLayoutBounds $ getNewIDWithTag "DriverInfoCardActionView"
-      isDriverInfoCardBanner = isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow
+      isDriverInfoCardBanner = isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow && state.props.currentStage == RideStarted
       driverDetailsView = if isDriverInfoCardBanner && (state.data.fareProductType == FPT.RENTAL) then runFn1 getLayoutBounds $ getNewIDWithTag "DriverDetailsView"  else {height : 0, width : 0}
       driverDetailsViewPadding = if isDriverInfoCardBanner && (state.data.fareProductType == FPT.RENTAL) then 16 else 0
       fareEstimate = runFn1 getLayoutBounds $ getNewIDWithTag "PaymentMethodView"

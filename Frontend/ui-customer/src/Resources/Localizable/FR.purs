@@ -1171,5 +1171,4 @@ getFR stringKey =
         RENTALS_ -> "Locations"
         INTER_CITY_ -> "Intercité"
         A_RIDE_ALREADY_EXISTS -> "Un trajet existe déjà."
-        YOU_HAVE_AN_ACTIVE_RIDE bookingTime -> "Vous avez un trajet actif jusqu'à " <> bookingTime <> ". Pour créer une nouvelle réservation, annulez la réservation existante ou attendez qu'elle soit terminée."
-
+        YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL -> "Vous avez un trajet {} de {} à {} prévu de {} à {}. Vous pouvez prendre des trajets normaux ou planifier un autre trajet tant qu'il ne chevauche pas les horaires de trajet déjà planifiés."

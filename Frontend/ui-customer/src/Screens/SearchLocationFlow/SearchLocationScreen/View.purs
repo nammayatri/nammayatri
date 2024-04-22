@@ -28,11 +28,12 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.SaveFavouriteCard as SaveFavouriteCard
 import Components.SeparatorView.View as SeparatorView
+import Components.ChooseYourRide as ChooseYourRide
 import Components.RateCard as RateCard
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Monad.Free (runFree)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array(mapWithIndex, length, null, any) as DA
+import Data.Array(mapWithIndex, length, null, any, elem) as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3, runFn1)
 import Data.Maybe (isNothing, maybe, Maybe(..), isJust, fromMaybe ) as MB
@@ -42,7 +43,7 @@ import Debug(spy)
 import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Effect.Aff (launchAff)
-import Engineering.Helpers.Commons (os, screenHeight, screenWidth, safeMarginBottom, safeMarginTop, flowRunner, getNewIDWithTag) as EHC
+import Engineering.Helpers.Commons (os, screenHeight, screenWidth, safeMarginBottom, safeMarginTop, flowRunner, getNewIDWithTag, getCurrentUTC, convertUTCtoISC) as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.CommonView (emptyTextView)
@@ -59,7 +60,7 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getDelayForAutoComplete)
-import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig, locUnserviceablePopUpConfig, primaryButtonRequestRideConfig, rentalRateCardConfig)
+import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig, locUnserviceablePopUpConfig, primaryButtonRequestRideConfig, rentalRateCardConfig, chooseYourRideConfig)
 import Screens.SearchLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps, Station, ZoneType(..))
 import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..))
@@ -71,6 +72,7 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Screens.SearchLocationScreen.ScreenData (dummyQuote)
+import Helpers.TipConfig
 
 searchLocationScreen :: SearchLocationScreenState -> GlobalProps -> Screen Action SearchLocationScreenState ScreenOutput
 searchLocationScreen initialState globalProps = 
@@ -190,54 +192,7 @@ chooseYourRideView push state =
   , visibility $ boolToVisibility $ currentStageOn state ChooseYourRide
   , background Color.transparent
   , gravity BOTTOM 
-  ][  linearLayout[
-        height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , gravity CENTER_HORIZONTAL
-      , cornerRadii $ Corners 24.0 true true false false 
-      , stroke $ "1," <> Color.grey900
-      , background Color.white900
-  ][  textView
-      [ height $ V 4
-      , width $ V 28 
-      , cornerRadius 4.0 
-      , margin $ MarginVertical 10 2
-      , background Color.grey900
-      ]
-    , 
-    textView $
-        [ text $ getString CHOOSE_YOUR_RIDE 
-        , color Color.black800
-        , gravity CENTER_HORIZONTAL
-        , height WRAP_CONTENT
-        , width MATCH_PARENT
-        ]
-        <> FontStyle.h2 TypoGraphy
-    , linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , gravity CENTER
-      , margin $ MarginVertical 4 4
-      ]
-      [ createTextView $ show state.data.rideDetails.rideDuration <> " hrs"
-      , linearLayout
-          [ height $ V 4
-          , width $ V 4
-          , cornerRadius 2.5
-          , background Color.black600
-          , margin (Margin 6 2 6 0)
-          ]
-          []
-      , createTextView $ show state.data.rideDetails.rideDistance <> " km"
-      ]
-    , createTextView $ state.data.rideDetails.rideScheduledDate <> " , " <> state.data.rideDetails.rideScheduledTime
-    , verticalSeparatorView 1 (MarginVertical 12 12)
-    , chooseVehicleView state push
-    , verticalSeparatorView 1 (MarginTop 0)
-    , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonRequestRideConfig state) 
-    ]
-  ]
+  ][  ChooseYourRide.view (push <<< ChooseYourRideAC) (chooseYourRideConfig state)]
   where
     createTextView :: forall w. String -> PrestoDOM (Effect Unit) w
     createTextView textContent =
@@ -248,58 +203,6 @@ chooseYourRideView push state =
         , color Color.black900
         ]
         <> FontStyle.paragraphText TypoGraphy
-
-chooseVehicleView :: forall w. SearchLocationScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-chooseVehicleView state push =
-    scrollView
-    [ height $ if DA.null state.data.quotesList then V 200 else getQuoteListViewHeight state 
-    , width MATCH_PARENT
-    ][  if DA.null state.data.quotesList  then 
-          shimmerFrameLayout 
-            [ width MATCH_PARENT
-            , height $ V 200
-            , orientation VERTICAL
-            , background Color.transparent
-            ][ linearLayout
-                [ width MATCH_PARENT
-                , height WRAP_CONTENT
-                , padding $ PaddingHorizontal 16 16
-                , orientation VERTICAL
-                ] (DA.mapWithIndex (\index _ -> 
-                  shimmerItemView (index == 0)) [1,2,3] )]
-          else vehicleSelectionView push state ]
-  where 
-    shimmerItemView :: forall w. Boolean -> PrestoDOM (Effect Unit) w
-    shimmerItemView hasTopMargin = 
-      linearLayout
-        [ width MATCH_PARENT
-        , height $ V 80
-        , margin $ MarginVertical (if hasTopMargin then 16 else 0)  16 
-        , cornerRadius 8.0
-        , background Color.greyDark
-        ]
-        []
-
-vehicleSelectionView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
-vehicleSelectionView push state = 
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , padding $ PaddingHorizontal 16 16
-    ]
-    ( map 
-      ( \quote ->
-          ChooseVehicle.view (push <<< ChooseVehicleAC) quote.quoteDetails { layoutMargin = MarginHorizontal 0 0,  showInfo = true, showStroke = true}
-      ) (state.data.quotesList))
-
-getQuoteListViewHeight :: SearchLocationScreenState -> Length
-getQuoteListViewHeight state = 
-    let len = DA.length state.data.quotesList
-        height1 = MB.maybe 0 (\item -> (runFn1 getLayoutBounds $ EHC.getNewIDWithTag item.quoteDetails.id).height) state.data.selectedQuote
-        quoteHeight = getDefaultPixelSize height1 
-        height = if quoteHeight == 0 then 84 else quoteHeight
-    in V $ (if len >= 4 then 3 * height else len * height) + if len == 1 then 16 else 5
 
 
 mapViewLayout push state globalProps = 

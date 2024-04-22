@@ -114,7 +114,7 @@ config = {
     title : "",
     titleColor : Color.grey900,
     finalAmount : 0,
-    initalAmount : 0,
+    initialAmount : 0,
     fareUpdatedVisiblity : false,
     gradient : [Color.black900, Color.black900, Color.pickledBlue, Color.black900],
     topPill : {
@@ -250,7 +250,7 @@ type TopCard = {
   title :: String,
   titleColor :: String,
   finalAmount :: Int,
-  initalAmount :: Int,
+  initialAmount :: Int,
   fareUpdatedVisiblity :: Boolean,
   gradient :: Array String,
   topPill :: TopPill,
@@ -400,8 +400,8 @@ dummyRentalBookingConfig =
   , startOdometer : ""
   , endOdometer : ""
   , nightCharge : ""
-  , estimatedFare : 0
-  , finalFare : 0
   , finalDuration : 0
   , finalDistance : 0
+  , rideStartedAt : "" 
+  , rideEndedAt : ""
   }

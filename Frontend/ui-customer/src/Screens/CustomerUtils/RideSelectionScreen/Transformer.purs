@@ -113,7 +113,7 @@ myRideListTransformer isSrcServiceable listRes = filter (\item -> any (_ == item
     isScheduled : if isScheduled then "visible" else "gone",
     rating : fromMaybe 0 rideDetails.rideRating,
     driverName : rideDetails.driverName,
-    rideStartTime : convertUTCtoISC (fromMaybe "" ride.rideStartTime) "h:mm A",
+    rideStartTime : convertUTCtoISC (fromMaybe ride.createdAt $ if isScheduled then ride.rideScheduledTime else ride.rideStartTime) "h:mm A",
     rideEndTime : convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A",
     vehicleNumber : rideDetails.vehicleNumber,
     rideId : rideDetails.id,
@@ -147,6 +147,7 @@ myRideListTransformer isSrcServiceable listRes = filter (\item -> any (_ == item
   , estimatedDuration : fromMaybe 0 ride.estimatedDuration
   , estimatedFare : ride.estimatedFare
   , showDestination : if (decodeAddress $ Booking destination) == "" then "gone" else "visible"
+  , rideScheduledTime : fromMaybe "" ride.rideScheduledTime
   }) listRes)
 
 matchRidebyId :: IndividualRideCardState -> IndividualRideCardState -> Boolean

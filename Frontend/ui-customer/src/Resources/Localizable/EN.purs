@@ -1171,5 +1171,5 @@ getEN stringKey =
         RENTALS_ -> "Rentals"
         INTER_CITY_ -> "Intercity"
         A_RIDE_ALREADY_EXISTS -> "A ride already exists"
-        YOU_HAVE_AN_ACTIVE_RIDE bookingTime -> "You have an active ride until " <> bookingTime <> ". To create a new booking, cancel the existing booking or wait until it is complete."
+        YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL -> "You have an {} ride from {} to {} which is scheduled from {} till {}. You can take normal rides or schedule another ride unless it does not overlap with the already scheduled ride timelines."
 

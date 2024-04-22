@@ -37,7 +37,7 @@ import Data.Function.Uncurried (Fn2, runFn3, Fn1, Fn3)
 import Data.Generic.Rep (class Generic)
 import Data.Int (round, toNumber, fromString, ceil)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe, isJust)
 import Data.Number (pi, sin, cos, sqrt, asin, abs)
 import Data.Ord (comparing, Ordering)
 import Data.Profunctor.Strong (first)
@@ -56,7 +56,7 @@ import Effect.Console (logShow)
 import Effect.Uncurried (EffectFn1(..), EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
 import Effect.Uncurried (EffectFn1, EffectFn4, EffectFn3, runEffectFn3)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os)
+import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os, getCurrentUTC, compareUTCDate)
 import Engineering.Helpers.Commons (parseFloat, setText, toStringJSON) as ReExport
 import Engineering.Helpers.Utils (class Serializable, serialize)
 import Foreign (MultipleErrors, unsafeToForeign)
@@ -70,8 +70,7 @@ import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, mod, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<#>), (<$>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>=), (>>>), (||))
-import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>), (<), (#))
+import Prelude (class Eq, class EuclideanRing, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, mod, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<#>), (<$>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>=), (>>>), (||), (#), max, ($>))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..), ZoneType(..))
@@ -1016,7 +1015,7 @@ getVehicleName vaiant =
 
 encodeBookingTimeList :: Array BookingTime -> String
 encodeBookingTimeList bookingTimeList = do
-  AC.stringify $ AE.encodeJson $ bookingTimeList
+  AC.stringify $ AE.encodeJson bookingTimeList
 
 decodeBookingTimeList :: LazyCheck -> (Array BookingTime)
 decodeBookingTimeList _ = 
@@ -1024,3 +1023,34 @@ decodeBookingTimeList _ =
     case (AD.decodeJson =<< ADP.parseJson (getValueToLocalStore BOOKING_TIME_LIST)) of
       Right resp -> Just resp
       Left err   -> Nothing
+
+invalidBookingTime :: String -> Maybe Int -> Maybe BookingTime
+invalidBookingTime rideStartTime maybeEstimatedDuration =
+    if DA.null bookingTimeList 
+      then Nothing 
+      else fromMaybe Nothing $ DA.head $ DA.filter (isJust) $ map (overlappingRide rideStartTime maybeEstimatedDuration) bookingTimeList
+          
+  where
+    overlappingRide :: String -> Maybe Int -> BookingTime -> Maybe BookingTime
+    overlappingRide rideTime maybeEstimatedDuration bookingDetails =
+      let diffInMins = (compareUTCDate bookingDetails.rideStartTime rideTime) / 60
+          overlappingPollingTime = diffInMins >= 0 && diffInMins <= 30
+      in
+        if ( overlappingPollingTime || (maybe false (\estimatedDuration -> (rideStartingInBetweenPrevRide diffInMins bookingDetails estimatedDuration) || (rideEndingInBetweenNextRide diffInMins bookingDetails estimatedDuration)) maybeEstimatedDuration))
+          then Just bookingDetails
+          else Nothing
+
+    bookingTimeList :: Array BookingTime
+    bookingTimeList = decodeBookingTimeList FunctionCall
+
+rideStartingInBetweenPrevRide :: Int -> BookingTime -> Int -> Boolean
+rideStartingInBetweenPrevRide diffInMins bookingDetails estimatedDuration =
+  let estimatedTripDuration = bookingDetails.estimatedDuration + diffInMins
+  in (diffInMins <= 0 && estimatedTripDuration >= 0 && estimatedTripDuration <= estimatedDuration + 30)
+
+rideEndingInBetweenNextRide :: Int -> BookingTime -> Int -> Boolean
+rideEndingInBetweenNextRide diffInMins _ estimatedDuration =
+  (diffInMins >= 0 && diffInMins <= estimatedDuration + 30)
+
+bufferTimePerKm :: Int -> Int
+bufferTimePerKm estimatedDistance = 3 * estimatedDistance

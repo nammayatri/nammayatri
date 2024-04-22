@@ -31,7 +31,7 @@ import Data.Array (any, null, head, length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust, maybe', maybe)
 import Screens.HomeScreen.ScreenData (dummyRideBooking, initData) as HSD
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getSpecialTag, getFareProductType)
-import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
+import Helpers.TipConfig (setTipViewData)
 import Data.Lens ((^.))
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Accessor
@@ -80,6 +80,7 @@ checkRideStatus rideAssigned = do
                       , bookingId : resp.id
                       , multipleScheduled : multipleScheduled
                       , fareProductType : fareProductType
+                      , nearestRideScheduledAtUTC : ""
                       }))},
                   props
                     { currentStage = rideStatus
@@ -101,6 +102,7 @@ checkRideStatus rideAssigned = do
                       , bookingId : resp.id
                       , multipleScheduled : multipleScheduled
                       , fareProductType : fareProductType
+                      , nearestRideScheduledAtUTC : ""
                       }))}})
           updateLocalStage HomeScreen
         else do

@@ -22,10 +22,11 @@ import Components.LocationTagBarV2 as LTB
 import Components.InputView as InputView
 import Components.RateCard as RateCard
 import Components.MenuButton as MenuButton
+import Components.ChooseYourRide as ChooseYourRide
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types as ST
 import MerchantConfig.Types as MT
-import Prelude ((==), (<>), ($), (/=), (>), (||), map, not)
+import Prelude ((==), (<>), ($), (/=), (>), (||), map, not, identity)
 import Styles.Colors as Color
 import Font.Style as FontStyle
 import Font.Size as FontSize
@@ -44,6 +45,10 @@ import Screens
 import JBridge as JB
 import ConfigProvider 
 import Data.Array as DA
+import Engineering.Helpers.Commons as EHC
+import Screens.SearchLocationScreen.ScreenData (dummyQuote)
+import Helpers.TipConfig
+import Storage(getValueToLocalStore, KeyStore(..))
 
 locationTagBarConfig :: ST.SearchLocationScreenState -> ST.GlobalProps -> LTB.LocationTagBarConfig
 locationTagBarConfig state globalProps = 
@@ -425,3 +430,29 @@ rentalRateCardConfig state =
           ]
         }
   in rentalRateCardConfig'
+
+
+chooseYourRideConfig state = 
+  let 
+    quoteSelected = MB.maybe dummyQuote identity state.data.selectedQuote
+    tipConfig = getTipConfig quoteSelected.quoteDetails.vehicleVariant
+    city = getValueToLocalStore CUSTOMER_LOCATION
+
+  in 
+  ChooseYourRide.config {
+    quoteList = map (\quote -> quote.quoteDetails) state.data.quotesList,
+    rideDistance = (show state.data.rideDetails.rideDistance) <> " km",
+    rideDuration = (show state.data.rideDetails.rideDuration) <> " hrs",
+    customerTipArray = tipConfig.customerTipArray,
+    customerTipArrayWithValues = tipConfig.customerTipArrayWithValues,
+    enableTips = false, 
+    rideTime = formatDate "D" <> " " <> formatDate "MMM" <> ", " <> formatDate "hh" <> ":" <> formatDate "mm" <> " " <> formatDate "A",
+    tipViewProps = getTipViewProps state.props.tipViewProps quoteSelected.quoteDetails.vehicleVariant ,
+    tipForDriver = state.props.customerTip.tipForDriver,
+    activeIndex = quoteSelected.activeIndex 
+  }
+
+  where 
+    formatDate formatSTR = 
+      let startTime = if state.data.rideDetails.rideScheduledTimeUTC == "" then EHC.getCurrentUTC "" else state.data.rideDetails.rideScheduledTimeUTC
+      in EHC.convertUTCtoISC startTime formatSTR

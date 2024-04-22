@@ -15,13 +15,14 @@
 
 module Screens.SearchLocationScreen.ScreenData where
 
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..), City(..), FareDetails(..), QuotesList(..))
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..), City(..), FareDetails(..), QuotesList(..), TipViewStage(..))
 import ConfigProvider
 import Screens (ScreenName(..), getScreen)
 import Data.Maybe (Maybe(..))
 import Services.API (PlaceName(..), LatLong(..))
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
 import Components.ChooseVehicle.Controller as ChooseVehicleController
+import Prelude (negate)
  
 
 initData :: SearchLocationScreenState 
@@ -34,7 +35,8 @@ initData = {
             rideDistance : 0,
             rideDuration : 0,
             rideScheduledDate : "",
-            rideScheduledTime : ""
+            rideScheduledTime : "",
+            rideScheduledTimeUTC : ""
          }
          , currentLoc : dummyLocationInfo{
             address = "Current Location"
@@ -72,7 +74,26 @@ initData = {
     isSpecialZone : false,
     isAutoComplete : false,
     pickUpSelectedOnMap : false,
-    showRateCard : false
+    showRateCard : false,
+    tipViewProps : {
+        stage : DEFAULT
+      , isVisible : false
+      , onlyPrimaryText : false
+      , isprimaryButtonVisible : false
+      , primaryText : ""
+      , secondaryText : ""
+      , customerTipArray : []
+      , customerTipArrayWithValues : []
+      , activeIndex : -1
+      , primaryButtonText : ""
+      },
+    customerTip : {
+        enableTips: false
+      , tipForDriver: 0
+      , tipActiveIndex: -1
+      , isTipSelected: false
+      }
+
   },
   appConfig : getAppConfig appConfig
 }

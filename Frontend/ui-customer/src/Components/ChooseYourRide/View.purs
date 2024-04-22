@@ -8,7 +8,7 @@ import Animation.Config as Animation
 import Components.ChooseVehicle as ChooseVehicle
 import Components.ChooseYourRide.Controller (Action(..), Config)
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (mapWithIndex, length, (!!), any)
+import Data.Array (mapWithIndex, length, (!!), any, null)
 import Data.Function.Uncurried (runFn1)
 import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Effect (Effect)
@@ -21,13 +21,14 @@ import JBridge (getLayoutBounds)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), const, pure, unit, not, show, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-), (/=))
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), Gradient(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml, gradient, frameLayout)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), Gradient(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml, gradient, frameLayout, shimmerFrameLayout)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
 import ConfigProvider
 import PrestoDOM.Properties (sheetState)
 import Data.Int (toNumber,ceil)
+import Data.String (null) as DS
 import MerchantConfig.Types(AppConfig(..))
 import Mobility.Prelude
 import Screens.Types (ZoneType(..), TipViewStage(..))
@@ -541,6 +542,23 @@ estimatedTimeAndDistanceView push config =
         , color Color.black650
         ]
         <> FontStyle.paragraphText TypoGraphy
+    , linearLayout
+        [ height $ V 4
+        , width $ V 4
+        , cornerRadius 2.5
+        , background Color.black600
+        , visibility $ boolToVisibility $ not $ DS.null config.rideTime
+        , margin (Margin 6 2 6 0)
+        ]
+        []
+    , textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text config.rideTime
+        , visibility $ boolToVisibility $ not $ DS.null config.rideTime
+        , color Color.black650
+        ]
+        <> FontStyle.paragraphText TypoGraphy
     ]
 
 quoteListView :: forall w. (Action -> Effect Unit) -> Config -> Boolean -> PrestoDOM (Effect Unit) w
@@ -552,19 +570,34 @@ quoteListView push config isSingleEstimate =
     , afterRender push (const NoAction)
     ]
     [scrollView
-      [ height $ getQuoteListViewHeight config isSingleEstimate
+      [ height $ if null (config.quoteList) then V 200 else getQuoteListViewHeight config isSingleEstimate
       , width MATCH_PARENT
-      ][  linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , padding $ PaddingVertical 16 10
-          , margin $ MarginHorizontal 16 16
-          , orientation VERTICAL
-          ]( mapWithIndex
-              ( \index item -> 
-                  ChooseVehicle.view (push <<< ChooseVehicleAC) (item{isSingleEstimate = isSingleEstimate})
-              ) config.quoteList
-          )]
+      ][  if null (config.quoteList) then 
+            shimmerFrameLayout 
+            [ width MATCH_PARENT
+            , height $ V 200
+            , orientation VERTICAL
+            , background Color.transparent
+            ][ linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , padding $ PaddingHorizontal 16 16
+                , orientation VERTICAL
+                ] (mapWithIndex (\index _ -> 
+                      shimmerItemView (index == 0)) [1,2,3] )]
+            else 
+              linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , padding $ PaddingVertical 16 10
+              , orientation VERTICAL
+              ](
+                  ( mapWithIndex
+                      ( \index item -> 
+                          ChooseVehicle.view (push <<< ChooseVehicleAC) (item{isSingleEstimate = isSingleEstimate})
+                      ) config.quoteList
+                  ))
+              ]
     , linearLayout
       [ height $ WRAP_CONTENT
       , width $ MATCH_PARENT
@@ -592,6 +625,17 @@ quoteListView push config isSingleEstimate =
         ][]  
       ]
     ]
+    where 
+      shimmerItemView :: forall w. Boolean -> PrestoDOM (Effect Unit) w
+      shimmerItemView hasTopMargin = 
+        linearLayout
+          [ width MATCH_PARENT
+          , height $ V 80
+          , margin $ MarginVertical (if hasTopMargin then 16 else 0)  16 
+          , cornerRadius 8.0
+          , background Color.greyDark
+          ]
+          []
 
 getQuoteListViewHeight :: Config -> Boolean -> Length
 getQuoteListViewHeight config isSingleEstimate =
@@ -615,6 +659,8 @@ primaryButtonRequestRideConfig config = let
   , id = "ConfirmAndBookButton"
   , background = Color.black900
   , margin = Margin 0 16 0 15
+  , isClickable = not $ null config.quoteList
+  , alpha = if null config.quoteList then 0.5 else 1.0
   , enableRipple = true
   , rippleColor = Color.rippleShade
   }

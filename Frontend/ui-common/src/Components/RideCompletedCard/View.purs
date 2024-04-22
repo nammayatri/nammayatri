@@ -230,8 +230,8 @@ priceAndDistanceUpdateView config push =
               , height WRAP_CONTENT
               ] <> (FontStyle.title0 TypoGraphy)
           , textView $
-              [ textFromHtml $ "<strike> ₹" <> (show config.topCard.initalAmount) <> "</strike>"
-              , accessibilityHint $ "Your Fare Has Been Updated From ₹"  <> (show config.topCard.initalAmount) <> " To ₹" <> (show config.topCard.finalAmount)
+              [ textFromHtml $ "<strike> ₹" <> (show config.topCard.initialAmount) <> "</strike>"
+              , accessibilityHint $ "Your Fare Has Been Updated From ₹"  <> (show config.topCard.initialAmount) <> " To ₹" <> (show config.topCard.finalAmount)
               , accessibility config.accessibility
               , margin $ Margin 8 5 0 0
               , width WRAP_CONTENT
@@ -800,30 +800,39 @@ rentalTripDetailsView config push =
       ] 
       [ rentalTripRowView config push RideTime
       , rentalTripRowView config push RideDistance
-      -- , separatorView
-      -- , rentalTripRowView config push RideStartedAt
-      -- , rentalTripRowView config push RideEndedAt
+      , separatorView
+      , rentalTripRowView config push RideStartedAt
+      , rentalTripRowView config push RideEndedAt
       ]
-    -- , textView $
-    --   [ text rentalRowDetails.fareUpdateTitle
-    --   , color Color.black800
-    --   , margin $ MarginVertical 24 8
-    --   ] <> FontStyle.body1 TypoGraphy
-    -- , linearLayout
-    --   [ height WRAP_CONTENT
-    --   , width MATCH_PARENT
-    --   , cornerRadius 9.0
-    --   , background Color.white900
-    --   , padding $ Padding 16 16 16 16
-    --   , stroke $ "1,"<> Color.grey900
-    --   , orientation VERTICAL
-    --   ]
-    --   [ rentalTripRowView config push EstimatedFare
-    --   , rentalTripRowView config push ExtraTimePrice
-    --   , separatorView
-    --   , rentalTripRowView config push TotalFare
-    --   ]
+    , textView $
+      [ text rentalRowDetails.fareUpdateTitle
+      , color Color.black800
+      , margin $ MarginVertical 24 8
+      ] <> FontStyle.body1 TypoGraphy
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , cornerRadius 9.0
+      , background Color.white900
+      , padding $ Padding 16 16 16 16
+      , stroke $ "1,"<> Color.grey900
+      , orientation VERTICAL
+      ]
+      [ rentalTripRowView config push EstimatedFare
+      , rentalTripRowView config push ExtraTimePrice
+      , separatorView
+      , rentalTripRowView config push TotalFare
+      ]
     ]
+  
+  where 
+    separatorView = 
+      linearLayout
+      [ height $ V 1
+      , width MATCH_PARENT 
+      , margin $ MarginTop 16
+      , background Color.grey700
+      ][]
 
 rentalTripRowView :: forall w. Config -> (Action -> Effect Unit) -> RentalRowView -> PrestoDOM (Effect Unit) w
 rentalTripRowView config push description =
@@ -873,11 +882,11 @@ rentalTripRowView config push description =
           case description' of
             RideTime -> mkRentalTextConfig rentalRowDetails.rideTime (" / " <> show rentalBookingData.baseDuration <> "hr") (Utils.formatMinIntoHoursMins rentalBookingData.finalDuration) (showRedOrBlackColor ((rentalBookingData.finalDuration / 60) > rentalBookingData.baseDuration))
             RideDistance -> mkRentalTextConfig rentalRowDetails.rideDistance (" / " <> show rentalBookingData.baseDistance <> "km") (show rentalBookingData.finalDistance <> "km") (showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance))
-            RideStartedAt -> mkRentalTextConfig rentalRowDetails.rideStartedAt (rentalBookingData.startOdometer <> " km") "" Color.black600
-            RideEndedAt -> mkRentalTextConfig rentalRowDetails.rideEndedAt (rentalBookingData.endOdometer <> " km") "" Color.black600
-            EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare ("₹" <> show rentalBookingData.estimatedFare) "" Color.black600
-            ExtraTimePrice -> mkRentalTextConfig rentalRowDetails.extraTimePrice ("₹" <> show (rentalBookingData.finalFare - rentalBookingData.estimatedFare)) "" Color.black600
-            TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare ("₹" <> show rentalBookingData.finalFare) "" Color.black600
+            RideStartedAt -> mkRentalTextConfig rentalRowDetails.rideStartedAt rentalBookingData.rideStartedAt "" Color.black600
+            RideEndedAt -> mkRentalTextConfig rentalRowDetails.rideEndedAt rentalBookingData.rideEndedAt "" Color.black600
+            EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare ("₹" <> show config'.topCard.initialAmount) "" Color.black600
+            ExtraTimePrice -> mkRentalTextConfig rentalRowDetails.extraTimePrice ("₹" <> show (config'.topCard.finalAmount - config'.topCard.initialAmount)) "" Color.black600
+            TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare ("₹" <> show config'.topCard.finalAmount) "" Color.black600
             
       mkRentalTextConfig :: String -> String -> String -> String -> RentalTextConfig
       mkRentalTextConfig title' estimatedValue' actualValue' color' = { title: title', estimatedValue: estimatedValue', actualValue: actualValue', color: color'}

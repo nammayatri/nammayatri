@@ -92,6 +92,10 @@ import Screens.Types as ST
 import Services.API as API
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
+import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig)
+import Effect.Unsafe (unsafePerformEffect)
+import Debug (spy)
+import Helpers.TipConfig
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -1275,7 +1279,7 @@ quoteListModelViewState state = let vehicleVariant = state.data.selectedEstimate
                                 , autoSelecting: state.props.autoSelecting
                                 , searchExpire: state.props.searchExpire
                                 , showProgress : isLocalStageOn ConfirmingQuotes || (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes
-                                , tipViewProps : getTipViewProps state
+                                , tipViewProps : getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant
                                 , findingRidesAgain : state.props.findingRidesAgain
                                 , progress : state.props.findingQuotesProgress
                                 , appConfig : state.data.config
@@ -1460,7 +1464,7 @@ chooseYourRideConfig state =
     enableSingleEstimate = state.data.config.enableSingleEstimate,
     selectedEstimateHeight = state.props.selectedEstimateHeight,
     zoneType = state.props.zoneType.sourceTag,
-    tipViewProps = getTipViewProps state,
+    tipViewProps = getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant ,
     tipForDriver = state.props.customerTip.tipForDriver,
     customerTipArray = tipConfig.customerTipArray,
     customerTipArrayWithValues = tipConfig.customerTipArrayWithValues,
@@ -1477,8 +1481,6 @@ specialLocationConfig srcIcon destIcon isAnim animConfig = {
   , polylineAnimationConfig : animConfig
 }
 
-setTipViewData :: Encode TipViewData => TipViewData -> Effect Unit
-setTipViewData object = void $ pure $ setValueToLocalStore TIP_VIEW_DATA (encodeJSON object)
 
 getTipViewData :: String -> Maybe TipViewData
 getTipViewData dummy =
@@ -1486,51 +1488,6 @@ getTipViewData dummy =
     Right res -> Just res
     Left err -> Nothing
 
-getTipViewProps :: ST.HomeScreenState -> TipViewProps
-getTipViewProps state = do  
-  let tipViewProps = state.props.tipViewProps
-  case tipViewProps.stage of
-    DEFAULT ->  tipViewProps{ stage = DEFAULT
-                            , onlyPrimaryText = false
-                            , isprimaryButtonVisible = false
-                            , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
-                            , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
-                            -- , secondaryButtonText = getString GO_BACK_
-                            -- , secondaryButtonVisibility = true
-                            }
-    TIP_AMOUNT_SELECTED -> tipViewProps{ stage = TIP_AMOUNT_SELECTED
-                                       , onlyPrimaryText = false
-                                       , isprimaryButtonVisible = true
-                                       , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
-                                       , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
-                                       , primaryButtonText = getTipViewText tipViewProps state (getString CONTINUE_SEARCH_WITH)
-                                      --  , secondaryButtonText = getString GO_BACK_
-                                      --  , secondaryButtonVisibility = true
-                                       }
-    TIP_ADDED_TO_SEARCH -> tipViewProps{ onlyPrimaryText = true, isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "." }
-    RETRY_SEARCH_WITH_TIP -> tipViewProps{ onlyPrimaryText = true , isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "." }
-    -- ADD_TIP_OR_CHANGE_RIDE_TYPE -> tipViewProps{ showTipsList = false
-    --                                           , isprimaryButtonVisible = true
-    --                                           , primaryText = getString TRY_ADDING_TIP_OR_CHANGE_RIDE_TYPE
-    --                                           , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
-    --                                           , primaryButtonText = getString ADD_TIP
-    --                                           , secondaryButtonText = getString CHANGE_RIDE_TYPE
-    --                                           , secondaryButtonVisibility = true
-    --                                           }
-
-
-getTipViewText :: TipViewProps -> ST.HomeScreenState -> String -> String
-getTipViewText tipViewProps state prefixString = do
-  let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
-      tip = show (fromMaybe 10 (tipConfig.customerTipArrayWithValues !! tipViewProps.activeIndex))
-  if tip == "0" then 
-    case tipViewProps.stage of
-      TIP_AMOUNT_SELECTED -> getString CONTINUE_SEARCH_WITH_NO_TIP
-      _ -> getString SEARCHING_WITH_NO_TIP
-  else  
-    case (getLanguageLocale languageKey) of
-      "EN_US" -> prefixString <> (if tipViewProps.stage == TIP_AMOUNT_SELECTED then " +₹" else " ₹")<>tip<>" "<> (getString TIP)
-      _ -> "+₹"<>tip<>" "<>(getString TIP) <> " " <> prefixString
 
 reportIssueOptions :: ST.HomeScreenState -> Array OptionButtonList -- need to modify
 reportIssueOptions state =
@@ -1694,7 +1651,7 @@ rideCompletedCardConfig state =
           title =  getString RIDE_COMPLETED,
           titleColor = topCardConfig.titleColor,
           finalAmount = state.data.finalAmount,
-          initalAmount = state.data.driverInfoCardState.price,
+          initialAmount = state.data.driverInfoCardState.price,
           fareUpdatedVisiblity = state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing,
           gradient = topCardGradient,
           infoPill {
@@ -1727,7 +1684,8 @@ rideCompletedCardConfig state =
         , baseDistance = state.data.driverInfoCardState.rentalData.baseDistance
         , finalDuration = state.data.driverInfoCardState.rentalData.finalDuration
         , finalDistance = state.data.driverInfoCardState.rentalData.finalDistance
-        , finalFare = state.data.finalAmount
+        , rideStartedAt = state.data.rideRatingState.rideStartTime 
+        , rideEndedAt = ""
         },
         rentalRowDetails {
           rideTime = getString RIDE_TIME
@@ -2079,72 +2037,6 @@ referralPopUpConfig state =
       }
   in popUpConfig'
 
-type TipConfig = {
-  customerTipArray :: Array String,
-  customerTipArrayWithValues :: Array Int
-} 
-
-type TipVehicleConfig = {
-  sedan :: TipConfig,
-  suv :: TipConfig,
-  hatchback :: TipConfig,
-  autoRickshaw :: TipConfig,
-  taxi :: TipConfig,
-  taxiPlus :: TipConfig
-}
-
-getTipConfig :: String -> TipConfig
-getTipConfig variant = do
-  let city = HU.getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-  case city of 
-    Bangalore -> bangaloreConfig variant
-    Hyderabad -> hyderabadConfig variant
-    _ -> defaultTipConfig variant
-
-mkTipConfig :: Array Int -> TipConfig
-mkTipConfig customerTipArrayWithValues = {
-  customerTipArray: getTips customerTipArrayWithValues,
-  customerTipArrayWithValues: customerTipArrayWithValues
-}
-
-getTips :: Array Int -> Array String
-getTips arr = mapWithIndex (\index item -> if item == 0 then (getString NO_TIP) 
-                                           else "₹" <> show item <> " " <> fromMaybe "🤩" (emoji !! index)) arr
-  where
-    emoji = [(getString NO_TIP), "🙂", "😀", "😃", "😁", "🤩"]
-      
-bangaloreConfig :: String -> TipConfig
-bangaloreConfig variant = 
-  case variant of
-    "SEDAN" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "SUV" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "HATCHBACK" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI_PLUS" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    _ -> mkTipConfig [0, 10, 20, 30, 40, 50]
-
-hyderabadConfig :: String -> TipConfig
-hyderabadConfig variant = 
-  case variant of
-    "SEDAN" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "SUV" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "HATCHBACK" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "AUTO_RICKSHAW" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "TAXI" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "TAXI_PLUS" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    _ -> mkTipConfig [0, 20, 30, 40, 50, 60]
-
-defaultTipConfig :: String -> TipConfig
-defaultTipConfig variant = 
-  case variant of
-    "SEDAN" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "SUV" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "HATCHBACK" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI_PLUS" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    _ -> mkTipConfig [0, 10, 20, 30, 40, 50]
 
 specialZoneInfoPopupConfig :: HU.SpecialZoneInfoPopUp -> RequestInfoCard.Config
 specialZoneInfoPopupConfig infoConfig = let
@@ -2262,7 +2154,6 @@ intercityInSpecialZonePopupConfig state = let
 
 scheduledRideExistsPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
 scheduledRideExistsPopUpConfig state = let
-  bookingTime = ""
   config' = PopUpModal.config
   popUpConfig' = config'{
     gravity = CENTER,
@@ -2278,7 +2169,7 @@ scheduledRideExistsPopUpConfig state = let
       margin = MarginTop 16
       },
     secondaryText { 
-      text = getString $ YOU_HAVE_AN_ACTIVE_RIDE bookingTime,
+      text = maybe "" textDetails $ DA.head $ DA.filter (\bookingDetail -> Just bookingDetail.bookingId == state.data.invalidBookingId) $ HU.decodeBookingTimeList FunctionCall,
       margin = MarginTop 4
       },
     option1 {
@@ -2298,3 +2189,13 @@ scheduledRideExistsPopUpConfig state = let
     }
   }
   in popUpConfig'
+  where
+    textDetails :: ST.BookingTime -> String
+    textDetails bookingDetails = 
+      let invalidBookingPopUpConfig = fromMaybe dummyInvalidBookingPopUpConfig state.data.invalidBookingPopUpConfig
+          rideType = if invalidBookingPopUpConfig.fareProductType == FPT.RENTAL then "rental" else "intercity"
+          rideEndTime = formatDateInHHMM $ EHC.getUTCAfterNSeconds invalidBookingPopUpConfig.rideScheduledTime $ (invalidBookingPopUpConfig.maxEstimatedDuration + 30) * 60
+      in getVarString YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL [rideType, invalidBookingPopUpConfig.fromLocation, invalidBookingPopUpConfig.toLocation, formatDateInHHMM invalidBookingPopUpConfig.rideScheduledTime, rideEndTime]
+
+    formatDateInHHMM :: String -> String
+    formatDateInHHMM timeUTC = EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"

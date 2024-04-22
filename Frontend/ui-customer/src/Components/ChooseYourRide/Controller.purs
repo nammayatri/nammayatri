@@ -24,6 +24,7 @@ data Action
 type Config
   = { rideDistance :: String
     , rideDuration :: String
+    , rideTime :: String
     , activeIndex :: Int
     , quoteList :: Array ChooseVehicleController.Config
     , showTollExtraCharges :: Boolean
@@ -46,6 +47,7 @@ config :: Config
 config =
   { rideDistance: ""
   , rideDuration: ""
+  , rideTime: ""
   , activeIndex: 0
   , quoteList: []
   , showTollExtraCharges : (getAppConfig appConfig).searchLocationConfig.showAdditionalChargesText

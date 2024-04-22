@@ -58,13 +58,15 @@ import Resources.Constants (encodeAddress)
 import Screens (getScreen, ScreenName(..))
 import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote)
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig)
-import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo)
+import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo, initData) as SearchLocationScreenData
 import Services.API (QuoteAPIEntity(..), GetQuotesRes(..), OfferRes(..), RentalQuoteAPIDetails(..), QuoteAPIContents(..), Snapped(..), LatLong(..), Route(..))
 import Services.Backend (walkCoordinates, walkCoordinate, normalRoute)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
 import Language.Strings (getString)
+import Components.ChooseYourRide.Controller as ChooseYourRideController
 import Language.Types (STR(..))
+import Helpers.TipConfig
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -99,9 +101,9 @@ data Action = NoAction
             | SpecialZoneInfoTag
             | PopUpModalAC PopUpModalController.Action
             | GetQuotes GetQuotesRes
-            | ChooseVehicleAC ChooseVehicleController.Action
             | CheckFlowStatusAction
             | CurrentLocation 
+            | ChooseYourRideAC ChooseYourRideController.Action
             
 
 data ScreenOutput = NoOutput SearchLocationScreenState
@@ -125,15 +127,6 @@ data ScreenOutput = NoOutput SearchLocationScreenState
 eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLocationScreenState
 
 eval CheckFlowStatusAction state = exit $ CurrentFlowStatus
-
-eval (ChooseVehicleAC (ChooseVehicleController.OnSelect variant)) state =
-  let updatedQuotes = map (\item -> 
-                              item {activeIndex = variant.index , quoteDetails {activeIndex = variant.index}}) state.data.quotesList
-      selectedQuote = (fetchSelectedQuote updatedQuotes)
-  in  continue state { data { quotesList = updatedQuotes , selectedQuote = selectedQuote}}
-  
-eval (ChooseVehicleAC (ChooseVehicleController.ShowRateCard _)) state = 
-  continue state { props { showRateCard = true }}
 
 eval (MapReady _ _ _) state = do 
   if state.props.searchLocStage == PredictionSelectedFromHome then 
@@ -396,7 +389,7 @@ eval (SetLocationOnMap) state = do
   void $ pure $ hideKeyboardOnNavigation true
   pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
   void $ pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lng, geoJson = "", points = [], zoomLevel = 17.0}
-  let newState = state{props{searchLocStage = LocateOnMapStage, locUnserviceable = false}, data{latLonOnMap = MB.fromMaybe (MB.fromMaybe dummyLocationInfo state.data.srcLoc) focussedField}}
+  let newState = state{props{searchLocStage = LocateOnMapStage, locUnserviceable = false}, data{latLonOnMap = MB.fromMaybe (MB.fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.srcLoc) focussedField}}
   updateAndExit newState $ Reload newState
   where 
     mkLatLong currentLat currentLng loc = { lat: MB.fromMaybe currentLat loc.lat, lng: MB.fromMaybe currentLng loc.lon }
@@ -429,6 +422,39 @@ eval (RateCardAC action) state =
     RateCardController.PrimaryButtonAC (PrimaryButtonController.NoAction) -> continue state
     _ -> continue state { props {showRateCard = false}}
     
+eval (ChooseYourRideAC (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect variant))) state = do 
+  let updatedQuotes = map (\item -> 
+                              item {activeIndex = variant.index , quoteDetails {activeIndex = variant.index}}) state.data.quotesList
+      selectedQuote = (fetchSelectedQuote updatedQuotes)
+      newState = if variant.activeIndex == variant.index then state else state{props{customerTip = SearchLocationScreenData.initData.props.customerTip, tipViewProps = SearchLocationScreenData.initData.props.tipViewProps}}
+  continue newState { data { quotesList = updatedQuotes , selectedQuote = selectedQuote}}
+
+eval (ChooseYourRideAC (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state = continue state { props { showRateCard = true }}
+
+eval (ChooseYourRideAC ChooseYourRideController.AddTip) state = do
+  continue state { props { tipViewProps {stage = TIP_AMOUNT_SELECTED}}}
+  
+eval (ChooseYourRideAC ChooseYourRideController.ChangeTip) state = do
+  continue state { props {tipViewProps { activeIndex = state.props.customerTip.tipActiveIndex, stage = TIP_AMOUNT_SELECTED}}} 
+
+eval (ChooseYourRideAC (ChooseYourRideController.TipBtnClick index value)) state = do 
+  let quoteSelected = MB.maybe dummyQuote identity state.data.selectedQuote
+      vehicleVariant = quoteSelected.quoteDetails.vehicleVariant
+      tipConfig = getTipConfig vehicleVariant
+      customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+      tip = MB.fromMaybe 0 (customerTipArrayWithValues DA.!! index)
+      isTipSelected = tip > 0
+      customerTip = if isTipSelected then 
+                      state.props.customerTip {isTipSelected = isTipSelected, enableTips = isTipEnabled state.appConfig.customerTip vehicleVariant , tipForDriver = tip, tipActiveIndex = index}
+                      else SearchLocationScreenData.initData.props.customerTip
+      tipViewProps = if isTipSelected then 
+                      state.props.tipViewProps{ stage = RETRY_SEARCH_WITH_TIP, activeIndex = index, onlyPrimaryText = true}
+                      else SearchLocationScreenData.initData.props.tipViewProps
+  void $ pure $ setTipViewData (TipViewData { stage : tipViewProps.stage , activeIndex : tipViewProps.activeIndex , isVisible : tipViewProps.isVisible })
+  continue state { props {customerTip = customerTip , tipViewProps = tipViewProps }}
+
+eval (ChooseYourRideAC (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = exit $ SelectedQuote state
+
 eval _ state = continue state
 
 
@@ -460,7 +486,7 @@ handleBackPress state = do
   case state.props.searchLocStage of 
     ConfirmLocationStage -> do 
       void $ pure $ exitLocateOnMap ""
-      continue state {props {searchLocStage = PredictionsStage}, data{latLonOnMap = dummyLocationInfo}}
+      continue state {props {searchLocStage = PredictionsStage}, data{latLonOnMap = SearchLocationScreenData.dummyLocationInfo}}
     PredictionsStage -> do 
       void $ pure $ hideKeyboardOnNavigation true
       if state.data.fromScreen == getScreen HOME_SCREEN then exit $ HomeScreen state 

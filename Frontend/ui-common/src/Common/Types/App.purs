@@ -548,8 +548,8 @@ type RentalBookingConfig = {
   , finalDistance :: Int
   , startOdometer :: String
   , endOdometer :: String
-  , estimatedFare :: Int
-  , finalFare :: Int
   , nightCharge :: String
+  , rideStartedAt :: String 
+  , rideEndedAt :: String
 }
 
