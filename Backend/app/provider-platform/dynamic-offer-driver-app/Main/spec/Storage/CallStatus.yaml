@@ -1,0 +1,48 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  CallService: Kernel.External.Call.Types
+
+CallStatus:
+  tableName: call_status
+
+  fields:
+    id : Id CallStatus
+    callId : Text
+    entityId : Maybe Text
+    dtmfNumberUsed : Maybe Text
+    status : Kernel.External.Call.Interface.Types.CallStatus
+    recordingUrl : Maybe Text
+    conversationDuration : Int
+    merchantId : Maybe Text
+    callService : Maybe CallService
+    callError : Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    updatedAt: Maybe UTCTime
+
+  fromTType:
+    updatedAt: Kernel.Prelude.fromMaybe createdAt|I
+
+  toTType:
+    updatedAt: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    callId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - create
+
+  excludedFields: [merchantOperatingCityId]
+

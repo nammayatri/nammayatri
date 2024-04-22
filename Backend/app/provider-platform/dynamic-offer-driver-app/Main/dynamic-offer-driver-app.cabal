@@ -165,6 +165,7 @@ library
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
+      Domain.Action.UI.CallStatus
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.City
       Domain.Action.UI.Driver
@@ -215,7 +216,6 @@ library
       Domain.Types.BusinessEvent
       Domain.Types.Cac
       Domain.Types.CacType
-      Domain.Types.CallStatus
       Domain.Types.CancellationCharges
       Domain.Types.City
       Domain.Types.Coins.CoinHistory
@@ -349,7 +349,6 @@ library
       Storage.Beam.Booking.BookingLocation
       Storage.Beam.BookingCancellationReason
       Storage.Beam.BusinessEvent
-      Storage.Beam.CallStatus
       Storage.Beam.CancellationCharges
       Storage.Beam.Coins.CoinHistory
       Storage.Beam.Coins.CoinsConfig
@@ -465,7 +464,7 @@ library
       Storage.Queries.Booking.Internal
       Storage.Queries.BookingCancellationReason
       Storage.Queries.BusinessEvent
-      Storage.Queries.CallStatus
+      Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationCharges
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
@@ -548,6 +547,7 @@ library
       Storage.Queries.SearchTry
       Storage.Queries.Status
       Storage.Queries.Transformers.BlackListOrg
+      Storage.Queries.Transformers.CallStatus
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.DocumentVerificationConfig
       Storage.Queries.Transformers.QuestionInformation
@@ -596,6 +596,7 @@ library
       Domain.Types.BecknConfig
       Domain.Types.BookingUpdateRequest
       Domain.Types.BlackListOrg
+      Domain.Types.CallStatus
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.DailyStats
@@ -644,6 +645,7 @@ library
       Storage.Beam.BecknConfig
       Storage.Beam.BookingUpdateRequest
       Storage.Beam.BlackListOrg
+      Storage.Beam.CallStatus
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.DailyStats
@@ -692,6 +694,7 @@ library
       Storage.Queries.BecknConfig
       Storage.Queries.BookingUpdateRequest
       Storage.Queries.BlackListOrg
+      Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.DailyStats
@@ -714,6 +717,7 @@ library
       Storage.Queries.MerchantState
       Storage.Queries.MetaData
       Storage.Queries.ModuleCompletionInformation
+      Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.DailyStats
       Storage.Queries.OrphanInstances.DocumentVerificationConfig
