@@ -28,6 +28,7 @@ data DriverInformation = DriverInformation
     canDowngradeToHatchback :: Kernel.Prelude.Bool,
     canDowngradeToSedan :: Kernel.Prelude.Bool,
     canDowngradeToTaxi :: Kernel.Prelude.Bool,
+    canSwitchToInterCity :: Kernel.Prelude.Bool,
     canSwitchToRental :: Kernel.Prelude.Bool,
     compAadhaarImagePath :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

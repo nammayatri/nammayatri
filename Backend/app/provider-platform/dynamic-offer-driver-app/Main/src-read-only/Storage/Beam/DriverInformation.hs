@@ -27,6 +27,7 @@ data DriverInformationT f = DriverInformationT
     canDowngradeToSedan :: B.C f Kernel.Prelude.Bool,
     canDowngradeToTaxi :: B.C f Kernel.Prelude.Bool,
     canSwitchToRental :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    canSwitchToInterCity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     compAadhaarImagePath :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverId :: B.C f Kernel.Prelude.Text,

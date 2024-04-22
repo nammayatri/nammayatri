@@ -31,8 +31,8 @@ getDriverInfos ::
 getDriverInfos personKeys = do
   findAllWithKV [Se.Is BeamDI.driverId $ Se.In personKeys]
 
-getDriverInfosWithCond :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DP.Person] -> Bool -> Bool -> Bool -> m [DriverInfo.DriverInformation]
-getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide isRental =
+getDriverInfosWithCond :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DP.Person] -> Bool -> Bool -> Bool -> Bool -> m [DriverInfo.DriverInformation]
+getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide isRental isInterCity =
   findAllWithKV
     [ Se.And
         ( [ Se.Is BeamDI.driverId $ Se.In personsKeys,
@@ -53,6 +53,7 @@ getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide isRental =
           ]
             <> ([Se.Is BeamDI.onRide $ Se.Eq (not onlyNotOnRide) | not (onlyNotOnRide && onlyOnRide)])
             <> ([Se.Is BeamDI.canSwitchToRental $ Se.Eq (Just True) | isRental])
+            <> ([Se.Is BeamDI.canSwitchToInterCity $ Se.Eq (Just True) | isInterCity])
         )
     ]
   where

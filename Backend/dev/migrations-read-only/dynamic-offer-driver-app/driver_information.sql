@@ -54,3 +54,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information DROP COLUMN selected_servi
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ALTER COLUMN can_switch_to_rental DROP NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN can_switch_to_inter_city boolean default false;

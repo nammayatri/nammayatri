@@ -51,6 +51,7 @@ DriverInformation:
     canDowngradeToHatchback: Bool
     canDowngradeToTaxi: Bool
     canSwitchToRental: Bool
+    canSwitchToInterCity: Bool
     mode: Maybe DriverMode
     aadhaarVerified: Bool
     autoPayStatus: Maybe DriverAutoPayStatus
@@ -78,6 +79,7 @@ DriverInformation:
     canDowngradeToHatchback: "false"
     canDowngradeToTaxi: "false"
     canSwitchToRental: "false"
+    canSwitchToInterCity: "false"
     aadhaarVerified: "false"
 
   constraints:
@@ -85,12 +87,15 @@ DriverInformation:
 
   beamType:
     canSwitchToRental: Maybe Bool
+    canSwitchToInterCity: Maybe Bool
 
   fromTType:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    canSwitchToInterCity: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
+    canSwitchToInterCity: Kernel.Prelude.Just|I
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -122,7 +127,7 @@ DriverInformation:
       where: driverId
     updateDriverInformation: #check
       kvFunction: updateOneWithKV
-      params: [canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, availableUpiApps]
+      params: [canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, canSwitchToInterCity, availableUpiApps]
       where: driverId
     updateOnRide:
       kvFunction: updateOneWithKV

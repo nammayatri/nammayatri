@@ -302,13 +302,13 @@ selectDriversAndMatchFarePolicies :: Id DM.Merchant -> Id DMOC.MerchantOperating
 selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies = do
   driverPoolCfg <- getSearchDriverPoolConfig merchantOpCityId mbDistance area
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-  driverPoolNotOnRide <- calculateDriverPool cityServiceTiers Estimate driverPoolCfg [] fromLocation merchantId True Nothing False
+  driverPoolNotOnRide <- calculateDriverPool cityServiceTiers Estimate driverPoolCfg [] fromLocation merchantId True Nothing False False
   logDebug $ "Driver Pool not on ride " <> show driverPoolNotOnRide
   driverPoolCurrentlyOnRide <-
     if null driverPoolNotOnRide
       then do
         if transporterConfig.includeDriverCurrentlyOnRide
-          then calculateDriverPoolCurrentlyOnRide cityServiceTiers Estimate driverPoolCfg [] fromLocation merchantId Nothing False
+          then calculateDriverPoolCurrentlyOnRide cityServiceTiers Estimate driverPoolCfg [] fromLocation merchantId Nothing False False
           else pure []
       else pure []
   let driverPool =

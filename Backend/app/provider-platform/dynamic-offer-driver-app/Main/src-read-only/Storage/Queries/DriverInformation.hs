@@ -69,14 +69,15 @@ updateDriverDowngradeForSuv canDowngradeToHatchback canDowngradeToTaxi (Kernel.T
 
 updateDriverInformation ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental availableUpiApps (Kernel.Types.Id.Id driverId) = do
+  (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity availableUpiApps (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.canDowngradeToSedan canDowngradeToSedan,
       Se.Set Beam.canDowngradeToHatchback canDowngradeToHatchback,
       Se.Set Beam.canDowngradeToTaxi canDowngradeToTaxi,
       Se.Set Beam.canSwitchToRental (Kernel.Prelude.Just canSwitchToRental),
+      Se.Set Beam.canSwitchToInterCity (Kernel.Prelude.Just canSwitchToInterCity),
       Se.Set Beam.availableUpiApps availableUpiApps,
       Se.Set Beam.updatedAt _now
     ]
@@ -115,6 +116,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.canDowngradeToHatchback canDowngradeToHatchback,
       Se.Set Beam.canDowngradeToSedan canDowngradeToSedan,
       Se.Set Beam.canDowngradeToTaxi canDowngradeToTaxi,
+      Se.Set Beam.canSwitchToInterCity (Kernel.Prelude.Just canSwitchToInterCity),
       Se.Set Beam.canSwitchToRental (Kernel.Prelude.Just canSwitchToRental),
       Se.Set Beam.compAadhaarImagePath compAadhaarImagePath,
       Se.Set Beam.driverDob driverDob,
