@@ -18,13 +18,20 @@ import qualified Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data Ride = Ride
-  { bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
+  { backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
     clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),
+    clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
     distanceCalculationFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

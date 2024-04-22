@@ -43,6 +43,8 @@ type API =
     :> ( ReqBody '[JSON] DRegistration.AuthReq
            :> Header "x-bundle-version" Version
            :> Header "x-client-version" Version
+           :> Header "x-config-version" Version
+           :> Header "x-device" Text
            :> Post '[JSON] DRegistration.AuthRes
            :<|> Capture "authId" (Id SR.RegistrationToken)
              :> "verify"
@@ -64,8 +66,8 @@ handler =
     :<|> resend
     :<|> logout
 
-auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> FlowHandler DRegistration.AuthRes
-auth req mbBundleVersionText = withFlowHandlerAPI . DRegistration.auth False req mbBundleVersionText
+auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler DRegistration.AuthRes
+auth req mbBundleVersionText mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . DRegistration.auth False req mbBundleVersionText mbClientVersion mbClientConfigVersion
 
 verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes
 verify tokenId = withFlowHandlerAPI . DRegistration.verify tokenId

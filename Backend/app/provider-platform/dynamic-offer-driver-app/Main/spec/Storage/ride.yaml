@@ -15,6 +15,9 @@ imports:
   Client: Domain.Types.Client
   Double: Kernel.Prelude
   Int: Kernel.Prelude
+  Device : Kernel.Types.Version
+  DeviceType: Kernel.Types.Version
+  Version: Kernel.Types.Version
 
 Ride:
   tableName: ride
@@ -72,6 +75,12 @@ Ride:
     vehicleServiceTierSeatingCapacity: Maybe Int
     vehicleServiceTierAirConditioned: Maybe Double
     rideEndedBy: Maybe RideEndedBy
+    clientSdkVersion: Maybe Version
+    clientBundleVersion: Maybe Version
+    clientConfigVersion: Maybe Version
+    backendConfigVersion: Maybe Version
+    backendAppVersion: Maybe Text
+    clientDevice: Maybe Device
 
   sqlType:
     id: character(36)
@@ -99,6 +108,9 @@ Ride:
   beamFields:
     toLocation: {}
     fromLocation: {}
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
     tripStartPos:
       tripStartLat: Maybe Double
       tripStartLon: Maybe Double
@@ -121,6 +133,11 @@ Ride:
     tripEndPos: Storage.Queries.Transformers.Ride.mkLatLong|I
     startOdometerReading: Storage.Queries.Transformers.Ride.mkOdometerReading|I
     endOdometerReading: Storage.Queries.Transformers.Ride.mkOdometerReading|I
+    clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
+    clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
+    clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
+    backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
+    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
@@ -133,10 +150,21 @@ Ride:
     endOdometerReadingValue: Kernel.Prelude.fmap Domain.Types.Ride.value|I
     endOdometerReadingFileId: getEndOdometerReadingFileId
     merchantOperatingCityId: Kernel.Prelude.Just $ Kernel.Types.Id.getId|I
+    clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
+    clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
+    clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
+    backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
+    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
+    clientOsType:  (clientDevice <&> (.deviceType))|E
 
   beamType:
     trackingUrl: Text
     merchantOperatingCityId: Maybe Text
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
+    clientOsVersion: Maybe Text
 
   constraints:
     id: PrimaryKey

@@ -12,6 +12,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -32,7 +33,13 @@ data NearestDriversResult = NearestDriversResult
     airConditioned :: Maybe Double,
     lat :: Double,
     lon :: Double,
-    mode :: Maybe DriverInfo.DriverMode
+    mode :: Maybe DriverInfo.DriverMode,
+    clientSdkVersion :: Maybe Version,
+    clientBundleVersion :: Maybe Version,
+    clientConfigVersion :: Maybe Version,
+    clientDevice :: Maybe Device,
+    backendConfigVersion :: Maybe Version,
+    backendAppVersion :: Maybe Text
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -93,4 +100,4 @@ getNearestDrivers cityServiceTiers serviceTiers fromLocLatLong radiusMeters merc
       where
         mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
-          Just $ NearestDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.airConditioned location.lat location.lon info.mode
+          Just $ NearestDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.airConditioned location.lat location.lon info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice person.backendConfigVersion person.backendAppVersion

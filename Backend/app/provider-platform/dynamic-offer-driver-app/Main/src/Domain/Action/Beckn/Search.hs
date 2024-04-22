@@ -434,6 +434,12 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled m
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
         createdAt = now,
         updatedAt = now,
+        clientSdkVersion = Nothing,
+        clientBundleVersion = Nothing,
+        clientConfigVersion = Nothing,
+        clientDevice = Nothing,
+        backendConfigVersion = Nothing,
+        backendAppVersion = Nothing,
         ..
       }
 

@@ -595,7 +595,13 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           airConditioned = nearestGoHomeDrivers.airConditioned,
           lat = nearestGoHomeDrivers.lat,
           lon = nearestGoHomeDrivers.lon,
-          mode = nearestGoHomeDrivers.mode
+          mode = nearestGoHomeDrivers.mode,
+          clientSdkVersion = nearestGoHomeDrivers.clientSdkVersion,
+          clientBundleVersion = nearestGoHomeDrivers.clientBundleVersion,
+          clientConfigVersion = nearestGoHomeDrivers.clientConfigVersion,
+          clientDevice = nearestGoHomeDrivers.clientDevice,
+          backendConfigVersion = nearestGoHomeDrivers.backendConfigVersion,
+          backendAppVersion = nearestGoHomeDrivers.backendAppVersion
         }
 
     getRoutesForAllDrivers =

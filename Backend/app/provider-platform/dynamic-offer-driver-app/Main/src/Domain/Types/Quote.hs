@@ -24,6 +24,7 @@ import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.Version
 
 data Quote = Quote
   { id :: Id Quote,
@@ -44,6 +45,12 @@ data Quote = Quote
     farePolicy :: Maybe Policy.FarePolicy,
     isScheduled :: Bool,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    clientSdkVersion :: Maybe Version,
+    clientBundleVersion :: Maybe Version,
+    clientConfigVersion :: Maybe Version,
+    clientDevice :: Maybe Device,
+    backendConfigVersion :: Maybe Version,
+    backendAppVersion :: Maybe Text
   }
   deriving (Generic, Show)

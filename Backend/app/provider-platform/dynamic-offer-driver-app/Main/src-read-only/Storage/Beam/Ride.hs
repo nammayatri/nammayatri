@@ -11,12 +11,20 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
 data RideT f = RideT
-  { bookingId :: B.C f Kernel.Prelude.Text,
+  { backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bookingId :: B.C f Kernel.Prelude.Text,
     chargeableDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
+    clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientOsType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType),
+    clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     distanceCalculationFailed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     driverArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
