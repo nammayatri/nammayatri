@@ -187,7 +187,7 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
       markAsComplete jobType' job.id
       fork "" $ incrementStreamCounter ("Executor_" <> show jobType')
     Terminate description -> do
-      logInfo $ "job terminated on try " <> show (currErrors + 1) <> "; reason: " <> description
+      logError $ "job terminated on try " <> show (currErrors + 1) <> "; with jobId: " <> show job.id <> "; reason: " <> description
       markAsFailed jobType' job.id
     ReSchedule reScheduledTime -> do
       logInfo $ "job rescheduled on time = " <> show reScheduledTime <> " jobType :" <> jobType'
@@ -196,10 +196,10 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
       let newErrorsCount = job.currErrors + 1
        in if newErrorsCount >= job.maxErrors
             then do
-              logError $ "retries amount exceeded, job failed after try " <> show newErrorsCount
+              logError $ "retries amount exceeded for jobId:" <> show job.id <> ", job failed after try " <> show newErrorsCount
               updateErrorCountAndFail jobType' job.id newErrorsCount
             else do
-              logInfo $ "try " <> show newErrorsCount <> " was not successful, trying again"
+              logError $ "try " <> show newErrorsCount <> " was not successful for jobId:" <> show job.id <> ", trying again"
               waitBeforeRetry <- asks (.waitBeforeRetry)
               now <- getCurrentTime
               reScheduleOnError jobType' j newErrorsCount $
