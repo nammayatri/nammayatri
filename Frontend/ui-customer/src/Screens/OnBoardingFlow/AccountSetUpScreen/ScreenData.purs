@@ -46,5 +46,7 @@ initData =
       , activeField : Nothing
       , isNameValid : false
       , isSpecialAssistList : false
+      , referralPopup : false
+      , referralHelpPopup : false
       }
   }

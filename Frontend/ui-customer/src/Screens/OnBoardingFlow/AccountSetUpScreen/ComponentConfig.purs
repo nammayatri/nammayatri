@@ -27,13 +27,14 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude ((/=), (==), negate)
-import PrestoDOM (Length(..), Margin(..))
+import PrestoDOM 
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
 import Animation.Config (AnimConfig, animConfig)
 import PrestoDOM.Animation as PrestoAnim
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import PrestoDOM.Types.DomAttributes (Corners(..))
 import Prelude ((<>))
 
 primaryButtonConfig :: ST.AccountSetUpScreenState -> PrimaryButton.Config
@@ -46,6 +47,19 @@ primaryButtonConfig state = PrimaryButton.config
   , margin = (Margin 0 0 0 0)
   , enableLoader = (JB.getBtnLoader "AccountSetupScreen")
   , id = "AccountSetupScreen"
+  , background = state.data.config.primaryBackground
+  }
+
+referralButtonConfig :: ST.AccountSetUpScreenState -> PrimaryButton.Config
+referralButtonConfig state = PrimaryButton.config
+  { textConfig { text = "Apply" 
+    , color = state.data.config.primaryTextColor
+    , accessibilityHint = if state.props.btnActive then "Let's go : Button" else "Let's go : Button disabled"}
+  , isClickable = state.props.btnActive
+  , alpha = if state.props.btnActive then 1.0 else 0.4
+  , margin = (MarginBottom 10)
+  , enableLoader = (JB.getBtnLoader "ApplyReferralCode")
+  , id = "ApplyReferralCode"
   , background = state.data.config.primaryBackground
   }
 
@@ -92,6 +106,37 @@ goBackPopUpModelConfig state =
         }
   in
     popUpConfig
+
+referralPopupConfig :: ST.AccountSetUpScreenState -> PopUpModal.Config
+referralPopupConfig state = PopUpModal.config
+        { buttonLayoutMargin = Margin 24 0 24 20
+        , gravity = CENTER
+        , margin = MarginHorizontal 20 20
+        , primaryText
+          { text =  "What is the Referral Program?"
+          , margin = Margin 16 16 16 10
+          }
+        , secondaryText
+          { text = "The referral program incentivises drivers to accept more rides, cancel less and serve you better by recognising and rewarding worthy drivers. "
+          , margin = MarginHorizontal 16 16
+          }
+        , option1
+          { text = "Got it"
+          , color = Color.black700
+          , background = Color.white900
+          , width = MATCH_PARENT
+          , margin = MarginVertical 20 10
+          , enableRipple = true
+          }
+        , option2
+          { visibility = false
+          }
+        , cornerRadius = Corners 15.0 true true true true
+        , coverImageConfig
+          { visibility = GONE
+          }
+        , backgroundClickable = false
+        }
 
 translateFullYAnimWithDurationConfigs :: ST.AccountSetUpScreenState -> AnimConfig
 translateFullYAnimWithDurationConfigs state = animConfig {

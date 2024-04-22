@@ -235,6 +235,8 @@ type AccountSetUpScreenStateProps =
     , activeField :: Maybe ActiveFieldAccountSetup
     , isNameValid :: Boolean
     , isSpecialAssistList :: Boolean
+    , referralPopup :: Boolean
+    , referralHelpPopup :: Boolean
   }
 
 

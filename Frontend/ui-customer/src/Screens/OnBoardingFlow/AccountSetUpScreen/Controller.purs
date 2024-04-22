@@ -104,6 +104,9 @@ data Action
   | NameSectionClick
   | SpecialAssistanceListAC SelectListModal.Action
   | GenericRadioButtonAC GenericRadioButton.Action
+  | ReferralCodeSkip 
+  | ReferralHelpPopup
+  | ReferralButtonActionController PrimaryButtonController.Action
 
 eval :: Action -> AccountSetUpScreenState -> Eval Action ScreenOutput AccountSetUpScreenState
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
@@ -111,14 +114,24 @@ eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
   if state.data.disabilityOptions.activeIndex == 1 then 
     continue state{props{isSpecialAssistList = true},data{disabilityOptions{editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason}}}
     else do 
-      let newState = state{data{disabilityOptions{editedDisabilityReason = "" , selectedDisability = Nothing, otherDisabilityReason = Nothing}}}
-      updateAndExit newState $ GoHome newState
+      continue state{data{disabilityOptions{editedDisabilityReason = "" , selectedDisability = Nothing, otherDisabilityReason = Nothing}}, props{referralPopup = true}}
+      -- updateAndExit newState $ GoHome newState
+
+eval (ReferralButtonActionController PrimaryButtonController.OnClick) state = do
+  -- let newState = state{props{isSpecialAssistList = true},data{disabilityOptions{editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason}}}
+  -- updateAndExit newState $ GoHome newState
 
 eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) state =
   continueWithCmd state
     [ do
         pure $ BackPressed
     ]
+
+eval ReferralCodeSkip state = do
+  let newState = state{data{disabilityOptions{editedDisabilityReason = "" , selectedDisability = Nothing, otherDisabilityReason = Nothing}}}
+  updateAndExit newState $ GoHome newState
+
+eval ReferralHelpPopup state = continue state{ props{ referralHelpPopup = true, referralPopup = false }}
 
 eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state[ do pure $ BackPressed]
 
@@ -141,12 +154,13 @@ eval (AnimationEnd _)  state = continue state{props{showOptions = false}}
 
 eval BackPressed state = do
   if state.props.isSpecialAssistList then continue state {props{isSpecialAssistList = false}}
+  else if state.props.referralHelpPopup then continue state { props {referralHelpPopup = false}}
     else do 
       _ <- pure $ hideKeyboardOnNavigation true
       _ <- pure $ clearTimerWithId "otp"
       continue state { props { backPressed = true } }
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { props { backPressed = false } }
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { props { backPressed = false, referralHelpPopup = false, referralPopup = true } }
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ ChangeMobileNumber
 

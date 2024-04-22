@@ -34,6 +34,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Components.RequestInfoCard as RequestInfoCard
 import Prelude (Unit, const, unit, not, ($), (<<<), (<>), (==), (/=), (||), (&&), (-), (>=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, color, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, relativeLayout, scrollView, singleLine, text, textView, weight, width, fontStyle, textSize, stroke, cornerRadius, imageView, imageWithFallback, visibility, onClick, editText, hint, id, pattern, hintColor, onChange, onFocus, onAnimationEnd, lineHeight, alpha, adjustViewWithKeyboard, accessibilityHint ,accessibility)
 import Screens.AccountSetUpScreen.Controller (Action(..), ScreenOutput, eval)
@@ -42,7 +43,6 @@ import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
 import Screens.AccountSetUpScreen.ComponentConfig
 import Font.Size as FontSize
-import Font.Style as FontStyle
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
@@ -126,8 +126,107 @@ view push state =
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state) ]
         , if state.props.backPressed then goBackPopUpView push state else emptyTextView
+        , if state.props.referralHelpPopup then referralPopupHelpView push state else emptyTextView
         , if state.props.isSpecialAssistList then specialAssistanceView state push else emptyTextView
+        , if state.props.referralPopup then referralPopupView push state else emptyTextView
         ])
+
+referralPopupView :: forall w. (Action -> Effect Unit) -> ST.AccountSetUpScreenState -> PrestoDOM (Effect Unit) w
+referralPopupView push state =
+  relativeLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.blackLessTrans
+    ][
+      linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , alignParentBottom "true,-1"
+        , background Color.white900
+        , cornerRadii $ Corners 16.0 true true false false
+        , orientation VERTICAL
+        , padding $ PaddingHorizontal 16 16
+        ][ linearLayout
+           [ height WRAP_CONTENT
+           , width MATCH_PARENT
+           , gravity RIGHT
+           , margin $ MarginVertical 16 16
+            ]
+            [ textView
+              $ [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , color Color.black700
+                , padding $ Padding 8 4 8 4
+                , cornerRadius 31.0
+                , text $ getString SKIP 
+                , stroke $ "1,"<> Color.black700
+              , onClick push $ const $ ReferralCodeSkip
+                ]
+              <> FontStyle.tags TypoGraphy
+            , imageView
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , padding $ PaddingHorizontal 10 5
+              , imageWithFallback $ fetchImage FF_ASSET "ny_ic_green_loc_tag"
+              , onClick push $ const $ ReferralHelpPopup
+              ]
+          ]
+        , linearLayout
+            [ height $ V 180
+            , width $ MATCH_PARENT
+            , background Color.blue600
+            ] 
+            [ ]
+        , linearLayout
+            [ height $ WRAP_CONTENT
+            , width $ MATCH_PARENT
+            , orientation VERTICAL
+            , gravity CENTER
+            ] 
+            [ textView
+              $ [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , color Color.black800
+                , margin $ MarginVertical 24 8
+                , cornerRadius 31.0
+                , text "HAVE A REFERRAL CODE ?"
+                ] <> FontStyle.h2 TypoGraphy
+              , textView
+                $ [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , color Color.black700
+                  , cornerRadius 31.0
+                  , text "Enter 6 digit referral code below"
+                  ] <> FontStyle.body1 TypoGraphy
+              , editText  
+                $ [ height MATCH_PARENT
+                  , width WRAP_CONTENT
+                  , weight 1.0
+                  , margin $ MarginVertical 16 20
+                  , color Color.black800
+                  , onChange push $ TextChanged
+                  , onFocus push $ const $ EditTextFocusChanged
+                  , gravity CENTER
+                  , cornerRadius 8.0
+                  , hint $ "Enter Referral Code"
+                  , hintColor Color.black600
+                  , pattern "[a-zA-Z0-9. ]*,6"
+                  , id $ EHC.getNewIDWithTag "RefferalCode"
+                  ] <> FontStyle.body25 LanguageStyle 
+                    <> if EHC.os == "IOS" then [] else [onClick push $ const NameSectionClick]
+              ]
+        , PrimaryButton.view (push <<< ReferralButtonActionController) (referralButtonConfig state)
+          ]
+  ]
+
+referralPopupHelpView :: forall w. (Action -> Effect Unit) -> ST.AccountSetUpScreenState -> PrestoDOM (Effect Unit) w
+referralPopupHelpView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity CENTER
+    ]
+    [ PopUpModal.view (push <<< PopUpModalAction) (referralPopupConfig state) ]
 
 goBackPopUpView :: forall w. (Action -> Effect Unit) -> ST.AccountSetUpScreenState -> PrestoDOM (Effect Unit) w
 goBackPopUpView push state =
