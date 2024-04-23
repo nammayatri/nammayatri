@@ -250,7 +250,7 @@ window.getMerchantConfig = function () {
       , "cityCode" : "std:040"  
       , "metroStationTtl" : 10080
       , "bookingStartTime" : "04:30:00"
-      , "bookingEndTime" : "22:30:00"
+      , "bookingEndTime" : "01:00:00"
       , "ticketLimit" : {
           "roundTrip" : 6
         , "oneWay" : 6
