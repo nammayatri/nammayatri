@@ -38,6 +38,8 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
+import Kernel.Tools.Metrics.CoreMetrics.Types (incrementSystemConfigsFailedCounter)
 import Kernel.Types.Cac
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -46,12 +48,42 @@ import qualified Storage.Queries.FarePolicy as Queries
 import qualified System.Environment as SE
 import System.Random
 
+findFarePolicyFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
+findFarePolicyFromDB id = do
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
+    Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
+    Nothing -> do
+      flip whenJust cacheFarePolicy /=<< Queries.findById id
+
+findFarePolicyFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> String -> Int -> m (Maybe FarePolicy)
+findFarePolicyFromCACStrict id cond toss = do
+  tenant <- liftIO $ SE.lookupEnv "TENANT"
+  contextValue <- liftIO $ CM.evalExperimentAsString (fromMaybe "atlas_driver_offer_bpp_v2" tenant) cond toss
+  config <- jsonToFarePolicy contextValue $ Text.unpack $ getId id
+  maybe
+    ( do
+        incrementSystemConfigsFailedCounter "cac_fare_policy_parse_error"
+        findFarePolicyFromDB id
+    )
+    (pure . Just)
+    config
+
+findFarePolicyFromCACHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> String -> Int -> m (Maybe FarePolicy)
+findFarePolicyFromCACHelper id cond toss = do
+  mbHost <- liftIO $ SE.lookupEnv "CAC_HOST"
+  mbInterval <- liftIO $ SE.lookupEnv "CAC_INTERVAL"
+  tenant <- liftIO (SE.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
+  config <- KSQS.findById $ Text.pack tenant
+  _ <- initializeCACThroughConfig CM.createClientFromConfig (fromMaybe (error "Config not found for DriverIntelligentPoolConfig in db") config) tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
+  findFarePolicyFromCACStrict id cond toss
+
 findFarePolicyFromCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Int -> Maybe Text -> Maybe Text -> m (Maybe FarePolicy)
 findFarePolicyFromCAC id toss txnId idName = do
   fp <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "farePolicyId", DA.String (getId id))]
   tenant <- liftIO $ SE.lookupEnv "TENANT"
   contextValue <- liftIO $ CM.evalExperimentAsString (fromMaybe "atlas_driver_offer_bpp_v2" tenant) fp toss
-  config <- jsonToFarePolicy contextValue $ Text.unpack $ getId id
+  config' <- jsonToFarePolicy contextValue $ Text.unpack $ getId id
+  config <- maybe (findFarePolicyFromCACHelper id fp toss) (pure . Just) config'
   when (isJust txnId) do
     variantIds <- liftIO $ CM.getVariants (fromMaybe "atlas_driver_offer_bpp_v2" tenant) fp toss
     let idName' = fromMaybe (error "idName not found") idName
@@ -65,7 +97,8 @@ getConfigFromInMemory id toss = do
   maybe
     ( findFarePolicyFromCAC id toss Nothing Nothing
         >>= ( \config -> do
-                L.setOption (DTC.FarePolicy id.getId) (fromJust config)
+                when (isJust config) do
+                  L.setOption (DTC.FarePolicy id.getId) (fromJust config)
                 pure config
             )
     )
@@ -74,7 +107,8 @@ getConfigFromInMemory id toss = do
         if isUpdateReq
           then do
             config <- findFarePolicyFromCAC id toss Nothing Nothing
-            L.setOption (DTC.FarePolicy id.getId) (fromJust config)
+            when (isJust config) do
+              L.setOption (DTC.FarePolicy id.getId) (fromJust config)
             pure config
           else pure $ Just config'
     )
@@ -106,10 +140,7 @@ findById txnId idName id = do
         else
           ( do
               logDebug $ "Getting farePolicy from DB for farePolicyId:" <> getId id
-              Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
-                Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
-                Nothing -> do
-                  flip whenJust cacheFarePolicy /=<< Queries.findById id
+              findFarePolicyFromDB id
           )
       )
   logDebug $ "farePlicy we recieved for farePolicyId:" <> getId id <> " is:" <> show config
@@ -128,7 +159,7 @@ cacheToss txnId toss = do
   Hedis.withCrossAppRedis $ Hedis.setExp (makeCACFarePolicy txnId) toss expTime
 
 makeCACFarePolicy :: Text -> Text
-makeCACFarePolicy id = "driver-offer:CAC:CachedQueries:TransporterConfig:PersonId-" <> id
+makeCACFarePolicy id = "driver-offer:CAC:CachedQueries-" <> id
 
 makeIdKey :: Id FarePolicy -> Text
 makeIdKey id = "driver-offer:CachedQueries:FarePolicy:Id-" <> id.getId

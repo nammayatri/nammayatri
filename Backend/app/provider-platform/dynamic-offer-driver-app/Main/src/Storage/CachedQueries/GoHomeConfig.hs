@@ -35,6 +35,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
+import Kernel.Tools.Metrics.CoreMetrics.Types (incrementSystemConfigsFailedCounter)
 import Kernel.Types.Cac
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common
@@ -51,14 +52,17 @@ import Tools.Error (GenericError (..))
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => GoHomeConfig -> m ()
 create = Queries.create
 
-getGoHomeConfigFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Int -> Maybe Text -> Maybe Text -> String -> m GoHomeConfig
-getGoHomeConfigFromCACStrict toss stickyId idName context = do
+getGoHomeConfigFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Int -> Maybe Text -> Maybe Text -> String -> Id MerchantOperatingCity -> m GoHomeConfig
+getGoHomeConfigFromCACStrict toss stickyId idName context id' = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
   config <- liftIO $ CM.evalExperimentAsString (fromMaybe "atlas_driver_offer_bpp_v2" tenant) context toss
   let res8 = config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "goHomeConfig:") (itraversed . indices (Text.isPrefixOf "goHomeConfig:" . DAK.toText))
       res9 = DA.Object (DAKM.fromList res8) ^? _JSON :: Maybe GoHomeConfig
   maybe
-    (error "Could not find Go-To config")
+    ( do
+        incrementSystemConfigsFailedCounter "cac_driver_intelligent_pool_config_parse_error"
+        getGoHomeConfigFromDB id'
+    )
     ( \res'' -> do
         when (isJust stickyId) do
           variantIds <- liftIO $ CM.getVariants (fromMaybe "atlas_driver_offer_bpp_v2" tenant) context toss
@@ -69,14 +73,14 @@ getGoHomeConfigFromCACStrict toss stickyId idName context = do
     )
     res9
 
-createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Int -> Maybe Text -> Maybe Text -> String -> m GoHomeConfig
-createThroughConfigHelper toss stickyId idName context = do
+createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Int -> Maybe Text -> Maybe Text -> String -> Id MerchantOperatingCity -> m GoHomeConfig
+createThroughConfigHelper toss stickyId idName context id' = do
   mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
   mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
   tenant <- liftIO (Se.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
   config <- KSQS.findById $ Text.pack tenant
   _ <- initializeCACThroughConfig CM.createClientFromConfig (fromMaybe (error "config not found for goHomeConfig in db") config) tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
-  getGoHomeConfigFromCACStrict toss stickyId idName context
+  getGoHomeConfigFromCACStrict toss stickyId idName context id'
 
 getGoHomeConfigFromCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> Maybe Text -> Maybe Text -> m GoHomeConfig
 getGoHomeConfigFromCAC id' toss stickyId idName = do
@@ -86,7 +90,7 @@ getGoHomeConfigFromCAC id' toss stickyId idName = do
   let res8 = config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "goHomeConfig:") (itraversed . indices (Text.isPrefixOf "goHomeConfig:" . DAK.toText))
       res9 = DA.Object (DAKM.fromList res8) ^? _JSON :: Maybe GoHomeConfig
   maybe
-    (logDebug ("GoHomeConfig from CAC Not Parsable: " <> show res8 <> " for tenant: " <> Text.pack (fromMaybe "atlas_driver_offer_bpp_v2" tenant)) >> createThroughConfigHelper toss stickyId idName context)
+    (logDebug ("GoHomeConfig from CAC Not Parsable: " <> show res8 <> " for tenant: " <> Text.pack (fromMaybe "atlas_driver_offer_bpp_v2" tenant)) >> createThroughConfigHelper toss stickyId idName context id')
     ( \res'' -> do
         when (isJust stickyId) do
           variantIds <- liftIO $ CM.getVariants (fromMaybe "atlas_driver_offer_bpp_v2" tenant) context toss

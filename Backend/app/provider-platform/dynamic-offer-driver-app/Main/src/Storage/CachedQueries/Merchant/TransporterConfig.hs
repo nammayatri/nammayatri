@@ -47,8 +47,10 @@ import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude as KP
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
+-- import Kernel.Types.Error
+
+import Kernel.Tools.Metrics.CoreMetrics.Types (incrementSystemConfigsFailedCounter)
 import Kernel.Types.Cac
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
@@ -69,7 +71,7 @@ valueToText val = case val of
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
 create = Queries.create
 
-getTransporterConfigFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m TransporterConfig
+getTransporterConfigFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m (Maybe TransporterConfig)
 getTransporterConfigFromCACStrict id' toss = do
   context <- liftIO $ CM.hashMapToString $ HashMap.fromList [(Text.pack "merchantOperatingCityId", DA.String (getId id'))]
   tenant <- liftIO $ Se.lookupEnv "TENANT"
@@ -85,9 +87,16 @@ getTransporterConfigFromCACStrict id' toss = do
               )
       res'' = parsingMiddleware $ DAKM.fromList res'
       res = DA.Object res'' ^? _JSON :: Maybe TransporterConfig
-  maybe (throwError (InternalError ("Could not find TransporterConfig config corresponding to the stated merchant id" <> id'.getId))) pure res
+  maybe
+    ( do
+        incrementSystemConfigsFailedCounter "cac_transporter_config_parse_error"
+        getTransporterConfigFromDB id'
+        -- throwError (InternalError ("Could not find TransporterConfig config corresponding to the stated merchant id" <> id'.getId))
+    )
+    (pure . Just)
+    res
 
-createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m TransporterConfig
+createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m (Maybe TransporterConfig)
 createThroughConfigHelper id' toss = do
   mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
   mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
@@ -113,7 +122,7 @@ parsingMiddleware km =
       newObject = KP.foldr DAKM.delete newObject'' ["fcmUrl", "fcmServiceAccount", "fcmTokenKeyPrefix"]
    in DAKM.insert "fcmConfig" (toJSON fcmConfig) newObject
 
-getConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> Maybe Text -> Maybe Text -> m TransporterConfig
+getConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> Maybe Text -> Maybe Text -> m (Maybe TransporterConfig)
 getConfig id toss stickId idName = do
   confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(Text.pack "merchantOperatingCityId", DA.String (getId id))]
   tenant <- liftIO $ Se.lookupEnv "TENANT"
@@ -137,17 +146,18 @@ getConfig id toss stickId idName = do
           let idName' = fromMaybe (error "idName not found") idName
               cacData = CACData (fromJust stickId) idName' (Text.pack confCond) "transporterConfig" (Text.pack (show variantIds))
           pushToKafka cacData "cac-data" ""
-        pure res'''
+        pure $ Just res'''
     )
     res
 
-getConfigFromMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m TransporterConfig
+getConfigFromMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m (Maybe TransporterConfig)
 getConfigFromMemory id toss = do
   value <- L.getOption (DTC.TransporterConfig id.getId)
   maybe
     ( getConfig id toss Nothing Nothing
         >>= ( \config -> do
-                L.setOption (DTC.TransporterConfig id.getId) config
+                when (isJust config) do
+                  L.setOption (DTC.TransporterConfig id.getId) (fromJust config)
                 pure config
             )
     )
@@ -156,9 +166,10 @@ getConfigFromMemory id toss = do
         if isUpdateReq
           then do
             config <- getConfig id toss Nothing Nothing
-            L.setOption (DTC.TransporterConfig id.getId) config
+            when (isJust config) do
+              L.setOption (DTC.TransporterConfig id.getId) (fromJust config)
             pure config
-          else pure config'
+          else pure $ Just config'
     )
     value
 
@@ -176,14 +187,14 @@ findByMerchantOpCityId id mbstickId idName = do
     if "transporter_config" `GL.elem` useCACConfig
       then do
         logDebug $ "Getting transporterConfig from CAC for merchatOperatingCity:" <> getId id
-        Just <$> findByMerchantOpCityIdCAC id mbstickId idName
+        findByMerchantOpCityIdCAC id mbstickId idName
       else do
         logDebug $ "Getting transporterConfig from DB for merchatOperatingCity:" <> getId id
         getTransporterConfigFromDB id
   logDebug $ "transporterConfig we recieved for merchantOperatingCityId:" <> getId id <> " is:" <> show config
   pure config
 
-findByMerchantOpCityIdCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m TransporterConfig
+findByMerchantOpCityIdCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m (Maybe TransporterConfig)
 findByMerchantOpCityIdCAC id (Just stickId) idName = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
   isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "atlas_driver_offer_bpp_v2" tenant)
