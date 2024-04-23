@@ -194,11 +194,10 @@ accumulateCoins targetAmount = takeCoinsRequired (targetAmount, []) False
       let availableCoins = coinHis.coins - coinHis.coinsUsed
           coinsTaken = coinHis.coins
           afterTaking = toTake - availableCoins
+          coinStatus = bool Remaining Used (afterTaking == 0)
       if afterTaking > 0
-        then do
-          takeCoinsRequired (afterTaking, (coinHis.id.getId, coinsTaken, Used) : result) False coinHistories
-        else do
-          takeCoinsRequired (afterTaking, (coinHis.id.getId, coinsTaken + afterTaking, Remaining) : result) True []
+        then takeCoinsRequired (afterTaking, (coinHis.id.getId, coinsTaken, Used) : result) False coinHistories
+        else takeCoinsRequired (afterTaking, (coinHis.id.getId, coinsTaken + afterTaking, coinStatus) : result) True []
 
 useCoinsHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> ConvertCoinToCashReq -> Flow APISuccess
 useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
