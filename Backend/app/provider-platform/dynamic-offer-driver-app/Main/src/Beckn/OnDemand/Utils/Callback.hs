@@ -50,10 +50,7 @@ withCallback' ::
 withCallback' doWithCallback transporter action api cbUrl internalEndPointHashMap fromError f = do
   let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
-  fork ("sending " <> show action <> ", pushing ondc logs") do
-    req <- f
-    void $ pushLogs action (toJSON req) transporter.id.getId
-  withBecknCallback doWithCallback (Just $ ET.ManagerSelector authKey) action api cbUrl internalEndPointHashMap fromError f
+  withBecknCallback doWithCallback (Just $ ET.ManagerSelector authKey) transporter.id.getId action api cbUrl internalEndPointHashMap fromError f
 
 type Action = Text
 
@@ -75,16 +72,23 @@ type WithBecknCallback api callback_result m =
   m AckResponse
 
 withBecknCallback ::
+  (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]) =>
   (m () -> m ()) ->
   Maybe ET.ManagerSelector ->
+  Text ->
   WithBecknCallback api callback_result m
-withBecknCallback doWithCallback auth action api cbUrl internalEndPointHashMap fromError cbHandler = do
+withBecknCallback doWithCallback auth transporterId action api cbUrl internalEndPointHashMap fromError cbHandler = do
   forkBecknCallback
     fromError
-    (doWithCallback . void . callBecknAPI auth Nothing action api cbUrl internalEndPointHashMap)
+    doWithResult
     action
     cbHandler
   return Ack
+  where
+    doWithResult result = do
+      fork ("sending " <> show action <> ", pushing ondc logs") do
+        void $ pushLogs action (toJSON result) transporterId
+      doWithCallback . void . callBecknAPI auth Nothing action api cbUrl internalEndPointHashMap $ result
 
 forkBecknCallback ::
   (Forkable m, MonadCatch m, Log m) =>
