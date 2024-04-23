@@ -19,7 +19,7 @@ add_file_for_commit() { #dir , sub_dir, asset_type, asset_name, source_path
 # Function to create a Pull Request
 create_pull_request() {
     local target_repo_name="asset-store"
-
+    echo "target_repo_name"
     if [ -z "$branch_name" ]; then
         echo "Error: Branch name not provided"
         return 1
@@ -71,29 +71,32 @@ create_pull_request() {
             file_type="lottie"
         fi
         asset_type=${file_type}
-        if [[ ${sub_directory} == "main" && ${dir} == *"common"* ]]; then
-            substring="common"
+
+        if [[ ${sub_dir} == "main" && ${dir} == *"Common"* ]]; then
+            substring="Common"
             result="${dir//$substring/}" 
             add_file_for_commit "$result" "$dir" "$asset_type" "$asset_name" "$source_path"
 # Check if the source path contains any of the following keywords for directory
-        elif echo ${dir} | grep -q "jatriSaathi"; then
-            final_dir="jatrisaathi"
-        elif echo ${dir} | grep -q "nammaYatri"; then
-            final_dir="nammayatri"
-        elif echo ${dir} | grep -q "yatri"; then
-            final_dir="yatri"
-        elif echo ${dir} | grep -q "manayatri"; then
-            final_dir="manayatri"
         else 
-            final_dir=""
-        fi
-        if [[ ${sub_directory} == "main" ]]; then 
-            add_file_for_commit "common" "common" "$asset_type" "$asset_name" "$source_path"
-        elif [[ ${dir} == "common" ]]; then
-            add_file_for_commit "common" "$sub_dir" "$asset_type" "$asset_name" "$source_path"    
-        else
-            add_file_for_commit "$final_dir" "$sub_dir" "$asset_type" "$asset_name" "$source_path"
-        fi
+            if echo ${dir} | grep -q "jatriSaathi"; then
+                final_dir="jatrisaathi"
+            elif echo ${dir} | grep -q "nammaYatri"; then
+                final_dir="nammayatri"
+            elif echo ${dir} | grep -q "yatri"; then
+                final_dir="yatri"
+            elif echo ${dir} | grep -q "manayatri"; then
+                final_dir="manayatri"
+            else 
+                final_dir=""
+            fi
+            if final_dir == "" ; then
+                if [[ ${sub_directory} == "main" ]]; then 
+                    add_file_for_commit "common" "common" "$asset_type" "$asset_name" "$source_path"
+                elif [[ ${dir} == "common" ]]; then
+                    add_file_for_commit "common" "$sub_dir" "$asset_type" "$asset_name" "$source_path"    
+            else
+                add_file_for_commit "$final_dir" "$sub_dir" "$asset_type" "$asset_name" "$source_path"
+            fi
         # Iterate through dir_array and call add_file_for_commit
         # for dir in "${dir_array[@]}"; do
         #     sub_directory="${sub_dir}"
@@ -126,6 +129,4 @@ create_pull_request() {
 
 
 # Loop through target repositories and create pull requests
-for target_repo in "${TARGET_REPOS[@]}"; do
-    create_pull_request "$target_repo" "$target_repo"
-done
+create_pull_request 
