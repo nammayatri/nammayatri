@@ -259,7 +259,7 @@ rideInfo merchantId merchantOpCityId reqRideId = do
 
   mbBCReason <-
     if ride.status == DRide.CANCELLED
-      then runInReplica $ QBCReason.findByRideId rideId -- it can be Nothing if cancelled by user
+      then runInReplica $ QBCReason.findByRideId (Just rideId) -- it can be Nothing if cancelled by user
       else pure Nothing
   let cancellationReason =
         (coerce @DCReason.CancellationReasonCode @Common.CancellationReasonCode <$>) . join $ mbBCReason <&> (.reasonCode)
