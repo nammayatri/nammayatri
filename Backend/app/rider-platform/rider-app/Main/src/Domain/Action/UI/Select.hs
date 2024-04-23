@@ -57,6 +57,7 @@ import Kernel.Utils.Validation
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.ValueAddNP as CQVNP
@@ -169,10 +170,18 @@ select2 personId estimateId req@DSelectReq {..} = do
   _ <- QEstimate.updateStatus estimateId DEstimate.DRIVER_QUOTE_REQUESTED
   _ <- QDOffer.updateStatus estimateId DDO.INACTIVE
   let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney <$> req.customerExtraFee) -- TODO check for correct currency
+  let merchantOperatingCityId = searchRequest.merchantOperatingCityId
+
+  whenJust req.paymentMethodId $ \paymentMethodId' -> do
+    _paymentMethod <-
+      CQMPM.findByIdAndMerchantOperatingCityId paymentMethodId' merchantOperatingCityId
+        >>= fromMaybeM (MerchantPaymentMethodDoesNotExist paymentMethodId'.getId)
+    unless (paymentMethodId' `elem` searchRequest.availablePaymentMethods) $
+      throwError (InvalidRequest "Payment method not allowed")
+
   when (isJust mbCustomerExtraFee || isJust req.paymentMethodId) $ do
     void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee req.paymentMethodId
   QPFS.clearCache searchRequest.riderId
-  let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   pure
     DSelectRes
