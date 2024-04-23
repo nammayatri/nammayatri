@@ -91,7 +91,7 @@ create_pull_request() {
                 else 
                     final_dir=""
                 fi
-                if [[${final_dir} == ""]] ; then
+                if [[ "${final_dir}" == "" ]]; then
                     echo "dfsdjfhkjh $sub_dir directoty $dir"
                     if [[ ${sub_dir} == "main" ]]; then 
                         add_file_for_commit "common" "common" "$asset_type" "$asset_name" "$source_path"
