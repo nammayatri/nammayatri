@@ -64,13 +64,15 @@ isReceivedMaxDriverQuotes driverPoolCfg searchTryId = do
 getRescheduleTime ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    Log m
+    Log m,
+    HasField "singleBatchProcessingTempDelay" r NominalDiffTime
   ) =>
   Seconds ->
   m UTCTime
 getRescheduleTime singleBatchProcessTime = do
+  singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
   now <- getCurrentTime
-  return $ fromIntegral singleBatchProcessTime `addUTCTime` now
+  return $ singleBatchProcessingTempDelay `addUTCTime` (fromIntegral singleBatchProcessTime `addUTCTime` now) -- Temporarily adding this singleBatchProcessingTempDelayTime for preventing second fcm to be triggered when first is already there, should be removed later once UI fix is done.
 
 setBatchDurationLock ::
   ( MonadFlow m,
@@ -87,12 +89,16 @@ setBatchDurationLock searchRequestId singleBatchProcessTime = do
     else return Nothing
 
 createRescheduleTime ::
-  Monad m =>
+  ( Monad m,
+    CacheFlow m r,
+    HasField "singleBatchProcessingTempDelay" r NominalDiffTime
+  ) =>
   Seconds ->
   UTCTime ->
   m UTCTime
 createRescheduleTime singleBatchProcessTime lastProcTime = do
-  return $ fromIntegral singleBatchProcessTime `addUTCTime` lastProcTime
+  singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
+  return $ singleBatchProcessingTempDelay `addUTCTime` (fromIntegral singleBatchProcessTime `addUTCTime` lastProcTime)
 
 cancelSearchTry :: (CacheFlow m r, EsqDBFlow m r) => Id SearchTry -> m ()
 -- cancelSearchTry searchTryId = Esq.runTransaction $ QST.updateStatus searchTryId DST.CANCELLED
