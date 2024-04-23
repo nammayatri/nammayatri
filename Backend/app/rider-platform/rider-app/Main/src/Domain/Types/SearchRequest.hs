@@ -50,8 +50,6 @@ data SearchRequest = SearchRequest
     device :: Maybe Text,
     merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version,
     language :: Maybe Maps.Language,
     disabilityTag :: Maybe Text,
     customerExtraFee :: Maybe Price,
@@ -60,6 +58,12 @@ data SearchRequest = SearchRequest
     availablePaymentMethods :: [Id DMPM.MerchantPaymentMethod],
     selectedPaymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
     riderPreferredOption :: RiderPreferredOption,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    clientBundleVersion :: Maybe Version,
+    clientSdkVersion :: Maybe Version,
+    clientConfigVersion :: Maybe Version,
+    clientDevice :: Maybe Device,
+    backendConfigVersion :: Maybe Version,
+    backendAppVersion :: Maybe Text
   }
   deriving (Generic, Show)

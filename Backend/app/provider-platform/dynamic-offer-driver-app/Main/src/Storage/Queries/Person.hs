@@ -45,6 +45,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common hiding (Value)
+import Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -391,22 +392,35 @@ updatePersonRec (Id personId) person = do
       Se.Set BeamP.merchantId $ getId person.merchantId,
       Se.Set BeamP.description $ person.description,
       Se.Set BeamP.updatedAt now,
-      Se.Set BeamP.clientVersion (versionToText <$> person.clientVersion),
-      Se.Set BeamP.bundleVersion (versionToText <$> person.bundleVersion)
+      Se.Set BeamP.clientSdkVersion (versionToText <$> person.clientSdkVersion),
+      Se.Set BeamP.clientBundleVersion (versionToText <$> person.clientBundleVersion),
+      Se.Set BeamP.clientConfigVersion (versionToText <$> person.clientConfigVersion),
+      Se.Set BeamP.clientOsVersion (deviceVersion <$> person.clientDevice),
+      Se.Set BeamP.clientOsType (deviceType <$> person.clientDevice),
+      Se.Set BeamP.backendConfigVersion (versionToText <$> person.backendConfigVersion),
+      Se.Set BeamP.backendAppVersion (person.backendAppVersion)
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updatePersonVersions :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person -> Maybe Version -> Maybe Version -> m ()
-updatePersonVersions person mbBundleVersion mbClientVersion =
+updatePersonVersions :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> m ()
+updatePersonVersions person mbBundleVersion mbClientVersion mbConfigVersion mbDevice' mbBackendApp = do
+  let mbDevice = getDeviceFromText mbDevice'
   when
-    ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
+    ((isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice' || isJust mbConfigVersion) && (person.clientBundleVersion /= mbBundleVersion || person.clientSdkVersion /= mbClientVersion || person.clientConfigVersion /= mbConfigVersion || person.clientDevice /= mbDevice || person.backendAppVersion /= mbBackendApp))
     do
       now <- getCurrentTime
-      let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
-          mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
+      let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.clientBundleVersion)
+          mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientSdkVersion)
+          mbConfigVersionText = versionToText <$> (mbConfigVersion <|> person.clientConfigVersion)
+          mbOsVersion = deviceVersion <$> (mbDevice <|> person.clientDevice)
+          mbOsType = deviceType <$> (mbDevice <|> person.clientDevice)
       updateOneWithKV
-        [ Se.Set BeamP.clientVersion mbClientVersionText,
-          Se.Set BeamP.bundleVersion mbBundleVersionText,
+        [ Se.Set BeamP.clientSdkVersion mbClientVersionText,
+          Se.Set BeamP.clientBundleVersion mbBundleVersionText,
+          Se.Set BeamP.clientConfigVersion mbConfigVersionText,
+          Se.Set BeamP.clientOsVersion mbOsVersion,
+          Se.Set BeamP.clientOsType mbOsType,
+          Se.Set BeamP.backendAppVersion mbBackendApp,
           Se.Set BeamP.updatedAt now
         ]
         [Se.Is BeamP.id (Se.Eq $ getId person.id)]

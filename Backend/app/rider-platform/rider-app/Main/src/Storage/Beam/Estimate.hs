@@ -22,6 +22,7 @@ import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.External.Maps hiding (status)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
 data EstimateT f = EstimateT
@@ -61,7 +62,14 @@ data EstimateT f = EstimateT
     serviceTierShortDesc :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    validTill :: B.C f UTCTime
+    validTill :: B.C f UTCTime,
+    clientBundleVersion :: B.C f (Maybe Text),
+    clientSdkVersion :: B.C f (Maybe Text),
+    clientConfigVersion :: B.C f (Maybe Text),
+    clientOsType :: B.C f (Maybe DeviceType),
+    clientOsVersion :: B.C f (Maybe Text),
+    backendConfigVersion :: B.C f (Maybe Text),
+    backendAppVersion :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

@@ -51,3 +51,15 @@ ALTER TABLE atlas_app.ride ADD COLUMN currency character varying(255) ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN vehicle_service_tier_type text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN client_sdk_version text ;
+ALTER TABLE atlas_app.ride ADD COLUMN client_os_version text ;
+ALTER TABLE atlas_app.ride ADD COLUMN client_os_type text ;
+ALTER TABLE atlas_app.ride ADD COLUMN client_config_version text ;
+ALTER TABLE atlas_app.ride ADD COLUMN client_bundle_version text ;
+ALTER TABLE atlas_app.ride ADD COLUMN backend_config_version text ;
+ALTER TABLE atlas_app.ride ADD COLUMN backend_app_version text ;

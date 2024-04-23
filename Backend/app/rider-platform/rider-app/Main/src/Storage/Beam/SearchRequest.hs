@@ -21,6 +21,7 @@ import qualified Domain.Types.SearchRequest as Domain
 import Kernel.External.Maps (Language)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
 data SearchRequestT f = SearchRequestT
@@ -34,7 +35,6 @@ data SearchRequestT f = SearchRequestT
     distance :: B.C f (Maybe Centesimal),
     maxDistance :: B.C f (Maybe Centesimal),
     estimatedRideDuration :: B.C f (Maybe Seconds),
-    device :: B.C f (Maybe Text),
     merchantId :: B.C f Text,
     merchantOperatingCityId :: B.C f (Maybe Text),
     language :: B.C f (Maybe Language),
@@ -47,9 +47,15 @@ data SearchRequestT f = SearchRequestT
     riderPreferredOption :: B.C f (Maybe Domain.RiderPreferredOption),
     autoAssignEnabled :: B.C f (Maybe Bool),
     autoAssignEnabledV2 :: B.C f (Maybe Bool),
-    bundleVersion :: B.C f (Maybe Text),
-    clientVersion :: B.C f (Maybe Text),
-    createdAt :: B.C f UTCTime
+    createdAt :: B.C f UTCTime,
+    device :: B.C f (Maybe Text),
+    clientBundleVersion :: B.C f (Maybe Text),
+    clientSdkVersion :: B.C f (Maybe Text),
+    clientConfigVersion :: B.C f (Maybe Text),
+    clientOsType :: B.C f (Maybe DeviceType),
+    clientOsVersion :: B.C f (Maybe Text),
+    backendConfigVersion :: B.C f (Maybe Text),
+    backendAppVersion :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

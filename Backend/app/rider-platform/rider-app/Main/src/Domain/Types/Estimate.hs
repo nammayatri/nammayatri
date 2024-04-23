@@ -30,6 +30,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
@@ -69,6 +70,12 @@ data Estimate = Estimate
     serviceTierShortDesc :: Maybe Text,
     updatedAt :: UTCTime,
     createdAt :: UTCTime,
+    clientBundleVersion :: Maybe Version,
+    clientSdkVersion :: Maybe Version,
+    clientConfigVersion :: Maybe Version,
+    clientDevice :: Maybe Device,
+    backendConfigVersion :: Maybe Version,
+    backendAppVersion :: Maybe Text,
     validTill :: UTCTime
   }
   deriving (Generic, Show)

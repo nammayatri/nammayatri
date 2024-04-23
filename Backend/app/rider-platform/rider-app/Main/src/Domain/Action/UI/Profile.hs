@@ -56,6 +56,7 @@ import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Types.Predicate
@@ -65,6 +66,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import qualified Kernel.Utils.Text as TU
 import Kernel.Utils.Validation
+import Kernel.Utils.Version
 import SharedLogic.Cac
 import SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -200,17 +202,18 @@ getPersonDetails (personId, _) mbToss = do
           frontendConfigHash = md5DigestHash,
           isSafetyCenterDisabled = isSafetyCenterDisabled_,
           customerReferralCode = newCustomerReferralCode,
+          bundleVersion = clientBundleVersion,
+          clientVersion = clientSdkVersion,
           ..
         }
 
-updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
-updatePerson personId req = do
+updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion]) => Id Person.Person -> UpdateProfileReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
+updatePerson personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
   mPerson <- join <$> QPerson.findByEmail `mapM` req.email
   whenJust mPerson (\_ -> throwError PersonEmailExists)
   mbEncEmail <- encrypt `mapM` req.email
-
   refCode <- join <$> validateRefferalCode personId `mapM` req.referralCode
-
+  deploymentVersion <- asks (.version)
   void $
     QPerson.updatePersonalInfo
       personId
@@ -223,8 +226,11 @@ updatePerson personId req = do
       req.notificationToken
       req.language
       req.gender
-      req.clientVersion
-      req.bundleVersion
+      (mbClientVersion <|> req.clientVersion)
+      (mbBundleVersion <|> req.bundleVersion)
+      mbClientConfigVersion
+      (getDeviceFromText mbDevice)
+      deploymentVersion.getDeploymentVersion
   updateDisability req.hasDisability req.disability personId
 
 updateDisability :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Bool -> Maybe Disability -> Id Person.Person -> m APISuccess.APISuccess

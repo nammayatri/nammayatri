@@ -104,8 +104,11 @@ data PersonE e = Person
     aadhaarVerified :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version,
+    clientSdkVersion :: Maybe Version,
+    clientBundleVersion :: Maybe Version,
+    clientConfigVersion :: Maybe Version,
+    clientDevice :: Maybe Device,
+    backendAppVersion :: Maybe Text,
     shareEmergencyContacts :: Bool,
     nightSafetyChecks :: Bool,
     shareTripWithEmergencyContactOption :: Maybe RideShareOptions,
@@ -180,5 +183,7 @@ makePersonAPIEntity Person {..} disability isSafetyCenterDisabled =
     { maskedMobileNumber = maskText <$> mobileNumber,
       maskedDeviceToken = maskText <$> deviceToken,
       hasTakenRide = hasTakenValidRide,
+      bundleVersion = clientBundleVersion,
+      clientVersion = clientSdkVersion,
       ..
     }

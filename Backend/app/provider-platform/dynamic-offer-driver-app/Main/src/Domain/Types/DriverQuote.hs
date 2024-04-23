@@ -30,6 +30,7 @@ import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Kernel.Utils.GenericPretty
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
@@ -62,6 +63,12 @@ data DriverQuote = DriverQuote
     providerId :: Id DMerchant.Merchant,
     specialLocationTag :: Maybe Text,
     goHomeRequestId :: Maybe (Id DDGR.DriverGoHomeRequest),
+    clientSdkVersion :: Maybe Version,
+    clientBundleVersion :: Maybe Version,
+    clientConfigVersion :: Maybe Version,
+    clientDevice :: Maybe Device,
+    backendConfigVersion :: Maybe Version,
+    backendAppVersion :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

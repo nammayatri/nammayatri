@@ -15,6 +15,7 @@
 
 module Storage.Queries.DriverQuote where
 
+import qualified Data.Text as T
 import qualified Data.Time as T
 import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverQuote
@@ -29,6 +30,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Version
 import qualified Sequelize as Se
 import SharedLogic.DriverPool.Types
 import qualified Storage.Beam.DriverQuote as BeamDQ
@@ -93,6 +95,11 @@ setInactiveAllDQByEstId (Id estimateId) now = updateWithKV [Se.Set BeamDQ.status
 instance FromTType' BeamDQ.DriverQuote DriverQuote where
   fromTType' BeamDQ.DriverQuoteT {..} = do
     fp <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError $ "FareParameters not found in DriverQuote for id: " <> show fareParametersId)
+    clientSdkVersion' <- mapM readVersion (T.strip <$> clientSdkVersion)
+    clientBundleVersion' <- mapM readVersion (T.strip <$> clientBundleVersion)
+    clientConfigVersion' <- mapM readVersion (T.strip <$> clientConfigVersion)
+    backendConfigVersion' <- mapM readVersion (T.strip <$> backendConfigVersion)
+    let clientDevice' = mkClientDevice clientOsType clientOsVersion
     return $
       Just
         Domain.DriverQuote
@@ -119,7 +126,13 @@ instance FromTType' BeamDQ.DriverQuote DriverQuote where
             fareParams = fp,
             providerId = Id providerId,
             goHomeRequestId = Id <$> goHomeRequestId,
-            specialLocationTag = specialLocationTag
+            specialLocationTag = specialLocationTag,
+            clientSdkVersion = clientSdkVersion',
+            clientBundleVersion = clientBundleVersion',
+            clientConfigVersion = clientConfigVersion',
+            backendConfigVersion = backendConfigVersion',
+            clientDevice = clientDevice',
+            ..
           }
 
 instance ToTType' BeamDQ.DriverQuote DriverQuote where
@@ -148,5 +161,12 @@ instance ToTType' BeamDQ.DriverQuote DriverQuote where
         BeamDQ.fareParametersId = getId fareParams.id,
         BeamDQ.providerId = getId providerId,
         BeamDQ.goHomeRequestId = getId <$> goHomeRequestId,
-        BeamDQ.specialLocationTag = specialLocationTag
+        BeamDQ.specialLocationTag = specialLocationTag,
+        BeamDQ.clientSdkVersion = versionToText <$> clientSdkVersion,
+        BeamDQ.clientBundleVersion = versionToText <$> clientBundleVersion,
+        BeamDQ.clientConfigVersion = versionToText <$> clientConfigVersion,
+        BeamDQ.backendConfigVersion = versionToText <$> backendConfigVersion,
+        BeamDQ.clientOsVersion = clientDevice <&> (.deviceVersion),
+        BeamDQ.clientOsType = clientDevice <&> (.deviceType),
+        ..
       }

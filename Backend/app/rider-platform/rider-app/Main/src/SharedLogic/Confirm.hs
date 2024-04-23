@@ -36,6 +36,7 @@ import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -99,8 +100,7 @@ confirm ::
     CacheFlow m r,
     EventStreamFlow m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "version" ::: DeploymentVersion],
     EncFlow m r
   ) =>
   DConfirmReq ->
@@ -196,7 +196,9 @@ confirm DConfirmReq {..} = do
       max estRideEndTimeByDuration estRideEndTimeByDist >= booking.startTime
 
 buildBooking ::
-  MonadFlow m =>
+  ( MonadFlow m,
+    HasFlowEnv m r '["version" ::: DeploymentVersion]
+  ) =>
   DSReq.SearchRequest ->
   Maybe Text ->
   DQuote.Quote ->
@@ -211,6 +213,7 @@ buildBooking ::
 buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
+  deploymentVersion <- asks (.version)
   return $
     DRB.Booking
       { id = Id id,
@@ -246,6 +249,12 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         serviceTierName = quote.serviceTierName,
         vehicleServiceTierType = quote.vehicleServiceTierType,
         serviceTierShortDesc = quote.serviceTierShortDesc,
+        clientBundleVersion = quote.clientBundleVersion,
+        clientSdkVersion = quote.clientSdkVersion,
+        clientDevice = quote.clientDevice,
+        clientConfigVersion = quote.clientConfigVersion,
+        backendConfigVersion = quote.backendConfigVersion,
+        backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         paymentStatus = Nothing
       }
   where
