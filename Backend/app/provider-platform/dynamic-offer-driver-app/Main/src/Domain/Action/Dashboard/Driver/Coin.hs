@@ -18,11 +18,11 @@ module Domain.Action.Dashboard.Driver.Coin where
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin as Common
 import Data.Time (UTCTime (UTCTime, utctDay))
 import qualified Domain.Types.Coins.CoinHistory as DTCC
-import Domain.Types.Coins.PurchaseHistory as PurchaseHistory
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Person as SP
+import Domain.Types.PurchaseHistory as PurchaseHistory
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
@@ -37,8 +37,8 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import Storage.Queries.Coins.CoinHistory as CHistory
-import Storage.Queries.Coins.PurchaseHistory as PHistory
 import Storage.Queries.Person as Person
+import Storage.Queries.PurchaseHistory as PHistory
 import Tools.Error
 
 bulkUploadCoinsHandler :: ShortId DM.Merchant -> Context.City -> Common.BulkUploadCoinsReq -> Flow APISuccess
