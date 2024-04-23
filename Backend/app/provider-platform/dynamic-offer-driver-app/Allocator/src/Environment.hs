@@ -96,7 +96,8 @@ data HandlerEnv = HandlerEnv
     schedulerType :: SchedulerType,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    singleBatchProcessingTempDelay :: NominalDiffTime
   }
   deriving (Generic)
 

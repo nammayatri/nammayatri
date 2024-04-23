@@ -91,11 +91,13 @@ setInactiveBySTId (Id searchTryId) = do
     [Se.Set BeamSRFD.status Domain.Inactive]
     [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId)]
 
-setInactiveBySRId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequest -> m ()
-setInactiveBySRId (Id searchReqId) = do
+setInactiveAndPulledByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id SearchRequestForDriver] -> m ()
+setInactiveAndPulledByIds srdIds = do
   updateWithKV
-    [Se.Set BeamSRFD.status Domain.Inactive]
-    [Se.Is BeamSRFD.requestId (Se.Eq searchReqId)]
+    [ Se.Set BeamSRFD.status Domain.Inactive,
+      Se.Set BeamSRFD.response (Just Domain.Pulled)
+    ]
+    [Se.Is BeamSRFD.id (Se.In $ (.getId) <$> srdIds)]
 
 updateDriverResponse :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequestForDriver -> SearchRequestForDriverResponse -> m ()
 updateDriverResponse (Id id) response =
