@@ -4,6 +4,7 @@ branch_name=$1
 
 files_to_be_added=();
 
+
 add_file_for_commit() { #dir , sub_dir, asset_type, asset_name, source_path
     local dir="$1"
     local sub_dir="$2"
@@ -24,17 +25,17 @@ create_pull_request() {
         return 1
     fi
 
-    git checkout "$branch_name"
+    git checkout $BRANCH_NAME
 
     # Fetch the changes
-    git fetch origin "$branch_name"
+    git fetch origin $BRANCH_NAME
     declare -a staged_files_array
-    for file in "${ALL_CHANGED_FILES[@]}"; do
+    for file in ${ALL_CHANGED_FILES[@]}; do
         staged_files_array+=("$file")
         echo "$file was changed"
     done
 
-    echo "$target_repo_name"
+    echo $target_repo_name
 
     cd "$target_repo_name" || { echo "Error: Directory $target_repo_name does not exist after cloning"; return 1; }
     git checkout main
@@ -54,13 +55,13 @@ create_pull_request() {
         if [[ " ${allowed_extensions[@]} " =~ " $extension " ]]; then
             source_path="$file"
             IFS="/" read -ra src_path_components <<< "$source_path"
-
+            
             length=${#src_path_components[@]}
             dir=${src_path_components[5]}
             dir_array=()
             final_dir=""
             sub_dir=${src_path_components[4]}
-
+            
             asset_name=${src_path_components[length-1]}
 
             # Determine file type based on path_components[3]
@@ -75,34 +76,35 @@ create_pull_request() {
                 substring="Common"
                 result="${dir//$substring/}" 
                 add_file_for_commit "$result" "$dir" "$asset_type" "$asset_name" "$source_path"
+    # Check if the source path contains any of the following keywords for directory
             else 
-                if echo "$dir" | grep -q "jatriSaathi"; then
+                if echo ${dir} | grep -q "jatriSaathi"; then
                     final_dir="jatrisaathi"
-                elif echo "$dir" | grep -q "nammaYatri"; then
+                elif echo ${dir} | grep -q "nammaYatri"; then
                     final_dir="nammayatri"
-                elif echo "$dir" | grep -q "yatri"; then
+                elif echo ${dir} | grep -q "yatri"; then
                     final_dir="yatri"
-                elif echo "$dir" | grep -q "manayatri"; then
+                elif echo ${dir} | grep -q "manayatri"; then
                     final_dir="manayatri"
                 else 
                     final_dir=""
                 fi
-                if [[ "$final_dir" == "" ]]; then
+                if [[${final_dir} == ""]] ; then
                     if [[ ${sub_directory} == "main" ]]; then 
                         add_file_for_commit "common" "common" "$asset_type" "$asset_name" "$source_path"
-                    elif [[ "$dir" == "common" ]]; then
-                        add_file_for_commit "common" "$sub_dir" "$asset_type" "$asset_name" "$source_path"    
-                    else
-                        add_file_for_commit "$final_dir" "$sub_dir" "$asset_type" "$asset_name" "$source_path"
-                    fi
+                    elif [[ ${dir} == "common" ]]; then
+                        add_file_for_commit "common" "$sub_dir" "$asset_type" "$asset_name" "$source_path" 
+                    fi   
+                else
+                    add_file_for_commit "$final_dir" "$sub_dir" "$asset_type" "$asset_name" "$source_path"
                 fi
             fi
         fi
     done 
     for item in "${files_to_be_added[@]}"; do
-        source_path="${item%:*}"
-        updated_path="${item#*:}"
-        cp "$source_path" "$updated_path"
+      source_path="${item%:*}"
+      updated_path="${item#*:}"
+      cp "$source_path" "$updated_path"
     done
 
     git add .
@@ -117,7 +119,10 @@ create_pull_request() {
 
     cd ..
     rm -rf "$target_repo_name" 
+    
+
 }
 
+
 # Loop through target repositories and create pull requests
-create_pull_request
+create_pull_request 
