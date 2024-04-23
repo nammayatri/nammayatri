@@ -22,6 +22,7 @@ import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
 data BookingT f = BookingT
@@ -65,7 +66,14 @@ data BookingT f = BookingT
     updatedAt :: B.C f UTCTime,
     serviceTierName :: B.C f (Maybe Text),
     serviceTierShortDesc :: B.C f (Maybe Text),
-    paymentStatus :: B.C f (Maybe Domain.PaymentStatus)
+    paymentStatus :: B.C f (Maybe Domain.PaymentStatus),
+    clientBundleVersion :: B.C f (Maybe Text),
+    clientSdkVersion :: B.C f (Maybe Text),
+    clientConfigVersion :: B.C f (Maybe Text),
+    clientOsType :: B.C f (Maybe DeviceType),
+    clientOsVersion :: B.C f (Maybe Text),
+    backendConfigVersion :: B.C f (Maybe Text),
+    backendAppVersion :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

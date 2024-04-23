@@ -15,6 +15,7 @@
 
 module Storage.Queries.Estimate where
 
+import Data.Text (strip)
 import Domain.Types.Estimate as DE
 import Domain.Types.SearchRequest
 import Kernel.Beam.Functions
@@ -22,6 +23,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id (Id (Id, getId))
 import Kernel.Utils.Common
+import Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
 import qualified Storage.Queries.EstimateBreakup as QEB
@@ -71,6 +73,11 @@ updateStatusByRequestId (Id searchId) status_ = do
 
 instance FromTType' BeamE.Estimate Estimate where
   fromTType' BeamE.EstimateT {..} = do
+    clientBundleVersion' <- mapM readVersion (strip <$> clientBundleVersion)
+    clientSdkVersion' <- mapM readVersion (strip <$> clientSdkVersion)
+    clientConfigVersion' <- mapM readVersion (strip <$> clientConfigVersion)
+    backendConfigVersion' <- mapM readVersion (strip <$> backendConfigVersion)
+
     etB <- QEB.findAllByEstimateIdT (Id id)
     trip <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
     pUrl <- parseBaseUrl providerUrl
@@ -118,6 +125,12 @@ instance FromTType' BeamE.Estimate Estimate where
             waitingCharges = DE.WaitingCharges $ mkPriceWithDefault waitingChargePerMinAmount currency <$> waitingChargePerMin,
             driversLocation = driversLocation,
             specialLocationTag = specialLocationTag,
+            clientDevice = mkClientDevice clientOsType clientOsVersion,
+            clientBundleVersion = clientBundleVersion',
+            clientSdkVersion = clientSdkVersion',
+            clientConfigVersion = clientConfigVersion',
+            backendConfigVersion = backendConfigVersion',
+            backendAppVersion = backendAppVersion,
             updatedAt = updatedAt,
             createdAt = createdAt,
             validTill = validTill
@@ -163,6 +176,13 @@ instance ToTType' BeamE.Estimate Estimate where
         BeamE.waitingChargePerMin = waitingCharges.waitingChargePerMin <&> (.amountInt),
         BeamE.waitingChargePerMinAmount = waitingCharges.waitingChargePerMin <&> (.amount),
         BeamE.specialLocationTag = specialLocationTag,
+        BeamE.clientOsType = clientDevice <&> (.deviceType),
+        BeamE.clientOsVersion = clientDevice <&> (.deviceVersion),
+        BeamE.clientBundleVersion = versionToText <$> clientBundleVersion,
+        BeamE.clientSdkVersion = versionToText <$> clientSdkVersion,
+        BeamE.clientConfigVersion = versionToText <$> clientConfigVersion,
+        BeamE.backendConfigVersion = versionToText <$> backendConfigVersion,
+        BeamE.backendAppVersion = backendAppVersion,
         BeamE.updatedAt = updatedAt,
         BeamE.createdAt = createdAt,
         BeamE.validTill = validTill

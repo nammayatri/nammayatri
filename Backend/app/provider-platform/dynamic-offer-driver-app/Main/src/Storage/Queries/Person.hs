@@ -404,11 +404,11 @@ updatePersonRec (Id personId) person = do
 
 updatePersonVersions :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> m ()
 updatePersonVersions person mbBundleVersion mbClientVersion mbConfigVersion mbDevice' mbBackendApp = do
+  let mbDevice = getDeviceFromText mbDevice'
   when
-    ((isJust mbBundleVersion || isJust mbClientVersion) && (person.clientBundleVersion /= mbBundleVersion || person.clientSdkVersion /= mbClientVersion))
+    ((isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice' || isJust mbConfigVersion) && (person.clientBundleVersion /= mbBundleVersion || person.clientSdkVersion /= mbClientVersion || person.clientConfigVersion /= mbConfigVersion || person.clientDevice /= mbDevice || person.backendAppVersion /= mbBackendApp))
     do
       now <- getCurrentTime
-      let mbDevice = getDeviceFromText mbDevice'
       let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.clientBundleVersion)
           mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientSdkVersion)
           mbConfigVersionText = versionToText <$> (mbConfigVersion <|> person.clientConfigVersion)

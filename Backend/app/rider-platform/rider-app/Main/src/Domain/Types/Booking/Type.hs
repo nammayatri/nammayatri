@@ -35,6 +35,7 @@ import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH
 
@@ -102,7 +103,13 @@ data Booking = Booking
     updatedAt :: UTCTime,
     serviceTierName :: Maybe Text,
     serviceTierShortDesc :: Maybe Text,
-    paymentStatus :: Maybe PaymentStatus
+    paymentStatus :: Maybe PaymentStatus,
+    clientBundleVersion :: Maybe Version,
+    clientSdkVersion :: Maybe Version,
+    clientConfigVersion :: Maybe Version,
+    clientDevice :: Maybe Device,
+    backendConfigVersion :: Maybe Version,
+    backendAppVersion :: Maybe Text
   }
   deriving (Generic, Show)
 
