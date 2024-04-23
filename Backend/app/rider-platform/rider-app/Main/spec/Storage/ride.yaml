@@ -12,6 +12,9 @@ imports:
   Booking: Domain.Types.Booking.Type
   Client: Domain.Types.Client
   VehicleServiceTierType: Domain.Types.VehicleServiceTier
+  Device: Kernel.Types.Version
+  DeviceType: Kernel.Types.Version
+  Version: Kernel.Types.Version
 
 Ride:
   tableName: ride
@@ -90,6 +93,12 @@ Ride:
     isFreeRide: Maybe Bool
     createdAt: UTCTime
     updatedAt: UTCTime
+    clientDevice: Maybe Device
+    clientBundleVersion: Maybe Version
+    clientSdkVersion: Maybe Version
+    clientConfigVersion: Maybe Version
+    backendConfigVersion: Maybe Version
+    backendAppVersion: Maybe Text
     safetyCheckStatus: Maybe Bool
 
   sqlType:
@@ -122,6 +131,9 @@ Ride:
   beamFields:
     toLocation: {}
     fromLocation: {}
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
     fare:
       currency: Maybe Currency
       fare: Maybe HighPrecMoney
@@ -143,6 +155,11 @@ Ride:
     trackingUrl: Kernel.Prelude.mapM Kernel.Prelude.parseBaseUrl|IM
     chargeableDistance: Kernel.Types.Common.mkDistanceWithDefault distanceUnit chargeableDistanceValue <$> chargeableDistance|E
     traveledDistance: Kernel.Types.Common.mkDistanceWithDefault distanceUnit traveledDistanceValue <$> traveledDistance|E
+    clientBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)|EM
+    clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
+    clientConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)|EM
+    clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion|E
+    backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -155,11 +172,21 @@ Ride:
     distanceUnit: Kernel.Prelude.fmap (.unit) chargeableDistance|E
     traveledDistance: Kernel.Prelude.fmap Kernel.Types.Common.distanceToHighPrecMeters|I
     traveledDistanceValue: Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.fmap (.unit) chargeableDistance))|I
+    clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
+    clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
+    clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
+    clientOsType: clientDevice <&> (.deviceType)|E
+    clientOsVersion: clientDevice <&> (.deviceVersion)|E
+    backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
 
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney
     trackingUrl: Maybe Text
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
 
   constraints:
     id: PrimaryKey

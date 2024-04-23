@@ -52,6 +52,7 @@ import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
+import Kernel.Utils.Version
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MerchantConfig as SMC
@@ -211,10 +212,11 @@ search ::
   SearchReq ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Version ->
   Maybe (Id DC.Client) ->
   Maybe Text ->
   m SearchRes
-search personId req bundleVersion clientVersion clientId device = do
+search personId req bundleVersion clientVersion clientConfigVersion clientId device = do
   now <- getCurrentTime
   let (riderPreferredOption, origin, stops, isSourceManuallyMoved, isSpecialLocation, startTime, isReallocationEnabled) =
         case req of
@@ -338,6 +340,7 @@ search personId req bundleVersion clientVersion clientId device = do
       startTime
       bundleVersion
       clientVersion
+      clientConfigVersion
       device
       tag
       shortestRouteDuration
@@ -409,7 +412,7 @@ updateEfficientRoutePosition routeInfos idx = do
   y ++ x
 
 buildSearchRequest ::
-  ( (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]),
+  ( (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds, "version" ::: DeploymentVersion]),
     EsqDBFlow m r,
     CoreMetrics m,
     MonadFlow m
@@ -425,14 +428,16 @@ buildSearchRequest ::
   UTCTime ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Version ->
   Maybe Text ->
   Maybe Text ->
   Maybe Seconds ->
   SearchRequest.RiderPreferredOption ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime bundleVersion clientVersion device disabilityTag duration riderPreferredOption = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime bundleVersion clientVersion clientConfigVersion device disabilityTag duration riderPreferredOption = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
+  deploymentVersion <- asks (.version)
   return
     SearchRequest.SearchRequest
       { id = searchRequestId,
@@ -449,8 +454,12 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         createdAt = now,
         estimatedRideDuration = duration,
         device = device,
-        bundleVersion = bundleVersion,
-        clientVersion = clientVersion,
+        clientBundleVersion = bundleVersion,
+        clientSdkVersion = clientVersion,
+        clientDevice = getDeviceFromText device,
+        clientConfigVersion = clientConfigVersion,
+        backendConfigVersion = Nothing,
+        backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         language = person.language,
         disabilityTag = disabilityTag,
         customerExtraFee = Nothing,

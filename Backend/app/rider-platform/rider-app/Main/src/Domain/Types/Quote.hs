@@ -30,6 +30,7 @@ import Domain.Types.VehicleVariant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Kernel.Utils.GenericPretty
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
@@ -51,10 +52,16 @@ data Quote = Quote
     merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     specialLocationTag :: Maybe Text,
+    clientBundleVersion :: Maybe Version,
+    clientSdkVersion :: Maybe Version,
+    clientConfigVersion :: Maybe Version,
+    clientDevice :: Maybe Device,
+    backendConfigVersion :: Maybe Version,
+    backendAppVersion :: Maybe Text,
     createdAt :: UTCTime,
     validTill :: UTCTime
   }
-  deriving (Generic, Show, PrettyShow)
+  deriving (Generic, Show)
 
 data QuoteDetails
   = OneWayDetails OneWayQuoteDetails

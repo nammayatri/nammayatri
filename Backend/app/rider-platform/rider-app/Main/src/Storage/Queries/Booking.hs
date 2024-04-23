@@ -18,6 +18,7 @@ module Storage.Queries.Booking where
 import Control.Applicative
 import Data.List (sortBy)
 import Data.Ord
+import Data.Text (strip)
 import qualified Database.Beam as B
 import qualified Domain.Types.Booking.BookingLocation as DBBL
 import Domain.Types.Booking.Type as Domain
@@ -38,6 +39,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
@@ -294,6 +296,11 @@ cancelBookings bookingIds now =
 
 instance FromTType' BeamB.Booking Booking where
   fromTType' BeamB.BookingT {..} = do
+    clientBundleVersion' <- mapM readVersion (strip <$> clientBundleVersion)
+    clientSdkVersion' <- mapM readVersion (strip <$> clientSdkVersion)
+    clientConfigVersion' <- mapM readVersion (strip <$> clientConfigVersion)
+    backendConfigVersion' <- mapM readVersion (strip <$> backendConfigVersion)
+
     mappings <- QLM.findByEntityId id
     logTagDebug ("bookingId:-" <> id) $ "Location Mappings:-" <> show mappings
     (fl, bookingDetails) <-
@@ -381,7 +388,13 @@ instance FromTType' BeamB.Booking Booking where
             initialPickupLocation = initialPickupLocation,
             serviceTierName = serviceTierName,
             serviceTierShortDesc = serviceTierShortDesc,
-            paymentStatus = paymentStatus
+            paymentStatus = paymentStatus,
+            clientDevice = mkClientDevice clientOsType clientOsVersion,
+            clientBundleVersion = clientBundleVersion',
+            clientSdkVersion = clientSdkVersion',
+            clientConfigVersion = clientConfigVersion',
+            backendConfigVersion = backendConfigVersion',
+            backendAppVersion = backendAppVersion
           }
     where
       buildOneWayDetails mbToLocid = do
@@ -473,7 +486,14 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.updatedAt = updatedAt,
             BeamB.serviceTierName = serviceTierName,
             BeamB.serviceTierShortDesc = serviceTierShortDesc,
-            BeamB.paymentStatus = paymentStatus
+            BeamB.paymentStatus = paymentStatus,
+            BeamB.clientOsType = clientDevice <&> (.deviceType),
+            BeamB.clientOsVersion = clientDevice <&> (.deviceVersion),
+            BeamB.clientBundleVersion = versionToText <$> clientBundleVersion,
+            BeamB.clientSdkVersion = versionToText <$> clientSdkVersion,
+            BeamB.clientConfigVersion = versionToText <$> clientConfigVersion,
+            BeamB.backendConfigVersion = versionToText <$> backendConfigVersion,
+            BeamB.backendAppVersion = backendAppVersion
           }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME

@@ -45,11 +45,15 @@ type API =
     :> ( ReqBody '[JSON] DRegistration.AuthReq
            :> Header "x-bundle-version" Version
            :> Header "x-client-version" Version
+           :> Header "x-config-version" Version
+           :> Header "x-device" Text
            :> Post '[JSON] DRegistration.AuthRes
            :<|> "signature"
              :> SignatureAuth DRegistration.AuthReq "x-sdk-authorization"
              :> Header "x-bundle-version" Version
              :> Header "x-client-version" Version
+             :> Header "x-config-version" Version
+             :> Header "x-device" Text
              :> Post '[JSON] DRegistration.AuthRes
            :<|> Capture "authId" (Id SRT.RegistrationToken)
              :> "verify"
@@ -72,13 +76,13 @@ handler =
     :<|> resend
     :<|> logout
 
-auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> FlowHandler DRegistration.AuthRes
-auth req mbBundleVersion =
-  withFlowHandlerAPI . DRegistration.auth req mbBundleVersion
+auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler DRegistration.AuthRes
+auth req mbBundleVersion mbClientVersion mbClientConfigVersion =
+  withFlowHandlerAPI . DRegistration.auth req mbBundleVersion mbClientVersion mbClientConfigVersion
 
-signatureAuth :: SignatureAuthResult DRegistration.AuthReq -> Maybe Version -> Maybe Version -> FlowHandler DRegistration.AuthRes
-signatureAuth (SignatureAuthResult req) mbBundleVersion =
-  withFlowHandlerAPI . DRegistration.signatureAuth req mbBundleVersion
+signatureAuth :: SignatureAuthResult DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler DRegistration.AuthRes
+signatureAuth (SignatureAuthResult req) mbBundleVersion mbClientVersion mbClientConfigVersion =
+  withFlowHandlerAPI . DRegistration.signatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion
 
 verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes
 verify tokenId = withFlowHandlerAPI . DRegistration.verify tokenId

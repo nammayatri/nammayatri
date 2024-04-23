@@ -15,6 +15,7 @@
 
 module Storage.Queries.Quote where
 
+import Data.Text (strip)
 import Domain.Types.DriverOffer as DDO
 import Domain.Types.Estimate
 import Domain.Types.FarePolicy.FareProductType as DFFP
@@ -26,6 +27,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
@@ -92,6 +94,11 @@ findDOfferByEstimateId (Id estimateId) status = findAllWithKV [Se.And [Se.Is Bea
 
 instance FromTType' BeamQ.Quote Quote where
   fromTType' BeamQ.QuoteT {..} = do
+    clientBundleVersion' <- mapM readVersion (strip <$> clientBundleVersion)
+    clientSdkVersion' <- mapM readVersion (strip <$> clientSdkVersion)
+    clientConfigVersion' <- mapM readVersion (strip <$> clientConfigVersion)
+    backendConfigVersion' <- mapM readVersion (strip <$> backendConfigVersion)
+
     trip <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
     pUrl <- parseBaseUrl providerUrl
 
@@ -134,6 +141,12 @@ instance FromTType' BeamQ.Quote Quote where
             serviceTierShortDesc = serviceTierShortDesc,
             tripTerms = trip,
             specialLocationTag = specialLocationTag,
+            clientDevice = mkClientDevice clientOsType clientOsVersion,
+            clientBundleVersion = clientBundleVersion',
+            clientSdkVersion = clientSdkVersion',
+            clientConfigVersion = clientConfigVersion',
+            backendConfigVersion = backendConfigVersion',
+            backendAppVersion = backendAppVersion,
             createdAt = createdAt,
             validTill = validTill
           }
@@ -191,6 +204,13 @@ instance ToTType' BeamQ.Quote Quote where
             BeamQ.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
             BeamQ.specialZoneQuoteId = specialZoneQuoteId,
             BeamQ.specialLocationTag = specialLocationTag,
+            BeamQ.clientOsType = clientDevice <&> (.deviceType),
+            BeamQ.clientOsVersion = clientDevice <&> (.deviceVersion),
+            BeamQ.clientBundleVersion = versionToText <$> clientBundleVersion,
+            BeamQ.clientSdkVersion = versionToText <$> clientSdkVersion,
+            BeamQ.clientConfigVersion = versionToText <$> clientConfigVersion,
+            BeamQ.backendConfigVersion = versionToText <$> backendConfigVersion,
+            BeamQ.backendAppVersion = backendAppVersion,
             BeamQ.createdAt = createdAt,
             BeamQ.validTill = validTill
           }

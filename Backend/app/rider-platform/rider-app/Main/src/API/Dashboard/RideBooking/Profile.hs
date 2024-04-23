@@ -65,4 +65,4 @@ callGetPersonDetails merchantId personId = do
 callUpdatePerson :: ShortId DM.Merchant -> Id DP.Person -> DProfile.UpdateProfileReq -> FlowHandler APISuccess
 callUpdatePerson merchantId personId req = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  AP.updatePerson (personId, m.id) req
+  AP.updatePerson (personId, m.id) req Nothing Nothing Nothing Nothing

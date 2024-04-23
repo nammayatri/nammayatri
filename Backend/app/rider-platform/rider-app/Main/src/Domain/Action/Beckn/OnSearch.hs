@@ -51,6 +51,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -201,8 +202,9 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       logTagError "onSearch" "disability tag enabled search estimates discarded, not supported for OFF-US transactions"
       pure ()
     else do
-      estimates <- traverse (buildEstimate providerInfo now searchRequest) (filterEstimtesByPrefference estimatesInfo)
-      quotes <- traverse (buildQuote requestId providerInfo now searchRequest) (filterQuotesByPrefference quotesInfo)
+      deploymentVersion <- asks (.version)
+      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo)
+      quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo)
       merchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId merchantOperatingCityId
       let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
       forM_ estimates $ \est -> do
@@ -261,9 +263,10 @@ buildEstimate ::
   ProviderInfo ->
   UTCTime ->
   SearchRequest ->
+  DeploymentVersion ->
   EstimateInfo ->
   m DEstimate.Estimate
-buildEstimate providerInfo now searchRequest EstimateInfo {..} = do
+buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
@@ -301,6 +304,12 @@ buildEstimate providerInfo now searchRequest EstimateInfo {..} = do
           DEstimate.WaitingCharges
             { waitingChargePerMin = waitingCharges >>= (.waitingChargePerMin)
             },
+        clientBundleVersion = searchRequest.clientBundleVersion,
+        clientSdkVersion = searchRequest.clientSdkVersion,
+        clientDevice = searchRequest.clientDevice,
+        clientConfigVersion = searchRequest.clientConfigVersion,
+        backendConfigVersion = searchRequest.backendConfigVersion,
+        backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         ..
       }
 
@@ -310,9 +319,10 @@ buildQuote ::
   ProviderInfo ->
   UTCTime ->
   SearchRequest ->
+  DeploymentVersion ->
   QuoteInfo ->
   m DQuote.Quote
-buildQuote requestId providerInfo now searchRequest QuoteInfo {..} = do
+buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   quoteDetails' <- case quoteDetails of
@@ -334,6 +344,12 @@ buildQuote requestId providerInfo now searchRequest QuoteInfo {..} = do
         merchantId = searchRequest.merchantId,
         merchantOperatingCityId = searchRequest.merchantOperatingCityId,
         vehicleServiceTierType = fromMaybe (DVST.castVariantToServiceTier vehicleVariant) serviceTierType,
+        clientBundleVersion = searchRequest.clientBundleVersion,
+        clientSdkVersion = searchRequest.clientSdkVersion,
+        clientDevice = searchRequest.clientDevice,
+        clientConfigVersion = searchRequest.clientConfigVersion,
+        backendConfigVersion = searchRequest.backendConfigVersion,
+        backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         ..
       }
 

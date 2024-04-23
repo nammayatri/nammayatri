@@ -23,6 +23,7 @@ import Kernel.External.Maps (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
 data PersonT f = PersonT
@@ -60,8 +61,12 @@ data PersonT f = PersonT
     blockedByRuleId :: B.C f (Maybe Text),
     aadhaarVerified :: B.C f Bool,
     updatedAt :: B.C f UTCTime,
-    bundleVersion :: B.C f (Maybe Text),
-    clientVersion :: B.C f (Maybe Text),
+    clientBundleVersion :: B.C f (Maybe Text),
+    clientSdkVersion :: B.C f (Maybe Text),
+    clientConfigVersion :: B.C f (Maybe Text),
+    clientOsType :: B.C f (Maybe DeviceType),
+    clientOsVersion :: B.C f (Maybe Text),
+    backendAppVersion :: B.C f (Maybe Text),
     hasTakenValidRide :: B.C f Bool,
     hasDisability :: B.C f (Maybe Bool),
     referralCode :: B.C f (Maybe Text),

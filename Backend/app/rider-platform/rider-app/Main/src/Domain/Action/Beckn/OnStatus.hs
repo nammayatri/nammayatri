@@ -302,6 +302,12 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       startOdometerReading = Nothing
       endOdometerReading = Nothing
       clientId = booking.clientId
+      backendAppVersion = Nothing
+      backendConfigVersion = Nothing
+      clientBundleVersion = Nothing
+      clientConfigVersion = Nothing
+      clientDevice = Nothing
+      clientSdkVersion = Nothing
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::

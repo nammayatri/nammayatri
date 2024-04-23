@@ -94,8 +94,10 @@ updatePaymentMethods (Id searchReqId) availablePaymentMethods =
 
 instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
-    bundleVersion' <- mapM readVersion (strip <$> bundleVersion)
-    clientVersion' <- mapM readVersion (strip <$> clientVersion)
+    clientBundleVersion' <- mapM readVersion (strip <$> clientBundleVersion)
+    clientSdkVersion' <- mapM readVersion (strip <$> clientSdkVersion)
+    clientConfigVersion' <- mapM readVersion (strip <$> clientConfigVersion)
+    backendConfigVersion' <- mapM readVersion (strip <$> backendConfigVersion)
 
     fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
     fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
@@ -114,8 +116,12 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
             maxDistance = mkDistanceWithDefault distanceUnit maxDistanceValue . HighPrecMeters <$> maxDistance,
             merchantId = Id merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
-            bundleVersion = bundleVersion',
-            clientVersion = clientVersion',
+            clientDevice = mkClientDevice clientOsType clientOsVersion,
+            clientBundleVersion = clientBundleVersion',
+            clientSdkVersion = clientSdkVersion',
+            clientConfigVersion = clientConfigVersion',
+            backendConfigVersion = backendConfigVersion',
+            backendAppVersion = backendAppVersion,
             availablePaymentMethods = Id <$> availablePaymentMethods,
             selectedPaymentMethodId = Id <$> selectedPaymentMethodId,
             riderPreferredOption = fromMaybe OneWay riderPreferredOption,
@@ -147,8 +153,13 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.device = device,
         BeamSR.merchantId = getId merchantId,
         BeamSR.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
-        BeamSR.bundleVersion = versionToText <$> bundleVersion,
-        BeamSR.clientVersion = versionToText <$> clientVersion,
+        BeamSR.clientOsType = clientDevice <&> (.deviceType),
+        BeamSR.clientOsVersion = clientDevice <&> (.deviceVersion),
+        BeamSR.clientBundleVersion = versionToText <$> clientBundleVersion,
+        BeamSR.clientSdkVersion = versionToText <$> clientSdkVersion,
+        BeamSR.clientConfigVersion = versionToText <$> clientConfigVersion,
+        BeamSR.backendConfigVersion = versionToText <$> backendConfigVersion,
+        BeamSR.backendAppVersion = backendAppVersion,
         BeamSR.language = language,
         BeamSR.disabilityTag = disabilityTag,
         BeamSR.customerExtraFee = customerExtraFee <&> (.amountInt),
