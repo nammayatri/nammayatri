@@ -48,3 +48,16 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN toll_charges double precision ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ALTER COLUMN merchant_operating_city_id DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN client_sdk_version text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN client_os_version text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN client_os_type text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN client_config_version text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN client_bundle_version text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN backend_config_version text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN backend_app_version text ;

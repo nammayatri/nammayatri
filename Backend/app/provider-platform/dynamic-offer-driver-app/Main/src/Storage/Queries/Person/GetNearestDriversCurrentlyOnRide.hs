@@ -17,6 +17,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -42,7 +43,13 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     destinationLon :: Double,
     distanceToDriver :: Meters,
     distanceFromDriverToDestination :: Meters,
-    mode :: Maybe DriverInfo.DriverMode
+    mode :: Maybe DriverInfo.DriverMode,
+    clientSdkVersion :: Maybe Version,
+    clientBundleVersion :: Maybe Version,
+    clientConfigVersion :: Maybe Version,
+    clientDevice :: Maybe Device,
+    backendConfigVersion :: Maybe Version,
+    backendAppVersion :: Maybe Text
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -117,4 +124,4 @@ getNearestDriversCurrentlyOnRide cityServiceTiers mbServiceTier fromLocLatLong r
       where
         mkDriverResult person info location bookingLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
-          Just $ NearestDriversResultCurrentlyOnRide (cast person.id) person.deviceToken person.language info.onRide location.lat location.lon vehicle.variant serviceTier serviceTierInfo.airConditioned bookingLocation.lat bookingLocation.lon (roundToIntegral $ distanceFromDriverToDestination + distanceFromDestinationToPickup) (roundToIntegral distanceFromDriverToDestination) info.mode
+          Just $ NearestDriversResultCurrentlyOnRide (cast person.id) person.deviceToken person.language info.onRide location.lat location.lon vehicle.variant serviceTier serviceTierInfo.airConditioned bookingLocation.lat bookingLocation.lon (roundToIntegral $ distanceFromDriverToDestination + distanceFromDestinationToPickup) (roundToIntegral distanceFromDriverToDestination) info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice person.backendConfigVersion person.backendAppVersion

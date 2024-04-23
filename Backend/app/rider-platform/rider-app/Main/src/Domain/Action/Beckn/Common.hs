@@ -32,6 +32,7 @@ import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -183,14 +184,13 @@ data DFareBreakup = DFareBreakup
   }
 
 rideAssignedReqHandler ::
-  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+  ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
     CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r
   ) =>
@@ -218,11 +218,12 @@ rideAssignedReqHandler req = do
       Notify.notifyDriverBirthDay booking.riderId driverName
   withLongRetry $ CallBPP.callTrack booking ride
   where
-    buildRide :: MonadFlow m => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> m DRide.Ride
+    buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> m DRide.Ride
     buildRide mbMerchant booking BookingDetails {..} = do
       guid <- generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
+      deploymentVersion <- asks (.version)
       let fromLocation = booking.fromLocation
           toLocation = case booking.bookingDetails of
             DRB.OneWayDetails details -> Just details.toLocation
@@ -257,6 +258,12 @@ rideAssignedReqHandler req = do
             endOtp = Nothing,
             startOdometerReading = Nothing,
             endOdometerReading = Nothing,
+            clientBundleVersion = booking.clientBundleVersion,
+            clientSdkVersion = booking.clientSdkVersion,
+            clientDevice = booking.clientDevice,
+            clientConfigVersion = booking.clientConfigVersion,
+            backendConfigVersion = booking.backendConfigVersion,
+            backendAppVersion = Just deploymentVersion.getDeploymentVersion,
             ..
           }
 

@@ -60,7 +60,14 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     goHomeRequestId :: B.C f (Maybe Text),
     rideFrequencyScore :: B.C f (Maybe Double),
     customerCancellationDues :: B.C f (Maybe HighPrecMoney),
-    createdAt :: B.C f LocalTime
+    createdAt :: B.C f LocalTime,
+    clientSdkVersion :: B.C f (Maybe Text),
+    clientBundleVersion :: B.C f (Maybe Text),
+    clientConfigVersion :: B.C f (Maybe Text),
+    clientOsType :: B.C f (Maybe DeviceType),
+    clientOsVersion :: B.C f (Maybe Text),
+    backendConfigVersion :: B.C f (Maybe Text),
+    backendAppVersion :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

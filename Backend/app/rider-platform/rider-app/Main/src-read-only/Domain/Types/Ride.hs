@@ -15,15 +15,22 @@ import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data Ride = Ride
   { allowedEditLocationAttempts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Type.Booking,
     bppRideId :: Kernel.Types.Id.Id Domain.Types.Ride.BPPRide,
     chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
+    clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
     clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),
+    clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

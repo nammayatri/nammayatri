@@ -15,6 +15,7 @@
 
 module Storage.Queries.SearchRequestForDriver where
 
+import qualified Data.Text as T
 import qualified Data.Time as T
 import Domain.Types.Person
 import Domain.Types.SearchRequest (SearchRequest)
@@ -26,6 +27,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -109,6 +111,11 @@ instance FromTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
         CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
       Just mId -> CQM.findById (Id mId) >>= fromMaybeM (MerchantNotFound mId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant Nothing
+    clientSdkVersion' <- mapM readVersion (T.strip <$> clientSdkVersion)
+    clientBundleVersion' <- mapM readVersion (T.strip <$> clientBundleVersion)
+    clientConfigVersion' <- mapM readVersion (T.strip <$> clientConfigVersion)
+    backendConfigVersion' <- mapM readVersion (T.strip <$> backendConfigVersion)
+    let clientDevice' = mkClientDevice clientOsType clientOsVersion
     pure $
       Just
         SearchRequestForDriver
@@ -147,7 +154,13 @@ instance FromTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
             mode = mode,
             goHomeRequestId = Id <$> goHomeRequestId,
             rideFrequencyScore = rideFrequencyScore,
-            customerCancellationDues = fromMaybe 0 customerCancellationDues
+            customerCancellationDues = fromMaybe 0 customerCancellationDues,
+            clientSdkVersion = clientSdkVersion',
+            clientBundleVersion = clientBundleVersion',
+            clientConfigVersion = clientConfigVersion',
+            backendConfigVersion = backendConfigVersion',
+            clientDevice = clientDevice',
+            ..
           }
 
 instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
@@ -188,5 +201,12 @@ instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
         BeamSRFD.mode = mode,
         BeamSRFD.goHomeRequestId = getId <$> goHomeRequestId,
         BeamSRFD.rideFrequencyScore = rideFrequencyScore,
-        BeamSRFD.customerCancellationDues = Just customerCancellationDues
+        BeamSRFD.customerCancellationDues = Just customerCancellationDues,
+        BeamSRFD.clientSdkVersion = versionToText <$> clientSdkVersion,
+        BeamSRFD.clientBundleVersion = versionToText <$> clientBundleVersion,
+        BeamSRFD.clientConfigVersion = versionToText <$> clientConfigVersion,
+        BeamSRFD.backendConfigVersion = versionToText <$> backendConfigVersion,
+        BeamSRFD.clientOsVersion = clientDevice <&> (.deviceVersion),
+        BeamSRFD.clientOsType = clientDevice <&> (.deviceType),
+        ..
       }

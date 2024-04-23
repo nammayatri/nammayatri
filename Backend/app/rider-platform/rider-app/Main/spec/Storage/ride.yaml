@@ -12,6 +12,9 @@ imports:
   Booking: Domain.Types.Booking.Type
   Client: Domain.Types.Client
   VehicleServiceTierType: Domain.Types.VehicleServiceTier
+  Device: Kernel.Types.Version
+  DeviceType: Kernel.Types.Version
+  Version: Kernel.Types.Version
 
 Ride:
   tableName: ride
@@ -89,6 +92,12 @@ Ride:
     isFreeRide: Maybe Bool
     createdAt: UTCTime
     updatedAt: UTCTime
+    clientDevice: Maybe Device
+    clientBundleVersion: Maybe Version
+    clientSdkVersion: Maybe Version
+    clientConfigVersion: Maybe Version
+    backendConfigVersion: Maybe Version
+    backendAppVersion: Maybe Text
     safetyCheckStatus: Maybe Bool
 
   sqlType:
@@ -120,6 +129,9 @@ Ride:
   beamFields:
     toLocation: {}
     fromLocation: {}
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
     fare:
       currency: Maybe Currency
       fare: Maybe HighPrecMoney
@@ -132,17 +144,32 @@ Ride:
     fare: fmap (Kernel.Types.Common.mkPrice currency) fare|E
     totalFare: fmap (Kernel.Types.Common.mkPrice currency) totalFare|E
     trackingUrl: Kernel.Prelude.mapM Kernel.Prelude.parseBaseUrl|IM
+    clientBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)|EM
+    clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
+    clientConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)|EM
+    clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion|E
+    backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
 
   toTType:
     fare: Kernel.Prelude.fmap (.amount)|I
     totalFare: Kernel.Prelude.fmap (.amount)|I
     currency: Kernel.Prelude.fmap (.currency)|I
     trackingUrl: Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl|I
+    clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
+    clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
+    clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
+    clientOsType: clientDevice <&> (.deviceType)|E
+    clientOsVersion: clientDevice <&> (.deviceVersion)|E
+    backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
 
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney
     trackingUrl: Maybe Text
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
 
   constraints:
     id: PrimaryKey

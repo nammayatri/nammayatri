@@ -262,7 +262,8 @@ instance FromTType' BeamB.Booking Booking where
                 updatedAt = updatedAt,
                 stopLocationId = Id <$> stopLocationId,
                 isScheduled = fromMaybe False isScheduled,
-                distanceToPickup = roundToIntegral <$> distanceToPickup
+                distanceToPickup = roundToIntegral <$> distanceToPickup,
+                ..
               }
       else do
         logError $ "FareParameters not found for booking: " <> show id
@@ -311,7 +312,8 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.updatedAt = updatedAt,
         BeamB.distanceToPickup = realToFrac <$> distanceToPickup,
         BeamB.isScheduled = Just isScheduled,
-        BeamB.stopLocationId = getId <$> stopLocationId
+        BeamB.stopLocationId = getId <$> stopLocationId,
+        ..
       }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
