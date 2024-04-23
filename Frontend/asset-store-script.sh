@@ -75,7 +75,9 @@ create_pull_request() {
             if [[ ${sub_dir} == "main" && ${dir} == *"Common"* ]]; then
                 substring="Common"
                 result="${dir//$substring/}" 
-                add_file_for_commit "$result" "$dir" "$asset_type" "$asset_name" "$source_path"
+                lower_case_result=${result,,}
+                lower_case_directory=${dir,,}
+                add_file_for_commit "$lower_case_result" "$lower_case_directory" "$asset_type" "$asset_name" "$source_path"
     # Check if the source path contains any of the following keywords for directory
             else 
                 if echo ${dir} | grep -q "jatriSaathi"; then
