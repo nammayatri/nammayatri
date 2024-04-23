@@ -50,6 +50,9 @@ createJobIn uuid inTime maxShards jobData = do
 createJobFunc :: (HedisFlow m r, HasField "schedulerSetName" r Text, HasField "maxShards" r Int) => AnyJob t -> m ()
 createJobFunc (AnyJob job) = do
   key <- getShardKey
+  let storedJobInfo = storeJobInfo $ jobInfo job
+  when (storedJobType storedJobInfo == "SendSearchRequestToDriver") $
+    logDebug $ "storedJobContent: " <> (storedJobContent storedJobInfo)
   Hedis.withNonCriticalCrossAppRedis $ Hedis.zAdd key [(utcToMilliseconds job.scheduledAt, AnyJob job)]
 
 getShardKey :: (HedisFlow m r, HasField "schedulerSetName" r Text, HasField "maxShards" r Int) => m Text
