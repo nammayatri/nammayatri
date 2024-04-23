@@ -91,6 +91,7 @@ create_pull_request() {
                 else 
                     final_dir=""
                 fi
+                echo "dfsdjfhkjh $sub_dir directoty $dir"
                 if [[ "${final_dir}" == "" ]]; then
                     echo "dfsdjfhkjh $sub_dir directoty $dir"
                     if [[ ${sub_dir} == "main" ]]; then 
