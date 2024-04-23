@@ -60,6 +60,7 @@ import Types.ModifyScreenState (modifyScreenState)
 import Data.Boolean (otherwise)
 import Screens.Types as ST
 import Resource.Constants as RC
+import SessionCache
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -67,6 +68,7 @@ getHeaders dummy isGzipCompressionEnabled = do
     regToken <- loadS $ show REGISTERATION_TOKEN
     pure $ Headers $ [   Header "Content-Type" "application/json",
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-config-version" (getValueFromWindow "CONFIG_VERSION"),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
@@ -82,6 +84,7 @@ getHeaders' dummy isGzipCompressionEnabled = do
     _ <- pure $ spy "import headers" regToken
     lift $ lift $ pure $ Headers $ [   Header "Content-Type" "application/json",
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                         Header "x-config-version" (getValueToLocalStore CONFIG_VERSION),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
