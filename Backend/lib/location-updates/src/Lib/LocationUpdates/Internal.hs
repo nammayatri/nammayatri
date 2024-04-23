@@ -66,7 +66,7 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     updateDistance :: Id person -> HighPrecMeters -> Int -> Int -> m (),
     updateTollCharges :: Id person -> HighPrecMoney -> m (),
     updateRouteDeviation :: Id person -> [LatLong] -> m Bool,
-    getTravelledDistance :: Id person -> Meters -> m Meters,
+    getTravelledDistanceAndTollCharges :: Id person -> Meters -> Maybe HighPrecMoney -> m (Meters, Maybe HighPrecMoney),
     getRecomputeIfPickupDropNotOutsideOfThreshold :: Bool
   }
 
@@ -159,8 +159,8 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
           whenJust mbTollCharges $ \tollCharges -> updateTollCharges driverId tollCharges
           updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls
         else do
-          distanceToBeUpdated <- getTravelledDistance driverId estDist
-          whenJust estTollCharges $ \tollCharges -> updateTollCharges driverId tollCharges
+          (distanceToBeUpdated, tollCharges) <- getTravelledDistanceAndTollCharges driverId estDist estTollCharges
+          whenJust tollCharges $ \tollCharges' -> updateTollCharges driverId tollCharges'
           updateDistance driverId (metersToHighPrecMeters distanceToBeUpdated) 0 0
     else do
       isAtLeastBatchPlusOne <- atLeastBatchPlusOne
@@ -233,11 +233,11 @@ mkRideInterpolationHandler ::
   (Id person -> HighPrecMoney -> m ()) ->
   (Id person -> [LatLong] -> m Bool) ->
   (Maybe (Id person) -> RoutePoints -> m (Maybe HighPrecMoney)) ->
-  (Id person -> Meters -> m Meters) ->
+  (Id person -> Meters -> Maybe HighPrecMoney -> m (Meters, Maybe HighPrecMoney)) ->
   Bool ->
   (Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
   RideInterpolationHandler person m
-mkRideInterpolationHandler isEndRide updateDistance updateTollCharges updateRouteDeviation getTollChargesOnTheRoute getTravelledDistance getRecomputeIfPickupDropNotOutsideOfThreshold snapToRoadCall =
+mkRideInterpolationHandler isEndRide updateDistance updateTollCharges updateRouteDeviation getTollChargesOnTheRoute getTravelledDistanceAndTollCharges getRecomputeIfPickupDropNotOutsideOfThreshold snapToRoadCall =
   RideInterpolationHandler
     { batchSize = 98,
       addPoints = addPointsImplementation,
@@ -256,7 +256,7 @@ mkRideInterpolationHandler isEndRide updateDistance updateTollCharges updateRout
       updateTollCharges,
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation,
-      getTravelledDistance,
+      getTravelledDistanceAndTollCharges,
       getRecomputeIfPickupDropNotOutsideOfThreshold
     }
 
