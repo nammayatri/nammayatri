@@ -219,7 +219,6 @@ library
       Domain.Types.City
       Domain.Types.Coins.CoinHistory
       Domain.Types.Coins.CoinsConfig
-      Domain.Types.Coins.PurchaseHistory
       Domain.Types.Common
       Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
       Domain.Types.Driver.GoHomeFeature.DriverHomeLocation
@@ -350,7 +349,6 @@ library
       Storage.Beam.CancellationCharges
       Storage.Beam.Coins.CoinHistory
       Storage.Beam.Coins.CoinsConfig
-      Storage.Beam.Coins.PurchaseHistory
       Storage.Beam.Common
       Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation
@@ -466,7 +464,6 @@ library
       Storage.Queries.CancellationCharges
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
-      Storage.Queries.Coins.PurchaseHistory
       Storage.Queries.DailyStatsExtra
       Storage.Queries.DocumentVerificationConfigExtra
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest
@@ -532,6 +529,7 @@ library
       Storage.Queries.Person.GetNearestGoHomeDrivers
       Storage.Queries.Person.Internal
       Storage.Queries.Plan
+      Storage.Queries.PurchaseHistoryExtra
       Storage.Queries.Quote
       Storage.Queries.RatingExtra
       Storage.Queries.RegistrationToken
@@ -620,6 +618,7 @@ library
       Domain.Types.MetaData
       Domain.Types.ModuleCompletionInformation
       Domain.Types.PlanTranslation
+      Domain.Types.PurchaseHistory
       Domain.Types.QuestionInformation
       Domain.Types.QuestionModuleMapping
       Domain.Types.Rating
@@ -670,6 +669,7 @@ library
       Storage.Beam.MetaData
       Storage.Beam.ModuleCompletionInformation
       Storage.Beam.PlanTranslation
+      Storage.Beam.PurchaseHistory
       Storage.Beam.QuestionInformation
       Storage.Beam.QuestionModuleMapping
       Storage.Beam.Rating
@@ -730,6 +730,7 @@ library
       Storage.Queries.OrphanInstances.DriverReferral
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.Image
+      Storage.Queries.OrphanInstances.PurchaseHistory
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.Translations
@@ -738,6 +739,7 @@ library
       Storage.Queries.OrphanInstances.Volunteer
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.PlanTranslation
+      Storage.Queries.PurchaseHistory
       Storage.Queries.QuestionInformation
       Storage.Queries.QuestionModuleMapping
       Storage.Queries.Rating

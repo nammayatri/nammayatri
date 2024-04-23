@@ -1,0 +1,30 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+
+PurchaseHistory:
+  tableName: purchase_history
+  beamInstance: Custom Kernel.Beam.Lib.UtilsTH.mkTableInstances "coin_purchase_history" "atlas_driver_offer_bpp"
+
+  fields:
+    id : Id PurchaseHistory
+    driverId : Text
+    merchantId : Text
+    merchantOptCityId : Text
+    numCoins : Int
+    cash : HighPrecMoney
+    title : Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+
+
+  excludedFields: [merchantOperatingCityId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+

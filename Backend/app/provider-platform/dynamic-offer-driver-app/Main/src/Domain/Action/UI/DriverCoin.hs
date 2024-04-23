@@ -18,11 +18,11 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin a
 import Data.OpenApi hiding (title)
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import Domain.Types.Coins.CoinHistory
-import Domain.Types.Coins.PurchaseHistory
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Merchant.TransporterConfig ()
 import qualified Domain.Types.Person as SP
+import Domain.Types.PurchaseHistory
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
@@ -35,11 +35,11 @@ import qualified Lib.DriverCoins.Types as DCT
 import SharedLogic.DriverFee (delCoinAdjustedInSubscriptionByDriverIdKey, getCoinAdjustedInSubscriptionByDriverIdKey)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import Storage.Queries.Coins.CoinHistory as CHistory
-import Storage.Queries.Coins.PurchaseHistory as PHistory
 import Storage.Queries.DailyStatsExtra as DS
 import Storage.Queries.DriverPlan as DPlan
 import Storage.Queries.DriverStats as QDS
 import Storage.Queries.Person as Person
+import Storage.Queries.PurchaseHistory as PHistory
 import Tools.Error
 
 data CoinTransactionHistoryItem = CoinTransactionHistoryItem
