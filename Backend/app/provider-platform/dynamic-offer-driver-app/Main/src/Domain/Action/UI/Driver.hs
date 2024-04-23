@@ -137,6 +137,7 @@ import Kernel.Serviceability (rideServiceable)
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
@@ -149,6 +150,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
+import Kernel.Utils.Version
 import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
@@ -662,8 +664,8 @@ buildDriverEntityRes (person, driverInfo) = do
         payerVpa = driverPlan >>= (.payerVpa),
         blockStateModifier = driverInfo.blockStateModifier,
         autoPayStatus = driverPlan >>= (.autoPayStatus),
-        clientVersion = person.clientVersion,
-        bundleVersion = person.bundleVersion,
+        clientVersion = person.clientSdkVersion,
+        bundleVersion = person.clientBundleVersion,
         gender = Just person.gender,
         mediaUrl = mediaUrl,
         aadhaarCardPhoto = aadhaarCardPhoto,
@@ -695,22 +697,32 @@ updateDriver ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    HasField "s3Env" r (S3.S3Env m)
+    HasField "s3Env" r (S3.S3Env m),
+    HasField "version" r DeploymentVersion
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
   UpdateDriverReq ->
   m UpdateDriverRes
-updateDriver (personId, _, merchantOpCityId) req = do
+updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbConfigVersion mbDevice req = do
   runRequestValidation validateUpdateDriverReq req
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  deploymentVersion <- asks (.version)
   let updPerson =
         person{firstName = fromMaybe person.firstName req.firstName,
                middleName = req.middleName <|> person.middleName,
                lastName = req.lastName <|> person.lastName,
                deviceToken = req.deviceToken <|> person.deviceToken,
                language = req.language <|> person.language,
-               clientVersion = req.clientVersion <|> person.clientVersion,
-               bundleVersion = req.bundleVersion <|> person.bundleVersion,
+               clientSdkVersion = mbClientVersion <|> person.clientSdkVersion,
+               clientBundleVersion = mbBundleVersion <|> person.clientBundleVersion,
+               clientConfigVersion = mbConfigVersion <|> person.clientConfigVersion,
+               clientDevice = getDeviceFromText mbDevice <|> person.clientDevice,
+               backendConfigVersion = person.backendConfigVersion,
+               backendAppVersion = Just deploymentVersion.getDeploymentVersion,
                gender = fromMaybe person.gender req.gender,
                hometown = req.hometown <|> person.hometown,
                languagesSpoken = req.languagesSpoken <|> person.languagesSpoken
@@ -839,10 +851,10 @@ offerQuoteLockKey driverId = "Driver:OfferQuote:DriverId-" <> driverId.getId
 offerQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> DriverOfferReq -> Flow APISuccess
 offerQuote (driverId, merchantId, merchantOpCityId) clientId DriverOfferReq {..} = do
   let response = Accept
-  respondQuote (driverId, merchantId, merchantOpCityId) clientId DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, ..}
+  respondQuote (driverId, merchantId, merchantOpCityId) clientId Nothing Nothing Nothing Nothing DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, ..}
 
-respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> DriverRespondReq -> Flow APISuccess
-respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
+respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> DriverRespondReq -> Flow APISuccess
+respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbDevice req = do
   Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
     searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
     searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
@@ -867,7 +879,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
         Accept -> do
           whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
           case searchTry.tripCategory of
-            DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD
+            DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice
             _ -> acceptStaticOfferDriverRequest searchTry driver
         Reject -> pure []
     QSRD.updateDriverResponse sReqFD.id req.response
@@ -882,7 +894,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
         }
 
     buildDriverQuote ::
-      (MonadFlow m, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime) =>
+      (MonadFlow m, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime, HasField "version" r DeploymentVersion) =>
       SP.Person ->
       DST.SearchTry ->
       DSR.SearchRequest ->
@@ -890,10 +902,15 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
       Text ->
       DTC.TripCategory ->
       Fare.FareParameters ->
+      Maybe Version ->
+      Maybe Version ->
+      Maybe Version ->
+      Maybe Text ->
       m DDrQuote.DriverQuote
-    buildDriverQuote driver searchTry searchReq sd estimateId tripCategory fareParams = do
+    buildDriverQuote driver searchTry searchReq sd estimateId tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice' = do
       guid <- generateGUID
       now <- getCurrentTime
+      deploymentVersion <- asks (.version)
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
       let estimatedFare = fareSum fareParams
       pure
@@ -921,7 +938,13 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
             specialLocationTag = searchReq.specialLocationTag,
             goHomeRequestId = sd.goHomeRequestId,
             tripCategory = tripCategory,
-            estimateId = Id estimateId
+            estimateId = Id estimateId,
+            clientSdkVersion = mbClientVersion',
+            clientBundleVersion = mbBundleVersion',
+            clientConfigVersion = mbConfigVersion',
+            clientDevice = getDeviceFromText mbDevice',
+            backendConfigVersion = Nothing,
+            backendAppVersion = Just deploymentVersion.getDeploymentVersion
           }
     thereAreActiveQuotes = do
       driverUnlockDelay <- asks (.driverUnlockDelay)
@@ -932,7 +955,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
       driverPoolCfg <- DP.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory area dist (Just txnId) (Just "transactionId")
       pure driverPoolCfg.driverQuoteLimit
 
-    acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD = do
+    acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice' = do
       when (searchReq.autoAssignEnabled == Just True) $ do
         whenM (CS.isSearchTryCancelled searchTry.id) $
           throwError (InternalError "SEARCH_TRY_CANCELLED")
@@ -969,7 +992,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
               ..
             }
       QFP.updateFareParameters fareParams
-      driverQuote <- buildDriverQuote driver searchTry searchReq sReqFD searchTry.estimateId searchTry.tripCategory fareParams
+      driverQuote <- buildDriverQuote driver searchTry searchReq sReqFD searchTry.estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice'
       void $ cacheFarePolicyByQuoteId driverQuote.id.getId farePolicy
       triggerQuoteEvent QuoteEventData {quote = driverQuote}
       void $ QDrQt.create driverQuote

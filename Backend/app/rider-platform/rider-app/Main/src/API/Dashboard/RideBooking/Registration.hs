@@ -81,7 +81,7 @@ handler merchantId =
 callAuth :: ShortId DM.Merchant -> CustomerAuthReq -> FlowHandler DRegistration.AuthRes
 callAuth merchantShortId req = do
   let authReq = buildAuthReq merchantShortId req
-  withFlowHandlerAPI $ DRegistration.auth authReq Nothing Nothing
+  withFlowHandlerAPI $ DRegistration.auth authReq Nothing Nothing Nothing Nothing
 
 callVerify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes
 callVerify tokenId req = withFlowHandlerAPI $ DRegistration.verify tokenId req

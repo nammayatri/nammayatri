@@ -30,8 +30,11 @@ import Tools.Error
 instance FromTType' BeamP.Person Person where
   fromTType' :: (L.MonadFlow m, Log m, CacheFlow m r, EsqDBFlow m r) => BeamP.Person -> m (Maybe Person)
   fromTType' BeamP.PersonT {..} = do
-    bundleVersion' <- mapM readVersion (strip <$> bundleVersion)
-    clientVersion' <- mapM readVersion (strip <$> clientVersion)
+    clientBundleVersion' <- mapM readVersion (strip <$> clientBundleVersion)
+    clientSdkVersion' <- mapM readVersion (strip <$> clientSdkVersion)
+    clientConfigVersion' <- mapM readVersion (strip <$> clientConfigVersion)
+    backendConfigVersion' <- mapM readVersion (strip <$> backendConfigVersion)
+    let clientDevice' = mkClientDevice clientOsType clientOsVersion
     merchant <- CQM.findById (Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant Nothing
     pure $
@@ -63,8 +66,11 @@ instance FromTType' BeamP.Person Person where
             description = description,
             createdAt = createdAt,
             updatedAt = updatedAt,
-            bundleVersion = bundleVersion',
-            clientVersion = clientVersion',
+            clientBundleVersion = clientBundleVersion',
+            clientSdkVersion = clientSdkVersion',
+            clientConfigVersion = clientConfigVersion',
+            backendConfigVersion = backendConfigVersion',
+            backendAppVersion = backendAppVersion,
             unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
             faceImageId = Id <$> faceImageId,
             alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash,
@@ -72,7 +78,8 @@ instance FromTType' BeamP.Person Person where
             usedCoins = usedCoins,
             registrationLat = registrationLat,
             registrationLon = registrationLon,
-            useFakeOtp = useFakeOtp
+            useFakeOtp = useFakeOtp,
+            clientDevice = clientDevice'
           }
 
 instance ToTType' BeamP.Person Person where
@@ -105,8 +112,11 @@ instance ToTType' BeamP.Person Person where
         BeamP.description = description,
         BeamP.createdAt = createdAt,
         BeamP.updatedAt = updatedAt,
-        BeamP.bundleVersion = versionToText <$> bundleVersion,
-        BeamP.clientVersion = versionToText <$> clientVersion,
+        BeamP.clientBundleVersion = versionToText <$> clientBundleVersion,
+        BeamP.clientSdkVersion = versionToText <$> clientSdkVersion,
+        BeamP.clientConfigVersion = versionToText <$> clientConfigVersion,
+        BeamP.backendConfigVersion = versionToText <$> backendConfigVersion,
+        BeamP.backendAppVersion = backendAppVersion,
         BeamP.unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
         BeamP.alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
         BeamP.faceImageId = getId <$> faceImageId,
@@ -115,5 +125,7 @@ instance ToTType' BeamP.Person Person where
         BeamP.usedCoins = usedCoins,
         BeamP.registrationLat = registrationLat,
         BeamP.registrationLon = registrationLon,
-        BeamP.useFakeOtp = useFakeOtp
+        BeamP.useFakeOtp = useFakeOtp,
+        BeamP.clientOsType = clientDevice <&> (.deviceType),
+        BeamP.clientOsVersion = clientDevice <&> (.deviceVersion)
       }

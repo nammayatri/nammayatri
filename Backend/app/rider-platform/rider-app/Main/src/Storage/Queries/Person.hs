@@ -59,36 +59,20 @@ findByEmail email_ = do
 findByRoleAndMobileNumberAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-updateMultiple :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Person -> m ()
-updateMultiple (Id personId) person = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.updatedAt now,
-      Se.Set BeamP.firstName $ person.firstName,
-      Se.Set BeamP.middleName $ person.middleName,
-      Se.Set BeamP.lastName $ person.lastName,
-      Se.Set BeamP.gender $ person.gender,
-      Se.Set BeamP.description $ person.description,
-      Se.Set BeamP.role $ person.role,
-      Se.Set BeamP.identifier $ person.identifier,
-      Se.Set BeamP.deviceToken $ person.deviceToken,
-      Se.Set BeamP.clientVersion (versionToText <$> person.clientVersion),
-      Se.Set BeamP.bundleVersion (versionToText <$> person.bundleVersion)
-    ]
-    [Se.Is BeamP.id (Se.Eq personId)]
-
-updatePersonVersions :: (MonadFlow m, EsqDBFlow m r) => Person -> Maybe Version -> Maybe Version -> m ()
-updatePersonVersions person mbBundleVersion mbClientVersion =
+updatePersonVersions :: (MonadFlow m, EsqDBFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> Text -> m ()
+updatePersonVersions person mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion =
   when
-    ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
+    ((isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice || isJust mbClientConfigVersion) && (person.clientBundleVersion /= mbBundleVersion || person.clientSdkVersion /= mbClientVersion || person.clientConfigVersion /= mbClientConfigVersion || person.clientDevice /= mbDevice || person.backendAppVersion /= Just deploymentVersion))
     do
       now <- getCurrentTime
-      let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
-          mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
       updateWithKV
         [ Se.Set BeamP.updatedAt now,
-          Se.Set BeamP.clientVersion mbClientVersionText,
-          Se.Set BeamP.bundleVersion mbBundleVersionText
+          Se.Set BeamP.clientSdkVersion (versionToText <$> (mbClientVersion <|> person.clientSdkVersion)),
+          Se.Set BeamP.clientBundleVersion (versionToText <$> (mbBundleVersion <|> person.clientBundleVersion)),
+          Se.Set BeamP.clientConfigVersion (versionToText <$> mbClientConfigVersion),
+          Se.Set BeamP.clientOsType ((.deviceType) <$> mbDevice),
+          Se.Set BeamP.clientOsVersion ((.deviceVersion) <$> mbDevice),
+          Se.Set BeamP.backendAppVersion (Just deploymentVersion)
         ]
         [Se.Is BeamP.id (Se.Eq (getId (person.id)))]
 
@@ -144,8 +128,11 @@ updatePersonalInfo ::
   Maybe Gender ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Version ->
+  Maybe Device ->
+  Text ->
   m ()
-updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbCVersion mbBVersion = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -162,8 +149,12 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
         <> [Se.Set BeamP.referredAt (Just now) | isJust mbReferralCode]
         <> [Se.Set BeamP.language mbLanguage | isJust mbLanguage]
         <> [Se.Set BeamP.gender (fromJust mbGender) | isJust mbGender]
-        <> [Se.Set BeamP.clientVersion (versionToText <$> mbCVersion) | isJust mbCVersion]
-        <> ([Se.Set BeamP.bundleVersion $ versionToText <$> mbBVersion | isJust mbBVersion])
+        <> [Se.Set BeamP.clientSdkVersion (versionToText <$> mbClientVersion) | isJust mbClientVersion]
+        <> [Se.Set BeamP.clientBundleVersion (versionToText <$> mbBundleVersion) | isJust mbBundleVersion]
+        <> [Se.Set BeamP.clientConfigVersion (versionToText <$> mbClientConfigVersion) | isJust mbClientConfigVersion]
+        <> [Se.Set BeamP.clientOsType ((.deviceType) <$> mbDevice) | isJust mbDevice]
+        <> [Se.Set BeamP.clientOsVersion ((.deviceVersion) <$> mbDevice) | isJust mbDevice]
+        <> [Se.Set BeamP.backendAppVersion (Just deploymentVersion)]
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
@@ -376,8 +367,9 @@ updateCustomerReferralCode personId refferalCode = do
 
 instance FromTType' BeamP.Person Person where
   fromTType' BeamP.PersonT {..} = do
-    bundleVersion' <- mapM readVersion (strip <$> bundleVersion)
-    clientVersion' <- mapM readVersion (strip <$> clientVersion)
+    clientBundleVersion' <- mapM readVersion (strip <$> clientBundleVersion)
+    clientSdkVersion' <- mapM readVersion (strip <$> clientSdkVersion)
+    clientConfigVersion' <- mapM readVersion (strip <$> clientConfigVersion)
     (merchantOperatingCityId', currentCity') <- backfillCityAndMOCId currentCity merchantOperatingCityId
     pure $
       Just $
@@ -390,8 +382,11 @@ instance FromTType' BeamP.Person Person where
             hasDisability = hasDisability,
             blockedAt = T.localTimeToUTC T.utc <$> blockedAt,
             blockedByRuleId = Id <$> blockedByRuleId,
-            bundleVersion = bundleVersion',
-            clientVersion = clientVersion',
+            clientDevice = mkClientDevice clientOsType clientOsVersion,
+            clientBundleVersion = clientBundleVersion',
+            clientSdkVersion = clientSdkVersion',
+            clientConfigVersion = clientConfigVersion',
+            backendAppVersion = backendAppVersion,
             rating = Just $ fromIntegral totalRatingScore / fromIntegral totalRatings,
             currentCity = currentCity',
             falseSafetyAlarmCount = fromMaybe 0 falseSafetyAlarmCount,
@@ -450,8 +445,12 @@ instance ToTType' BeamP.Person Person where
         BeamP.aadhaarVerified = aadhaarVerified,
         BeamP.createdAt = createdAt,
         BeamP.updatedAt = updatedAt,
-        BeamP.bundleVersion = versionToText <$> bundleVersion,
-        BeamP.clientVersion = versionToText <$> clientVersion,
+        BeamP.clientOsType = clientDevice <&> (.deviceType),
+        BeamP.clientOsVersion = clientDevice <&> (.deviceVersion),
+        BeamP.clientBundleVersion = versionToText <$> clientBundleVersion,
+        BeamP.clientSdkVersion = versionToText <$> clientSdkVersion,
+        BeamP.clientConfigVersion = versionToText <$> clientConfigVersion,
+        BeamP.backendAppVersion = backendAppVersion,
         BeamP.shareEmergencyContacts = shareEmergencyContacts,
         BeamP.nightSafetyChecks = nightSafetyChecks,
         BeamP.shareTripWithEmergencyContactOption = shareTripWithEmergencyContactOption,

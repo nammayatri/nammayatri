@@ -43,6 +43,7 @@ import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common as BC
@@ -54,6 +55,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
+import Kernel.Utils.Version
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -117,7 +119,7 @@ authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BPP:Registration:auth:" <> getId person.id <> ":hitsCount"
 
 auth ::
-  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
+  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -127,8 +129,11 @@ auth ::
   AuthReq ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
   m AuthRes
-auth isDashboard req mbBundleVersion mbClientVersion = do
+auth isDashboard req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
+  deploymentVersion <- asks (.version)
   runRequestValidation validateInitiateLoginReq req
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
@@ -141,7 +146,7 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req.merchantOperatingCity
   person <-
     QP.findByMobileNumberAndMerchant countryCode mobileNumberHash merchant.id
-      >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion merchant.id merchantOpCityId isDashboard) return
+      >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
@@ -149,7 +154,7 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
   let mkId = getId merchantId
   token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId
   _ <- QR.create token
-  QP.updatePersonVersions person mbBundleVersion mbClientVersion
+  QP.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion)
   whenNothing_ useFakeOtpM $ do
     let otpHash = smsCfg.credConfig.otpHash
     let otpCode = SR.authValueHash token
@@ -214,8 +219,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
   QD.create driverInfo
   pure ()
 
-makePerson :: EncFlow m r => AuthReq -> TC.TransporterConfig -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
-makePerson req transporterConfig mbBundleVersion mbClientVersion merchantId merchantOperatingCityId isDashboard = do
+makePerson :: EncFlow m r => AuthReq -> TC.TransporterConfig -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
+makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOperatingCityId isDashboard = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   let useFakeOtp = if req.mobileNumber `elem` transporterConfig.fakeOtpMobileNumbers then Just "7891" else Nothing
@@ -247,8 +252,12 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion merchantId merc
         description = Nothing,
         createdAt = now,
         updatedAt = now,
-        bundleVersion = mbBundleVersion,
-        clientVersion = mbClientVersion,
+        clientBundleVersion = mbBundleVersion,
+        clientSdkVersion = mbClientVersion,
+        clientConfigVersion = mbClientConfigVersion,
+        clientDevice = getDeviceFromText mbDevice,
+        backendConfigVersion = Nothing,
+        backendAppVersion = mbBackendApp,
         whatsappNotificationEnrollStatus = Nothing,
         unencryptedAlternateMobileNumber = Nothing,
         alternateMobileNumber = Nothing,
@@ -303,10 +312,10 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp merchan
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
-createDriverWithDetails req mbBundleVersion mbClientVersion merchantId merchantOpCityId isDashboard = do
+createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
+createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard = do
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  person <- makePerson req transporterConfig mbBundleVersion mbClientVersion merchantId merchantOpCityId isDashboard
+  person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard
   void $ QP.create person
   createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig
   pure person

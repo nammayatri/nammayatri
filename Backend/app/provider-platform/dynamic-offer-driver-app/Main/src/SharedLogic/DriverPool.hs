@@ -595,7 +595,13 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           airConditioned = nearestGoHomeDrivers.airConditioned,
           lat = nearestGoHomeDrivers.lat,
           lon = nearestGoHomeDrivers.lon,
-          mode = nearestGoHomeDrivers.mode
+          mode = nearestGoHomeDrivers.mode,
+          clientSdkVersion = nearestGoHomeDrivers.clientSdkVersion,
+          clientBundleVersion = nearestGoHomeDrivers.clientBundleVersion,
+          clientConfigVersion = nearestGoHomeDrivers.clientConfigVersion,
+          clientDevice = nearestGoHomeDrivers.clientDevice,
+          backendConfigVersion = nearestGoHomeDrivers.backendConfigVersion,
+          backendAppVersion = nearestGoHomeDrivers.backendAppVersion
         }
 
     getRoutesForAllDrivers =
@@ -859,7 +865,8 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage poolType drive
           airConditioned = airConditioned,
           lat = destinationLat,
           lon = destinationLon,
-          mode = mode
+          mode = mode,
+          ..
         }
     calculateActualDistanceCurrently driverToDestinationDistanceThreshold DriverPoolResultCurrentlyOnRide {..} = do
       let temp = DriverPoolResult {..}

@@ -54,6 +54,7 @@ searchServices ::
   AppBESearch.SearchReq ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Version ->
   Maybe (Id DC.Client) ->
   Maybe Text ->
   ClientM AppBESearch.SearchResp
