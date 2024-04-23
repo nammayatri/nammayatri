@@ -6,7 +6,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel/feat/metrics/config-fn";
+      url = "github:nammayatri/shared-kernel";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

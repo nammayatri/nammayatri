@@ -3818,16 +3818,15 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1713791327,
-        "narHash": "sha256-nShogDXE+TwH+oP0mM2yDbW3zkRLSiovcNAfc3MFXMk=",
+        "lastModified": 1713865976,
+        "narHash": "sha256-xxi+P8x3vmElqWn8OCcQQPpiGckmbfXdUGcUaoWdAnw=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "8b682931bff2790b6f33bdcee1cbe5349792eb35",
+        "rev": "7670fd6f343a988fff59f9960fbf1fb11cd7960d",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "feat/metrics/config-fn",
         "repo": "shared-kernel",
         "type": "github"
       }
