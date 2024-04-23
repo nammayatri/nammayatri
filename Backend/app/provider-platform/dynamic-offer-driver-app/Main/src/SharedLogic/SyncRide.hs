@@ -110,7 +110,7 @@ fetchBookingCancelledInfo mbRide = do
 
 findCancellationSource :: Maybe DRide.Ride -> Flow DBCR.CancellationSource
 findCancellationSource (Just ride) = do
-  mbBookingCReason <- runInReplica $ QBCReason.findByRideId ride.id
+  mbBookingCReason <- runInReplica $ QBCReason.findByRideId (Just ride.id)
   -- mbBookingCReason <- QBCReason.findByRideId ride.id
   case mbBookingCReason of
     Just bookingCReason -> pure bookingCReason.source

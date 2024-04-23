@@ -62,8 +62,8 @@ stuckBookingsCancel merchantShortId opCity req = do
   now <- getCurrentTime
   stuckBookingIds <- B.runInReplica $ QBooking.findStuckBookings merchant merchantOpCity reqBookingIds now
   stuckRideItems <- B.runInReplica $ QRide.findStuckRideItems merchant merchantOpCity reqBookingIds now
-  let bcReasons = mkBookingCancellationReason (merchant.id) Common.bookingStuckCode Nothing <$> stuckBookingIds
-  let bcReasonsWithRides = (\item -> mkBookingCancellationReason merchant.id Common.rideStuckCode (Just item.rideId) item.bookingId) <$> stuckRideItems
+  bcReasons <- mkBookingCancellationReason (merchant.id) Common.bookingStuckCode Nothing `mapM` stuckBookingIds
+  bcReasonsWithRides <- (\item -> mkBookingCancellationReason merchant.id Common.rideStuckCode (Just item.rideId) item.bookingId) `mapM` stuckRideItems
   let allStuckBookingIds = stuckBookingIds <> (stuckRideItems <&> (.bookingId))
   let stuckPersonIds = stuckRideItems <&> (.driverId)
   let stuckDriverIds = cast @DP.Person @DP.Driver <$> stuckPersonIds
@@ -75,19 +75,23 @@ stuckBookingsCancel merchantShortId opCity req = do
   logTagInfo "dashboard -> stuckBookingsCancel: " $ show allStuckBookingIds
   pure $ mkStuckBookingsCancelRes stuckBookingIds stuckRideItems
 
-mkBookingCancellationReason :: Id DM.Merchant -> Common.CancellationReasonCode -> Maybe (Id DRide.Ride) -> Id DBooking.Booking -> DBCR.BookingCancellationReason
+mkBookingCancellationReason :: (MonadFlow m) => Id DM.Merchant -> Common.CancellationReasonCode -> Maybe (Id DRide.Ride) -> Id DBooking.Booking -> m DBCR.BookingCancellationReason
 mkBookingCancellationReason merchantId reasonCode mbRideId bookingId = do
-  DBCR.BookingCancellationReason
-    { bookingId = bookingId,
-      rideId = mbRideId,
-      merchantId = Just merchantId,
-      source = DBCR.ByMerchant,
-      reasonCode = Just $ coerce @Common.CancellationReasonCode @DCR.CancellationReasonCode reasonCode,
-      driverId = Nothing,
-      additionalInfo = Nothing,
-      driverCancellationLocation = Nothing,
-      driverDistToPickup = Nothing
-    }
+  now <- getCurrentTime
+  return $
+    DBCR.BookingCancellationReason
+      { bookingId = bookingId,
+        rideId = mbRideId,
+        merchantId = Just merchantId,
+        source = DBCR.ByMerchant,
+        reasonCode = Just $ coerce @Common.CancellationReasonCode @DCR.CancellationReasonCode reasonCode,
+        driverId = Nothing,
+        additionalInfo = Nothing,
+        driverCancellationLocation = Nothing,
+        driverDistToPickup = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }
 
 mkStuckBookingsCancelRes :: [Id DBooking.Booking] -> [QRide.StuckRideItem] -> Common.StuckBookingsCancelRes
 mkStuckBookingsCancelRes stuckBookingIds stuckRideItems = do
@@ -131,20 +135,24 @@ multipleBookingSync merchantShortId opCity req = do
                     DRide.INPROGRESS -> DBooking.TRIP_ASSIGNED
                     DRide.COMPLETED -> DBooking.COMPLETED
                     DRide.CANCELLED -> DBooking.CANCELLED
-              let mbCancellationReason =
-                    if bookingNewStatus == DBooking.CANCELLED && booking.status /= DBooking.CANCELLED
-                      then Just $ mkBookingCancellationReason merchant.id Common.syncBookingCode (Just ride.id) bookingId
-                      else Nothing
+              mbCancellationReason <-
+                if bookingNewStatus == DBooking.CANCELLED && booking.status /= DBooking.CANCELLED
+                  then do
+                    bookingCR <- mkBookingCancellationReason merchant.id Common.syncBookingCode (Just ride.id) bookingId
+                    return (Just bookingCR)
+                  else return Nothing
               unless (bookingNewStatus == booking.status) $ do
                 QBooking.updateStatus bookingId bookingNewStatus
                 whenJust mbCancellationReason QBCR.upsert
               let updBooking = booking{status = bookingNewStatus}
               void $ SyncRide.rideSync (mbCancellationReason <&> (.source)) (Just ride) updBooking merchant
             Nothing -> do
-              let mbCancellationReason =
-                    if booking.status /= DBooking.CANCELLED
-                      then Just $ mkBookingCancellationReason merchant.id Common.syncBookingCodeWithNoRide Nothing bookingId
-                      else Nothing
+              mbCancellationReason <-
+                if booking.status /= DBooking.CANCELLED
+                  then do
+                    bookingCR <- mkBookingCancellationReason merchant.id Common.syncBookingCodeWithNoRide Nothing bookingId
+                    return (Just bookingCR)
+                  else return Nothing
               when (booking.status /= DBooking.CANCELLED) $ do
                 QBooking.updateStatus bookingId DBooking.CANCELLED
                 whenJust mbCancellationReason QBCR.upsert
