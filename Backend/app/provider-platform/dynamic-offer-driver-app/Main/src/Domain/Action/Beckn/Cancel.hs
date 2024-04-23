@@ -188,7 +188,7 @@ cancelSearch _merchantId searchTry = do
   CS.whenSearchTryCancellable searchTry.id $ do
     driverSearchReqs <- QSRD.findAllActiveBySRId searchTry.requestId
     QST.cancelActiveTriesByRequestId searchTry.requestId
-    QSRD.setInactiveBySRId searchTry.requestId
+    QSRD.setInactiveAndPulledByIds $ (.id) <$> driverSearchReqs
     QDQ.setInactiveBySRId searchTry.requestId
     for_ driverSearchReqs $ \driverReq -> do
       driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
