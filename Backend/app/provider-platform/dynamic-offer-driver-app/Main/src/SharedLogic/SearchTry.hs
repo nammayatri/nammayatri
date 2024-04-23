@@ -90,6 +90,7 @@ initiateDriverSearchBatch ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
@@ -110,12 +111,13 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
   searchTry <- createNewSearchTry farePolicy
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance (Just searchReq.transactionId) (Just "transactionId")
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just searchReq.transactionId) (Just "transactionId")
+  singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
   let driverPickUpCharges = extractDriverPickupCharges farePolicy.farePolicyDetails
   if not searchTry.isScheduled
     then do
       (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds driverPickUpCharges goHomeCfg
-      let inTime = maybe (fromIntegral driverPoolConfig.singleBatchProcessTime) fromIntegral mbNewScheduleTimeIn
+      let inTime = singleBatchProcessingTempDelay + maybe (fromIntegral driverPoolConfig.singleBatchProcessTime) fromIntegral mbNewScheduleTimeIn
       case res of
         ReSchedule _ -> scheduleBatching searchTry driverExtraFeeBounds driverPickUpCharges inTime
         _ -> return ()
