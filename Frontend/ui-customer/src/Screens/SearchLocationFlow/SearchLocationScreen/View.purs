@@ -129,7 +129,7 @@ view globalProps push state =
                 [ height MATCH_PARENT
                 , width MATCH_PARENT
                 , gravity CENTER
-                ][  RateCard.view (push <<< RateCardAC) (rentalRateCardConfig (MB.maybe dummyQuote identity (state.data.selectedQuote)))] 
+                ][  RateCard.view (push <<< RateCardAC) (rentalRateCardConfig state)] 
                 else emptyTextView
           ]
       ]

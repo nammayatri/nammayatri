@@ -20,6 +20,7 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
+import Data.Maybe (Maybe(..))
 
 data Action = Close 
             | BackPressed 
@@ -30,7 +31,8 @@ type Config = {
     primaryText :: TextConfig,
     secondaryText :: TextConfig,
     imageConfig :: ImageConfig,
-    buttonConfig :: ButtonConfig
+    buttonConfig :: ButtonConfig,
+    infoImageConfig :: ImageConfig
 }
 
 type ImageConfig = {
@@ -100,14 +102,7 @@ config = {
       width : WRAP_CONTENT,
       accessibilityHint : ""
     }
-  , imageConfig : {
-      visibility : VISIBLE,
-      imageUrl : "",
-      height : V 122,
-      width : V 116,
-      margin : Margin 0 0 0 0,
-      padding : Padding 0 0 0 0
-    }
+  , imageConfig : dummyImageConfig
   , buttonConfig : {
       text : "",
       color : Color.blue800,
@@ -118,4 +113,15 @@ config = {
       gravity : CENTER,
       accessibilityHint : ""
     }
+  , infoImageConfig : dummyImageConfig
+}
+
+dummyImageConfig :: ImageConfig
+dummyImageConfig = { 
+  visibility : GONE,
+  imageUrl : "",
+  height : V 122,
+  width : V 116,
+  margin : Margin 0 0 0 0,
+  padding : Padding 0 0 0 0
 }

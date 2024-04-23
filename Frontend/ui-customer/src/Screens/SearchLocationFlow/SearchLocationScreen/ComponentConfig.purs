@@ -33,7 +33,7 @@ import Font.Size as FontSize
 import Data.Maybe(isJust, maybe, Maybe(..)) as MB
 import Helpers.Utils as HU
 import Data.String as DS
-import Prelude (show, (&&))
+import Prelude (show, (&&), identity)
 import Language.Strings (getString)
 import Components.PopUpModal as PopUpModal
 import Language.Types (STR(..))
@@ -406,13 +406,16 @@ primaryButtonRequestRideConfig state =
   in
     primaryButtonConfig'
 
-rentalRateCardConfig :: ST.QuotesList -> RateCard.Config
+rentalRateCardConfig :: ST.SearchLocationScreenState -> RateCard.Config
 rentalRateCardConfig state =
   let config = RateCard.config
       currency = getCurrency appConfig
+      selectedQuote = MB.maybe dummyQuote identity (state.data.selectedQuote)
       rentalRateCardConfig' = config
         { currentRateCardType = RentalRateCard
-        , title = getString RENTAL_PACKAGE
+        , title = getString RATE_CARD
+        , description = getString RENTAL_CHARGES
+        , buttonText = MB.Just $ getString GOT_IT
         , primaryButtonConfig {
             margin = MarginTop 16,
             text = getString GOT_IT,
@@ -423,10 +426,19 @@ rentalRateCardConfig state =
             visibility = VISIBLE
           }
         , additionalStrings = [
-            {key : "FINAL_FARE_DESCRIPTION", val : (getString FINAL_FARE_DESCRIPTION)}
-          , {key : "EXCESS_DISTANCE_CHARGE_DESCRIPTION", val : (getString EXCESS_DISTANCE_CHARGE_DESCRIPTION) <> " " <> currency <> (show state.fareDetails.perExtraKmRate) <> "/km."}
-          , {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ DA.singleton $ currency <> (show state.fareDetails.nightShiftCharge))}
+            {key : "TOTAL_FARE_CHANGE", val : (getString TOTAL_FARE_MAY_CHANGE_DUE_TO_CHANGE_IN_ROUTE)}
+          , {key : "EXCESS_DISTANCE_CHARGE_DESCRIPTION", val : (getString EXCESS_DISTANCE_CHARGE_DESCRIPTION)}
+          , {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ DA.singleton $ currency <> (show selectedQuote.fareDetails.nightShiftCharge))}
           , {key : "PARKING_FEES_AND_TOLLS_NOT_INCLUDED", val : (getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED)}
+          , {key : "FARE_ACCORDING_TO_GOVERNMENT", val : (getString FARE_DETERMINED_AS_PER_KARNATAKA_GUIDELINES)}
+          ]
+        , fareList = [
+            {key : ("Base Fare (incl. " <> show state.data.rideDetails.rideDistance <> " km & " <> show state.data.rideDetails.rideDuration <> " hrs)"), val : (currency <> show selectedQuote.fareDetails.perExtraKmRate)}
+          , {key : getString EXTRA_PER_KM_FARE, val : (currency <> show selectedQuote.fareDetails.perExtraKmRate <> "/km")}
+          , {key : getString EXTRA_PER_MINUTE_FARE, val : (currency <> show selectedQuote.fareDetails.perExtraMinRate <> "/min")}
+          , {key : getString PICKUP_CHARGES, val :(currency <> "25")} -- TODO-codex :: Pickup Charges not coming with API
+          , {key : getString WAITING_CHARGES_AFTER_5_MINS, val : (currency <> "1.5" <> "/min")} -- TODO-codex :: Waiting Charges not coming with API
+          , {key : getString TOLL_CHARGES_ESTIMATED, val : (currency <> "100")} -- TODO-codex :: Toll Charges not coming with API
           ]
         }
   in rentalRateCardConfig'

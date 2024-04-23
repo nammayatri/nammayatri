@@ -15,10 +15,10 @@
 
 module Components.RequestInfoCard.View where
 
-import Components.RequestInfoCard.Controller (Action(..) , Config, TextConfig)
+import Components.RequestInfoCard.Controller (Action(..) , Config, TextConfig, ImageConfig, dummyImageConfig)
 import Prelude ((*), Unit, ($), const, (/), unit, (-), (<>), (/=))
 import Effect (Effect)
-import PrestoDOM (PrestoDOM, Accessiblity(..),Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, cornerRadius, weight, imageWithFallback , visibility, accessibility, accessibilityHint)
+import PrestoDOM (PrestoDOM, Accessiblity(..),Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, cornerRadius, weight, imageWithFallback , visibility, accessibility, accessibilityHint, textFromHtml)
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -27,6 +27,7 @@ import Language.Types (STR(..))
 import Engineering.Helpers.Commons (screenWidth)
 import Common.Types.App (LazyCheck(..))
 import Data.String as DS
+import Data.Maybe (isJust, Maybe(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push state = 
@@ -62,15 +63,9 @@ view push state =
               [ height WRAP_CONTENT
               , weight 1.0
               ][]
-            , imageView
-              [ width state.imageConfig.width
-              , height state.imageConfig.height
-              , imageWithFallback state.imageConfig.imageUrl
-              , visibility state.imageConfig.visibility
-              , margin state.imageConfig.margin
-              , padding state.imageConfig.padding
-              ]
+            , genericImageView state.imageConfig
         ]
+        , genericImageView state.infoImageConfig
         , genericTextView push state.secondaryText
         , textView $
           [ width MATCH_PARENT
@@ -93,9 +88,21 @@ genericTextView push config =
   , height config.height
   , padding config.padding
   , margin config.margin
-  , text config.text
+  , textFromHtml config.text
   , color config.color
   , visibility config.visibility
   , accessibility $ if DS.null config.accessibilityHint then DISABLE else ENABLE
   , accessibilityHint $ config.accessibilityHint
   ] <> (FontStyle.getFontStyle config.textStyle LanguageStyle)
+
+
+genericImageView :: forall w. ImageConfig -> PrestoDOM (Effect Unit) w
+genericImageView imageConfig=
+  imageView
+  [ width imageConfig.width
+  , height imageConfig.height
+  , imageWithFallback imageConfig.imageUrl
+  , visibility imageConfig.visibility
+  , margin imageConfig.margin
+  , padding imageConfig.padding
+  ]

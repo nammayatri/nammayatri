@@ -125,7 +125,8 @@ metroTimeErrorPopupConfig state (CityMetroConfig cityMetroConfig) = let
       imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_red_warning_with_red_circle_bg",
       height = V 130,
       width = V 130,
-      padding = Padding 0 2 2 0
+      padding = Padding 0 2 2 0,
+      visibility = VISIBLE
     }
   , buttonConfig {
       text = getString GOT_IT,

@@ -835,7 +835,8 @@ specialZonePopupConfig state = let
   , imageConfig {
       imageUrl = fetchImage FF_ASSET "ny_ic_sp_pickup_zone_map",
       height = V 122,
-      width = V 116
+      width = V 116,
+      visibility = VISIBLE
     }
   , buttonConfig {
       text = getString GOT_IT

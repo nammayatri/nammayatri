@@ -39,7 +39,7 @@ import Language.Types (STR(..))
 import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..))
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback, alignParentBottom, singleLine, ellipsize, clickable)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback, alignParentBottom, singleLine, ellipsize, clickable, textFromHtml)
 import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, locUnserviceablePopUpConfig, rentalPolicyInfoConfig)
 import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval, dummyRentalQuote)
 import Screens.Types (RentalScreenState, RentalScreenStage(..))
@@ -375,28 +375,11 @@ fareBreakupView push state = let
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
                     , orientation VERTICAL
-                    , margin $ MarginHorizontal 16 16
+                    , margin $ Margin 16 0 16 16
                     ]
                     (map (\item -> 
                       descriptionView push state (item)
-                    ) [BookingTime, BookingDistance, BaseFare, TollFee])
-                  , linearLayout 
-                    [ height WRAP_CONTENT
-                    , width MATCH_PARENT
-                    , orientation HORIZONTAL
-                    , margin $ MarginBottom 32
-                    , padding $ PaddingHorizontal 16 16
-                    ]
-                    [ textView $ [
-                        text $ getString NOTE <> " : "
-                      , color Color.black900
-                      ] <> FontStyle.body3 TypoGraphy
-                      , textView $ [
-                          text $ getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> (show selectedQuote.fareDetails.nightShiftCharge)
-                        , width MATCH_PARENT
-                        , height WRAP_CONTENT
-                      ] <> FontStyle.body3 TypoGraphy
-                    ]
+                    ) [BookingFrom, BookingTime, BookingDistance, BaseFare, TollFee, ParkingCharges, NightTimeFee])
                   ]
               
               ]
@@ -477,16 +460,24 @@ descriptionView push state description =
     [ textView $
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , text $ getTitleFromDescription description true
+      , textFromHtml $ getTitleFromDescription description true
       , color Color.black800
-      ] <> FontStyle.body1 TypoGraphy
+      ] <> if description == BookingFrom then FontStyle.subHeading1 TypoGraphy else FontStyle.body1 TypoGraphy
     , textView $
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , text $ getTitleFromDescription description false
+      , textFromHtml $ getTitleFromDescription description false
       , color Color.black700
-      , margin $ MarginVertical 4 24
+      , margin $ MarginTop 4
+      , visibility $ boolToVisibility $ description /= BookingFrom
       ] <> FontStyle.paragraphText TypoGraphy
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , margin $ MarginVertical 11 11
+      , visibility $ boolToVisibility $ description /= NightTimeFee
+      ]
+      [ separatorView push state ]
     ]
   where 
     getTitleFromDescription :: FareBreakupRowType -> Boolean -> String
@@ -496,11 +487,18 @@ descriptionView push state description =
           activeQuote = head $ filter (\item -> (item.index == item.activeIndex)) state.data.rentalsQuoteList
           selectedQuote = maybe dummyRentalQuote identity (state.data.selectedQuote)
           currency = getCurrency appConfig
+          rideEndTime = formatDateInHHMM $ EHC.getUTCAfterNSeconds startTimeUTC $ (state.data.rentalBookingData.baseDuration) * 60 * 60
       in case description of
-          BookingTime -> if toShowTitle then getString BOOKING_ON <> " " <> EHC.convertUTCtoISC startTimeUTC "Do" <> " " <> EHC.convertUTCtoISC startTimeUTC "MMM" <> ", " <> EHC.convertUTCtoISC startTimeUTC "hh" <> ":" <> EHC.convertUTCtoISC startTimeUTC "mm" <> " " <> EHC.convertUTCtoISC startTimeUTC "a" <> " (" <> baseDuration <> "hrs)" else getString FINAL_FARE_DESCRIPTION
-          BookingDistance -> if toShowTitle then getString INCLUDED_KMS <> show state.data.rentalBookingData.baseDistance <> " kms" else getString EXCESS_DISTANCE_CHARGE_DESCRIPTION <> " " <> currency <> (show selectedQuote.fareDetails.perExtraKmRate) <> "/km."
-          BaseFare -> if toShowTitle then getString BASE_FARE <> currency <> show selectedQuote.fareDetails.baseFare else getString ADDITIONAL_CHARGES_DESCRIPTION
-          TollFee -> if toShowTitle then getString TOLLS_AND_PARKING_FEES else getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED
+          BookingFrom -> "<b>Booking from " <> formatDateInHHMM startTimeUTC <> " - " <> rideEndTime <> "</b>"
+          BookingTime -> if toShowTitle then "Included Time: <b>" <> show state.data.rentalBookingData.baseDuration <> " hrs</b>" else getString FINAL_FARE_DESCRIPTION
+          BookingDistance -> if toShowTitle then "Included Distance: <b>" <> show state.data.rentalBookingData.baseDistance <> " km</b>" else getString EXCESS_DISTANCE_CHARGE_DESCRIPTION <> " " <> currency <> (show selectedQuote.fareDetails.perExtraKmRate) <> "/km."
+          BaseFare -> if toShowTitle then "Rental Base Fare: <b>" <> currency <> show selectedQuote.fareDetails.baseFare <> "</b>" else getString ADDITIONAL_CHARGES_DESCRIPTION
+          TollFee -> if toShowTitle then "Toll Charges: <b>" <> currency <> "69" <> "</b>" else "Toll Charges are included in the fare."
+          ParkingCharges -> if toShowTitle then "Parking and other charges" else getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED
+          NightTimeFee -> if toShowTitle then "Night Time Fees" else getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> state.data.rentalBookingData.nightCharge
+    
+    formatDateInHHMM :: String -> String
+    formatDateInHHMM timeUTC = EHC.convertUTCtoISC timeUTC "hh" <> ":" <> EHC.convertUTCtoISC timeUTC "mm" <> " " <> EHC.convertUTCtoISC timeUTC "a"
 
 noteAndPrimaryButtonView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
 noteAndPrimaryButtonView push state = 

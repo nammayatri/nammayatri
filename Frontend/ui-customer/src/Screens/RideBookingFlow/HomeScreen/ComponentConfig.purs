@@ -862,7 +862,8 @@ waitTimeInfoCardConfig state = let
       imageUrl = fetchImage FF_ASSET "ny_ic_wait_timer",
       height = V 130,
       width = V 130,
-      padding = Padding 0 2 2 0
+      padding = Padding 0 2 2 0,
+      visibility = VISIBLE
     }
   , buttonConfig {
       text = getString GOT_IT,

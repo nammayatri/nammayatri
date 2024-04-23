@@ -104,7 +104,7 @@ data ScreenOutput = NoScreen
                   | GoToSelectPackage RentalScreenState
                   | GoToSelectVariant RentalScreenState
                   
-data FareBreakupRowType = BookingTime | BookingDistance | BaseFare | TollFee
+data FareBreakupRowType = BookingFrom | BookingTime | BookingDistance | BaseFare | TollFee | ParkingCharges | NightTimeFee
 
 derive instance genericFareBreakupRowType :: Generic FareBreakupRowType _
 instance showFareBreakupRowType :: Show FareBreakupRowType where show = genericShow
