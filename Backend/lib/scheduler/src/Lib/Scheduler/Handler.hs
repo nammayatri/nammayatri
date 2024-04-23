@@ -180,7 +180,7 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
   let jobType' = show (fromSing $ jobType jobInfo)
       storedJobInfo = storeJobInfo jobInfo
   when (storedJobType storedJobInfo == "SendSearchRequestToDriver") $
-    logDebug $ "Executed scheduled search entry: " <> (show $ toJSON (AnyJob job))
+    logDebug $ "Executed scheduled search entry: " <> show (toJSON (AnyJob job))
   logDebug $ "Current Job Id with Status : " <> show id <> " " <> show result
   case result of
     DuplicateExecution -> do
