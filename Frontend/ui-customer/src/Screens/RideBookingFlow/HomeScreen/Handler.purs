@@ -137,9 +137,9 @@ homeScreen = do
     SaveFavourite updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ SAVE_FAVOURITE updatedState)
-    GoToReferral updatedState -> do
+    GoToReferral referralType updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_REFERRAL)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_REFERRAL referralType)
     CallContact updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_CALL_EMERGENCY_CONTACT updatedState)
@@ -223,3 +223,6 @@ homeScreen = do
     ExitToConfirmingLocationStage updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GOTO_CONFIRMING_LOCATION_STAGE updatedState)
+    UpdateReferralCode updatedState code -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ UPDATE_REFERRAL_CODE code)

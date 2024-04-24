@@ -415,9 +415,6 @@ greenDull = "#5FAF9E"
 greenDisabled :: Color
 greenDisabled = "#B2D6D5"
 
-transparentWhite :: Color
-transparentWhite = "#30FFFFFF"
-
 lightGradientBlue :: Color
 lightGradientBlue = "#F5F8FF"
 

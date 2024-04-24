@@ -802,6 +802,7 @@ type HomeScreenStateProps =
   , hasToll :: Boolean
   , repeatRideServiceTierName :: Maybe String
   , isSearchCancelled :: Boolean
+  , referralComponentProps :: ReferralComponentState
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -978,14 +979,16 @@ type RecentlySearchedObject =
   }
 
 type ReferralScreenState =
-  {
-      referralCode :: String
+  {   referralCode :: String
     , btnActive :: Boolean
     , showThanks :: Boolean
     , isInvalidCode :: Boolean
     , isExpandReference :: Boolean
     , config :: AppConfig
     , logField :: Object Foreign
+    , referralType :: ReferralType
+    , showQRCodePopUp :: Boolean
+    , referralComponentProps :: ReferralComponentState
   }
 
 type EstimateInfo = {
@@ -2117,13 +2120,19 @@ instance eqEmAudioPlayStatus :: Eq EmAudioPlayStatus where eq = genericEq
 
 type ReferralStatusProp = {
   referralStatus :: ReferralStatus,
-  referralCode :: Maybe String
+  referralCode :: Maybe String,
+  showAddReferralPopup :: Boolean
 }
 
 data ReferralStatus = NO_REFERRAL | REFERRAL_APPLIED | REFERRAL_INVALID | REFERRAL_ALREADY_APPLIED
 
 derive instance genericReferralStatus :: Generic ReferralStatus _
 instance eqReferralStatus :: Eq ReferralStatus where eq = genericEq
+
+data ReferralType = GIVE_REFERRAL | GET_REFERRED
+
+derive instance genericReferralType :: Generic ReferralType _
+instance eqReferralType :: Eq ReferralType where eq = genericEq
 
 type MetroStation = {
   code :: String
@@ -2262,3 +2271,21 @@ data LocationSelectType = SEARCH | MAP | FAVOURITE | REPEAT_RIDE | RETRY_SEARCH 
 
 derive instance genericLocationSelectType :: Generic LocationSelectType _
 instance eqLocationSelectType :: Eq LocationSelectType where eq = genericEq
+
+type ReferralComponentState =
+  { stage :: ReferralStage
+  , referralCode :: Maybe String
+  , applyButtonActive :: Boolean
+  , showReferredUserInfoPopup :: Boolean
+  , showReferralProgramInfoPopup :: Boolean
+  , isInvalidCode :: Boolean
+  }
+
+data ReferralStage = ENTER_REFERRAL_CODE
+                   | INVALID_POPUP
+                   | APPLIED_POPUP
+                   | ALREADY_APPLIED_POPUP
+                   | NO_REFERRAL_STAGE
+
+derive instance genericReferralStage :: Generic ReferralStage _
+instance eqReferralStage :: Eq ReferralStage where eq = genericEq

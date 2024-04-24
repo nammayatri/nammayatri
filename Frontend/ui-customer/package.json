@@ -20,7 +20,8 @@
     "clean": "sh cleanSpago.sh",
     "webpack-uglify": "uglifyjs dist/android/index_bundle.js --output dist/android/index_bundle.js --mangle --compress",
     "fast:purs": "spago build -w --purs-args '--purs=fastpurs'",
-    "fast:start": "npm-run-all -p fast:purs webpack-dev"
+    "fast:start": "npm-run-all -p fast:purs webpack-dev",
+    "fast:start:ios": "npm-run-all -p fast:purs webpack-dev-ios"
   },
   "author": "juspay",
   "license": "ISC",
