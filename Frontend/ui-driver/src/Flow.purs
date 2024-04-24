@@ -191,7 +191,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
       setValueToLocalStore BUNDLE_VERSION bundle
       setValueToLocalStore CONFIG_VERSION config
       setValueToLocalStore BASE_URL (getBaseUrl "dummy")
-      setValueToLocalStore RIDE_REQUEST_BUFFER "0"
+      setValueToLocalStore RIDE_REQUEST_BUFFER "2"
       setValueToLocalStore IS_BANNER_ACTIVE "True"
       setValueToLocalStore MESSAGES_DELAY "0"
       setValueToLocalStore SHOW_PAYMENT_MODAL "true"
