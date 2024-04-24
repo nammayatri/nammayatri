@@ -31,14 +31,18 @@ jobs:
           echo "User name: $username"
           echo "User email: $email" 
 
+      - name: Checkout codeToRepo
+        uses: actions/checkout@v2
+        with:
+          repository: MercyQueen/asset-store
 
-      - name: Clone asset-store repo 
-        run: |
-          username=$(git log -1 --pretty=format:"%an")
-          email=$(git log -1 --pretty=format:"%ae")
-          git config --global user.name "$username"
-          git config --global user.email "$email"
-          git clone https://github.com/MercyQueen/asset-store asset-store
+      # - name: Clone asset-store repo 
+      #   run: |
+      #     username=$(git log -1 --pretty=format:"%an")
+      #     email=$(git log -1 --pretty=format:"%ae")
+      #     git config --global user.name "$username"
+      #     git config --global user.email "$email"
+      #     git clone https://$username@github.com/MercyQueen/asset-store asset-store
 
       - name: Run script
         env:
