@@ -31,18 +31,16 @@ jobs:
           echo "User name: $username"
           echo "User email: $email" 
 
+
       - name: Clone asset-store repo 
         run: |
-          git config --global user.name "$username"
-          git config --global user.email "$email"
+          git config --global user.name 'namma-bot'
+          git config --global user.email ${{ secrets.NAMMA_BOT_EMAIL }}
           git clone https://github.com/MercyQueen/asset-store asset-store
-        env:
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
 
       - name: Run script
         env:
           ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }} 
         run: |
           chmod +x asset-store-script.sh 
           ./asset-store-script.sh ${{ github.event.pull_request.head.ref }} ${{ secrets.GITHUB_TOKEN }}
