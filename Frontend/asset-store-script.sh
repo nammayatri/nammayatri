@@ -1,4 +1,4 @@
-#!/bin/bash
+
 
 branch_name=$1
 
@@ -54,13 +54,13 @@ create_pull_request() {
         if [[ " ${allowed_extensions[@]} " =~ " $extension " ]]; then
             source_path="$file"
             IFS="/" read -ra src_path_components <<< "$source_path"
-            
+
             length=${#src_path_components[@]}
             dir=${src_path_components[5]}
             dir_array=()
             final_dir=""
             sub_dir=${src_path_components[4]}
-            
+
             asset_name=${src_path_components[length-1]}
 
             # Determine file type based on path_components[3]
@@ -77,7 +77,7 @@ create_pull_request() {
                 lower_case_result=${result,,}
                 lower_case_directory=${dir,,}
                 add_file_for_commit "$lower_case_result" "$lower_case_directory" "$asset_type" "$asset_name" "$source_path"
-                
+
             # Check if the source path contains any of the following keywords for directory
             else 
                 if echo ${dir} | grep -q "jatriSaathi"; then
@@ -111,12 +111,7 @@ create_pull_request() {
 
     git add .
     git commit -m "[GITHUB-ACTION]Added new asset from NammaYatri/NammaYatri branch : $branch_name"
-    echo "commited the changes"
-    git remote set-url origin git@github.com:MercyQueen/asset-store.git
     git push --set-upstream origin "$branch_name"
-    echo "commited the changes pushed changes $PAT_TOKEN"
-    git push --set-upstream origin "$branch_name"
-    echo "commited the changes pushed changessdfsdfsdf $PAT_TOKEN"
     git push 
     curl -X POST -H "Authorization: token $PAT_TOKEN" \
         https://api.github.com/repos/MercyQueen/asset-store/dispatches \
@@ -124,8 +119,8 @@ create_pull_request() {
 
     cd ..
     rm -rf "$target_repo_name" 
-    
+
 
 }
 
-create_pull_request 
+create_pull_request  
