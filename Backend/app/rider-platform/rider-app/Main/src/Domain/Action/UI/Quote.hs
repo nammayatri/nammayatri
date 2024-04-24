@@ -32,16 +32,18 @@ import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.DriverOffer as UDriverOffer
 import Domain.Action.UI.Estimate as UEstimate
+import qualified Domain.Action.UI.Location as DL
+import qualified Domain.Action.UI.MerchantPaymentMethod as DMPM
+import qualified Domain.Action.UI.RentalDetails as DRentalDetails
 import qualified Domain.Action.UI.SpecialZoneQuote as USpecialZoneQuote
+import Domain.Types.Booking
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.CancellationReason
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Location as DL
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Quote as DQuote
 import qualified Domain.Types.Quote as SQuote
-import qualified Domain.Types.RentalDetails as DRentalDetails
 import qualified Domain.Types.SearchRequest as SSR
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import Domain.Types.VehicleServiceTier as DVST

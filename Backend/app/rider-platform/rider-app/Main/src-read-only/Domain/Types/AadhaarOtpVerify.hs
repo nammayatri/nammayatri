@@ -4,7 +4,7 @@
 
 module Domain.Types.AadhaarOtpVerify where
 
-import Data.Aeson (eitherDecode)
+import Data.Aeson
 import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Id

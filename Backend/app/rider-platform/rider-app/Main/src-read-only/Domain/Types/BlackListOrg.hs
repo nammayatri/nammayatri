@@ -4,7 +4,7 @@
 
 module Domain.Types.BlackListOrg where
 
-import Data.Aeson (eitherDecode)
+import Data.Aeson
 import Domain.Types.Common (UsageSafety (..))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Domain

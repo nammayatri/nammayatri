@@ -4,7 +4,7 @@
 
 module Domain.Types.CallbackRequest where
 
-import Data.Aeson (eitherDecode)
+import Data.Aeson
 import qualified Domain.Types.Merchant
 import Kernel.External.Encryption
 import Kernel.Prelude

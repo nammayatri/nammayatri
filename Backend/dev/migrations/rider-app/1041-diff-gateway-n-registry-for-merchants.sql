@@ -1,10 +1,3 @@
-ALTER TABLE
-    atlas_app.merchant
-ADD
-    COLUMN registry_url character varying(255),
-ADD
-    COLUMN gateway_url character varying(255);
-
 UPDATE
     atlas_app.merchant
 SET

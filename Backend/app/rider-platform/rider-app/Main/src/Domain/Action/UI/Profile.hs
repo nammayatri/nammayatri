@@ -40,7 +40,7 @@ import qualified Data.HashMap.Strict as HM
 import Data.List (nubBy)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Registration as DR
-import Domain.Types.Booking.Type as DBooking
+import Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN

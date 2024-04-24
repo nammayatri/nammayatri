@@ -24,6 +24,7 @@ import Data.OpenApi (ToSchema (..))
 import qualified Data.Time as DT
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.Booking.API as SRB
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Client as DC
 import Domain.Types.Location

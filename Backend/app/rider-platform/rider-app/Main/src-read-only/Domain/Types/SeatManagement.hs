@@ -4,7 +4,7 @@
 
 module Domain.Types.SeatManagement where
 
-import Data.Aeson (eitherDecode)
+import Data.Aeson
 import qualified Data.Time.Calendar
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity

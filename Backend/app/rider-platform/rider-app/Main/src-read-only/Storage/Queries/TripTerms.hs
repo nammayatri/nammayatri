@@ -34,7 +34,7 @@ updateByPrimaryKey (Domain.Types.TripTerms.TripTerms {..}) = do
   updateWithKV
     [ Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
       Se.Set Beam.descriptions (intercalateDescriptions descriptions),
-      Se.Set Beam.updatedAt (Kernel.Prelude.Just updatedAt)
+      Se.Set Beam.updatedAt (Just _now)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 

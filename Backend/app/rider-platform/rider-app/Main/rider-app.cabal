@@ -176,6 +176,7 @@ library
       Domain.Action.UI.Disability
       Domain.Action.UI.DriverOffer
       Domain.Action.UI.Estimate
+      Domain.Action.UI.FareBreakup
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
       Domain.Action.UI.FollowRide
@@ -183,13 +184,16 @@ library
       Domain.Action.UI.Frontend
       Domain.Action.UI.HotSpot
       Domain.Action.UI.Invoice
+      Domain.Action.UI.Location
       Domain.Action.UI.Maps
+      Domain.Action.UI.MerchantPaymentMethod
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
       Domain.Action.UI.PersonStats
       Domain.Action.UI.Profile
       Domain.Action.UI.Quote
       Domain.Action.UI.Registration
+      Domain.Action.UI.RentalDetails
       Domain.Action.UI.Ride
       Domain.Action.UI.Route
       Domain.Action.UI.SavedReqLocation
@@ -201,32 +205,23 @@ library
       Domain.Action.UI.Support
       Domain.Action.UI.TicketService
       Domain.Action.UI.Whatsapp
-      Domain.Types.Booking
       Domain.Types.Booking.API
-      Domain.Types.Booking.BookingLocation
-      Domain.Types.Booking.Type
       Domain.Types.CacType
       Domain.Types.Common
+      Domain.Types.Extra.Booking
       Domain.Types.Extra.CancellationReason
-      Domain.Types.FarePolicy.FareBreakup
+      Domain.Types.Extra.MerchantMessage
+      Domain.Types.Extra.MerchantPaymentMethod
+      Domain.Types.Extra.MerchantServiceConfig
+      Domain.Types.Extra.PlaceNameCache
+      Domain.Types.Extra.RentalDetails
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.FeedbackForm
       Domain.Types.Geometry
       Domain.Types.HotSpot
-      Domain.Types.Location
       Domain.Types.LocationAddress
-      Domain.Types.Maps.PlaceNameCache
-      Domain.Types.Merchant
-      Domain.Types.Merchant.MerchantMessage
-      Domain.Types.Merchant.MerchantPaymentMethod
-      Domain.Types.Merchant.MerchantServiceConfig
-      Domain.Types.Merchant.MerchantServiceUsageConfig
       Domain.Types.Person.PersonDefaultEmergencyNumber
       Domain.Types.Person.PersonFlowStatus
-      Domain.Types.PlaceBasedServiceConfig
-      Domain.Types.RentalDetails
-      Domain.Types.SavedReqLocation
-      Domain.Types.SearchRequest
       Domain.Types.UtilsTH
       Domain.Types.VehicleServiceTier
       Domain.Types.VehicleVariant
@@ -249,32 +244,18 @@ library
       SharedLogic.PublicTransport
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       Storage.Beam.BecknRequest
-      Storage.Beam.Booking
-      Storage.Beam.Booking.BookingLocation
       Storage.Beam.Common
       Storage.Beam.Disability
       Storage.Beam.DisabilityTranslation
       Storage.Beam.EstimateBreakup
-      Storage.Beam.FarePolicy.FareBreakup
       Storage.Beam.FeedbackForm
       Storage.Beam.Geometry
       Storage.Beam.Geometry.Geometry
       Storage.Beam.Geometry.GeometryGeom
       Storage.Beam.IssueManagement
-      Storage.Beam.Location
-      Storage.Beam.Maps.PlaceNameCache
-      Storage.Beam.Merchant
-      Storage.Beam.Merchant.MerchantMessage
-      Storage.Beam.Merchant.MerchantPaymentMethod
-      Storage.Beam.Merchant.MerchantServiceConfig
-      Storage.Beam.Merchant.MerchantServiceUsageConfig
       Storage.Beam.Payment
       Storage.Beam.Person.PersonDefaultEmergencyNumber
       Storage.Beam.Person.PersonFlowStatus
-      Storage.Beam.PlaceBasedServiceConfig
-      Storage.Beam.RentalDetails
-      Storage.Beam.SavedReqLocation
-      Storage.Beam.SearchRequest
       Storage.Beam.SystemConfigs
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
@@ -306,9 +287,8 @@ library
       Storage.Clickhouse.Location
       Storage.Clickhouse.Ride
       Storage.Queries.AppInstallsExtra
-      Storage.Queries.Booking
-      Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReasonExtra
+      Storage.Queries.BookingExtra
       Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationReasonExtra
       Storage.Queries.Disability
@@ -316,39 +296,43 @@ library
       Storage.Queries.EstimateExtra
       Storage.Queries.ExophoneExtra
       Storage.Queries.Extra.Transformers.Ride
-      Storage.Queries.FareBreakup
+      Storage.Queries.FareBreakupExtra
       Storage.Queries.FeedbackForm
       Storage.Queries.FRFSTicketBokingPayment
       Storage.Queries.Geometry
       Storage.Queries.IssueExtra
-      Storage.Queries.Location
       Storage.Queries.LocationMappingExtra
-      Storage.Queries.Maps.PlaceNameCache
-      Storage.Queries.Merchant
-      Storage.Queries.Merchant.MerchantMessage
-      Storage.Queries.Merchant.MerchantPaymentMethod
-      Storage.Queries.Merchant.MerchantServiceConfig
-      Storage.Queries.Merchant.MerchantServiceUsageConfig
+      Storage.Queries.MerchantExtra
+      Storage.Queries.MerchantPaymentMethodExtra
+      Storage.Queries.MerchantServiceConfigExtra
+      Storage.Queries.MerchantServiceUsageConfigExtra
       Storage.Queries.Person.PersonDefaultEmergencyNumber
       Storage.Queries.Person.PersonFlowStatus
       Storage.Queries.PersonExtra
       Storage.Queries.PersonStatsExtra
-      Storage.Queries.PlaceBasedServiceConfig
+      Storage.Queries.PlaceBasedServiceConfigExtra
       Storage.Queries.QuoteExtra
       Storage.Queries.RegistrationTokenExtra
-      Storage.Queries.RentalDetails
+      Storage.Queries.RentalDetailsExtra
       Storage.Queries.RideExtra
-      Storage.Queries.SavedReqLocation
-      Storage.Queries.SearchRequest
+      Storage.Queries.SavedReqLocationExtra
+      Storage.Queries.SearchRequestExtra
       Storage.Queries.Transformers.AppInstalls
       Storage.Queries.Transformers.BlackListOrg
+      Storage.Queries.Transformers.Booking
       Storage.Queries.Transformers.BookingCancellationReason
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.Estimate
+      Storage.Queries.Transformers.Merchant
       Storage.Queries.Transformers.MerchantConfig
+      Storage.Queries.Transformers.MerchantMessage
+      Storage.Queries.Transformers.MerchantPaymentMethod
+      Storage.Queries.Transformers.MerchantServiceConfig
       Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.Quote
+      Storage.Queries.Transformers.RentalDetails
       Storage.Queries.Transformers.SearchReqLocation
+      Storage.Queries.Transformers.SearchRequest
       Storage.Queries.Transformers.SpecialZoneQuote
       Storage.Queries.Transformers.TripTerms
       Storage.Queries.Transformers.WhiteListOrg
@@ -392,7 +376,9 @@ library
       Domain.Types.AppInstalls
       Domain.Types.BecknConfig
       Domain.Types.BlackListOrg
+      Domain.Types.Booking
       Domain.Types.BookingCancellationReason
+      Domain.Types.BookingLocation
       Domain.Types.BppDetails
       Domain.Types.BusinessHour
       Domain.Types.CallbackRequest
@@ -402,6 +388,7 @@ library
       Domain.Types.DriverOffer
       Domain.Types.Estimate
       Domain.Types.Exophone
+      Domain.Types.FareBreakup
       Domain.Types.FRFSQuote
       Domain.Types.FRFSRecon
       Domain.Types.FRFSSearch
@@ -411,21 +398,32 @@ library
       Domain.Types.FRFSTrip
       Domain.Types.HotSpotConfig
       Domain.Types.Issue
+      Domain.Types.Location
       Domain.Types.LocationMapping
+      Domain.Types.Merchant
       Domain.Types.MerchantConfig
+      Domain.Types.MerchantMessage
       Domain.Types.MerchantOperatingCity
+      Domain.Types.MerchantPaymentMethod
+      Domain.Types.MerchantServiceConfig
+      Domain.Types.MerchantServiceUsageConfig
       Domain.Types.MerchantState
       Domain.Types.NotificationSoundsConfig
       Domain.Types.OnSearchEvent
       Domain.Types.Person
       Domain.Types.PersonDisability
       Domain.Types.PersonStats
+      Domain.Types.PlaceBasedServiceConfig
+      Domain.Types.PlaceNameCache
       Domain.Types.Quote
       Domain.Types.Rating
       Domain.Types.RegistrationToken
+      Domain.Types.RentalDetails
       Domain.Types.Ride
       Domain.Types.RiderConfig
+      Domain.Types.SavedReqLocation
       Domain.Types.SearchReqLocation
+      Domain.Types.SearchRequest
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
@@ -448,7 +446,9 @@ library
       Storage.Beam.AppInstalls
       Storage.Beam.BecknConfig
       Storage.Beam.BlackListOrg
+      Storage.Beam.Booking
       Storage.Beam.BookingCancellationReason
+      Storage.Beam.BookingLocation
       Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
       Storage.Beam.CallbackRequest
@@ -458,6 +458,7 @@ library
       Storage.Beam.DriverOffer
       Storage.Beam.Estimate
       Storage.Beam.Exophone
+      Storage.Beam.FareBreakup
       Storage.Beam.FRFSQuote
       Storage.Beam.FRFSRecon
       Storage.Beam.FRFSSearch
@@ -467,21 +468,32 @@ library
       Storage.Beam.FRFSTrip
       Storage.Beam.HotSpotConfig
       Storage.Beam.Issue
+      Storage.Beam.Location
       Storage.Beam.LocationMapping
+      Storage.Beam.Merchant
       Storage.Beam.MerchantConfig
+      Storage.Beam.MerchantMessage
       Storage.Beam.MerchantOperatingCity
+      Storage.Beam.MerchantPaymentMethod
+      Storage.Beam.MerchantServiceConfig
+      Storage.Beam.MerchantServiceUsageConfig
       Storage.Beam.MerchantState
       Storage.Beam.NotificationSoundsConfig
       Storage.Beam.OnSearchEvent
       Storage.Beam.Person
       Storage.Beam.PersonDisability
       Storage.Beam.PersonStats
+      Storage.Beam.PlaceBasedServiceConfig
+      Storage.Beam.PlaceNameCache
       Storage.Beam.Quote
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
+      Storage.Beam.RentalDetails
       Storage.Beam.Ride
       Storage.Beam.RiderConfig
+      Storage.Beam.SavedReqLocation
       Storage.Beam.SearchReqLocation
+      Storage.Beam.SearchRequest
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
@@ -504,7 +516,9 @@ library
       Storage.Queries.AppInstalls
       Storage.Queries.BecknConfig
       Storage.Queries.BlackListOrg
+      Storage.Queries.Booking
       Storage.Queries.BookingCancellationReason
+      Storage.Queries.BookingLocation
       Storage.Queries.BppDetails
       Storage.Queries.BusinessHour
       Storage.Queries.CallbackRequest
@@ -514,6 +528,7 @@ library
       Storage.Queries.DriverOffer
       Storage.Queries.Estimate
       Storage.Queries.Exophone
+      Storage.Queries.FareBreakup
       Storage.Queries.FRFSQuote
       Storage.Queries.FRFSRecon
       Storage.Queries.FRFSSearch
@@ -523,35 +538,56 @@ library
       Storage.Queries.FRFSTrip
       Storage.Queries.HotSpotConfig
       Storage.Queries.Issue
+      Storage.Queries.Location
       Storage.Queries.LocationMapping
+      Storage.Queries.Merchant
       Storage.Queries.MerchantConfig
+      Storage.Queries.MerchantMessage
       Storage.Queries.MerchantOperatingCity
+      Storage.Queries.MerchantPaymentMethod
+      Storage.Queries.MerchantServiceConfig
+      Storage.Queries.MerchantServiceUsageConfig
       Storage.Queries.MerchantState
       Storage.Queries.NotificationSoundsConfig
       Storage.Queries.OnSearchEvent
       Storage.Queries.OrphanInstances.AppInstalls
+      Storage.Queries.OrphanInstances.Booking
       Storage.Queries.OrphanInstances.BookingCancellationReason
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.Estimate
       Storage.Queries.OrphanInstances.Exophone
+      Storage.Queries.OrphanInstances.FareBreakup
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.LocationMapping
+      Storage.Queries.OrphanInstances.Merchant
+      Storage.Queries.OrphanInstances.MerchantPaymentMethod
+      Storage.Queries.OrphanInstances.MerchantServiceConfig
+      Storage.Queries.OrphanInstances.MerchantServiceUsageConfig
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.PersonStats
+      Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
       Storage.Queries.OrphanInstances.Quote
       Storage.Queries.OrphanInstances.RegistrationToken
+      Storage.Queries.OrphanInstances.RentalDetails
       Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.OrphanInstances.SavedReqLocation
+      Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Person
       Storage.Queries.PersonDisability
       Storage.Queries.PersonStats
+      Storage.Queries.PlaceBasedServiceConfig
+      Storage.Queries.PlaceNameCache
       Storage.Queries.Quote
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
+      Storage.Queries.RentalDetails
       Storage.Queries.Ride
       Storage.Queries.RiderConfig
+      Storage.Queries.SavedReqLocation
       Storage.Queries.SearchReqLocation
+      Storage.Queries.SearchRequest
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory

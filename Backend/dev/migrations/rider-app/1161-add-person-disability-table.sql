@@ -1,1 +1,0 @@
-ALTER TABLE atlas_app.search_request ADD COLUMN disability_tag character(255);

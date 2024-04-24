@@ -39,7 +39,7 @@ updateByPrimaryKey (Domain.Types.BlackListOrg.BlackListOrg {..}) = do
     [ Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
       Se.Set Beam.domain domain,
       Se.Set Beam.subscriberId (Kernel.Types.Id.getShortId subscriberId),
-      Se.Set Beam.updatedAt (Kernel.Prelude.Just updatedAt)
+      Se.Set Beam.updatedAt (Just _now)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 

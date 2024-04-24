@@ -22,12 +22,12 @@ import qualified "rider-app" API.UI.Registration as Reg
 import qualified "rider-app" API.UI.Select as AppSelect
 import qualified "rider-app" API.UI.Serviceability as AppServ
 import qualified "rider-app" Domain.Action.UI.Cancel as CancelAPI
-import qualified "rider-app" Domain.Types.Booking as AbeBooking
 import qualified "rider-app" Domain.Types.Booking as BRB
+import qualified "rider-app" Domain.Types.Booking.API as AbeBooking
 import qualified "rider-app" Domain.Types.CancellationReason as AbeCRC
 import qualified "rider-app" Domain.Types.Client as DC
 import qualified "rider-app" Domain.Types.Estimate as AbeEstimate
-import qualified "rider-app" Domain.Types.Merchant.MerchantPaymentMethod as AppMPM
+import qualified "rider-app" Domain.Types.MerchantPaymentMethod as AppMPM
 import qualified "rider-app" Domain.Types.Quote as AbeQuote
 import qualified "rider-app" Domain.Types.RegistrationToken as AppSRT
 import qualified "rider-app" Domain.Types.Ride as BRide

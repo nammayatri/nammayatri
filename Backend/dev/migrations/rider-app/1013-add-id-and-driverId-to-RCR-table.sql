@@ -12,7 +12,7 @@ ALTER TABLE ONLY atlas_app.ride_cancellation_reason
 
 UPDATE atlas_app.ride_cancellation_reason AS T1
   SET id = atlas_app.uuid_generate_v4()
-  FROM atlas_app.ride_booking AS T2
+  FROM atlas_app.booking AS T2
   WHERE T2.id = T1.ride_booking_id;
 
 ALTER TABLE atlas_app.ride_cancellation_reason

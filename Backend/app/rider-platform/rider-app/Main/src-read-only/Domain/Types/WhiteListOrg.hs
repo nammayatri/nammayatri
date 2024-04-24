@@ -23,7 +23,7 @@ data WhiteListOrgD (s :: UsageSafety) = WhiteListOrg
   }
   deriving (Generic, Show)
 
-type WhiteListOrg = WhiteListOrgD ('Safe)
+type WhiteListOrg = WhiteListOrgD 'Safe
 
 instance FromJSON (WhiteListOrgD 'Unsafe)
 

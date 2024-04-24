@@ -1,0 +1,150 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Version: Kernel.Types.Version
+  Price: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  MerchantPaymentMethod: Domain.Types.MerchantPaymentMethod
+  Person: Domain.Types.Person
+  Client: Domain.Types.Client
+  Location: Domain.Types.Location
+  Language: Kernel.External.Maps
+  Currency: Kernel.Utils.Common
+  Money: Kernel.Utils.Common
+  Centesimal: Kernel.Utils.Common
+  Distance: Kernel.Types.Common
+  DistanceUnit: Kernel.Types.Common
+  HighPrecDistance: Kernel.Types.Common
+  Device: Kernel.Types.Version
+  DeviceType: Kernel.Types.Version
+
+SearchRequest:
+  tableName: search_request
+
+  derives: "Generic, Show"
+
+  fields:
+    id: Id SearchRequest
+    startTime: UTCTime
+    validTill: UTCTime
+    riderId: Id Person
+    clientId: Maybe (Id Client)
+    fromLocation: Location
+    toLocation: Maybe Location
+    distance: Maybe Distance
+    maxDistance: Maybe Distance
+    estimatedRideDuration: Maybe Seconds
+    device: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity #
+    language: Maybe Language
+    disabilityTag: Maybe Text
+    customerExtraFee: Maybe Price
+    autoAssignEnabled: Maybe Bool
+    autoAssignEnabledV2: Maybe Bool
+    availablePaymentMethods: "[Id MerchantPaymentMethod]"
+    selectedPaymentMethodId: Maybe (Id MerchantPaymentMethod)
+    riderPreferredOption: RiderPreferredOption
+    createdAt: UTCTime
+    clientBundleVersion: Maybe Version
+    clientSdkVersion: Maybe Version
+    clientConfigVersion: Maybe Version
+    clientDevice: Maybe Device
+    backendConfigVersion: Maybe Version
+    backendAppVersion: Maybe Text
+
+  types:
+    SearchRequestStatus:
+      enum: "NEW, INPROGRESS, CONFIRMED, COMPLETED, CLOSED"
+      derive: "HttpInstance"
+    RiderPreferredOption:
+      enum: "Rental, OneWay"
+      derive: "HttpInstance"
+
+  beamType:
+    merchantOperatingCityId: Maybe Text
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
+    riderPreferredOption: Maybe RiderPreferredOption
+
+  sqlType:
+    toLocationId : character varying(36)
+    distance: numeric(30,2)
+    language: character varying(255)
+    maxDistance: double precision
+    availablePaymentMethods: character(36) []
+    disabilityTag: character(255)
+    currency: character varying(255)
+    fromLocationId: character varying(36)
+
+  beamFields:
+    distance:
+      distance: Maybe Centesimal
+      distanceValue: Maybe HighPrecDistance
+      distanceUnit: Maybe DistanceUnit
+    maxDistance:
+      maxDistance: Maybe Centesimal
+      maxDistanceValue: Maybe HighPrecDistance
+    fromLocation:
+      fromLocationId: Maybe Text
+    toLocation:
+      toLocationId: Maybe Text
+    customerExtraFee:
+      customerExtraFee: Maybe Money
+      customerExtraFeeAmount: Maybe HighPrecMoney
+      currency: Maybe Currency
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
+
+
+  toTType:
+    fromLocationId: (Just $ Kernel.Types.Id.getId ((.id) fromLocation))|E
+    toLocationId: (Kernel.Types.Id.getId <$> (toLocation <&> (.id)))|E
+    distance: (Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> distance)|E
+    distanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance (distance <&> (.unit)) <$> distance)|E
+    distanceUnit: (distance <&> (.unit))|E
+    maxDistance: (Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> maxDistance)|E
+    maxDistanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance (distance <&> (.unit)) <$> distance)|E
+    merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
+    customerExtraFee: (customerExtraFee <&> (.amountInt))|E
+    customerExtraFeeAmount: (customerExtraFee <&> (.amount))|E
+    currency: (customerExtraFee <&> (.currency))|E
+    riderPreferredOption: (Just riderPreferredOption)|E
+    clientOsType: clientDevice <&> (.deviceType)|E
+    clientOsVersion: clientDevice <&> (.deviceVersion)|E
+    clientBundleVersion: Kernel.Utils.Version.versionToText <$> clientBundleVersion|E
+    clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
+    clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
+    backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
+
+  fromTType:
+    merchantOperatingCityId: Storage.Queries.Transformers.SearchRequest.backfillMOCId merchantId merchantOperatingCityId|EM
+    distance: (Kernel.Utils.Common.mkDistanceWithDefault distanceUnit distanceValue . Kernel.Types.Common.HighPrecMeters <$> distance)|E
+    maxDistance: (Kernel.Utils.Common.mkDistanceWithDefault distanceUnit maxDistanceValue . Kernel.Types.Common.HighPrecMeters <$> maxDistance)|E
+    riderPreferredOption: fromMaybe Domain.Types.SearchRequest.OneWay riderPreferredOption|E
+    customerExtraFee: Kernel.Utils.Common.mkPriceWithDefault customerExtraFeeAmount currency <$> customerExtraFee|E
+    fromLocation: Storage.Queries.Transformers.SearchRequest.getFromLocation id|EM
+    toLocation: Storage.Queries.Transformers.SearchRequest.getToLocation id|EM
+    clientBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)|EM
+    clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
+    clientConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)|EM
+    clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion|E
+    backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
+
+  excludedFields: [updatedAt]
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  constraints:
+    id: PrimaryKey
+    riderId: SecondaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

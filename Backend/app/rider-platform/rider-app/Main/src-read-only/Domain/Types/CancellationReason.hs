@@ -8,11 +8,8 @@ module Domain.Types.CancellationReason (module Domain.Types.CancellationReason, 
 import Data.Aeson
 import Domain.Types.Extra.CancellationReason as ReExport
 import qualified Domain.Types.Extra.CancellationReason
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
-import qualified Kernel.Types.Id
 import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
@@ -26,14 +23,12 @@ data CancellationReason = CancellationReason
     onSearch :: Kernel.Prelude.Bool,
     priority :: Kernel.Prelude.Int,
     reasonCode :: Domain.Types.Extra.CancellationReason.CancellationReasonCode,
-    updatedAt :: Kernel.Prelude.UTCTime,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
+    updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data CancellationStage = OnSearch | OnInit | OnConfirm | OnAssign deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+data CancellationStage = OnSearch | OnInit | OnConfirm | OnAssign deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''CancellationStage))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''CancellationStage)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''CancellationStage))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationStage)

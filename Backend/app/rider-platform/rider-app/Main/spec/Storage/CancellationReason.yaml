@@ -24,6 +24,10 @@ CancellationReason:
     createdAt: UTCTime
     updatedAt: UTCTime
 
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <CancellationStage>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CancellationStage>

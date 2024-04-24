@@ -4,7 +4,7 @@
 
 module Domain.Types.Rating where
 
-import Data.Aeson (eitherDecode)
+import Data.Aeson
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
 import Kernel.Prelude

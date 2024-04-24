@@ -1,6 +1,6 @@
 -- Provide valid MMI credentials via dashboard
-INSERT INTO atlas_app.merchant_service_config (merchant_id, service_name, config_json)
-SELECT m.id, 'Maps_MMI',
+INSERT INTO atlas_app.merchant_service_config (merchant_id,merchant_operating_city_id ,service_name, config_json)
+SELECT m.merchant_id, m.id, 'Maps_MMI',
   json_build_object(
      'mmiAuthUrl','https://outpost.mappls.com/api/security/oauth/token'
     , 'mmiAuthId','mmi-auth-id'
@@ -9,4 +9,4 @@ SELECT m.id, 'Maps_MMI',
     , 'mmiKeyUrl','https://apis.mapmyindia.com/'
     , 'mmiNonKeyUrl','https://atlas.mapmyindia.com/'
   )
-FROM atlas_app.merchant m;
+FROM atlas_app.merchant_operating_city m;

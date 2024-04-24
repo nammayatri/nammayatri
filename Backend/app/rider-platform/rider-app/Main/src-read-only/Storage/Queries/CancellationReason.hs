@@ -11,7 +11,6 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as Beam
@@ -39,8 +38,6 @@ updateByPrimaryKey (Domain.Types.CancellationReason.CancellationReason {..}) = d
       Se.Set Beam.onInit onInit,
       Se.Set Beam.onSearch onSearch,
       Se.Set Beam.priority priority,
-      Se.Set Beam.updatedAt (Just _now),
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
+      Se.Set Beam.updatedAt (Just _now)
     ]
     [Se.And [Se.Is Beam.reasonCode $ Se.Eq reasonCode]]

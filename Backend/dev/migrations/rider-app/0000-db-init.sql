@@ -1,10 +1,5 @@
 -- tables
 
-
-
-
-
-
 CREATE TABLE atlas_app.tag (
 id character(36) NOT NULL,
 created_by character(36) NOT NULL,
@@ -173,22 +168,6 @@ ALTER TABLE atlas_app.product_instance_backup OWNER TO atlas_app_user;
 
 
 
-
-
-
-
-
-CREATE TABLE atlas_app.search_request (
-id character(36) NOT NULL,
-start_time timestamp with time zone NOT NULL,
-valid_till timestamp with time zone NOT NULL,
-rider_id character varying(255) NOT NULL,
-from_location_id character varying(36),
-to_location_id character varying(36),
-distance double precision NOT NULL,
-created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-,CONSTRAINT  idx_16386_primary PRIMARY KEY (id)
-);
 ALTER TABLE atlas_app.search_request OWNER TO atlas_app_user;
 CREATE INDEX idx_16386_requestor ON atlas_app.search_request USING btree (rider_id);
 
@@ -201,56 +180,18 @@ CREATE INDEX idx_16434_state ON atlas_app.search_request_location USING btree (s
 
 
 
-
-
-CREATE TABLE atlas_app.ride_booking (
-id character(36) NOT NULL,
-request_id character(36) NOT NULL,
-quote_id character(36) NOT NULL,
-status character varying(255) NOT NULL,
-provider_id character varying(255) NOT NULL,
-provider_mobile_number character varying(255) NOT NULL,
-start_time timestamp with time zone NOT NULL,
-rider_id character(36) NOT NULL,
-from_location_id character(36) NOT NULL,
-to_location_id character(36) NOT NULL,
-estimated_fare double precision NOT NULL,
-discount double precision,
-estimated_total_fare numeric(30,2) NOT NULL,
-distance double precision NOT NULL,
-vehicle_variant character varying(60) NOT NULL,
-created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-bpp_ride_booking_id character(36),
-provider_name character varying(255) NOT NULL,
-provider_url character varying(255) NOT NULL
-,CONSTRAINT  ride_booking_pkey PRIMARY KEY (id)
-,CONSTRAINT  ride_booking_from_location_id_fkey FOREIGN KEY (from_location_id) REFERENCES atlas_app.search_request_location(id)
-,CONSTRAINT  ride_booking_quote_id_fkey FOREIGN KEY (quote_id) REFERENCES atlas_app.quote(id)
-,CONSTRAINT  ride_booking_request_id_fkey FOREIGN KEY (request_id) REFERENCES atlas_app.search_request(id)
-,CONSTRAINT  ride_booking_to_location_id_fkey FOREIGN KEY (to_location_id) REFERENCES atlas_app.search_request_location(id)
-);
-ALTER TABLE atlas_app.ride_booking OWNER TO atlas_app_user;
-
-
-
-
-
-
-
-
 CREATE TABLE atlas_app.ride_cancellation_reason (
 ride_booking_id character(36) NOT NULL,
 source character varying(255) NOT NULL,
 reason_code character varying(255),
 additional_info character varying(255)
 ,CONSTRAINT  ride_cancellation_reason_pkey PRIMARY KEY (ride_booking_id)
-,CONSTRAINT  ride_cancellation_reason_ride_booking_id_fkey FOREIGN KEY (ride_booking_id) REFERENCES atlas_app.ride_booking(id)
+,CONSTRAINT  ride_cancellation_reason_ride_booking_id_fkey FOREIGN KEY (ride_booking_id) REFERENCES atlas_app.booking(id)
 );
 ALTER TABLE atlas_app.ride_cancellation_reason OWNER TO atlas_app_user;
 
 -- necessary data
-INSERT INTO atlas_app.cancellation_reason
+INSERT INTO atlas_app.cancellation_reason (reason_code,enabled,on_assign,on_confirm,on_init,on_search,priority,description,created_at,updated_at)
 VALUES
     ('COULDNOT_CONNECT_WITH_DRIVER', true, true, true, true, true, 0, 'I could not connect to the driver.', now(), now()),
     ('HIGH_FARE', true, true, true, true, true, 0, 'My fare was too high.', now(), now()),

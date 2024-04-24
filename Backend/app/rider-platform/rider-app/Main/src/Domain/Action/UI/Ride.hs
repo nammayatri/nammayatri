@@ -30,10 +30,11 @@ import qualified Data.HashMap.Strict as HM
 import Data.List (sortBy)
 import Data.Ord
 import qualified Domain.Action.Beckn.OnTrack as OnTrack
+import Domain.Action.UI.Location (makeLocationAPIEntity)
 import qualified Domain.Action.UI.Person as UPerson
+import qualified Domain.Types.Booking as DB
 import Domain.Types.Booking.API (makeRideAPIEntity)
-import qualified Domain.Types.Booking.Type as DB
-import Domain.Types.Location (LocationAPIEntity, makeLocationAPIEntity)
+import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.LocationMapping as DLM

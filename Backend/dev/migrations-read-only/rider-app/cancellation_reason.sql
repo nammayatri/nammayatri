@@ -10,6 +10,4 @@ ALTER TABLE atlas_app.cancellation_reason ADD COLUMN on_search boolean NOT NULL 
 ALTER TABLE atlas_app.cancellation_reason ADD COLUMN priority smallint NOT NULL default 0;
 ALTER TABLE atlas_app.cancellation_reason ADD COLUMN reason_code character varying(255) NOT NULL;
 ALTER TABLE atlas_app.cancellation_reason ADD COLUMN updated_at timestamp with time zone  default CURRENT_TIMESTAMP;
-ALTER TABLE atlas_app.cancellation_reason ADD COLUMN merchant_id character varying(36) ;
-ALTER TABLE atlas_app.cancellation_reason ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_app.cancellation_reason ADD PRIMARY KEY ( reason_code);

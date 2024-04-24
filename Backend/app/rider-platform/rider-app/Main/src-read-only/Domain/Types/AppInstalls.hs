@@ -4,7 +4,7 @@
 
 module Domain.Types.AppInstalls where
 
-import Data.Aeson (eitherDecode)
+import Data.Aeson
 import qualified Domain.Types.Merchant
 import Kernel.Prelude
 import qualified Kernel.Types.Id

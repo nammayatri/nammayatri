@@ -38,7 +38,7 @@ updateByPrimaryKey (Domain.Types.AadhaarOtpVerify.AadhaarOtpVerify {..}) = do
       Se.Set Beam.requestMessage requestMessage,
       Se.Set Beam.statusCode statusCode,
       Se.Set Beam.transactionId transactionId,
-      Se.Set Beam.updatedAt (Kernel.Prelude.Just updatedAt)
+      Se.Set Beam.updatedAt (Just _now)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 

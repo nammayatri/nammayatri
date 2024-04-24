@@ -32,8 +32,8 @@ import Data.Coerce (coerce)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as Text
 import Domain.Types.Common
-import Domain.Types.Merchant.MerchantServiceUsageConfig
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import Domain.Types.MerchantServiceUsageConfig
 import qualified EulerHS.Language as L
 import qualified GHC.List as GL
 import qualified Kernel.Beam.Types as KBT
@@ -44,7 +44,7 @@ import qualified Kernel.Types.Cac as KTC
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Queries.Merchant.MerchantServiceUsageConfig as Queries
+import qualified Storage.Queries.MerchantServiceUsageConfig as Queries
 import qualified System.Environment as Se
 import System.Random
 

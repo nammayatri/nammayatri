@@ -3,7 +3,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   CancellationReasonCode: Domain.Types.CancellationReason
   CancellationStage: Domain.Types.CancellationReason
-  Booking:  Domain.Types.Booking.Type
+  Booking:  Domain.Types.Booking
   Ride: Domain.Types.Ride
   LatLong: Kernel.External.Maps
 

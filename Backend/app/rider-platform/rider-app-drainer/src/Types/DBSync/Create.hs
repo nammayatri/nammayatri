@@ -24,7 +24,7 @@ import qualified "rider-app" Storage.Beam.DriverOffer as DriverOffer
 import qualified "rider-app" Storage.Beam.Estimate as Estimate
 import qualified "rider-app" Storage.Beam.EstimateBreakup as EstimateBreakup
 import qualified "rider-app" Storage.Beam.Exophone as Exophone
-import qualified "rider-app" Storage.Beam.FarePolicy.FareBreakup as FareBreakup
+import qualified "rider-app" Storage.Beam.FareBreakup as FareBreakup
 import qualified "rider-app" Storage.Beam.FeedbackForm as FeedbackForm
 import qualified "rider-app" Storage.Beam.Geometry as Geometry
 import qualified "rider-app" Storage.Beam.HotSpotConfig as HotSpotConfig
@@ -32,18 +32,18 @@ import qualified "rider-app" Storage.Beam.Issue as Issue
 import "rider-app" Storage.Beam.IssueManagement ()
 import qualified "rider-app" Storage.Beam.Location as Location
 import qualified "rider-app" Storage.Beam.LocationMapping as LocationMapping
-import qualified "rider-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "rider-app" Storage.Beam.Merchant as Merchant
-import qualified "rider-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
-import qualified "rider-app" Storage.Beam.Merchant.MerchantPaymentMethod as MerchantPaymentMethod
-import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
-import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
 import qualified "rider-app" Storage.Beam.MerchantConfig as MerchantConfig
+import qualified "rider-app" Storage.Beam.MerchantMessage as MerchantMessage
+import qualified "rider-app" Storage.Beam.MerchantPaymentMethod as MerchantPaymentMethod
+import qualified "rider-app" Storage.Beam.MerchantServiceConfig as MerchantServiceConfig
+import qualified "rider-app" Storage.Beam.MerchantServiceUsageConfig as MerchantServiceUsageConfig
 import qualified "rider-app" Storage.Beam.OnSearchEvent as OnSearchEvent
 import qualified "rider-app" Storage.Beam.Payment ()
 import qualified "rider-app" Storage.Beam.Person as Person
 import qualified "rider-app" Storage.Beam.Person.PersonDefaultEmergencyNumber as PersonDefaultEmergencyNumber
 import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowStatus
+import qualified "rider-app" Storage.Beam.PlaceNameCache as PlaceNameCache
 import qualified "rider-app" Storage.Beam.Quote as Quote
 import qualified "rider-app" Storage.Beam.Rating as Rating
 import qualified "rider-app" Storage.Beam.RegistrationToken as RegistrationToken

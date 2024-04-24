@@ -7,7 +7,7 @@ where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.Merchant.MerchantServiceConfig
+import Domain.Types.MerchantServiceConfig
 import Domain.Types.PlaceBasedServiceConfig
 import Domain.Types.TicketPlace
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification

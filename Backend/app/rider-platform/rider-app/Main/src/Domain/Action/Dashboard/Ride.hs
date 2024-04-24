@@ -33,8 +33,8 @@ import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.Coerce (coerce)
 import qualified Data.List as DL
 import qualified Data.Text as T
+import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking as DTB
-import qualified Domain.Types.Booking.Type as DB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import Domain.Types.CancellationReason
 import Domain.Types.Location (Location (..))
