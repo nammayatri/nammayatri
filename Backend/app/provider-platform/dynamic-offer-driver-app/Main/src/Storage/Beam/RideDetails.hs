@@ -32,7 +32,9 @@ data RideDetailsT f = RideDetailsT
     vehicleVariant :: B.C f (Maybe SV.Variant),
     vehicleModel :: B.C f (Maybe Text),
     vehicleClass :: B.C f (Maybe Text),
-    fleetOwnerId :: B.C f (Maybe Text)
+    fleetOwnerId :: B.C f (Maybe Text),
+    defaultServiceTierName :: B.C f (Maybe Text),
+    createdAt :: B.C f (Maybe UTCTime)
   }
   deriving (Generic, B.Beamable)
 

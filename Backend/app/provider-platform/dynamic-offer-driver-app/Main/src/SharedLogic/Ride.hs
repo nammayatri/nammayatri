@@ -40,6 +40,7 @@ import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
@@ -114,7 +115,10 @@ buildRideDetails ::
   DVeh.Vehicle ->
   Flow SRD.RideDetails
 buildRideDetails ride driver vehicle = do
+  now <- getCurrentTime
   vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId
+  let defaultServiceTierName = (.name) <$> find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
   return $
     SRD.RideDetails
       { id = ride.id,
@@ -126,7 +130,9 @@ buildRideDetails ride driver vehicle = do
         vehicleVariant = Just vehicle.variant,
         vehicleModel = Just vehicle.model,
         vehicleClass = Nothing,
-        fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId)
+        fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId),
+        defaultServiceTierName = defaultServiceTierName,
+        createdAt = Just now
       }
 
 buildRide :: DPerson.Person -> DBooking.Booking -> Maybe (Id DGetHomeRequest.DriverGoHomeRequest) -> Text -> Maybe Bool -> Maybe (Id DC.Client) -> Flow DRide.Ride

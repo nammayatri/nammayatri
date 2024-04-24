@@ -46,7 +46,9 @@ instance FromTType' BeamRD.RideDetails RideDetails where
             vehicleVariant = vehicleVariant,
             vehicleModel = vehicleModel,
             vehicleClass = vehicleClass,
-            fleetOwnerId = fleetOwnerId
+            fleetOwnerId = fleetOwnerId,
+            defaultServiceTierName = defaultServiceTierName,
+            createdAt = createdAt
           }
 
 instance ToTType' BeamRD.RideDetails RideDetails where
@@ -62,5 +64,7 @@ instance ToTType' BeamRD.RideDetails RideDetails where
         BeamRD.vehicleVariant = vehicleVariant,
         BeamRD.vehicleModel = vehicleModel,
         BeamRD.vehicleClass = vehicleClass,
-        BeamRD.fleetOwnerId = fleetOwnerId
+        BeamRD.fleetOwnerId = fleetOwnerId,
+        BeamRD.defaultServiceTierName = defaultServiceTierName,
+        BeamRD.createdAt = createdAt
       }
