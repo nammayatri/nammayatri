@@ -1098,3 +1098,4 @@ getFR stringKey =
         WAITING_CHARGE_LIMIT timeLimit -> "Frais d'attente après " <> timeLimit
         TIME_TAKEN -> "Temps pris"
         TRIP_DISTANCE -> "Distance du trajet"
+        UNABLE_TO_CANCEL_RIDE -> "Impossible d'annuler le trajet"

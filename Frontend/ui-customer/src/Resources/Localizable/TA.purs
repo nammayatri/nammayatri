@@ -1112,3 +1112,4 @@ getTA stringKey =
     WAITING_CHARGE_LIMIT timeLimit -> "காத்திருப்பு கட்டணம் ("<> timeLimit <>" நிமிடங்கள் பின்பு)"
     TIME_TAKEN -> "மொத்த நேரம்"
     TRIP_DISTANCE -> "பயண தூரம்"
+    UNABLE_TO_CANCEL_RIDE -> "இந்த சவாரியை ரத்து செய்ய முடியவில்லை"

@@ -861,7 +861,9 @@ rateCardConfig state =
     bangaloreCode = HU.getCityCodeFromCity Bangalore
     fareInfoText =  mkFareInfoText state.props.city state.data.rateCard.vehicleVariant
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-    nightShiftMultiplier = if city == Delhi then "1.25" else "1.5"
+    nightShiftMultiplier = if city == Delhi then "1.25" else 
+                              if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then "1.5"
+                              else "1.1"
     nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
     nightChargeTill = "5 AM"
     dayChargeFrom = "5 AM"

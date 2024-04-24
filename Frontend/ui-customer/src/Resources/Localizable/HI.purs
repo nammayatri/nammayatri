@@ -1095,3 +1095,4 @@ getHI stringKey =
         WAITING_CHARGE_LIMIT timeLimit -> "इंतजार शुल्क ("<> timeLimit <>" मिनट के बाद)"
         TIME_TAKEN -> "सवारी की अवधि"
         TRIP_DISTANCE -> "यात्रा की दूरी"
+        UNABLE_TO_CANCEL_RIDE -> "आप इस सवारी को रद्द नहीं कर सकते"

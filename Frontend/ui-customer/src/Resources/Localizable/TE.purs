@@ -1110,3 +1110,4 @@ getTE stringKey =
     WAITING_CHARGE_LIMIT timeLimit -> "వైటింగ్ ఛార్జీలు ("<> timeLimit <>" నిమిషాల తర్వాత)"
     TIME_TAKEN -> "మొత్తం సమయం"
     TRIP_DISTANCE -> "ప్రయాణ దూరం"
+    UNABLE_TO_CANCEL_RIDE -> "రైడ్ రద్దు చేయలేము"

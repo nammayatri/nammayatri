@@ -872,21 +872,28 @@ homeScreenFlow = do
             lift $ lift $ triggerRideStatusEvent "DRIVER_ASSIGNMENT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
             homeScreenFlow
     CANCEL_RIDE_REQUEST state -> do
-      void $ pure $ currentPosition ""
-      void $ updateLocalStage HomeScreen
-      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_rider_cancellation" $ [ {key : "Reason code", value : unsafeToForeign state.props.cancelReasonCode},
-                                                                                                      {key : "Additional info", value : unsafeToForeign state.props.cancelDescription},
-                                                                                                      {key : "Pickup", value : unsafeToForeign state.data.driverInfoCardState.source},
-                                                                                                      {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
-                                                                                                      {key : "Night Ride", value : unsafeToForeign state.data.rateCard.nightCharges}]
-      void $ Remote.cancelRideBT (Remote.makeCancelRequest state) (state.props.bookingId)
-      lift $ lift $ triggerRideStatusEvent "CANCELLED_PRODUCT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
-      void $ pure $ clearTimerWithId <$> state.props.waitingTimeTimerIds
-      liftFlowBT $ logEvent logField_ "ny_user_ride_cancelled_by_user"
-      liftFlowBT $ logEvent logField_ $ "ny_user_cancellation_reason: " <> state.props.cancelReasonCode
-      removeChatService ""
-      updateUserInfoToState state
-      homeScreenFlow
+      response <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest state) (state.props.bookingId)
+      case response of
+        Right _ -> do
+          void $ pure $ currentPosition ""
+          void $ updateLocalStage HomeScreen
+          liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_rider_cancellation" $ [ {key : "Reason code", value : unsafeToForeign state.props.cancelReasonCode},
+                                                                                                          {key : "Additional info", value : unsafeToForeign state.props.cancelDescription},
+                                                                                                          {key : "Pickup", value : unsafeToForeign state.data.driverInfoCardState.source},
+                                                                                                          {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
+                                                                                                          {key : "Night Ride", value : unsafeToForeign state.data.rateCard.nightCharges},
+                                                                                                          {key : "BookingId", value : unsafeToForeign state.props.bookingId}]
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{autoScroll = false, isCancelRide = false,currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = NoView }})
+          lift $ lift $ triggerRideStatusEvent "CANCELLED_PRODUCT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
+          void $ pure $ clearTimerWithId <$> state.props.waitingTimeTimerIds
+          liftFlowBT $ logEvent logField_ "ny_user_ride_cancelled_by_user"
+          liftFlowBT $ logEvent logField_ $ "ny_user_cancellation_reason: " <> state.props.cancelReasonCode
+          removeChatService ""
+          updateUserInfoToState state
+          homeScreenFlow
+        Left err -> do
+          void $ pure $ toast $ getString STR.UNABLE_TO_CANCEL_RIDE
+          homeScreenFlow
     FCM_NOTIFICATION notification state-> do
         let rideID = state.data.driverInfoCardState.rideId
             srcLat = state.data.driverInfoCardState.sourceLat
@@ -2558,7 +2565,7 @@ fetchAndModifyLocationLists savedLocationResp = do
                 (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors)
         
         updatedLocationList = updateLocListWithDistance updateFavIcon state.props.sourceLat state.props.sourceLong true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
-    
+        correctedList = map (\item -> transformTrip item) sortedTripList
     updateSavedLocations savedLocationResp 
     modifyScreenState $ GlobalPropsType (\globalProps -> globalProps{cachedSearches = updatedLocationList , recentSearches = recents, savedLocations = savedLocationResp})
     modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{data{locationList = updatedLocationList}})
@@ -2572,7 +2579,7 @@ fetchAndModifyLocationLists savedLocationResp = do
               , locationList = updatedLocationList
               , destinationSuggestions = updatedLocationList
               , suggestionsData{suggestionsMap = suggestionsMap}
-              , tripSuggestions = removeDuplicateTrips sortedTripList suggestionsConfig.destinationGeohashPrecision
+              , tripSuggestions = removeDuplicateTrips correctedList suggestionsConfig.destinationGeohashPrecision
               }
             })
     where

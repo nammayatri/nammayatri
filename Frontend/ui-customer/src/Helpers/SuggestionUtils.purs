@@ -347,6 +347,9 @@ getLocationFromTrip locationType trip sourceLat sourceLong =
     , locationScore : trip.locationScore
     }
 
+transformTrip :: Trip -> Trip 
+transformTrip trip = trip { serviceTierNameV2 = correctServiceTierName trip.serviceTierNameV2 }
+
 correctServiceTierName :: Maybe String -> Maybe String
 correctServiceTierName serviceTierName = 
   case serviceTierName of
