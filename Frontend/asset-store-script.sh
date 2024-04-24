@@ -19,7 +19,6 @@ add_file_for_commit() { #dir , sub_dir, asset_type, asset_name, source_path
 # Function to create a Pull Request
 create_pull_request() {
     local target_repo_name="asset-store"
-    echo "target_repo_name"
     if [ -z "$branch_name" ]; then
         echo "Error: Branch name not provided"
         return 1
@@ -78,7 +77,8 @@ create_pull_request() {
                 lower_case_result=${result,,}
                 lower_case_directory=${dir,,}
                 add_file_for_commit "$lower_case_result" "$lower_case_directory" "$asset_type" "$asset_name" "$source_path"
-    # Check if the source path contains any of the following keywords for directory
+                
+            # Check if the source path contains any of the following keywords for directory
             else 
                 if echo ${dir} | grep -q "jatriSaathi"; then
                     final_dir="jatrisaathi"
@@ -91,9 +91,7 @@ create_pull_request() {
                 else 
                     final_dir=""
                 fi
-                echo "dfsdjfhkjh $sub_dir directoty $dir"
                 if [[ "${final_dir}" == "" ]]; then
-                    echo "dfsdjfhkjh $sub_dir directoty $dir"
                     if [[ ${sub_dir} == "main" ]]; then 
                         add_file_for_commit "common" "common" "$asset_type" "$asset_name" "$source_path"
                     elif [[ ${dir} == "common" ]]; then
@@ -114,9 +112,7 @@ create_pull_request() {
     git add .
     git commit -m "[GITHUB-ACTION]Added new asset from NammaYatri/NammaYatri branch : $branch_name"
     git push --set-upstream origin "$branch_name"
-    git push #origin "$branch_name" || { echo "Error: Failed to push changes to branch $branch_name"; return 1; }
-    pull_request_url="${target_repo}/compare/main...${branch_name}"
-    echo "Pull request URL: $pull_request_url"
+    git push 
     curl -X POST -H "Authorization: token $PAT_TOKEN" \
         https://api.github.com/repos/MercyQueen/asset-store/dispatches \
         -d '{"event_type": "trigger_workflow",  "client_payload": {"branch": "'$branch_name'" , "ref" : "main"}}'
@@ -127,6 +123,4 @@ create_pull_request() {
 
 }
 
-
-# Loop through target repositories and create pull requests
 create_pull_request 

@@ -26,9 +26,7 @@ jobs:
 
       - name: Clone private repo 
         run: |
-          git config --global user.email "mercyqueen71@gmail.com"
-          git config --global user.name "MercyQueen"
-          git clone https://MercyQueen:$PAT_TOKEN@github.com/MercyQueen/asset-store.git asset-store
+          git clone https://github.com/MercyQueen/MercyQueen/asset-store asset-store
         env:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
 
@@ -38,5 +36,4 @@ jobs:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }} 
         run: |
           chmod +x asset-store-script.sh 
-          echo $ALL_CHANGED_FILESiuhuh
           ./asset-store-script.sh ${{ github.event.pull_request.head.ref }} ${{ secrets.GITHUB_TOKEN }}
