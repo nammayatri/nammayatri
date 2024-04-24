@@ -15,7 +15,7 @@
 
 module Domain.Action.UI.Plan where
 
-import Data.List (intersect)
+import Data.List (intersect, nubBy)
 import qualified Data.List as DL
 import qualified Data.Map as M
 import Data.Maybe (listToMaybe)
@@ -661,7 +661,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
 
   let currentDues = sum $ map (.driverFeeAmount) dues
   let autopayDues = sum $ map (.driverFeeAmount) $ filter (\due -> due.feeType == DF.RECURRING_EXECUTION_INVOICE) dues
-  let dueBoothCharges = roundToHalf $ sum $ map (.totalSpecialZoneCharges) dues
+  let dueBoothCharges = roundToHalf $ sum $ map (.specialZoneAmount) (nubBy (\x y -> (x.startTime == y.startTime) && (x.endTime == y.endTime)) dueDriverFees)
 
   return
     PlanEntity
