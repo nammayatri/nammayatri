@@ -26,7 +26,7 @@ jobs:
 
       - name: Clone private repo 
         run: |
-          git clone https://github.com/MercyQueen/MercyQueen/asset-store asset-store
+          git clone https://github.com/MercyQueen/asset-store asset-store
         env:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
 
