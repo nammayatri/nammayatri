@@ -195,6 +195,7 @@ import Foreign.Object (lookup)
 import Screens.RideSelectionScreen.Transformer (myRideListTransformer)
 import Services.FlowCache as FlowCache
 import Data.HashMap as DHM
+import Helpers.API as HelpersAPI
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -1061,8 +1062,8 @@ homeScreenFlow = do
       enterMobileNumberScreenFlow -- Removed choose langauge screen
     SUBMIT_RATING state -> do
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_ride_give_feedback" $ [{key : "Rating", value : unsafeToForeign state.data.ratingViewState.selectedRating}]
-      void $ Remote.bookingFeedbackBT (Remote.makeRideFeedBackReq (state.data.rideRatingState.rideId) (state.data.rideRatingState.feedbackList))
-      void $ Remote.rideFeedbackBT (getfeedbackReq state)
+      void $ lift $ lift $ fork $ HelpersAPI.callApi $ Remote.makeRideFeedBackReq state.data.rideRatingState.rideId state.data.rideRatingState.feedbackList
+      void $ lift $ lift $ fork $ HelpersAPI.callApi $ getfeedbackReq state
       void $ updateLocalStage HomeScreen
       let finalAmount = if state.data.finalAmount == 0 then state.data.rideRatingState.finalAmount else state.data.finalAmount
       let bookingId = if state.props.bookingId == "" then state.data.rideRatingState.bookingId else state.props.bookingId

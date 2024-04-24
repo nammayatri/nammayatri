@@ -453,13 +453,6 @@ callDriverBT rideId = do
 
 ------------------------------------------------------------------------ Feedback Function --------------------------------------------------------------------------------------------
 
-rideFeedbackBT :: FeedbackReq -> FlowBT String FeedbackRes
-rideFeedbackBT payload = do
-    headers <- getHeaders' "" false
-    withAPIResultBT (EP.feedback "") identity errorHandler (lift $ lift $ callAPI headers payload)
-    where
-      errorHandler errorPayload = do
-            BackT $ pure GoBack
 
 makeFeedBackReq :: Int -> String -> String -> Maybe Boolean -> FeedbackReq
 makeFeedBackReq rating rideId feedback wasOfferedAssistance = FeedbackReq
@@ -927,13 +920,6 @@ makeSosStatus sosStatus comment= SosStatus {
 
 ------------------------------------------------------------------------ Ride Feedback ------------------------------------------------------------------------------------
 
-bookingFeedbackBT :: RideFeedbackReq -> FlowBT String RideFeedbackRes
-bookingFeedbackBT payload = do
-    headers <- getHeaders' "" false
-    withAPIResultBT (EP.bookingFeedback "") identity errorHandler (lift $ lift $ callAPI headers payload)
-    where
-      errorHandler errorPayload = do
-            BackT $ pure GoBack
 
 makeRideFeedBackReq :: String -> Array FeedbackAnswer -> RideFeedbackReq
 makeRideFeedBackReq id feedbackList = RideFeedbackReq
