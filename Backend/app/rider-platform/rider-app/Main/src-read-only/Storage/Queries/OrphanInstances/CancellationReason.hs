@@ -9,7 +9,6 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.CancellationReason as Beam
 import Storage.Queries.Transformers.CancellationReason
@@ -30,9 +29,7 @@ instance FromTType' Beam.CancellationReason Domain.Types.CancellationReason.Canc
             onSearch = onSearch,
             priority = priority,
             reasonCode = reasonCode,
-            updatedAt = updatedAt',
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
+            updatedAt = updatedAt'
           }
 
 instance ToTType' Beam.CancellationReason Domain.Types.CancellationReason.CancellationReason where
@@ -47,7 +44,5 @@ instance ToTType' Beam.CancellationReason Domain.Types.CancellationReason.Cancel
         Beam.onSearch = onSearch,
         Beam.priority = priority,
         Beam.reasonCode = reasonCode,
-        Beam.updatedAt = Kernel.Prelude.Just updatedAt,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
+        Beam.updatedAt = Kernel.Prelude.Just updatedAt
       }

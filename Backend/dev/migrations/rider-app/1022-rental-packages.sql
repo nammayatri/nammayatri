@@ -1,5 +1,5 @@
 CREATE TABLE atlas_app.quote_bak_1022 AS TABLE atlas_app.quote;
-CREATE TABLE atlas_app.ride_booking_bak_1022 AS TABLE atlas_app.ride_booking;
+--CREATE TABLE atlas_app.ride_booking_bak_1022 AS TABLE atlas_app.ride_booking;
 CREATE TABLE atlas_app.search_request_bak_1022 AS TABLE atlas_app.search_request;
 
 CREATE TABLE atlas_app.rental_quote (
@@ -16,8 +16,5 @@ CREATE TABLE atlas_app.quote_terms (
 
 ALTER TABLE atlas_app.quote ALTER COLUMN distance_to_nearest_driver DROP NOT NULL;
 
-ALTER TABLE atlas_app.ride_booking ALTER COLUMN distance DROP NOT NULL;
-ALTER TABLE atlas_app.ride_booking ALTER COLUMN to_location_id DROP NOT NULL;
-
-ALTER TABLE atlas_app.search_request ALTER COLUMN distance DROP NOT NULL;
-ALTER TABLE atlas_app.search_request ALTER COLUMN to_location_id DROP NOT NULL;
+-- ALTER TABLE atlas_app.ride_booking ALTER COLUMN distance DROP NOT NULL;
+-- ALTER TABLE atlas_app.ride_booking ALTER COLUMN to_location_id DROP NOT NULL;

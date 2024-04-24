@@ -1,1 +1,0 @@
-ALTER TABLE atlas_app.merchant ADD COLUMN cipher_text text NOT NULL DEFAULT 'TXlTZWNyZXRLZXkxMjM0NQo=';

@@ -4,7 +4,7 @@
 
 module Domain.Types.SpecialOccasion where
 
-import Data.Aeson (eitherDecode)
+import Data.Aeson
 import qualified Data.Time.Calendar
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant

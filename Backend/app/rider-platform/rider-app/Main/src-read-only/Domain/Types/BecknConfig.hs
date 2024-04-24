@@ -4,7 +4,7 @@
 
 module Domain.Types.BecknConfig where
 
-import Data.Aeson (eitherDecode)
+import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude

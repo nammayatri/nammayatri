@@ -4,7 +4,7 @@
 
 module Domain.Types.ValueAddNP where
 
-import Data.Aeson (eitherDecode)
+import Data.Aeson
 import Kernel.Prelude
 import qualified Tools.Beam.UtilsTH
 

@@ -5,8 +5,7 @@
 module Domain.Types.Ride where
 
 import Data.Aeson
-import Data.Aeson (eitherDecode)
-import qualified Domain.Types.Booking.Type
+import qualified Domain.Types.Booking
 import qualified Domain.Types.Client
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
@@ -24,7 +23,7 @@ data Ride = Ride
   { allowedEditLocationAttempts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
-    bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Type.Booking,
+    bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     bppRideId :: Kernel.Types.Id.Id Domain.Types.Ride.BPPRide,
     chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -106,6 +105,6 @@ data RideAPIEntity = RideAPIEntity
 
 data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
-$(mkHttpInstancesForEnum (''RideStatus))
+$(mkHttpInstancesForEnum ''RideStatus)

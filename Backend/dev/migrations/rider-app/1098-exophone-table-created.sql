@@ -11,4 +11,10 @@ INSERT INTO atlas_app.exophone (id, merchant_id, merchant_operating_city_id, pri
 
 ALTER TABLE atlas_app.merchant DROP COLUMN exo_phones;
 
-ALTER TABLE atlas_app.booking RENAME COLUMN provider_exo_phone TO primary_exophone;
+
+-- updating after dsl generated query
+ALTER TABLE atlas_app.booking ALTER COLUMN primary_exophone DROP NOT NULL;
+UPDATE atlas_app.booking
+    SET primary_exophone = 'UNKNOWN';
+ALTER TABLE atlas_app.booking ALTER COLUMN primary_exophone SET NOT NULL;
+

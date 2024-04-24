@@ -4,7 +4,7 @@
 module Storage.Queries.IssueExtra where
 
 -- Extra code goes here --
-import Domain.Types.Booking.Type as Booking
+import Domain.Types.Booking as Booking
 import Domain.Types.Issue as Issue
 import qualified Domain.Types.Issue
 import Domain.Types.Merchant

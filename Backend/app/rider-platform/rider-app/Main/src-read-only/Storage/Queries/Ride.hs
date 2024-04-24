@@ -4,7 +4,7 @@
 
 module Storage.Queries.Ride (module Storage.Queries.Ride, module ReExport) where
 
-import qualified Domain.Types.Booking.Type
+import qualified Domain.Types.Booking
 import qualified Domain.Types.Ride
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -22,7 +22,7 @@ findByBPPRideId (Kernel.Types.Id.Id bppRideId) = do findOneWithKV [Se.Is Beam.bp
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe Domain.Types.Ride.Ride))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByRBId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Type.Booking -> m (Maybe Domain.Types.Ride.Ride))
+findByRBId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe Domain.Types.Ride.Ride))
 findByRBId (Kernel.Types.Id.Id bookingId) = do findOneWithKV [Se.Is Beam.bookingId $ Se.Eq bookingId]
 
 findRideByRideShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId Domain.Types.Ride.Ride -> m (Maybe Domain.Types.Ride.Ride))

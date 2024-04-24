@@ -1,1 +1,0 @@
-ALTER TABLE atlas_app.booking ADD COLUMN service_tier_name text;

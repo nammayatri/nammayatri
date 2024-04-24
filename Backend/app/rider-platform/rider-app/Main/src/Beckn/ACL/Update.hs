@@ -35,7 +35,7 @@ import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context

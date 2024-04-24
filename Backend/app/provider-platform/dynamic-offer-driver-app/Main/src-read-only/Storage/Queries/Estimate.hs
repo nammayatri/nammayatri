@@ -45,7 +45,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
       Se.Set Beam.specialLocationTag specialLocationTag,
       Se.Set Beam.tripCategory (Kernel.Prelude.Just tripCategory),
-      Se.Set Beam.updatedAt (Kernel.Prelude.Just updatedAt),
+      Se.Set Beam.updatedAt (Just _now),
       Se.Set Beam.vehicleVariant vehicleServiceTier,
       Se.Set Beam.vehicleServiceTierName vehicleServiceTierName
     ]

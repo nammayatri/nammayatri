@@ -4,7 +4,7 @@
 
 module Storage.Queries.BookingCancellationReason (module Storage.Queries.BookingCancellationReason, module ReExport) where
 
-import qualified Domain.Types.Booking.Type
+import qualified Domain.Types.Booking
 import qualified Domain.Types.BookingCancellationReason
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -25,12 +25,10 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BookingCancellationReason.BookingCancellationReason] -> m ())
 createMany = traverse_ create
 
-findByRideBookingId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Booking.Type.Booking -> m (Maybe Domain.Types.BookingCancellationReason.BookingCancellationReason))
+findByRideBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe Domain.Types.BookingCancellationReason.BookingCancellationReason))
 findByRideBookingId (Kernel.Types.Id.Id bookingId) = do findOneWithKV [Se.Is Beam.bookingId $ Se.Eq bookingId]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Type.Booking -> m (Maybe Domain.Types.BookingCancellationReason.BookingCancellationReason))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe Domain.Types.BookingCancellationReason.BookingCancellationReason))
 findByPrimaryKey (Kernel.Types.Id.Id bookingId) = do findOneWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq bookingId]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingCancellationReason.BookingCancellationReason -> m ())
@@ -49,6 +47,6 @@ updateByPrimaryKey (Domain.Types.BookingCancellationReason.BookingCancellationRe
       Se.Set Beam.reasonStage reasonStage,
       Se.Set Beam.rideId (Kernel.Types.Id.getId <$> rideId),
       Se.Set Beam.source source,
-      Se.Set Beam.updatedAt (Kernel.Prelude.Just updatedAt)
+      Se.Set Beam.updatedAt (Just _now)
     ]
     [Se.And [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)]]

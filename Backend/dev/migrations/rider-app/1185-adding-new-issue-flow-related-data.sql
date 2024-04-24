@@ -74,10 +74,6 @@ CREATE TABLE atlas_app.issue_config (
   on_kapt_mark_issue_res_msgs text[]
 );
 
---MEDIAFILE CONFIGS TO MERCHANT TABLE
-ALTER TABLE atlas_app.merchant ADD COLUMN media_file_url_pattern text DEFAULT 'http://localhost:8013/v2/<DOMAIN>/media?filePath=<FILE_PATH>' NOT NULL;
-ALTER TABLE atlas_app.merchant ADD COLUMN media_file_size_upper_limit int DEFAULT 10000000 NOT NULL;
-
 --ISSUE CONFIGS
 INSERT INTO atlas_app.issue_config VALUES ('h56bjh3i-4n5b-34ut-bg8b3k3ggkq8', 2, ARRAY['qradsvna-c76f-42f2-8209-68fb00b875ef'],ARRAY['v31ghv31-1234-234f-fb2ds-34v2dfstf1j'], ARRAY['v31ghv31-1234-234f-fb2ds-34v2dfstf1j'], ARRAY['12m3n3ql-ch17-12cb-34hu-1h23ewdf112j', '123md312-ch17-u3tj-123d-febf223b12j3']);
 

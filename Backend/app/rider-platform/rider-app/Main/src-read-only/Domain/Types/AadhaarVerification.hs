@@ -4,7 +4,7 @@
 
 module Domain.Types.AadhaarVerification where
 
-import Data.Aeson (eitherDecode)
+import Data.Aeson
 import qualified Domain.Types.Person
 import qualified Kernel.External.Encryption
 import Kernel.Prelude

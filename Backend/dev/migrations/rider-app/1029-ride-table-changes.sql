@@ -1,5 +1,5 @@
 
-ALTER TABLE atlas_app.ride ADD CONSTRAINT ride_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES atlas_app.ride_booking(id);
+-- ALTER TABLE atlas_app.ride ADD CONSTRAINT ride_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES atlas_app.ride_booking(id);
 
 ALTER TABLE atlas_app.ride ADD FOREIGN KEY (merchant_id) REFERENCES atlas_app.merchant(id);
 

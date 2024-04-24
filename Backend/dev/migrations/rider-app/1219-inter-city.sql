@@ -43,8 +43,6 @@ UPDATE atlas_app.merchant_operating_city
 SET state = 'Haryana'
 WHERE city = 'Gurugram';
 
-ALTER TABLE atlas_app.merchant ADD COLUMN state text;
-
 -- Update state based on city
 UPDATE atlas_app.merchant
 SET state = 'Karnataka'

@@ -31,7 +31,7 @@ module SharedLogic.MessageBuilder
 where
 
 import qualified Data.Text as T
-import qualified Domain.Types.Merchant.MerchantMessage as DMM
+import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Types.Id

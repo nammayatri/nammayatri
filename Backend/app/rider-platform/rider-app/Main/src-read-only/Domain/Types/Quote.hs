@@ -4,7 +4,7 @@
 
 module Domain.Types.Quote where
 
-import Data.Aeson (eitherDecode)
+import Data.Aeson
 import qualified Domain.Action.UI.DriverOffer
 import qualified Domain.Action.UI.SpecialZoneQuote
 import qualified Domain.Types.DriverOffer
@@ -48,7 +48,7 @@ data Quote = Quote
     validTill :: Kernel.Prelude.UTCTime,
     vehicleServiceTierType :: Domain.Types.VehicleServiceTier.VehicleServiceTierType
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
 data OneWayQuoteAPIDetails = OneWayQuoteAPIDetails {distanceToNearestDriver :: Kernel.Types.Common.HighPrecMeters, distanceToNearestDriverWithUnit :: Kernel.Types.Common.Distance}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

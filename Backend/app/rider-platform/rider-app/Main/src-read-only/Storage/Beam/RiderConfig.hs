@@ -31,7 +31,7 @@ data RiderConfigT f = RiderConfigT
     timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: B.C f Kernel.Prelude.Text,
     videoFileSizeUpperLimit :: B.C f Kernel.Prelude.Int,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
