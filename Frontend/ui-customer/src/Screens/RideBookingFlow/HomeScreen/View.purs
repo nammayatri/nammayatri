@@ -65,7 +65,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
@@ -173,8 +173,8 @@ screen initialState =
                   pure unit
               FindingEstimate -> do
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                _ <- launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState
-                pure unit
+                estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
+                when estimatesPolling.shouldPush $ void $ launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState estimatesPolling.id
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
                   void $ pure $ setValueToLocalStore FINDING_QUOTES_POLLING "true"
@@ -257,7 +257,8 @@ screen initialState =
                 void $ storeCallBackLocateOnMap push UpdatePickupLocation
                 void $ push $ GoToConfirmingLocationStage
               TryAgain -> do
-                _ <- launchAff $ flowRunner defaultGlobalState $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState
+                estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
+                when estimatesPolling.shouldPush $ void $ launchAff $ flowRunner defaultGlobalState $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState estimatesPolling.id
                 pure unit
               FindEstimateAndSearch -> do
                 push $ SearchForSelectedLocation
@@ -2585,9 +2586,11 @@ lottieLoaderView state push =
     , width $ V state.data.config.searchLocationConfig.lottieWidth
     ]
 
-getEstimate :: forall action. (GetQuotesRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
-getEstimate action flowStatusAction count duration push state = do
-  if (isLocalStageOn FindingEstimate) || (isLocalStageOn TryAgain) then
+getEstimate :: forall action. (GetQuotesRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState  -> Int -> Flow GlobalState Unit
+getEstimate action flowStatusAction count duration push state id = do
+  noEstimatePolling <- liftFlow $ runEffectFn1 getValueFromIdMap "EstimatePolling"
+  if ((isLocalStageOn FindingEstimate) || (isLocalStageOn TryAgain))  && noEstimatePolling.id == id then do
+    let _ = runFn2 updatePushInIdMap "EstimatePolling" false
     if (count > 0) then do
       resp <- getQuotes (state.props.searchId)
       _ <- pure $ printLog "caseId" (state.props.searchId)
@@ -2605,7 +2608,7 @@ getEstimate action flowStatusAction count duration push state = do
               doAff do liftEffect $ push $ action response
             else do
               void $ delay $ Milliseconds duration
-              getEstimate action flowStatusAction (count - 1) duration push state
+              getEstimate action flowStatusAction (count - 1) duration push state id
         Left err -> do
           let errResp = err.response
               codeMessage = decodeError errResp.errorMessage "errorMessage"
@@ -2620,7 +2623,7 @@ getEstimate action flowStatusAction count duration push state = do
               _ <- pure $ updateLocalStage SearchLocationModel
               doAff do liftEffect $ push $ action response
             else do
-              getEstimate action flowStatusAction (count - 1) duration push state
+              getEstimate action flowStatusAction (count - 1) duration push state id
     else
       pure unit
   else
@@ -3251,7 +3254,8 @@ footerView push state =
       contentBounds = (runFn1 getLayoutBounds (getNewIDWithTag "homescreenContent")) 
       contentHeight = contentBounds.height
       dynamicMargin =  screenHeight unit - getDefaultPixelSize (headerBounds.height + contentHeight ) 
-      marginTop = if state.props.suggestionsListExpanded || (os /= "IOS" && not state.props.suggestionsListExpanded && length state.data.tripSuggestions >= 3)
+      suggestions = if null state.data.tripSuggestions then length state.data.destinationSuggestions else length state.data.tripSuggestions
+      marginTop = if state.props.suggestionsListExpanded || (os /= "IOS" && not state.props.suggestionsListExpanded && suggestions >= 3)
                       then getDefaultPixelSize 150 
                   else if dynamicMargin > getDefaultPixelSize 150 
                       then dynamicMargin 

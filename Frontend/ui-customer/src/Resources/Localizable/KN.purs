@@ -1096,3 +1096,4 @@ getKN stringKey =
         WAITING_CHARGE_LIMIT timeLimit -> "ಕಾಯಿದಾರಿ ಶುಲ್ಕಗಳು ("<> timeLimit <>" ನಿಮಿಷಗಳ ನಂತರ)"
         TIME_TAKEN -> "ಒಟ್ಟು ಸಮಯ"
         TRIP_DISTANCE -> "ಪ್ರಯಾಣ ದೂರವು"
+        UNABLE_TO_CANCEL_RIDE -> "ಈ ಸವಾರಿಯನ್ನು ರದ್ದುಗೊಳಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ"

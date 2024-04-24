@@ -1097,3 +1097,4 @@ getML stringKey =
         WAITING_CHARGE_LIMIT timeLimit -> "കാത്തിരിക്കൽ ചാർജുകൾ ("<> timeLimit <>" മിനിറ്റ് ശേഷം)"
         TIME_TAKEN -> "മൊത്തം സമയം"
         TRIP_DISTANCE -> "യാത്ര ദൂരം"
+        UNABLE_TO_CANCEL_RIDE -> "റൈഡ് റദ്ദാക്കാനായി കഴിയില്ല"

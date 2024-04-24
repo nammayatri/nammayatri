@@ -433,6 +433,13 @@ cancelRideBT payload bookingId = do
       errorHandler errorPayload = do
             BackT $ pure GoBack
 
+cancelRide :: CancelReq -> String -> Flow GlobalState (Either ErrorResponse CancelRes)
+cancelRide payload bookingId = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.cancelRide bookingId) unwrapResponse $ callAPI headers (CancelRequest payload bookingId)
+    where
+        unwrapResponse (x) = x
+
 makeCancelRequest :: HomeScreenState -> CancelReq
 makeCancelRequest state = CancelReq {
     "additionalInfo" : Just state.props.cancelDescription

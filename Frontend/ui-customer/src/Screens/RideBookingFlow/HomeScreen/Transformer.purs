@@ -475,6 +475,9 @@ getTripDetailsState (RideBookingRes ride) state = do
       city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
       nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
       nightChargeTill = "5 AM"
+      nightCharges = if rideDetails.vehicleVariant == "AUTO_RICKSHAW" 
+                          then 1.5 
+                          else 1.1
   state {
     data {
       tripId = rideDetails.shortRideId,
@@ -501,7 +504,7 @@ getTripDetailsState (RideBookingRes ride) state = do
         totalAmount = ("₹ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _computedPrice))),
         shortRideId = rideDetails.shortRideId,
         baseDistance = baseDistanceVal,
-        referenceString = (if (nightChargesVal && (getMerchant FunctionCall) /= YATRI) then "1.5" <> (getEN $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) else "")
+        referenceString = (if (nightChargesVal && (getMerchant FunctionCall) /= YATRI) then (show nightCharges) <> (getEN $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) else "")
                         <> (if (isHaveFare "DRIVER_SELECTED_FARE" (updatedFareList)) then "\n\n" <> (getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) else "")
                         <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" updatedFareList) then "\n\n" <> (getEN WAITING_CHARGE_DESCRIPTION) else "")
                         <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" (updatedFareList)) then "\n\n" <> (getEN EARLY_END_RIDE_CHARGES_DESCRIPTION) else "")
@@ -735,7 +738,11 @@ getFareBreakupList (EstimateAPIEntity estimate) =
     compareByLimit a b = compare a.lLimit b.lLimit
     baseFare = maybe 0 calculateBaseFare (find hasBaseDistanceFare fareBreakup)
     hasBaseDistanceFare item = item ^. _title == "BASE_DISTANCE_FARE"
-    fareMultiplier = if nightCharges then nightShiftMultiplier else 1.0
+    fareMultiplier = if nightCharges then 
+                        if estimate.vehicleVariant == "AUTO_RICKSHAW" 
+                          then 1.5 
+                          else 1.1
+                     else 1.0
     nightShiftRate = estimate.nightShiftRate
     nightShiftStart = maybe "" (view _nightShiftStart >>> fromMaybe "") nightShiftRate
     nightShiftEnd = maybe "" (view _nightShiftEnd >>> fromMaybe "") nightShiftRate

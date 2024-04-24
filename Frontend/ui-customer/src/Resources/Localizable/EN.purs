@@ -1095,3 +1095,4 @@ getEN stringKey =
         WAITING_CHARGE_LIMIT timeLimit -> "Waiting Charges (after " <> timeLimit <> " mins)"
         TIME_TAKEN -> "Time Taken"
         TRIP_DISTANCE -> "Trip Distance"
+        UNABLE_TO_CANCEL_RIDE -> "Unable to cancel ride"

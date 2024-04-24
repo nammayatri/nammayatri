@@ -1097,3 +1097,4 @@ getBN stringKey =
         WAITING_CHARGE_LIMIT timeLimit -> "অপেক্ষা চার্জ (" <> timeLimit <> " মিনিটের পরে)"
         TIME_TAKEN -> "সময় নেয়া"
         TRIP_DISTANCE -> "ভ্রমণের দূরত্ব"
+        UNABLE_TO_CANCEL_RIDE -> "আপনি এই রাইড বাতিল করতে অক্ষম"
