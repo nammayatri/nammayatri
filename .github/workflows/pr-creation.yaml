@@ -38,7 +38,7 @@ jobs:
           email=$(git log -1 --pretty=format:"%ae")
           git config --global user.name "$username"
           git config --global user.email "$email"
-          git clone https://github.com/$username/MercyQueen/asset-store asset-store
+          git clone https://github.com/MercyQueen/asset-store asset-store
 
       - name: Run script
         env:
