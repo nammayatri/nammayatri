@@ -49,5 +49,5 @@ rating :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> A
 rating (personId, _) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   dFeedbackRes <- DFeedback.feedback request
   becknReq <- ACL.buildRatingReqV2 dFeedbackRes
-  void $ withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq
+  fork "rating processing" $ void $ withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq
   pure Success
