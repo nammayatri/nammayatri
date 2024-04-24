@@ -112,9 +112,10 @@ create_pull_request() {
     git add .
 
     git commit -m "[GITHUB-ACTION]Added new asset from NammaYatri/NammaYatri branch : $branch_name"
-    git push --set-upstream origin "$branch_name"
     git config --global user.email "mercyqueen71@gmail.com"
     git config --global user.name "MercyQueen"
+    git push --set-upstream origin "$branch_name"
+    
     git push 
     curl -X POST -H "Authorization: token $PAT_TOKEN" \
         https://api.github.com/repos/MercyQueen/asset-store/dispatches \
