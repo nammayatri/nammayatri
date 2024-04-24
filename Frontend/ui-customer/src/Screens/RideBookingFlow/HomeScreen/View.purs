@@ -301,7 +301,7 @@ view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effec
 view push state =
   let 
     showLabel = not $ DS.null state.props.defaultPickUpPoint
-    extraPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize (if os == "IOS" then 10 else 112) else 0
+    extraPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize (if os == "IOS" then 50 else 112) else (if os == "IOS" then 50 else 0)
   in
   frameLayout
     [ height MATCH_PARENT
