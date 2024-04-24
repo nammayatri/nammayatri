@@ -22,10 +22,19 @@ jobs:
     
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v44    
+        uses: tj-actions/changed-files@v44   
 
-      - name: Clone private repo 
+      - name: Fetch User Name and Email
         run: |
+          username=$(git log -1 --pretty=format:"%an")
+          email=$(git log -1 --pretty=format:"%ae")
+          echo "User name: $username"
+          echo "User email: $email" 
+
+      - name: Clone asset-store repo 
+        run: |
+          git config --global user.name "$username"
+          git config --global user.email "$email"
           git clone https://github.com/MercyQueen/asset-store asset-store
         env:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
