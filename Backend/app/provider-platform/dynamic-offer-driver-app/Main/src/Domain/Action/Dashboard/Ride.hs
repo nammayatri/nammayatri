@@ -323,6 +323,7 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         distanceCalculationFailed = ride.distanceCalculationFailed,
         driverDeviatedFromRoute = ride.driverDeviatedFromRoute,
         vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant,
+        vehicleServiceTierName = booking.vehicleServiceTierName,
         nextStopLocation = mkLocationAPIEntity <$> nextStopLoc,
         lastStopLocation = mkLocationAPIEntity <$> lastStopLoc,
         endOtp = ride.endOtp,
