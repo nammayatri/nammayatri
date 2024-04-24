@@ -25,6 +25,7 @@ import Control.Monad.Extra (partitionM)
 import Data.Foldable.Extra (notNull)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
+import qualified Data.Map as Map
 import Domain.Types.Common
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DriverInfo
@@ -216,7 +217,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
           let onlyNewGoHomeDriversWithMultipleSeriveTier = filter (\dpr -> (dpr.driverPoolResult.driverId, dpr.driverPoolResult.serviceTier) `notElem` previousBatchesDrivers) allNearbyGoHomeDrivers'
           let onlyNewGoHomeDrivers =
                 if isBookAny (tripQuoteDetails <&> (.vehicleServiceTier))
-                  then do filterBookAnyDrivers transporterConfig.bookAnyVehicleDowngradeLevel onlyNewGoHomeDriversWithMultipleSeriveTier
+                  then do selectMinDowngrade transporterConfig.bookAnyVehicleDowngradeLevel onlyNewGoHomeDriversWithMultipleSeriveTier
                   else do onlyNewGoHomeDriversWithMultipleSeriveTier
           goHomeDriverPoolBatch <- mkDriverPoolBatch mOCityId onlyNewGoHomeDrivers intelligentPoolConfig transporterConfig
           logDebug $ "GoHomeDriverPoolBatch-" <> show goHomeDriverPoolBatch
@@ -229,7 +230,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
           let onlyNewNormalDriversWithMultipleSeriveTier = filter (\dpr -> (dpr.driverPoolResult.driverId, dpr.driverPoolResult.serviceTier) `notElem` previousBatchesDrivers) allNearbyDrivers
           let onlyNewNormalDrivers =
                 if isBookAny (tripQuoteDetails <&> (.vehicleServiceTier))
-                  then do filterBookAnyDrivers transporterConfig.bookAnyVehicleDowngradeLevel onlyNewNormalDriversWithMultipleSeriveTier
+                  then do selectMinDowngrade transporterConfig.bookAnyVehicleDowngradeLevel onlyNewNormalDriversWithMultipleSeriveTier
                   else do onlyNewNormalDriversWithMultipleSeriveTier
           if length onlyNewNormalDrivers < batchSize && not (isAtMaxRadiusStep radiusStep)
             then do
@@ -249,10 +250,23 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
 
         filterSpecialDrivers specialDrivers = filter (\dpr -> not ((getId dpr.driverPoolResult.driverId) `elem` specialDrivers))
 
-        filterBookAnyDrivers :: Int -> [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
-        filterBookAnyDrivers config dpResp = map DL.head . DL.groupBy ((==) `on` (.driverPoolResult.driverId)) . sortOn (.driverPoolResult.serviceTierDowngradeLevel) $ filtered
+        -- This function takes a list of DriverPoolWithActualDistResult and returns a list with unique driverId entries with the minimum serviceTierDowngradeLevel.
+        selectMinDowngrade :: Int -> [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
+        selectMinDowngrade config results = Map.elems $ foldr insertOrUpdate Map.empty filtered
           where
-            filtered = filter (\d -> d.driverPoolResult.serviceTierDowngradeLevel >= config) dpResp
+            insertOrUpdate :: DriverPoolWithActualDistResult -> Map.Map Text DriverPoolWithActualDistResult -> Map.Map Text DriverPoolWithActualDistResult
+            insertOrUpdate result currentMap =
+              let driver = result.driverPoolResult
+                  key = driver.driverId.getId
+               in Map.insertWith (minByDowngradeLevel) key result currentMap
+
+            minByDowngradeLevel :: DriverPoolWithActualDistResult -> DriverPoolWithActualDistResult -> DriverPoolWithActualDistResult
+            minByDowngradeLevel new old =
+              if new.driverPoolResult.serviceTierDowngradeLevel < old.driverPoolResult.serviceTierDowngradeLevel
+                then new
+                else old
+
+            filtered = filter (\d -> d.driverPoolResult.serviceTierDowngradeLevel >= config) results
 
         mkDriverPoolBatch mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig = do
           case sortingType of
@@ -338,7 +352,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
           let nonGoHomeNormalDriversWithValidReqCount = filter (\ngd -> ngd.driverPoolResult.driverId `notElem` blockListedDrivers) nonGoHomeDriversWithValidReqCount
           let nonGoHomeNormalDriversWithValidReqCountWithServiceTier =
                 if isBookAny (tripQuoteDetails <&> (.vehicleServiceTier))
-                  then do filterBookAnyDrivers transporterConfig.bookAnyVehicleDowngradeLevel nonGoHomeNormalDriversWithValidReqCount
+                  then do selectMinDowngrade transporterConfig.bookAnyVehicleDowngradeLevel nonGoHomeNormalDriversWithValidReqCount
                   else do nonGoHomeNormalDriversWithValidReqCount
           let fillSize = batchSize - length batch
           (batch <>)
