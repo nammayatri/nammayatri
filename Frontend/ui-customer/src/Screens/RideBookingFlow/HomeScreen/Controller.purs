@@ -52,6 +52,7 @@ import Components.SearchLocationModel.Controller as SearchLocationModelControlle
 import Components.SelectListModal.Controller as CancelRidePopUp
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
+import Components.Referral as ReferralComponent
 import Constants (defaultDensity, languageKey)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Except (runExcept)
@@ -106,7 +107,7 @@ import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions, metersToKm, safetyIssueOptions)
-import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..), SuggestionsMap(..), SosBannerType(..))
+import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..), SuggestionsMap(..), SosBannerType(..), ReferralType(..), ReferralStage(..))
 import Screens.Types (AutoCompleteReqType(..), LocationSelectType(..)) as ST
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import PrestoDOM.Properties (sheetState) as PP
@@ -691,7 +692,7 @@ data ScreenOutput = LogoutUser
                   | GoToInvoice HomeScreenState
                   | CheckFavDistance HomeScreenState
                   | SaveFavourite HomeScreenState
-                  | GoToReferral HomeScreenState
+                  | GoToReferral ReferralType HomeScreenState
                   | CallDriver HomeScreenState CallType String
                   | CallContact HomeScreenState
                   | CallSupport HomeScreenState
@@ -724,6 +725,7 @@ data ScreenOutput = LogoutUser
                   | RepeatSearch HomeScreenState
                   | ChangeVehicleVarient HomeScreenState
                   | ExitToConfirmingLocationStage HomeScreenState
+                  | UpdateReferralCode HomeScreenState String
 
 data Action = NoAction
             | BackPressed
@@ -882,8 +884,7 @@ data Action = NoAction
             | NotifyRideShare PrimaryButtonController.Action
             | ToggleShare Int
             | UpdateFollowers FollowRideRes
-            | GoToFollowRide 
-            | PopUpModalReferralAction PopUpModal.Action
+            | GoToFollowRide
             | ShowBookingPreference
             | UpdateBookingDetails RideBookingRes
             | UpdateContacts (Array NewContacts)
@@ -893,6 +894,7 @@ data Action = NoAction
             | GoToSafetyEducationScreen
             | SpecialZoneInfoTag
             | GoToConfirmingLocationStage
+            | ReferralComponentAction ReferralComponent.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1627,15 +1629,7 @@ eval (SettingSideBarActionController (SettingSideBarController.GoToMyMetroTicket
   exit $ GoToMyMetroTickets state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
 
 eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) state =
-  do
-    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_share_app_menu"
-        shareAppConfig = state.data.config.shareAppConfig
-        title = shareAppConfig.title
-        referralCode = getValueToLocalStore CUSTOMER_REFERRAL_CODE
-        code = if (referralCode `elem` ["__failed", "(null)",""]) then "" else "Referral Code : " <> referralCode
-        message = shareAppConfig.description <> code <>  "\n" <> (generateReferralLink (getValueToLocalStore CUSTOMER_LOCATION) "share" "referral" "refer" referralCode)
-    void $ pure $ shareTextMessage title message
-    continue state
+  exit $ GoToReferral GIVE_REFERRAL state
 
 eval (SettingSideBarActionController (SettingSideBarController.EditProfile)) state = exit $ GoToMyProfile state { data { settingSideBar { opened = SettingSideBarController.OPEN } } } false
 
@@ -2467,16 +2461,6 @@ eval (PopUpModalShareAppAction PopUpModal.OnButton2Click) state= do
   _ <- pure $ shareTextMessage shareAppConfig.title shareAppConfig.description
   continue state{props{showShareAppPopUp=false}}
 
-eval (PopUpModalReferralAction PopUpModal.OnButton1Click) state = 
-  case state.props.referral.referralStatus of
-    REFERRAL_INVALID -> exit $ GoToReferral state{ props{ referral{ referralStatus = NO_REFERRAL } } }
-    REFERRAL_APPLIED -> do
-      void $ pure $ setValueToLocalStore REFERRAL_STATUS "REFERRED_NOT_TAKEN_RIDE"
-      continue state{ props{ referral{ referralStatus = NO_REFERRAL }, isReferred = true } } 
-    _ -> continue state{ props{ referral{ referralStatus = NO_REFERRAL } } } 
-
-eval (PopUpModalReferralAction PopUpModal.OnButton2Click) state = continue state{ props{ referral{ referralStatus = NO_REFERRAL } } }
-
 eval (CallSupportAction PopUpModal.OnButton1Click) state= do
   _ <- pure $ performHapticFeedback unit
   continue state{props{callSupportPopUp=false}}
@@ -2512,7 +2496,9 @@ eval (RepeatRide index item) state = do
   void $ pure $ setValueToLocalStore TEST_POLLING_COUNT $ "22" 
   updateAndExit state{props{currentStage = LoadMap, suggestedRideFlow = true}, data{settingSideBar { opened = SettingSideBarController.CLOSED }}} $ RepeatTrip state{props{isRepeatRide = true, suggestedRideFlow = true, repeatRideServiceTierName = item.serviceTierNameV2}} item
 
-eval (ReferralFlowAction) state = exit $ GoToReferral state
+eval (ReferralFlowAction) state = 
+  continue state{ props{ referral{ showAddReferralPopup = true }, referralComponentProps = HomeScreenData.initData.props.referralComponentProps } }
+
 eval NewUser state = continueWithCmd state [ do
   if (getValueToLocalNativeStore REGISTRATION_APPROVED) == "true" then do
     _ <- pure $ setValueToLocalStore REGISTRATION_APPROVED "false"
@@ -2732,6 +2718,55 @@ eval (UpdateBookingDetails (RideBookingRes response)) state = do
                     }, data { 
                       driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == QUOTES)}}
   continue newState
+
+eval (ReferralComponentAction componentAction) state =
+  case componentAction of
+    ReferralComponent.OnClickDone referralCode ->
+      if STR.length referralCode == 6 then 
+        continue state{ props{ referralComponentProps{ applyButtonActive = true, referralCode = Just referralCode } } }
+      else
+        continue state{ props{ referralComponentProps{ applyButtonActive = false } } }
+
+    ReferralComponent.PopUpModalAction popUpAction ->
+      case popUpAction of
+        PopUpModal.OnButton1Click -> do
+          case state.props.referral.referralStatus of
+            REFERRAL_INVALID -> do
+              void $ pure $ JB.showKeyboard (getNewIDWithTag "RefferalCode")
+              continue state{ props{ referral{ referralStatus = NO_REFERRAL, showAddReferralPopup = true } } }
+            REFERRAL_APPLIED -> do
+              void $ pure $ setValueToLocalStore REFERRAL_STATUS "REFERRED_NOT_TAKEN_RIDE"
+              continue state{ props{ referral{ referralStatus = NO_REFERRAL }, isReferred = true } } 
+            _ -> continue state
+        PopUpModal.OnButton2Click ->
+          continue state{ props{ referral{ referralStatus = NO_REFERRAL, showAddReferralPopup = false } } }
+        _ -> continue state
+
+    ReferralComponent.ApplyAction buttonAction ->
+      case buttonAction of
+        PrimaryButtonController.OnClick ->
+          case state.props.referralComponentProps.referralCode of
+            Just code -> exit $ UpdateReferralCode state{ props{ referralComponentProps{ applyButtonActive = false } } } code
+            Nothing -> continue state
+        _ -> continue state
+
+    ReferralComponent.SkipAction buttonAction ->
+      case buttonAction of
+        PrimaryButtonController.OnClick -> do
+          void $ pure $ hideKeyboardOnNavigation true
+          continue state{ props{ referralComponentProps{ stage = NO_REFERRAL_STAGE }, referral{ showAddReferralPopup = false } } }
+        _ -> continue state
+
+    ReferralComponent.OpenReferralProgramInfo ->
+      continue state{ props{ referralComponentProps{ showReferralProgramInfoPopup = true } } }
+    
+    ReferralComponent.ReferredUserInfo PopUpModal.OnButton2Click ->
+      continue state{ props{ referralComponentProps{ showReferredUserInfoPopup = false } } }
+    
+    ReferralComponent.ReferralProgramInfo PopUpModal.OnButton2Click -> 
+      continue state{ props{ referralComponentProps{ showReferralProgramInfoPopup = false } } }
+
+    _ -> continue state
 
 eval _ state = continue state
 

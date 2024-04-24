@@ -395,7 +395,8 @@ type CityConfig = {
   geoCodeConfig :: GeoCodeConfig,
   enableCabs :: Boolean,
   estimateAndQuoteConfig :: EstimateConfig,
-  featureConfig :: CityBasedFeatures
+  featureConfig :: CityBasedFeatures,
+  referral :: ReferalConfig
 }
 
 type CityBasedFeatures = {

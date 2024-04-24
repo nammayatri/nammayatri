@@ -46,6 +46,7 @@ import Components.SaveFavouriteCard as SaveFavouriteCard
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUp
 import Components.SettingSideBar as SettingSideBar
+import Components.Referral as ReferralComponent
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -472,7 +473,7 @@ view push state =
             , if state.props.showBookingPreference then bookingPreferencesView push state else emptyTextView state
             , if isJust state.props.safetyAlertType && state.props.currentStage == RideStarted then safetyAlertPopup push state else  emptyTextView state
             , if state.props.showShareRide then PopupWithCheckbox.view (push <<< ShareRideAction) (shareRideConfig state) else emptyTextView state
-            , if state.props.referral.referralStatus /= NO_REFERRAL then referralPopUp push state else emptyTextView state 
+            , if state.props.referral.referralStatus /= NO_REFERRAL || state.props.referral.showAddReferralPopup then referralPopUp push state else emptyTextView state 
             , if state.props.showSpecialZoneInfoPopup then specialZoneInfoPopup push state else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
@@ -3410,11 +3411,10 @@ pickupLocationView push state =
                     , visibility $ if state.data.config.homeScreen.header.showLogo then GONE else VISIBLE
                     ] <> FontStyle.h3 TypoGraphy
                 ]
-            , linearLayout
+            , frameLayout
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
                 , background Color.transparentBlue
-                , padding $ Padding 12 8 12 8
                 , gravity CENTER_VERTICAL
                 , cornerRadius 8.0
                 , layoutGravity "center_vertical"
@@ -3424,7 +3424,35 @@ pickupLocationView push state =
                     [ text $ if not state.props.isReferred then  getString HAVE_A_REFFERAL else (getString REFERRAL_CODE_APPLIED)
                     , color Color.blue800
                     , textSize FontSize.a_14  
+                    , padding $ Padding 12 8 12 8
                     ]
+                  , if not state.props.isReferred then
+                      PrestoAnim.animationSet
+                        [ PrestoAnim.Animation
+                          [ PrestoAnim.duration 3000
+                          , PrestoAnim.fromX $ (- 200)
+                          , PrestoAnim.toX $ (screenWidth unit) + 200
+                          , PrestoAnim.repeatCount PrestoAnim.Infinite
+                          ] true
+                        ] $ linearLayout
+                            [ width MATCH_PARENT
+                            , height MATCH_PARENT
+                            , gravity CENTER_VERTICAL
+                            ][  linearLayout
+                                [ width (V 4)
+                                , height (V 35)
+                                , background Color.transparentWhite
+                                , rotation 20.0
+                                , margin (MarginRight 5)
+                                ][]
+                              , linearLayout
+                                [ width (V 10)
+                                , height (V 35)
+                                , background Color.transparentWhite
+                                , rotation 20.0
+                                ][]
+                            ]
+                      else dummyView state
                 ]
             ]
           , linearLayout[
@@ -4157,11 +4185,7 @@ getFollowRide push action = do
       
 referralPopUp :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 referralPopUp push state =
-  linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , background Color.blackLessTrans
-  ][PopUpModal.view (push <<< PopUpModalReferralAction) (referralPopUpConfig state)]
+  ReferralComponent.view (push <<< ReferralComponentAction) (referralPopUpConfig state)
 
 specialZoneInfoPopup :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 specialZoneInfoPopup push state =

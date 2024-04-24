@@ -196,6 +196,7 @@ import Screens.RideSelectionScreen.Transformer (myRideListTransformer)
 import Services.FlowCache as FlowCache
 import Data.HashMap as DHM
 import Helpers.API as HelpersAPI
+import Helpers.Referral (applyReferralCode)
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -364,24 +365,18 @@ currentFlowStatus = do
                               "NOT_REFERRED_NOT_TAKEN_RIDE" -> getReferralCode (getValueToLocalStore REFERRER_URL)
                               _                             -> Nothing
                           else Nothing
+
       if isNothing language || (getKeyByLanguage (fromMaybe "ENGLISH" language) /= (getLanguageLocale languageKey)) || isJust referralCode then do
-        let UpdateProfileReq updateProfileConfig = Remote.mkUpdateProfileRequest FunctionCall
-        if isJust referralCode && referralStatus == "NOT_REFERRED_NOT_TAKEN_RIDE" then do
-          let updateProfileReq = UpdateProfileReq updateProfileConfig{ referralCode = referralCode }
-          res <- lift $ lift $ Remote.updateProfile updateProfileReq
-          case res of
-            Right response -> do
-              setValueToLocalStore REFERRAL_STATUS "REFERRED_NOT_TAKEN_RIDE"  
-              setValueToLocalStore REFERRER_URL ""
-              void $ pure $ cleverTapCustomEvent "ny_user_referral_code_applied"
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{ referral{ referralStatus = REFERRAL_APPLIED }, isReferred = true } })
-            Left err -> do
-              if ((err.code == 500 && (decodeError err.response.errorMessage "errorCode") == "BPP_INTERNAL_API_ERROR")) then do
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ referral{ referralStatus = REFERRAL_INVALID } } })
-                setValueToLocalStore REFERRER_URL ""
-                void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq updateProfileConfig)
-              else pure unit
-        else void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq updateProfileConfig)
+        case referralCode of
+          Just code | referralStatus == "NOT_REFERRED_NOT_TAKEN_RIDE" -> do
+            referralAppliedStatus <- applyReferralCode code
+            case referralAppliedStatus of
+              REFERRAL_APPLIED -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{ referral{ referralStatus = REFERRAL_APPLIED }, isReferred = true } })
+              REFERRAL_INVALID -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ referral{ referralStatus = REFERRAL_INVALID } } })
+              _ -> pure unit
+          _ -> do
+            let UpdateProfileReq updateProfileConfig = Remote.mkUpdateProfileRequest FunctionCall
+            void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq updateProfileConfig)
       else pure unit
 
     goToFindingQuotesStage :: String -> Boolean -> FlowBT String Unit
@@ -536,7 +531,7 @@ accountSetUpScreenFlow = do
           setValueToLocalStore USER_NAME state.data.name
           void $ liftFlowBT $ setCleverTapUserData "Name" (getValueToLocalStore USER_NAME)
           case gender of
-            Just value -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just value}}, props{isBanner = false}})
+            Just value -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just value}}, props{isBanner = false, referral{ showAddReferralPopup = false }}})
             Nothing    -> pure unit
           void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_onboarded"
           void $ pure $ metaLogEvent "ny_user_onboarded"
@@ -1472,7 +1467,10 @@ homeScreenFlow = do
       let updatedRecents = getUpdatedLocationList state.data.recentSearchs.predictionArray  state.data.saveFavouriteCard.selectedItem.placeId
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{locationList = updatedLocationList, recentSearchs{predictionArray = updatedRecents},savedLocations = (AddNewAddress.getSavedLocations savedLocationResp.list)}})
       homeScreenFlow
-    GO_TO_REFERRAL -> referralScreenFlow
+    GO_TO_REFERRAL referralType -> do
+      let referralCode = getValueToLocalStore CUSTOMER_REFERRAL_CODE
+      modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { referralType = referralType, referralCode = if any (_ == referralCode) ["__failed", ""] then "" else referralCode })
+      referralScreenFlow
     ON_CALL state callType exophoneNumber -> do
       (OnCallRes res) <- Remote.onCallBT (Remote.makeOnCallReq state.data.driverInfoCardState.rideId (show callType) exophoneNumber)
       homeScreenFlow
@@ -1619,6 +1617,17 @@ homeScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true, locateOnMapLocation{sourceLat = finalState.props.sourceLat, sourceLng = finalState.props.sourceLong, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress }, locateOnMapProps{ cameraAnimatedToSource = false } }})
         void $ pure $ updateLocalStage ConfirmingLocation
         void $ lift $ lift $ toggleLoader false
+      homeScreenFlow
+    UPDATE_REFERRAL_CODE referralCode -> do
+      referralAppliedStatus <- applyReferralCode referralCode
+      case referralAppliedStatus of
+        REFERRAL_APPLIED -> do
+          void $ pure $ hideKeyboardOnNavigation true
+          _ <- UI.successScreen "" ""
+          modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { showThanks = true, referralComponentProps{ stage = ST.APPLIED_POPUP } })
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{isReferred = true, referralComponentProps{ stage = NO_REFERRAL_STAGE }, referral{ referralStatus = NO_REFERRAL, showAddReferralPopup = false }} })
+        REFERRAL_INVALID -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props{ referralComponentProps{ isInvalidCode = true } } })
+        _ -> pure unit
       homeScreenFlow
     _ -> homeScreenFlow
 
@@ -2466,23 +2475,17 @@ addNewAddressScreenFlow input = do
 
 referralScreenFlow :: FlowBT String Unit
 referralScreenFlow = do
+  modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { referralCode = getValueToLocalStore CUSTOMER_REFERRAL_CODE })
   flow <- UI.referralScreen
   case flow of
     UPDATE_REFERRAL referralCode -> do
-      let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
-          requiredData = initialData{referralCode = (Just referralCode)}
-      res <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
-      case res of
-        Right response -> do
-          modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { showThanks = true })
-          setValueToLocalStore REFERRAL_STATUS "REFERRED_NOT_TAKEN_RIDE"
+      referralAppliedStatus <- applyReferralCode referralCode
+      case referralAppliedStatus of
+        REFERRAL_APPLIED -> do
+          modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { showThanks = true, referralComponentProps{ stage = ST.APPLIED_POPUP } })
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{isReferred = true} })
-        Left err -> do
-          if ((err.code == 500 && (decodeError err.response.errorMessage "errorCode") == "BPP_INTERNAL_API_ERROR")) then
-            modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { isInvalidCode = true })
-          else do
-            void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-            pure unit
+        REFERRAL_INVALID -> modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { isInvalidCode = true, referralComponentProps{ isInvalidCode = true } })
+        _ -> pure unit
       referralScreenFlow
     BACK_TO_HOME -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreen.initData)

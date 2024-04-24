@@ -367,36 +367,43 @@ config =
       }
     ]
   , cityConfig :
-      [ { cityCode : "std:080"
-        , cityName : "Bangalore"
-        , geoCodeConfig :
-            { radius : 50000
-            , strictBounds : true
+      [ defaultCityConfig 
+          { cityName = "Bangalore",
+            cityCode = "std:080",
+            geoCodeConfig
+              { radius = 50000,
+                strictBounds = true
+              },
+            featureConfig {
+              enableCabBanner = true,
+              enableChangeRideVariant = true
             }
-        , enableCabs : false
-        , estimateAndQuoteConfig : {
-          showInfoIcon : true
+          },
+        defaultCityConfig 
+          { cityName = "Chennai",
+            cityCode = "std:044",
+            geoCodeConfig
+              { radius = 50000,
+                strictBounds = true
+              },
+            enableCabs = true
+          },
+        defaultCityConfig
+          { cityName = "Hyderabad",
+            cityCode = "std:040",
+            referral
+              { domain = "https://www.manayatri.in",
+                customerAppId = "in.mobility.manayatri"
+              }
+          },
+        defaultCityConfig
+          { cityName = "Kolkata",
+            cityCode = "std:033",
+            referral
+              { domain = "https://www.yatrisathi.in",
+                customerAppId = "in.juspay.jatrisaathi"
+              }
           }
-        , featureConfig : {
-            enableCabBanner : true,
-            enableChangeRideVariant : true
-          }
-        }
-      , { cityCode : "std:044"
-        , cityName : "Chennai"
-        , geoCodeConfig :
-            { radius : 50000
-            , strictBounds : true
-            }
-        , enableCabs : true
-        , estimateAndQuoteConfig : {
-          showInfoIcon : false
-          }
-        , featureConfig : {
-            enableCabBanner : false,
-            enableChangeRideVariant : false
-          }
-        }
       ]
   , bannerCarousel : defaultBannerCarousel
   , enableSingleEstimate : false
@@ -434,5 +441,9 @@ defaultCityConfig =
     featureConfig : {
       enableCabBanner : false,
       enableChangeRideVariant : false
+    },
+    referral : {
+      domain : "https://nammayatri.in",
+      customerAppId : "in.juspay.nammayatri"
     }
   }
