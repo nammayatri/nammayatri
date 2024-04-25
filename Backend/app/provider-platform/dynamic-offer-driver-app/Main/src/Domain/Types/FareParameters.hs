@@ -26,6 +26,7 @@ data FareParameters = FareParameters
     driverSelectedFare :: Maybe Money,
     customerExtraFee :: Maybe Money,
     serviceCharge :: Maybe Money,
+    parkingCharge :: Maybe HighPrecMoney,
     govtCharges :: Maybe Money,
     baseFare :: Money,
     waitingCharge :: Maybe Money,
