@@ -237,8 +237,7 @@ buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
 buildBookingAPIEntity booking personId = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
   mbRide <- runInReplica $ QRide.findByRBId booking.id
-  -- nightIssue <- runInReplica $ QIssue.findNightIssueByBookingId booking.id
-  fareBreakups <- runInReplica $ QFareBreakup.findAllByBookingId booking.id
+  fareBreakups <- bool (runInReplica $ QFareBreakup.findAllByBookingId booking.id) (pure []) (booking.status == COMPLETED)
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   let merchantOperatingCityId = booking.merchantOperatingCityId
