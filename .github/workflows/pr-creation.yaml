@@ -1,12 +1,10 @@
 name: Execute Script
 
 on:
-  pull_request:
-    types: [closed]
+  push:
 
 jobs:
   on_pr_merge:
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     
     defaults:
