@@ -349,11 +349,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1710791416,
-        "narHash": "sha256-a+BaHFhcAsNJlry9tbaWA9x/Qi1VOE8LwymCb954Gvs=",
+        "lastModified": 1714025974,
+        "narHash": "sha256-DBcYfKzIxie5FgNFqOHpK/njhYOz1SWThpCYUC9DIaU=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "58942765565ddc750934ab7f203971c8c16e979e",
+        "rev": "5f2f839d2a3c1e69e93b27b5fa0c38856b8b4e1c",
         "type": "github"
       },
       "original": {
@@ -1658,11 +1658,11 @@
     },
     "haskell-flake": {
       "locked": {
-        "lastModified": 1710675764,
-        "narHash": "sha256-ZpBoh1dVLTxC3wccOnsji7u/Ceuwh2raQn/Vq6BBYwo=",
+        "lastModified": 1714025946,
+        "narHash": "sha256-R2k/UG5XtyTtmezRs0HZZ9MlvhWXtkyHR+ngEAWrtZI=",
         "owner": "srid",
         "repo": "haskell-flake",
-        "rev": "ef955d7d239d7f82f343b569a4cf2c7c1a4df1f4",
+        "rev": "2ee7904390ce78a81d0f66fcc98bf4c32d128d33",
         "type": "github"
       },
       "original": {
