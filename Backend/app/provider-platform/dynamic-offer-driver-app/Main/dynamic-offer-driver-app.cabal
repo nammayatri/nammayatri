@@ -221,7 +221,6 @@ library
       Domain.Types.Common
       Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
       Domain.Types.Driver.GoHomeFeature.DriverHomeLocation
-      Domain.Types.DriverBlockReason
       Domain.Types.DriverFee
       Domain.Types.DriverLocation
       Domain.Types.DriverPlan
@@ -350,7 +349,6 @@ library
       Storage.Beam.Common
       Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation
-      Storage.Beam.DriverBlockReason
       Storage.Beam.DriverFee
       Storage.Beam.DriverPlan
       Storage.Beam.DriverQuote
@@ -466,7 +464,7 @@ library
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
       Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation
-      Storage.Queries.DriverBlockReason
+      Storage.Queries.DriverBlockReasonExtra
       Storage.Queries.DriverFee
       Storage.Queries.DriverInformation.Internal
       Storage.Queries.DriverInformationExtra
@@ -545,6 +543,7 @@ library
       Storage.Queries.Transformers.CancellationCharges
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.DocumentVerificationConfig
+      Storage.Queries.Transformers.DriverBlockReason
       Storage.Queries.Transformers.QuestionInformation
       Storage.Queries.Transformers.ReelsData
       Storage.Queries.Transformers.Ride
@@ -598,6 +597,7 @@ library
       Domain.Types.Client
       Domain.Types.DailyStats
       Domain.Types.DocumentVerificationConfig
+      Domain.Types.DriverBlockReason
       Domain.Types.DriverInformation
       Domain.Types.DriverLicense
       Domain.Types.DriverModuleCompletion
@@ -650,6 +650,7 @@ library
       Storage.Beam.Client
       Storage.Beam.DailyStats
       Storage.Beam.DocumentVerificationConfig
+      Storage.Beam.DriverBlockReason
       Storage.Beam.DriverInformation
       Storage.Beam.DriverLicense
       Storage.Beam.DriverModuleCompletion
@@ -702,6 +703,7 @@ library
       Storage.Queries.Client
       Storage.Queries.DailyStats
       Storage.Queries.DocumentVerificationConfig
+      Storage.Queries.DriverBlockReason
       Storage.Queries.DriverInformation
       Storage.Queries.DriverLicense
       Storage.Queries.DriverModuleCompletion
@@ -725,6 +727,7 @@ library
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.DailyStats
       Storage.Queries.OrphanInstances.DocumentVerificationConfig
+      Storage.Queries.OrphanInstances.DriverBlockReason
       Storage.Queries.OrphanInstances.DriverInformation
       Storage.Queries.OrphanInstances.DriverLicense
       Storage.Queries.OrphanInstances.DriverRCAssociation
