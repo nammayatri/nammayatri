@@ -57,7 +57,7 @@ updateDeviceToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prel
 updateDeviceToken deviceToken (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.deviceToken deviceToken, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
 updateFollowsRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateFollowsRide followsRide (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.followsRide followsRide, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+updateFollowsRide followsRide (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.followsRide followsRide, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
 updateHasDisability :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateHasDisability hasDisability (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.hasDisability hasDisability, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]

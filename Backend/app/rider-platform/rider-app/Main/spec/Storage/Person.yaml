@@ -262,7 +262,7 @@ Person:
       where: id
 
     updateFollowsRide:
-      kvFunction: updateWithKV
+      kvFunction: updateOneWithKV
       params: [followsRide, updatedAt]
       where: id
 
@@ -279,3 +279,4 @@ Person:
     - EXTRA_QUERY_FILE
 
   excludedFields: [merchantOperatingCityId]
+
