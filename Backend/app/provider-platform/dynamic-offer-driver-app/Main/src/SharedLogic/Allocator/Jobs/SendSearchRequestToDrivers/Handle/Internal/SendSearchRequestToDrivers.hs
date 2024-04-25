@@ -40,14 +40,15 @@ import qualified Lib.DriverScore.Types as DST
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 import qualified SharedLogic.DriverPool as SDP
 import SharedLogic.GoogleTranslate
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
+import Utils.Common.Cac.KeyNameConstants
 
 type LanguageDictionary = M.Map Maps.Language DSR.SearchRequest
 
@@ -93,7 +94,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
-    transporterConfig <- SCT.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just searchReq.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+    transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
     let needTranslation = language `elem` transporterConfig.languagesToBeTranslated
     let translatedSearchReq =
           if needTranslation
@@ -235,7 +236,7 @@ addLanguageToDictionary ::
   m LanguageDictionary
 addLanguageToDictionary searchReq dict dPoolRes = do
   let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
-  transporterConfig <- SCT.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just searchReq.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   if language `elem` transporterConfig.languagesToBeTranslated
     then
       if isJust $ M.lookup language dict

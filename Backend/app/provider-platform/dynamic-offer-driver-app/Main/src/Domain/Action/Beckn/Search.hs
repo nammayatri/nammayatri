@@ -65,11 +65,12 @@ import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
 import SharedLogic.Ride
 import SharedLogic.TollsDetector
+import Storage.Cac.DriverPoolConfig as CDP
+import Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantState as CQMS
-import Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Geometry as QGeometry
@@ -79,6 +80,7 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
+import Utils.Common.Cac.KeyNameConstants
 
 data DSearchReq = DSearchReq
   { messageId :: Text,
@@ -176,7 +178,7 @@ handler ValidatedDSearchReq {..} sReq = do
         mbTollChargesAndNames <- getTollInfoOnRoute merchantOpCityId Nothing serviceableRoute.routePoints
         return (Just setRouteInfo, Just toLocation, Just estimatedDistance, Just estimatedDuration, Just serviceableRoute.isCustomerPrefferedSearchRoute, Just serviceableRoute.isBlockedRoute, (\(charges, _, _) -> charges) <$> mbTollChargesAndNames, (\(_, names, _) -> names) <$> mbTollChargesAndNames, (\(_, _, isAutoRickshawAllowed) -> isAutoRickshawAllowed) <$> mbTollChargesAndNames)
       _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing) -- estimate distance and durations by user
-  allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.pickupLocation sReq.dropLocation (Just sReq.transactionId) (Just "transactionId")) `mapM` possibleTripOption.tripCategories)
+  allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.pickupLocation sReq.dropLocation (Just (TransactionId (Id sReq.transactionId)))) `mapM` possibleTripOption.tripCategories)
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed allFarePoliciesProduct.farePolicies
 
   (driverPool, selectedFarePolicies) <-
@@ -297,15 +299,15 @@ addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes = do
 
 selectDriversAndMatchFarePolicies :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
 selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies = do
-  driverPoolCfg <- getSearchDriverPoolConfig merchantOpCityId mbDistance area
+  driverPoolCfg <- CDP.getSearchDriverPoolConfig merchantOpCityId mbDistance area
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-  driverPoolNotOnRide <- calculateDriverPool cityServiceTiers Estimate driverPoolCfg [] fromLocation merchantId True Nothing False False
+  driverPoolNotOnRide <- calculateDriverPool cityServiceTiers Estimate (fromJust driverPoolCfg) [] fromLocation merchantId True Nothing False False
   logDebug $ "Driver Pool not on ride " <> show driverPoolNotOnRide
   driverPoolCurrentlyOnRide <-
     if null driverPoolNotOnRide
       then do
         if transporterConfig.includeDriverCurrentlyOnRide
-          then calculateDriverPoolCurrentlyOnRide cityServiceTiers Estimate driverPoolCfg [] fromLocation merchantId Nothing False False
+          then calculateDriverPoolCurrentlyOnRide cityServiceTiers Estimate (fromJust driverPoolCfg) [] fromLocation merchantId Nothing False False
           else pure []
       else pure []
   let driverPool =
@@ -524,7 +526,7 @@ validateRequest merchantId sReq = do
       Nothing -> pure False
   let bapCity = nearestOperatingCity.city
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just bapCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just sReq.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id sReq.transactionId))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   now <- getCurrentTime
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity
   return ValidatedDSearchReq {..}

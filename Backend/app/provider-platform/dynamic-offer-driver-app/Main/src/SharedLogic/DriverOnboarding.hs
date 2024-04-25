@@ -44,11 +44,11 @@ import Kernel.Utils.Common
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.Message.Message as MessageQuery
@@ -58,6 +58,7 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Error
 import qualified Tools.Ticket as TT
 import Tools.Whatsapp as Whatsapp
+import Utils.Common.Cac.KeyNameConstants
 
 driverDocumentTypes :: [DVC.DocumentType]
 driverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto]
@@ -74,7 +75,7 @@ notifyErrorToSupport ::
   [Maybe DriverOnboardingError] ->
   Flow ()
 notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let reasons = catMaybes $ mapMaybe toMsg errs
   let description = T.intercalate ", " reasons
   _ <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig)

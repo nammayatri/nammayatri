@@ -43,8 +43,8 @@ import Kernel.Utils.Common (fromMaybeM, logDebug, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import Storage.Beam.IssueManagement ()
+import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Message.Message as MQuery
 import qualified Storage.Queries.Message.MessageReport as MRQuery
@@ -83,7 +83,7 @@ uploadFile merchantShortId opCity Common.UploadFileRequest {..} = do
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
   filePath <- S3.createFilePath "/message-media/" ("org-" <> merchant.id.getId) fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let fileUrl =
         transporterConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "message"

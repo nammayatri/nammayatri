@@ -25,13 +25,14 @@ import Servant
 import SharedLogic.External.LocationTrackingService.Types
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QR
 import Tools.Auth
 import Tools.Error
 import qualified Tools.Ticket as TT
+import Utils.Common.Cac.KeyNameConstants
 
 type API =
   "issue" :> TokenAuth :> IA.IssueAPI
@@ -158,7 +159,7 @@ castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merc
 
 buildMerchantConfig :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Person -> m Common.MerchantConfig
 buildMerchantConfig _merchantId merchantOpCityId personId = do
-  transporterConfig <- SCT.findByMerchantOpCityId (cast merchantOpCityId) (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   return
     Common.MerchantConfig
       { mediaFileSizeUpperLimit = transporterConfig.mediaFileSizeUpperLimit,

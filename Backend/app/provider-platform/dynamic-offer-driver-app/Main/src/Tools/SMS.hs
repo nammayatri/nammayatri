@@ -39,11 +39,12 @@ import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import Utils.Common.Cac.KeyNameConstants
 
 sendSMS :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> SendSMSReq -> m SendSMSRes
 sendSMS merchantId merchantOpCityId = Sms.sendSMS handler
@@ -80,7 +81,7 @@ sendDashboardSms ::
   HighPrecMoney ->
   m ()
 sendDashboardSms merchantId merchantOpCityId messageType mbRide driverId mbBooking amount = do
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId (mbBooking <&> (.transactionId)) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (TransactionId . Id <$> (mbBooking <&> (.transactionId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if transporterConfig.enableDashboardSms
     then do
       driver <- B.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)

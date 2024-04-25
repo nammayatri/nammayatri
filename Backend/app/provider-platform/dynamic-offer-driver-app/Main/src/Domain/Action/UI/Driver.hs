@@ -170,13 +170,14 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
+import qualified Storage.Cac.DriverPoolConfig as SCDPC
+import qualified Storage.Cac.GoHomeConfig as CGHC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.FareProduct as CQFP
-import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -208,6 +209,7 @@ import Tools.Error
 import Tools.Event
 import Tools.SMS as Sms hiding (Success)
 import Tools.Verification
+import Utils.Common.Cac.KeyNameConstants
 
 data DriverInformationRes = DriverInformationRes
   { id :: Id Person,
@@ -492,7 +494,7 @@ setActivity (personId, _merchantId, merchantOpCityId) isActive mode = do
   when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
     driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
     autoPayStatus <- fst <$> DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION personId
-    transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
     mbVehicle <- QV.findById personId
     let isEnableForVariant = maybe False (`elem` transporterConfig.variantsToEnableForSubscription) (mbVehicle <&> (.variant))
@@ -507,7 +509,7 @@ setActivity (personId, _merchantId, merchantOpCityId) isActive mode = do
 
 activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> m APISuccess.APISuccess
 activateGoHomeFeature (driverId, _merchantId, merchantOpCityId) driverHomeLocationId driverLocation = do
-  goHomeConfig <- CQGHC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId")
+  goHomeConfig <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
@@ -525,7 +527,7 @@ activateGoHomeFeature (driverId, _merchantId, merchantOpCityId) driverHomeLocati
 
 deactivateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess.APISuccess
 deactivateGoHomeFeature (personId, _, merchantOpCityId) = do
-  goHomeConfig <- CQGHC.findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId")
+  goHomeConfig <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId)))
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
   let driverId = cast personId
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
@@ -541,7 +543,7 @@ deactivateGoHomeFeature (personId, _, merchantOpCityId) = do
 
 addHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> AddHomeLocationReq -> m APISuccess.APISuccess
 addHomeLocation (driverId, merchantId, merchantOpCityId) req = do
-  cfg <- CQGHC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId")
+  cfg <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
   unless (cfg.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
@@ -571,7 +573,7 @@ buildDriverHomeLocation driverId req = do
 
 updateHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> UpdateHomeLocationReq -> m APISuccess.APISuccess
 updateHomeLocation (driverId, merchantId, merchantOpCityId) homeLocationId req = do
-  goHomeConfig <- CQGHC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId")
+  goHomeConfig <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
@@ -606,7 +608,7 @@ getHomeLocations (driverId, _, _) = do
 
 deleteHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> m APISuccess.APISuccess
 deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
-  goHomeConfig <- CQGHC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId")
+  goHomeConfig <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
@@ -618,7 +620,7 @@ deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
 
 buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), EsqDBFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
-  transporterConfig <- CQTC.findByMerchantOpCityId person.merchantOperatingCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   driverPlan <- snd <$> DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION person.id
   vehicleMB <- QVehicle.findById person.id
   now <- getCurrentTime
@@ -818,7 +820,7 @@ updateMetaData (personId, _, _) req = do
 makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> m DriverInformationRes
 makeDriverInformationRes merchantOpCityId DriverEntityRes {..} org referralCode driverStats dghInfo currentDues manualDues md5DigestHash = do
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
-  CQGHC.findByMerchantOpCityId merchantOpCityId (Just id.getId) (Just "driverId") >>= \cfg ->
+  CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast id))) >>= \cfg ->
     return $
       DriverInformationRes
         { organization = DM.makeMerchantAPIEntity org,
@@ -841,7 +843,7 @@ getNearbySearchRequests ::
   m GetNearbySearchRequestsRes
 getNearbySearchRequests (driverId, _, merchantOpCityId) searchReqId = do
   nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig transporterConfig
   cancellationRatio <- DP.getLatestCancellationRatio cancellationScoreRelatedConfig merchantOpCityId (cast driverId)
   searchRequestForDriverAPIEntity <- mapM (buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig) nearbyReqs
@@ -857,7 +859,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchReqId = do
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       bapMetadata <- CQSM.findById (Id searchRequest.bapId)
       isValueAddNP <- CQVAN.isValueAddNP searchRequest.bapId
-      farePolicy <- getFarePolicyByEstOrQuoteId searchRequest.merchantOperatingCityId searchTry.tripCategory nearbyReq.vehicleServiceTier searchRequest.area (fromMaybe searchTry.estimateId nearbyReq.estimateId) (Just searchRequest.transactionId) (Just "transactionId")
+      farePolicy <- getFarePolicyByEstOrQuoteId searchRequest.merchantOperatingCityId searchTry.tripCategory nearbyReq.vehicleServiceTier searchRequest.area (fromMaybe searchTry.estimateId nearbyReq.estimateId) (Just (TransactionId (Id searchRequest.transactionId)))
       popupDelaySeconds <- DP.getPopupDelay merchantOpCityId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       let driverPickUpCharges = extractDriverPickupCharges farePolicy.farePolicyDetails
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP driverPickUpCharges -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
@@ -980,7 +982,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       logDebug $ "active quotes for driverId = " <> driverId.getId <> show activeQuotes
       pure $ not $ null activeQuotes
     getQuoteLimit dist vehicleServiceTier tripCategory txnId area = do
-      driverPoolCfg <- DP.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory area dist (Just txnId) (Just "transactionId")
+      driverPoolCfg <- SCDPC.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory area dist (Just (TransactionId (Id txnId)))
       pure driverPoolCfg.driverQuoteLimit
 
     acceptDynamicOfferDriverRequest :: DM.Merchant -> DST.SearchTry -> DSR.SearchRequest -> SP.Person -> SearchRequestForDriver -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Flow [SearchRequestForDriver]
@@ -993,7 +995,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq.transactionId (fromMaybe SL.Default searchReq.area)
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
       when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-      farePolicy <- getFarePolicyByEstOrQuoteId merchantOpCityId searchTry.tripCategory sReqFD.vehicleServiceTier searchReq.area estimateId (Just searchReq.transactionId) (Just "transactionId")
+      farePolicy <- getFarePolicyByEstOrQuoteId merchantOpCityId searchTry.tripCategory sReqFD.vehicleServiceTier searchReq.area estimateId (Just (TransactionId (Id searchReq.transactionId)))
       let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
       whenJust req.offeredFare $ \off ->
         whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
@@ -1056,7 +1058,7 @@ getStats ::
   Day ->
   m DriverStatsRes
 getStats (driverId, _, merchantOpCityId) date = do
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   rides <- runInReplica $ QRide.getRidesForDate driverId date transporterConfig.timeDiffFromUtc
   let fareParamId = mapMaybe (.fareParametersId) rides
   fareParameters <- (runInReplica . QFP.findAllIn) fareParamId
@@ -1100,7 +1102,7 @@ driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq 
   checkSlidingWindowLimit (driverPhotoUploadHitsCountKey driverId)
   person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound (getId driverId))
   imageExtension <- validateContentType
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when transporterConfig.enableFaceVerification
     let req = IF.FaceValidationReq {file = image, brisqueFeatures}
      in void $ validateFaceImage merchantId merchantOpCityId req
@@ -1356,7 +1358,7 @@ getDriverPayments (personId, _, merchantOpCityId) mbFrom mbTo mbStatus mbLimit m
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset = fromMaybe 0 mbOffset
       defaultFrom = fromMaybe (fromGregorian 2020 1 1) mbFrom
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let today = utctDay now
       from = fromMaybe defaultFrom mbFrom
@@ -1492,7 +1494,7 @@ getDriverPaymentsHistoryV2 (driverId, _, merchantOpCityId) mPaymentMode mbLimit 
       modes = maybe manualInvoiceModes (\mode -> if mode == INV.AUTOPAY_INVOICE then [INV.AUTOPAY_INVOICE] else manualInvoiceModes) mPaymentMode
   invoices <- QINV.findAllInvoicesByDriverIdWithLimitAndOffset driverId modes limit offset serviceName
   driverFeeForInvoices <- QDF.findAllByDriverFeeIds (invoices <&> (.driverFeeId))
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId) -- check if there is error type already for this
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId) -- check if there is error type already for this
   let mapDriverFeeByDriverFeeId = M.fromList (map (\dfee -> (dfee.id, dfee)) driverFeeForInvoices)
 
   (manualPayInvoices, autoPayInvoices) <-
@@ -1592,7 +1594,7 @@ getHistoryEntryDetailsEntityV2 ::
 getHistoryEntryDetailsEntityV2 (driverId, _, merchantOpCityId) invoiceShortId serviceName = do
   allEntiresByInvoiceId <- QINV.findAllByInvoiceShortId invoiceShortId
   allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntiresByInvoiceId <&> (.driverFeeId))
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
   let amount = sum $ mapToAmount allDriverFeeForInvoice
       invoiceType = listToMaybe allEntiresByInvoiceId <&> (.paymentMode)
@@ -1678,7 +1680,7 @@ data DriverFeeResp = DriverFeeResp
 
 getDownloadInvoiceData :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Maybe Day -> m [DriverFeeResp]
 getDownloadInvoiceData (personId, _merchantId, merchantOpCityId) from mbTo = do
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let today = utctDay now
       to = fromMaybe today mbTo

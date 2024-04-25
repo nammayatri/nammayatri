@@ -26,7 +26,7 @@ import Kernel.Types.Flow (FlowR)
 import Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.App (lookupDeploymentVersion)
-import Kernel.Utils.Common (CacheConfig)
+import Kernel.Utils.Common (CacConfig, CacheConfig)
 import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
@@ -92,6 +92,7 @@ data AppCfg = AppCfg
     granualityPeriodType :: PeriodType,
     loggerConfig :: LoggerConfig,
     cacheConfig :: CacheConfig,
+    cacConfig :: CacConfig,
     httpClientOptions :: HttpClientOptions,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
@@ -125,7 +126,8 @@ data AppEnv = AppEnv
     enablePrometheusMetricLogging :: Bool,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    cacConfig :: CacConfig
   }
   deriving (Generic)
 

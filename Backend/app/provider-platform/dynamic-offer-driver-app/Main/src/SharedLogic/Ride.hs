@@ -38,8 +38,8 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -55,6 +55,7 @@ import Storage.Queries.VehicleRegistrationCertificate as QVRC
 import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
+import Utils.Common.Cac.KeyNameConstants
 
 initializeRide ::
   Id Merchant ->
@@ -140,7 +141,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   now <- getCurrentTime
-  transporterConfig <- TC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   trackingUrl <- buildTrackingUrl guid
   return
     DRide.Ride

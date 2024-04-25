@@ -85,6 +85,14 @@ let specialZone =
 
 let cacheConfig = { configsExpTime = +86400 }
 
+let cacConfig =
+      { host = "http://localhost:8080"
+      , interval = 10
+      , tenant = "dev"
+      , retryConnection = False
+      , cacExpTime = +86400
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -121,5 +129,6 @@ in  { esqDBCfg
     , slackChannel = "CXXXXXXXXXF"
     , internalEndPointMap = common.internalEndPointMap
     , cacheConfig
+    , cacConfig
     , kvConfigUpdateFrequency = +60
     }

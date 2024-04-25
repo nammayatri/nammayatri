@@ -48,9 +48,9 @@ import SharedLogic.FarePolicy
 import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.Ride
 import SharedLogic.TollsDetector
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.FareParameters as QFP
@@ -61,6 +61,7 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
+import Utils.Common.Cac.KeyNameConstants
 
 data DUpdateReq
   = UPaymentCompletedReq PaymentCompletedReq
@@ -154,7 +155,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     -----------1. Add a check for forward dispatch ride -----------------
     -----------2. Add a check for last location timestamp of driver ----------------- LTS dependency
     booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-    transporterConfig <- CTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+    transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     now <- getCurrentTime
     QL.create dropLocation
     let dropLatLong = Maps.LatLong {lat = dropLocation.lat, lon = dropLocation.lon}
@@ -186,8 +187,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         let routeInfo = RR.RouteInfo {distance = Just estimatedDistance, duration = Just duration, points = Just shortestRoute.points}
         Redis.setExp (bookingRequestKeySoftUpdate booking.id.getId) routeInfo 600
         Redis.setExp (multipleRouteKeySoftUpdate booking.id.getId) (map RR.createMultipleRouteInfo routeResponse) 600
-        fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id srcPt (Just dropLatLong) (Just booking.transactionId) (Just "transactionId") booking.tripCategory
-        farePolicy <- getFarePolicy merchantOperatingCity.id booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.transactionId) (Just "transactionId")
+        fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id srcPt (Just dropLatLong) (Just (TransactionId (Id booking.transactionId))) booking.tripCategory
+        farePolicy <- getFarePolicy merchantOperatingCity.id booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just (TransactionId (Id booking.transactionId)))
         mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
         fareParameters <-
           calculateFareParameters

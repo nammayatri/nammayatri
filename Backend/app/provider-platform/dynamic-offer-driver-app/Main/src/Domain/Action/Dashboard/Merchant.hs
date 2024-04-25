@@ -98,14 +98,19 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import qualified SharedLogic.DriverFee as SDF
 import qualified SharedLogic.DriverPool.Types as DriverPool
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIPC
+import qualified Storage.Cac.DriverIntelligentPoolConfig as CQDIPC
+import qualified Storage.Cac.DriverPoolConfig as CQDPC
+import qualified Storage.Cac.FarePolicy as CFP
+import qualified Storage.Cac.FarePolicy as CQFP
+import qualified Storage.Cac.GoHomeConfig as CGHC
+import qualified Storage.Cac.GoHomeConfig as CQGHC
+import qualified Storage.Cac.TransporterConfig as CQTC
+import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Exophone as CQExophone
-import qualified Storage.CachedQueries.FarePolicy as CQFP
 import qualified Storage.CachedQueries.FareProduct as CQFProduct
-import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as CQDIPC
-import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CQDPC
 import qualified Storage.CachedQueries.Merchant.LeaderBoardConfig as CQLBC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CQMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -113,7 +118,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.Overlay as CQMO
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPPDEKM
@@ -199,7 +203,7 @@ merchantCommonConfig :: ShortId DM.Merchant -> Context.City -> Flow Common.Merch
 merchantCommonConfig merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQTC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  config <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   pure $ mkMerchantCommonConfigRes config
 
 mkMerchantCommonConfigRes :: DTC.TransporterConfig -> Common.MerchantCommonConfigRes
@@ -211,7 +215,7 @@ merchantCommonConfigUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateMerchantCommonConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQTC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  config <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let updConfig =
         config{pickupLocThreshold = maybe config.pickupLocThreshold (.value) req.pickupLocThreshold,
                dropLocThreshold = maybe config.dropLocThreshold (.value) req.dropLocThreshold,
@@ -413,7 +417,7 @@ driverIntelligentPoolConfig :: ShortId DM.Merchant -> Context.City -> Flow Commo
 driverIntelligentPoolConfig merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDIPC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
+  config <- CDIPC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
   pure $ mkDriverIntelligentPoolConfigRes config
 
 mkDriverIntelligentPoolConfigRes :: DDIPC.DriverIntelligentPoolConfig -> Common.DriverIntelligentPoolConfigRes
@@ -429,7 +433,7 @@ driverIntelligentPoolConfigUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateDriverIntelligentPoolConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDIPC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
+  config <- CDIPC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
   let updConfig =
         config{availabilityTimeWeightage = maybe config.availabilityTimeWeightage (.value) req.availabilityTimeWeightage,
                availabilityTimeWindowOption = fromMaybe config.availabilityTimeWindowOption req.availabilityTimeWindowOption,
@@ -805,7 +809,7 @@ updateFPPerExtraKmRate _ _ farePolicyId startDistance req = do
 
 updateFarePolicy :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
 updateFarePolicy _ _ farePolicyId req = do
-  farePolicy <- CQFP.findById Nothing Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
+  farePolicy <- CFP.findById Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
   updatedFarePolicy <- mkUpdatedFarePolicy farePolicy
   CQFP.update' updatedFarePolicy
   CQFP.clearCacheById farePolicyId
@@ -940,7 +944,7 @@ createMerchantOperatingCity merchantShortId city req = do
   newOperatingCity <- buildMerchantOperatingCity merchant.id baseOperatingCity
 
   -- intelligent pool config
-  intelligentPoolConfig <- CQDIPC.findByMerchantOpCityId baseOperatingCityId Nothing Nothing >>= fromMaybeM (InvalidRequest "Intelligent Pool Config not found")
+  intelligentPoolConfig <- CDIPC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Intelligent Pool Config not found")
   newIntelligentPoolConfig <- buildIntelligentPoolConfig newOperatingCity.id intelligentPoolConfig
 
   -- driver pool config
@@ -952,7 +956,7 @@ createMerchantOperatingCity merchantShortId city req = do
   newFareProducts <- mapM (buildFareProduct newOperatingCity.id) fareProducts
 
   -- go home config
-  goHomeConfig <- CQGHC.findByMerchantOpCityId baseOperatingCityId Nothing Nothing
+  goHomeConfig <- CGHC.findByMerchantOpCityId baseOperatingCityId Nothing
   newGoHomeConfig <- buildGoHomeConfig newOperatingCity.id goHomeConfig
 
   -- leader board configs
@@ -984,7 +988,7 @@ createMerchantOperatingCity merchantShortId city req = do
   newDocumentVerificationConfigs <- mapM (buildNewDocumentVerificationConfig newOperatingCity.id) documentVerificationConfigs
 
   -- transporter config
-  transporterConfig <- CQTC.findByMerchantOpCityId baseOperatingCityId Nothing Nothing >>= fromMaybeM (InvalidRequest "Transporter Config not found")
+  transporterConfig <- CTC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Transporter Config not found")
   newTransporterConfig <- buildTransporterConfig newOperatingCity.id transporterConfig
 
   -- geometry
