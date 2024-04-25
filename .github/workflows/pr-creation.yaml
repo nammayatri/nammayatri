@@ -34,7 +34,7 @@ jobs:
           email=$(git log -1 --pretty=format:"%ae")
           git config --global user.email "$email"
           git config --global user.name "$username"
-          git clone "https://github.com/MercyQueen/asset-store" asset-store
+          git clone "git@github.com:$username/MercyQueen/asset-store.git" asset-store
         env : 
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
       - name: Run script
