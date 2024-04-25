@@ -112,7 +112,7 @@ getDriverRateCard ::
   )
 getDriverRateCard (mbPersonId, _, merchantOperatingCityId) serviceTierType = do
   _personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  fullFarePolicy <- getFarePolicy merchantOperatingCityId (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing Nothing
+  fullFarePolicy <- getFarePolicy merchantOperatingCityId (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing
   let rateCard = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id mkBreakupItem Nothing Nothing (fullFarePolicyToFarePolicy fullFarePolicy)
   return rateCard
   where

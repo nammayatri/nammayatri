@@ -34,8 +34,8 @@ import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverCoins.Types as DCT
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import Storage.Queries.Coins.CoinHistory as CHistory
 import Storage.Queries.Person as Person
 import Storage.Queries.PurchaseHistory as PHistory
@@ -45,7 +45,7 @@ bulkUploadCoinsHandler :: ShortId DM.Merchant -> Context.City -> Common.BulkUplo
 bulkUploadCoinsHandler merchantShortId opCity Common.BulkUploadCoinsReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchant.id.getId
   mapM_ (\Common.DriverIdListWithCoins {..} -> bulkUpdateByDriverId merchant.id merchantOpCityId (Id driverId :: Id SP.Person) DCT.BulkUploadFunction coins bulkUploadTitle expirationTime transporterConfig) driverIdListWithCoins
@@ -103,7 +103,7 @@ bulkUploadCoinsV2Handler :: ShortId DM.Merchant -> Context.City -> Common.BulkUp
 bulkUploadCoinsV2Handler merchantShortId opCity Common.BulkUploadCoinsReqV2 {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchant.id.getId
   mapM_ (\Common.DriverIdListWithAmount {..} -> bulkUpdateByDriverIdV2 merchant.id merchantOpCityId (Id driverId :: Id SP.Person) (castEventFunctionForCoinsReverse eventFunction) amount bulkUploadTitle expirationTime transporterConfig) driverIdListWithCoins
@@ -161,7 +161,7 @@ coinHistoryHandler :: ShortId DM.Merchant -> Context.City -> Id SP.Person -> May
 coinHistoryHandler merchantShortId opCity driverId mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchant.id.getId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc

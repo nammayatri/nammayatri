@@ -64,9 +64,9 @@ import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
 import SharedLogic.Merchant
 import qualified SharedLogic.Payment as SPayment
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -80,6 +80,7 @@ import Tools.Error
 import Tools.Notifications
 import qualified Tools.Payment as Payment
 import qualified Tools.PaymentNudge as PaymentNudge
+import Utils.Common.Cac.KeyNameConstants
 
 -- create order -----------------------------------------------------
 createOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id INV.Invoice -> Flow Payment.CreateOrderResp
@@ -255,7 +256,7 @@ processPayment ::
   [INV.Invoice] ->
   m ()
 processPayment _ driver orderId sendNotification (serviceName, subsConfig) invoices = do
-  transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId driver.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let invoice = listToMaybe invoices
   let driverFeeIds = (.driverFeeId) <$> invoices
@@ -391,7 +392,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
   let driverFeeId = driverFee.id
   now <- getCurrentTime
   unless (notification.status == Juspay.SUCCESS) $ do
-    transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+    transporterConfig <- SCTC.findByMerchantOpCityId driver.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
     case notificationStatus of
       Juspay.NOTIFICATION_FAILURE -> do
         --- here based on notification status failed update driver fee to payment_overdue and reccuring invoice----

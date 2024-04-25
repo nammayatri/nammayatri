@@ -44,6 +44,14 @@ let hedisClusterCfg =
 
 let cacheConfig = { configsExpTime = +86400 }
 
+let cacConfig =
+      { host = "http://localhost:8080"
+      , interval = 10
+      , tenant = "dev"
+      , retryConnection = False
+      , cacExpTime = +86400
+      }
+
 let kvConfigUpdateFrequency = +10
 
 let kafkaProducerCfg =
@@ -79,4 +87,5 @@ in  { hedisCfg
     , kvConfigUpdateFrequency
     , runReviver = True
     , kafkaProducerCfg
+    , cacConfig
     }

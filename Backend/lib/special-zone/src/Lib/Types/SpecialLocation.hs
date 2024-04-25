@@ -17,8 +17,10 @@
 module Lib.Types.SpecialLocation where
 
 import Control.Lens.Operators
+import Data.Aeson
 import qualified Data.List as List
 import Data.OpenApi hiding (name)
+import Data.Text (unpack)
 import qualified Data.Text as T
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Maps (LatLong)
@@ -52,8 +54,14 @@ data Area
   | Drop (Id SpecialLocation)
   | Default
   deriving stock (Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving anyclass (ToSchema, ToJSON)
   deriving (PrettyShow) via Showable Area
+
+instance FromJSON Area where
+  parseJSON (String val) = case readMaybe (unpack val) of
+    Just a -> return a
+    Nothing -> fail "Not able to parse string to Area"
+  parseJSON other = genericParseJSON defaultOptions other
 
 instance Read Area where
   readsPrec d' =

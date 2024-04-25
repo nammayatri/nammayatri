@@ -67,6 +67,7 @@ data AppCfg = AppCfg
     slackChannel :: Text,
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
     cacheConfig :: CacheConfig,
+    cacConfig :: CacConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
     kvConfigUpdateFrequency :: Int
   }
@@ -105,6 +106,7 @@ data AppEnv = AppEnv
     slackEnv :: SlackEnv,
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     cacheConfig :: CacheConfig,
+    cacConfig :: CacConfig,
     kafkaProducerTools :: KafkaProducerTools,
     cacAclMap :: [(String, [(String, String)])],
     requestId :: Maybe Text,

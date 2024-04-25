@@ -15,7 +15,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as Beam
-import qualified Storage.CachedQueries.FarePolicy
+import qualified Storage.Cac.FarePolicy
 import qualified Storage.Queries.FareParameters
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.Estimate -> m ())
@@ -37,7 +37,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
     [ Se.Set Beam.createdAt createdAt,
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.fareParamsId ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
-      Se.Set Beam.farePolicyId ((Kernel.Types.Id.getId . (.id) <$>) farePolicy),
+      Se.Set Beam.farePolicyId (((Kernel.Types.Id.getId . (.id) <$>)) farePolicy),
       Se.Set Beam.isBlockedRoute isBlockedRoute,
       Se.Set Beam.isCustomerPrefferedSearchRoute isCustomerPrefferedSearchRoute,
       Se.Set Beam.isScheduled (Kernel.Prelude.Just isScheduled),
@@ -55,7 +55,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
 
 instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   fromTType' (Beam.EstimateT {..}) = do
-    farePolicy' <- maybe (pure Nothing) (Storage.CachedQueries.FarePolicy.findById Nothing Nothing . Kernel.Types.Id.Id) farePolicyId
+    farePolicy' <- (maybe (pure Nothing) ((Storage.Cac.FarePolicy.findById Nothing) . Kernel.Types.Id.Id)) farePolicyId
     fareParams' <- maybe (pure Nothing) (Storage.Queries.FareParameters.findById . Kernel.Types.Id.Id) fareParamsId
     pure $
       Just
@@ -84,8 +84,8 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
     Beam.EstimateT
       { Beam.createdAt = createdAt,
         Beam.estimatedDistance = estimatedDistance,
-        Beam.fareParamsId = (Kernel.Types.Id.getId . (.id) <$>) fareParams,
-        Beam.farePolicyId = (Kernel.Types.Id.getId . (.id) <$>) farePolicy,
+        Beam.fareParamsId = ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
+        Beam.farePolicyId = ((Kernel.Types.Id.getId . (.id) <$>)) farePolicy,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isBlockedRoute = isBlockedRoute,
         Beam.isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,

@@ -19,6 +19,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as D
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
 import qualified Domain.Types.FarePolicy as Domain
+import Domain.Types.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
@@ -51,3 +52,4 @@ type FullFarePolicySlabsDetailsSlab = (KTI.Id Domain.FarePolicy, Domain.FPSlabsD
 $(enableKVPG ''FarePolicySlabsDetailsSlabT ['id] [['farePolicyId]])
 
 $(mkTableInstances ''FarePolicySlabsDetailsSlabT "fare_policy_slabs_details_slab")
+$(mkCacParseInstanceList ''FarePolicySlabsDetailsSlab)

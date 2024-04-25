@@ -21,8 +21,8 @@ import Environment
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQMTC
 import Tools.Auth
 import Tools.Error
 
@@ -32,7 +32,7 @@ listCities mId = do
   mapM mkCityRes merchantOperatingCities
   where
     mkCityRes MerchantOperatingCity {..} = do
-      transporterConfig <- CQMTC.findByMerchantOpCityId id Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound id.getId)
+      transporterConfig <- SCTC.findByMerchantOpCityId id Nothing >>= fromMaybeM (TransporterConfigNotFound id.getId)
       return $
         DTC.CityRes
           { code = city,

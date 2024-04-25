@@ -53,7 +53,7 @@ Estimate:
       updatedAt: Kernel.Prelude.fromMaybe createdAt|I
       isScheduled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
       tripCategory: Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer)|I
-      farePolicy: maybe (pure Nothing) ((Storage.CachedQueries.FarePolicy.findById Nothing Nothing) . Kernel.Types.Id.Id)|IM
+      farePolicy: maybe (pure Nothing) ((Storage.Cac.FarePolicy.findById Nothing) . Kernel.Types.Id.Id)|IM
 
 
     toTType:

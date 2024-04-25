@@ -13,24 +13,22 @@
 -}
 module SharedLogic.Cac where
 
-import qualified Client.Main as CM
 import qualified Data.Aeson as DA
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Text as T
 import Domain.Types.Person
 import Kernel.Prelude
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Utils.Logging
+import Utils.Common.CacUtils
 
 getFrontendConfigs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) => Person -> Maybe Int -> m (Maybe DA.Object)
 getFrontendConfigs person mbToss = do
-  ghcCond <- liftIO $ CM.hashMapToString $ HM.fromList [(T.pack "city", (DA.String . T.pack . show) person.currentCity)]
+  let ghcCond = [(City, show person.currentCity)]
   contextValue <- case mbToss of
-    Just toss -> liftIO $ CM.evalExperiment "atlas_customer_ui" ghcCond toss -- CACTODO: remove hardcoding of tenant name
-    Nothing -> liftIO $ CM.evalCtx "atlas_customer_ui" ghcCond
+    Just toss -> getConfigFromCac ghcCond (show RiderFrontEndTenant) toss Empty
+    Nothing -> getConfigFromCac ghcCond (show RiderFrontEndTenant) 1 Empty
   case contextValue of
-    Left err -> do
-      logError $ "Error in getting frontend configs: " <> show err <> "City: " <> show person.currentCity <> "toss: " <> show mbToss
+    Nothing -> do
+      logError $ "Error in getting frontend configs for City: " <> show person.currentCity <> "toss: " <> show mbToss
       return Nothing
-    Right cfgs -> return $ Just cfgs
+    Just cfgs -> return $ Just cfgs
