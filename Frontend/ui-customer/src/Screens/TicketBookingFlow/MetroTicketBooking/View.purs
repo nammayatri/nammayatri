@@ -82,7 +82,8 @@ screen initialState =
       let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
           config = getAppConfig appConfig
           cityMetroConfig = getMetroConfigFromAppConfig config (show city)
-          withinTimeRange = JB.withinTimeRange cityMetroConfig.bookingStartTime cityMetroConfig.bookingEndTime $ 
+          bookingEndTime  = if elem (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "DD/MM/YYYY") cityMetroConfig.customDates then cityMetroConfig.customEndTime else cityMetroConfig.bookingEndTime
+          withinTimeRange = JB.withinTimeRange cityMetroConfig.bookingStartTime bookingEndTime $ 
             EHC.convertUTCtoISC (EHC.getCurrentUTC "") "HH:mm:ss"
       push $ ShowMetroBookingTimeError withinTimeRange
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ getQuotesPolling initialState.data.searchId 5 3000.0 initialState push GetMetroQuotesAction
