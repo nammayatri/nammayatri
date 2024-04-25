@@ -31,6 +31,7 @@ data FareParametersT f = FareParametersT
     nightShiftCharge :: B.C f (Maybe Money),
     nightShiftRateIfApplies :: B.C f (Maybe Double),
     serviceCharge :: B.C f (Maybe Money),
+    parkingCharge :: B.C f (Maybe HighPrecMoney),
     fareParametersType :: B.C f Domain.FareParametersType,
     govtCharges :: B.C f (Maybe Money),
     customerCancellationDues :: B.C f (Maybe HighPrecMoney),

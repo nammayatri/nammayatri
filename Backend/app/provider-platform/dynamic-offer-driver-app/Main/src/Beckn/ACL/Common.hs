@@ -123,7 +123,8 @@ filterRequiredBreakups fParamsType breakup = do
                  "TOTAL_FARE",
                  "WAITING_OR_PICKUP_CHARGES",
                  "EXTRA_TIME_FARE",
-                 "CANCELLATION_CHARGES"
+                 "CANCELLATION_CHARGES",
+                 "PARKING_CHARGE"
                ]
     DFParams.Slab ->
       title
@@ -138,7 +139,8 @@ filterRequiredBreakups fParamsType breakup = do
                  "TOTAL_FARE",
                  "NIGHT_SHIFT_CHARGE",
                  "EXTRA_TIME_FARE",
-                 "CANCELLATION_CHARGES"
+                 "CANCELLATION_CHARGES",
+                 "PARKING_CHARGE"
                ]
     DFParams.Rental ->
       title
@@ -153,7 +155,8 @@ filterRequiredBreakups fParamsType breakup = do
                  "TOTAL_FARE",
                  "WAITING_OR_PICKUP_CHARGES",
                  "EXTRA_TIME_FARE",
-                 "CANCELLATION_CHARGES"
+                 "CANCELLATION_CHARGES",
+                 "PARKING_CHARGE"
                ]
 
 -- Fix these tage properly

@@ -124,6 +124,7 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
     BeamFP.FarePolicyT
       { BeamFP.id = getId id,
         BeamFP.serviceCharge = serviceCharge,
+        BeamFP.parkingCharge = parkingCharge,
         BeamFP.nightShiftStart = (.nightShiftStart) <$> nightShiftBounds,
         BeamFP.nightShiftEnd = (.nightShiftEnd) <$> nightShiftBounds,
         BeamFP.maxAllowedTripDistance = (.maxAllowedTripDistance) <$> allowedTripDistanceBounds,
@@ -166,6 +167,7 @@ instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
             Domain.FarePolicy
               { id = Id id,
                 serviceCharge = serviceCharge,
+                parkingCharge = parkingCharge,
                 nightShiftBounds = DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
                 allowedTripDistanceBounds =
                   ((,) <$> minAllowedTripDistance <*> maxAllowedTripDistance) <&> \(minAllowedTripDistance', maxAllowedTripDistance') ->

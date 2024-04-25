@@ -46,7 +46,8 @@ getInvoice (mbPersonId, merchantId) from to = do
                   ("SERVICE_CHARGE", "Service Charge"),
                   ("TIME_BASED_FARE", "Time Based Fare"),
                   ("DIST_BASED_FARE", "Distance Based Fare"),
-                  ("WAITING_OR_PICKUP_CHARGES", "Wating Charge")
+                  ("WAITING_OR_PICKUP_CHARGES", "Wating Charge"),
+                  ("PARKING_CHARGE", "Parking Charge")
                 ]
           fareBreakups <- mapM (getFareBreakup booking.id) breakupItems
           mbSource <- join <$> mapM CHL.findLocationById booking.fromLocationId
