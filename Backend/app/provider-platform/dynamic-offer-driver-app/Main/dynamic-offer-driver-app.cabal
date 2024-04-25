@@ -215,7 +215,6 @@ library
       Domain.Types.BusinessEvent
       Domain.Types.Cac
       Domain.Types.CacType
-      Domain.Types.CancellationCharges
       Domain.Types.City
       Domain.Types.Coins.CoinHistory
       Domain.Types.Coins.CoinsConfig
@@ -346,7 +345,6 @@ library
       Storage.Beam.Booking
       Storage.Beam.Booking.BookingLocation
       Storage.Beam.BusinessEvent
-      Storage.Beam.CancellationCharges
       Storage.Beam.Coins.CoinHistory
       Storage.Beam.Coins.CoinsConfig
       Storage.Beam.Common
@@ -461,7 +459,6 @@ library
       Storage.Queries.BookingCancellationReasonExtra
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatusExtra
-      Storage.Queries.CancellationCharges
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
       Storage.Queries.DailyStatsExtra
@@ -545,6 +542,7 @@ library
       Storage.Queries.Transformers.BlackListOrg
       Storage.Queries.Transformers.BookingCancellationReason
       Storage.Queries.Transformers.CallStatus
+      Storage.Queries.Transformers.CancellationCharges
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.DocumentVerificationConfig
       Storage.Queries.Transformers.QuestionInformation
@@ -595,6 +593,7 @@ library
       Domain.Types.BlackListOrg
       Domain.Types.BookingCancellationReason
       Domain.Types.CallStatus
+      Domain.Types.CancellationCharges
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.DailyStats
@@ -646,6 +645,7 @@ library
       Storage.Beam.BlackListOrg
       Storage.Beam.BookingCancellationReason
       Storage.Beam.CallStatus
+      Storage.Beam.CancellationCharges
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.DailyStats
@@ -697,6 +697,7 @@ library
       Storage.Queries.BlackListOrg
       Storage.Queries.BookingCancellationReason
       Storage.Queries.CallStatus
+      Storage.Queries.CancellationCharges
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.DailyStats
