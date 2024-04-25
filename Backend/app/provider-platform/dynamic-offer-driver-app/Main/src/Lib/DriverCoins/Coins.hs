@@ -55,7 +55,7 @@ import qualified Tools.Notifications as Notify
 type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters))
 
 getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Int
-getCoinsByDriverId driverId timeDiffFromUtc = do
+getCoinsByDriverId driverId timeDiffFromUtc = Hedis.withLockRedisAndReturnValue driverId.getId 60 $ do
   now <- getCurrentTime
   let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
   let currentDate = show $ utctDay istTime
