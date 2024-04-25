@@ -164,6 +164,7 @@ Person:
     emailHash: SecondaryKey
     referralCode: SecondaryKey
     deviceToken: SecondaryKey
+    customerReferralCode: SecondaryKey
 
   sqlType:
     firstName: character varying(255)
