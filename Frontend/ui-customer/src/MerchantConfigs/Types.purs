@@ -289,6 +289,8 @@ type MapConfig = {
 type MetroConfig = {
   cityName :: String
 , cityCode :: String
+, customEndTime :: String
+, customDates :: Array String 
 , metroStationTtl :: Int
 , bookingStartTime :: String
 , bookingEndTime :: String
