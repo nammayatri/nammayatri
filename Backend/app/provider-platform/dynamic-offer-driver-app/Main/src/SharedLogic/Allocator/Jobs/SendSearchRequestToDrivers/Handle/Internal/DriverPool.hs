@@ -38,7 +38,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import EulerHS.Prelude hiding (id)
 import Kernel.Randomizer (randomizeList)
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -70,7 +70,7 @@ previouslyAttemptedDriversKey searchTryId = "Driver-Offer:PreviouslyAttemptedDri
 
 prepareDriverPoolBatch ::
   ( EncFlow m r,
-    EsqDBReplicaFlow m r,
+    Esq.EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
     LT.HasLocationService m r
@@ -200,7 +200,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
             Just pickupZoneGateId ->
               partitionM
                 ( \dd -> do
-                    mbDriverGate <- findGateInfoIfDriverInsideGatePickupZone (LatLong dd.driverPoolResult.lat dd.driverPoolResult.lon)
+                    mbDriverGate <- Esq.runInReplica $ findGateInfoIfDriverInsideGatePickupZone (LatLong dd.driverPoolResult.lat dd.driverPoolResult.lon)
                     pure $ case mbDriverGate of
                       Just driverGate -> driverGate.id.getId == pickupZoneGateId
                       Nothing -> False
@@ -521,7 +521,7 @@ poolRadiusStepKey searchTryId = "Driver-Offer:Allocator:PoolRadiusStep:SearchTry
 getNextDriverPoolBatch ::
   ( EncFlow m r,
     CacheFlow m r,
-    EsqDBReplicaFlow m r,
+    Esq.EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     LT.HasLocationService m r
   ) =>
