@@ -1,7 +1,6 @@
 name: Execute Script
 
-on:
-  push:
+on: [push, pull_request]
 
 jobs:
   on_pr_merge:
