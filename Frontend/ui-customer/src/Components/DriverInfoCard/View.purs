@@ -56,7 +56,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, chatSuggestion)
 import Helpers.Utils (parseFloat)
 import Data.Int(toNumber, fromString)
 import MerchantConfig.Types (DriverInfoConfig)
-import Mobility.Prelude (boolToVisibility)
+import Mobility.Prelude (boolToVisibility, capitalize)
 import Locale.Utils
 import Components.DriverInfoCard.Common.View
 import Components.DriverInfoCard.Common.Types
@@ -1244,6 +1244,9 @@ getDriverDetails state = {
   , config : state.data.config
   , rideStarted : state.props.currentStage == RideStarted
   , enablePaddingBottom : false
+  , vehicleModel : capitalize $ STR.toLower state.data.vehicleModel
+  , vehicleColor : capitalize $ STR.toLower state.data.vehicleColor
+  , serviceTierName : state.data.serviceTierName
 }
 
 getTripDetails :: DriverInfoCardState -> TripDetails Action

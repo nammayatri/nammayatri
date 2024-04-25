@@ -1368,3 +1368,6 @@ getBN stringKey =
         TRIP_TIME -> "ট্রিপ টাইম"
         EARNINGS_PER_KM -> "প্রতি কিমি আয়"
         OPTIONAL_DOCUMENT -> "ঐচ্ছিক নথি"
+        EARNINGS_PER_KM_DESC_1 -> "আজকের জন্য মোট উপার্জন/মোট রাইড দূরত্ব নির্দেশ করে।"
+        EARNINGS_PER_KM_DESC_2 -> "এই পরিমাণে পার্কিং এবং টোল চার্জ অন্তর্ভুক্ত নয়"
+        EARNINGS_P_KM -> "আয়/কিমি"

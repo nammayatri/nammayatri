@@ -70,6 +70,7 @@ cancelBooking booking = do
   Notify.notifyOnBookingCancelled booking DBCR.ByApplication bppDetails
   where
     buildBookingCancellationReason bookingId = do
+      now <- getCurrentTime
       return $
         DBCR.BookingCancellationReason
           { bookingId = bookingId,
@@ -80,5 +81,7 @@ cancelBooking booking = do
             reasonStage = Nothing,
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
-            driverDistToPickup = Nothing
+            driverDistToPickup = Nothing,
+            createdAt = now,
+            updatedAt = now
           }

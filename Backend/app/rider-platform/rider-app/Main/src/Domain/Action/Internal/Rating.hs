@@ -78,7 +78,7 @@ rating apiKey FeedbackReq {..} = do
   pure Success
 
 calculateAverageRating ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
   Id DP.Person ->
   Int ->
   Int ->
@@ -95,10 +95,10 @@ calculateAverageRating personId minimumDriverRatesCount ratingValue totalRatings
     then do
       let isValidRating = True
       logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
-      void $ QP.updateAverageRating personId newRatingsCount newTotalRatingScore isValidRating
+      void $ QP.updateAverageRating newRatingsCount newTotalRatingScore isValidRating personId
     else do
       let isValidRating = False
-      void $ QP.updateAverageRating personId newRatingsCount newTotalRatingScore isValidRating
+      void $ QP.updateAverageRating newRatingsCount newTotalRatingScore isValidRating personId
 
 buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Bool -> m DRating.Rating
 buildRating rideId riderId ratingValue feedbackDetails wasOfferedAssistance = do

@@ -41,14 +41,7 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     farePolicyId :: B.C f (Maybe Text),
     isScheduled :: B.C f (Maybe Bool),
     createdAt :: B.C f LocalTime,
-    updatedAt :: B.C f LocalTime,
-    clientSdkVersion :: B.C f (Maybe Text),
-    clientBundleVersion :: B.C f (Maybe Text),
-    clientOsVersion :: B.C f (Maybe Text),
-    clientOsType :: B.C f (Maybe DeviceType),
-    clientConfigVersion :: B.C f (Maybe Text),
-    backendConfigVersion :: B.C f (Maybe Text),
-    backendAppVersion :: B.C f (Maybe Text)
+    updatedAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 

@@ -15,14 +15,14 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data DailyStatsT f = DailyStatsT
-  { driverId :: (B.C f Data.Text.Text),
-    id :: (B.C f Data.Text.Text),
-    merchantLocalDate :: (B.C f Data.Time.Calendar.Day),
-    numRides :: (B.C f Kernel.Prelude.Int),
-    totalDistance :: (B.C f Kernel.Types.Common.Meters),
-    totalEarnings :: (B.C f Kernel.Types.Common.Money),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { driverId :: B.C f Data.Text.Text,
+    id :: B.C f Data.Text.Text,
+    merchantLocalDate :: B.C f Data.Time.Calendar.Day,
+    numRides :: B.C f Kernel.Prelude.Int,
+    totalDistance :: B.C f Kernel.Types.Common.Meters,
+    totalEarnings :: B.C f Kernel.Types.Common.Money,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +32,6 @@ instance B.Table DailyStatsT where
 
 type DailyStats = DailyStatsT Identity
 
-$(enableKVPG (''DailyStatsT) [('id)] [[('driverId)]])
+$(enableKVPG ''DailyStatsT ['id] [['driverId]])
 
-$(mkTableInstances (''DailyStatsT) "daily_stats")
+$(mkTableInstances ''DailyStatsT "daily_stats")

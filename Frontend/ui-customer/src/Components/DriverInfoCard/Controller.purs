@@ -103,4 +103,7 @@ type DriverInfoCardData =
   , bottomSheetState :: BottomSheetState
   , bannerData :: BannerCarousalData
   , bannerArray :: Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
+  , vehicleModel :: String
+  , vehicleColor :: String
+  , serviceTierName :: Maybe String
   }

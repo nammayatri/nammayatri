@@ -40,6 +40,7 @@ import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
@@ -78,7 +79,7 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
           Just otp -> pure otp
   ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
 
-  ride <- buildRide driver.id booking ghrId otpCode enableFrequentLocationUpdates mbClientId
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   rideDetails <- buildRideDetails ride driver vehicle
 
@@ -114,7 +115,10 @@ buildRideDetails ::
   DVeh.Vehicle ->
   Flow SRD.RideDetails
 buildRideDetails ride driver vehicle = do
+  now <- getCurrentTime
   vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId
+  let defaultServiceTierName = (.name) <$> find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
   return $
     SRD.RideDetails
       { id = ride.id,
@@ -126,11 +130,13 @@ buildRideDetails ride driver vehicle = do
         vehicleVariant = Just vehicle.variant,
         vehicleModel = Just vehicle.model,
         vehicleClass = Nothing,
-        fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId)
+        fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId),
+        defaultServiceTierName = defaultServiceTierName,
+        createdAt = Just now
       }
 
-buildRide :: Id Person -> DBooking.Booking -> Maybe (Id DGetHomeRequest.DriverGoHomeRequest) -> Text -> Maybe Bool -> Maybe (Id DC.Client) -> Flow DRide.Ride
-buildRide driverId booking ghrId otp enableFrequentLocationUpdates clientId = do
+buildRide :: DPerson.Person -> DBooking.Booking -> Maybe (Id DGetHomeRequest.DriverGoHomeRequest) -> Text -> Maybe Bool -> Maybe (Id DC.Client) -> Flow DRide.Ride
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   now <- getCurrentTime
@@ -146,7 +152,7 @@ buildRide driverId booking ghrId otp enableFrequentLocationUpdates clientId = do
         merchantId = Just booking.providerId,
         merchantOperatingCityId = booking.merchantOperatingCityId,
         status = DRide.NEW,
-        driverId = cast driverId,
+        driverId = cast driver.id,
         otp = otp,
         endOtp = Nothing,
         trackingUrl = trackingUrl,
@@ -174,18 +180,18 @@ buildRide driverId booking ghrId otp enableFrequentLocationUpdates clientId = do
         tollCharges = Nothing,
         uiDistanceCalculationWithAccuracy = Nothing,
         uiDistanceCalculationWithoutAccuracy = Nothing,
-        isFreeRide = Just ((getId driverId) `elem` transporterConfig.specialDrivers),
+        isFreeRide = Just ((getId driver.id) `elem` transporterConfig.specialDrivers),
         driverGoHomeRequestId = ghrId,
         safetyAlertTriggered = False,
         enableFrequentLocationUpdates = enableFrequentLocationUpdates,
         vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
         vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
-        clientSdkVersion = booking.clientSdkVersion,
-        clientBundleVersion = booking.clientBundleVersion,
-        clientDevice = booking.clientDevice,
-        clientConfigVersion = booking.clientConfigVersion,
-        backendConfigVersion = booking.backendConfigVersion,
-        backendAppVersion = booking.backendAppVersion
+        clientSdkVersion = driver.clientSdkVersion,
+        clientBundleVersion = driver.clientBundleVersion,
+        clientDevice = driver.clientDevice,
+        clientConfigVersion = driver.clientConfigVersion,
+        backendConfigVersion = driver.backendConfigVersion,
+        backendAppVersion = driver.backendAppVersion
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

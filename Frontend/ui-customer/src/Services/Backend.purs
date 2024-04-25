@@ -61,12 +61,14 @@ import MerchantConfig.Types (GeoCodeConfig)
 import Debug
 import Effect.Uncurried (runEffectFn9)
 import Engineering.Helpers.BackTrack (liftFlowBT)
+import SessionCache
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
     regToken <- loadS $ show REGISTERATION_TOKEN
     pure $ Headers $ [   Header "Content-Type" "application/json",
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-config-version" (getValueFromWindow "CONFIG_VERSION"),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
@@ -81,6 +83,7 @@ getHeaders' val isGzipCompressionEnabled = do
     regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
     lift $ lift $ pure $ Headers $ [   Header "Content-Type" "application/json",
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-config-version" (getValueToLocalStore CONFIG_VERSION),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
@@ -450,13 +453,6 @@ callDriverBT rideId = do
 
 ------------------------------------------------------------------------ Feedback Function --------------------------------------------------------------------------------------------
 
-rideFeedbackBT :: FeedbackReq -> FlowBT String FeedbackRes
-rideFeedbackBT payload = do
-    headers <- getHeaders' "" false
-    withAPIResultBT (EP.feedback "") identity errorHandler (lift $ lift $ callAPI headers payload)
-    where
-      errorHandler errorPayload = do
-            BackT $ pure GoBack
 
 makeFeedBackReq :: Int -> String -> String -> Maybe Boolean -> FeedbackReq
 makeFeedBackReq rating rideId feedback wasOfferedAssistance = FeedbackReq
@@ -924,13 +920,6 @@ makeSosStatus sosStatus comment= SosStatus {
 
 ------------------------------------------------------------------------ Ride Feedback ------------------------------------------------------------------------------------
 
-bookingFeedbackBT :: RideFeedbackReq -> FlowBT String RideFeedbackRes
-bookingFeedbackBT payload = do
-    headers <- getHeaders' "" false
-    withAPIResultBT (EP.bookingFeedback "") identity errorHandler (lift $ lift $ callAPI headers payload)
-    where
-      errorHandler errorPayload = do
-            BackT $ pure GoBack
 
 makeRideFeedBackReq :: String -> Array FeedbackAnswer -> RideFeedbackReq
 makeRideFeedBackReq id feedbackList = RideFeedbackReq

@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -19,6 +20,8 @@ module Domain.Action.UI.Quote
     getQuotes,
     estimateBuildLockKey,
     processActiveBooking,
+    mkQAPIEntityList,
+    QuoteAPIEntity (..),
   )
 where
 
@@ -27,15 +30,21 @@ import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.Cancel as DCancel
-import Domain.Types.Booking
+import qualified Domain.Action.UI.DriverOffer as UDriverOffer
+import Domain.Action.UI.Estimate as UEstimate
+import qualified Domain.Action.UI.SpecialZoneQuote as USpecialZoneQuote
+import Domain.Types.Booking as DBooking
+import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.CancellationReason
-import Domain.Types.Estimate (EstimateAPIEntity)
-import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import Domain.Types.Quote (QuoteAPIEntity)
+import Domain.Types.Quote as DQuote
 import qualified Domain.Types.Quote as SQuote
+import qualified Domain.Types.RentalDetails as DRentalDetails
 import qualified Domain.Types.SearchRequest as SSR
+import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
+import Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
@@ -60,12 +69,89 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
+import qualified Tools.JSON as J
+import qualified Tools.Schema as S
+
+data QuoteAPIEntity = QuoteAPIEntity
+  { id :: Id Quote,
+    vehicleVariant :: DVST.VehicleServiceTierType,
+    serviceTierName :: Maybe Text,
+    serviceTierShortDesc :: Maybe Text,
+    estimatedFare :: Money,
+    estimatedTotalFare :: Money,
+    discount :: Maybe Money,
+    estimatedFareWithCurrency :: PriceAPIEntity,
+    estimatedTotalFareWithCurrency :: PriceAPIEntity,
+    discountWithCurrency :: Maybe PriceAPIEntity,
+    agencyName :: Text,
+    agencyNumber :: Maybe Text,
+    tripTerms :: [Text],
+    quoteDetails :: QuoteAPIDetails,
+    specialLocationTag :: Maybe Text,
+    agencyCompletedRidesCount :: Maybe Int,
+    createdAt :: UTCTime,
+    isValueAddNP :: Bool,
+    validTill :: UTCTime
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+makeQuoteAPIEntity :: Quote -> DBppDetails.BppDetails -> Bool -> QuoteAPIEntity
+makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
+  let agencyCompletedRidesCount = Just 0
+      providerNum = fromMaybe "+91" bppDetails.supportNumber
+   in QuoteAPIEntity
+        { agencyName = bppDetails.name,
+          agencyNumber = Just providerNum,
+          tripTerms = maybe [] (.descriptions) tripTerms,
+          quoteDetails = mkQuoteAPIDetails quoteDetails,
+          estimatedFare = estimatedFare.amountInt,
+          estimatedTotalFare = estimatedTotalFare.amountInt,
+          discount = discount <&> (.amountInt),
+          estimatedFareWithCurrency = mkPriceAPIEntity estimatedFare,
+          estimatedTotalFareWithCurrency = mkPriceAPIEntity estimatedTotalFare,
+          discountWithCurrency = mkPriceAPIEntity <$> discount,
+          vehicleVariant = vehicleServiceTierType,
+          ..
+        }
+
+instance ToJSON QuoteAPIDetails where
+  toJSON = genericToJSON J.fareProductOptions
+
+instance FromJSON QuoteAPIDetails where
+  parseJSON = genericParseJSON J.fareProductOptions
+
+instance ToSchema QuoteAPIDetails where
+  declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
+
+mkQuoteAPIDetails :: QuoteDetails -> QuoteAPIDetails
+mkQuoteAPIDetails = \case
+  DQuote.RentalDetails details -> DQuote.RentalAPIDetails $ DRentalDetails.mkRentalDetailsAPIEntity details
+  DQuote.OneWayDetails OneWayQuoteDetails {..} ->
+    DQuote.OneWayAPIDetails
+      OneWayQuoteAPIDetails
+        { distanceToNearestDriver = distanceToHighPrecMeters distanceToNearestDriver,
+          distanceToNearestDriverWithUnit = distanceToNearestDriver
+        }
+  DQuote.DriverOfferDetails DDriverOffer.DriverOffer {..} ->
+    let distanceToPickup' = (distanceToHighPrecMeters <$> distanceToPickup) <|> (Just . HighPrecMeters $ toCentesimal 0) -- TODO::remove this default value
+        distanceToPickupWithUnit' = distanceToPickup <|> Just (Distance 0 Meter) -- TODO::remove this default value
+        durationToPickup' = durationToPickup <|> Just 0 -- TODO::remove this default value
+        rating' = rating <|> Just (toCentesimal 500) -- TODO::remove this default value
+     in DQuote.DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickupWithUnit', durationToPickup = durationToPickup', rating = rating', ..}
+  DQuote.OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> DQuote.OneWaySpecialZoneAPIDetails USpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
+  DQuote.InterCityDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> DQuote.InterCityAPIDetails USpecialZoneQuote.InterCityQuoteAPIEntity {..}
+
+mkQAPIEntityList :: [Quote] -> [DBppDetails.BppDetails] -> [Bool] -> [QuoteAPIEntity]
+mkQAPIEntityList (q : qRemaining) (bpp : bppRemaining) (isValueAddNP : remVNP) =
+  makeQuoteAPIEntity q bpp isValueAddNP : mkQAPIEntityList qRemaining bppRemaining remVNP
+mkQAPIEntityList [] [] [] = []
+mkQAPIEntityList _ _ _ = [] -- This should never happen as all the list are of same length
 
 data GetQuotesRes = GetQuotesRes
   { fromLocation :: DL.LocationAPIEntity,
     toLocation :: Maybe DL.LocationAPIEntity,
     quotes :: [OfferRes],
-    estimates :: [EstimateAPIEntity],
+    estimates :: [UEstimate.EstimateAPIEntity],
     paymentMethods :: [DMPM.PaymentMethodAPIEntity]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -130,10 +216,10 @@ processActiveBooking booking cancellationStage = do
             void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
         else throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
 
-isRentalOrInterCity :: BookingDetails -> Bool
+isRentalOrInterCity :: DBooking.BookingDetails -> Bool
 isRentalOrInterCity bookingDetails = case bookingDetails of
-  RentalDetails _ -> True
-  InterCityDetails _ -> True
+  DBooking.RentalDetails _ -> True
+  DBooking.InterCityDetails _ -> True
   _ -> False
 
 getOffers :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
@@ -145,7 +231,7 @@ getOffers searchRequest = do
       logDebug $ "quotes are :-" <> show quoteList
       bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
-      let quotes = OnDemandCab <$> SQuote.mkQAPIEntityList quoteList bppDetailList isValueAddNPList
+      let quotes = OnDemandCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
       metroOffers <- map Metro <$> Metro.getMetroOffers searchRequest.id
       publicTransportOffers <- map PublicTransport <$> PublicTransport.getPublicTransportOffers searchRequest.id
       return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers
@@ -154,7 +240,7 @@ getOffers searchRequest = do
       logDebug $ "quotes are :-" <> show quoteList
       bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
-      let quotes = OnRentalCab <$> SQuote.mkQAPIEntityList quoteList bppDetailList isValueAddNPList
+      let quotes = OnRentalCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
       return . sortBy (compare `on` creationTime) $ quotes
   where
     sortByNearestDriverDistance quoteList = do
@@ -168,15 +254,15 @@ getOffers searchRequest = do
         SQuote.OneWaySpecialZoneDetails _ -> Just $ Distance 0 Meter
         SQuote.InterCityDetails _ -> Just $ Distance 0 Meter
     creationTime :: OfferRes -> UTCTime
-    creationTime (OnDemandCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
+    creationTime (OnDemandCab QuoteAPIEntity {createdAt}) = createdAt
     creationTime (Metro Metro.MetroOffer {createdAt}) = createdAt
-    creationTime (OnRentalCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
+    creationTime (OnRentalCab QuoteAPIEntity {createdAt}) = createdAt
     creationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
 
-getEstimates :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]
+getEstimates :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m [UEstimate.EstimateAPIEntity]
 getEstimates searchRequestId = do
   estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
-  estimates <- mapM DEstimate.mkEstimateAPIEntity (sortByEstimatedFare estimateList)
+  estimates <- mapM UEstimate.mkEstimateAPIEntity (sortByEstimatedFare estimateList)
   return . sortBy (compare `on` (.createdAt)) $ estimates
 
 sortByEstimatedFare :: (HasField "estimatedFare" r Price) => [r] -> [r]

@@ -1095,3 +1095,5 @@ getBN stringKey =
         BOOK name -> "বুক " <> name
         FARE_FOR limit -> limit <> " এর জন্য ভাড়া"
         WAITING_CHARGE_LIMIT timeLimit -> "অপেক্ষা চার্জ (" <> timeLimit <> " মিনিটের পরে)"
+        TIME_TAKEN -> "সময় নেয়া"
+        TRIP_DISTANCE -> "ভ্রমণের দূরত্ব"

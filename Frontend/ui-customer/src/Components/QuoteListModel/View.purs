@@ -295,7 +295,7 @@ addTipView state push =
   , orientation VERTICAL
   , height WRAP_CONTENT
   , accessibility DISABLE
-  , visibility $ boolToVisibility $ state.appConfig.tipsEnabled && state.tipViewProps.isVisible
+  , visibility $ boolToVisibility $ state.appConfig.tipsEnabled && state.tipViewProps.isVisible && length state.customerTipArray > 0
   ]
   [ linearLayout
       [ height WRAP_CONTENT
@@ -733,7 +733,7 @@ tipsViewConfig state = let
   , isVisible = state.tipViewProps.isVisible
   , customerTipArray = state.customerTipArray
   , customerTipArrayWithValues = state.customerTipArrayWithValues
-  , enableTips = state.appConfig.tipsEnabled
+  , enableTips = state.appConfig.tipsEnabled && length state.customerTipArray > 0
   , showTipInfo = false
   }
   in tipsViewConfig'

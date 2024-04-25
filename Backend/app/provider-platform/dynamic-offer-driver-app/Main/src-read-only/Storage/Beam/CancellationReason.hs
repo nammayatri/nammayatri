@@ -14,12 +14,12 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data CancellationReasonT f = CancellationReasonT
-  { description :: B.C f Data.Text.Text,
-    enabled :: B.C f Kernel.Prelude.Bool,
-    priority :: B.C f Kernel.Prelude.Int,
-    reasonCode :: B.C f Domain.Types.CancellationReason.CancellationReasonCode,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { description :: (B.C f Data.Text.Text),
+    enabled :: (B.C f Kernel.Prelude.Bool),
+    priority :: (B.C f Kernel.Prelude.Int),
+    reasonCode :: (B.C f Domain.Types.CancellationReason.CancellationReasonCode),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table CancellationReasonT where
 
 type CancellationReason = CancellationReasonT Identity
 
-$(enableKVPG ''CancellationReasonT ['reasonCode] [])
+$(enableKVPG (''CancellationReasonT) [('reasonCode)] [])
 
-$(mkTableInstances ''CancellationReasonT "cancellation_reason")
+$(mkTableInstances (''CancellationReasonT) "cancellation_reason")

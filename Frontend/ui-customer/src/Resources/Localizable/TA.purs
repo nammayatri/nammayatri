@@ -1110,3 +1110,5 @@ getTA stringKey =
     BOOK name -> "புத்தகம் " <> name
     FARE_FOR limit -> limit <> " வரை கட்டணம்"
     WAITING_CHARGE_LIMIT timeLimit -> "காத்திருப்பு கட்டணம் ("<> timeLimit <>" நிமிடங்கள் பின்பு)"
+    TIME_TAKEN -> "மொத்த நேரம்"
+    TRIP_DISTANCE -> "பயண தூரம்"

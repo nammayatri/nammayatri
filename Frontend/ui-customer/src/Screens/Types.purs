@@ -452,6 +452,9 @@ type IndividualRideCardState =
   , optionsVisibility :: Boolean
   , merchantExoPhone :: String
   , serviceTierName :: Maybe String
+  , totalTime :: String
+  , vehicleModel :: String
+  , rideStartTimeUTC :: String
   }
 
 
@@ -798,6 +801,7 @@ type HomeScreenStateProps =
   , repeatRideVariant :: String
   , hasToll :: Boolean
   , repeatRideServiceTierName :: Maybe String
+  , isSearchCancelled :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -1153,6 +1157,8 @@ type DriverInfoCard =
   , destinationAddress :: Address
   , status :: String
   , serviceTierName :: Maybe String
+  , vehicleModel :: String
+  , vehicleColor :: String
   }
 
 type RatingCard =

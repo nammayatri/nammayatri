@@ -145,7 +145,8 @@ data AppCfg = AppCfg
     _version :: Text,
     cacConfig :: CacConfig,
     superPositionConfig :: SuperPositionConfig,
-    maxStraightLineRectificationThreshold :: HighPrecMeters
+    maxStraightLineRectificationThreshold :: HighPrecMeters,
+    singleBatchProcessingTempDelay :: NominalDiffTime
   }
   deriving (Generic, FromDhall)
 
@@ -228,7 +229,8 @@ data AppEnv = AppEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    maxStraightLineRectificationThreshold :: HighPrecMeters
+    maxStraightLineRectificationThreshold :: HighPrecMeters,
+    singleBatchProcessingTempDelay :: NominalDiffTime
   }
   deriving (Generic)
 

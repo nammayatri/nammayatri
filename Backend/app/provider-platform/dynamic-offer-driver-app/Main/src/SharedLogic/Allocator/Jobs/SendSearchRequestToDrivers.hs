@@ -65,6 +65,7 @@ sendSearchRequestToDrivers ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
+    HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Job 'SendSearchRequestToDriver ->
@@ -117,6 +118,7 @@ sendSearchRequestToDrivers' ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
+    HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   DriverPoolConfig ->

@@ -166,6 +166,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
                             fromMaybe "" vehicleVariant
       , status : rideList.status
       , serviceTierName : resp.serviceTierName
+      , vehicleModel : rideList.vehicleModel
+      , vehicleColor : rideList.vehicleColor
       }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity

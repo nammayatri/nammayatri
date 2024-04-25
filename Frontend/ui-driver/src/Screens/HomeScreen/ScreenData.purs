@@ -95,6 +95,7 @@ initData =
       , locationLastUpdatedTime: ""
       , totalRidesOfDay: 0
       , totalEarningsOfDay: 0
+      , earningPerKm : Nothing
       , bonusEarned: 0
       , route: []
       , cancelRideConfirmationPopUp:
@@ -266,4 +267,5 @@ dummyDriverRideStats =
     , totalEarningsOfDay: 0
     , bonusEarning: 0
     , coinBalance: 0
+    , totalEarningsOfDayPerKm : Nothing
     }

@@ -19,6 +19,7 @@ import qualified Domain.Types.Ride as SR
 import qualified Domain.Types.Vehicle as SV
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
+import Kernel.Prelude
 import Kernel.Types.Id
 
 data RideDetailsE e = RideDetails
@@ -31,7 +32,9 @@ data RideDetailsE e = RideDetails
     vehicleVariant :: Maybe SV.Variant,
     vehicleModel :: Maybe Text,
     vehicleClass :: Maybe Text,
-    fleetOwnerId :: Maybe Text
+    fleetOwnerId :: Maybe Text,
+    defaultServiceTierName :: Maybe Text,
+    createdAt :: Maybe UTCTime
   }
   deriving (Generic)
 

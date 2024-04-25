@@ -224,7 +224,7 @@ onUpdate = \case
   OUValidatedBookingCancelledReq req -> Common.bookingCancelledReqHandler req
   OUValidatedBookingReallocationReq ValidatedBookingReallocationReq {..} -> do
     mbRide <- QRide.findActiveByRBId booking.id
-    let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
+    bookingCancellationReason <- mkBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
     _ <- QRB.updateStatus booking.id DRB.AWAITING_REASSIGNMENT
     _ <- QRide.updateStatus ride.id DRide.CANCELLED
     QBCR.upsert bookingCancellationReason
@@ -232,10 +232,10 @@ onUpdate = \case
   OUValidatedDriverArrivedReq req -> Common.driverArrivedReqHandler req
   OUValidatedNewMessageReq ValidatedNewMessageReq {..} -> Notify.notifyOnNewMessage booking message
   OUValidatedEstimateRepetitionReq ValidatedEstimateRepetitionReq {..} -> do
-    let bookingCancellationReason = mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
+    bookingCancellationReason <- mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
     logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
 
-    _ <- QEstimate.updateStatus estimate.id DEstimate.DRIVER_QUOTE_REQUESTED
+    _ <- QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimate.id
     _ <- QRB.updateStatus booking.id DRB.REALLOCATED
     _ <- QRide.updateStatus ride.id DRide.CANCELLED
     _ <- QBCR.upsert bookingCancellationReason
@@ -313,20 +313,25 @@ validateRequest = \case
         return $ OUValidatedStopArrivedReq ValidatedStopArrivedReq {..}
 
 mkBookingCancellationReason ::
+  (MonadFlow m) =>
   Id DRB.Booking ->
   Maybe (Id DRide.Ride) ->
   DBCR.CancellationSource ->
   Id DMerchant.Merchant ->
-  DBCR.BookingCancellationReason
-mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId =
-  DBCR.BookingCancellationReason
-    { bookingId = bookingId,
-      rideId = mbRideId,
-      merchantId = Just merchantId,
-      source = cancellationSource,
-      reasonCode = Nothing,
-      reasonStage = Nothing,
-      additionalInfo = Nothing,
-      driverCancellationLocation = Nothing,
-      driverDistToPickup = Nothing
-    }
+  m DBCR.BookingCancellationReason
+mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId = do
+  now <- getCurrentTime
+  return $
+    DBCR.BookingCancellationReason
+      { bookingId = bookingId,
+        rideId = mbRideId,
+        merchantId = Just merchantId,
+        source = cancellationSource,
+        reasonCode = Nothing,
+        reasonStage = Nothing,
+        additionalInfo = Nothing,
+        driverCancellationLocation = Nothing,
+        driverDistToPickup = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }

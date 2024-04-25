@@ -1367,3 +1367,6 @@ getHI stringKey =
         TRIP_TIME -> "यात्रा का समय"
         EARNINGS_PER_KM -> "प्रति किमी आय"
         OPTIONAL_DOCUMENT -> "वैकल्पिक दस्तावेज़"
+        EARNINGS_PER_KM_DESC_1 -> "आज के लिए कुल आय/कुल सवारी दूरी दर्शाता है।"
+        EARNINGS_PER_KM_DESC_2 -> "इस राशि में पार्किंग और टोल शुल्क शामिल नहीं है"
+        EARNINGS_P_KM -> "आय/किमी"

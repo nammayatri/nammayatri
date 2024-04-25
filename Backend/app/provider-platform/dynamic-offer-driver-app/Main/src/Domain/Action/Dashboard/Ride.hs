@@ -60,7 +60,6 @@ import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
@@ -269,13 +268,6 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         DRide.CANCELLED -> Just ride.updatedAt
         _ -> Nothing
   customerPhoneNo <- decrypt riderDetails.mobileNumber
-  vehicleDetails <- runInReplica $ VQuery.findByRegistrationNo rideDetails.vehicleNumber
-  mbDefaultServiceTierName <-
-    case vehicleDetails of
-      Nothing -> return Nothing
-      Just vehicle -> do
-        cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-        return $ (.name) <$> find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   (nextStopLoc, lastStopLoc) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
@@ -327,7 +319,7 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         lastStopLocation = mkLocationAPIEntity <$> lastStopLoc,
         vehicleServiceTierName = booking.vehicleServiceTierName,
         endOtp = ride.endOtp,
-        mbDefaultServiceTierName = mbDefaultServiceTierName,
+        mbDefaultServiceTierName = rideDetails.defaultServiceTierName,
         rideCity = Just $ show city.city
       }
 

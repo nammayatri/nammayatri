@@ -90,11 +90,8 @@ view push config =
       , padding $ Padding 16 (if config.showPreferences then 16 else 0) 16 16
       , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
       ]
-    --   [ addTipView push config
-    --   , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config) ]
-    -- ]
-     [
-      PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config) ]
+      [ addTipView push config
+      , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config) ]
     ]
   where
     getPeekHeight :: Config -> Boolean -> Int

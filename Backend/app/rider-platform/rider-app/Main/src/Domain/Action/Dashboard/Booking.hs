@@ -61,8 +61,8 @@ stuckBookingsCancel merchantShortId opCity req = do
   now <- getCurrentTime
   stuckBookingIds <- B.runInReplica $ QBooking.findStuckBookings merchant merchantOpCity reqBookingIds now
   stuckRideItems <- B.runInReplica $ QRide.findStuckRideItems merchant merchantOpCity reqBookingIds now
-  let bcReasons = mkBookingCancellationReason merchant.id Common.bookingStuckCode Nothing <$> stuckBookingIds
-  let bcReasonsWithRides = (\item -> mkBookingCancellationReason (merchant.id) Common.rideStuckCode (Just item.rideId) item.bookingId) <$> stuckRideItems
+  bcReasons <- mkBookingCancellationReason merchant.id Common.bookingStuckCode Nothing `mapM` stuckBookingIds
+  bcReasonsWithRides <- (\item -> mkBookingCancellationReason merchant.id Common.rideStuckCode (Just item.rideId) item.bookingId) `mapM` stuckRideItems
   let allStuckBookingIds = stuckBookingIds <> (stuckRideItems <&> (.bookingId))
   let stuckPersonIds = stuckRideItems <&> (.riderId)
   _ <- QRide.cancelRides (stuckRideItems <&> (.rideId)) now
@@ -73,19 +73,23 @@ stuckBookingsCancel merchantShortId opCity req = do
   logTagInfo "dashboard -> stuckBookingsCancel: " $ show allStuckBookingIds
   pure $ mkStuckBookingsCancelRes stuckBookingIds stuckRideItems
 
-mkBookingCancellationReason :: Id DM.Merchant -> Common.CancellationReasonCode -> Maybe (Id DRide.Ride) -> Id DBooking.Booking -> DBCR.BookingCancellationReason
+mkBookingCancellationReason :: (MonadFlow m) => Id DM.Merchant -> Common.CancellationReasonCode -> Maybe (Id DRide.Ride) -> Id DBooking.Booking -> m DBCR.BookingCancellationReason
 mkBookingCancellationReason merchantId reasonCode mbRideId bookingId = do
-  DBCR.BookingCancellationReason
-    { bookingId = bookingId,
-      rideId = mbRideId,
-      merchantId = Just merchantId,
-      source = DBCR.ByMerchant,
-      reasonCode = Just $ coerce @Common.CancellationReasonCode @DCR.CancellationReasonCode reasonCode,
-      reasonStage = Nothing,
-      additionalInfo = Nothing,
-      driverCancellationLocation = Nothing,
-      driverDistToPickup = Nothing
-    }
+  now <- getCurrentTime
+  return $
+    DBCR.BookingCancellationReason
+      { bookingId = bookingId,
+        rideId = mbRideId,
+        merchantId = Just merchantId,
+        source = DBCR.ByMerchant,
+        reasonCode = Just $ coerce @Common.CancellationReasonCode @DCR.CancellationReasonCode reasonCode,
+        reasonStage = Nothing,
+        additionalInfo = Nothing,
+        driverCancellationLocation = Nothing,
+        driverDistToPickup = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }
 
 mkStuckBookingsCancelRes :: [Id DBooking.Booking] -> [QRide.StuckRideItem] -> Common.StuckBookingsCancelRes
 mkStuckBookingsCancelRes stuckBookingIds stuckRideItems = do
@@ -144,7 +148,7 @@ bookingSync merchant merchantOpCityId reqBookingId = do
             DRide.COMPLETED -> DBooking.COMPLETED
             DRide.CANCELLED -> DBooking.CANCELLED
       unless (bookingNewStatus == booking.status) $ do
-        let cancellationReason = mkBookingCancellationReason merchant.id Common.syncBookingCode (Just ride.id) bookingId
+        cancellationReason <- mkBookingCancellationReason merchant.id Common.syncBookingCode (Just ride.id) bookingId
         QBooking.updateStatus bookingId bookingNewStatus
         when (bookingNewStatus == DBooking.CANCELLED) $ QBCR.upsert cancellationReason
       let updBooking = booking{status = bookingNewStatus}
@@ -153,7 +157,7 @@ bookingSync merchant merchantOpCityId reqBookingId = do
       logTagDebug ("bookingId:-" <> bookingId.getId) $ "bookingSync:-becknStatusReqV2:-" <> show becknStatusReq
       void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq
     Nothing -> do
-      let cancellationReason = mkBookingCancellationReason merchant.id Common.syncBookingCodeWithNoRide Nothing bookingId
+      cancellationReason <- mkBookingCancellationReason merchant.id Common.syncBookingCodeWithNoRide Nothing bookingId
       QBooking.updateStatus bookingId DBooking.CANCELLED
       QBCR.upsert cancellationReason
       let updBooking = booking{status = DBooking.CANCELLED}

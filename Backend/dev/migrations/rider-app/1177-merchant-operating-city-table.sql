@@ -100,15 +100,6 @@ ADD PRIMARY KEY (merchant_operating_city_id, message_key);
 ALTER TABLE atlas_app.search_request
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
 
-ALTER TABLE atlas_app.estimate
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
-
-ALTER TABLE atlas_app.quote
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
-
-ALTER TABLE atlas_app.driver_offer
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
-
 ALTER TABLE atlas_app.booking
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
 
@@ -134,10 +125,6 @@ ALTER COLUMN city SET NOT NULL;
 
 ------------------------------------------------------------- Person Table Migrations ----------------------------------------------------------------
 -- Add new column 'current_city'
-ALTER TABLE atlas_app.person
-ADD COLUMN current_city               character varying(255) NULL,
--- Add new column 'merchant_operating_city_id'
-ADD COLUMN merchant_operating_city_id character(36)          NULL;
 
 -- Update the values of the 'current_city' column
 UPDATE atlas_app.person

@@ -18,6 +18,7 @@ import Data.Aeson (object)
 import qualified Data.List as L
 import qualified Data.Text as T
 import Data.Time hiding (secondsToNominalDiffTime)
+import Domain.Action.UI.Quote as UQuote
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BppDetails as DBppDetails
@@ -29,7 +30,6 @@ import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageCon
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.NotificationSoundsConfig as NSC
 import Domain.Types.Person as Person
-import Domain.Types.Quote (mkQAPIEntityList)
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
@@ -57,7 +57,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
-import qualified Storage.Queries.Person.PersonDisability as PD
+import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
 import qualified Tools.SMS as Sms
@@ -125,7 +125,7 @@ notifyOnDriverOfferIncoming estimateId quotes person bppDetailList = do
             subCategory = Nothing,
             showNotification = Notification.SHOW,
             messagePriority = Nothing,
-            entity = Notification.Entity Notification.Product estimateId.getId $ mkQAPIEntityList quotes bppDetailList isValueAddNPList,
+            entity = Notification.Entity Notification.Product estimateId.getId $ UQuote.mkQAPIEntityList quotes bppDetailList isValueAddNPList,
             body = body,
             title = title,
             dynamicParams = EmptyDynamicParam,
@@ -289,7 +289,7 @@ disableFollowRide personId = do
       list <- CQFollowRide.getFollowRideCounter emPersonId
       when (L.null list) $ do
         CQFollowRide.clearFollowsRideCounter emPersonId
-        Person.updateFollowsRide emPersonId False
+        Person.updateFollowsRide False emPersonId
 
 notifyOnExpiration ::
   ServiceFlow m r =>
@@ -741,7 +741,7 @@ notifyRideStartToEmergencyContacts booking ride = do
   where
     updateFollowsRideCount emPersonId = do
       void $ CQFollowRide.updateFollowRideList emPersonId booking.riderId True
-      Person.updateFollowsRide emPersonId True
+      Person.updateFollowsRide True emPersonId
 
     sendFCM personId name notificationSound = do
       person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)

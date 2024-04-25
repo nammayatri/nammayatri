@@ -30,7 +30,8 @@ type Config = {
     primaryText :: TextConfig,
     secondaryText :: TextConfig,
     imageConfig :: ImageConfig,
-    buttonConfig :: ButtonConfig
+    buttonConfig :: ButtonConfig,
+    bulletPoints :: Array String
 }
 
 type ImageConfig = {
@@ -67,6 +68,7 @@ type ButtonConfig = {
 
 config :: Config
 config = {
+    bulletPoints : [],
     title : {
       text : "",
       color : Color.black800,

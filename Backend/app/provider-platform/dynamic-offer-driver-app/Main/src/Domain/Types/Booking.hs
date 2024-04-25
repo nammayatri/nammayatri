@@ -82,13 +82,7 @@ data Booking = Booking
     paymentUrl :: Maybe Text,
     stopLocationId :: Maybe (Id DLoc.Location),
     distanceToPickup :: Maybe Meters,
-    isScheduled :: Bool,
-    clientSdkVersion :: Maybe Version,
-    clientBundleVersion :: Maybe Version,
-    clientConfigVersion :: Maybe Version,
-    clientDevice :: Maybe Device,
-    backendConfigVersion :: Maybe Version,
-    backendAppVersion :: Maybe Text
+    isScheduled :: Bool
   }
   deriving (Generic)
 

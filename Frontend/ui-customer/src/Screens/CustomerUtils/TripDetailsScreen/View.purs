@@ -34,7 +34,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage, ge
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Mobility.Prelude (boolToVisibility)
+import Mobility.Prelude (boolToVisibility, capitalize)
 import Prelude ((<>), show)
 import Prelude (Unit, const, map, unit, ($), (&&), (/=), (<<<), (<=), (<>), (==), (/), not, (-), (||))
 import PrestoDOM (Accessiblity(..), FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, color, cornerRadius, disableClickFeedback, editText, fontStyle, frameLayout, gravity, height, hint, hintColor, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, multiLineEditText, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd)
@@ -103,6 +103,7 @@ tripDetailsLayout state push =
           ][ tripDetailsView state
            , separatorView
            , tripIdView push state
+           , distanceAndTimeTaken state
            , SourceToDestination.view (push <<< SourceToDestinationActionController) (sourceToDestinationConfig state)
            , ratingAndInvoiceView state push
            ]
@@ -125,9 +126,7 @@ tripDetailsLayout state push =
 ---------------------- tripIdView ---------------------------
 tripIdView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 tripIdView push state =
-  let rideType = case state.data.vehicleVariant of
-                    Just variant -> getVariantRideType (show variant)
-                    Nothing      -> getString AC_CAB
+  let rideType = fromMaybe "" state.data.selectedItem.serviceTierName 
   in
   linearLayout
   [ width MATCH_PARENT
@@ -137,7 +136,25 @@ tripIdView push state =
   ][  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
-      , width WRAP_CONTENT
+      , width $ V (EHC.screenWidth unit/ 2)
+      , visibility $ boolToVisibility $ isJust state.data.selectedItem.serviceTierName 
+      ][  textView $
+          [ text $ getString RIDE_TYPE
+          , accessibilityHint $ "Ride Type :" <> rideType
+          , accessibility ENABLE
+          , color Color.black700
+          ] <> FontStyle.body1 LanguageStyle
+        , textView $
+          [ text rideType
+          , width WRAP_CONTENT
+          , color Color.black900
+          , accessibility DISABLE_DESCENDANT
+          ] <> FontStyle.paragraphText LanguageStyle
+      ]
+    , linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width $ V (EHC.screenWidth unit/ 2)
       , visibility if state.data.tripId == "" then GONE else VISIBLE
       ][  textView $
           [ text $ getString RIDE_ID
@@ -165,23 +182,48 @@ tripIdView push state =
               ]
           ]
       ]
-    , linearLayout
+   ]
+
+distanceAndTimeTaken :: forall w . ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
+distanceAndTimeTaken state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , margin $ MarginBottom 16
+  , orientation HORIZONTAL
+  ][  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
-      , width WRAP_CONTENT
-      -- , weight 1.0
-      , visibility if isJust state.data.vehicleVariant && (getMerchant FunctionCall) == YATRISATHI then VISIBLE else GONE
+      , width $ V (EHC.screenWidth unit/ 2)
+      , visibility $ boolToVisibility $ not $ DS.null state.data.selectedItem.baseDistance
       ][  textView $
-          [ text $ getString RIDE_TYPE
-          , accessibilityHint $ "Ride Type :" <> rideType
+          [ text $ getString TRIP_DISTANCE
+          , accessibilityHint $ "Trip Distance :" <> state.data.selectedItem.baseDistance
           , accessibility ENABLE
           , color Color.black700
           ] <> FontStyle.body1 LanguageStyle
         , textView $
-          [ text $ rideType
+          [ text state.data.selectedItem.baseDistance
           , width WRAP_CONTENT
           , color Color.black900
           , accessibility DISABLE_DESCENDANT
+          ] <> FontStyle.paragraphText LanguageStyle
+      ]
+    , linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width $ V (EHC.screenWidth unit/ 2)
+      , visibility $ boolToVisibility $ not $ DS.null state.data.selectedItem.totalTime
+      ][  textView $
+          [ text $ getString TIME_TAKEN
+          , accessibilityHint $ "Time Taken :" <> state.data.selectedItem.totalTime
+          , accessibility ENABLE
+          , color Color.black700
+          ] <> FontStyle.body1 LanguageStyle
+        , textView $
+          [ text state.data.selectedItem.totalTime
+          , width WRAP_CONTENT
+          , color Color.black900
           ] <> FontStyle.paragraphText LanguageStyle
       ]
    ]
@@ -194,48 +236,31 @@ tripDetailsView state =
   , width MATCH_PARENT
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
-  ][   frameLayout
-          [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , orientation HORIZONTAL
-          ][  imageView
-              [ margin $ MarginLeft $ if isJust state.data.vehicleVariant then 24 else 0
-              , cornerRadius 18.0
-              -- , background Color.grey800
-              , width (V 36)
-              , height (V 36)
-              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_profile_image"
-              ]
-            , imageView
-              [ imageWithFallback $ case state.data.vehicleVariant of
-                                      Just variant -> getVehicleVariantImage (show variant)
-                                      Nothing      -> fetchImage FF_ASSET "ic_vehicle_side" 
-              , width $ V 40
-              , visibility if (isJust state.data.vehicleVariant) then VISIBLE else GONE
-              , height $ V 40
-              ]
-            ]
+  ][   imageView
+        [ imageWithFallback $ case state.data.vehicleVariant of
+                                Just variant -> getVehicleVariantImage (show variant)
+                                Nothing      -> fetchImage FF_ASSET "ic_vehicle_side" 
+        , width $ V 40
+        , visibility if (isJust state.data.vehicleVariant) then VISIBLE else GONE
+        , height $ V 40
+        ]
 
     , linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , orientation VERTICAL
       , margin $ MarginLeft 10
-      ][  textView $
-          [ text state.data.driverName
-          , accessibilityHint $ "Driver : " <> state.data.driverName
-          , accessibility ENABLE
-          , color Color.darkCharcoal
-          ] <> FontStyle.body1 LanguageStyle
-        , linearLayout
+      ][  linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , orientation HORIZONTAL
           , gravity CENTER_VERTICAL
           ][  textView $
               [ text state.data.date
-              , color Color.greyShade
-              ] <> FontStyle.body16 LanguageStyle
+              , accessibilityHint $ "date : " <> state.data.date
+              , accessibility ENABLE
+              , color Color.darkCharcoal
+              ] <> FontStyle.body1 LanguageStyle
             , linearLayout
               [ height MATCH_PARENT
               , width WRAP_CONTENT
@@ -251,9 +276,15 @@ tripDetailsView state =
                ]
             , textView $
               [ text state.data.time
-              , color Color.greyShade
-              ] <> FontStyle.body16 LanguageStyle
+              , color Color.darkCharcoal
+              ] <> FontStyle.body1 LanguageStyle
             ]
+          , textView $
+            [ text $ capitalize $ DS.toLower state.data.selectedItem.vehicleModel
+            , accessibilityHint $ "date : " <> state.data.date
+            , accessibility ENABLE
+            , color Color.greyShade
+            ] <> FontStyle.body16 LanguageStyle
         ]
     , linearLayout
       [ height WRAP_CONTENT

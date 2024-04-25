@@ -43,7 +43,7 @@ import Components.LocationTagBarV2 as LocationTagBar
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except (runExcept)
-import Data.Array ((!!), sortBy, mapWithIndex, elem)
+import Data.Array ((!!), sortBy, mapWithIndex, elem, length)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3)
@@ -79,7 +79,7 @@ import Data.Either (Either(..))
 import Font.Style (Style(..))
 import Services.API as API
 import Data.Lens ((^.))
-import Accessor (_fareBreakup, _description, _rideEndTime, _amount)
+import Accessor (_fareBreakup, _description, _rideEndTime, _amount, _serviceTierName)
 import Resources.Localizable.EN(getEN)
 import Engineering.Helpers.Utils as EHU
 import Mobility.Prelude
@@ -1154,6 +1154,9 @@ driverInfoTransformer state =
     , bottomSheetState : state.props.currentSheetState
     , bannerData : state.data.bannerData
     , bannerArray : getDriverInfoCardBanners state DriverInfoCard.BannerCarousel
+    , vehicleModel : cardState.vehicleModel
+    , vehicleColor : cardState.vehicleColor
+    , serviceTierName : cardState.serviceTierName
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1418,7 +1421,7 @@ chooseYourRideConfig state =
     tipForDriver = state.props.customerTip.tipForDriver,
     customerTipArray = tipConfig.customerTipArray,
     customerTipArrayWithValues = tipConfig.customerTipArrayWithValues,
-    enableTips = state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities)
+    enableTips = state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities) && (DA.length tipConfig.customerTipArray) > 0
   }
 
 specialLocationConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
@@ -1615,6 +1618,7 @@ rideCompletedCardConfig state =
       appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
       isRecentRide = EHC.getExpiryTime (fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
       actualTollCharge =  maybe 0 (\obj ->  obj^._amount) $ DA.find (\entity  -> entity ^._description == "TOLL_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
+      serviceTier = fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _serviceTierName)
   in RideCompletedCard.config {
         isDriver = false,
         customerIssueCard{
@@ -1661,7 +1665,8 @@ rideCompletedCardConfig state =
         enableContactSupport = state.data.config.feature.enableSupport,
         showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled,
         safetyTitle = getString SAFETY_CENTER,
-        needHelpText = getString NEED_HELP
+        needHelpText = getString NEED_HELP,
+        serviceTierAndAC = serviceTier
       }
   where 
     mkHeaderConfig :: Boolean -> Boolean -> {title :: String, subTitle :: String}
@@ -2036,35 +2041,35 @@ getTips arr = mapWithIndex (\index item -> if item == 0 then (getString NO_TIP)
 bangaloreConfig :: String -> TipConfig
 bangaloreConfig variant = 
   case variant of
-    "SEDAN" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "SUV" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "HATCHBACK" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI_PLUS" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    _ -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "SEDAN" -> mkTipConfig []
+    "SUV" -> mkTipConfig []
+    "HATCHBACK" -> mkTipConfig []
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "TAXI" -> mkTipConfig []
+    "TAXI_PLUS" -> mkTipConfig []
+    _ -> mkTipConfig []
 
 hyderabadConfig :: String -> TipConfig
 hyderabadConfig variant = 
   case variant of
-    "SEDAN" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "SUV" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "HATCHBACK" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "AUTO_RICKSHAW" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "TAXI" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    "TAXI_PLUS" -> mkTipConfig [0, 20, 30, 40, 50, 60]
-    _ -> mkTipConfig [0, 20, 30, 40, 50, 60]
+    "SEDAN" -> mkTipConfig []
+    "SUV" -> mkTipConfig []
+    "HATCHBACK" -> mkTipConfig []
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "TAXI" -> mkTipConfig []
+    "TAXI_PLUS" -> mkTipConfig []
+    _ -> mkTipConfig []
 
 defaultTipConfig :: String -> TipConfig
 defaultTipConfig variant = 
   case variant of
-    "SEDAN" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "SUV" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "HATCHBACK" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    "TAXI_PLUS" -> mkTipConfig [0, 10, 20, 30, 40, 50]
-    _ -> mkTipConfig [0, 10, 20, 30, 40, 50]
+    "SEDAN" -> mkTipConfig []
+    "SUV" -> mkTipConfig []
+    "HATCHBACK" -> mkTipConfig []
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "TAXI" -> mkTipConfig []
+    "TAXI_PLUS" -> mkTipConfig []
+    _ -> mkTipConfig []
 
 specialZoneInfoPopupConfig :: HU.SpecialZoneInfoPopUp -> RequestInfoCard.Config
 specialZoneInfoPopupConfig infoConfig = let

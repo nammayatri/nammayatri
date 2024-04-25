@@ -117,7 +117,7 @@ verifyAadhaarOtp mbMerchant personId req = do
             Right _ -> do
               aadhaarEntity <- mkAadhaar personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) (Just orgImageFilePath) True
               QAV.create aadhaarEntity
-              Person.updateAadhaarVerifiedState (cast personId) True
+              Person.updateAadhaarVerifiedState True (cast personId)
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
     Nothing -> throwError TransactionIdNotFound

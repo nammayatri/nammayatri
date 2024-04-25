@@ -191,7 +191,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
       setValueToLocalStore BUNDLE_VERSION bundle
       setValueToLocalStore CONFIG_VERSION config
       setValueToLocalStore BASE_URL (getBaseUrl "dummy")
-      setValueToLocalStore RIDE_REQUEST_BUFFER "0"
+      setValueToLocalStore RIDE_REQUEST_BUFFER "2"
       setValueToLocalStore IS_BANNER_ACTIVE "True"
       setValueToLocalStore MESSAGES_DELAY "0"
       setValueToLocalStore SHOW_PAYMENT_MODAL "true"
@@ -3175,7 +3175,14 @@ updateDriverDataToStates = do
   (GlobalState globalstate) <- getState  
   case globalstate.globalProps.driverRideStats of
     Just (DriverProfileStatsResp driverStats) -> do
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { totalRidesOfDay = driverStats.totalRidesOfDay, totalEarningsOfDay = driverStats.totalEarningsOfDay, coinBalance = driverStats.coinBalance, bonusEarned = driverStats.bonusEarning, driverStats = true }})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
+        { data { 
+          totalRidesOfDay = driverStats.totalRidesOfDay, 
+          totalEarningsOfDay = driverStats.totalEarningsOfDay, 
+          coinBalance = driverStats.coinBalance, 
+          bonusEarned = driverStats.bonusEarning, 
+          earningPerKm = driverStats.totalEarningsOfDayPerKm,
+          driverStats = true }})
       void $ pure $ setCleverTapUserProp [{key : "Driver Coin Balance", value : unsafeToForeign driverStats.coinBalance }]
     Nothing -> pure unit
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate) false

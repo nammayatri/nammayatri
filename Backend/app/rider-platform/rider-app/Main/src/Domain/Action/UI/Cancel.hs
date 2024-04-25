@@ -178,6 +178,7 @@ cancel bookingId _ req = do
   where
     buildBookingCancelationReason currentDriverLocation disToPickup merchantId = do
       let CancelReq {..} = req
+      now <- getCurrentTime
       return $
         SBCR.BookingCancellationReason
           { bookingId = bookingId,
@@ -189,6 +190,8 @@ cancel bookingId _ req = do
             additionalInfo = additionalInfo,
             driverCancellationLocation = currentDriverLocation,
             driverDistToPickup = disToPickup,
+            createdAt = now,
+            updatedAt = now,
             ..
           }
 
@@ -245,12 +248,12 @@ cancelSearch personId dcr = do
       then -- then Esq.runTransaction $ do
       do
         _ <- QPFS.updateStatus personId DPFS.IDLE
-        void $ QEstimate.updateStatus dcr.estimateId DEstimate.DRIVER_QUOTE_CANCELLED
-        QDOffer.updateStatus dcr.estimateId DDO.INACTIVE
+        void $ QEstimate.updateStatus DEstimate.DRIVER_QUOTE_CANCELLED dcr.estimateId
+        QDOffer.updateStatus DDO.INACTIVE dcr.estimateId
       else do
         _ <- QPFS.updateStatus personId DPFS.IDLE
-        void $ QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
-        QDOffer.updateStatus dcr.estimateId DDO.INACTIVE
+        void $ QEstimate.updateStatus DEstimate.CANCELLED dcr.estimateId
+        QDOffer.updateStatus DDO.INACTIVE dcr.estimateId
   QPFS.clearCache personId
 
 driverDistanceToPickup ::

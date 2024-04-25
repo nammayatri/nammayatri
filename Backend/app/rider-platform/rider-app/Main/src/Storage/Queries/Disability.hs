@@ -2,7 +2,7 @@
 
 module Storage.Queries.Disability where
 
-import Domain.Types.Person.PersonDisability
+import Domain.Types.PersonDisability
 import Kernel.Beam.Functions
 import Kernel.External.Types (Language)
 import Kernel.Prelude
