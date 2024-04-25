@@ -83,6 +83,7 @@ getFPSlabDetailsSlab config key' = do
     Just fpsdsl' -> pure $ Just (FPSlabsDetails fpsdsl')
     Nothing -> pure Nothing
 
+-- FIXME not used, can we remove?
 makeFPSlabsDetailsAPIEntity :: FPSlabsDetails -> FPSlabsDetailsAPIEntity
 makeFPSlabsDetailsAPIEntity FPSlabsDetails {..} =
   FPSlabsDetailsAPIEntity

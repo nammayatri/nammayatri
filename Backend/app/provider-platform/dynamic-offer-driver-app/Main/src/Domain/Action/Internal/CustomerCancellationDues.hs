@@ -25,6 +25,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
@@ -147,9 +148,7 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
   when (isJust reqCancellationCharges && isJust req.disputeChancesUsed) $ do
     throwError DisputeChancesOrCancellationDuesHasToBeNull
   merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchantId merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchantCity)
-  Kernel.Prelude.whenJust req.cancellationChargesWithCurrency $ \reqWithCurrency -> do
-    unless (merchantOperatingCity.currency == reqWithCurrency.currency) $
-      throwError $ InvalidRequest "Invalid currency"
+  SMerchant.checkCurrencies merchantOperatingCity.currency [req.cancellationChargesWithCurrency]
   transporterConfig <- SCT.findByMerchantOpCityId merchantOperatingCity.id Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
   riderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id >>= fromMaybeM (RiderDetailsDoNotExist "Mobile Number" req.customerMobileNumber)
   case (reqCancellationCharges, req.disputeChancesUsed) of

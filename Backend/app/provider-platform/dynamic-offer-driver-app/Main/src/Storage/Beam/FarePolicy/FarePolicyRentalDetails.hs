@@ -10,7 +10,6 @@
 
 module Storage.Beam.FarePolicy.FarePolicyRentalDetails where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import qualified Database.Beam as B
 import qualified Domain.Types.FarePolicy as Domain
 import Domain.Types.UtilsTH
@@ -29,7 +28,7 @@ data FarePolicyRentalDetailsT f = FarePolicyRentalDetailsT
     perHourChargeAmount :: B.C f (Maybe HighPrecMoney),
     perExtraMinRateAmount :: B.C f (Maybe HighPrecMoney),
     perExtraKmRateAmount :: B.C f (Maybe HighPrecMoney),
-    nightShiftCharge :: B.C f (Maybe DPM.NightShiftCharge),
+    nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge),
     includedKmPerHr :: B.C f Kilometers,
     plannedPerKmRate :: B.C f Money,
     plannedPerKmRateAmount :: B.C f (Maybe HighPrecMoney),

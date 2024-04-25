@@ -72,14 +72,17 @@ data CollectionList = CollectionList
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+-- not used
 data DriverFeeAPIEntity = DriverFeeAPIEntity
   { id :: Id DriverFeeAPIEntity,
     merchantId :: Text,
     driverId :: Id Driver,
     fee :: HighPrecMoney,
+    feeWithCurrency :: PriceAPIEntity,
     numRides :: Int,
     payBy :: UTCTime,
     totalEarnings :: Money,
+    totalEarningsWithCurrency :: PriceAPIEntity,
     startTime :: UTCTime,
     endTime :: UTCTime,
     createdAt :: UTCTime,

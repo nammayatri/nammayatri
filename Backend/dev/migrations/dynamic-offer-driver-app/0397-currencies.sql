@@ -35,6 +35,8 @@ ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN cur
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN time_based_fare_amount double precision;
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN dist_based_fare_amount double precision;
 
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters_slab_details ADD COLUMN currency character varying(255);
+
 ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN currency character varying(255);
 ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN service_charge_amount double precision;
 

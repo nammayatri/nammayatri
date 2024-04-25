@@ -15,7 +15,6 @@ where
 
 import Control.Lens.Combinators
 import Control.Lens.Fold
-import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant
 import Data.Aeson as DA
 import qualified Data.Aeson.Key as DAK
 import qualified Data.Aeson.KeyMap as DAKM
@@ -23,6 +22,7 @@ import Data.Aeson.Lens
 import Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import Domain.Types.Common
+import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
 import Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffer as Reexport
 import Kernel.Prelude
 import Kernel.Types.Cac
@@ -40,7 +40,7 @@ data FPRentalDetailsD (s :: UsageSafety) = FPRentalDetails
     currency :: Currency,
     maxAdditionalKmsLimit :: Kilometers,
     totalAdditionalKmsLimit :: Kilometers,
-    nightShiftCharge :: Maybe NightShiftCharge
+    nightShiftCharge :: Maybe Domain.NightShiftCharge
   }
   deriving (Generic, Show)
 

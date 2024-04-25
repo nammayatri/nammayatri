@@ -24,6 +24,7 @@ import Data.Aeson.Lens
 import Data.Text as Text
 import qualified Data.Vector as DV
 import Domain.Types.Common
+import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
 import Kernel.Prelude as KP
 import Kernel.Types.Cac
 import Kernel.Types.Common
@@ -35,9 +36,9 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
     baseFare :: HighPrecMoney,
-    waitingChargeInfo :: Maybe WaitingChargeInfo,
+    waitingChargeInfo :: Maybe Domain.WaitingChargeInfo,
     platformFeeInfo :: Maybe PlatformFeeInfo,
-    nightShiftCharge :: Maybe NightShiftCharge,
+    nightShiftCharge :: Maybe Domain.NightShiftCharge,
     currency :: Currency
   }
   deriving (Generic, Show, Eq)
@@ -67,13 +68,14 @@ data PlatformFeeInfo = PlatformFeeInfo
 ------------------------------------------------APIEntity--------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------
 
+-- FIXME should we parse currency here?
 parseFromCACMiddleware :: MonadFlow m => String -> Value -> m (Maybe FPSlabsDetailsSlab)
 parseFromCACMiddleware key' k1 = do
   case k1 of
     Object config -> do
       let waitingCharge = DAKM.lookup "waitingCharge" config >>= fromJSONHelper
           freeWaitingTime = DAKM.lookup "freeWatingTime" config >>= fromJSONHelper
-          waitingChargeInfo = WaitingChargeInfo <$> freeWaitingTime <*> waitingCharge
+          waitingChargeInfo = Domain.WaitingChargeInfo <$> freeWaitingTime <*> waitingCharge
           platformFeeCharge = DAKM.lookup "platformFeeCharge" config >>= fromJSONHelper
           platformFeeCgst = DAKM.lookup "platformFeeCgst" config >>= fromJSONHelper
           platformFeeSgst = DAKM.lookup "platformFeeSgst" config >>= fromJSONHelper
@@ -102,17 +104,20 @@ data FPSlabsDetailsSlabAPIEntity = FPSlabsDetailsSlabAPIEntity
   { startDistance :: Meters,
     baseFare :: Money,
     baseFareWithCurrency :: PriceAPIEntity,
-    waitingChargeInfo :: Maybe WaitingChargeInfo,
+    waitingChargeInfo :: Maybe WaitingChargeInfoAPIEntity,
     platformFeeInfo :: Maybe PlatformFeeInfo,
-    nightShiftCharge :: Maybe NightShiftCharge
+    nightShiftCharge :: Maybe NightShiftChargeAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+-- FIXME not used, can we remove?
 makeFPSlabsDetailsSlabAPIEntity :: FPSlabsDetailsSlab -> FPSlabsDetailsSlabAPIEntity
 makeFPSlabsDetailsSlabAPIEntity FPSlabsDetailsSlab {..} =
   FPSlabsDetailsSlabAPIEntity
     { baseFare = roundToIntegral baseFare,
       baseFareWithCurrency = PriceAPIEntity baseFare currency,
+      waitingChargeInfo = Domain.mkWaitingChargeInfoAPIEntity currency <$> waitingChargeInfo,
+      nightShiftCharge = Domain.mkNightShiftChargeAPIEntity currency <$> nightShiftCharge,
       ..
     }
 

@@ -15,7 +15,6 @@
 
 module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import Data.List.NonEmpty (nonEmpty)
 import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions
@@ -45,7 +44,7 @@ instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyP
               currency = fromMaybe INR currency,
               waitingChargeInfo =
                 ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
-                  DPM.WaitingChargeInfo
+                  Domain.WaitingChargeInfo
                     { waitingCharge = waitingCharge',
                       freeWaitingTime = freeWaitingTime'
                     },

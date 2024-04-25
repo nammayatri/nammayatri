@@ -61,7 +61,8 @@ data BulkUploadCoinsReqV2 = BulkUploadCoinsReqV2
 
 data DriverIdListWithAmount = DriverIdListWithAmount
   { driverId :: Text,
-    amount :: HighPrecMoney
+    amount :: HighPrecMoney,
+    amountWithCurrency :: Maybe PriceAPIEntity
   }
   deriving (Generic, Read, Eq, Show, FromJSON, ToJSON, Ord, ToSchema)
 

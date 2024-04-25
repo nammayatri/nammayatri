@@ -15,7 +15,6 @@
 
 module Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import qualified Domain.Types.FarePolicy as DFP
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -52,7 +51,7 @@ instance FromTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicyS
               currency = fromMaybe INR currency,
               waitingChargeInfo =
                 ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
-                  DPM.WaitingChargeInfo
+                  DFP.WaitingChargeInfo
                     { waitingCharge = waitingCharge',
                       freeWaitingTime = freeWaitingTime'
                     },

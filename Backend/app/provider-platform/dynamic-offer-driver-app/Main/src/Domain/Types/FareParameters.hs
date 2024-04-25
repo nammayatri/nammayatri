@@ -54,7 +54,8 @@ data FParamsProgressiveDetails = FParamsProgressiveDetails
 data FParamsSlabDetails = FParamsSlabDetails
   { platformFee :: Maybe HighPrecMoney,
     sgst :: Maybe HighPrecMoney,
-    cgst :: Maybe HighPrecMoney
+    cgst :: Maybe HighPrecMoney,
+    currency :: Currency
   }
   deriving (Generic, Show, Eq, PrettyShow)
 

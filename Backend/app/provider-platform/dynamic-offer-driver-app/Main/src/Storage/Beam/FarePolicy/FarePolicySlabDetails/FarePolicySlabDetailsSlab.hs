@@ -15,7 +15,6 @@
 
 module Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
 import qualified Domain.Types.FarePolicy as Domain
@@ -34,9 +33,9 @@ data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
     platformFeeCharge :: B.C f (Maybe Domain.PlatformFeeCharge),
     platformFeeCgst :: B.C f (Maybe Double),
     platformFeeSgst :: B.C f (Maybe Double),
-    waitingCharge :: B.C f (Maybe DPM.WaitingCharge),
+    waitingCharge :: B.C f (Maybe Domain.WaitingCharge),
     freeWatingTime :: B.C f (Maybe Minutes), -- FIXME typo
-    nightShiftCharge :: B.C f (Maybe DPM.NightShiftCharge)
+    nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)
   }
   deriving (Generic, B.Beamable)
 

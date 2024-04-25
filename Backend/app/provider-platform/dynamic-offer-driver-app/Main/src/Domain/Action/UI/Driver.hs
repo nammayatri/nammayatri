@@ -860,9 +860,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId req = do
     let reqOfferedValue = (req.offeredFareWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.offeredFare)
     searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
     searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
-    whenJust req.offeredFareWithCurrency $ \reqWithCurrency -> do
-      unless (searchTry.currency == reqWithCurrency.currency) $
-        throwError $ InvalidRequest "Invalid currency"
+    SMerchant.checkCurrencies searchTry.currency [req.offeredFareWithCurrency]
     now <- getCurrentTime
     when (searchTry.validTill < now) $ throwError SearchRequestExpired
     searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
@@ -1330,14 +1328,14 @@ getDriverPayments (personId, _, merchantOpCityId) mbFrom mbTo mbStatus mbLimit m
 
   driverFeeByInvoices <- case driverFees of
     [] -> pure []
-    _ -> SLDriverFee.groupDriverFeeByInvoices driverFees
+    _ -> SLDriverFee.groupDriverFeeByInvoices currency driverFees
 
-  mapM (buildPaymentHistory currency) driverFeeByInvoices
+  mapM buildPaymentHistory driverFeeByInvoices
   where
     maxLimit = 20
     defaultLimit = 10
 
-    buildPaymentHistory currency SLDriverFee.DriverFeeByInvoice {..} = do
+    buildPaymentHistory SLDriverFee.DriverFeeByInvoice {..} = do
       let charges = totalFee
           chargesBreakup = mkChargesBreakup currency govtCharges platformFee.fee platformFee.cgst platformFee.sgst
           totalRides = numRides

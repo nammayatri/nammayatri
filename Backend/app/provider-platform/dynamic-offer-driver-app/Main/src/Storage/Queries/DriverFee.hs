@@ -938,7 +938,7 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             merchantId = Id merchantId,
             driverId = Id driverId,
             govtCharges = mkAmountWithDefault govtChargesAmount govtCharges,
-            platformFee = Domain.PlatformFee platformFee cgst sgst,
+            platformFee = Domain.PlatformFee platformFee cgst sgst (fromMaybe INR currency),
             numRides = numRides,
             payBy = payBy,
             totalEarnings = mkAmountWithDefault totalEarningsAmount totalEarnings,

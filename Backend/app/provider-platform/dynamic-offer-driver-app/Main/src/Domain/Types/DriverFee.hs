@@ -70,7 +70,8 @@ data DriverFee = DriverFee
 data PlatformFee = PlatformFee
   { fee :: HighPrecMoney,
     cgst :: HighPrecMoney,
-    sgst :: HighPrecMoney
+    sgst :: HighPrecMoney,
+    currency :: Currency
   }
   deriving (Generic, Eq, Show)
 

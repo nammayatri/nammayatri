@@ -45,17 +45,19 @@ data DriverFeeByInvoice = DriverFeeByInvoice
     totalFee :: HighPrecMoney,
     startTime :: UTCTime,
     endTime :: UTCTime,
-    status :: DDF.DriverFeeStatus
+    status :: DDF.DriverFeeStatus,
+    currency :: Currency
   }
 
 data PlatformFee = PlatformFee
   { fee :: HighPrecMoney,
     cgst :: HighPrecMoney,
-    sgst :: HighPrecMoney
+    sgst :: HighPrecMoney,
+    currency :: Currency
   }
 
-groupDriverFeeByInvoices :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [DDF.DriverFee] -> m [DriverFeeByInvoice]
-groupDriverFeeByInvoices driverFees_ = do
+groupDriverFeeByInvoices :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Currency -> [DDF.DriverFee] -> m [DriverFeeByInvoice]
+groupDriverFeeByInvoices currency driverFees_ = do
   let pendingFees = filter (\df -> elem df.status [DDF.PAYMENT_PENDING, DDF.PAYMENT_OVERDUE]) driverFees_
 
   pendingFeeInvoiceId <- getInvoiceIdForPendingFees pendingFees

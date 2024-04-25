@@ -40,6 +40,7 @@ import Servant hiding (Summary)
 ---------------------------------------------------------
 -- ride list --------------------------------------------
 
+-- TODO test fareDiff query param
 type RideListAPI =
   "list"
     :> QueryParam "limit" Int
@@ -48,7 +49,8 @@ type RideListAPI =
     :> QueryParam "rideShortId" (ShortId Ride)
     :> QueryParam "customerPhoneNo" Text
     :> QueryParam "driverPhoneNo" Text
-    :> QueryParam "fareDiff" Money
+    :> QueryParam "fareDiff" HighPrecMoney
+    :> QueryParam "currency" Currency
     :> QueryParam "from" UTCTime
     :> QueryParam "to" UTCTime
     :> Get '[JSON] RideListRes
@@ -71,6 +73,7 @@ data RideListItem = RideListItem
     tripCategory :: TripCategory,
     vehicleNo :: Text,
     fareDiff :: Maybe Money,
+    fareDiffWithCurrency :: Maybe PriceAPIEntity,
     bookingStatus :: BookingStatus,
     rideCreatedAt :: UTCTime
   }
@@ -251,6 +254,9 @@ data RideInfoRes = RideInfoRes
     estimatedFare :: Money,
     actualFare :: Maybe Money,
     driverOfferedFare :: Maybe Money,
+    estimatedFareWithCurrency :: PriceAPIEntity,
+    actualFareWithCurrency :: Maybe PriceAPIEntity,
+    driverOfferedFareWithCurrency :: Maybe PriceAPIEntity,
     pickupDuration :: Maybe Minutes,
     rideDuration :: Maybe Minutes,
     bookingStatus :: BookingStatus,
@@ -484,6 +490,7 @@ data RideInfo = RideInfo
     dropLocationAreaCode :: Maybe Text,
     dropLocationArea :: Maybe Text,
     fare :: Maybe Money,
+    fareWithCurrency :: Maybe PriceAPIEntity,
     personId :: Id Driver,
     classification :: Ticket.Classification
   }
@@ -522,11 +529,22 @@ data FareBreakUp = FareBreakUp
     waitingCharge :: Maybe Money,
     rideExtraTimeFare :: Maybe Money,
     nightShiftCharge :: Maybe Money,
+    driverSelectedFareWithCurrency :: Maybe PriceAPIEntity,
+    customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
+    serviceChargeWithCurrency :: Maybe PriceAPIEntity,
+    govtChargesWithCurrency :: Maybe PriceAPIEntity,
+    baseFareWithCurrency :: PriceAPIEntity,
+    waitingChargeWithCurrency :: Maybe PriceAPIEntity,
+    rideExtraTimeFareWithCurrency :: Maybe PriceAPIEntity,
+    nightShiftChargeWithCurrency :: Maybe PriceAPIEntity,
     nightShiftRateIfApplies :: Maybe Double,
     fareParametersDetails :: FareParametersDetails,
     customerCancellationDues :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
     congestionCharge :: Maybe Money,
+    customerCancellationDuesWithCurrency :: Maybe PriceAPIEntity,
+    tollChargesWithCurrency :: Maybe PriceAPIEntity,
+    congestionChargeWithCurrency :: Maybe PriceAPIEntity,
     updatedAt :: UTCTime
   }
   deriving stock (Show, Generic)
@@ -538,7 +556,9 @@ data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | Slab
 
 data FParamsProgressiveDetails = FParamsProgressiveDetails
   { deadKmFare :: Money,
-    extraKmFare :: Maybe Money
+    extraKmFare :: Maybe Money,
+    deadKmFareWithCurrency :: PriceAPIEntity,
+    extraKmFareWithCurrency :: Maybe PriceAPIEntity
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -546,7 +566,10 @@ data FParamsProgressiveDetails = FParamsProgressiveDetails
 data FParamsSlabDetails = FParamsSlabDetails
   { platformFee :: Maybe HighPrecMoney,
     sgst :: Maybe HighPrecMoney,
-    cgst :: Maybe HighPrecMoney
+    cgst :: Maybe HighPrecMoney,
+    platformFeeWithCurrency :: Maybe PriceAPIEntity,
+    sgstWithCurrency :: Maybe PriceAPIEntity,
+    cgstWithCurrency :: Maybe PriceAPIEntity
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -554,6 +577,8 @@ data FParamsSlabDetails = FParamsSlabDetails
 data FParamsRentalDetails = FParamsRentalDetails
   { timeBasedFare :: Money,
     distBasedFare :: Money,
+    timeBasedFareWithCurrency :: PriceAPIEntity,
+    distBasedFareWithCurrency :: PriceAPIEntity,
     extraDistance :: Meters,
     extraDuration :: Seconds
   }

@@ -10,7 +10,6 @@
 module SharedLogic.FarePolicy where
 
 import BecknV2.OnDemand.Tags as Tags
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import Data.Coerce (coerce)
 import qualified Data.List.NonEmpty as NE
 import Data.Ord (comparing)
@@ -277,8 +276,8 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
     waitingChargeBreakups (Just waitingChargeInfo) = do
       let (mbWaitingChargePerMin, mbWaitingChargePerMinFloat, mbConstantWaitingCharges) =
             waitingChargeInfo.waitingCharge & \case
-              DPM.PerMinuteWaitingCharge hpm -> (Just $ show (round hpm :: Money), Just $ show hpm, Nothing)
-              DPM.ConstantWaitingCharge mo -> (Nothing, Nothing, Just $ show mo)
+              FarePolicyD.PerMinuteWaitingCharge hpm -> (Just $ show (round hpm :: Money), Just $ show hpm, Nothing)
+              FarePolicyD.ConstantWaitingCharge mo -> (Nothing, Nothing, Just $ show mo)
 
           waitingOrPickupChargesCaption = show Tags.WAITING_OR_PICKUP_CHARGES -- TODO :: To be deprecated
           mbWaitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption . mkValue <$> mbConstantWaitingCharges
@@ -298,8 +297,8 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       catMaybes [mbWaitingOrPickupChargesItem, mbWaitingChargePerMinItem, mbWaitingChargePerMinFloatItem, mbConstantWaitingChargeItem, Just freeWaitingTimeItem]
 
     oldNightShiftChargeBreakups nightShiftChargeInfo = do
-      let getNightShiftChargeValue (DPM.ProgressiveNightShiftCharge a) = show (round a :: Money) -- fix from customer side first
-          getNightShiftChargeValue (DPM.ConstantNightShiftCharge a) = show a
+      let getNightShiftChargeValue (FarePolicyD.ProgressiveNightShiftCharge a) = show (round a :: Money) -- fix from customer side first
+          getNightShiftChargeValue (FarePolicyD.ConstantNightShiftCharge a) = show a
 
       let oldNightShiftCharge = getNightShiftChargeValue <$> nightShiftChargeInfo
           oldNightShiftChargeCaption = show Tags.NIGHT_SHIFT_CHARGE
@@ -311,8 +310,8 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
     newNightShiftChargeBreakups (Just nightShiftChargeInfo) = do
       let (mbNightShiftChargePercentage, mbConstantNightShiftCharge) =
             nightShiftChargeInfo & \case
-              DPM.ProgressiveNightShiftCharge a -> (Just $ show ((a - 1) * 100), Nothing)
-              DPM.ConstantNightShiftCharge a -> (Nothing, Just $ show a)
+              FarePolicyD.ProgressiveNightShiftCharge a -> (Just $ show ((a - 1) * 100), Nothing)
+              FarePolicyD.ConstantNightShiftCharge a -> (Nothing, Just $ show a)
 
           mbNightShiftChargePercentageCaption = show Tags.NIGHT_SHIFT_CHARGE_PERCENTAGE
           mbNightShiftChargePercentageItem = mkBreakupItem mbNightShiftChargePercentageCaption . mkValue <$> mbNightShiftChargePercentage

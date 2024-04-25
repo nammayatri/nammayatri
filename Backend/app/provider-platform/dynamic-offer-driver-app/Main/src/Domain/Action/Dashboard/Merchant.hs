@@ -98,6 +98,7 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import qualified SharedLogic.DriverFee as SDF
 import qualified SharedLogic.DriverPool.Types as DriverPool
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.FarePolicy as CQFP
@@ -766,7 +767,10 @@ verificationServiceConfigUpdate merchantShortId city req = do
 ---------------------------------------------------------------------
 
 createFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
-createFPDriverExtraFee _ _ farePolicyId startDistance req = do
+createFPDriverExtraFee merchantShortId city farePolicyId startDistance req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- CQMOC.getMerchantOpCity merchant (Just city)
+  SMerchant.checkCurrencies merchantOperatingCity.currency [req.minFeeWithCurrency, req.maxFeeWithCurrency]
   mbFarePolicy <- QFPEFB.findByFarePolicyIdAndStartDistance farePolicyId startDistance
   whenJust mbFarePolicy $ \_ -> throwError $ InvalidRequest "Fare policy with the same id and startDistance already exists"
   farePolicyDetails <- buildFarePolicy farePolicyId startDistance req
@@ -778,29 +782,46 @@ createFPDriverExtraFee _ _ farePolicyId startDistance req = do
       let driverExtraFeeBounds =
             DFPEFB.DriverExtraFeeBounds
               { startDistance = strtDistance,
-                minFee = toHighPrecMoney request.minFee, -- FIXME
-                maxFee = toHighPrecMoney request.maxFee -- FIXME
+                minFee = fromMaybe (toHighPrecMoney request.minFee) $ request.minFeeWithCurrency <&> (.amount),
+                maxFee = fromMaybe (toHighPrecMoney request.maxFee) $ request.maxFeeWithCurrency <&> (.amount)
               }
       return (fpId, driverExtraFeeBounds)
 
 ---------------------------------------------------------------------
 updateFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
-updateFPDriverExtraFee _ _ farePolicyId startDistance req = do
+updateFPDriverExtraFee merchantShortId city farePolicyId startDistance req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- CQMOC.getMerchantOpCity merchant (Just city)
+  SMerchant.checkCurrencies merchantOperatingCity.currency [req.minFeeWithCurrency, req.maxFeeWithCurrency]
+  let reqMinFee = fromMaybe (toHighPrecMoney req.minFee) $ req.minFeeWithCurrency <&> (.amount)
+  let reqMaxFee = fromMaybe (toHighPrecMoney req.maxFee) $ req.maxFeeWithCurrency <&> (.amount)
   _ <- QFPEFB.findByFarePolicyIdAndStartDistance farePolicyId startDistance >>= fromMaybeM (InvalidRequest "Fare Policy with given id and startDistance not found")
-  _ <- QFPEFB.update farePolicyId startDistance req.minFee req.maxFee
+  _ <- QFPEFB.update farePolicyId startDistance reqMinFee reqMaxFee
   CQFP.clearCacheById farePolicyId
   pure Success
 
 updateFPPerExtraKmRate :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Meters -> Common.UpdateFPPerExtraKmRateReq -> Flow APISuccess
-updateFPPerExtraKmRate _ _ farePolicyId startDistance req = do
+updateFPPerExtraKmRate merchantShortId city farePolicyId startDistance req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- CQMOC.getMerchantOpCity merchant (Just city)
+  SMerchant.checkCurrencies merchantOperatingCity.currency [req.perExtraKmRateWithCurrency]
   _ <- QFPPDEKM.findByIdAndStartDistance farePolicyId startDistance >>= fromMaybeM (InvalidRequest "Fare Policy Parameters Per Extra Km Section with given id and start distance not found")
-  _ <- QFPPDEKM.updatePerExtraKmRate farePolicyId startDistance req.perExtraKmRate
+  _ <- QFPPDEKM.updatePerExtraKmRate farePolicyId startDistance $ fromMaybe req.perExtraKmRate (req.perExtraKmRateWithCurrency <&> (.amount))
   CQFP.clearCacheById farePolicyId
   pure Success
 
 updateFarePolicy :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
 updateFarePolicy _ _ farePolicyId req = do
   farePolicy <- CQFP.findById Nothing Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
+  SMerchant.checkCurrencies farePolicy.currency $
+    [ req.serviceChargeWithCurrency,
+      req.perMinuteRideExtraTimeChargeWithCurrency,
+      req.baseFareWithCurrency,
+      req.deadKmFareWithCurrency
+    ]
+      <> maybe [] FarePolicy.getWaitingChargeFields req.waitingCharge
+      <> maybe [] FarePolicy.getWaitingChargeInfoFields req.waitingChargeInfo
+      <> maybe [] FarePolicy.getNightShiftChargeFields req.nightShiftCharge
   updatedFarePolicy <- mkUpdatedFarePolicy farePolicy
   CQFP.update' updatedFarePolicy
   CQFP.clearCacheById farePolicyId
@@ -810,11 +831,11 @@ updateFarePolicy _ _ farePolicyId req = do
       fPDetails <- mkFarePolicyDetails farePolicyDetails
       pure $
         FarePolicy.FarePolicy
-          { serviceCharge = (toHighPrecMoney <$> req.serviceCharge) <|> serviceCharge, -- FIXME
+          { serviceCharge = (req.serviceChargeWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.serviceCharge) <|> serviceCharge,
             nightShiftBounds = req.nightShiftBounds <|> nightShiftBounds,
             allowedTripDistanceBounds = req.allowedTripDistanceBounds <|> allowedTripDistanceBounds,
             govtCharges = req.govtCharges <|> govtCharges,
-            perMinuteRideExtraTimeCharge = req.perMinuteRideExtraTimeCharge <|> perMinuteRideExtraTimeCharge,
+            perMinuteRideExtraTimeCharge = (req.perMinuteRideExtraTimeChargeWithCurrency <&> (.amount)) <|> req.perMinuteRideExtraTimeCharge <|> perMinuteRideExtraTimeCharge,
             farePolicyDetails = fPDetails,
             description = req.description <|> description,
             ..
@@ -830,11 +851,11 @@ updateFarePolicy _ _ farePolicyId req = do
 
     mkUpdatedFPProgressiveDetails FarePolicy.FPProgressiveDetails {..} =
       FarePolicy.FPProgressiveDetails
-        { baseFare = fromMaybe baseFare (toHighPrecMoney <$> req.baseFare), -- FIXME
+        { baseFare = fromMaybe baseFare $ (req.baseFareWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.baseFare),
           baseDistance = fromMaybe baseDistance req.baseDistance,
-          deadKmFare = fromMaybe deadKmFare (toHighPrecMoney <$> req.deadKmFare), -- FIXME
-          waitingChargeInfo = req.waitingChargeInfo <|> waitingChargeInfo,
-          nightShiftCharge = req.nightShiftCharge <|> nightShiftCharge,
+          deadKmFare = fromMaybe deadKmFare $ (req.deadKmFareWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.deadKmFare),
+          waitingChargeInfo = FarePolicy.mkWaitingChargeInfo <$> req.waitingChargeInfo <|> waitingChargeInfo,
+          nightShiftCharge = FarePolicy.mkNightShiftCharge <$> req.nightShiftCharge <|> nightShiftCharge,
           ..
         }
 

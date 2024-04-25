@@ -594,7 +594,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
             numRides = 0,
             createdAt = now,
             updatedAt = now,
-            platformFee = DF.PlatformFee fee cgst sgst,
+            platformFee = DF.PlatformFee fee cgst sgst currency,
             totalEarnings = 0,
             feeType = DF.MANDATE_REGISTRATION,
             govtCharges = 0,

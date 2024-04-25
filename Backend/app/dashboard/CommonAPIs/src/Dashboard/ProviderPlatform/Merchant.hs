@@ -25,7 +25,6 @@ import Dashboard.Common.Merchant as Reexport
 import Data.Aeson
 import Data.OpenApi hiding (description, name, password, url)
 import Data.Text as T
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Types.APISuccess
@@ -622,7 +621,9 @@ type CreateFPDriverExtraFee =
 
 data CreateFPDriverExtraFeeReq = CreateFPDriverExtraFeeReq
   { minFee :: Money,
-    maxFee :: Money
+    maxFee :: Money,
+    minFeeWithCurrency :: Maybe PriceAPIEntity,
+    maxFeeWithCurrency :: Maybe PriceAPIEntity
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -653,8 +654,9 @@ type UpdateFPPerExtraKmRate =
     :> ReqBody '[JSON] UpdateFPPerExtraKmRateReq
     :> Post '[JSON] APISuccess
 
-newtype UpdateFPPerExtraKmRateReq = UpdateFPPerExtraKmRateReq
-  { perExtraKmRate :: HighPrecMoney
+data UpdateFPPerExtraKmRateReq = UpdateFPPerExtraKmRateReq
+  { perExtraKmRate :: HighPrecMoney,
+    perExtraKmRateWithCurrency :: Maybe PriceAPIEntity
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -671,40 +673,52 @@ type UpdateFarePolicy =
     :> Post '[JSON] APISuccess
 
 data UpdateFarePolicyReq = UpdateFarePolicyReq
-  { serviceCharge :: Maybe Money, -- FIXME fix all dashboard requests and responses
+  { serviceCharge :: Maybe Money,
+    serviceChargeWithCurrency :: Maybe PriceAPIEntity,
     nightShiftBounds :: Maybe NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
+    perMinuteRideExtraTimeChargeWithCurrency :: Maybe PriceAPIEntity,
     congestionChargeMultiplier :: Maybe Centesimal,
     description :: Maybe Text,
     baseDistance :: Maybe Meters,
     baseFare :: Maybe Money,
     deadKmFare :: Maybe Money,
-    waitingCharge :: Maybe WaitingCharge,
-    waitingChargeInfo :: Maybe WaitingChargeInfo,
+    baseFareWithCurrency :: Maybe PriceAPIEntity,
+    deadKmFareWithCurrency :: Maybe PriceAPIEntity,
+    waitingCharge :: Maybe WaitingChargeAPIEntity,
+    waitingChargeInfo :: Maybe WaitingChargeInfoAPIEntity,
     freeWaitingTime :: Maybe Minutes,
-    nightShiftCharge :: Maybe NightShiftCharge
+    nightShiftCharge :: Maybe NightShiftChargeAPIEntity
   }
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets UpdateFarePolicyReq where
   hideSecrets = identity
 
-data WaitingChargeInfo = WaitingChargeInfo
+data WaitingChargeInfoAPIEntity = WaitingChargeInfoAPIEntity
   { freeWaitingTime :: Minutes,
-    waitingCharge :: WaitingCharge
+    waitingCharge :: WaitingChargeAPIEntity
   }
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharge Money -- FIXME HighPrecMoney
-  deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
+data WaitingChargeAPIEntity
+  = PerMinuteWaitingCharge HighPrecMoney
+  | ConstantWaitingCharge Money
+  | PerMinuteWaitingChargeWithCurrency PriceAPIEntity
+  | ConstantWaitingChargeWithCurrency PriceAPIEntity
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data NightShiftCharge = ProgressiveNightShiftCharge Float | ConstantNightShiftCharge Money -- FIXME HighPrecMoney
-  deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
+data NightShiftChargeAPIEntity
+  = ProgressiveNightShiftCharge Float
+  | ConstantNightShiftCharge Money
+  | ConstantNightShiftChargeWithCurrency PriceAPIEntity
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data NightShiftBounds = NightShiftBounds
   { nightShiftStart :: TimeOfDay,
@@ -717,9 +731,6 @@ data AllowedTripDistanceBounds = AllowedTripDistanceBounds
     minAllowedTripDistance :: Meters
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
-
-$(mkBeamInstancesForJSON ''NightShiftCharge)
-$(mkBeamInstancesForJSON ''WaitingCharge)
 
 ---- generic trigger for schedulers ----
 

@@ -483,7 +483,7 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
       startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
       endTime = addUTCTime transporterConfig.driverPaymentCycleDuration startTime
       payBy = if isNothing transporterConfig.driverFeeCalculationTime then addUTCTime transporterConfig.driverPaymentCycleBuffer endTime else addUTCTime (transporterConfig.driverAutoPayNotificationTime + transporterConfig.driverAutoPayExecutionTime) endTime
-      platformFee_ = if isNothing transporterConfig.driverFeeCalculationTime then DF.PlatformFee platformFee cgst sgst else DF.PlatformFee 0 0 0
+      platformFee_ = if isNothing transporterConfig.driverFeeCalculationTime then DF.PlatformFee platformFee cgst sgst currency else DF.PlatformFee 0 0 0 currency
       govtCharges_ = if isNothing transporterConfig.driverFeeCalculationTime then govtCharges else 0
       isPlanMandatory = transporterConfig.isPlanMandatory
       totalFee = platformFee + cgst + sgst

@@ -27,7 +27,8 @@ data FareParametersSlabDetailsT f = FareParametersSlabDetailsT
   { fareParametersId :: B.C f Text,
     platformFee :: B.C f (Maybe HighPrecMoney),
     sgst :: B.C f (Maybe HighPrecMoney),
-    cgst :: B.C f (Maybe HighPrecMoney)
+    cgst :: B.C f (Maybe HighPrecMoney),
+    currency :: B.C f (Maybe Currency)
   }
   deriving (Generic, B.Beamable)
 

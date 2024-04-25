@@ -25,7 +25,7 @@ module SharedLogic.FareCalculator
 where
 
 import qualified BecknV2.OnDemand.Enums as Enums
-import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant hiding (Variant (..))
+import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant hiding (NightShiftChargeAPIEntity (..), Variant (..), WaitingChargeAPIEntity (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import Domain.Types.FareParameters
@@ -222,6 +222,7 @@ calculateFareParameters params = do
                 countPlatformFee -- Mb change platformFee from Nothing to proper value
                   fullCompleteRideCost
                   (DFP.findFPSlabsDetailsSlabByDistance (fromMaybe 0 params.actualDistance) det.slabs & (.platformFeeInfo))
+                  params.currency
                   fareParametersDetails
               DFP.RentalDetails _ -> fareParametersDetails,
             customerCancellationDues = params.customerCancellationDues,
@@ -307,7 +308,8 @@ calculateFareParameters params = do
           DFParams.FParamsSlabDetails
             { platformFee = Nothing, -- Nothing for now, can be counted only after everything else
               sgst = Nothing,
-              cgst = Nothing
+              cgst = Nothing,
+              currency
             }
         )
 
@@ -329,12 +331,12 @@ calculateFareParameters params = do
       case waitingChargeInfo.waitingCharge of
         PerMinuteWaitingCharge charge -> (\waitingTime -> HighPrecMoney $ toRational waitingTime * charge.getHighPrecMoney) <$> chargedWaitingTime
         ConstantWaitingCharge charge -> Just $ toHighPrecMoney charge -- Always charged, freeWaitingTime doesn't make sense in this case
-    countPlatformFee :: HighPrecMoney -> Maybe PlatformFeeInfo -> FareParametersDetails -> FareParametersDetails
-    countPlatformFee fullCompleteRideCost platformFeeInfo = \case
+    countPlatformFee :: HighPrecMoney -> Maybe PlatformFeeInfo -> Currency -> FareParametersDetails -> FareParametersDetails
+    countPlatformFee fullCompleteRideCost platformFeeInfo currency = \case
       (DFParams.ProgressiveDetails det) -> DFParams.ProgressiveDetails det -- should be impossible anyway
       (DFParams.RentalDetails det) -> DFParams.RentalDetails det
-      (DFParams.SlabDetails _det) ->
-        DFParams.SlabDetails $ maybe (FParamsSlabDetails Nothing Nothing Nothing) countPlatformFeeMath platformFeeInfo
+      (DFParams.SlabDetails det) ->
+        DFParams.SlabDetails $ maybe (FParamsSlabDetails Nothing Nothing Nothing det.currency) countPlatformFeeMath platformFeeInfo
       where
         countPlatformFeeMath platformFeeInfo' = do
           let baseFee = case platformFeeInfo'.platformFeeCharge of
@@ -343,7 +345,8 @@ calculateFareParameters params = do
           FParamsSlabDetails
             { platformFee = Just baseFee,
               cgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.cgst * realToFrac baseFee,
-              sgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.sgst * realToFrac baseFee
+              sgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.sgst * realToFrac baseFee,
+              currency
             }
     calculateExtraTimeFare :: Meters -> Maybe HighPrecMoney -> Maybe Seconds -> ServiceTierType -> AvgSpeedOfVechilePerKm -> Maybe HighPrecMoney
     calculateExtraTimeFare distance perMinuteRideExtraTimeCharge actualRideDuration serviceTier avgSpeedOfVehicle = do
