@@ -62,6 +62,7 @@ type Config
     , selectedServices :: Array String
     , currentEstimateHeight :: Int
     , selectedEstimateHeight :: Int
+    , validTill :: String
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -117,4 +118,5 @@ config =
   , selectedServices : []
   , currentEstimateHeight : 184 
   , selectedEstimateHeight : 0
+  , validTill : ""
   }
