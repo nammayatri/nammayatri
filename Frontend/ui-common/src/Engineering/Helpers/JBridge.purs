@@ -254,6 +254,7 @@ foreign import emitJOSEvent :: Fn3 String String Foreign Unit
 foreign import getLayoutBounds :: Fn1 String LayoutBound
 foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
 foreign import withinTimeRange :: String -> String -> String -> Boolean
+foreign import timeValidity :: String -> String -> Boolean
 foreign import isServiceRunning :: Fn1 String Boolean
 foreign import getChatMessages :: LazyCheck -> Array ChatComponent
 foreign import storeKeyBoardCallback :: forall action. EffectFn2 (action -> Effect Unit) (String -> action) Unit

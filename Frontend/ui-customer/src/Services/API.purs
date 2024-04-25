@@ -596,7 +596,8 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   airConditioned :: Maybe Boolean,
   providerName :: Maybe String,
   providerId :: Maybe String,
-  isValueAddNP :: Maybe Boolean --true if entity is from ny
+  isValueAddNP :: Maybe Boolean, --true if entity is from ny
+  validTill :: String
 }
 
 newtype NightShiftRate = NightShiftRate {

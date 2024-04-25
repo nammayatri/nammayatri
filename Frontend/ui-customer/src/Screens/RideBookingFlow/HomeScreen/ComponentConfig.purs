@@ -1565,6 +1565,7 @@ chooseVehicleConfig state = let
     , driverAdditions = selectedEstimates.driverAdditions
     , showEditButton = true
     , editBtnText = getString CHANGE
+    , validTill = selectedEstimates.validTill
     }
   in chooseVehicleConfig'
 

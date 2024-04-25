@@ -2263,6 +2263,16 @@ export const withinTimeRange = function (startTime) {
   }
 }
 
+export const timeValidity = function (time1) {
+  return function (time2) {
+    try {
+      return time2 > time1;
+    } catch (err) {
+      return false;
+    }
+  }
+}
+
 export const askNotificationPermission = function () {
   if (window.JBridge.requestNotificationPermission) {
     return window.JBridge.requestNotificationPermission();

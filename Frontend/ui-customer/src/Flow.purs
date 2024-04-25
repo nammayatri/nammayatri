@@ -20,7 +20,7 @@ import Engineering.Helpers.LogEvent
 import Screens.TicketBookingFlow.TicketBooking.Transformer
 import Services.API
 import Common.Resources.Constants (zoomLevel)
-import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate)
+import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate, ProviderType(..))
 import Common.Types.App as Common
 import Components.ChatView.Controller (makeChatComponent')
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
@@ -61,7 +61,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding)
+import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, timeValidity, removeMarker)
 import JBridge as JB
 import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig)
 import Language.Strings (getString)
@@ -197,6 +197,7 @@ import Data.HashMap as DHM
 import Helpers.API as HelpersAPI
 import Helpers.Referral (applyReferralCode)
 import Helpers.SpecialZoneAndHotSpots
+import Components.ChooseVehicle.Controller as ChooseVehicle
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -685,16 +686,24 @@ homeScreenFlow = do
           Right res -> do
             updateLocalStage FindingQuotes
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } })
+            let tipViewData = if state.props.customerTip.isTipSelected then state.props.tipViewProps{ stage = TIP_ADDED_TO_SEARCH } else HomeScreenData.initData.props.tipViewProps
+            logInfo "retry_finding_quotes" ( "selectedEstimate Current Stage: " <> (show state.props.currentStage) <> " LOCAL_STAGE: " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id :" <> state.props.estimateId )
+            void $ pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
+            void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = 0.0 , scaleType="CENTER_CROP"}
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { customerTip = if homeScreen.props.customerTip.isTipSelected then homeScreen.props.customerTip else HomeScreenData.initData.props.customerTip{enableTips = homeScreen.props.customerTip.enableTips } , tipViewProps = tipViewData, findingQuotesProgress = 0.0 }})
+            homeScreenFlow
           Left err -> do
             void $ pure $ firebaseLogEvent "ny_user_estimate_expired"
             updateLocalStage FindEstimateAndSearch
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindEstimateAndSearch, searchAfterEstimate = true } })
-        let tipViewData = if state.props.customerTip.isTipSelected then state.props.tipViewProps{ stage = TIP_ADDED_TO_SEARCH } else HomeScreenData.initData.props.tipViewProps
-        logInfo "retry_finding_quotes" ( "selectedEstimate Current Stage: " <> (show state.props.currentStage) <> " LOCAL_STAGE: " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id :" <> state.props.estimateId )
-        void $ pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
-        void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = 0.0 , scaleType="CENTER_CROP"}
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { customerTip = if homeScreen.props.customerTip.isTipSelected then homeScreen.props.customerTip else HomeScreenData.initData.props.customerTip{enableTips = homeScreen.props.customerTip.enableTips } , tipViewProps = tipViewData, findingQuotesProgress = 0.0 }})
-      homeScreenFlow
+            let errResp = err.response
+                codeMessage = decodeError errResp.errorMessage "errorCode"
+            if ( err.code == 400 && codeMessage == "SEARCH_REQUEST_EXPIRED") then do
+                void $ pure $ toast (getString STR.ESTIMATES_EXPIRY_ERROR)
+            else do
+                void $ pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = SearchLocationModel}})
+            currentFlowStatus
     LOCATION_SELECTED item addToRecents-> do
         void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
         void $ lift $ lift $ toggleLoader true
@@ -861,9 +870,17 @@ homeScreenFlow = do
           else do
             pure unit
           void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
-          void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates) (state.props.estimateId)
-          logStatus "finding_quotes" ("estimateId : " <> state.props.estimateId)
-          homeScreenFlow
+          let topProvider = filter (\quotes -> quotes.providerType == ONUS ) state.data.specialZoneQuoteList
+              mbSpecialZoneQuoteList = fromMaybe ChooseVehicle.config (head topProvider)
+              valid = timeValidity (getCurrentUTC "") mbSpecialZoneQuoteList.validTill
+          if valid then do
+            void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates) (state.props.estimateId)
+            logStatus "finding_quotes" ("estimateId : " <> state.props.estimateId)
+            homeScreenFlow
+            else do
+              void $ pure $ toast (getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN)
+              findEstimates state
+
     SELECT_ESTIMATE state -> do
         logStatus "setting_price" ""
         void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
@@ -1681,7 +1698,16 @@ homeScreenFlow = do
       safetyEducationFlow
     REPEAT_SEARCH state -> do
       cancelEstimate state.props.estimateId
-      findEstimates state
+      let topProvider = filter (\quotes -> quotes.providerType == ONUS ) state.data.specialZoneQuoteList
+          mbSpecialZoneQuoteList = fromMaybe ChooseVehicle.config (head topProvider)
+          valid = timeValidity (getCurrentUTC "") mbSpecialZoneQuoteList.validTill
+      if (valid) then do
+        updateLocalStage SettingPrice
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{currentStage = SettingPrice}})
+        homeScreenFlow
+        else do
+          findEstimates state
+      
     GOTO_CONFIRMING_LOCATION_STAGE finalState -> do
       if os == "IOS" && finalState.props.currentStage == HomeScreen then 
         pure unit 
@@ -3739,7 +3765,6 @@ predictionClickedFlow prediction state = do
         modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ srcLoc = src, destLoc = dest , srcCode = srcCode, destCode = destCode}, props {isButtonActive = true}})
         metroTicketBookingFlow
       else do
-        void $ pure $ spy "else do" state
         if state.props.focussedTextField == Just SearchLocPickup then 
           void $ pure $ showKeyboard (getNewIDWithTag (show SearchLocPickup))
           else do

@@ -528,6 +528,7 @@ getEstimates (EstimateAPIEntity estimate) estimates index isFareRange count acti
       , driverAdditions = breakupConfig.driverAdditions
       , availableServices = availableServices
       , selectedServices = selectedServices
+      , validTill = estimate.validTill
       }
 
 mapServiceTierName :: String -> Maybe Boolean -> Maybe String -> Maybe String
@@ -661,6 +662,7 @@ dummyEstimateEntity =
     , providerName : Nothing
     , providerId : Nothing
     , isValueAddNP : Nothing
+    , validTill : ""
     }
 
 estimatesWithBookAny :: Array EstimateAPIEntity -> Array EstimateAPIEntity
@@ -691,6 +693,7 @@ estimatesWithBookAny estimates =
         , serviceTierName: Just "Book Any"
         , airConditioned: Nothing
         , isValueAddNP: Just true
+        , validTill : ""
         }
     filteredEstimates = filter (\(EstimateAPIEntity item) -> ((DA.elem (fromMaybe "" item.serviceTierName) selectedServices) && (fromMaybe false item.isValueAddNP))) estimates
   in
