@@ -17,6 +17,7 @@ module Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiv
 
 import qualified Database.Beam as B
 import qualified Domain.Types.FarePolicy as Domain
+import Domain.Types.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
@@ -43,3 +44,4 @@ type FullFarePolicyProgressiveDetailsPerExtraKmRateSection = (KTI.Id Domain.Fare
 $(enableKVPG ''FarePolicyProgressiveDetailsPerExtraKmRateSectionT ['farePolicyId] [])
 
 $(mkTableInstances ''FarePolicyProgressiveDetailsPerExtraKmRateSectionT "fare_policy_progressive_details_per_extra_km_rate_section")
+$(mkCacParseInstanceList ''FarePolicyProgressiveDetailsPerExtraKmRateSection)

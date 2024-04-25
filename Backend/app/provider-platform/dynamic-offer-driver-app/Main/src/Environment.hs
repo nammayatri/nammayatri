@@ -31,6 +31,7 @@ import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
 import Kernel.Types.Cache
+import qualified Kernel.Types.CacheFlow as KTC
 import Kernel.Types.Common (HighPrecMeters, Seconds)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Flow (FlowR)
@@ -58,14 +59,6 @@ import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import System.Environment (lookupEnv)
 import Tools.Metrics
 import TransactionLogs.Types
-
-data CacConfig = CacConfig
-  { host :: String,
-    interval :: Natural,
-    tenants :: [String],
-    retryConnection :: Bool
-  }
-  deriving (Generic, FromDhall)
 
 data SuperPositionConfig = SuperPositionConfig
   { host :: String,
@@ -144,7 +137,8 @@ data AppCfg = AppCfg
     incomingAPIResponseTimeout :: Int,
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
     _version :: Text,
-    cacConfig :: CacConfig,
+    cacConfig :: KTC.CacConfig,
+    cacTenants :: [String],
     superPositionConfig :: SuperPositionConfig,
     maxStraightLineRectificationThreshold :: HighPrecMeters,
     singleBatchProcessingTempDelay :: NominalDiffTime,
@@ -227,7 +221,8 @@ data AppEnv = AppEnv
     incomingAPIResponseTimeout :: Int,
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
     _version :: Text,
-    cacConfig :: CacConfig,
+    cacConfig :: KTC.CacConfig,
+    cacTenants :: [String],
     superPositionConfig :: SuperPositionConfig,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,

@@ -362,7 +362,6 @@ library
       Storage.Beam.FarePolicy.FarePolicyRentalDetails
       Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab
-      Storage.Beam.FarePolicyCACTypes
       Storage.Beam.FareProduct
       Storage.Beam.Feedback.Feedback
       Storage.Beam.Feedback.FeedbackBadge
@@ -407,6 +406,17 @@ library
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
       Storage.Beam.SystemConfigs
+      Storage.Cac.DriverIntelligentPoolConfig
+      Storage.Cac.DriverPoolConfig
+      Storage.Cac.FarePolicy
+      Storage.Cac.FarePolicy.DriverExtraFeeBounds
+      Storage.Cac.FarePolicy.FarePolicyProgressiveDetails
+      Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Storage.Cac.FarePolicy.FarePolicyRentalDetails
+      Storage.Cac.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
+      Storage.Cac.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+      Storage.Cac.GoHomeConfig
+      Storage.Cac.TransporterConfig
       Storage.CachedQueries.BapMetadata
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg

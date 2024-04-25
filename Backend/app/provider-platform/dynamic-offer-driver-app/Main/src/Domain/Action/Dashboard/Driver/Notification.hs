@@ -38,12 +38,13 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverPool.Types
+import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
 import qualified Tools.Notifications as TN
+import Utils.Common.Cac.KeyNameConstants
 
 --------------------------------------------------------------------------------------------------
 
@@ -71,7 +72,7 @@ triggerDummyRideRequest ::
   m APISuccess
 triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
   vehicle <- B.runInReplica $ QVehicle.findById driver.id >>= fromMaybeM (VehicleDoesNotExist driver.id.getId)
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigDoesNotExist merchantOperatingCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOperatingCityId.getId)
   let dummyFromLocation = transporterConfig.dummyFromLocation
       dummyToLocation = transporterConfig.dummyToLocation
   let isValueAddNP = True

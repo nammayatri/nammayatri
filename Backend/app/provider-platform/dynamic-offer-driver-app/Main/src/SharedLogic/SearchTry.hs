@@ -36,12 +36,12 @@ import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator
 import qualified SharedLogic.Booking as SBooking
-import SharedLogic.DriverPool (getDriverPoolConfig)
 import SharedLogic.DriverPool.Types
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
-import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
+import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
+import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
@@ -50,6 +50,7 @@ import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
+import Utils.Common.Cac.KeyNameConstants
 
 getNextScheduleTime ::
   ( MonadFlow m,
@@ -103,8 +104,8 @@ initiateDriverSearchBatch ::
   m ()
 initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
   searchTry <- createNewSearchTry
-  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance (Just searchReq.transactionId) (Just "transactionId")
-  goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just searchReq.transactionId) (Just "transactionId")
+  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance (Just (TransactionId (Id searchReq.transactionId)))
+  goHomeCfg <- CGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId)))
   singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
   if not searchTry.isScheduled
     then do
@@ -238,7 +239,7 @@ buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceT
     case (mDriverPickUpCharge, mbDriverMinFee, mbDriverMaxFee, mbStepFee, mbDefaultStepFee) of
       (Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee) -> return (Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee)
       _ -> do
-        farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId (Just searchReq.transactionId) (Just "transactionId")
+        farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId (Just (TransactionId (Id searchReq.transactionId)))
         let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
         return $
           ( DTSRD.extractDriverPickupCharges farePolicy.farePolicyDetails,

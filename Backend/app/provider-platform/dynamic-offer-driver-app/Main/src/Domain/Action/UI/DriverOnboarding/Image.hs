@@ -36,14 +36,15 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.Multipart
 import SharedLogic.DriverOnboarding
+import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.Merchant as CQM
-import Storage.CachedQueries.Merchant.TransporterConfig
 import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Error
 import qualified Tools.Verification as Verification
+import Utils.Common.Cac.KeyNameConstants
 
 data ImageValidateRequest = ImageValidateRequest
   { image :: Text,
@@ -125,7 +126,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
 
   images <- Query.findRecentByPersonIdAndImageType personId imageType
   unless isDashboard $ do
-    transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let onboardingTryLimit = transporterConfig.onboardingTryLimit
     when (length images > onboardingTryLimit) $ do
       -- not needed now

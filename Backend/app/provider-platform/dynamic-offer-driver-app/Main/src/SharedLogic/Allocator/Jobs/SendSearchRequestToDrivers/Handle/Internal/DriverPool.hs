@@ -50,10 +50,11 @@ import Lib.Queries.GateInfo
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
 import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as DIP
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import Tools.Maps as Maps
+import Utils.Common.Cac.KeyNameConstants
 
 isBatchNumExceedLimit ::
   ( EsqDBFlow m r,
@@ -88,7 +89,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
   previousBatchesDrivers <- getPreviousBatchesDrivers
   let merchantOpCityId = searchReq.merchantOperatingCityId
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
-  (finalPool, poolType, nextScheduleTime) <- prepareDriverPoolBatch' previousBatchesDrivers startingbatchNum True merchantOpCityId (Just searchReq.transactionId)
+  (finalPool, poolType, nextScheduleTime) <- prepareDriverPoolBatch' previousBatchesDrivers startingbatchNum True merchantOpCityId searchReq.transactionId
   incrementDriverRequestCount finalPool searchTry.id
   pure $ buildDriverPoolWithActualDistResultWithFlags finalPool poolType nextScheduleTime previousBatchesDrivers
   where
@@ -112,8 +113,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
 
     prepareDriverPoolBatch' previousBatchesDrivers batchNum doSpecialPooling merchantOpCityId_ txnId = withLogTag ("BatchNum - " <> show batchNum) $ do
       radiusStep <- getPoolRadiusStep searchTry.id
-      transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId_ Nothing Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId_.getId)
-      intelligentPoolConfig <- DIP.findByMerchantOpCityId merchantOpCityId_ txnId (Just "driverId") >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
+      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId_ Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId_.getId)
+      intelligentPoolConfig <- CDIP.findByMerchantOpCityId merchantOpCityId_ (Just ((TransactionId . Id) txnId)) >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
       blockListedDriversForSearch <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
       blockListedDriversForRider <- maybe (pure []) (\riderId -> Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversForRiderKey riderId)) searchReq.riderId
       let blockListedDrivers = blockListedDriversForSearch <> blockListedDriversForRider

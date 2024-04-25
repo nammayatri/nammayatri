@@ -19,10 +19,11 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DriverReferral as CQD
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.DriverReferral as QRD
 import Tools.Error
+import Utils.Common.Cac.KeyNameConstants
 
 data ReferralLinkReq = ReferralLinkReq
   { referralCode :: Text,
@@ -48,7 +49,7 @@ createDriverReferral ::
 createDriverReferral (driverId, _, merchantOpCityId) isDashboard ReferralLinkReq {..} = do
   unless (TU.validateAllDigitWithMinLength 6 referralCode) $
     throwError $ InvalidRequest "Referral Code must have 6 digits."
-  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (transporterConfig.referralLinkPassword /= referralLinkPassword && not isDashboard) $
     throwError $ InvalidRequest "Invalid Password."
   mbLastReferralCodeWithDriver <- B.runInReplica $ QRD.findById driverId
@@ -75,6 +76,7 @@ createDriverReferral (driverId, _, merchantOpCityId) isDashboard ReferralLinkReq
 
 generateReferralCode ::
   ( HasCacheConfig r,
+    HasCacConfig r,
     Redis.HedisFlow m r,
     MonadFlow m,
     EsqDBReplicaFlow m r,

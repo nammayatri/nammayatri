@@ -36,3 +36,8 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config DROP COLUMN dl_n
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_default_enabled_on_manual_verification boolean NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ALTER COLUMN is_default_enabled_on_manual_verification SET DEFAULT true;

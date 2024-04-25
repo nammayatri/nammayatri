@@ -28,10 +28,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.FareProduct as FareProduct
-import qualified Storage.CachedQueries.FarePolicy as QFP
+import qualified Storage.Cac.FarePolicy as QFP
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
 import Tools.Error
 import Tools.Maps
+import Utils.Common.Cac.KeyNameConstants
 
 data FarePoliciesProduct = FarePoliciesProduct
   { farePolicies :: [FarePolicyD.FullFarePolicy],
@@ -50,12 +51,12 @@ getFarePolicyByEstOrQuoteIdWithoutFallback estOrQuoteId = do
       return Nothing
     Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
 
-getFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe Text -> Maybe Text -> m FarePolicyD.FullFarePolicy
-getFarePolicyByEstOrQuoteId merchantOpCityId tripCategory vehicleServiceTier area estOrQuoteId txnId idName = do
+getFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe CacKey -> m FarePolicyD.FullFarePolicy
+getFarePolicyByEstOrQuoteId merchantOpCityId tripCategory vehicleServiceTier area estOrQuoteId txnId = do
   Redis.safeGet (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId) >>= \case
     Nothing -> do
       logWarning "Old Fare Policy Not Found, Hence using new fare policy."
-      getFarePolicy merchantOpCityId tripCategory vehicleServiceTier area txnId idName
+      getFarePolicy merchantOpCityId tripCategory vehicleServiceTier area txnId
     Just a -> return $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
 
 cacheFarePolicyByQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> FarePolicyD.FullFarePolicy -> m ()
@@ -70,37 +71,37 @@ cacheFarePolicyByEstimateId estimateId fp = Redis.setExp (makeFarePolicyByEstOrQ
 clearCachedFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> m ()
 clearCachedFarePolicyByEstOrQuoteId = Redis.del . makeFarePolicyByEstOrQuoteIdKey
 
-getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Maybe Text -> Maybe Text -> m FarePolicyD.FullFarePolicy
-getFarePolicy merchantOpCityId tripCategory serviceTier Nothing txnId idName = do
+getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Maybe CacKey -> m FarePolicyD.FullFarePolicy
+getFarePolicy merchantOpCityId tripCategory serviceTier Nothing txnId = do
   fareProduct <-
     FareProduct.getBoundedFareProduct merchantOpCityId tripCategory serviceTier SL.Default
       |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId tripCategory serviceTier SL.Default
       >>= fromMaybeM NoFareProduct
-  farePolicy <- QFP.findById txnId idName fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
+  farePolicy <- QFP.findById txnId fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
   return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory farePolicy
-getFarePolicy merchantOpCityId tripCategory serviceTier (Just area) txnId idName = do
+getFarePolicy merchantOpCityId tripCategory serviceTier (Just area) txnId = do
   mbFareProduct <-
     FareProduct.getBoundedFareProduct merchantOpCityId tripCategory serviceTier area
       |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId tripCategory serviceTier area
   case mbFareProduct of
     Just fareProduct -> do
-      farePolicy <- QFP.findById txnId idName fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
+      farePolicy <- QFP.findById txnId fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
       return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory farePolicy
     Nothing -> do
       fareProduct <-
         FareProduct.getBoundedFareProduct merchantOpCityId tripCategory serviceTier SL.Default
           |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId tripCategory serviceTier SL.Default
           >>= fromMaybeM NoFareProduct
-      farePolicy <- QFP.findById txnId idName fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
+      farePolicy <- QFP.findById txnId fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
       return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory farePolicy
 
-getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> DTC.TripCategory -> m FarePoliciesProduct
-getAllFarePoliciesProduct merchantId merchantOpCityId fromlocaton mbToLocation txnId idName tripCategory = do
+getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> Maybe LatLong -> Maybe CacKey -> DTC.TripCategory -> m FarePoliciesProduct
+getAllFarePoliciesProduct merchantId merchantOpCityId fromlocaton mbToLocation txnId tripCategory = do
   allFareProducts <- FareProduct.getAllFareProducts merchantId merchantOpCityId fromlocaton mbToLocation tripCategory
   farePolicies <-
     mapM
       ( \fareProduct -> do
-          farePolicy <- QFP.findById txnId idName fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
+          farePolicy <- QFP.findById txnId fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
           return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory farePolicy
       )
       allFareProducts.fareProducts

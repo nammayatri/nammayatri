@@ -18,23 +18,13 @@ module Domain.Types.FarePolicy.FarePolicyProgressiveDetails
   )
 where
 
-import Control.Lens.Combinators
-import Control.Lens.Fold
 import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant
-import qualified Data.Aeson as DA
-import Data.Aeson.Key as DAK
-import qualified Data.Aeson.KeyMap as KM
-import Data.Aeson.Lens
 import Data.Aeson.Types
 import Data.List.NonEmpty
-import Data.Text as Text
-import qualified Data.Vector as DV
 import Domain.Types.Common
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as Reexport
 import Kernel.Prelude as KP
-import Kernel.Types.Cac
 import Kernel.Types.Common
-import Kernel.Utils.Logging
 
 data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
   { baseFare :: Money,
@@ -69,46 +59,6 @@ data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
     nightShiftCharge :: Maybe NightShiftCharge
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-jsonToFPProgressiveDetailsPerExtraKmRateSection :: MonadFlow m => String -> String -> m [FPProgressiveDetailsPerExtraKmRateSection]
-jsonToFPProgressiveDetailsPerExtraKmRateSection config key' = do
-  let res' =
-        config
-          ^@.. _Value
-            . _Object
-            . reindexed
-              ( dropPrefixFromConfig
-                  "farePolicyProgressiveDetailsPerExtraKmRateSection:"
-              )
-              ( itraversed
-                  . indices
-                    ( Text.isPrefixOf
-                        "farePolicyProgressiveDetailsPerExtraKmRateSection:"
-                        . DAK.toText
-                    )
-              )
-      res'' = fromMaybe (DA.Array (DV.fromList [])) (KM.lookup (DAK.fromText (Text.pack key')) (KM.fromList res'))
-      res = res'' ^? _JSON :: (Maybe [FPProgressiveDetailsPerExtraKmRateSection])
-  when (isNothing res) do
-    logDebug $ "farePolicyProgressiveDetailsPerExtraKmRateSection from CAC Not Parsable: " <> show res' <> " after middle parsing" <> show res'' <> " for key: " <> Text.pack key'
-  pure $ fromMaybe [] res
-
-parsingMiddleware :: MonadFlow m => KM.KeyMap Value -> String -> String -> m (KM.KeyMap Value)
-parsingMiddleware config configS key' = do
-  perExtraKmRateSections <- jsonToFPProgressiveDetailsPerExtraKmRateSection configS key'
-  let waitingCharge = KM.lookup "waitingCharge" config >>= fromJSONHelper
-      freeWaitingTime = KM.lookup "freeWatingTime" config >>= fromJSONHelper
-      waitingChargeInfo = WaitingChargeInfo <$> freeWaitingTime <*> waitingCharge
-  pure $ KP.foldr (\(k, v) acc -> KM.insert k v acc) config [("perExtraKmRateSections", toJSON perExtraKmRateSections), ("waitingChargeInfo", DA.toJSON waitingChargeInfo)]
-
-jsonToFPProgressiveDetails :: MonadFlow m => String -> String -> m (Maybe FPProgressiveDetails)
-jsonToFPProgressiveDetails config key' = do
-  let res' = config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicyProgressiveDetails:") (itraversed . indices (Text.isPrefixOf "farePolicyProgressiveDetails:" . DAK.toText))
-  res'' <- parsingMiddleware (KM.fromList res') config key'
-  let res = DA.Object res'' ^? _JSON :: (Maybe FPProgressiveDetails)
-  when (isNothing res) do
-    logDebug $ "FarePolicyProgressiveDetails from CAC Not Parsable: " <> show res' <> " after middle parsing" <> show res'' <> " for key: " <> Text.pack key'
-  pure res
 
 makeFPProgressiveDetailsAPIEntity :: FPProgressiveDetails -> FPProgressiveDetailsAPIEntity
 makeFPProgressiveDetailsAPIEntity FPProgressiveDetails {..} =

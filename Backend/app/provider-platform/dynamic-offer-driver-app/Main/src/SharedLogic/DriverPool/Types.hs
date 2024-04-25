@@ -15,6 +15,7 @@
 module SharedLogic.DriverPool.Types
   ( PoolCalculationStage (..),
     CalculateGoHomeDriverPoolReq (..),
+    CancellationScoreRelatedConfig (..),
     DriverPoolResult (..),
     DriverPoolResultCurrentlyOnRide (..),
     DriverPoolWithActualDistResult (..),
@@ -69,6 +70,13 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
     isRental :: Bool,
     isInterCity :: Bool
   }
+
+data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
+  { popupDelayToAddAsPenalty :: Maybe Seconds,
+    thresholdCancellationScore :: Maybe Int,
+    minRidesForCancellationScore :: Maybe Int
+  }
+  deriving (Generic)
 
 data DriverPoolResult = DriverPoolResult
   { driverId :: Id Driver,

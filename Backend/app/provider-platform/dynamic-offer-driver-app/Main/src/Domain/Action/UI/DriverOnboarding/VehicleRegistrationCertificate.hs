@@ -62,8 +62,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as SCO
-import Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as DIQuery
 import Storage.Queries.DriverRCAssociation (buildRcHM)
@@ -77,6 +77,7 @@ import qualified Storage.Queries.VehicleDetails as CQVD
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import Tools.Error
 import qualified Tools.Verification as Verification
+import Utils.Common.Cac.KeyNameConstants
 
 data DriverVehicleDetails = DriverVehicleDetails
   { colour :: Text,
@@ -146,7 +147,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
   when driverInfo.blocked $ throwError DriverAccountBlocked
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
-  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   allLinkedRCs <- DAQuery.findAllLinkedByDriverId personId
   unless (length allLinkedRCs < (transporterConfig.rcLimit + (if isDashboard then 1 else 0))) $ throwError (RCLimitReached transporterConfig.rcLimit)
@@ -374,7 +375,7 @@ compareRegistrationDates actualDate providedDate =
 linkRCStatus :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> RCStatusReq -> Flow APISuccess
 linkRCStatus (driverId, merchantId, merchantOpCityId) req@RCStatusReq {..} = do
   driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError (RCActivationFailedPaymentDue driverId.getId)
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   unless (rc.verificationStatus == Domain.VALID) $ throwError (InvalidRequest "Can't perform activate/inactivate operations on invalid RC!")
@@ -428,7 +429,7 @@ validateRCActivation driverId merchantOpCityId rc = do
   where
     deactivateIfWeCanDeactivate :: Id Person.Person -> UTCTime -> (Id Person.Person -> Flow ()) -> Flow ()
     deactivateIfWeCanDeactivate oldDriverId now deactivateFunc = do
-      transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId (Just oldDriverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast oldDriverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       mLastRideAssigned <- RQuery.findLastRideAssigned oldDriverId
       case mLastRideAssigned of
         Just lastRide -> do
@@ -459,7 +460,7 @@ activateRC driverInfo merchantId merchantOpCityId now rc = do
   where
     addVehicleToDriver = do
       rcNumber <- decrypt rc.certificateNumber
-      transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId (Just driverInfo.driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       whenJust rc.vehicleVariant $ \variant -> do
         when (variant == Vehicle.SUV) $
           DIQuery.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi driverInfo.driverId

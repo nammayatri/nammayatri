@@ -31,7 +31,7 @@ import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common (CacheFlow, Forkable (fork), MonadGuid (generateGUIDText), Money (Money), fromMaybeM, getCurrentTime, getLocalCurrentTime, getMoney, highPrecMetersToMeters, logDebug)
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTCQ
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.Booking as BQ
 import qualified Storage.Queries.BookingCancellationReason as BCRQ
 import qualified Storage.Queries.DailyStats as SQDS
@@ -40,6 +40,7 @@ import qualified Storage.Queries.DriverStats as DSQ
 import qualified Storage.Queries.FareParameters as FPQ
 import qualified Storage.Queries.Ride as RQ
 import Tools.Error
+import Utils.Common.Cac.KeyNameConstants
 
 driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 driverScoreEventHandler merchantOpCityId payload = fork "DRIVER_SCORE_EVENT_HANDLER" do
@@ -67,7 +68,7 @@ eventPayloadHandler merchantOpCityId DST.OnNewRideAssigned {..} = do
 eventPayloadHandler merchantOpCityId DST.OnNewSearchRequestForDrivers {..} =
   forM_ driverPool $ \dPoolRes -> DP.incrementTotalQuotesCount searchReq.providerId merchantOpCityId (cast dPoolRes.driverPoolResult.driverId) searchReq validTill batchProcessTime
 eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
-  merchantConfig <- CTCQ.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  merchantConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbDriverStats <- B.runInReplica $ DSQ.findById (cast driverId)
   -- mbDriverStats <- DSQ.findById (cast driverId)
   driverStats <- getDriverStats mbDriverStats driverId rideFare
@@ -130,7 +131,7 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
 
 updateDailyStats :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> DR.Ride -> m ()
 updateDailyStats driverId merchantOpCityId ride = do
-  transporterConfig <- CTCQ.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   ds <- SQDS.findByDriverIdAndDate driverId (utctDay localTime)
   case ds of

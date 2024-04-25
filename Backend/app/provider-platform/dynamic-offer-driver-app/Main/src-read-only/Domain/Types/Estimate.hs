@@ -4,6 +4,7 @@
 
 module Domain.Types.Estimate where
 
+import Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy

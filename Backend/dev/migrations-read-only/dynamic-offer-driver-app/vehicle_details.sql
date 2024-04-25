@@ -7,3 +7,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_details ADD COLUMN make text NOT NULL
 ALTER TABLE atlas_driver_offer_bpp.vehicle_details ADD COLUMN model text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_details ADD COLUMN vehicle_variant text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_details ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_details ALTER COLUMN ac_available SET DEFAULT true;

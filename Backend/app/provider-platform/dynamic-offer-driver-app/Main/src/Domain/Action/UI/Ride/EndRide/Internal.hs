@@ -83,9 +83,9 @@ import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.Ride (multipleRouteKey, searchRequestKey)
 import SharedLogic.TollsDetector
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CancellationCharges as QCC
@@ -105,6 +105,7 @@ import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import Tools.Notifications
 import qualified Tools.PaymentNudge as PaymentNudge
+import Utils.Common.Cac.KeyNameConstants
 
 endRideTransaction ::
   ( CacheFlow m r,
@@ -374,7 +375,7 @@ createDriverFee ::
   ServiceNames ->
   m ()
 createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxShards driverInfo booking serviceName = do
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft
   let govtCharges = fromMaybe 0 newFareParams.govtCharges
