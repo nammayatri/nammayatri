@@ -145,6 +145,7 @@ initData = {
       , selectedServices : []
       , currentEstimateHeight : 184
       , selectedEstimateHeight : 0
+      , validTill : ""
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }

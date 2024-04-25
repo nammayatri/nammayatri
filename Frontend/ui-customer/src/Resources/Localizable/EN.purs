@@ -1145,3 +1145,5 @@ getEN stringKey =
         TIP_CAN_BE_ADDED maxTip -> "Tip of upto ₹" <> maxTip <> " can be added to the ride fare."
         RUSH_HOURS_DESC charges -> "*During Rush hours, "<> charges <>"% additional fare is applicable to compensate driver’s time for high traffic."
         AC_TURNED_OFF -> "AC Turned Off"
+        ESTIMATES_EXPIRY_ERROR -> "Estimates has been expired. Please try again."
+        ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "Estimates has been expired. Fetching again, Please wait a moment and check again."

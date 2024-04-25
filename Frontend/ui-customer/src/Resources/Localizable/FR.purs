@@ -1149,3 +1149,6 @@ getFR stringKey =
         TIP_CAN_BE_ADDED maxTip -> "Un pourboire allant jusqu'à "<> maxTip <>" peut être ajouté au tarif de la course."
         RUSH_HOURS_DESC charges -> "*Frais de pointe de " <> charges <> " applicables"
         AC_TURNED_OFF -> "Climatisation éteinte"
+        ESTIMATES_EXPIRY_ERROR -> "Estimates has been expired. Please try again."
+        ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "Estimates has been expired. Fetching again, Please wait a moment and check again."
+
