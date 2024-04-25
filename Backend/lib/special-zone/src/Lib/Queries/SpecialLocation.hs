@@ -42,13 +42,13 @@ create = Esq.create
 findById :: Transactionable m => Id D.SpecialLocation -> m (Maybe D.SpecialLocation)
 findById = Esq.findById
 
-makeFullSpecialLocation :: Transactionable m => (D.SpecialLocation, Text) -> m SpecialLocationFull
+makeFullSpecialLocation :: (EsqDBReplicaFlow m r, Transactionable m) => (D.SpecialLocation, Text) -> m SpecialLocationFull
 makeFullSpecialLocation (D.SpecialLocation {..}, specialShape) = do
-  gatesWithShape <- QGI.findAllGatesBySpecialLocationId id
+  gatesWithShape <- Esq.runInReplica $ QGI.findAllGatesBySpecialLocationId id
   let gatesInfoFull = map (\(GD.GateInfo {point = gatePoint, id = gateId, createdAt = _gateCreatedAt, ..}, gateShape) -> GD.GateInfoFull {GD.id = gateId, GD.point = gatePoint, GD.geoJson = gateShape, ..}) gatesWithShape
   pure $ SpecialLocationFull {gatesInfo = gatesInfoFull, geoJson = Just specialShape, ..}
 
-findFullSpecialLocationsByMerchantOperatingCityId :: Transactionable m => Text -> m [SpecialLocationFull]
+findFullSpecialLocationsByMerchantOperatingCityId :: (EsqDBReplicaFlow m r, Transactionable m) => Text -> m [SpecialLocationFull]
 findFullSpecialLocationsByMerchantOperatingCityId mocId = do
   mbRes <-
     Esq.findAll $ do
@@ -59,7 +59,7 @@ findFullSpecialLocationsByMerchantOperatingCityId mocId = do
       return (specialLocation, F.getGeomGeoJSON)
   mapM makeFullSpecialLocation mbRes
 
-findSpecialLocationByLatLongFull :: Transactionable m => LatLong -> m (Maybe SpecialLocationFull)
+findSpecialLocationByLatLongFull :: (EsqDBReplicaFlow m r, Transactionable m) => LatLong -> m (Maybe SpecialLocationFull)
 findSpecialLocationByLatLongFull point = do
   mbRes <-
     Esq.findAll $ do
@@ -75,12 +75,12 @@ findSpecialLocationByLatLongNearby point radius = do
     where_ $ pointCloseByOrWithin (point.lon, point.lat) (val radius)
     return (specialLocation, F.getGeomGeoJSON)
 
-findPickupSpecialLocationByLatLong :: Transactionable m => LatLong -> m (Maybe D.SpecialLocation)
+findPickupSpecialLocationByLatLong :: (EsqDBReplicaFlow m r, Transactionable m) => LatLong -> m (Maybe D.SpecialLocation)
 findPickupSpecialLocationByLatLong point = do
   mbSpecialLocation <- findSpecialLocationByLatLong' point
   case mbSpecialLocation of
     Just specialLocation -> pure $ Just specialLocation
-    Nothing -> maybe (pure Nothing) (Lib.Queries.SpecialLocation.findById . (.specialLocationId)) =<< QGI.findGateInfoByLatLongWithoutGeoJson point
+    Nothing -> maybe (pure Nothing) (Lib.Queries.SpecialLocation.findById . (.specialLocationId)) =<< (Esq.runInReplica $ QGI.findGateInfoByLatLongWithoutGeoJson point)
 
 findSpecialLocationByLatLong' :: Transactionable m => LatLong -> m (Maybe D.SpecialLocation)
 findSpecialLocationByLatLong' point = do
