@@ -228,7 +228,7 @@ Estimate:
       where: id
 
     updateStatusByRequestId:
-      kvFunction: updateOneWithKV
+      kvFunction: updateWithKV
       params: [updatedAt, status]
       where: requestId
 
