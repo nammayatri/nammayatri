@@ -4,7 +4,7 @@
 
 module Domain.Types.Person where
 
-import Data.Aeson (eitherDecode)
+import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig
 import qualified Domain.Types.MerchantOperatingCity
