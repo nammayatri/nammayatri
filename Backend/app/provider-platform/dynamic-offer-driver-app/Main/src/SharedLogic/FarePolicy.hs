@@ -123,6 +123,9 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       congestionChargeMultiplierCaption = show Tags.CONGESTION_CHARGE_MULTIPLIER
       congestionChargeMultiplierItem = mkBreakupItem congestionChargeMultiplierCaption . (mkValue . show) <$> farePolicy.congestionChargeMultiplier
 
+      parkingChargeCaption = show Tags.PARKING_CHARGE
+      parkingChargeItem = mkBreakupItem parkingChargeCaption . (mkValue . show) <$> farePolicy.parkingCharge
+
       serviceChargeCaption = show Tags.SERVICE_CHARGE
       serviceChargeItem = mkBreakupItem serviceChargeCaption . (mkValue . show . (.getMoney)) <$> farePolicy.serviceCharge
 
@@ -149,6 +152,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
   catMaybes
     [ tollChargesItem,
       serviceChargeItem,
+      parkingChargeItem,
       governmentChargeItem,
       driverMinExtraFeeItem,
       driverMaxExtraFeeItem,

@@ -100,7 +100,8 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.WAITING_OR_PICKUP_CHARGES),
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
-                     Just (show Enums.TOLL_CHARGES)
+                     Just (show Enums.TOLL_CHARGES),
+                     Just (show Enums.PARKING_CHARGE)
                    ]
         DFParams.Slab ->
           title
@@ -116,7 +117,8 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.NIGHT_SHIFT_CHARGE),
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
-                     Just (show Enums.TOLL_CHARGES)
+                     Just (show Enums.TOLL_CHARGES),
+                     Just (show Enums.PARKING_CHARGE)
                    ]
         DFParams.Rental ->
           title
@@ -131,7 +133,8 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.WAITING_OR_PICKUP_CHARGES),
                      Just (show Enums.NIGHT_SHIFT_CHARGE),
                      Just (show Enums.EXTRA_TIME_FARE),
-                     Just (show Enums.CANCELLATION_CHARGES)
+                     Just (show Enums.CANCELLATION_CHARGES),
+                     Just (show Enums.PARKING_CHARGE)
                    ]
 
 mkPaymentParams :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> DRB.Booking -> Spec.Payment

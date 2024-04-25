@@ -25,6 +25,7 @@ data FarePolicyT f = FarePolicyT
   { id :: B.C f Text,
     farePolicyType :: B.C f Domain.FarePolicyType,
     serviceCharge :: B.C f (Maybe Money),
+    parkingCharge :: B.C f (Maybe HighPrecMoney),
     nightShiftStart :: B.C f (Maybe TimeOfDay),
     nightShiftEnd :: B.C f (Maybe TimeOfDay),
     maxAllowedTripDistance :: B.C f (Maybe Meters),
