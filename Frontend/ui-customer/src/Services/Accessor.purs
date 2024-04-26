@@ -302,3 +302,6 @@ _customerReferralCode = lens (unwrap >>> _.customerReferralCode) (\oldRec newVal
 
 _serviceTierName :: forall a b c. Newtype a { serviceTierName :: b | c } => Lens' a b
 _serviceTierName = lens (unwrap >>> _.serviceTierName) (\oldRec newVal -> wrap ((unwrap oldRec) { serviceTierName = newVal }))
+
+_hasTakenValidCabRide :: forall a b c. Newtype a { hasTakenValidCabRide :: b | c } => Lens' a b
+_hasTakenValidCabRide = lens (unwrap >>> _.hasTakenValidCabRide) (\oldRec newVal -> wrap ((unwrap oldRec) { hasTakenValidCabRide = newVal }))
