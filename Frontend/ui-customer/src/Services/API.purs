@@ -1253,6 +1253,10 @@ newtype GetProfileRes = GetProfileRes
   , maskedMobileNumber :: Maybe String
   , email :: Maybe String
   , hasTakenRide :: Boolean
+  , hasTakenValidCabRide :: Boolean
+  , hasTakenValidAutoRide :: Boolean
+  , hasTakenValidBikeRide :: Boolean
+  , hasTakenValidRide :: Boolean
   , referralCode :: Maybe String
   , language :: Maybe String
   , gender :: Maybe String
