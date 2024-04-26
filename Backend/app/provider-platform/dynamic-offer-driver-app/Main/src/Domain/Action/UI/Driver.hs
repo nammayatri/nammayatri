@@ -1041,7 +1041,10 @@ getStats (driverId, _, merchantOpCityId) date = do
       { coinBalance = coinBalance_,
         totalRidesOfDay = length rides,
         totalEarningsOfDay = totalEarningsOfDay,
-        totalEarningsOfDayPerKm = Money $ totalEarningOfDayExcludingTollCharges.getMoney `div` totalDistanceTravelledInKilometers.getMeters,
+        totalEarningsOfDayPerKm =
+          if totalDistanceTravelledInKilometers.getMeters == 0
+            then Money 0
+            else Money $ totalEarningOfDayExcludingTollCharges.getMoney `div` totalDistanceTravelledInKilometers.getMeters,
         bonusEarning =
           let (driverSelFares, customerExtFees) = (mapMaybe (.driverSelectedFare) fareParameters, mapMaybe (.customerExtraFee) fareParameters)
               driverSelFares' = getMoney <$> driverSelFares
