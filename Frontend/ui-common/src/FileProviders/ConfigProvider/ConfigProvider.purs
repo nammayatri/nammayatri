@@ -55,7 +55,7 @@ loadAppConfig _ =
       mergedConfig = mergeObjects $ [ defaultConfig] <> merchantConfig
       decodeAppConfig = decodeForeignObject mergedConfig DefaultConfig.config
       _ = runFn2 loadInWindow ReExport.appConfig mergedConfig
-      _ = runFn2 loadInWindow ReExport.decodeAppConfig mergedConfig
+      _ = runFn2 (loadInWindow :: Fn2 String AppConfig Unit) ReExport.decodeAppConfig decodeAppConfig
   in decodeAppConfig
 
 getConfigFromFile :: String -> Array Foreign
@@ -94,9 +94,9 @@ getAppConfigEff :: EffectFn1 String AppConfig
 getAppConfigEff = mkEffectFn1 \key -> pure $ getAppConfig key
 
 getAppConfig :: String -> AppConfig
-getAppConfig key = do 
+getAppConfig _ = do 
   let
-    mBconfig = runFn3 getAppConfigFromWindow key Nothing Just
+    mBconfig = runFn3 getAppConfigFromWindow ReExport.decodeAppConfig Nothing Just
   case mBconfig of
       Nothing -> loadAppConfig ""
       Just config -> config
