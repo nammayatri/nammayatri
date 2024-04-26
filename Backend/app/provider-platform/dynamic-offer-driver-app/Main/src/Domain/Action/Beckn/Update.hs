@@ -14,11 +14,13 @@
 
 module Domain.Action.Beckn.Update where
 
+import qualified API.Types.UI.EditBooking as EditBooking
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.EditLocationEvent as EditLocationU
 import Data.List.NonEmpty (last)
 import Data.Maybe
 import qualified Data.Text as T
+import qualified Domain.Action.UI.EditBooking as EditBooking
 import Domain.Action.UI.Ride.EndRide.Internal
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingUpdateRequest as DBUR
@@ -150,6 +152,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     -----------1. Add a check for forward dispatch ride -----------------
     -----------2. Add a check for last location timestamp of driver ----------------- LTS dependency
     booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+    transporterConfig <- CTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     now <- getCurrentTime
     dropLocation <- buildLocation drop
     QL.create dropLocation
@@ -202,7 +205,6 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                 tollCharges
               }
         QFP.create fareParameters
-        transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCity.id (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
         let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now
         bookingUpdateReq <- buildbookingUpdateRequest booking merchantOperatingCity.merchantId bapBookingUpdateRequestId fareParameters farePolicy.id maxEstimatedDist currentPoint estimatedDistance validTill
         QBUR.create bookingUpdateReq
@@ -220,8 +222,11 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         when (bookingUpdateReq.validTill < now) $ throwError (InvalidRequest "BookingUpdateRequest is expired")
         when (bookingUpdateReq.status /= DBUR.SOFT) $ throwError (InvalidRequest "BookingUpdateRequest is not in SOFT state")
         QBUR.updateStatusById DBUR.USER_CONFIRMED bookingUpdateReq.id
-        let entityData = Notify.EditLocationReq {..}
-        Notify.notifyPickupOrDropLocationChange person.merchantOperatingCityId person.id person.deviceToken entityData
+        if transporterConfig.editLocDriverPermissionNeeded
+          then do
+            let entityData = Notify.EditLocationReq {..}
+            Notify.notifyPickupOrDropLocationChange person.merchantOperatingCityId person.id person.deviceToken entityData
+          else void $ EditBooking.postEditResult (Just person.id, merchantOperatingCity.merchantId, merchantOperatingCity.id) bookingUpdateReq.id (EditBooking.EditBookingRespondAPIReq {action = EditBooking.ACCEPT})
 
 -- handler _ = throwError (InvalidRequest "Not Implemented")
 

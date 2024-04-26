@@ -38,8 +38,8 @@ getEditResult ::
     Environment.Flow API.Types.UI.EditLocation.EditLocationResultAPIResp
   )
 getEditResult (mbPersonId, merchantId) bookingUpdateReqId = do
-  _ <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-  _ <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+  void $ fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  void $ CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bookingUpdateReq <- B.runInReplica $ QBUR.findById bookingUpdateReqId >>= fromMaybeM (InvalidRequest "Invalid booking update request id")
   return $ EditLocationResultAPIResp bookingUpdateReq
 
@@ -51,7 +51,7 @@ postEditResultConfirm ::
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
 postEditResultConfirm (mbPersonId, merchantId) bookingUpdateReqId = do
-  _ <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  void $ fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bookingUpdateReq <- B.runInReplica $ QBUR.findById bookingUpdateReqId >>= fromMaybeM (InvalidRequest "Invalid booking update request id")
   dropLocMapping <- B.runInReplica $ QLM.getLatestEndByEntityId bookingUpdateReqId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateRequestId: " <> bookingUpdateReqId.getId)
