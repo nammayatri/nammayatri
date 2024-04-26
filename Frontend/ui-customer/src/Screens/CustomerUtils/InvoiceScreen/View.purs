@@ -230,6 +230,7 @@ getFareText fareType baseDistance estimatedDistance rideType =
         distanceBasedCharges = if rideType == CTA.RENTAL_RIDE && (baseDistanceInMeters > estimatedDistance) then getString DIST_BASED_CHARGES <> " (" <> (Constants.getKmMeter $ (baseDistanceInMeters) - estimatedDistance ) <> ")" else getString DIST_BASED_CHARGES
     in case fareType of
         "BASE_FARE" -> (getString BASE_FARES) <> if baseDistance' == "0 m" then "" else " (" <> baseDistance' <> ")"
+        "PARKING_CHARGE" -> getString PARKING_CHARGE
         "EXTRA_DISTANCE_FARE" -> getString NOMINAL_FARE
         "DRIVER_SELECTED_FARE" -> getString DRIVER_ADDITIONS
         "TOTAL_FARE" -> getString TOTAL_PAID
