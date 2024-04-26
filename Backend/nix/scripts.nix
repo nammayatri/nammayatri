@@ -198,6 +198,18 @@ _:
           nix run .#load-test-dev -- -p=0 "$@"
         '';
       };
+
+      run-integration-tests = {
+        category = "Backend";
+        description = ''
+          Run integration tests using newman cli
+        '';
+        exec = ''
+          set -x
+          cd "''${FLAKE_ROOT}/Backend/newman-tests"
+          ./run-tests.sh
+        '';
+      };
     };
   };
 }

@@ -183,6 +183,9 @@ Run the following command in `./Backend` folder after the services are up and ru
 cabal test all
 ```
 
+#### Running integration tests
+
+See Documentation [README.md](newman-tests/README.md)
 
 ## Usage
 
