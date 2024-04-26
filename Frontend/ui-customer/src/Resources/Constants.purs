@@ -228,6 +228,7 @@ getFaresList fares baseDistance =
                       "DIST_BASED_FARE" -> getEN DIST_BASED_CHARGES
                       "TIME_BASED_FARE" -> getEN TIME_BASED_CHARGES
                       "EXTRA_TIME_FARE" -> getEN EXTRA_TIME_CHARGES
+                      "PARKING_CHARGE" -> getEN PARKING_CHARGE
                       _ -> getEN BASE_FARES
           }
     )

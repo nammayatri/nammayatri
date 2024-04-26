@@ -957,6 +957,7 @@ getFR stringKey =
         BOOKING_ON -> "Réservation le"
         INCLUDED_KMS -> "Kms inclus :"
         BASE_FARE -> "Tarif de base :"
+        PARKING_CHARGE -> "Frais de stationnement :"
         TOLLS_AND_PARKING_FEES -> "Péages et frais de stationnement"
         FINAL_FARE_DESCRIPTION -> "Le tarif final sera basé sur la durée réelle du trajet arrondie à l'heure suivante ou la durée du trajet sélectionnée (selon laquelle est la plus élevée)."
         EXCESS_DISTANCE_CHARGE_DESCRIPTION -> "Toute distance parcourue en excès des kms inclus sera facturée à"
