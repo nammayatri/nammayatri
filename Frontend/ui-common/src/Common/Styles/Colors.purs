@@ -357,7 +357,7 @@ white800 :: Color
 white800 = "#80FFFFFF"
 
 tealBlue :: Color
-tealBlue = "##3D475C"
+tealBlue = "#3D475C"
 
 transparentWhite :: Color
 transparentWhite = "#30FFFFFF"

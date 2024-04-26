@@ -1356,6 +1356,7 @@ eval DirectSearch state =continue state{props{currentStage = SearchLocationModel
 
 eval BackPressed state = do
   void $ pure $ toggleBtnLoader "" false
+  let _ = runFn2 updatePushInIdMap "EstimatePolling" true
   case state.props.currentStage of
     SearchLocationModel -> do
       if state.props.isSaveFavourite then 
@@ -3105,6 +3106,7 @@ estimatesListFlow estimates state = do
     _ <- pure $ hideKeyboardOnNavigation true
     _ <- pure $ updateLocalStage SearchLocationModel
     _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
+    let _ = runFn2 updatePushInIdMap "EstimatePolling" true
     continue state { props {currentStage = SearchLocationModel}, data{currentSearchResultType = ESTIMATES}}
 
 
