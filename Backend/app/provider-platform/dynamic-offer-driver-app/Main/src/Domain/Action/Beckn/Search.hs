@@ -515,7 +515,7 @@ validateRequest merchantId sReq = do
             -- Destination states should be in the allowed states of the origin state
             if destinationCityState.state `elem` allowedStates
               then return True
-              else throwError RideNotServiceable
+              else throwError (RideNotServiceableInState $ show destinationCityState.state)
       Nothing -> pure False
   let bapCity = nearestOperatingCity.city
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just bapCity)
