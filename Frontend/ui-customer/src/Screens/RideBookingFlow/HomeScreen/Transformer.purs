@@ -43,7 +43,7 @@ import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSave
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
-import JBridge (fromMetersToKm, getLatLonFromAddress, Location)
+import JBridge (fromMetersToKm, getLatLonFromAddress, Location, differenceBetweenTwoUTCInMinutes)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityFromString)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..), Paths, FareList)
@@ -59,6 +59,7 @@ import Locale.Utils
 import Data.Either (Either(..))
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
 import Mobility.Prelude as MP
+import Data.Function.Uncurried (runFn2)
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -478,6 +479,8 @@ getTripDetailsState (RideBookingRes ride) state = do
       nightCharges = if rideDetails.vehicleVariant == "AUTO_RICKSHAW" 
                           then 1.5 
                           else 1.1
+      endTime = fromMaybe "" rideDetails.rideEndTime
+      startTime = fromMaybe "" rideDetails.rideStartTime
   state {
     data {
       tripId = rideDetails.shortRideId,
@@ -498,8 +501,8 @@ getTripDetailsState (RideBookingRes ride) state = do
         destination= (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
         rating= (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _rideRating)),
         driverName =((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _driverName),
-        rideStartTime = (convertUTCtoISC (fromMaybe "" rideDetails.rideStartTime ) "h:mm A"),
-        rideEndTime = (convertUTCtoISC (fromMaybe "" rideDetails.rideEndTime) "h:mm A"),
+        rideStartTime = (convertUTCtoISC startTime "h:mm A"),
+        rideEndTime = (convertUTCtoISC endTime "h:mm A"),
         vehicleNumber = rideDetails.vehicleNumber,
         totalAmount = ("₹ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _computedPrice))),
         shortRideId = rideDetails.shortRideId,
@@ -510,7 +513,12 @@ getTripDetailsState (RideBookingRes ride) state = do
                         <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" (updatedFareList)) then "\n\n" <> (getEN EARLY_END_RIDE_CHARGES_DESCRIPTION) else "")
                         <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" ((updatedFareList))) then "\n\n" <> (getEN CUSTOMER_TIP_DESCRIPTION) else "")
                         <> (if isHaveFare "TOLL_CHARGES" updatedFareList then "\n\n" <> "⁺" <> (getEN TOLL_CHARGES_DESC) else ""),
-        merchantExoPhone = ride.merchantExoPhone
+        merchantExoPhone = ride.merchantExoPhone,
+        serviceTierName = ride.serviceTierName,
+        totalTime = show (runFn2 differenceBetweenTwoUTCInMinutes endTime startTime) <> " min",
+        vehicleModel = rideDetails.vehicleModel,
+        rideStartTimeUTC = fromMaybe "" ride.rideStartTime,
+        rideEndTimeUTC = fromMaybe "" ride.rideEndTime
       },
       vehicleVariant = fetchVehicleVariant rideDetails.vehicleVariant
     }

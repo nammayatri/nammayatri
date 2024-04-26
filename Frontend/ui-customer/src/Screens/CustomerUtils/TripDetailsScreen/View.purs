@@ -191,6 +191,7 @@ distanceAndTimeTaken state =
   , height WRAP_CONTENT
   , margin $ MarginBottom 16
   , orientation HORIZONTAL
+  , visibility $ boolToVisibility $ state.data.selectedItem.status /= "CANCELLED"
   ][  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT

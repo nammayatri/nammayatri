@@ -300,7 +300,7 @@ window.getMerchantConfig = function () {
     , "feature" : {
         "enableSupport" : false
       , "enableSuggestions" : true
-      ,  "enableRepeatTripBackfilling" : false
+      ,  "enableRepeatTripBackfilling" : true
     }
     , "appData" : {
       "link" : getAppLink(window.__OS)

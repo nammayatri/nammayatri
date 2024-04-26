@@ -92,6 +92,12 @@ sourceToDestinationConfig :: ST.TripDetailsScreenState -> SourceToDestination.Co
 sourceToDestinationConfig state = let 
   startDate = state.data.selectedItem.rideStartTime <> " . " <> (convertUTCtoISC state.data.selectedItem.rideStartTimeUTC "DD/MM/YYYY") 
   endDate = state.data.selectedItem.rideEndTime <> " . " <> (convertUTCtoISC state.data.selectedItem.rideEndTimeUTC "DD/MM/YYYY")
+  sourceText = if state.data.selectedItem.status /= "CANCELLED"
+                  then startDate <> "\n" <> state.data.source
+                  else state.data.source
+  destinationText = if state.data.selectedItem.status /= "CANCELLED"
+                  then endDate <> "\n" <> state.data.destination
+                  else state.data.destination
   sourceToDestinationConfig' = SourceToDestination.config
     { id = Just $ "TripDetailsSTDC_" <> state.data.tripId
     , sourceImageConfig {
@@ -99,7 +105,7 @@ sourceToDestinationConfig state = let
       , margin = (MarginTop 3)
       }
     , sourceTextConfig {
-        text = startDate <> "\n" <> state.data.source
+        text = sourceText
       , padding = (Padding 2 0 2 2)
       , margin = (MarginHorizontal 12 15)
       , color = Color.greyDavy
@@ -111,7 +117,7 @@ sourceToDestinationConfig state = let
       }
     , destinationBackground = Color.blue600
     , destinationTextConfig {
-        text = endDate <> "\n" <> state.data.destination
+        text = destinationText
       , padding = (Padding 2 0 2 2)
       , margin = MarginHorizontal 12 15
       , color = Color.greyDavy
