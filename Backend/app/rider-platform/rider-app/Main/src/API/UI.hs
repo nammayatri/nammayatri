@@ -19,6 +19,7 @@ module API.UI
 where
 
 import qualified API.Action.UI.Cac as Cac
+import qualified API.Action.UI.EditLocation as EditLocation
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Invoice as Invoice
@@ -97,6 +98,7 @@ type API =
            :<|> SosApi.API
            :<|> FRFSTicketService.API
            :<|> Cac.API
+           :<|> EditLocation.API
        )
 
 handler :: FlowServer API
@@ -138,3 +140,4 @@ handler =
     :<|> SosApi.handler
     :<|> FRFSTicketService.handler
     :<|> Cac.handler
+    :<|> EditLocation.handler

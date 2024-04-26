@@ -20,6 +20,7 @@ where
 
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
+import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.LmsModule as LmsModule
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
@@ -93,6 +94,7 @@ type API =
            :<|> SpecialLocation.API
            :<|> Reels.API
            :<|> Cac.API
+           :<|> EditBooking.API
        )
 
 handler :: FlowServer API
@@ -131,3 +133,4 @@ handler =
     :<|> SpecialLocation.handler
     :<|> Reels.handler
     :<|> Cac.handler
+    :<|> EditBooking.handler

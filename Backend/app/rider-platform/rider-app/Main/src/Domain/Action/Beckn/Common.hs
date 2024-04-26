@@ -20,6 +20,8 @@ import Data.Time hiding (getCurrentTime)
 import Domain.Action.UI.HotSpot
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.BookingUpdateRequest as DBUR
+import qualified Domain.Types.FareBreakupV2 as DFareBreakupV2
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import Domain.Types.HotSpot
 import qualified Domain.Types.Merchant as DMerchant
@@ -379,6 +381,23 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           { id = guid,
             ..
           }
+
+buildFareBreakupV2 :: MonadFlow m => Text -> DFareBreakupV2.FareBreakupV2Tags -> DBUR.BookingUpdateRequest -> DFareBreakup -> m DFareBreakupV2.FareBreakupV2
+buildFareBreakupV2 entityId tag bookingUpdateReq DFareBreakup {..} = do
+  guid <- generateGUID
+  now <- getCurrentTime
+  pure
+    DFareBreakupV2.FareBreakupV2
+      { id = guid,
+        createdAt = now,
+        updatedAt = now,
+        merchantId = Just bookingUpdateReq.merchantId,
+        merchantOperatingCityId = Just bookingUpdateReq.merchantOperatingCityId,
+        entityId,
+        tag,
+        description,
+        amount = amount.amount
+      }
 
 farePaidReqHandler :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => ValidatedFarePaidReq -> m ()
 farePaidReqHandler req = void $ QRB.updatePaymentStatus req.booking.id req.paymentStatus

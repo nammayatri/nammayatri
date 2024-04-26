@@ -106,6 +106,7 @@ editStop (_, merchantId) bookingId req = do
 processStop :: Id SRB.Booking -> StopReq -> Id Merchant -> Bool -> Flow ()
 processStop bookingId loc merchantId isEdit = do
   booking <- runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+  uuid <- generateGUID
   validateStopReq booking isEdit
   location <- buildLocation loc
   locationMapping <- buildLocationMapping location.id booking.id.getId isEdit (Just booking.merchantId) (Just booking.merchantOperatingCityId)
@@ -131,6 +132,7 @@ processStop bookingId loc merchantId isEdit = do
           { bppId = booking.providerId,
             bppUrl = booking.providerUrl,
             transactionId = booking.transactionId,
+            messageId = uuid,
             city = merchant.defaultCity, -- TODO: Correct during interoperability
             ..
           }

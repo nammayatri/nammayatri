@@ -119,6 +119,18 @@ updateRiderName bookingId riderName = do
   now <- getCurrentTime
   updateOneWithKV [Se.Set BeamB.riderName $ Just riderName, Se.Set BeamB.updatedAt now] [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
+updateMultipleById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => HighPrecMoney -> Maybe HighPrecMeters -> Maybe Meters -> Text -> Id Booking -> m ()
+updateMultipleById estimatedFare maxEstimatedDistance estimatedDistance fareParametersId bookingId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.estimatedFare estimatedFare,
+      Se.Set BeamB.maxEstimatedDistance maxEstimatedDistance,
+      Se.Set BeamB.estimatedDistance estimatedDistance,
+      Se.Set BeamB.fareParametersId fareParametersId,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
 updateSpecialZoneOtpCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Text -> m ()
 updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
   now <- getCurrentTime

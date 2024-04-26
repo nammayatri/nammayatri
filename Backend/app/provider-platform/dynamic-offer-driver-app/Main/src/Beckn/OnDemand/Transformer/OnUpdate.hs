@@ -20,7 +20,9 @@ where
 import qualified Beckn.ACL.Common.Order as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.OnDemand.Utils.OnUpdate as Utils
+import qualified Beckn.OnDemand.Utils.OnUpdate as UtilsOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType as Event
+import qualified BecknV2.OnDemand.Enums as EventEnum
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as CU
@@ -36,6 +38,7 @@ import Kernel.Utils.Common
 import SharedLogic.Beckn.Common
 import qualified SharedLogic.FarePolicy as SFP
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.Queries.FareParameters as QFP
 
 buildOnUpdateReqV2 ::
   (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
@@ -169,6 +172,45 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderProvider = Nothing,
           orderQuote = Nothing,
           orderStatus = Nothing,
+          orderCreatedAt = Just booking.createdAt,
+          orderUpdatedAt = Just booking.updatedAt
+        }
+  OU.EditDestinationUpdate OU.DEditDestinationUpdateReq {..} -> do
+    let BookingDetails {..} = bookingDetails
+    fareParameters <- QFP.findById bookingUpdateReqDetails.fareParamsId >>= fromMaybeM (InternalError "Fare Parameters not found")
+    let farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
+    let (items, orderStatus, quote, payment) = case updateType of
+          OU.SOFT_UPDATE -> do
+            let items' = Utils.tfItemsSoftUpdate booking merchant.shortId.getShortId bookingUpdateReqDetails.estimatedDistance farePolicy Nothing bookingUpdateReqDetails ride.id.getId
+                orderStatus' = Just $ show EventEnum.SOFT_UPDATE
+                quote' = Utils.tfQuotationSU fareParameters bookingUpdateReqDetails.estimatedFare
+                payment' = UtilsOU.mkPaymentParamsSoftUpdate paymentMethodInfo paymentUrl merchant bppConfig bookingUpdateReqDetails.estimatedFare
+            (items', orderStatus', quote', payment')
+          OU.CONFIRM_UPDATE -> do
+            let items' = Utils.tfItems booking merchant.shortId.getShortId booking.estimatedDistance farePolicy Nothing
+                orderStatus' = Just $ show EventEnum.CONFIRM_UPDATE
+                quote' = Utils.tfQuotation booking
+                payment' = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
+            (items', orderStatus', quote', payment')
+    fulfillment <- case updateType of
+      OU.SOFT_UPDATE -> do
+        newDestination' <- newDestination & fromMaybeM (InternalError "New Destination not found for SOFT UPDATE")
+        let updateDetailsTagGroup = if isValueAddNP then Utils.mkUpdatedDistanceTags bookingUpdateReqDetails.estimatedDistance else Nothing
+            personTag = if isValueAddNP then Utils.mkLocationTagGroupV2 currentLocation else Nothing
+        Utils.mkFulfillmentV2SoftUpdate (Just driver) ride booking (Just vehicle) Nothing updateDetailsTagGroup personTag False False Nothing isValueAddNP newDestination'
+      OU.CONFIRM_UPDATE -> Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing Nothing Nothing False False Nothing isValueAddNP
+    pure $
+      Spec.Order
+        { orderId = Just $ booking.id.getId,
+          orderStatus,
+          orderFulfillments = Just [fulfillment],
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Just $ Utils.tfCancellationTerms becknConfig,
+          orderItems = items,
+          orderPayments = Just [payment],
+          orderProvider = Utils.tfProvider becknConfig,
+          orderQuote = quote,
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }

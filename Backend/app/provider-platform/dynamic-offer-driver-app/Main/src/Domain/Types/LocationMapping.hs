@@ -21,7 +21,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
-data LocationMappingTags = BOOKING | SEARCH_REQUEST | RIDE
+data LocationMappingTags = BOOKING | SEARCH_REQUEST | RIDE | BOOKING_UPDATE_REQUEST
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''LocationMappingTags)

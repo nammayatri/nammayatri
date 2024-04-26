@@ -34,7 +34,8 @@ import Domain.Types.Merchant
 import Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DOSC
 import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
-import Kernel.External.Maps as Reexport hiding
+import qualified Kernel.External.Maps as Maps
+import Kernel.External.Maps.Utils as Reexport hiding
   ( autoComplete,
     getDistance,
     getDistances,
@@ -44,7 +45,6 @@ import Kernel.External.Maps as Reexport hiding
     snapToRoad,
     snapToRoadWithFallback,
   )
-import qualified Kernel.External.Maps as Maps
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id

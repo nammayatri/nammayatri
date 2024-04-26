@@ -1,0 +1,72 @@
+imports:
+  FareParameters: Domain.Types.FareParameters
+  FarePolicy: Domain.Types.FarePolicy
+  Booking: Domain.Types.Booking
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Price: Kernel.Types.Common
+
+
+BookingUpdateRequest:
+  tableName: booking_update_request
+  derives: "Generic,Show"
+  types:
+    BookingUpdateRequestStatus:
+      enum: "SOFT, DRIVER_ACCEPTED, DRIVER_REJECTED, USER_CONFIRMED"
+      derive: "HttpInstance"
+
+  beamInstance: MakeTableInstancesWithTModifier []
+
+  fields:
+    id: Id BookingUpdateRequest
+    bookingId : Id Booking
+    bapBookingUpdateRequestId : Text
+    status : BookingUpdateRequestStatus
+    travelledDistance : Maybe HighPrecMeters
+    estimatedDistance : Maybe HighPrecMeters
+    maxEstimatedDistance : Maybe HighPrecMeters
+    estimatedFare : HighPrecMoney
+    totalDistance : Maybe HighPrecMeters
+    currentPointLat : Maybe Double
+    currentPointLon : Maybe Double
+    oldEstimatedFare : HighPrecMoney
+    oldEstimatedDistance : Maybe HighPrecMeters
+    oldMaxEstimatedDistance : Maybe HighPrecMeters
+    oldFareParamsId : Id FareParameters
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    validTill : UTCTime
+    fareParamsId : Id FareParameters
+    farePolicyId : Id FarePolicy
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        and: [id]
+    findByBAPBUReqId:
+      kvFunction: findOneWithKV
+      where:
+        and: [bapBookingUpdateRequestId]
+    findAllByBookingId:
+      kvFunction: findAllWithKV
+      where:
+        and: [bookingId]
+    updateMultipleById:
+      kvFunction: updateOneWithKV
+      params: [travelledDistance, estimatedFare, totalDistance, currentPointLat, currentPointLon, updatedAt]
+      where: id
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id
+    updateTravelledDistanceById:
+      kvFunction: updateOneWithKV
+      params: [travelledDistance, updatedAt]
+      where: id
+    updateStatusByBAPBookingUpdateRequestId:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: bapBookingUpdateRequestId

@@ -45,6 +45,7 @@ import qualified Kernel.External.Maps as MapsK
 import qualified Kernel.External.Maps.Interface as MapsRoutes
 import qualified Kernel.External.Maps.Interface.NextBillion as NextBillion
 import qualified Kernel.External.Maps.NextBillion.Types as NBT
+import qualified Kernel.External.Maps.Utils as Search
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Hedis as Redis
@@ -73,7 +74,6 @@ import qualified Tools.JSON as J
 import qualified Tools.Maps as Maps
 import Tools.Metrics
 import qualified Tools.Metrics as Metrics
-import qualified Tools.Search as Search
 
 data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq
   deriving (Generic, Show)
@@ -316,11 +316,11 @@ search personId req bundleVersion clientVersion clientId device = do
 
         let distanceWeightage = riderConfig.distanceWeightage
             durationWeightage = 100 - distanceWeightage
-            (shortestRouteInfo, shortestRouteIndex) = getEfficientRouteInfo routeResponse distanceWeightage durationWeightage
-            longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
+            (shortestRouteInfo, shortestRouteIndex) = Search.getEfficientRouteInfo routeResponse distanceWeightage durationWeightage
+            longestRouteDistance = (.distance) =<< Search.getLongestRouteDistance routeResponse
             shortestRouteDistance = (.distance) =<< shortestRouteInfo
             shortestRouteDuration = (.duration) =<< shortestRouteInfo
-        return (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, Just $ updateEfficientRoutePosition routeResponse shortestRouteIndex)
+        return (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, Just $ Search.updateEfficientRoutePosition routeResponse shortestRouteIndex)
       RentalSearch rentalReq -> return (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Nothing, Nothing)
 
   fromLocation <- buildSearchReqLoc origin
@@ -377,36 +377,6 @@ search personId req bundleVersion clientVersion clientId device = do
       if all (\d -> d.currentCity.state `elem` allowedStates) stopCitiesAndStates
         then return nearestOperatingCity.city
         else throwError RideNotServiceable
-
-getLongestRouteDistance :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
-getLongestRouteDistance [] = Nothing
-getLongestRouteDistance (routeInfo : routeInfoArray) =
-  if null routeInfoArray
-    then Just routeInfo
-    else do
-      restRouteresult <- getLongestRouteDistance routeInfoArray
-      Just $ comparator' routeInfo restRouteresult
-  where
-    comparator' route1 route2 =
-      if route1.distance > route2.distance
-        then route1
-        else route2
-
-getEfficientRouteInfo :: [Maps.RouteInfo] -> Int -> Int -> (Maybe Maps.RouteInfo, Int)
-getEfficientRouteInfo [] _ _ = (Nothing, 0)
-getEfficientRouteInfo routeInfos distanceWeight durationWeight = do
-  let minD = Search.minDistance routeInfos
-      minDur = Search.minDuration routeInfos
-      normalizedInfos = Search.normalizeArr (Just minD) (Just minDur) routeInfos
-      resultInfoIdx = Search.findMaxWeightedInfoIdx (fromIntegral distanceWeight) (fromIntegral durationWeight) normalizedInfos
-  if resultInfoIdx < length routeInfos
-    then (Just (routeInfos !! resultInfoIdx), resultInfoIdx)
-    else (Nothing, 0)
-
-updateEfficientRoutePosition :: [Maps.RouteInfo] -> Int -> [Maps.RouteInfo]
-updateEfficientRoutePosition routeInfos idx = do
-  let (x, y) = splitAt idx routeInfos
-  y ++ x
 
 buildSearchRequest ::
   ( (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]),

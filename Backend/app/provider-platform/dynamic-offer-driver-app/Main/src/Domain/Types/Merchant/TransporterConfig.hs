@@ -58,6 +58,7 @@ data TransporterConfigD u = TransporterConfig
     merchantOperatingCityId :: Id MerchantOperatingCity,
     pickupLocThreshold :: Meters,
     dropLocThreshold :: Meters,
+    editLocTimeThreshold :: Seconds,
     rideTimeEstimatedThreshold :: Seconds,
     includeDriverCurrentlyOnRide :: Bool,
     defaultPopupDelay :: Seconds,
