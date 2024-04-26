@@ -346,7 +346,7 @@ data DriverRespondReq = DriverRespondReq
 data DriverStatsRes = DriverStatsRes
   { totalRidesOfDay :: Int,
     totalEarningsOfDay :: Money,
-    totalRidesDistanceOfDay :: Meters,
+    totalEarningsOfDayPerKm :: Money,
     bonusEarning :: Money,
     coinBalance :: Int
   }
@@ -1033,12 +1033,15 @@ getStats (driverId, _, merchantOpCityId) date = do
   let fareParamId = mapMaybe (.fareParametersId) rides
   fareParameters <- (runInReplica . QFP.findAllIn) fareParamId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
+  let totalEarningsOfDay = sum (mapMaybe (.fare) rides)
+      totalDistanceTravelledInKilometers = sum (mapMaybe (.chargeableDistance) rides) `div` 1000
+      totalEarningOfDayExcludingTollCharges = totalEarningsOfDay - (round $ sum (mapMaybe (.tollCharges) rides) :: Money)
   return $
     DriverStatsRes
       { coinBalance = coinBalance_,
         totalRidesOfDay = length rides,
-        totalEarningsOfDay = sum (mapMaybe (.fare) rides) - (round $ sum (mapMaybe (.tollCharges) rides) :: Money),
-        totalRidesDistanceOfDay = sum (mapMaybe (.chargeableDistance) rides),
+        totalEarningsOfDay = totalEarningsOfDay,
+        totalEarningsOfDayPerKm = Money $ totalEarningOfDayExcludingTollCharges.getMoney `div` totalDistanceTravelledInKilometers.getMeters,
         bonusEarning =
           let (driverSelFares, customerExtFees) = (mapMaybe (.driverSelectedFare) fareParameters, mapMaybe (.customerExtraFee) fareParameters)
               driverSelFares' = getMoney <$> driverSelFares
