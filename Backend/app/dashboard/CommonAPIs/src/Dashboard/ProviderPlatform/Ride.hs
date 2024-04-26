@@ -40,7 +40,6 @@ import Servant hiding (Summary)
 ---------------------------------------------------------
 -- ride list --------------------------------------------
 
--- TODO test fareDiff query param
 type RideListAPI =
   "list"
     :> QueryParam "limit" Int

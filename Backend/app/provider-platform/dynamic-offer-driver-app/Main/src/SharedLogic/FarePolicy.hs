@@ -204,7 +204,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
 
           mkPerExtraKmFareItem section = do
             let perExtraKmFareCaption = show Tags.EXTRA_PER_KM_FARE
-            mkBreakupItem perExtraKmFareCaption (mkValue $ show (round section.perExtraKmRate :: Money))
+            mkBreakupItem perExtraKmFareCaption (mkValue $ highPrecMoneyToText section.perExtraKmRate)
           perExtraKmFareItems = mkPerExtraKmFareItem <$> (toList perExtraKmFareSections)
 
           perExtraKmStepFareItems = mkPerExtraKmStepFareItem [] (toList perExtraKmFareSections) det.baseDistance.getMeters
@@ -229,13 +229,13 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
         mkPerExtraKmStepFareItem perExtraKmStepFareItems [s1] baseDistance = do
           let startDistance = s1.startDistance.getMeters + baseDistance
               perExtraKmStepFareCaption = show $ Tags.EXTRA_PER_KM_STEP_FARE startDistance Nothing
-              perExtraKmStepFareItem = mkBreakupItem perExtraKmStepFareCaption (mkValue $ show (round s1.perExtraKmRate :: Money))
+              perExtraKmStepFareItem = mkBreakupItem perExtraKmStepFareCaption (mkValue $ highPrecMoneyToText s1.perExtraKmRate)
           perExtraKmStepFareItems <> [perExtraKmStepFareItem]
         mkPerExtraKmStepFareItem perExtraKmStepFareItems (s1 : s2 : ss) baseDistance = do
           let startDistance = s1.startDistance.getMeters + baseDistance
               endDistance = s2.startDistance.getMeters + baseDistance
               perExtraKmStepFareCaption = show $ Tags.EXTRA_PER_KM_STEP_FARE startDistance (Just endDistance)
-              perExtraKmStepFareItem = mkBreakupItem perExtraKmStepFareCaption (mkValue $ show (round s1.perExtraKmRate :: Money))
+              perExtraKmStepFareItem = mkBreakupItem perExtraKmStepFareCaption (mkValue $ highPrecMoneyToText s1.perExtraKmRate)
           mkPerExtraKmStepFareItem (perExtraKmStepFareItems <> [perExtraKmStepFareItem]) (s2 : ss) baseDistance
 
     mkAdditionalSlabBreakups det = do
@@ -276,7 +276,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
     waitingChargeBreakups (Just waitingChargeInfo) = do
       let (mbWaitingChargePerMin, mbWaitingChargePerMinFloat, mbConstantWaitingCharges) =
             waitingChargeInfo.waitingCharge & \case
-              FarePolicyD.PerMinuteWaitingCharge hpm -> (Just $ show (round hpm :: Money), Just $ show hpm, Nothing)
+              FarePolicyD.PerMinuteWaitingCharge hpm -> (Just $ highPrecMoneyToText hpm, Just $ show hpm, Nothing)
               FarePolicyD.ConstantWaitingCharge mo -> (Nothing, Nothing, Just $ show mo)
 
           waitingOrPickupChargesCaption = show Tags.WAITING_OR_PICKUP_CHARGES -- TODO :: To be deprecated
@@ -297,7 +297,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       catMaybes [mbWaitingOrPickupChargesItem, mbWaitingChargePerMinItem, mbWaitingChargePerMinFloatItem, mbConstantWaitingChargeItem, Just freeWaitingTimeItem]
 
     oldNightShiftChargeBreakups nightShiftChargeInfo = do
-      let getNightShiftChargeValue (FarePolicyD.ProgressiveNightShiftCharge a) = show (round a :: Money) -- fix from customer side first
+      let getNightShiftChargeValue (FarePolicyD.ProgressiveNightShiftCharge a) = highPrecMoneyToText $ toHighPrecMoney a -- fix from customer side first
           getNightShiftChargeValue (FarePolicyD.ConstantNightShiftCharge a) = show a
 
       let oldNightShiftCharge = getNightShiftChargeValue <$> nightShiftChargeInfo

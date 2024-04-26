@@ -577,7 +577,7 @@ buildFareBreakUp DFP.FareParameters {..} = do
       waitingChargeWithCurrency = flip PriceAPIEntity currency <$> waitingCharge,
       rideExtraTimeFareWithCurrency = flip PriceAPIEntity currency <$> rideExtraTimeFare,
       nightShiftChargeWithCurrency = flip PriceAPIEntity currency <$> nightShiftCharge,
-      customerCancellationDuesWithCurrency = flip PriceAPIEntity currency <$> congestionCharge,
+      customerCancellationDuesWithCurrency = flip PriceAPIEntity currency <$> customerCancellationDues,
       tollChargesWithCurrency = flip PriceAPIEntity currency <$> tollCharges,
       congestionChargeWithCurrency = flip PriceAPIEntity currency <$> congestionCharge,
       ..
@@ -608,7 +608,7 @@ makeFareParam (DFP.RentalDetails DFP.FParamsRentalDetails {..}) =
     Common.FParamsRentalDetails
       { timeBasedFare = roundToIntegral timeBasedFare,
         distBasedFare = roundToIntegral distBasedFare,
-        timeBasedFareWithCurrency = flip PriceAPIEntity currency timeBasedFare,
-        distBasedFareWithCurrency = flip PriceAPIEntity currency distBasedFare,
+        timeBasedFareWithCurrency = PriceAPIEntity timeBasedFare currency,
+        distBasedFareWithCurrency = PriceAPIEntity distBasedFare currency,
         ..
       }
