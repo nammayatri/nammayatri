@@ -43,7 +43,6 @@ import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
-import Components.StatsModel.Controller as StatsModelController
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
@@ -199,7 +198,6 @@ instance loggableAction :: Loggable Action where
     AutoPayBanner act -> pure unit
     RetryTimeUpdate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "retry_time_update_onclick"
     RideActiveAction activeRide -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "ride_active_action"
-    StatsModelAction act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stats_model_action"
     TimeUpdate time lat lng -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "time_update"
     ModifyRoute lat lon -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "modify_route"
     SetToken id -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "set_token"
@@ -324,7 +322,6 @@ data Action = NoAction
             | ModifyRoute String String
             | RetryTimeUpdate
             | TimeUpdate String String String
-            | StatsModelAction StatsModelController.Action
             | RideActiveAction RidesInfo
             | RecenterButtonAction
             | ChatViewActionController ChatView.Action
@@ -1243,8 +1240,6 @@ eval (AutoPayBanner (Banner.OnClick)) state = do
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
 
 eval (ToggleBonusPopup) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = not state.props.showBonusInfo } }
-
-eval (StatsModelAction StatsModelController.OnIconClick) state = continueWithCmd state [ pure $ ToggleBonusPopup]
 
 eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = false } }
 

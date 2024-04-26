@@ -36,7 +36,6 @@ import Components.RideActionModal as RideActionModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.RideCompletedCard.Controller (Theme(..))
 import Components.SelectListModal as SelectListModal
-import Components.StatsModel as StatsModel
 import Data.Array as DA
 import Data.Int (fromString)
 import Data.Int as Int
@@ -171,23 +170,6 @@ cancelRideModalConfig state = let
                               Nothing    -> false
   }
   in cancelRideModalConfig'
-
----------------------------------- statsModelConfig --------------------------------
-statsModelConfig :: ST.HomeScreenState -> Boolean -> StatsModel.Config
-statsModelConfig state bonusVisibility =
-  let
-    config = StatsModel.config
-    config' = config
-      { countTextConfig { text = getString TRIP_COUNT }
-      , earningsTextConfig { text = getString TODAYS_EARNINGS }
-      , bonusTextConfig { text = getString BONUS_EARNED }
-      , textConfig { text = "" }
-      , totalRidesOfDay = state.data.totalRidesOfDay
-      , totalEarningsOfDay = state.data.totalEarningsOfDay
-      , bonusEarned = state.data.bonusEarned
-      , showBonus = bonusVisibility
-      }
-  in config'
 
 -------------------------------------genderBannerConfig------------------------------------
 genderBannerConfig :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config  (BannerCarousel.Action -> a)

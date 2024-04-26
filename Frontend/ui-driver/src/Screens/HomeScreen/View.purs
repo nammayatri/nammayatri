@@ -36,7 +36,6 @@ import Components.RideActionModal as RideActionModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
 import PaymentPage (consumeBP)
-import Components.StatsModel as StatsModel
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -959,9 +958,7 @@ statsModel push state =
     , visibility $ boolToVisibility showStatsModel
     , gravity CENTER
     , padding $ Padding 16 2 16 6
-    ][  if not (state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins) then
-          StatsModel.view (push <<< StatsModelAction) (statsModelConfig state cityConfig.showEarningSection)
-        else linearLayout
+    ][  linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , gravity CENTER_VERTICAL
@@ -1002,6 +999,7 @@ statsModel push state =
            , height WRAP_CONTENT
            , gravity CENTER_VERTICAL
            , margin $ MarginLeft 15
+           , visibility $ boolToVisibility coinsEnabled
            ][ linearLayout
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
@@ -1037,6 +1035,7 @@ statsModel push state =
     ]
     where 
       showStatsModel = not ((DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) && not state.props.isStatsModelExpanded)
+      coinsEnabled = state.data.config.feature.enableYatriCoins && state.data.cityConfig.enableYatriCoins
 
 expandedStatsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 expandedStatsModel push state =
@@ -1051,7 +1050,7 @@ expandedStatsModel push state =
   , margin $ MarginHorizontal 16 16
   , background Color.white900
   , stroke $ "1,"<> Color.grey900
-  , visibility $ boolToVisibility (state.props.isStatsModelExpanded && state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins) 
+  , visibility $ boolToVisibility state.props.isStatsModelExpanded 
   , clickable true
   ][ linearLayout
       [ width MATCH_PARENT
