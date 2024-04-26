@@ -109,7 +109,7 @@ window.getMerchantConfig = function () {
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"],
     "merchantLogo" : "ny_ic_yatri_sathi_logo,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_yatri_sathi_logo.png",
     "feedbackBackground": "#2C2F3A",
-    "sideBarList": ["MyRides", "Tickets", "Favorites", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
+    "sideBarList": ["MyRides", "Tickets", "Favorites", "NammaSafety", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
     "rateCardColor": "#2C2F3A",
     "nyBrandingVisibility": false,
     "fontType": "Assets",
@@ -315,7 +315,7 @@ window.getMerchantConfig = function () {
       "enableZooTicketBookingFlow" : true,
       "enableShareRide" : false,
       "enableAdditionalServices" : true,
-      "enableSafetyFlow" : false
+      "enableSafetyFlow" : true
     } 
     , "suggestedTripsAndLocationConfig" : {
       "minLocationsToBeShown" : 1,
