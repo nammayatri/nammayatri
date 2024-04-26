@@ -31,8 +31,6 @@ import Kernel.Types.Common
 import Kernel.Utils.Logging
 import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 
--- import Data.Maybe
-
 data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
     baseFare :: HighPrecMoney,
@@ -43,14 +41,37 @@ data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   }
   deriving (Generic, Show, Eq)
 
+-- for correct CAC parsing
+-- FIXME use fromTType' instead of creating specific type
+data FPSlabsDetailsSlabCAC = FPSlabsDetailsSlabCAC
+  { startDistance :: Meters,
+    baseFare :: Money,
+    baseFareAmount :: Maybe HighPrecMoney,
+    currency :: Maybe Currency,
+    waitingChargeInfo :: Maybe Domain.WaitingChargeInfo,
+    platformFeeInfo :: Maybe PlatformFeeInfo,
+    nightShiftCharge :: Maybe Domain.NightShiftCharge
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+mkFPSlabsDetailsSlabFromCAC :: FPSlabsDetailsSlabCAC -> FPSlabsDetailsSlab
+mkFPSlabsDetailsSlabFromCAC FPSlabsDetailsSlabCAC {..} =
+  FPSlabsDetailsSlab
+    { baseFare = mkAmountWithDefault baseFareAmount baseFare,
+      currency = fromMaybe INR currency,
+      ..
+    }
+
 type FPSlabsDetailsSlab = FPSlabsDetailsSlabD 'Safe
 
 instance FromJSON (FPSlabsDetailsSlabD 'Unsafe)
 
 instance ToJSON (FPSlabsDetailsSlabD 'Unsafe)
 
+-- FIXME remove
 instance FromJSON (FPSlabsDetailsSlabD 'Safe)
 
+-- FIXME remove
 instance ToJSON (FPSlabsDetailsSlabD 'Safe)
 
 data PlatformFeeCharge = ProgressivePlatformFee HighPrecMoney | ConstantPlatformFee HighPrecMoney
@@ -68,7 +89,6 @@ data PlatformFeeInfo = PlatformFeeInfo
 ------------------------------------------------APIEntity--------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------
 
--- FIXME should we parse currency here?
 parseFromCACMiddleware :: MonadFlow m => String -> Value -> m (Maybe FPSlabsDetailsSlab)
 parseFromCACMiddleware key' k1 = do
   case k1 of
@@ -81,10 +101,10 @@ parseFromCACMiddleware key' k1 = do
           platformFeeSgst = DAKM.lookup "platformFeeSgst" config >>= fromJSONHelper
           platformFeeInfo = PlatformFeeInfo <$> platformFeeCharge <*> platformFeeCgst <*> platformFeeSgst
           newKeyMap = KP.foldr (\(k, v) acc -> DAKM.insert k v acc) config [("waitingChargeInfo", DA.toJSON waitingChargeInfo), ("platformFeeInfo", DA.toJSON platformFeeInfo)]
-      let res = Object newKeyMap ^? _JSON :: Maybe FPSlabsDetailsSlab
+      let res = Object newKeyMap ^? _JSON :: Maybe FPSlabsDetailsSlabCAC
       when (isNothing res) do
         logDebug $ "farePolicySlabsDetailsSlab from CAC Not Parsable: " <> show newKeyMap <> " for key: " <> Text.pack key'
-      pure res
+      pure $ mkFPSlabsDetailsSlabFromCAC <$> res
     val -> do
       logDebug $ "farePolicySlabsDetailsSlab invalidType inCAC: " <> show val <> " for key: " <> Text.pack key'
       pure Nothing

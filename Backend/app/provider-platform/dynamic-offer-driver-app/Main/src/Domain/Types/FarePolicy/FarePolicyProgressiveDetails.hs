@@ -49,6 +49,30 @@ data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
   }
   deriving (Generic, Show)
 
+-- for correct CAC parsing
+-- FIXME use fromTType' instead of creating specific type
+data FPProgressiveDetailsCAC = FPProgressiveDetailsCAC
+  { baseFare :: Money,
+    deadKmFare :: Money,
+    baseFareAmount :: Maybe HighPrecMoney,
+    deadKmFareAmount :: Maybe HighPrecMoney,
+    currency :: Maybe Currency,
+    baseDistance :: Meters,
+    perExtraKmRateSections :: NonEmpty FPProgressiveDetailsPerExtraKmRateSection,
+    waitingChargeInfo :: Maybe WaitingChargeInfo,
+    nightShiftCharge :: Maybe NightShiftCharge
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+mkFPProgressiveDetailsFromCAC :: FPProgressiveDetailsCAC -> FPProgressiveDetails
+mkFPProgressiveDetailsFromCAC FPProgressiveDetailsCAC {..} =
+  FPProgressiveDetails
+    { baseFare = mkAmountWithDefault baseFareAmount baseFare,
+      deadKmFare = mkAmountWithDefault deadKmFareAmount deadKmFare,
+      currency = fromMaybe INR currency,
+      ..
+    }
+
 data NightShiftCharge
   = ProgressiveNightShiftCharge Float
   | ConstantNightShiftCharge HighPrecMoney
@@ -68,18 +92,20 @@ data WaitingCharge
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-$(mkBeamInstancesForJSON ''NightShiftCharge)
-$(mkBeamInstancesForJSON ''WaitingCharge)
-
 type FPProgressiveDetails = FPProgressiveDetailsD 'Safe
 
 instance FromJSON (FPProgressiveDetailsD 'Unsafe)
 
 instance ToJSON (FPProgressiveDetailsD 'Unsafe)
 
+-- FIXME remove
 instance FromJSON (FPProgressiveDetailsD 'Safe)
 
+-- FIXME remove
 instance ToJSON (FPProgressiveDetailsD 'Safe)
+
+$(mkBeamInstancesForJSON ''NightShiftCharge)
+$(mkBeamInstancesForJSON ''WaitingCharge)
 
 -----------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------APIEntity--------------------------------------------------------------------------------
@@ -132,10 +158,10 @@ jsonToFPProgressiveDetails :: MonadFlow m => String -> String -> m (Maybe FPProg
 jsonToFPProgressiveDetails config key' = do
   let res' = config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicyProgressiveDetails:") (itraversed . indices (Text.isPrefixOf "farePolicyProgressiveDetails:" . DAK.toText))
   res'' <- parsingMiddleware (KM.fromList res') config key'
-  let res = DA.Object res'' ^? _JSON :: (Maybe FPProgressiveDetails)
+  let res = DA.Object res'' ^? _JSON :: (Maybe FPProgressiveDetailsCAC)
   when (isNothing res) do
     logDebug $ "FarePolicyProgressiveDetails from CAC Not Parsable: " <> show res' <> " after middle parsing" <> show res'' <> " for key: " <> Text.pack key'
-  pure res
+  pure $ mkFPProgressiveDetailsFromCAC <$> res
 
 -- FIXME not used, can we remove?
 makeFPProgressiveDetailsAPIEntity :: FPProgressiveDetails -> FPProgressiveDetailsAPIEntity

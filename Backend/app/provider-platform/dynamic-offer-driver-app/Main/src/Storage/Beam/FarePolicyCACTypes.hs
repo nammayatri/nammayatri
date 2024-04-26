@@ -23,6 +23,8 @@ data FarePolicyRentalDetailsDistanceBuffers = FarePolicyRentalDetailsDistanceBuf
 data FarePolicySlabsDetailsSlab = FarePolicySlabsDetailsSlab
   { startDistance :: Meters,
     baseFare :: Money,
+    baseFareAmount :: Maybe HighPrecMoney,
+    currency :: Maybe Currency,
     platformFeeCharge :: Maybe Domain.PlatformFeeCharge,
     platformFeeCgst :: Maybe Double,
     platformFeeSgst :: Maybe Double,

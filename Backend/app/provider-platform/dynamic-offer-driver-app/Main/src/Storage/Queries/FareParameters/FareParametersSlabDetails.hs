@@ -40,7 +40,7 @@ instance ToTType' FareParametersSlabDetails BeamFPSD.FullFareParametersSlabDetai
         platformFee = platformFee,
         sgst = sgst,
         cgst = cgst,
-        currency = Just $ currency
+        currency = Just currency
       }
 
 instance FromTType' FareParametersSlabDetails BeamFPSD.FullFareParametersSlabDetails where

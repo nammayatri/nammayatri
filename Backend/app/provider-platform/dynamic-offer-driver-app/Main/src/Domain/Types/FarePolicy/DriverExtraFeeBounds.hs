@@ -24,7 +24,26 @@ data DriverExtraFeeBounds = DriverExtraFeeBounds
     minFee :: HighPrecMoney,
     maxFee :: HighPrecMoney
   }
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, Read)
+
+-- for correct CAC parsing
+-- FIXME use fromTType' instead of creating specific type
+data DriverExtraFeeBoundsCAC = DriverExtraFeeBoundsCAC
+  { startDistance :: Meters,
+    minFee :: Money,
+    maxFee :: Money,
+    minFeeAmount :: Maybe HighPrecMoney,
+    maxFeeAmount :: Maybe HighPrecMoney
+  }
+  deriving (Generic, ToJSON, FromJSON)
+
+mkDriverExtraFeeBoundsFromCAC :: DriverExtraFeeBoundsCAC -> DriverExtraFeeBounds
+mkDriverExtraFeeBoundsFromCAC DriverExtraFeeBoundsCAC {..} =
+  DriverExtraFeeBounds
+    { startDistance = startDistance,
+      minFee = mkAmountWithDefault minFeeAmount minFee,
+      maxFee = mkAmountWithDefault maxFeeAmount maxFee
+    }
 
 findDriverExtraFeeBoundsByDistance :: Meters -> NonEmpty DriverExtraFeeBounds -> DriverExtraFeeBounds
 findDriverExtraFeeBoundsByDistance dist driverExtraFeeBoundsList = do

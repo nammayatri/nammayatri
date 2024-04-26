@@ -44,14 +44,50 @@ data FPRentalDetailsD (s :: UsageSafety) = FPRentalDetails
   }
   deriving (Generic, Show)
 
+-- for correct CAC parsing
+-- FIXME use fromTType' instead of creating specific type
+data FPRentalDetailsCAC = FPRentalDetailsCAC
+  { baseFare :: Money,
+    perHourCharge :: Money,
+    distanceBuffers :: NonEmpty FPRentalDetailsDistanceBuffers,
+    perExtraKmRate :: Money,
+    perExtraMinRate :: Money,
+    includedKmPerHr :: Kilometers,
+    plannedPerKmRate :: Money,
+    baseFareAmount :: Maybe HighPrecMoney,
+    perHourChargeAmount :: Maybe HighPrecMoney,
+    perExtraMinRateAmount :: Maybe HighPrecMoney,
+    perExtraKmRateAmount :: Maybe HighPrecMoney,
+    plannedPerKmRateAmount :: Maybe HighPrecMoney,
+    currency :: Maybe Currency,
+    maxAdditionalKmsLimit :: Kilometers,
+    totalAdditionalKmsLimit :: Kilometers,
+    nightShiftCharge :: Maybe Domain.NightShiftCharge
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+mkFPRentalDetailsFromCAC :: FPRentalDetailsCAC -> FPRentalDetails
+mkFPRentalDetailsFromCAC FPRentalDetailsCAC {..} =
+  FPRentalDetails
+    { baseFare = mkAmountWithDefault baseFareAmount baseFare,
+      perHourCharge = mkAmountWithDefault perHourChargeAmount perHourCharge,
+      perExtraMinRate = mkAmountWithDefault perExtraMinRateAmount perExtraMinRate,
+      perExtraKmRate = mkAmountWithDefault perExtraKmRateAmount perExtraKmRate,
+      plannedPerKmRate = mkAmountWithDefault plannedPerKmRateAmount plannedPerKmRate,
+      currency = fromMaybe INR currency,
+      ..
+    }
+
 type FPRentalDetails = FPRentalDetailsD 'Safe
 
 instance FromJSON (FPRentalDetailsD 'Unsafe)
 
 instance ToJSON (FPRentalDetailsD 'Unsafe)
 
+-- FIXME remove
 instance FromJSON (FPRentalDetailsD 'Safe)
 
+-- FIXME remove
 instance ToJSON (FPRentalDetailsD 'Safe)
 
 parsingMiddlewareForRental :: String -> DAKM.KeyMap Value -> String -> DAKM.KeyMap Value
@@ -63,7 +99,7 @@ jsonToFPRentalDetails :: MonadFlow m => String -> String -> m (Maybe FPRentalDet
 jsonToFPRentalDetails config key' = do
   let fPRD' = config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicyRentalDetails:") (itraversed . indices (Text.isPrefixOf "farePolicyRentalDetails:" . DAK.toText))
       fpRD'' = parsingMiddlewareForRental config (DAKM.fromList fPRD') key'
-      res = Object fpRD'' ^? _JSON :: (Maybe FPRentalDetails)
+      res = Object fpRD'' ^? _JSON :: (Maybe FPRentalDetailsCAC)
   when (isNothing res) do
     logDebug $ "FarePolicyRentalDetails from CAC Not Parsable: " <> show fPRD' <> " after middle parsing" <> show fpRD'' <> " for key: " <> Text.pack key'
-  pure res
+  pure $ mkFPRentalDetailsFromCAC <$> res
