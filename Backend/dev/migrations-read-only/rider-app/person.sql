@@ -59,3 +59,8 @@ ALTER TABLE atlas_app.person ADD COLUMN updated_at timestamp with time zone NOT 
 ALTER TABLE atlas_app.person ADD COLUMN use_fake_otp text ;
 ALTER TABLE atlas_app.person ADD COLUMN whatsapp_notification_enroll_status character varying(255) ;
 ALTER TABLE atlas_app.person ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN blocked_count integer ;

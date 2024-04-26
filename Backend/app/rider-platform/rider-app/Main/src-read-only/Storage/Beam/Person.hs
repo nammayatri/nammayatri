@@ -24,6 +24,7 @@ data PersonT f = PersonT
     blocked :: B.C f Kernel.Prelude.Bool,
     blockedAt :: B.C f (Kernel.Prelude.Maybe Data.Time.LocalTime),
     blockedByRuleId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    blockedCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientOsType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType),

@@ -89,6 +89,7 @@ Person:
     clientConfigVersion : Maybe Version
     clientDevice : Maybe Device
     backendAppVersion : Maybe Text
+    blockedCount : Maybe Int
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
