@@ -1,19 +1,7 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.BusinessEvent where
+module Storage.Queries.BusinessEventExtra where
 
 import Domain.Types.Booking
 import Domain.Types.BusinessEvent
@@ -21,11 +9,15 @@ import Domain.Types.Person (Driver)
 import Domain.Types.Ride
 import Domain.Types.Vehicle (Variant)
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.BusinessEvent as BeamBE
+import Storage.Queries.OrphanInstances.BusinessEvent
 
 logBusinessEvent ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -52,7 +44,9 @@ logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distan
             vehicleVariant = variant,
             distance = distance,
             duration = duration,
-            rideId = rideId
+            rideId = rideId,
+            createdAt = now,
+            updatedAt = now
           }
   createWithKV bE
 
@@ -92,34 +86,4 @@ logRideCommencedEvent driverId bookingId rideId = do
     Nothing
     (Just rideId)
 
-instance FromTType' BeamBE.BusinessEvent BusinessEvent where
-  fromTType' BeamBE.BusinessEventT {..} = do
-    pure $
-      Just
-        BusinessEvent
-          { id = Id id,
-            driverId = Id <$> driverId,
-            eventType = eventType,
-            timeStamp = timeStamp,
-            bookingId = Id <$> bookingId,
-            whenPoolWasComputed = whenPoolWasComputed,
-            vehicleVariant = vehicleVariant,
-            distance = Meters <$> distance,
-            duration = Seconds <$> distance,
-            rideId = Id <$> rideId
-          }
-
-instance ToTType' BeamBE.BusinessEvent BusinessEvent where
-  toTType' BusinessEvent {..} = do
-    BeamBE.BusinessEventT
-      { BeamBE.id = getId id,
-        BeamBE.driverId = getId <$> driverId,
-        BeamBE.eventType = eventType,
-        BeamBE.timeStamp = timeStamp,
-        BeamBE.bookingId = getId <$> bookingId,
-        BeamBE.whenPoolWasComputed = whenPoolWasComputed,
-        BeamBE.vehicleVariant = vehicleVariant,
-        BeamBE.distance = getMeters <$> distance,
-        BeamBE.duration = getSeconds <$> duration,
-        BeamBE.rideId = getId <$> rideId
-      }
+-- Extra code goes here --
