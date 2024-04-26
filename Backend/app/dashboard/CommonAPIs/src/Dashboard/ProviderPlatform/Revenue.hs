@@ -26,7 +26,6 @@ import Data.Text
 import Data.Time (Day)
 import GHC.Int
 import Kernel.Prelude
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (Summary)
 
@@ -69,25 +68,6 @@ data CollectionListElem = CollectionListElem
 data CollectionList = CollectionList
   { onlineCollection :: [CollectionListElem],
     offlineCollection :: [CollectionListElem]
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
--- not used
-data DriverFeeAPIEntity = DriverFeeAPIEntity
-  { id :: Id DriverFeeAPIEntity,
-    merchantId :: Text,
-    driverId :: Id Driver,
-    fee :: HighPrecMoney,
-    feeWithCurrency :: PriceAPIEntity,
-    numRides :: Int,
-    payBy :: UTCTime,
-    totalEarnings :: Money,
-    totalEarningsWithCurrency :: PriceAPIEntity,
-    startTime :: UTCTime,
-    endTime :: UTCTime,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    collectedAt :: Maybe UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

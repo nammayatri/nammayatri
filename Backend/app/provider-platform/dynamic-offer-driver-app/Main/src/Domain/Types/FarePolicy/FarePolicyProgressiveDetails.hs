@@ -163,38 +163,6 @@ jsonToFPProgressiveDetails config key' = do
     logDebug $ "FarePolicyProgressiveDetails from CAC Not Parsable: " <> show res' <> " after middle parsing" <> show res'' <> " for key: " <> Text.pack key'
   pure $ mkFPProgressiveDetailsFromCAC <$> res
 
--- FIXME not used, can we remove?
-makeFPProgressiveDetailsAPIEntity :: FPProgressiveDetails -> FPProgressiveDetailsAPIEntity
-makeFPProgressiveDetailsAPIEntity FPProgressiveDetails {..} =
-  FPProgressiveDetailsAPIEntity
-    { perExtraKmRateSections = makeFPProgressiveDetailsPerExtraKmRateSectionAPIEntity <$> perExtraKmRateSections,
-      baseFare = roundToIntegral baseFare,
-      baseFareWithCurrency = PriceAPIEntity baseFare currency,
-      deadKmFare = roundToIntegral deadKmFare,
-      deadKmFareWithCurrency = PriceAPIEntity deadKmFare currency,
-      waitingChargeInfo = mkWaitingChargeInfoAPIEntity currency <$> waitingChargeInfo,
-      nightShiftCharge = mkNightShiftChargeAPIEntity currency <$> nightShiftCharge,
-      ..
-    }
-
--- FIXME not used, can we remove?
-mkWaitingChargeInfoAPIEntity :: Currency -> WaitingChargeInfo -> Common.WaitingChargeInfoAPIEntity
-mkWaitingChargeInfoAPIEntity currency WaitingChargeInfo {..} =
-  Common.WaitingChargeInfoAPIEntity
-    { waitingCharge = mkWaitingChargeAPIEntity currency waitingCharge,
-      ..
-    }
-
--- FIXME not used, can we remove?
-mkWaitingChargeAPIEntity :: Currency -> WaitingCharge -> Common.WaitingChargeAPIEntity
-mkWaitingChargeAPIEntity currency (PerMinuteWaitingCharge charge) = Common.PerMinuteWaitingChargeWithCurrency (PriceAPIEntity charge currency)
-mkWaitingChargeAPIEntity currency (ConstantWaitingCharge charge) = Common.ConstantWaitingChargeWithCurrency (PriceAPIEntity charge currency)
-
--- FIXME not used, can we remove?
-mkNightShiftChargeAPIEntity :: Currency -> NightShiftCharge -> Common.NightShiftChargeAPIEntity
-mkNightShiftChargeAPIEntity _ (ProgressiveNightShiftCharge charge) = Common.ProgressiveNightShiftCharge charge
-mkNightShiftChargeAPIEntity currency (ConstantNightShiftCharge charge) = Common.ConstantNightShiftChargeWithCurrency (PriceAPIEntity charge currency)
-
 mkWaitingChargeInfo :: Common.WaitingChargeInfoAPIEntity -> WaitingChargeInfo
 mkWaitingChargeInfo Common.WaitingChargeInfoAPIEntity {..} =
   WaitingChargeInfo

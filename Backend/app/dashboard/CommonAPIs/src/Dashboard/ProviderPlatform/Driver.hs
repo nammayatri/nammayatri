@@ -817,21 +817,6 @@ data DriverMode
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
   deriving (PrettyShow) via Showable DriverMode
 
--- not used
-data FleetVehicleStatsListItem = FleetVehicleStatsListItem
-  { vehicleRegNo :: Text,
-    driverName :: Text,
-    status :: Maybe DriverMode,
-    vehicleType :: Variant,
-    totalRides :: Maybe Int,
-    earnings :: Maybe Money,
-    earningsWithCurrency :: Maybe PriceAPIEntity,
-    rating :: Maybe Centesimal,
-    ridesAssigned :: Maybe Int,
-    ridesCancelled :: Maybe Int
-  }
-  deriving (Generic, ToJSON, ToSchema, FromJSON)
-
 type FleetTotalEarningAPI =
   "fleet"
     :> "totalEarning"

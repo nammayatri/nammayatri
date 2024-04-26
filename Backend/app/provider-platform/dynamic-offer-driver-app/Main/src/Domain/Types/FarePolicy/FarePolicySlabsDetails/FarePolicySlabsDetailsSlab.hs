@@ -130,15 +130,4 @@ data FPSlabsDetailsSlabAPIEntity = FPSlabsDetailsSlabAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
--- FIXME not used, can we remove?
-makeFPSlabsDetailsSlabAPIEntity :: FPSlabsDetailsSlab -> FPSlabsDetailsSlabAPIEntity
-makeFPSlabsDetailsSlabAPIEntity FPSlabsDetailsSlab {..} =
-  FPSlabsDetailsSlabAPIEntity
-    { baseFare = roundToIntegral baseFare,
-      baseFareWithCurrency = PriceAPIEntity baseFare currency,
-      waitingChargeInfo = Domain.mkWaitingChargeInfoAPIEntity currency <$> waitingChargeInfo,
-      nightShiftCharge = Domain.mkNightShiftChargeAPIEntity currency <$> nightShiftCharge,
-      ..
-    }
-
 $(mkBeamInstancesForJSON ''PlatformFeeCharge)
