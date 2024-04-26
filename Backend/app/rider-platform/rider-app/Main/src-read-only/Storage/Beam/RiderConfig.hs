@@ -15,6 +15,7 @@ import Tools.Beam.UtilsTH
 data RiderConfigT f = RiderConfigT
   { appUrl :: B.C f Kernel.Prelude.Text,
     autoUnblockSafetyCenterAfterDays :: B.C f Kernel.Prelude.Int,
+    bookingSyncStatusCallSecondsDiffThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     collectAutoCompleteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     collectMMIRouteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     distanceWeightage :: B.C f Kernel.Prelude.Int,

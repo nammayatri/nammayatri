@@ -43,3 +43,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN auto_unblock_safety_center_after_d
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN place_name_cache_expiry_days integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN booking_sync_status_call_seconds_diff_threshold integer ;

@@ -24,6 +24,7 @@ RiderConfig:
     isAvoidToll: Bool
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int
+    bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
 
   constraints:
     merchantOperatingCityId: PrimaryKey

@@ -115,18 +115,26 @@ findBlockedByDeviceToken :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow 
 findBlockedByDeviceToken Nothing = return [] -- return empty array in case device token is Nothing (WARNING: DON'T REMOVE IT)
 findBlockedByDeviceToken deviceToken = findAllWithKV [Se.And [Se.Is BeamP.deviceToken (Se.Eq deviceToken), Se.Is BeamP.blocked (Se.Eq True)]]
 
-updatingEnabledAndBlockedState :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> m ()
+updatingEnabledAndBlockedState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> m ()
 updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
-  now <- getCurrentTime
-  updateWithKV
-    ( [ Se.Set BeamP.enabled (not isBlocked),
-        Se.Set BeamP.blocked isBlocked,
-        Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
-        Se.Set BeamP.updatedAt now
-      ]
-        <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | isBlocked]
-    )
-    [Se.Is BeamP.id (Se.Eq personId)]
+  person <- findByPId (Id personId)
+  case person of
+    Nothing -> pure ()
+    Just driverP -> do
+      now <- getCurrentTime
+      updateWithKV
+        ( [ Se.Set BeamP.enabled (not isBlocked),
+            Se.Set BeamP.blocked isBlocked,
+            Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
+            Se.Set BeamP.updatedAt now,
+            Se.Set BeamP.blockedCount $
+              if isBlocked
+                then Just $ (fromMaybe 0 driverP.blockedCount) + 1
+                else driverP.blockedCount
+          ]
+            <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | isBlocked]
+        )
+        [Se.Is BeamP.id (Se.Eq personId)]
 
 findAllCustomers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> m [Person]
 findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash =
