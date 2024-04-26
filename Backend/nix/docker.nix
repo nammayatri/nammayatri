@@ -23,6 +23,9 @@ in
               self'.packages.nammayatri
               gdal
               postgis
+              curl
+              htop
+              wget
             ];
             name = "beckn-root";
             pathsToLink = [
