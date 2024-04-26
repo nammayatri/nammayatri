@@ -16,7 +16,7 @@
         preBuild = ''
           export ${if pkgs.stdenv.isLinux then "LD_LIBRARY_PATH" else "DYLD_LIBRARY_PATH"}="$cac_client/lib";
         '';
-        nativeBuildInputs = (oa.nativeBuildInputs or [ ]) ++ [ pkgs.makeWrapper pkgs.curl pkgs.htop pkgs.wget pkgs.dig pkgs.traceroute ];
+        nativeBuildInputs = (oa.nativeBuildInputs or [ ]) ++ [ pkgs.makeWrapper pkgs.curl pkgs.htop pkgs.wget pkgs.dig ];
         postFixup = (oa.postFixup or "") + ''
           if [-d $bin/bin/* ]; then
             wrapProgram $bin/bin/* \
