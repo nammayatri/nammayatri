@@ -32,7 +32,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id, (%~))
-import Kernel.Types.Common hiding (mkPrice)
+import Kernel.Types.Common
 import Kernel.Utils.Common hiding (mkPrice)
 import SharedLogic.FareCalculator as Fare
 import Tools.Error
@@ -59,7 +59,7 @@ mkRideCompletedQuote ride fareParams = do
             priceOfferedValue = Nothing
           }
       breakup =
-        Fare.mkFareParamsBreakups (mkPrice currency) mkBreakupItem fareParams
+        Fare.mkFareParamsBreakups (mkPrice' currency) mkBreakupItem fareParams
           & filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams)
   pure
     Spec.Quotation
@@ -68,7 +68,7 @@ mkRideCompletedQuote ride fareParams = do
         quotationTtl = Nothing
       }
   where
-    mkPrice currency val =
+    mkPrice' currency val =
       Spec.Price
         { priceCurrency = Just currency,
           priceValue = Just $ Utils.rationaliseMoney val,
@@ -140,6 +140,12 @@ mkRideCompletedQuote ride fareParams = do
 mkPaymentParams :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> DRB.Booking -> Spec.Payment
 mkPaymentParams _paymentMethodInfo _paymentUrl merchant bppConfig booking = do
   let mPrice = Just $ mkPriceFromMoney booking.estimatedFare -- FIXME
+  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
+  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+
+mkPaymentParamsSoftUpdate :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> HighPrecMoney -> Spec.Payment
+mkPaymentParamsSoftUpdate _paymentMethodInfo _paymentUrl merchant bppConfig estimatedFare = do
+  let mPrice = Just $ mkPrice Nothing estimatedFare
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
   mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
@@ -313,4 +319,36 @@ mkSafetyAlertTags reason =
                   },
             tagDisplay = Just False,
             tagValue = Just reason
+          }
+
+mkUpdatedDistanceTags :: Maybe HighPrecMeters -> Maybe [Spec.TagGroup]
+mkUpdatedDistanceTags mbDistance =
+  mbDistance >>= \distance ->
+    Just
+      [ Spec.TagGroup
+          { tagGroupDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tags.UPDATE_DETAILS,
+                    descriptorName = Just "Update Details",
+                    descriptorShortDesc = Nothing
+                  },
+            tagGroupDisplay = Just True,
+            tagGroupList =
+              Just $ updatedDistanceSingleton distance
+          }
+      ]
+  where
+    updatedDistanceSingleton distance =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tags.UPDATED_ESTIMATED_DISTANCE,
+                    descriptorName = Just "Updated Estimated Distance",
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just $ show distance
           }

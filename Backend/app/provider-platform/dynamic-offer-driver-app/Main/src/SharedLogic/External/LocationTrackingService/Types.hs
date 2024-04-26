@@ -85,4 +85,15 @@ newtype DriversLocationReq = DriversLocationReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
+data DriverLocationReq = DriverLocationReq
+  { driverId :: Id DP.Person,
+    merchantId :: Id DM.Merchant
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+newtype DriverLocationResp = DriverLocationResp
+  { loc :: NonEmpty LatLong
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
 type HasLocationService m r = (HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig])

@@ -26,6 +26,6 @@ data LocationMapping = LocationMapping
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data LocationMappingTags = BOOKING | SEARCH_REQUEST | RIDE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data LocationMappingTags = BOOKING | SEARCH_REQUEST | RIDE | BOOKING_UPDATE_REQUEST deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''LocationMappingTags)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''LocationMappingTags))

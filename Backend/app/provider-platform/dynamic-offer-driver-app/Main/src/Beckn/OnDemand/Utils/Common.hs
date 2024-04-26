@@ -33,6 +33,7 @@ import Domain.Types
 import Domain.Types.BecknConfig
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Common as DCT
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Estimate as DEst
@@ -752,27 +753,36 @@ tfQuotation :: DBooking.Booking -> Maybe Spec.Quotation
 tfQuotation booking =
   Just
     Spec.Quotation
-      { quotationBreakup = mkQuotationBreakup booking,
-        quotationPrice = tfQuotationPrice booking,
+      { quotationBreakup = mkQuotationBreakup booking.fareParams,
+        quotationPrice = tfQuotationPrice $ HighPrecMoney $ toRational booking.estimatedFare,
         quotationTtl = Nothing
       }
 
-tfQuotationPrice :: DBooking.Booking -> Maybe Spec.Price
-tfQuotationPrice booking =
+tfQuotationSU :: DFParams.FareParameters -> HighPrecMoney -> Maybe Spec.Quotation
+tfQuotationSU fareParams estimatedFare =
+  Just
+    Spec.Quotation
+      { quotationBreakup = mkQuotationBreakup fareParams,
+        quotationPrice = tfQuotationPrice estimatedFare,
+        quotationTtl = Nothing
+      }
+
+tfQuotationPrice :: HighPrecMoney -> Maybe Spec.Price
+tfQuotationPrice estimatedFare =
   Just
     Spec.Price
       { priceComputedValue = Nothing,
         priceCurrency = Just "INR",
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
-        priceOfferedValue = Just $ encodeToText booking.estimatedFare,
-        priceValue = Just $ encodeToText booking.estimatedFare
+        priceOfferedValue = Just $ encodeToText estimatedFare,
+        priceValue = Just $ encodeToText estimatedFare
       }
 
-mkQuotationBreakup :: DBooking.Booking -> Maybe [Spec.QuotationBreakupInner]
-mkQuotationBreakup booking =
-  let fareParams = mkFareParamsBreakups mkPrice mkQuotationBreakupInner booking.fareParams
-   in Just $ filter (filterRequiredBreakups $ DFParams.getFareParametersType booking.fareParams) fareParams -- TODO: Remove after roll out
+mkQuotationBreakup :: DFParams.FareParameters -> Maybe [Spec.QuotationBreakupInner]
+mkQuotationBreakup fareParams =
+  let fareParameters = mkFareParamsBreakups mkPrice mkQuotationBreakupInner fareParams
+   in Just $ filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams) fareParameters -- TODO: Remove after roll out
   where
     mkPrice money =
       Just
@@ -843,8 +853,23 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemId = Just $ Common.mkItemId shortId booking.vehicleServiceTier,
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
-          itemPrice = tfItemPrice booking,
+          itemPrice = tfItemPrice $ HighPrecMoney $ toRational booking.estimatedFare.getMoney,
           itemTags = mkRateCardTag estimatedDistance Nothing mbFarePolicy
+        }
+    ]
+
+tfItemsSoftUpdate :: DBooking.Booking -> MerchantShortId -> Maybe HighPrecMeters -> Maybe FarePolicyD.FarePolicy -> Maybe Text -> DBUR.BookingUpdateRequest -> Text -> Maybe [Spec.Item]
+tfItemsSoftUpdate booking shortId estimatedDistance mbFarePolicy mbPaymentId updatedBooking rideId = do
+  let estimatedDistance' = maybe Nothing (\dist -> Just $ highPrecMetersToMeters dist) estimatedDistance
+  Just
+    [ Spec.Item
+        { itemDescriptor = tfItemDescriptor booking,
+          itemFulfillmentIds = Just [rideId],
+          itemId = Just $ Common.mkItemId shortId booking.vehicleServiceTier,
+          itemLocationIds = Nothing,
+          itemPaymentIds = tfPaymentId mbPaymentId,
+          itemPrice = tfItemPrice updatedBooking.estimatedFare,
+          itemTags = mkRateCardTag estimatedDistance' Nothing mbFarePolicy
         }
     ]
 
@@ -853,16 +878,16 @@ tfPaymentId mbPaymentId = do
   paymentId <- mbPaymentId
   Just [paymentId]
 
-tfItemPrice :: DBooking.Booking -> Maybe Spec.Price
-tfItemPrice booking =
+tfItemPrice :: HighPrecMoney -> Maybe Spec.Price
+tfItemPrice estimatedFare =
   Just
     Spec.Price
       { priceComputedValue = Nothing,
         priceCurrency = Just "INR",
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
-        priceOfferedValue = Just $ encodeToText booking.estimatedFare, -- TODO : Remove this and make non mandatory on BAP side
-        priceValue = Just $ encodeToText booking.estimatedFare
+        priceOfferedValue = Just $ encodeToText estimatedFare, -- TODO : Remove this and make non mandatory on BAP side
+        priceValue = Just $ encodeToText estimatedFare
       }
 
 tfItemDescriptor :: DBooking.Booking -> Maybe Spec.Descriptor
@@ -1037,3 +1062,91 @@ tfProvider becknConfig =
         providerLocations = Nothing,
         providerPayments = Nothing
       }
+
+mkFulfillmentV2SoftUpdate ::
+  (MonadFlow m, EncFlow m r) =>
+  Maybe SP.Person ->
+  DRide.Ride ->
+  DBooking.Booking ->
+  Maybe DVeh.Vehicle ->
+  Maybe Text ->
+  Maybe [Spec.TagGroup] ->
+  Maybe [Spec.TagGroup] ->
+  Bool ->
+  Bool ->
+  Maybe Text ->
+  IsValueAddNP ->
+  DLoc.Location ->
+  m Spec.Fulfillment
+mkFulfillmentV2SoftUpdate mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent isValueAddNP newDestination = do
+  mbDInfo <- driverInfo
+  let rideOtp = fromMaybe ride.otp ride.endOtp
+  pure $
+    Spec.Fulfillment
+      { fulfillmentId = Just ride.id.getId,
+        fulfillmentStops = mkStops' booking.fromLocation (Just newDestination) (Just rideOtp),
+        fulfillmentType = Just $ mkFulfillmentType booking.tripCategory,
+        fulfillmentAgent =
+          Just $
+            Spec.Agent
+              { agentContact =
+                  mbDInfo >>= \dInfo ->
+                    Just $
+                      Spec.Contact
+                        { contactPhone = Just dInfo.mobileNumber
+                        },
+                agentPerson =
+                  Just $
+                    Spec.Person
+                      { personId = Nothing,
+                        personImage =
+                          mbImage <&> \mbImage' ->
+                            Spec.Image
+                              { imageHeight = Nothing,
+                                imageSizeType = Nothing,
+                                imageUrl = Just mbImage',
+                                imageWidth = Nothing
+                              },
+                        personName = mbDInfo >>= Just . (.name),
+                        personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
+                      }
+              },
+        fulfillmentVehicle =
+          mbVehicle >>= \vehicle -> do
+            let (category, variant) = castVariant vehicle.variant
+            Just $
+              Spec.Vehicle
+                { vehicleColor = Just vehicle.color,
+                  vehicleModel = Just vehicle.model,
+                  vehicleRegistration = Just vehicle.registrationNo,
+                  vehicleCategory = Just category,
+                  vehicleVariant = Just variant,
+                  vehicleMake = Nothing
+                },
+        fulfillmentCustomer = Nothing,
+        fulfillmentState =
+          mbEvent
+            >> ( Just $
+                   Spec.FulfillmentState
+                     { fulfillmentStateDescriptor =
+                         Just $
+                           Spec.Descriptor
+                             { descriptorCode = mbEvent,
+                               descriptorName = Nothing,
+                               descriptorShortDesc = Nothing
+                             }
+                     }
+               ),
+        fulfillmentTags = mbTags
+      }
+  where
+    driverInfo = forM mbDriver $ \driver -> do
+      dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
+      dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
+      let dTags = mkDriverDetailsTags driver isDriverBirthDay isFreeRide
+      pure $
+        DriverInfo
+          { mobileNumber = dPhoneNum,
+            name = dName,
+            tags = if isValueAddNP then dTags else Nothing
+          }
