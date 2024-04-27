@@ -37,7 +37,7 @@ import Domain.Types.BppDetails
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalDetails as DRentalDetails
 import Domain.Types.SearchRequest

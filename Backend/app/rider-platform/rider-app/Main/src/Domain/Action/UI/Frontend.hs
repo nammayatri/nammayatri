@@ -27,7 +27,7 @@ import Domain.Action.UI.Quote
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
 import Environment
 import qualified Kernel.Beam.Functions as B

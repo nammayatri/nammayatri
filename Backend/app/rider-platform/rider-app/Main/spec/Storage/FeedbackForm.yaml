@@ -1,0 +1,64 @@
+imports:
+  Ride: Domain.Types.Ride
+
+FeedbackForm:
+  tableName: feedback_form
+
+  types:
+    FeedbackFormReq:
+      rideId: Id Ride
+      feedback: "[FeedbackAnswer]"
+
+    FeedbackAnswer:
+      questionId: Text
+      answer: "[Text]"
+
+    FeedbackFormList:
+      recordType: NewType
+      _data: "[FeedbackFormAPIEntity]"
+      derive: Eq
+
+    FeedbackFormAPIEntity:
+      categoryName: Category
+      feedbackForm: "[FeedbackFormItem]"
+      derive: Eq
+
+    Category:
+      enum: "RIDE,DRIVER,VEHICLE"
+
+    FeedbackFormItem:
+      id: Id FeedbackFormItem
+      rating: Maybe Int
+      question: Text
+      answer: '[Text]'
+      answerType: AnswerType
+      derive: Eq
+
+    AnswerType:
+      enum: "Text,Checkbox,Radio"
+
+  derives: Generic,Show,FromJSON,ToJSON,ToSchema,Eq
+  fields:
+    categoryName: Category
+    id: Id FeedbackFormItem
+    rating: Maybe Int
+    question: Text
+    answer: '[Text]'
+    answerType: AnswerType
+
+  sqlType:
+    categoryName: character varying(255)
+    rating: INT
+    question: character varying(255)
+    answer: text[]
+    answerType: character varying(255)
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE

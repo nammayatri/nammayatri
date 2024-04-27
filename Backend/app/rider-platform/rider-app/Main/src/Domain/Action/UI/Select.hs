@@ -40,7 +40,7 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DPerson
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant (VehicleVariant)

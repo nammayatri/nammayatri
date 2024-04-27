@@ -1,27 +1,12 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
-module Domain.Types.Person.PersonFlowStatus
-  ( FlowStatus (..),
-    PersonFlowStatus (..),
-  )
-where
+module Domain.Types.Extra.PersonFlowStatus where
 
-import Data.Aeson (Options (..), SumEncoding (..), defaultOptions)
+import Data.Aeson
 import Data.OpenApi
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Estimate as DE
@@ -34,9 +19,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 
--- Warning: This whole thing is for frontend use only, don't make any backend logic based on this.
--- deriving stock instance Ord Maps.LatLong
-
+-- Extra code goes here --
 data FlowStatus
   = IDLE
   | SEARCHING
@@ -111,10 +94,3 @@ instance FromJSON FlowStatus where
 
 instance ToSchema FlowStatus where
   declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions flowStatusCustomJSONOptions
-
-data PersonFlowStatus = PersonFlowStatus
-  { personId :: Id DP.Person,
-    flowStatus :: FlowStatus,
-    updatedAt :: UTCTime
-  }
-  deriving (Show, Eq, Generic)

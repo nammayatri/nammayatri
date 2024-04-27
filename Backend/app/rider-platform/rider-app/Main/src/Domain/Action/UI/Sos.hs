@@ -9,10 +9,10 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Co
 import qualified Data.ByteString as BS
 import Data.Text as T
 import qualified Domain.Action.UI.FollowRide as DFR
+import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Action.UI.Profile as DP
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Sos as DSos
@@ -42,7 +42,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
+import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Sos as QSos
 import qualified Text.Read as Read
@@ -125,7 +125,7 @@ postSosCreate (mbPersonId, merchantId) req = do
   when (req.isRideEnded /= Just True) $ do
     emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
     when (shouldSendSms person) $ do
-      void $ QPDEN.updateShareRideForAll personId (Just True)
+      void $ QPDEN.updateShareRideForAll personId True
       enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
       SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just message) True emergencyContacts.defaultEmergencyNumbers
   return $
@@ -224,7 +224,7 @@ postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
     Just True -> do
       SPDEN.notifyEmergencyContacts person (notificationBody person True) notificationTitle Notification.SOS_MOCK_DRILL_NOTIFY Nothing False emergencyContacts.defaultEmergencyNumbers
       when (fromMaybe False onRide) $ do
-        void $ QPDEN.updateShareRideForAll personId (Just True)
+        void $ QPDEN.updateShareRideForAll personId True
         enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
     _ -> do
       when (not $ fromMaybe False person.hasCompletedMockSafetyDrill) $ QP.updateSafetyDrillStatus (Just True) personId

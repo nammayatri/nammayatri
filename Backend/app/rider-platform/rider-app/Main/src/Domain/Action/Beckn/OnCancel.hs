@@ -26,7 +26,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
 import Environment ()
 import Kernel.Beam.Functions

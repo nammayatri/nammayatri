@@ -7,11 +7,12 @@ import API.Types.UI.FollowRide
 import Data.OpenApi (ToSchema)
 import Data.Text (unwords)
 import Data.Time hiding (secondsToNominalDiffTime)
+import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as PDEN
 import Domain.Action.UI.Profile as DAP
 import Domain.Types.Booking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as PDEN
+import qualified Domain.Types.PersonDefaultEmergencyNumber as PDEN
 import qualified Domain.Types.RiderConfig as DRC
 import Environment
 import qualified Environment
@@ -34,7 +35,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as Booking
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as PDEN
+import qualified Storage.Queries.PersonDefaultEmergencyNumber as PDEN
 import Tools.Auth
 import Tools.Error
 import Tools.Notifications
@@ -85,7 +86,7 @@ postShareRide (mbPersonId, merchantId) req = do
               emergencyContactEntity <- QPerson.findById id >>= fromMaybeM (PersonDoesNotExist id.getId)
               updateFollowDetails emergencyContactEntity emergencyContact
               dbHash <- getDbHash emergencyContact.mobileNumber
-              PDEN.updateShareRide dbHash personId $ Just True
+              PDEN.updateShareRide dbHash personId True
               SLPEN.sendNotificationToEmergencyContact emergencyContactEntity (body person) title Notification.SHARE_RIDE
     )
     emergencyContacts.defaultEmergencyNumbers

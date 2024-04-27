@@ -43,8 +43,8 @@ import qualified "rider-app" Storage.Beam.MerchantServiceUsageConfig as Merchant
 import qualified "rider-app" Storage.Beam.OnSearchEvent as OnSearchEvent
 import qualified "rider-app" Storage.Beam.Payment ()
 import qualified "rider-app" Storage.Beam.Person as Person
-import qualified "rider-app" Storage.Beam.Person.PersonDefaultEmergencyNumber as PersonDefaultEmergencyNumber
-import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowStatus
+import qualified "rider-app" Storage.Beam.PersonDefaultEmergencyNumber as PersonDefaultEmergencyNumber
+import qualified "rider-app" Storage.Beam.PersonFlowStatus as PersonFlowStatus
 import qualified "rider-app" Storage.Beam.PlaceNameCache as PlaceNameCache
 import qualified "rider-app" Storage.Beam.Quote as Quote
 import qualified "rider-app" Storage.Beam.RegistrationToken as RegistrationToken

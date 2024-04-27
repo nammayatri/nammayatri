@@ -1,6 +1,8 @@
-ALTER TABLE atlas_app.person_default_emergency_number ADD COLUMN merchant_id text;
 
-ALTER TABLE atlas_app.person_default_emergency_number ADD COLUMN enable_for_share_ride boolean NOT NULL default false;
+-- dont run this line, just to sync with old table after generation with dsl
+-- ALTER TABLE atlas_app.person_default_emergency_number ALTER COLUMN enable_for_share_ride SET default false;
+-- ALTER TABLE atlas_app.person_default_emergency_number ALTER COLUMN enable_for_share_ride SET default false;
+
 
 WITH MerchantMessages AS (
   SELECT T1.merchant_id, 'ADDED_AS_EMERGENCY_CONTACT', '{#userName#} has chosen you as their trusted emergency contact for their Namma Yatri rides. Ensure seamless tracking and safety by installing the app today {#appUrl#} - Juspay', T1.id

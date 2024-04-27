@@ -16,13 +16,13 @@
 module Storage.CachedQueries.Person.PersonFlowStatus where
 
 import Domain.Types.Person
-import Domain.Types.Person.PersonFlowStatus
+import Domain.Types.PersonFlowStatus
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
-import qualified Storage.Queries.Person.PersonFlowStatus as Queries
+import qualified Storage.Queries.PersonFlowStatus as Queries
 
 create :: (MonadFlow m, EsqDBFlow m r) => PersonFlowStatus -> m ()
 create = Queries.create
