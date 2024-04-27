@@ -866,7 +866,7 @@ normalRideInfoView push config =
             , width MATCH_PARENT
             , height WRAP_CONTENT
             , margin $ MarginTop 12
-            , visibility $ boolToVisibility config.tollText
+            , visibility $ boolToVisibility config.hasToll
             ]
           <> FontStyle.body1 TypoGraphy
       ]

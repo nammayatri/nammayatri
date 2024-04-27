@@ -2043,8 +2043,7 @@ currentRideFlow activeRideResp isActiveRide = do
               }, 
               props{ 
                 silentPopUpView = false, 
-                goOfflineModal = false,
-                hasToll = maybe false (\charge -> charge /= 0) ride.estimatedTollCharges
+                goOfflineModal = false
               }})
         Nothing -> do
           setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
