@@ -2069,6 +2069,6 @@ generateReferralLink source medium term content campaign  =
       -- <> "%26utm_medium%3D" <> medium 
       -- <> "%26utm_term%3D" <> term 
       -- <> "%26utm_content%3D" <> content 
-      <> "%26utm_campaign%3D" <> campaign 
+      <> "utm_campaign%3D" <> campaign 
       -- <> "%26anid%3Dadmob&id=" <> packageId
 -- TODO: Add the above query params when needed
