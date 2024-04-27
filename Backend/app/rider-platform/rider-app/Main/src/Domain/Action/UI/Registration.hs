@@ -39,7 +39,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (PersonE (updatedAt))
 import qualified Domain.Types.Person as SP
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.PersonStats as DPS
 import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
@@ -77,7 +77,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QM
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
+import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken

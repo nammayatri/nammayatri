@@ -1,0 +1,30 @@
+imports:
+  Person: Domain.Types.Person
+
+PersonFlowStatus:
+  tableName: person_flow_status
+  fields:
+    personId: Id Person
+    flowStatus: Domain.Types.Extra.PersonFlowStatus.FlowStatus
+    updatedAt: UTCTime
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
+    - findByPrimaryKey
+    - create
+    - createMany
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE
+
+  sqlType:
+    flowStatus: JSON
+  constraints:
+    personId: PrimaryKey
+

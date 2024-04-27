@@ -31,7 +31,7 @@ import Domain.Types.HotSpot
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Beam.Functions

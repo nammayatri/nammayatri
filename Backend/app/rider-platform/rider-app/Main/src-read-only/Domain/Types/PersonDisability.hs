@@ -19,6 +19,3 @@ data PersonDisability = PersonDisability
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data DisabilityItem = DisabilityItem {description :: Kernel.Prelude.Text, id :: Kernel.Types.Id.Id Domain.Types.PersonDisability.DisabilityItem, tag :: Kernel.Prelude.Text}
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

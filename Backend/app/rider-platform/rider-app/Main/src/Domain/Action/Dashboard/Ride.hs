@@ -41,7 +41,7 @@ import Domain.Types.Location (Location (..))
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Sos as DSos
 import qualified Domain.Types.VehicleVariant as VehVar

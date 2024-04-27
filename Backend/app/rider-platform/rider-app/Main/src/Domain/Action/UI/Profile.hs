@@ -39,13 +39,14 @@ import Data.Digest.Pure.MD5 as MD5
 import qualified Data.HashMap.Strict as HM
 import Data.List (nubBy)
 import qualified Data.Text as T
+import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Action.UI.Registration as DR
 import qualified Domain.Types.BecknConfig as BecknConfig
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.ClientPersonInfo as DCP
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
+import qualified Domain.Types.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Types.PersonDisability as PersonDisability
 import Environment
 import qualified EulerHS.Language as L
@@ -80,7 +81,7 @@ import Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.Disability as QD
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
+import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPersonDEN
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonStats as QPS
 import Tools.Error

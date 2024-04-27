@@ -11,9 +11,11 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-missing-fields #-}
 
 module Domain.Action.UI.FeedbackForm where
 
+import Data.List (groupBy)
 import Domain.Types.FeedbackForm
 import Domain.Types.Person ()
 import Domain.Types.Ride ()
@@ -28,6 +30,33 @@ import qualified Storage.CachedQueries.FeedbackForm as CQFF
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
+
+makeFeedbackFormList :: [FeedbackFormAPIEntity] -> FeedbackFormList
+makeFeedbackFormList item =
+  FeedbackFormList
+    { _data = item
+    }
+
+makeFeedbackFormAPIEntity :: [FeedbackForm] -> [FeedbackFormAPIEntity]
+makeFeedbackFormAPIEntity response = map convertGroup groupedEntities
+  where
+    groupedEntities = groupBy (\a b -> a.categoryName == b.categoryName) response
+    convertGroup :: [FeedbackForm] -> FeedbackFormAPIEntity
+    convertGroup [] = FeedbackFormAPIEntity {}
+    convertGroup group@(res : _) =
+      FeedbackFormAPIEntity
+        { categoryName = res.categoryName,
+          feedbackForm = map convertResponse group
+        }
+    convertResponse :: FeedbackForm -> FeedbackFormItem
+    convertResponse res =
+      FeedbackFormItem
+        { id = res.id,
+          rating = res.rating,
+          question = res.question,
+          answer = res.answer,
+          answerType = res.answerType
+        }
 
 feedbackForm :: (CacheFlow m r, EsqDBFlow m r, HasCacheFeedbackFormConfig r) => Maybe Int -> m FeedbackFormList
 feedbackForm ratingValue =

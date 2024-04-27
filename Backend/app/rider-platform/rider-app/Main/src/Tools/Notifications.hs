@@ -56,7 +56,7 @@ import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as Person
-import Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
+import Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
@@ -282,7 +282,7 @@ disableFollowRide personId = do
     ( \contact -> maybe (pure ()) updateFollowRideCount contact.contactPersonId
     )
     followingContacts
-  void $ QPDEN.updateShareRideForAll personId $ Just False
+  void $ QPDEN.updateShareRideForAll personId False
   where
     updateFollowRideCount emPersonId = do
       CQFollowRide.updateFollowRideList emPersonId personId False

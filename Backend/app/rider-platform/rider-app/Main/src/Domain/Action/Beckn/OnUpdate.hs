@@ -43,7 +43,7 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.FareBreakupV2 as DFareBreakupV2
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
