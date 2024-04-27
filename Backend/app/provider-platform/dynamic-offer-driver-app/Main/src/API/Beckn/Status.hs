@@ -55,7 +55,8 @@ status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
     callbackUrl <- Utils.getContextBapUri context
     dStatusRes <- DStatus.handler transporterId dStatusReq
     internalEndPointHashMap <- asks (.internalEndPointHashMap)
-    onStautusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info
+    msgId <- Utils.getMessageId context
+    onStautusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info (Just msgId)
     Callback.withCallback dStatusRes.transporter "STATUS" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStautusReq.onStatusReqContext) $
       pure onStautusReq
 
