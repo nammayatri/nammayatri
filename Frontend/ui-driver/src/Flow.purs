@@ -2205,7 +2205,8 @@ homeScreenFlow = do
           let chargesOb = HU.getChargesOb updatedState.data.cityConfig updatedState.data.activeRide.driverVehicle
           void $ pure $ setValueToLocalNativeStore RIDE_ID id
           _ <- pure $ hideKeyboardOnNavigation true
-          liftFlowBT $ logEvent logField_ "ny_driver_ride_start"
+          liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_start" $ [{key : "Service Tier", value : unsafeToForeign updatedState.data.activeRide.serviceTier},
+                                                                                      {key : "Driver Vehicle", value : unsafeToForeign updatedState.data.activeRide.driverVehicle}]
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false,enterOdometerReadingModal = false, isInvalidOdometer = false, enterOdometerFocusIndex=0}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ pure $ hideKeyboardOnNavigation true
           void $ pure $ JB.exitLocateOnMap ""
@@ -2316,7 +2317,8 @@ homeScreenFlow = do
             void $ pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
             void $ Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
             void $ pure $ setValueToLocalNativeStore TRIP_STATUS "ended"
-            liftFlowBT $ logEvent logField_ "ny_driver_ride_completed"
+            liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_completed" $ [{key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
+                                                                                            {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle}]
             resp <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (getcurrentdate ""))
             modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverRideStats = Just resp}
             if getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "true" then do
@@ -2395,7 +2397,9 @@ homeScreenFlow = do
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_cancelled" $ [{key : "Reason code", value : unsafeToForeign reason},
                                                                                         {key : "Additional info", value : unsafeToForeign $ if info == "" then "null" else info},
                                                                                         {key : "Pickup", value : unsafeToForeign state.data.activeRide.source},
-                                                                                        {key : "Estimated Ride Distance (meters)" , value : unsafeToForeign state.data.activeRide.distance}]
+                                                                                        {key : "Estimated Ride Distance (meters)" , value : unsafeToForeign state.data.activeRide.distance},
+                                                                                        {key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
+                                                                                        {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle}]
       API.DriverCancelRideResponse cancelRideResp <- Remote.cancelRide id (Remote.makeCancelRideReq info reason)
       void $ pure if state.data.driverGotoState.timerId /= "" then clearTimerWithId state.data.driverGotoState.timerId else unit
       void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
@@ -2482,7 +2486,8 @@ homeScreenFlow = do
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.Triggered)
           void $ pure $ setValueToLocalStore WAITING_TIME_VAL $ state.data.activeRide.id <> "<$>" <> getCurrentUTC ""
           void $ pure $ JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then (EHS.getMessageFromKey EHS.chatSuggestion "dis1AP" "EN_US") else "dis1AP"
-          liftFlowBT $ logEvent logField_ "ny_driver_i_have_arrived_clicked"
+          liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_i_have_arrived_clicked" $ [{key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
+                                                                                                  {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle}]
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}})
         Left _ -> pure unit
       homeScreenFlow
