@@ -354,14 +354,15 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         case minTripDistanceForReferralCfg of
           Just distance -> updRide.chargeableDistance >= Just distance && not person.hasTakenValidRide
           Nothing -> True
-  mbPersonFirstRideInfo <- QCP.findByPersonIdAndVehicleCategory booking.riderId $ Just (DVST.castServiceTierToCategory booking.vehicleServiceTierType)
-  case mbPersonFirstRideInfo of
-    Just personFirstRideInfo -> do
-      QCP.updateHasTakenValidRideCount (personFirstRideInfo.rideCount + 1) booking.riderId $ Just (DVST.castServiceTierToCategory booking.vehicleServiceTierType)
-    Nothing -> do
-      totalCount <- B.runInReplica $ QRB.findCountByRideIdStatusAndVehicleServiceTierType booking.riderId BT.COMPLETED (getListOfServiceTireTypes $ DVST.castServiceTierToCategory booking.vehicleServiceTierType)
-      personClientInfo <- buildPersonClientInfo booking.riderId booking.clientId booking.merchantOperatingCityId booking.merchantId (DVST.castServiceTierToCategory booking.vehicleServiceTierType) (totalCount + 1)
-      QCP.create personClientInfo
+  fork "update first ride info" $ do
+    mbPersonFirstRideInfo <- QCP.findByPersonIdAndVehicleCategory booking.riderId $ Just (DVST.castServiceTierToCategory booking.vehicleServiceTierType)
+    case mbPersonFirstRideInfo of
+      Just personFirstRideInfo -> do
+        QCP.updateHasTakenValidRideCount (personFirstRideInfo.rideCount + 1) booking.riderId $ Just (DVST.castServiceTierToCategory booking.vehicleServiceTierType)
+      Nothing -> do
+        totalCount <- B.runInReplica $ QRB.findCountByRideIdStatusAndVehicleServiceTierType booking.riderId BT.COMPLETED (getListOfServiceTireTypes $ DVST.castServiceTierToCategory booking.vehicleServiceTierType)
+        personClientInfo <- buildPersonClientInfo booking.riderId booking.clientId booking.merchantOperatingCityId booking.merchantId (DVST.castServiceTierToCategory booking.vehicleServiceTierType) (totalCount + 1)
+        QCP.create personClientInfo
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
