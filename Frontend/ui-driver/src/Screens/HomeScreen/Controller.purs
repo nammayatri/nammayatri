@@ -1470,7 +1470,8 @@ activeRideDetail state (RidesInfo ride) =
   endOdometerReading : (\(API.OdometerReading {value}) -> value) <$> ride.endOdometerReading,
   driverVehicle : ride.vehicleVariant,
   serviceTier : ride.vehicleServiceTierName,
-  capacity : ride.vehicleCapacity
+  capacity : ride.vehicleCapacity,
+  hasToll :  maybe false (\charge -> charge /= 0) ride.estimatedTollCharges
 }
   where 
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String

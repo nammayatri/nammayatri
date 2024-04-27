@@ -81,6 +81,7 @@ initData =
           , endOdometerReading: Nothing
           , serviceTier : ""
           , capacity : Nothing
+          , hasToll: false
           }
       , cancelRideModal:
           { selectionOptions: []
@@ -256,7 +257,6 @@ initData =
       , odometerFileId: Nothing
       , odometerUploadAttempts: 0
       , odometerImageUploading: false
-      , hasToll: false
       }
   }
 
