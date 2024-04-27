@@ -2393,7 +2393,9 @@ eval (UpdateCurrentLocation lat lng) state = updateCurrentLocation state lat lng
 eval (CurrentLocation lat lng) state = do
   void $ pure $ setValueToLocalStore LAST_KNOWN_LAT lat
   void $ pure $ setValueToLocalStore LAST_KNOWN_LON lng
-  exit $ UpdatedState state { props { sourceLat = fromMaybe 0.0 (NUM.fromString lat), sourceLong = fromMaybe 0.0 (NUM.fromString lng) } } false
+  if isLocalStageOn FindingEstimate
+    then continue state
+    else exit $ UpdatedState state { props { sourceLat = fromMaybe 0.0 (NUM.fromString lat), sourceLong = fromMaybe 0.0 (NUM.fromString lng) } } false
 
 eval (RateCardAction RateCard.Close) state = continue state { props { showRateCard = false } , data{rateCard{onFirstPage = false,currentRateCardType = DefaultRateCard}}}
 
@@ -3088,9 +3090,10 @@ estimatesListFlow estimates state = do
         nearByDriversLength = length nearByDrivers
     _ <- pure $ updateLocalStage SettingPrice
     let _ = runFn2 updatePushInIdMap "EstimatePolling" true
+        quoteList = map (\quote -> quote{activeIndex = estimatesInfo.defaultQuote.index}) estimatesInfo.quoteList
     exit $ SelectEstimate state 
       { data
-        { specialZoneQuoteList = estimatesInfo.quoteList
+        { specialZoneQuoteList = quoteList
         , currentSearchResultType = ESTIMATES
         , selectedEstimatesObject = estimatesInfo.defaultQuote
         , nearByDrivers = if nearByDriversLength > 0 then Just nearByDriversLength else Nothing
