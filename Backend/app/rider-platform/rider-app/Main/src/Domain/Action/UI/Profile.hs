@@ -292,11 +292,12 @@ validateRefferalCode personId refCode = do
   let isCustomerReferralCode = T.isPrefixOf "C" refCode
   if isCustomerReferralCode
     then do
+      logDebug $ "Came inside Customer Referral Code" <> show personId <> " " <> show refCode
       unless (TU.validateAlphaNumericWithLength refCode 6) (throwError $ InvalidRequest "Referral Code must have 6 digits and must be Alphanumeric")
       referredByPerson <- QPerson.findPersonByCustomerReferralCode refCode >>= fromMaybeM (InvalidRequest "Invalid ReferralCode")
       when (personId == referredByPerson.id) (throwError $ InvalidRequest "Cannot refer yourself")
-      stats <- QPS.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
-      void $ QPS.updateReferralCount (stats.referralCount + 1) personId
+      stats <- QPS.findByPersonId referredByPerson.id >>= fromMaybeM (PersonStatsNotFound personId.getId)
+      void $ QPS.updateReferralCount (stats.referralCount + 1) referredByPerson.id
       void $ QPerson.updateReferredByCustomer personId referredByPerson.id.getId
       return $ Just refCode
     else do
