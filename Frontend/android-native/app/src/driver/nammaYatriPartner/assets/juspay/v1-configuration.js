@@ -448,6 +448,7 @@ window.getMerchantConfig = function () {
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
         "uploadRCandDL" : true,
         "enableYatriCoins" : true,
         "registration" : {
@@ -522,6 +523,7 @@ window.getMerchantConfig = function () {
           "callSupport" : true,
           "whatsappSupport" : true
         },
+        "vehicleNSImg" : "ny_ic_auto_image_old",
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
           "variantList" : [],
@@ -579,6 +581,7 @@ window.getMerchantConfig = function () {
         "cityLat" : 44.977753,
         "cityLong" : -93.2650108,
         "supportNumber" : "+918069724848",
+        "vehicleNSImg" : "ny_ic_auto_image_old",
         "languageKey" : "EN_US",
         "showDriverReferral" : true,
         "showCustomerReferral" : true,
