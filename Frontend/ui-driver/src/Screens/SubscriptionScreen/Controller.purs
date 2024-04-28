@@ -46,7 +46,7 @@ import PrestoDOM.Core (getPushFn)
 import Effect.Uncurried (runEffectFn5, runEffectFn1)
 import RemoteConfig (ReelItem(..))
 import Foreign (Foreign)
-import DecodeUtil(decodeForeignObject)
+import DecodeUtil(decodeForeignObject, decodeForeignAny)
 import RemoteConfig as RC
 import Foreign.Generic (encodeJSON)
 
@@ -409,7 +409,7 @@ eval (OpenReelsView index) state = do
 eval (GetCurrentPosition label stringData reelItemData buttonData) state = case label of
   "CURRENT_POSITION" -> continue state
   "ACTION" -> 
-      let  currentButtonConfig = decodeForeignObject buttonData RC.defaultReelButtonConfig
+      let  currentButtonConfig = decodeForeignAny buttonData RC.defaultReelButtonConfig
            shareMessageTitle = Mb.maybe Mb.Nothing (\rButtonData -> rButtonData.shareMessageTitle) currentButtonConfig
            shareText = Mb.maybe Mb.Nothing (\rButtonData -> rButtonData.shareText) currentButtonConfig
            shareLink = Mb.maybe Mb.Nothing (\rButtonData -> rButtonData.shareLink) currentButtonConfig
