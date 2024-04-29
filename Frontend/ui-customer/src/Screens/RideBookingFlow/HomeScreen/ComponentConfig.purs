@@ -1108,7 +1108,7 @@ ratingCardViewState state = {
     rating = state.data.ratingViewState.selectedRating, 
     feedbackList = state.data.rideRatingState.feedbackList
   } 
-  , feedbackPillData : customerFeedbackPillData FunctionCall
+  , feedbackPillData : customerFeedbackPillData state
   , primaryButtonConfig : PrimaryButton.config {
     textConfig{
       text = getString SUBMIT_FEEDBACK
@@ -1467,7 +1467,7 @@ reportIssueOptions state =
     , subtext : Nothing
     }
   , { reasonCode: "AUTO_BROKEN"
-    , description: getString AUTO_BROKEN
+    , description: getString VEHICLE_BROKEN
     , textBoxRequired : false
     , subtext : Nothing
     }
@@ -1661,8 +1661,9 @@ getFareUpdatedStr diffInDist waitingChargeApplied = do
     true , true -> getVarString (if shorter then FARE_UPDATED_WITH_CHARGES_SHORTER_DIST else FARE_UPDATED_WITH_CHARGES_LONGER_DIST) [distInKm]
     false, false -> getString FARE_UPDATED
 
-customerFeedbackPillData :: LazyCheck -> Array (Array (Array RatingCard.FeedbackItem)) 
-customerFeedbackPillData lazyCheck = [feedbackPillDataWithRating1 Language, feedbackPillDataWithRating2 Language, feedbackPillDataWithRating3 Language, feedbackPillDataWithRating4 Language, feedbackPillDataWithRating5 Language]
+
+customerFeedbackPillData :: ST.HomeScreenState -> Array (Array (Array RatingCard.FeedbackItem)) 
+customerFeedbackPillData state = [feedbackPillDataWithRating1 Language, feedbackPillDataWithRating2 Language, feedbackPillDataWithRating3 state, feedbackPillDataWithRating4 state, feedbackPillDataWithRating5 state]
 
 feedbackPillDataWithRating1 :: LazyCheck -> Array (Array RatingCard.FeedbackItem)
 feedbackPillDataWithRating1 lazycheck = [
@@ -1686,35 +1687,36 @@ feedbackPillDataWithRating2 lazycheck = [
   {id : "2", text : getString LATE_PICK_UP}]
 ]
 
-feedbackPillDataWithRating3 :: LazyCheck -> Array (Array RatingCard.FeedbackItem)
-feedbackPillDataWithRating3 lazycheck = [
+feedbackPillDataWithRating3 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+feedbackPillDataWithRating3 state = [
   [{id : "8", text : getString UNPROFESSIONAL_DRIVER},
   {id : "8", text : getString RASH_DRIVING}],
   [{id : "8", text : getString DRIVER_CHARGED_MORE},
-  {id : "11", text : getString UNCOMFORTABLE_AUTO}],
+  {id : "11", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB}],
   [{id : "3", text : getString TRIP_GOT_DELAYED},
   {id : "3", text : getString FELT_UNSAFE}]
 ]
 
-feedbackPillDataWithRating4 :: LazyCheck -> Array (Array RatingCard.FeedbackItem)
-feedbackPillDataWithRating4 lazycheck = [
+feedbackPillDataWithRating4 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+feedbackPillDataWithRating4 state = [
   [{id : "9", text : getString POLITE_DRIVER},
   {id : "9", text : getString EXPERT_DRIVING}],
   [{id : "9", text : getString ASKED_FOR_EXTRA_FARE},
-  {id : "11", text : getString UNCOMFORTABLE_AUTO}],
+  {id : "11", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB}],
   [{id : "4", text : getString TRIP_GOT_DELAYED},
   {id : "4", text : getString SAFE_RIDE}]
 ]
 
-feedbackPillDataWithRating5 :: LazyCheck -> Array (Array RatingCard.FeedbackItem)
-feedbackPillDataWithRating5 lazyCheck = [
+feedbackPillDataWithRating5 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+feedbackPillDataWithRating5 state = [
   [{id : "10", text : getString POLITE_DRIVER},
   {id : "5", text : getString EXPERT_DRIVING}],
-  [{id : "12", text : getString CLEAN_AUTO},
+  [{id : "12", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else getString CLEAN_CAB},
   {id : "10", text : getString ON_TIME}],
   [{id : "10", text : getString SKILLED_NAVIGATOR},
   {id : "5", text : getString SAFE_RIDE}]
 ]
+
 
 getCarouselData :: ST.HomeScreenState -> Array CarouselData
 getCarouselData state =

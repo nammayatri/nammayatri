@@ -1049,6 +1049,7 @@ homeScreenFlow = do
                                 , finalDistance = (fromMaybe 0 ride.chargeableRideDistance)/1000
                                 }
                             }
+                        , vehicleVariant = ride.vehicleVariant
                         }
                     , props
                         { currentStage = RideCompleted
