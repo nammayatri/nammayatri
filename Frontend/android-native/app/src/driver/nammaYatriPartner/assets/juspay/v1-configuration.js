@@ -351,7 +351,7 @@ window.getMerchantConfig = function () {
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
-        "showEarningSection" : false,
+        "showEarningSection" : true,
         "referral" : {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
@@ -428,7 +428,7 @@ window.getMerchantConfig = function () {
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
-        "showEarningSection" : false,
+        "showEarningSection" : true,
         "referral" : {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
@@ -564,7 +564,7 @@ window.getMerchantConfig = function () {
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
-        "showEarningSection" : false,
+        "showEarningSection" : true,
         "referral" : {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
@@ -598,7 +598,7 @@ window.getMerchantConfig = function () {
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
-        "showEarningSection" : false,
+        "showEarningSection" : true,
         "referral" : {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
