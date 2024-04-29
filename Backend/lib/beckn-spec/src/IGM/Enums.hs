@@ -152,7 +152,7 @@ instance FromJSON IssueRating where
   parseJSON (String "THUMBS-DOWN") = return THUMBS_DOWN
   parseJSON wrongVal = typeMismatch "Invalid IssueRating" wrongVal
 
-data RespondentAction
+data RespondentActions
   = -- ..issue.issue_action.respondent_actions.respondent_action
     PROCESSING
   | RESOLVED
@@ -160,21 +160,21 @@ data RespondentAction
   | NEED_MORE_INFO
   deriving (Eq, Generic)
 
-instance Show RespondentAction where
+instance Show RespondentActions where
   show PROCESSING = "PROCESSING"
   show RESOLVED = "RESOLVED"
   show CASCADED = "CASCADED"
   show NEED_MORE_INFO = "NEED-MORE-INFO"
 
-instance ToJSON RespondentAction where
+instance ToJSON RespondentActions where
   toJSON = genericToJSON constructorsWithHyphens
 
-instance FromJSON RespondentAction where
+instance FromJSON RespondentActions where
   parseJSON (String "PROCESSING") = return PROCESSING
   parseJSON (String "RESOLVED") = return RESOLVED
   parseJSON (String "CASCADED") = return CASCADED
   parseJSON (String "NEED-MORE-INFO") = return NEED_MORE_INFO
-  parseJSON wrongVal = typeMismatch "Invalid RespondentAction" wrongVal
+  parseJSON wrongVal = typeMismatch "Invalid RespondentActions" wrongVal
 
 data ResolutionAction
   = -- ..issues.resolution.action

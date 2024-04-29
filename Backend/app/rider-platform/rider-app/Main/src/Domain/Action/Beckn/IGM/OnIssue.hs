@@ -36,11 +36,11 @@ data DOnIssue = DOnIssue
 validateRequest :: DOnIssue -> Flow (DIGM.IGMIssue)
 validateRequest igmIssue = QIGM.findByPrimaryKey (Id igmIssue.id) >>= fromMaybeM (InvalidRequest "Issue not found")
 
-onIssue ::
+handler ::
   DOnIssue ->
   DIGM.IGMIssue ->
   Flow ()
-onIssue onIssueReq issue = do
+handler onIssueReq issue = do
   now <- getCurrentTime
   let issueStatus = mapActionToStatus onIssueReq.respondentAction & fromMaybe issue.issueStatus
   let updatedIssue =

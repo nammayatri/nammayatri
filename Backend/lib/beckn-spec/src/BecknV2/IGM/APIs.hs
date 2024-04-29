@@ -46,3 +46,6 @@ type OnIssueStatusAPI =
   "on_issue_status"
     :> ReqBody '[JSON] Spec.OnIssueStatusReq
     :> Post '[JSON] Spec.AckResponse
+
+onIssueStatusAPI :: Proxy OnIssueStatusAPI
+onIssueStatusAPI = Proxy

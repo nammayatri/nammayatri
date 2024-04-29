@@ -53,6 +53,7 @@ handler = externalHandler
         :<|> deleteIssue (personId, merchantId, merchantOpCityId)
         :<|> updateIssueStatus (personId, merchantId, merchantOpCityId)
         :<|> igmIssueStatus (personId, merchantId, merchantOpCityId)
+        :<|> resolveIGMIssue (personId, merchantId)
 
 driverIssueHandle :: Common.ServiceHandle Flow
 driverIssueHandle =
@@ -207,3 +208,6 @@ updateIssueStatus (driverId, merchantId, merchantOpCityId) issueReportId languag
 
 igmIssueStatus :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 igmIssueStatus _ = withFlowHandlerAPI $ throwError $ InvalidRequest "IGM Issue Status should not be called by BPP"
+
+resolveIGMIssue :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> Common.CustomerResponse -> FlowHandler APISuccess
+resolveIGMIssue _ _ _ = withFlowHandlerAPI $ throwError $ InvalidRequest "IGM Resolve Issue should not be called by BPP"

@@ -29,8 +29,8 @@ buildIssueReq ::
 buildIssueReq req = do
   Utils.validateContext Spec.ISSUE req.context
   issueCategory <- req.issueReqMessage.issueReqMessageIssue.issueCategory & fromMaybeM (InvalidRequest "IssueCategory not found")
-  issueType <- req.issueReqMessage.issueReqMessageIssue.issueIssueType & fromMaybeM (InvalidRequest "IssueType not found")
-  issueStatus <- req.issueReqMessage.issueReqMessageIssue.issueStatus & fromMaybeM (InvalidRequest "IssueStatus not found")
+  issueTypeText <- req.issueReqMessage.issueReqMessageIssue.issueIssueType & fromMaybeM (InvalidRequest "IssueType not found")
+  issueStatusText <- req.issueReqMessage.issueReqMessageIssue.issueStatus & fromMaybeM (InvalidRequest "IssueStatus not found")
   bookingId <- req.issueReqMessage.issueReqMessageIssue.issueOrderDetails >>= (.orderDetailsFulfillments) >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "BookingId not found")
   bapId <- req.context.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
   let issueRaisedBy = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationOrg) >>= (.organizationOrgName)

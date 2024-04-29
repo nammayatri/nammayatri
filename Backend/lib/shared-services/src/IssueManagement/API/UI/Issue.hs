@@ -31,3 +31,6 @@ type IssueAPI =
       :> Common.IssueStatusUpdateAPI
     :<|> "igmStatus"
       :> Common.IgmStatusAPI
+    :<|> Capture "issueId" (Id Domain.IssueReport)
+      :> "resolveIgmIssue"
+      :> Common.ResolveIgmIssueAPI

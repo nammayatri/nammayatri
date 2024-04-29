@@ -45,7 +45,7 @@ onIssue _ req = withFlowHandlerAPI $ do
       issue <- DOnIssue.validateRequest onIssueReq
       fork "IGM on_issue processing" $ do
         Redis.whenWithLockRedis (onIssueProcessingLockKey message_id) 60 $
-          DOnIssue.onIssue onIssueReq issue
+          DOnIssue.handler onIssueReq issue
   pure Utils.ack
 
 onIssueLockKey :: Text -> Text

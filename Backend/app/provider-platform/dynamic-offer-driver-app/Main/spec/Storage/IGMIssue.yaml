@@ -1,5 +1,6 @@
 imports:
   Merchant: Domain.Types.Merchant
+  Booking: Domain.Types.Booking
   UTCTime: Kernel.Prelude
   Text: Data.Text
 
@@ -9,19 +10,23 @@ IGMIssue:
   types:
     Status:
       enum: "OPEN, CLOSED, ESCALATED"
+    IssueType:
+      enum: "GRIEVANCE, ISSUE"
 
   fields:
     id: Id IGMIssue
-    issueType: Text
+    bookingId: Id Booking
+    issueType: IssueType
     issueStatus: Status
     customerName: Maybe Text
     customerEmail: Maybe Text
     customerPhone: Maybe Text
     respondentAction: Maybe Text
-    issueRaisedByName: Maybe Text
+    resolutionAction: Maybe Text
     issueRaisedByMerchantId: Id Merchant
     createdAt: UTCTime
     updatedAt: UTCTime
+    merchantId: Id Merchant
 
   excludedFields: [merchantOperatingCityId]
 
