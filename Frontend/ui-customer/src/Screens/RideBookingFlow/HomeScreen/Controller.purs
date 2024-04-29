@@ -80,7 +80,7 @@ import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistance
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo)
+import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo, logStatus)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<))
 import Control.Monad (unless)
@@ -895,6 +895,7 @@ data Action = NoAction
             | SpecialZoneInfoTag
             | GoToConfirmingLocationStage
             | ReferralComponentAction ReferralComponent.Action
+            | GoToHomeScreen
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -2283,7 +2284,7 @@ eval (StartLocationTracking item) state = do
     _ -> continue state
 
 eval (GetEstimates (GetQuotesRes quotesRes)) state = do
-  logInfo "estimates_and_quotes" quotesRes
+  logStatus "finding_estimates_and_quotes" quotesRes
   case null quotesRes.quotes of
     false -> do
       let _ = unsafePerformEffect $ Events.addEventData ("External.Search." <> state.props.searchId <> ".Type") "Quotes"      
@@ -2367,6 +2368,7 @@ eval (ContinueWithoutOffers (SelectListRes resp)) state = do
         else continue state
 
 eval (GetRideConfirmation resp) state = do
+  logStatus "confirming_ride" resp
   case state.props.isSpecialZone of
     false -> normalRideFlow resp state
     true -> specialZoneRideFlow resp state
@@ -2771,6 +2773,10 @@ eval (ReferralComponentAction componentAction) state =
 
     _ -> continue state
 
+eval GoToHomeScreen state = do
+  logStatus "confirming_ride" "no_active_ride"
+  exit $ GoToHome state
+
 eval _ state = continue state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
@@ -3089,6 +3095,7 @@ estimatesListFlow estimates state = do
         nearByDrivers = getNearByDrivers estimates
         nearByDriversLength = length nearByDrivers
     _ <- pure $ updateLocalStage SettingPrice
+    logStatus "drivers_available" nearByDriversLength
     let _ = runFn2 updatePushInIdMap "EstimatePolling" true
         quoteList = map (\quote -> quote{activeIndex = estimatesInfo.defaultQuote.index}) estimatesInfo.quoteList
     exit $ SelectEstimate state 
@@ -3106,6 +3113,7 @@ estimatesListFlow estimates state = do
         }
       }
   else do
+    logStatus "drivers_available" "no_drivers_available"
     _ <- pure $ hideKeyboardOnNavigation true
     _ <- pure $ updateLocalStage SearchLocationModel
     _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)

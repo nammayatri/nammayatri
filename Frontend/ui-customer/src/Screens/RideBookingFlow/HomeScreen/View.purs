@@ -78,7 +78,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdat
 import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import Log (printLog)
+import Log (printLog, logStatus)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||), (<$>), identity, (>=))
 import Presto.Core.Types.API (ErrorResponse)
@@ -173,6 +173,7 @@ screen initialState =
                     Nothing -> pure unit
                   pure unit
               FindingEstimate -> do
+                logStatus "find_estimate" ("searchId : " <> initialState.props.searchId)
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
                 when estimatesPolling.shouldPush $ void $ launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState estimatesPolling.id
@@ -185,7 +186,7 @@ screen initialState =
                   void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))
                   void $ launchAff $ flowRunner defaultGlobalState $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
-              ConfirmingRide -> void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation 5 3000.0 push initialState
+              ConfirmingRide -> void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation GoToHomeScreen 5 3000.0 push initialState
               HomeScreen -> do
                 let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
                 if (getValueToLocalStore UPDATE_REPEAT_TRIPS == "true" && Map.isEmpty suggestionsMap) then do
@@ -258,6 +259,7 @@ screen initialState =
                 void $ storeCallBackLocateOnMap push UpdatePickupLocation
                 void $ push $ GoToConfirmingLocationStage
               TryAgain -> do
+                logStatus "find_estimate" ("searchId : " <> initialState.props.searchId)
                 estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
                 when estimatesPolling.shouldPush $ void $ launchAff $ flowRunner defaultGlobalState $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState estimatesPolling.id
                 pure unit
@@ -2560,7 +2562,7 @@ separator lineHeight lineColor currentStage =
     [ height $ lineHeight
     , width MATCH_PARENT
     , background lineColor
-    , visibility if any (_ == currentStage) [FindingQuotes, ReAllocated] then GONE else VISIBLE
+    , visibility if any (_ == currentStage) [FindingQuotes] then GONE else VISIBLE
     ]
     []
 
@@ -2655,7 +2657,6 @@ getQuotesPolling pollingId action retryAction count duration push state = do
             _ <- pure $ printLog "api error " err
             doAff do liftEffect $ push $ retryAction err
             void $ delay $ Milliseconds duration
-            pure unit
             getQuotesPolling pollingId action retryAction (usableCount - 1) duration push state
       else do
         let response = SelectListRes { selectedQuotes: Nothing, bookingId : Nothing }
@@ -2824,9 +2825,9 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
         metersToKm distance (state.props.currentStage == RideStarted)
 
 
-confirmRide :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
-confirmRide action count duration push state = do
-  if (count /= 0) && (isLocalStageOn ConfirmingRide) && (state.props.bookingId /= "")then do
+confirmRide :: forall action. (RideBookingRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+confirmRide rideConfirmationAction goToHomeScreenAction count duration push state = do
+  if (count > 0) && (isLocalStageOn ConfirmingRide) && (state.props.bookingId /= "") then do
     resp <- rideBooking (state.props.bookingId)
     _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
     case resp of
@@ -2837,16 +2838,18 @@ confirmRide action count duration push state = do
             status = if fareProductType == "OneWaySpecialZoneAPIDetails" then "CONFIRMED" else "TRIP_ASSIGNED"
             willRideListNull = if fareProductType == "OneWaySpecialZoneAPIDetails" then true else false
         if  status == resp.status && (willRideListNull || not (null resp.rideList)) then do
-            doAff do liftEffect $ push $ action response
+            doAff do liftEffect $ push $ rideConfirmationAction response
             -- _ <- pure $ logEvent state.data.logField "ny_user_ride_assigned"
             pure unit
         else do
             void $ delay $ Milliseconds duration
-            confirmRide action (count - 1) duration push state
+            confirmRide rideConfirmationAction goToHomeScreenAction (count - 1) duration push state
       Left err -> do
         _ <- pure $ printLog "api error " err
         void $ delay $ Milliseconds duration
-        confirmRide action (count - 1) duration push state
+        confirmRide rideConfirmationAction goToHomeScreenAction (count - 1) duration push state
+  else if (count <= 0) && (isLocalStageOn ConfirmingRide) then
+    doAff do liftEffect $ push $ goToHomeScreenAction
   else
     pure unit
 

@@ -25,7 +25,7 @@ import Foreign.Class (class Encode, encode)
 import Foreign.Object (Object, empty, insert, lookup)
 import Tracker (trackActionObject, trackScreenEnd, trackScreen, trackScreenEvent)
 import Tracker.Types (Action(..), Level(..), Screen(..)) as Tracker
-import Prelude (Unit, pure, unit, ($), (<$>), (<<<), (/=), (&&),bind, not, show)
+import Prelude (Unit, pure, unit, ($), (<$>), (<<<), (/=), (&&),bind, not, show, (<>))
 import Effect.Unsafe (unsafePerformEffect)
 import Control.Applicative
 
@@ -131,3 +131,6 @@ logInfo key value =
 logWarn :: forall f a. Applicative f => Encode a => String -> a -> f Unit
 logWarn key value =
   logImpl Tracker.Warning key value -- warnings will not be shown in kibana
+
+logStatus :: forall f a. Applicative f => Encode a => String -> a -> f Unit
+logStatus key = logImpl Tracker.Info ("flow_status_" <> key)
