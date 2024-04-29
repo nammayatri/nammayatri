@@ -598,7 +598,7 @@ window.getMerchantConfig = function () {
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
-        "showEarningSection" : true,
+        "showEarningSection" : false,
         "referral" : {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
