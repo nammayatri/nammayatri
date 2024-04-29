@@ -56,7 +56,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Timers (clearTimerWithId)
 import Storage (getValueToLocalStore)
-import DecodeUtil (stringifyJSON, decodeForeignObject, parseJSON)
+import DecodeUtil (stringifyJSON, decodeForeignAny, parseJSON)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -402,7 +402,7 @@ canStartAudioPlayer state =
   in (status == STOPPED && (checkCurrentFollower currentFollower state.props.isMock)) || (status == RESTARTED)
 
 getMockSosAlarmStatus :: String -> Array String
-getMockSosAlarmStatus key = decodeForeignObject (parseJSON (getKeyInSharedPrefKeys key)) []
+getMockSosAlarmStatus key = decodeForeignAny (parseJSON (getKeyInSharedPrefKeys key)) []
 
 checkCurrentFollower :: ST.Followers -> Boolean -> Boolean
 checkCurrentFollower follower isMock = do

@@ -610,7 +610,7 @@ getScreenFromStage stage = case stage of
 getGlobalPayload :: String -> Maybe GlobalPayload
 getGlobalPayload key = do
   let mBPayload = runFn3 getFromWindow key Nothing Just
-  maybe (Nothing) (\payload -> decodeForeignObjImpl payload) mBPayload
+  maybe (Nothing) (\payload -> decodeForeignAnyImpl payload) mBPayload
 
 getSearchType :: Unit -> String
 getSearchType _ = 
