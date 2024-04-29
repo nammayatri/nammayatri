@@ -16,6 +16,7 @@ module SharedLogic.DriverOnboarding where
 
 import Control.Applicative ((<|>))
 import qualified Data.List as DL
+import qualified Data.List.Extra as DLE
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Data.Time.Calendar.OrdinalDate as TO
@@ -25,20 +26,24 @@ import Domain.Types.DriverRCAssociation
 import Domain.Types.IdfyVerification
 import qualified Domain.Types.IdfyVerification as DIV
 import qualified Domain.Types.Image as Domain
+import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DTM
 import qualified Domain.Types.Merchant.MerchantMessage as DMM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Vehicle
+import qualified Domain.Types.Vehicle as Vehicle
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
+import Kernel.External.Verification (VerificationServiceConfig, VerifyRCReq (..))
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.RCFlow (RCFlow)
 import Kernel.Utils.Common
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -52,6 +57,7 @@ import qualified Storage.Queries.Message.Message as MessageQuery
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Ticket as TT
+import qualified Tools.Verification as Verification
 import Tools.Whatsapp as Whatsapp
 
 driverDocumentTypes :: [DVC.DocumentType]
@@ -92,7 +98,7 @@ notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
           rideDescription = Nothing
         }
 
-throwImageError :: Id Domain.Image -> DriverOnboardingError -> Flow b
+throwImageError :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Image -> DriverOnboardingError -> m b
 throwImageError id_ err = do
   _ <- Query.addFailureReason (Just err) id_
   throwError err
@@ -265,57 +271,75 @@ data CreateRCInput = CreateRCInput
     color :: Maybe Text
   }
 
-buildRC :: Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> Flow (Maybe VehicleRegistrationCertificate)
-buildRC merchantId merchantOperatingCityId input = do
+buildRC :: RCFlow m r => Verification.OnVerifyRCCallBack m -> Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person -> CreateRCInput -> [VerificationServiceConfig] -> Maybe Bool -> Maybe Vehicle.Category -> Maybe (Id Image.Image) -> Maybe Bool -> Maybe UTCTime -> Text -> m (Maybe VehicleRegistrationCertificate)
+buildRC onVerifyRCCallBack merchantId merchantOperatingCityId driverId input restProviders mbImageExtraction mbVehicleCategory mbImageId multipleRC mbDateOfRegistration rcNumber = do
   now <- getCurrentTime
   id <- generateGUID
   rCConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId DVC.VehicleRegistrationCertificate (fromMaybe CAR input.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOperatingCityId.getId (show DVC.VehicleRegistrationCertificate))
   mEncryptedRC <- encrypt `mapM` input.registrationNumber
   let mbFitnessEpiry = input.fitnessUpto <|> input.permitValidityUpto <|> Just (UTCTime (TO.fromOrdinalDate 1900 1) 0)
-  return $ createRC merchantId merchantOperatingCityId input rCConfigs id now <$> mEncryptedRC <*> mbFitnessEpiry
+  fromMaybe (return Nothing) $ createRC onVerifyRCCallBack merchantId merchantOperatingCityId driverId input rCConfigs id now restProviders mbImageExtraction mbVehicleCategory mbImageId multipleRC mbDateOfRegistration rcNumber <$> mEncryptedRC <*> mbFitnessEpiry
 
 createRC ::
+  RCFlow m r =>
+  Verification.OnVerifyRCCallBack m ->
   Id DTM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Id Person ->
   CreateRCInput ->
   DVC.DocumentVerificationConfig ->
   Id VehicleRegistrationCertificate ->
   UTCTime ->
+  [VerificationServiceConfig] ->
+  Maybe Bool ->
+  Maybe Vehicle.Category ->
+  Maybe (Id Image.Image) ->
+  Maybe Bool ->
+  Maybe UTCTime ->
+  Text ->
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
-  VehicleRegistrationCertificate
-createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNumber expiry = do
+  m (Maybe VehicleRegistrationCertificate)
+createRC onVerifyRCCallBack merchantId merchantOperatingCityId driverId input rcconfigs id now restProviders mbImageExtraction mbVehicleCategory mbImageId multipleRC mbDateOfRegistration rcNumber certificateNumber expiry = do
   let (verificationStatus, reviewRequired, variant, mbVehicleModel) = validateRCStatus input rcconfigs now expiry
-  VehicleRegistrationCertificate
-    { id,
-      documentImageId = input.documentImageId,
-      certificateNumber,
-      fitnessExpiry = expiry,
-      permitExpiry = input.permitValidityUpto,
-      pucExpiry = input.pucValidityUpto,
-      vehicleClass = input.vehicleClass,
-      vehicleVariant = variant,
-      vehicleManufacturer = input.manufacturer <|> input.manufacturerModel,
-      vehicleCapacity = input.seatingCapacity,
-      vehicleModel = mbVehicleModel,
-      vehicleColor = input.color,
-      manufacturerModel = input.manufacturerModel,
-      vehicleEnergyType = input.fuelType,
-      reviewedAt = Nothing,
-      reviewRequired,
-      insuranceValidity = input.insuranceValidity,
-      verificationStatus,
-      fleetOwnerId = input.fleetOwnerId,
-      merchantId = Just merchantId,
-      merchantOperatingCityId = Just merchantOperatingCityId,
-      userPassedVehicleCategory = input.vehicleCategory,
-      airConditioned = Nothing,
-      luggageCapacity = Nothing,
-      vehicleRating = Nothing,
-      failedRules = [],
-      createdAt = now,
-      updatedAt = now
-    }
+  person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  if reviewRequired == (Just True) && (DLE.notNull restProviders)
+    then do
+      void $ Verification.callVerifyRC' onVerifyRCCallBack restProviders person mbImageExtraction mbVehicleCategory merchantOperatingCityId mbImageId multipleRC mbDateOfRegistration (VerifyRCReq {rcNumber = rcNumber, driverId = driverId.getId}) --Fix RC Number
+      return Nothing
+    else
+      return $
+        Just
+          VehicleRegistrationCertificate
+            { id,
+              documentImageId = input.documentImageId,
+              certificateNumber,
+              fitnessExpiry = expiry,
+              permitExpiry = input.permitValidityUpto,
+              pucExpiry = input.pucValidityUpto,
+              vehicleClass = input.vehicleClass,
+              vehicleVariant = variant,
+              vehicleManufacturer = input.manufacturer <|> input.manufacturerModel,
+              vehicleCapacity = input.seatingCapacity,
+              vehicleModel = mbVehicleModel,
+              vehicleColor = input.color,
+              manufacturerModel = input.manufacturerModel,
+              vehicleEnergyType = input.fuelType,
+              reviewedAt = Nothing,
+              reviewRequired,
+              insuranceValidity = input.insuranceValidity,
+              verificationStatus,
+              fleetOwnerId = input.fleetOwnerId,
+              merchantId = Just merchantId,
+              merchantOperatingCityId = Just merchantOperatingCityId,
+              userPassedVehicleCategory = input.vehicleCategory,
+              airConditioned = Nothing,
+              luggageCapacity = Nothing,
+              vehicleRating = Nothing,
+              failedRules = [],
+              createdAt = now,
+              updatedAt = now
+            }
 
 validateRCStatus :: CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> (DIV.VerificationStatus, Maybe Bool, Maybe Variant, Maybe Text)
 validateRCStatus input rcconfigs now expiry = do

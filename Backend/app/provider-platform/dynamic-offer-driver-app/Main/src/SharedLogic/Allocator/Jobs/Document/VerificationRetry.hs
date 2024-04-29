@@ -23,12 +23,11 @@ import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Error
+import Kernel.Types.RCFlow (RCFlow)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
-import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.DocumentVerificationConfig as QODC
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Person as QP
@@ -36,11 +35,7 @@ import Tools.Error
 import qualified Tools.Verification as Verification
 
 retryDocumentVerificationJob ::
-  ( TranslateFlow m r,
-    EsqDBReplicaFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  RCFlow m r =>
   Job 'RetryDocumentVerification ->
   m ExecutionResult
 retryDocumentVerificationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
@@ -56,8 +51,7 @@ retryDocumentVerificationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       case verificationReq.docType of
         DTO.VehicleRegistrationCertificate -> do
           verifyRes <-
-            Verification.verifyRC person.merchantId person.merchantOperatingCityId
-              Verification.VerifyRCReq {rcNumber = documentNumber, driverId = person.id.getId}
+            (Verification.verifyRC True Nothing person Nothing person.merchantId person.merchantOperatingCityId Nothing Nothing Nothing Nothing (Verification.VerifyRCReq {rcNumber = documentNumber, driverId = person.id.getId})) >>= fromMaybeM (InternalError "No response from service call")
           case verifyRes of
             Verification.AsyncResp Verification.VerifyAsyncResp {..} -> do
               mkNewVerificationEntity verificationReq requestId

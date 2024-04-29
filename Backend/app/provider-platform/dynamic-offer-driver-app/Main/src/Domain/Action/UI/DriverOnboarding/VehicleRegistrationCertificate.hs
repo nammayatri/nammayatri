@@ -48,6 +48,7 @@ import qualified Domain.Types.Vehicle as Vehicle
 import qualified Domain.Types.VehicleRegistrationCertificate as Domain
 import Environment
 import Kernel.External.Encryption
+import Kernel.External.Verification (VerificationServiceConfig)
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
 import qualified Kernel.Storage.Hedis as Redis
@@ -55,6 +56,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Types.RCFlow (RCFlow)
 import Kernel.Utils.Common
 import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
@@ -114,11 +116,12 @@ prefixMatchedResult :: Text -> [Text] -> Bool
 prefixMatchedResult rcNumber = DL.any (`T.isPrefixOf` rcNumber)
 
 verifyRC ::
+  (RCFlow m r, HasField "s3Env" r (S3Env m)) =>
   Bool ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverRCReq ->
-  Flow DriverRCRes
+  m DriverRCRes
 verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverRCReq {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   documentVerificationConfig <- SCO.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId ODC.VehicleRegistrationCertificate (fromMaybe Vehicle.CAR req.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.VehicleRegistrationCertificate))
@@ -159,7 +162,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverRCReq 
     verifyRCFlow person merchantOpCityId documentVerificationConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC req.vehicleCategory
   return Success
   where
-    getImage :: Id Image.Image -> Flow Text
+    getImage :: (RCFlow m r, HasField "s3Env" r (S3Env m)) => Id Image.Image -> m Text
     getImage imageId_ = do
       imageMetadata <- ImageQuery.findById imageId_ >>= fromMaybeM (ImageNotFound imageId_.getId)
       unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId_.getId)
@@ -168,53 +171,11 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverRCReq 
         throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
-verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe Vehicle.Category -> Flow ()
-verifyRCFlow person merchantOpCityId imageExtraction rcNumber imageId dateOfRegistration multipleRC mbVehicleCategory = do
-  now <- getCurrentTime
-  encryptedRC <- encrypt rcNumber
-  let imageExtractionValidation =
-        if isNothing dateOfRegistration && imageExtraction
-          then Domain.Success
-          else Domain.Skipped
-  verifyRes <-
-    Verification.verifyRC person.merchantId
-      merchantOpCityId
-      Verification.VerifyRCReq {rcNumber = rcNumber, driverId = person.id.getId}
-  case verifyRes of
-    Verification.AsyncResp res -> do
-      idfyVerificationEntity <- mkIdfyVerificationEntity res.requestId now imageExtractionValidation encryptedRC
-      IVQuery.create idfyVerificationEntity
-    Verification.SyncResp res -> do
-      void $ onVerifyRC person Nothing res
-  where
-    mkIdfyVerificationEntity requestId now imageExtractionValidation encryptedRC = do
-      id <- generateGUID
-      return $
-        Domain.IdfyVerification
-          { id,
-            driverId = person.id,
-            documentImageId1 = imageId,
-            documentImageId2 = Nothing,
-            requestId,
-            docType = ODC.VehicleRegistrationCertificate,
-            documentNumber = encryptedRC,
-            driverDateOfBirth = Nothing,
-            imageExtractionValidation = imageExtractionValidation,
-            issueDateOnDoc = dateOfRegistration,
-            status = "pending",
-            idfyResponse = Nothing,
-            multipleRC,
-            vehicleCategory = mbVehicleCategory,
-            retryCount = Just 0,
-            nameOnCard = Nothing,
-            merchantId = Just person.merchantId,
-            merchantOperatingCityId = Just merchantOpCityId,
-            createdAt = now,
-            updatedAt = now
-          }
+verifyRCFlow :: RCFlow m r => Person.Person -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe Vehicle.Category -> m ()
+verifyRCFlow person merchantOpCityId imageExtraction rcNumber imageId dateOfRegistration multipleRC mbVehicleCategory = void $ Verification.verifyRC False (Just onVerifyRC) person (Just imageExtraction) person.merchantId merchantOpCityId (Just imageId) multipleRC mbVehicleCategory dateOfRegistration Verification.VerifyRCReq {rcNumber = rcNumber, driverId = person.id.getId}
 
-onVerifyRC :: Person.Person -> Maybe Domain.IdfyVerification -> VT.RCVerificationResponse -> Flow AckResponse
-onVerifyRC person mbVerificationReq output = do
+onVerifyRC :: RCFlow m r => Person.Person -> Maybe Domain.IdfyVerification -> VT.RCVerificationResponse -> [VerificationServiceConfig] -> Maybe (Id Image.Image) -> Maybe Bool -> Maybe UTCTime -> Maybe Bool -> Text -> m AckResponse
+onVerifyRC person mbVerificationReq output restProviders mbImageId multipleRC mbDateOfRegistration mbImageExtraction rcNumber = do
   if maybe False (\req -> req.imageExtractionValidation == Domain.Skipped && compareRegistrationDates output.registrationDate req.issueDateOnDoc) mbVerificationReq
     then IVQuery.updateExtractValidationStatus Domain.Failed (maybe "" (.requestId) mbVerificationReq) >> return Ack
     else do
@@ -222,7 +183,7 @@ onVerifyRC person mbVerificationReq output = do
       let mbVehicleCategory = mbVerificationReq >>= (.vehicleCategory)
       fleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) output.registrationNumber
       let rcInput = createRCInput mbVehicleCategory fleetOwnerId (maybe "" (.documentImageId1) mbVerificationReq)
-      mVehicleRC <- buildRC person.merchantId person.merchantOperatingCityId rcInput
+      mVehicleRC <- buildRC (Just onVerifyRC) person.merchantId person.merchantOperatingCityId person.id rcInput restProviders mbImageExtraction mbVehicleCategory mbImageId multipleRC mbDateOfRegistration rcNumber
       case mVehicleRC of
         Just vehicleRC -> do
           RCQuery.upsert vehicleRC
@@ -346,7 +307,7 @@ validateRCActivation driverId merchantOpCityId rc = do
             then deactivateFunc oldDriverId
             else throwError RCActiveOnOtherAccount
 
-checkIfVehicleAlreadyExists :: Id Person.Person -> Domain.VehicleRegistrationCertificate -> Flow ()
+checkIfVehicleAlreadyExists :: RCFlow m r => Id Person.Person -> Domain.VehicleRegistrationCertificate -> m ()
 checkIfVehicleAlreadyExists driverId rc = do
   rcNumber <- decrypt rc.certificateNumber
   mVehicle <- VQuery.findByRegistrationNo rcNumber

@@ -184,6 +184,7 @@ getServiceName osc = case osc.serviceConfig of
     Verification.IdfyConfig _ -> VerificationService Verification.Idfy
     Verification.FaceVerificationConfig _ -> VerificationService Verification.InternalScripts
     Verification.GovtDataConfig -> VerificationService Verification.GovtData
+    Verification.HyperVergeCfg _ -> VerificationService Verification.HyperVerge
   AadhaarVerificationServiceConfig aadhaarVerifictaionCfg -> case aadhaarVerifictaionCfg of
     AadhaarVerification.GridlineConfig _ -> AadhaarVerificationService AadhaarVerification.Gridline
   DriverBackgroundVerificationServiceConfig safetyPortalCfg -> case safetyPortalCfg of

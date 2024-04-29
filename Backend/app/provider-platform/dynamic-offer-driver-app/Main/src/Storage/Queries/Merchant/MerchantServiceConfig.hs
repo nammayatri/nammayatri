@@ -99,6 +99,7 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
       Domain.VerificationService Verification.Idfy -> Domain.VerificationServiceConfig . Verification.IdfyConfig <$> valueToMaybe configJSON
       Domain.VerificationService Verification.InternalScripts -> Domain.VerificationServiceConfig . Verification.FaceVerificationConfig <$> valueToMaybe configJSON
       Domain.VerificationService Verification.GovtData -> Just $ Domain.VerificationServiceConfig Verification.GovtDataConfig
+      Domain.VerificationService Verification.HyperVerge -> Domain.VerificationServiceConfig . Verification.HyperVergeCfg <$> valueToMaybe configJSON
       Domain.DriverBackgroundVerificationService Verification.SafetyPortal -> Domain.DriverBackgroundVerificationServiceConfig . Verification.SafetyPortalConfig <$> valueToMaybe configJSON
       Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> valueToMaybe configJSON
       Domain.CallService Call.Knowlarity -> Nothing
@@ -110,7 +111,6 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
       Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> valueToMaybe configJSON
       Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> valueToMaybe configJSON
       Domain.TokenizationService TokenizeTypes.HyperVerge -> Domain.TokenizationServiceConfig . TokenizeIntTypes.HyperVergeTokenizationServiceConfig <$> valueToMaybe configJSON
-
     pure $
       Just
         MerchantServiceConfig
@@ -154,6 +154,7 @@ instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
           Verification.IdfyConfig cfg -> (Domain.VerificationService Verification.Idfy, toJSON cfg)
           Verification.FaceVerificationConfig cfg -> (Domain.VerificationService Verification.InternalScripts, toJSON cfg)
           Verification.GovtDataConfig -> (Domain.VerificationService Verification.GovtData, toJSON (A.object []))
+          Verification.HyperVergeCfg cfg -> (Domain.VerificationService Verification.HyperVerge, toJSON cfg)
         Domain.DriverBackgroundVerificationServiceConfig driverBackgroundVerificationCfg -> case driverBackgroundVerificationCfg of
           Verification.SafetyPortalConfig cfg -> (Domain.DriverBackgroundVerificationService Verification.SafetyPortal, toJSON cfg)
         Domain.CallServiceConfig callCfg -> case callCfg of

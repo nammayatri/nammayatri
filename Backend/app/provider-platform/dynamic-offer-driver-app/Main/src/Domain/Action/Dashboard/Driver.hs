@@ -847,7 +847,7 @@ addVehicle merchantShortId opCity reqDriverId req = do
     throwError $ InvalidRequest "RC already exists for this vehicle number, please activate."
 
   let createRCInput = createRCInputFromVehicle req
-  mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput
+  mbNewRC <- buildRC Nothing merchant.id merchantOpCityId (cast reqDriverId) createRCInput [] Nothing Nothing Nothing Nothing Nothing ""
   case mbNewRC of
     Just newRC -> do
       when (newRC.verificationStatus == IV.INVALID) $ do throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")

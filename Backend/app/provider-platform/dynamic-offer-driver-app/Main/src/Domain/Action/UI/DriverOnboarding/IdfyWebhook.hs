@@ -65,6 +65,7 @@ oldIdfyWebhookHandler secret val = do
           Idfy.webhookHandler idfyCfg onVerify secret val
         Verification.FaceVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.GovtDataConfig -> throwError $ InternalError "Incorrect service config for Idfy"
+        Verification.HyperVergeCfg _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookHandler ::
@@ -89,6 +90,7 @@ idfyWebhookHandler merchantShortId secret val = do
           Idfy.webhookHandler idfyCfg onVerify secret val
         Verification.FaceVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.GovtDataConfig -> throwError $ InternalError "Incorrect service config for Idfy"
+        Verification.HyperVergeCfg _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookV2Handler ::
@@ -114,6 +116,7 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
           Idfy.webhookHandler idfyCfg onVerify secret val
         Verification.FaceVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.GovtDataConfig -> throwError $ InternalError "Incorrect service config for Idfy"
+        Verification.HyperVergeCfg _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse
@@ -135,7 +138,7 @@ onVerify resp respDump = do
     getResultStatus mbResult = mbResult >>= (\rslt -> (rslt.extraction_output >>= (.status)) <|> (rslt.source_output >>= (.status)))
     verifyDocument person verificationReq rslt
       | isJust rslt.extraction_output =
-        maybe (pure Ack) (RC.onVerifyRC person (Just verificationReq)) (castToVerificationRes <$> rslt.extraction_output)
+        maybe (pure Ack) (\op -> RC.onVerifyRC person (Just verificationReq) op [] Nothing Nothing Nothing Nothing "") (castToVerificationRes <$> rslt.extraction_output)
       | isJust rslt.source_output =
         maybe (pure Ack) (DL.onVerifyDL verificationReq) rslt.source_output
       | otherwise = pure Ack
