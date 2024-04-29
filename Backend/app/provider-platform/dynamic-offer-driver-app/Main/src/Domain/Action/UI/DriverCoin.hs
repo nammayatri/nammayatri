@@ -185,9 +185,10 @@ getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset =
           title = historyItem.title
         }
 
-accumulateCoins :: () => Int -> [CoinHistory] -> AccumulationResult
+accumulateCoins :: Int -> [CoinHistory] -> AccumulationResult
 accumulateCoins targetAmount = takeCoinsRequired (targetAmount, []) False
   where
+    takeCoinsRequired :: (Int, AccumulationResult) -> Bool -> [CoinHistory] -> AccumulationResult
     takeCoinsRequired (_, result) True [] = result
     takeCoinsRequired (_, result) False [] = result
     takeCoinsRequired (toTake, result) _ (coinHis : coinHistories) = do
@@ -231,14 +232,12 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
                 updatedAt = now,
                 title = "converted from coins"
               }
+      histories <- CHistory.getDriverCoinInfo driverId timeDiffFromUtc
+      let result = accumulateCoins coins histories
       void $ PHistory.createPurchaseHistory history
       void $ QDS.updateCoinFieldsByDriverId driverId calculatedAmount
       driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       void $ Person.updateUsedCoins driverId (coins + driver.usedCoins)
-      histories <- CHistory.getDriverCoinInfo driverId timeDiffFromUtc
-      logDebug $ "histories : " <> show histories
-      let result = accumulateCoins coins histories
-      logDebug $ "result : " <> show result
       mapM_ (\(id, coinValue, status) -> CHistory.updateStatusOfCoins id coinValue status) result
       Coins.safeIncrBy (Coins.mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral (- coins)) driverId transporterConfig.timeDiffFromUtc
     else do
