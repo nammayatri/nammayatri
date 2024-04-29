@@ -36,6 +36,7 @@ import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
@@ -165,6 +166,7 @@ onStatus ::
     HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
     CacheFlow m r,
     EsqDBFlow m r,
+    ClickhouseFlow m r,
     HasBAPMetrics m r,
     EncFlow m r,
     HasHttpClientOptions r c,

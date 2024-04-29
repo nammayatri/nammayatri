@@ -32,6 +32,7 @@ import Environment ()
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -74,7 +75,8 @@ onCancel ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r,
-    HasField "hotSpotExpiry" r Seconds
+    HasField "hotSpotExpiry" r Seconds,
+    ClickhouseFlow m r
   ) =>
   ValidatedOnCancelReq ->
   m ()

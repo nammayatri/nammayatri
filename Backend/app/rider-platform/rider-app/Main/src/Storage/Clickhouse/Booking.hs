@@ -72,3 +72,41 @@ findAllCompletedRiderBookingsByMerchantInRange merchantId riderId from to =
               CH.&&. booking.createdAt <=. to
         )
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
+
+findCountByRideIdStatusAndTime ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DP.Person ->
+  DB.BookingStatus ->
+  UTCTime ->
+  UTCTime ->
+  m Int
+findCountByRideIdStatusAndTime riderId status from to = do
+  res <-
+    CH.findAll $
+      CH.select_ (\booking -> CH.aggregate $ CH.count_ booking.id) $
+        CH.filter_
+          ( \booking _ ->
+              booking.status CH.==. status
+                CH.&&. booking.riderId CH.==. riderId
+                CH.&&. booking.createdAt >=. from
+                CH.&&. booking.createdAt <=. to
+          )
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
+  pure $ fromMaybe 0 (listToMaybe res)
+
+findCountByRiderIdAndStatus ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DP.Person ->
+  DB.BookingStatus ->
+  m Int
+findCountByRiderIdAndStatus riderId status = do
+  res <-
+    CH.findAll $
+      CH.select_ (\booking -> CH.aggregate $ CH.count_ booking.id) $
+        CH.filter_
+          ( \booking _ ->
+              booking.status CH.==. status
+                CH.&&. booking.riderId CH.==. riderId
+          )
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
+  pure $ fromMaybe 0 (listToMaybe res)
