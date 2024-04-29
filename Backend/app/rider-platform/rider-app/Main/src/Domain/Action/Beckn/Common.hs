@@ -37,6 +37,7 @@ import Kernel.Beam.Functions as B
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
@@ -322,6 +323,7 @@ rideCompletedReqHandler ::
     MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
+    ClickhouseFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
@@ -339,7 +341,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     case tripEndLocation of
       Just location -> frequencyUpdator booking.merchantId location Nothing TripEnd
       Nothing -> return ()
-  SMC.updateTotalRidesCounters booking.riderId
+  fork "updating total rides count" $ SMC.updateTotalRidesCounters booking.riderId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
 
@@ -439,6 +441,7 @@ bookingCancelledReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
     EsqDBFlow m r,
+    ClickhouseFlow m r,
     MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,

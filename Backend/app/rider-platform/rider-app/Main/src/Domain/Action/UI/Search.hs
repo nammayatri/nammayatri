@@ -46,6 +46,7 @@ import qualified Kernel.External.Maps.Interface as MapsRoutes
 import qualified Kernel.External.Maps.Interface.NextBillion as NextBillion
 import qualified Kernel.External.Maps.NextBillion.Types as NBT
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Context (City)
@@ -199,6 +200,7 @@ updateForSpecialLocation merchantId origin mbIsSpecialLocation = do
 search ::
   ( CacheFlow m r,
     EncFlow m r,
+    ClickhouseFlow m r,
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     EsqDBFlow m r,
