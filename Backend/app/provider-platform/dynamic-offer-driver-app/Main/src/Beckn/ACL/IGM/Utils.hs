@@ -17,15 +17,11 @@ module Beckn.ACL.IGM.Utils where
 
 import Control.Lens ((%~))
 import Data.Aeson as A
-import qualified Data.Text as T
-import Domain.Types.Booking
-import qualified Domain.Types.IGMIssue as DIGM
+import Data.Text as T
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Person
 import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec
-import qualified IssueManagement.Common.UI.Issue as Common
-import IssueManagement.Domain.Types.Issue.IssueCategory
+import qualified IGM.Utils as Utils
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -37,13 +33,12 @@ import Kernel.Utils.Common
 mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m BaseUrl
 mkBapUri merchantId = asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId.getId)
 
-buildContext :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Spec.Action -> Spec.Domain -> DM.Merchant -> Text -> Text -> Context.City -> Maybe BppData -> Maybe Text -> m Spec.Context
-buildContext action domain merchant txnId msgId city bppData mTTL = do
+buildContext :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Spec.Action -> Spec.Domain -> Text -> DM.Merchant -> Text -> Text -> Context.City -> Maybe BapData -> Maybe Text -> m Spec.Context
+buildContext action domain bapId merchant txnId msgId city bapData mTTL = do
   now <- UTCTimeRFC3339 <$> getCurrentTime
   bapUrl <- mkBapUri merchant.id
-  let bapId = merchant.bapId
-      contextBppId = bppData <&> (.bppId)
-      contextBppUri = bppData <&> (.bppUri)
+  let contextBppId = bapData <&> (.bapId)
+      contextBppUri = bapData <&> (.bapUri)
   cityCode <- getCodeFromCity city
   pure $
     Spec.Context
@@ -88,46 +83,14 @@ tfLocation location_code =
 encodeToText' :: (ToJSON a) => a -> Maybe Text
 encodeToText' = A.decode . A.encode
 
-mapIssueCategory :: Id IssueCategory -> Maybe Text -- TODO : Fix this function to create a proper mapping
-mapIssueCategory _ = Just $ show Spec.FULFILLMENT
+buildTTL :: Int -> UTCTime -> Maybe Text
+buildTTL ttlInt now = do
+  let validTill = addUTCTime (intToNominalDiffTime ttlInt) now
+      ttl = diffUTCTime validTill now
+  Just $ Utils.durationToText ttl
 
-mapIssueStatus :: Maybe Common.CustomerResponse -> Maybe Text
-mapIssueStatus mbResp =
-  case mbResp of
-    Just resp | resp == Common.ACCEPT -> Just $ show Spec.CLOSED
-    _ -> Just $ show Spec.OPEN
-
-mapIssueType :: Maybe Common.CustomerResponse -> Maybe Text
-mapIssueType mbResp =
-  case mbResp of
-    Just resp | resp == Common.ESCALATE -> Just $ show Spec.GRIEVANCE -- fix this for case when closing escalated issue
-    _ -> Just $ show Spec.TYPE_ISSUE
-
-timeToText :: UTCTime -> Text
-timeToText = T.pack . show
-
-buildIGMIssue :: UTCTime -> Text -> Booking -> Person -> Text -> DIGM.IGMIssue
-buildIGMIssue now issueId booking rider transactionId = do
-  DIGM.IGMIssue
-    { createdAt = now,
-      riderId = show rider.id,
-      id = Id issueId,
-      issueStatus = DIGM.OPEN,
-      issueType = show Spec.TYPE_ISSUE,
-      respondentAction = Nothing,
-      respondentEmail = Nothing,
-      respondentName = Nothing,
-      respondentPhone = Nothing,
-      respondingMerchantId = booking.providerId,
-      respondentEntityType = Nothing,
-      transactionId = transactionId,
-      merchantOperatingCityId = booking.merchantOperatingCityId,
-      bookingId = booking.id,
-      updatedAt = now
-    }
-
-data BppData = BppData
-  { bppId :: Text,
-    bppUri :: Text
+data BapData = BapData
+  { bapId :: T.Text,
+    bapUri :: T.Text
   }
   deriving (Show, Eq, Generic)

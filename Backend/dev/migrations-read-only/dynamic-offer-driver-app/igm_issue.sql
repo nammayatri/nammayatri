@@ -19,3 +19,19 @@ ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.igm_issue DROP COLUMN internal_issue_id;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.igm_issue DROP COLUMN issue_raised_by_name;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD COLUMN resolution_action text ;
+ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD COLUMN booking_id character varying(36) NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.igm_issue ALTER COLUMN merchant_id SET NOT NULL;

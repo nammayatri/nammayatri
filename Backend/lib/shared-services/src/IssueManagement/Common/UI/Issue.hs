@@ -8,7 +8,7 @@ where
 
 import AWS.S3 (FileType (..))
 import Data.Aeson
-import Data.OpenApi (ToSchema)
+import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T hiding (count, map)
 import EulerHS.Prelude hiding (id)
 import IssueManagement.Common as Reexport hiding (Audio, Image)
@@ -228,3 +228,23 @@ newtype IssueStatusUpdateRes = IssueStatusUpdateRes
 
 type IgmStatusAPI =
   Post '[JSON] APISuccess
+
+-------------------------------------------------------------------------
+
+type ResolveIgmIssueAPI =
+  MandatoryQueryParam "response" CustomerResponse
+    :> Post '[JSON] APISuccess
+
+data CustomerResponse
+  = ACCEPT
+  | ESCALATE
+  deriving (Eq, Show, Ord, Read, Generic, ToJSON, FromJSON, ToParamSchema, ToSchema)
+
+instance FromHttpApiData CustomerResponse where
+  parseUrlPiece "accept" = pure ACCEPT
+  parseUrlPiece "escalate" = pure ESCALATE
+  parseUrlPiece _ = Left "Unable to parse customer response"
+
+instance ToHttpApiData CustomerResponse where
+  toUrlPiece ACCEPT = "accept"
+  toUrlPiece ESCALATE = "escalate"

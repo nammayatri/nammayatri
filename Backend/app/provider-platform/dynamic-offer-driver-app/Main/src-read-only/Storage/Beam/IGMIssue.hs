@@ -14,18 +14,19 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data IGMIssueT f = IGMIssueT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
+  { bookingId :: (B.C f Data.Text.Text),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
     customerEmail :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
     customerName :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
     customerPhone :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
     id :: (B.C f Data.Text.Text),
     issueRaisedByMerchantId :: (B.C f Data.Text.Text),
-    issueRaisedByName :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
     issueStatus :: (B.C f Domain.Types.IGMIssue.Status),
-    issueType :: (B.C f Data.Text.Text),
+    issueType :: (B.C f Domain.Types.IGMIssue.IssueType),
+    merchantId :: (B.C f Data.Text.Text),
+    resolutionAction :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
     respondentAction :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text)))
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 

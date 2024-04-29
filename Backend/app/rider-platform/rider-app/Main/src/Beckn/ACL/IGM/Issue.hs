@@ -26,68 +26,77 @@ import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec
 import qualified IGM.Utils as Utils
 import qualified IssueManagement.Common.UI.Issue as Common
+import IssueManagement.Domain.Types.Issue.IssueCategory as Common
 import Kernel.Prelude
+import Kernel.Types.Id
 import Kernel.Utils.Common
 
 buildIssueReq ::
   (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   Booking ->
   Ride ->
-  Common.IssueReportReq ->
+  Id Common.IssueCategory ->
+  Text ->
   DM.Merchant ->
   Person ->
   IGMConfig ->
   MerchantOperatingCity ->
+  Maybe Common.CustomerResponse ->
+  Maybe Text ->
   m (Spec.IssueReq, Text, IGMIssue)
-buildIssueReq booking ride issueReport merchant rider igmConfig merchantOperatingCity = do
+buildIssueReq booking ride categoryId description merchant rider igmConfig merchantOperatingCity mbCustomerAction mbIgmIssueId = do
   now <- getCurrentTime
   let validTill = addUTCTime (intToNominalDiffTime 30) now
       ttl = diffUTCTime validTill now
   transactionId <- generateGUID
   messageId <- generateGUID
-  issueId <- generateGUID
+  issueId <- case mbIgmIssueId of
+    Just igmIssueId -> pure igmIssueId
+    Nothing -> generateGUID
   context <- Utils.buildContext Spec.ISSUE Spec.ON_DEMAND merchant transactionId messageId merchantOperatingCity.city (Just $ Utils.BppData booking.providerId (show booking.providerUrl)) (Just $ Utils.durationToText ttl)
   let igmIssue = Utils.buildIGMIssue now issueId booking rider transactionId
   pure $
     ( Spec.IssueReq
         { context,
-          issueReqMessage = tfIssueReqMessage issueReport now issueId merchant booking ride rider igmConfig
+          issueReqMessage = tfIssueReqMessage categoryId description now issueId merchant booking ride rider igmConfig mbCustomerAction
         },
       issueId,
       igmIssue
     )
 
-tfIssueReqMessage :: Common.IssueReportReq -> UTCTime -> Text -> DM.Merchant -> Booking -> Ride -> Person -> IGMConfig -> Spec.IssueReqMessage
-tfIssueReqMessage issueReport now issueId merchant booking ride rider igmConfig =
+tfIssueReqMessage :: Id Common.IssueCategory -> Text -> UTCTime -> Text -> DM.Merchant -> Booking -> Ride -> Person -> IGMConfig -> Maybe Common.CustomerResponse -> Spec.IssueReqMessage
+tfIssueReqMessage categoryId description now issueId merchant booking ride rider igmConfig mbCustomerAction =
   Spec.IssueReqMessage
-    { issueReqMessageIssue = tfIssue issueReport now issueId merchant booking ride rider igmConfig
+    { issueReqMessageIssue = tfIssue categoryId description now issueId merchant booking ride rider igmConfig mbCustomerAction
     }
 
-tfIssue :: Common.IssueReportReq -> UTCTime -> Text -> DM.Merchant -> Booking -> Ride -> Person -> IGMConfig -> Spec.Issue
-tfIssue issueReport now issueId merchant booking ride rider igmConfig = do
-  let issueCategory = Utils.mapIssueCategory issueReport.categoryId
+tfIssue :: Id Common.IssueCategory -> Text -> UTCTime -> Text -> DM.Merchant -> Booking -> Ride -> Person -> IGMConfig -> Maybe Common.CustomerResponse -> Spec.Issue
+tfIssue categoryId description now issueId merchant booking ride rider igmConfig mbCustomerAction = do
+  let issueCategory = Utils.mapIssueCategory categoryId
+      issueType = Utils.mapIssueType mbCustomerAction
+      issueStatus = Utils.mapIssueStatus mbCustomerAction
   Spec.Issue
     { issueCategory = issueCategory,
       issueComplainantInfo = tfComplainantInfo booking rider,
       issueCreatedAt = now,
-      issueDescription = tfDescription issueReport,
+      issueDescription = tfDescription description,
       issueExpectedResolutionTime = Just $ Spec.IssueExpectedResolutionTime (Just $ Utils.timeToText igmConfig.expectedResolutionTime),
       issueExpectedResponseTime = Just $ Spec.IssueExpectedResolutionTime (Just $ Utils.timeToText igmConfig.expectedResponseTime),
       issueId = issueId,
       issueIssueActions = tfIssueActions merchant now igmConfig,
-      issueIssueType = Just $ show Spec.TYPE_ISSUE,
+      issueIssueType = issueType,
       issueOrderDetails = tfOrderDetails booking ride,
       issueResolution = Nothing,
       issueResolutionProvider = Nothing,
       issueSource = tfIssueSource merchant,
-      issueStatus = Just $ show Spec.OPEN,
+      issueStatus = issueStatus,
       issueSubCategory = Nothing,
       issueUpdatedAt = now,
       issueRating = Nothing
     }
 
-tfDescription :: Common.IssueReportReq -> Maybe Spec.IssueDescription
-tfDescription issueReport = Just $ Spec.IssueDescription (Just issueReport.description) (Just issueReport.description)
+tfDescription :: Text -> Maybe Spec.IssueDescription
+tfDescription description = Just $ Spec.IssueDescription (Just description) (Just description)
 
 tfIssueActions :: DM.Merchant -> UTCTime -> IGMConfig -> Maybe Spec.IssueActions
 tfIssueActions merchant now igmConfig =

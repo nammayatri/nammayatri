@@ -15,37 +15,52 @@
 module API.Beckn.IGM.Issue where
 
 import qualified Beckn.ACL.IGM.Issue as ACL
+import qualified Beckn.ACL.IGM.OnIssue as ACL
 import qualified BecknV2.IGM.APIs as Spec
 import qualified Domain.Action.Beckn.IGM.Issue as DIssue
+import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified IGM.Types as Spec
 import qualified IGM.Utils as Utils
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Servant hiding (throwError)
+import qualified SharedLogic.CallIGMBAP as CallBAP
 
-type API = Spec.IssueAPI
+type API =
+  Capture "merchantId" (Id DM.Merchant)
+    :> SignatureAuth 'Domain.MOBILITY "Authorization"
+    :> Spec.IssueAPI
 
-handler :: SignatureAuthResult -> FlowServer API
+handler :: FlowServer API
 handler = issue
 
 issue ::
+  Id DM.Merchant ->
   SignatureAuthResult ->
   Spec.IssueReq ->
   FlowHandler Spec.AckResponse
-issue _ req = withFlowHandlerAPI $ do
+issue merchantId _ req = withFlowHandlerAPI $ do
   transaction_id <- req.context.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
+  message_id <- req.context.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
+  bap_id <- req.context.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
+  bap_uri <- req.context.contextBapUri & fromMaybeM (InvalidRequest "BapUri not found")
   logDebug $ "Received Issue request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
-    message_id <- req.context.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
     issueReq <- ACL.buildIssueReq req
     Redis.whenWithLockRedis (issueLockKey message_id) 60 $ do
-      validatedIssueReq <- DIssue.validateRequest issueReq
+      validatedIssueReq <- DIssue.validateRequest merchantId issueReq
       fork "IGM issue processing" $ do
-        Redis.whenWithLockRedis (issueProcessingLockKey message_id) 60 $
-          DIssue.issue validatedIssueReq
+        Redis.whenWithLockRedis (issueProcessingLockKey message_id) 60 $ do
+          dIssueRes <- DIssue.handler validatedIssueReq
+          becknOnIssueReq <- ACL.buildOnIssueReq transaction_id message_id bap_id bap_uri dIssueRes
+          bapUrl <- parseBaseUrl bap_uri
+          void $ CallBAP.callOnIssue becknOnIssueReq bapUrl dIssueRes.merchant'
   pure Utils.ack
 
 issueLockKey :: Text -> Text

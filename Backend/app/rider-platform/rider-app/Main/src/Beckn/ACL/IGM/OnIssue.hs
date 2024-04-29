@@ -33,8 +33,7 @@ buildOnIssueReq req = do
   _messageId <- context.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   bppSubscriberId <- context.contextBppId & fromMaybeM (InvalidRequest "BppSubscriberId not found")
   bppSubscriberUrl <- context.contextBppUri & fromMaybeM (InvalidRequest "BppSubscriberUrl not found")
-
-  message <- req.onIssueReqMessage & fromMaybeM (InvalidRequest "Message not found") -- shrey00 : errorHandler
+  message <- req.onIssueReqMessage & fromMaybeM (InvalidRequest "Message not found")
   let issue = message.onIssueReqMessageIssue
   respondentAction <- issue.issueIssueActions >>= (.issueActionsRespondentActions) >>= listToMaybe & fromMaybeM (InvalidRequest "RespondentActions Missing")
   respondentInfo <- respondentAction.respondentActionUpdatedBy & fromMaybeM (InvalidRequest "RespondentActionUpdatedBy Missing")

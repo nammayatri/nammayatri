@@ -19,6 +19,7 @@ import qualified IssueManagement.Domain.Action.UI.Issue as Common
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as Domain
+import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import Kernel.Beam.Functions
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.External.Types (Language)
@@ -27,7 +28,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant
+import Servant hiding (throwError)
 import qualified SharedLogic.CallIGMBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import Storage.Beam.IssueManagement ()
@@ -64,6 +65,7 @@ handler = externalHandler
         :<|> deleteIssue (personId, merchantId)
         :<|> updateIssueStatus (personId, merchantId)
         :<|> igmIssueStatus (personId, merchantId)
+        :<|> resolveIGMIssue (personId, merchantId)
 
 customerIssueHandle :: Common.ServiceHandle Flow
 customerIssueHandle =
@@ -201,7 +203,7 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       igmConfig <- QIGMConfig.findByMerchantId merchantId >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchantId)
       merchantOperatingCity <- CQMOC.findById igmReq.booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show igmReq.booking.merchantOperatingCityId)
-      (becknIssueReq, issueId, igmIssue) <- ACL.buildIssueReq igmReq.booking igmReq.ride req merchant person igmConfig merchantOperatingCity
+      (becknIssueReq, issueId, igmIssue) <- ACL.buildIssueReq igmReq.booking igmReq.ride req.categoryId req.description merchant person igmConfig merchantOperatingCity Nothing Nothing
       QIGM.create igmIssue
       fork "sending beckn issue" . withShortRetry $ do
         void $ CallBPP.issue igmReq.booking.providerUrl becknIssueReq
@@ -241,3 +243,22 @@ igmIssueStatus (_, merchantId) = withFlowHandlerAPI $ do
     fork "sending beckn issue_status" . withShortRetry $ do
       void $ CallBPP.issueStatus booking.providerUrl becknIssueStatusReq
   return Success
+
+resolveIGMIssue :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> CustomerResponse -> FlowHandler APISuccess
+resolveIGMIssue (personId, merchantId) issueReportId response = withFlowHandlerAPI $ do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  issueReport <- QIR.findById issueReportId >>= fromMaybeM (InternalError $ "Issue Report not found " <> show issueReportId.getId)
+  becknIssueId <- maybe (throwError $ InvalidRequest "IGM Issue Id not found") return issueReport.becknIssueId
+  mbIGMIssue <- QIGM.findByPrimaryKey (Id becknIssueId)
+  maybe (throwError $ InvalidRequest "IGM Issue not found") (\igmIssue -> processIGMIssue igmIssue issueReport person) mbIGMIssue
+  return Success
+  where
+    processIGMIssue igmIssue issueReport person = do
+      merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      igmConfig <- QIGMConfig.findByMerchantId merchantId >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchantId)
+      merchantOperatingCity <- CQMOC.findById igmIssue.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show igmIssue.merchantOperatingCityId)
+      booking <- QB.findById igmIssue.bookingId >>= fromMaybeM (BookingNotFound igmIssue.bookingId.getId)
+      ride <- runInReplica $ QR.findByRBId booking.id >>= fromMaybeM (RideNotFound booking.id.getId)
+      (becknIssueReq, _, _) <- ACL.buildIssueReq booking ride issueReport.categoryId issueReport.description merchant person igmConfig merchantOperatingCity (Just response) issueReport.becknIssueId
+      fork "sending beckn issue" . withShortRetry $ do
+        void $ CallBPP.issue booking.providerUrl becknIssueReq
