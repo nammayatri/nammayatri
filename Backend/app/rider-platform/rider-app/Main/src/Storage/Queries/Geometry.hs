@@ -32,10 +32,16 @@ import qualified Storage.Beam.Geometry.GeometryGeom as BeamGeomG
 create :: (MonadFlow m, EsqDBFlow m r) => Geometry -> m ()
 create = createWithKV
 
-findGeometriesContaining :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LatLong -> [Text] -> m [Geometry]
-findGeometriesContaining gps regions = do
+findGeometriesContainingByRegion :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LatLong -> [Text] -> m [Geometry]
+findGeometriesContainingByRegion gps regions = do
   dbConf <- getMasterBeamConfig
   geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
+  catMaybes <$> mapM fromTType' (fromRight [] geoms)
+
+findGeometriesContaining :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LatLong -> m [Geometry]
+findGeometriesContaining gps = do
+  dbConf <- getMasterBeamConfig
+  geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {} -> containsPoint' (gps.lon, gps.lat)) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] geoms)
 
 instance FromTType' BeamG.Geometry Geometry where
