@@ -53,6 +53,7 @@ import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSReq
+import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
 import Tools.Event
 import TransactionLogs.Types
@@ -161,10 +162,10 @@ confirm DConfirmReq {..} = do
     unless (paymentMethodId' `elem` searchRequest.availablePaymentMethods) $
       throwError (InvalidRequest "Payment method not allowed")
     pure paymentMethod
-
+  let fareProduct = QTB.getFareProductType booking.bookingDetails
   -- DB.runTransaction $ do
   _ <- QRideB.createBooking booking
-  _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
+  _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = fareProduct}
   _ <- QEstimate.updateStatusByRequestId DEstimate.COMPLETED quote.requestId
   QPFS.clearCache searchRequest.riderId
   return $

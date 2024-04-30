@@ -28,8 +28,9 @@ import Domain.Types.Booking (Booking)
 import Domain.Types.SearchTry (SearchTry)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (CacheFlow, throwError)
 
 isSearchTryCancelled ::
   CacheFlow m r =>
@@ -51,7 +52,10 @@ whenSearchTryCancellable ::
   m () ->
   m ()
 whenSearchTryCancellable searchTryId actions = do
-  whenM (lockSearchTry searchTryId) actions
+  gotLock <- lockSearchTry searchTryId
+  if gotLock
+    then actions
+    else throwError (InternalError "SEARCH_TRY_CANCELLED")
 
 mkCancelledKey :: Id SearchTry -> Text
 mkCancelledKey searchTryId = "SearchTry:Cancelled:SearchTryId-" <> searchTryId.getId
