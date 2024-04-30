@@ -1358,7 +1358,7 @@ profileOptionsLayout state push =
                               ]
                           ]
                       ]
-                  , if (index == length (optionList state) - 2) then (horizontalLineView 7 0.5 0 20 0) else if (optionItem.menuOptions == DRIVER_LOGOUT) then dummyTextView else horizontalLineView 1 1.0 15 15 15
+                  , if (index == length (optionList state) - 3) then (horizontalLineView 7 0.5 0 20 0) else if (optionItem.menuOptions == DRIVER_LOGOUT) then dummyTextView else horizontalLineView 1 1.0 15 15 15
                   ]
             )
             (optionList state)

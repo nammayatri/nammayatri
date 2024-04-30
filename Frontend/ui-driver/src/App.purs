@@ -73,6 +73,7 @@ import Common.Types.App (CategoryListType)
 import Services.API
 import Screens.DocumentCaptureScreen.ScreenData as DocumentCaptureScreenData
 import Screens.DocumentDetailsScreen.ScreenData as DocumentDetailsScreenData
+import Screens.DeleteAccountScreen.ScreenData as DeleteAccountScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -125,6 +126,7 @@ newtype GlobalState = GlobalState {
   , lmsVideoScreen :: LmsVideoScreenState
   , lmsQuizScreen :: LmsQuizScreenState
   , documentDetailsScreen :: DocumentDetailsScreenState
+  , deleteAccountScreen :: DeleteAccountScreenData.State
   }
 
 defaultGlobalState :: GlobalState
@@ -177,6 +179,7 @@ defaultGlobalState = GlobalState {
 , lmsVideoScreen : LmsVideoScreenData.initData
 , lmsQuizScreen : LmsQuizScreenData.initData
 , documentDetailsScreen : DocumentDetailsScreenData.initData
+, deleteAccountScreen : DeleteAccountScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -244,6 +247,8 @@ data ScreenStage = HomeScreenStage HomeScreenStage
 
 data DOCUMENT_DETAILS_SCREEN_OUTPUT = GO_TO_HOME_FROM_DOCUMENT_DETAILS DocumentDetailsScreenState
 
+data DeleteAccountScreenOutput = SubmitRequest | Back 
+
 data MY_RIDES_SCREEN_OUTPUT = HOME_SCREEN 
                             | PROFILE_SCREEN
                             | GO_TO_REFERRAL_SCREEN
@@ -289,6 +294,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | GO_TO_EDIT_BANK_DETAIL_SCREEN
                                     | ON_BOARDING_FLOW
                                     | DOCUMENTS_FLOW
+                                    | DELETE_ACCOUNT_FLOW
                                     | NOTIFICATIONS_SCREEN
                                     | GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN
                                     | GO_TO_BOOKING_OPTIONS_SCREEN DriverProfileScreenState

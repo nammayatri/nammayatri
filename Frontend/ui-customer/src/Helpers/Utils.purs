@@ -136,8 +136,6 @@ foreign import requestKeyboardShow :: String -> Effect Unit
 
 foreign import factoryResetApp :: String -> Unit
 
-foreign import validateEmail :: String -> Boolean
-
 foreign import getUTCDay :: Date -> Int
 
 foreign import makePascalCase :: String -> String
