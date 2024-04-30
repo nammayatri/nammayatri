@@ -15,8 +15,8 @@
 module SharedLogic.SearchTryLocker
   ( whenSearchTryCancellable,
     isSearchTryCancelled,
-    markSearchTryAsAssigned,
     isBookingCancelled,
+    lockSearchTry,
     whenBookingCancellable,
     markBookingAssignmentInprogress,
     isBookingAssignmentInprogress,
@@ -38,12 +38,12 @@ isSearchTryCancelled ::
 isSearchTryCancelled searchTryId = do
   fromMaybe False <$> Hedis.get (mkCancelledKey searchTryId)
 
-isSearchTryAssigned ::
+lockSearchTry ::
   CacheFlow m r =>
   Id SearchTry ->
   m Bool
-isSearchTryAssigned searchTryId = do
-  fromMaybe False <$> Hedis.get (mkAssignedKey searchTryId)
+lockSearchTry searchTryId = do
+  (<= 1) <$> Hedis.incr (mkCancelledKey' searchTryId)
 
 whenSearchTryCancellable ::
   CacheFlow m r =>
@@ -51,24 +51,13 @@ whenSearchTryCancellable ::
   m () ->
   m ()
 whenSearchTryCancellable searchTryId actions = do
-  isSearchTryCancelled' <- isSearchTryCancelled searchTryId
-  isSearchTryAssigned' <- isSearchTryAssigned searchTryId
-  unless (isSearchTryCancelled' || isSearchTryAssigned') $ do
-    Hedis.setExp (mkCancelledKey searchTryId) True 120
-    actions
-
-markSearchTryAsAssigned ::
-  CacheFlow m r =>
-  Id SearchTry ->
-  m ()
-markSearchTryAsAssigned searchTryId = do
-  Hedis.setExp (mkAssignedKey searchTryId) True 120
+  whenM (lockSearchTry searchTryId) actions
 
 mkCancelledKey :: Id SearchTry -> Text
 mkCancelledKey searchTryId = "SearchTry:Cancelled:SearchTryId-" <> searchTryId.getId
 
-mkAssignedKey :: Id SearchTry -> Text
-mkAssignedKey searchTryId = "SearchTry:Assigned:SearchTryId-" <> searchTryId.getId
+mkCancelledKey' :: Id SearchTry -> Text
+mkCancelledKey' searchTryId = "SearchTry:Counter:SearchTryId-" <> searchTryId.getId
 
 isBookingCancelled ::
   CacheFlow m r =>
