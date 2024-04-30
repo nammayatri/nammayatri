@@ -107,6 +107,7 @@ getDriverDetails state =
     , vehicleModel : ride.vehicleModel
     , vehicleColor : ride.vehicleColor
     , serviceTierName : ride.serviceTierName
+    , providerType : Common.ONUS
     }
 
 

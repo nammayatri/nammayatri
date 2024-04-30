@@ -595,7 +595,7 @@ logOutPopUpModelConfig state =
           , dismissIconMargin = Margin 0 0 14 13
           , dismissIconVisibility = if isLocalStageOn ST.QuoteList then GONE else VISIBLE
           , backgroundClickable = true
-          , customerTipAvailable = true
+          , customerTipAvailable = state.data.selectedEstimatesObject.providerType == ONUS 
           , fareEstimateText = getString FARE_ESTIMATE
           , tipSelectedText = getString TIP_SELECTED
           , fareEstimate = getValueToLocalStore FARE_ESTIMATE_DATA
@@ -652,7 +652,7 @@ logOutPopUpModelConfig state =
             { primaryText { text = if (isLocalStageOn ST.QuoteList) then ((getString TRY_AGAIN) <> "?") else ((getString CANCEL_SEARCH) <> "?")}
             , buttonLayoutMargin = (MarginHorizontal 16 16)
             , dismissPopup = true
-            , optionButtonOrientation = if(isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then  "VERTICAL" else "HORIZONTAL"
+            , optionButtonOrientation = if(isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes || state.data.iopState.providerSelectionStage) then  "VERTICAL" else "HORIZONTAL"
             , secondaryText { text = if (isLocalStageOn ST.QuoteList) then (getString TRY_LOOKING_FOR_RIDES_AGAIN) else (getString CANCEL_ONGOING_SEARCH)}
             , option1 {
               text = if (isLocalStageOn ST.QuoteList) then (getString YES_TRY_AGAIN) else (getString YES_CANCEL_SEARCH)
@@ -1162,6 +1162,8 @@ driverInfoTransformer state =
     , vehicleModel : cardState.vehicleModel
     , vehicleColor : cardState.vehicleColor
     , serviceTierName : cardState.serviceTierName
+    , providerName : cardState.providerName
+    , providerType : cardState.providerType
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1248,6 +1250,12 @@ quoteListModelViewState state = let vehicleVariant = state.data.selectedEstimate
                                 , city : state.props.city
                                 , customerTipArray : tipConfig.customerTipArray
                                 , customerTipArrayWithValues : tipConfig.customerTipArrayWithValues
+                                , providerSelectionStage : state.data.iopState.providerSelectionStage
+                                , quoteList : state.data.specialZoneQuoteList
+                                , selectProviderTimer : state.data.iopState.timerVal
+                                , selectedEstimatesObject : state.data.selectedEstimatesObject
+                                , showAnim : not $ state.data.iopState.showMultiProvider && isLocalStageOn FindingQuotes
+                                , animEndTime : state.data.currentCityConfig.iopConfig.autoSelectTime
                                 }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig
@@ -1426,17 +1434,18 @@ chooseYourRideConfig state =
     tipForDriver = state.props.customerTip.tipForDriver,
     customerTipArray = tipConfig.customerTipArray,
     customerTipArrayWithValues = tipConfig.customerTipArrayWithValues,
-    enableTips = state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities) && (DA.length tipConfig.customerTipArray) > 0
+    enableTips = state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities) && (DA.length tipConfig.customerTipArray) > 0 && not state.data.iopState.showMultiProvider,
+    showMultiProvider = state.data.iopState.showMultiProvider
   }
 
 specialLocationConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
-specialLocationConfig srcIcon destIcon isAnim animConfig = {
-    sourceSpecialTagIcon : srcIcon
-  , destSpecialTagIcon : destIcon
-  , vehicleSizeTagIcon : (HU.getVehicleSize unit)
-  , isAnimation : isAnim
-  , autoZoom : true
-  , polylineAnimationConfig : animConfig
+specialLocationConfig srcIcon destIcon isAnim animConfig = JB.mapRouteConfig {
+    sourceSpecialTagIcon = srcIcon
+  , destSpecialTagIcon = destIcon
+  , vehicleSizeTagIcon = HU.getVehicleSize unit
+  , isAnimation = isAnim
+  , autoZoom = true
+  , polylineAnimationConfig = animConfig
 }
 
 setTipViewData :: Encode TipViewData => TipViewData -> Effect Unit
@@ -1449,8 +1458,9 @@ getTipViewData dummy =
     Left err -> Nothing
 
 getTipViewProps :: ST.HomeScreenState -> TipViewProps
-getTipViewProps state = do  
-  let tipViewProps = state.props.tipViewProps
+getTipViewProps state =
+  let tipViewProps = state.props.tipViewProps { isVisible = state.data.selectedEstimatesObject.providerType == ONUS && state.props.tipViewProps.isVisible } -- confirm if shown for blr only 
+  in
   case tipViewProps.stage of
     DEFAULT ->  tipViewProps{ stage = DEFAULT
                             , onlyPrimaryText = false
@@ -1481,6 +1491,54 @@ getTipViewText tipViewProps state prefixString = do
     case (getLanguageLocale languageKey) of
       "EN_US" -> prefixString <> (if tipViewProps.stage == TIP_AMOUNT_SELECTED then " +₹" else " ₹")<>tip<>" "<> (getString TIP)
       _ -> "+₹"<>tip<>" "<>(getString TIP) <> " " <> prefixString
+
+requestInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
+requestInfoCardConfig _ = let
+  config = RequestInfoCard.config
+  requestInfoCardConfig' = config{
+    title {
+      text = getString CHOOSE_BETWEEN_MULTIPLE_RIDES
+    }
+  , primaryText {
+      text = getString ENABLE_THIS_FEATURE_TO_CHOOSE_YOUR_RIDE
+    }
+  , imageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_select_offer",
+      height = V 122,
+      width = V 116
+    }
+  , buttonConfig {
+      text = getString GOT_IT
+    }
+  , backgroundColor = Color.transparent
+  , gravity = RIGHT
+  , padding = PaddingLeft 16
+  }
+  in requestInfoCardConfig'
+
+multipleProvidersInfo :: ST.HomeScreenState -> RequestInfoCard.Config
+multipleProvidersInfo _ = let
+  config = RequestInfoCard.config
+  requestInfoCardConfig' = config{
+    title {
+      text = getString CHOOSE_BETWEEN_PROVIDERS 
+    }
+  , primaryText {
+      text = getString CHOOSE_BETWEEN_PROVIDERS_DESC
+    }
+  , imageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_multiple_providers",
+      height = V 122,
+      width = V 116
+    }
+  , buttonConfig {
+      text = getString GOT_IT
+    }
+  , backgroundColor = Color.transparent
+  , gravity = RIGHT
+  , padding = PaddingLeft 16
+  }
+  in requestInfoCardConfig'
 
 reportIssueOptions :: ST.HomeScreenState -> Array OptionButtonList -- need to modify
 reportIssueOptions state =
@@ -1589,8 +1647,8 @@ chooseVehicleConfig state = let
     , price = selectedEstimates.price
     , isCheckBox = false
     , isEnabled = true
-    , index = 1
-    , activeIndex = 1
+    , index = selectedEstimates.index
+    , activeIndex = selectedEstimates.activeIndex
     , id = selectedEstimates.id
     , maxPrice = selectedEstimates.maxPrice
     , basePrice = selectedEstimates.basePrice

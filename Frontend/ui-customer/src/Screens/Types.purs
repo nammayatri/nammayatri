@@ -47,6 +47,7 @@ import PrestoDOM.List
 import JBridge (Location)
 import Data.HashMap as DHM
 import Data.Map as DM
+import MerchantConfig.Types as MRC
 
 type Contacts = {
   name :: String,
@@ -456,6 +457,8 @@ type IndividualRideCardState =
   , totalTime :: String
   , vehicleModel :: String
   , rideStartTimeUTC :: String
+  , providerName :: String
+  , providerType :: ProviderType
   }
 
 
@@ -530,6 +533,7 @@ data Stage = HomeScreen
            | RetryFindingQuote
            | PickUpFarFromCurrentLocation
            | LoadMap
+           | ProviderSelection
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -618,7 +622,20 @@ type HomeScreenStateData =
   , followers :: Maybe (Array Followers)
   , vehicleVariant :: String
   , hotSpotInfo :: Array HotSpotData
+  , iopState :: InteroperabilityState
+  , currentCityConfig :: MRC.CityConfig
   }
+
+type InteroperabilityState = {
+  timerId :: String,
+  timerVal :: String,
+  showMultiProvider :: Boolean,
+  providerPrefVisible :: Boolean,
+  providerSelectionStage :: Boolean,
+  showPrefButton :: Boolean,
+  providerPrefInfo :: Boolean,
+  hasTopProviderEstimate :: Boolean
+}
 
 type RentalsInfo = 
   {
@@ -806,6 +823,7 @@ type HomeScreenStateProps =
   , isSearchCancelled :: Boolean
   , referralComponentProps :: ReferralComponentState
   , showAcWorkingPopup :: Boolean
+  , repeateRideTimerStoped :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -994,23 +1012,6 @@ type ReferralScreenState =
     , referralComponentProps :: ReferralComponentState
   }
 
-type EstimateInfo = {
-  additionalFare :: Int,
-  estimatedPrice :: Int, 
-  quoteList :: Array ChooseVehicle.Config,
-  defaultQuote :: ChooseVehicle.Config,
-  estimateId :: String,
-  estimatedVarient :: Array EstimateAPIEntity,
-  -- pickUpCharges :: Int,
-  -- -- nightShiftMultiplier :: Number,
-  -- -- nightCharges :: Boolean,
-  -- baseFare :: Int,
-  -- extraFare :: Int,
-  showRateCardIcon :: Boolean,
-  zoneType :: SpecialTags,
-  createdTime :: String,
-  hasToll :: Boolean
-}
 
 -- ################################## SelectLanguageScreenState ###############################
 
@@ -1165,6 +1166,8 @@ type DriverInfoCard =
   , serviceTierName :: Maybe String
   , vehicleModel :: String
   , vehicleColor :: String
+  , providerType :: ProviderType
+  , providerName :: String
   }
 
 type RatingCard =
@@ -2054,7 +2057,8 @@ type NammaSafetyScreenProps =  {
   showPastRidePopUp :: Boolean,
   checkPastRide :: Boolean,
   reportPastRide :: Boolean,
-  appName :: String
+  appName :: String,
+  isOffUs :: Boolean
 }
 data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
 

@@ -82,6 +82,7 @@ initData = let
       , checkPastRide : false
       , reportPastRide : false
       , appName : fromMaybe config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+      , isOffUs : false
       }
   }
 

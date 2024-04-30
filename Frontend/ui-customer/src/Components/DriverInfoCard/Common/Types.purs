@@ -5,6 +5,7 @@ import Prelude
 import MerchantConfig.Types (AppConfig)
 import Screens.Types (City, SearchResultType)
 import Data.Maybe (Maybe(..))
+import Common.Types.App as CTP
 
 type DriverDetailsType
   = { searchType :: SearchResultType
@@ -20,6 +21,7 @@ type DriverDetailsType
   , vehicleModel :: String
   , vehicleColor :: String
   , serviceTierName :: Maybe String
+  , providerType :: CTP.ProviderType
   }
 
 type TripDetails a

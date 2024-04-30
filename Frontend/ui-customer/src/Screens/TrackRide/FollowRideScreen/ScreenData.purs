@@ -8,6 +8,7 @@ import Screens.Types
 import PrestoDOM (BottomSheetState(..))
 import Foreign.Object (empty)
 import Services.API (Route(..), Snapped(..), LatLong(..), GetRouteResp(..), GetDriverLocationResp(..))
+import Common.Types.App as CT
 
 initData :: FollowRideScreenState
 initData =
@@ -202,4 +203,6 @@ mockDriverInfo =
   , serviceTierName : Nothing
   , vehicleModel : ""
   , vehicleColor : ""
+  , providerName : ""
+  , providerType : CT.ONUS
   }

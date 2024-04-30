@@ -253,6 +253,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | CHANGE_VEHICLE_VARIANT HomeScreenState
                         | GOTO_CONFIRMING_LOCATION_STAGE HomeScreenState
                         | UPDATE_REFERRAL_CODE String
+                        | GO_TO_SAFETY_SETTING_SCREEN
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

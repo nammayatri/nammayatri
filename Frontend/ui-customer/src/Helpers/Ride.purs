@@ -168,7 +168,8 @@ checkRideStatus rideAssigned = do
                           , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
                           , driverInfoCardState {
                             price = resp.estimatedTotalFare,
-                            rideId = currRideListItem.id
+                            rideId = currRideListItem.id,
+                            providerType = maybe Common.ONUS (\valueAdd -> if valueAdd then Common.ONUS else Common.OFFUS) resp.isValueAddNP
                           }
                           , ratingViewState { rideBookingRes = (RideBookingRes resp), issueFacedView = nightSafetyFlow}
                           , vehicleVariant = currRideListItem.vehicleVariant

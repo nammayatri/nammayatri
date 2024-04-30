@@ -1122,3 +1122,25 @@ getFR stringKey =
         ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "Profitez de votre trajet économique sans climatisation"
         AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "La climatisation n'est pas disponible pour ce trajet"
         AC_NOT_WORKING_DESC -> "Annulation car je veux un trajet avec climatisation"
+        WAITING_CHARGE_LIMIT timeLimit -> "Frais d'attente après " <> timeLimit        
+        SHOWING_FARE_FROM_MULTI_PROVIDER -> "Affichage des tarifs de plusieurs fournisseurs"
+        LIVE_CHAT -> "Chat en direct"
+        DRIVER_TIP_ADDITION -> "Ajout d'une astuce pour le pilote"
+        LIVE_RIDE_SHARING -> "Partage de trajet en direct"
+        ENHANCED_SAFETY -> "Sécurité améliorée"
+        CONFIRM_PROVIDER -> "Confirmer le fournisseur"
+        SELECT_A_PROVIDER -> "Sélectionnez un fournisseur"
+        CONFIRMING_SELECTED_PROVIDER -> "Confirmation du fournisseur sélectionné dans : "
+        BOOK_TOP_PROVIDER -> "Réservez le meilleur fournisseur"
+        CHOOSE_FROM_PROVIDERS -> "Choisissez parmi tous les fournisseurs disponibles"
+        CHOOSE_BETWEEN_PROVIDERS -> "Choisir entre plusieurs fournisseurs"
+        CHOOSE_BETWEEN_PROVIDERS_DESC -> "Activez cette fonctionnalité pour voir les devis de tous les fournisseurs disponibles."
+        GUARANTEED_RIDE -> "Trajet garanti"
+        THIS_RIDE_FULFILLED_BY provider -> "Ce trajet est réalisé par : " <> provider
+        ADDITIONAL_FEATURES_ON merchantName -> "Fonctionnalités supplémentaires sur " <> merchantName
+        NOTIFY_YOUR_EC -> "Avertissez vos contacts personnels en cas d'urgence"
+        EC_CAN_RESPOND -> "Les contacts d'urgence peuvent suivre/prendre des mesures d'intervention d'urgence"
+        QUICK_SUPPORT merchantName -> "Assistance rapide de " <> merchantName <> " Assistance SOS"
+        LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> "En savoir plus sur les fonctionnalités de sécurité exclusives sur " <> merchantName
+        OTHER_PROVIDER_NO_RECEIPT -> "Les reçus du conducteur pour les courses effectuées par d'autres prestataires ne sont pas encore disponibles."
+        RIDE_FULFILLED_BY merchantName -> "Trajet effectué par : " <> merchantName

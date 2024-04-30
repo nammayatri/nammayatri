@@ -311,6 +311,6 @@ window.getMerchantConfig = function () {
     , "referral" : {
       "domain" : "https://nammayatri.in/"
     , "customerAppId" : "in.juspay.nammayatri"
-  },
+  }
   })
 }

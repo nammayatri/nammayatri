@@ -585,7 +585,7 @@ getEN stringKey =
         GOT_AN_OTP -> "Got an OTP?"
         JUST_ONE_LAST_THING -> "Just one last thing"
         YOUR_FEEDBACK_HELPS_US appName -> "Your feedback helps us improve the " <> appName <> " experience"
-        TOLL_CHARGES_WILL_BE_EXTRA -> "Applicable Toll charges are included in the fares"
+        TOLL_CHARGES_WILL_BE_EXTRA -> "<b>Toll</b> charges are included"
         AUTO_RICKSHAW -> "Auto Rickshaw"
         CABS_AVAILABLE -> "cabs available"
         PI_POINTER_1 -> "Drivers will be prompted to come to your exact location for pickup."
@@ -1119,3 +1119,24 @@ getEN stringKey =
         ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "Enjoy your budget friendly, Non AC ride!"
         AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "AC is not available on this ride"
         AC_NOT_WORKING_DESC -> "AC not working/Driver refused to switch on"
+        SHOWING_FARE_FROM_MULTI_PROVIDER -> "Showing fares from multiple providers"
+        LIVE_CHAT -> "Live Chat"
+        DRIVER_TIP_ADDITION -> "Driver Tip Addition"
+        LIVE_RIDE_SHARING -> "Live Ride Sharing"
+        ENHANCED_SAFETY -> "Enhanced Safety"
+        CONFIRM_PROVIDER -> "Confirm Provider"
+        SELECT_A_PROVIDER -> "Select a provider"
+        CONFIRMING_SELECTED_PROVIDER -> "Confirming selected provider in: "
+        BOOK_TOP_PROVIDER -> "Book top provider"
+        CHOOSE_FROM_PROVIDERS -> "Choose from all available providers"
+        CHOOSE_BETWEEN_PROVIDERS -> "Choose between Multiple Providers"
+        CHOOSE_BETWEEN_PROVIDERS_DESC -> "Enable this feature to see quotes from all available provider."
+        GUARANTEED_RIDE -> "Guaranteed Ride"
+        THIS_RIDE_FULFILLED_BY provider -> "This ride is fulfilled by: " <> provider
+        ADDITIONAL_FEATURES_ON merchantName -> "Additional features on " <> merchantName
+        NOTIFY_YOUR_EC -> "Notify your personal emergency contacts"
+        EC_CAN_RESPOND -> "Emergency Contacts can follow/ take emergency response actions"
+        QUICK_SUPPORT merchantName -> "Quick support from " <> merchantName <> " SOS support"
+        LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> "Learn about exclusive safety features on " <> merchantName 
+        OTHER_PROVIDER_NO_RECEIPT -> "Driver receipt for rides fulfilled by other providers are not available yet."
+        RIDE_FULFILLED_BY merchantName -> "Ride fulfilled by: " <> merchantName
