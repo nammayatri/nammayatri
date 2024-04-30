@@ -82,7 +82,7 @@ getPersonFlowStatus personId merchantId mIsPolling = do
     DPFS.DRIVER_OFFERED_QUOTE estimateId _ -> do
       estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
       findValueAddNP estimate.providerId personStatus
-    DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ -> expirePersonStatusIfNeeded personStatus Nothing
+    DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing
     DPFS.RIDE_PICKUP {} -> handleRideTracking personId merchantId mIsPolling personStatus
     DPFS.RIDE_STARTED {} -> handleRideTracking personId merchantId mIsPolling personStatus
     DPFS.DRIVER_ARRIVED {} -> handleRideTracking personId merchantId mIsPolling personStatus

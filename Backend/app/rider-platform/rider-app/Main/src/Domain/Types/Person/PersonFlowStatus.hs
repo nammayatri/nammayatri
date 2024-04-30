@@ -25,6 +25,7 @@ import Data.Aeson (Options (..), SumEncoding (..), defaultOptions)
 import Data.OpenApi
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Estimate as DE
+import qualified Domain.Types.FarePolicy.FareProductType as DFPT
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
@@ -56,7 +57,8 @@ data FlowStatus
       }
   | WAITING_FOR_DRIVER_ASSIGNMENT
       { bookingId :: Id DB.Booking,
-        validTill :: UTCTime
+        validTill :: UTCTime,
+        fareProductType :: DFPT.FareProductType
       }
   | RIDE_ASSIGNED -- deprecated status, kept it for backward compatibility
       { rideId :: Id DRide.Ride
