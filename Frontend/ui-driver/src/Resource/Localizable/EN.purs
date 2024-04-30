@@ -1373,3 +1373,5 @@ getEN stringKey =
         IS_YOUR_CAR_AC_WORKING -> "Is your car AC working?"
         HOW_DOES_AC_CONDITION_AFFECT -> "How does the condition of car AC affect you?"
         WE_WILL_USE_THIS_INFO -> "We will use this information to match with customer expectations regarding the AC"
+        YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(You can always change this later from your profile)"
+        IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "Is your car AC turned on and in working condition?"

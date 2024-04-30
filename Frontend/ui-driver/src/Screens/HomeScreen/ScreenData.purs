@@ -259,6 +259,7 @@ initData =
       , odometerFileId: Nothing
       , odometerUploadAttempts: 0
       , odometerImageUploading: false
+      , showAcWorkingPopup: false
       }
   }
 

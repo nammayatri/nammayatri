@@ -183,6 +183,7 @@
       "ny_ic_aadhaar_lg" : true,
       "ny_ic_about" : true,
       "ny_ic_ac_white" : true,
+      "ny_ic_ac_working_popup" : true,
       "ny_ic_account_related" : true,
       "ny_ic_activate" : true,
       "ny_ic_add_audio" : true,

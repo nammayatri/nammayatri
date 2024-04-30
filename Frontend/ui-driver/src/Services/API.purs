@@ -475,6 +475,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , operatingCity         :: Maybe String
     , isVehicleSupported    :: Maybe Boolean
     , canSwitchToRental     :: Boolean
+    , checkIfACWorking      :: Maybe Boolean
     }
 
 
@@ -4557,3 +4558,26 @@ instance makeDriverVehicleServiceTierReq :: RestEndpoint DriverVehicleServiceTie
   makeRequest reqBody headers = defaultMakeRequest GET (EP.driverVehicleServiceTier "") headers reqBody Nothing
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
+
+newtype UpdateAirConditionUpdateRequest = UpdateAirConditionUpdateRequest {
+  isAirConditioned :: Boolean
+}
+
+newtype UpdateAirConditionUpdateResponse = UpdateAirConditionUpdateResponse ApiSuccessResult
+
+instance makeUpdateAirConditionUpdateRequest :: RestEndpoint UpdateAirConditionUpdateRequest UpdateAirConditionUpdateResponse where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.updateAirConditioned "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericUpdateAirConditionUpdateRequest :: Generic UpdateAirConditionUpdateRequest _
+instance standardEncodeUpdateAirConditionUpdateRequest :: StandardEncode UpdateAirConditionUpdateRequest where standardEncode (UpdateAirConditionUpdateRequest res) = standardEncode res
+instance showUpdateAirConditionUpdateRequest :: Show UpdateAirConditionUpdateRequest where show = genericShow
+instance decodeUpdateAirConditionUpdateRequest :: Decode UpdateAirConditionUpdateRequest where decode = defaultDecode
+instance encodeUpdateAirConditionUpdateRequest  :: Encode UpdateAirConditionUpdateRequest where encode = defaultEncode
+
+derive instance genericUpdateAirConditionUpdateResponse :: Generic UpdateAirConditionUpdateResponse _
+instance standardEncodeUpdateAirConditionUpdateResponse :: StandardEncode UpdateAirConditionUpdateResponse where standardEncode (UpdateAirConditionUpdateResponse res) = standardEncode res
+instance showUpdateAirConditionUpdateResponse :: Show UpdateAirConditionUpdateResponse where show = genericShow
+instance decodeUpdateAirConditionUpdateResponse :: Decode UpdateAirConditionUpdateResponse where decode = defaultDecode
+instance encodeUpdateAirConditionUpdateResponse  :: Encode UpdateAirConditionUpdateResponse where encode = defaultEncode
