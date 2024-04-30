@@ -2934,15 +2934,18 @@ rideCompletedDetails (RideBookingRes resp) = do
       finalAmount =  getFinalAmount (RideBookingRes resp)
       timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
       nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
+      actualTollCharge = maybe 0 (\obj ->  obj^._amount) $ Arr.find (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.fareBreakup)
 
   [ {key : "Estimate ride distance (km)", value : unsafeToForeign (fromMaybe 0 contents.estimatedDistance/1000)},
           {key : "Actual ride distance (km)", value : unsafeToForeign ((fromMaybe 0 ride.chargeableRideDistance)/1000)},
           {key : "Difference between estimated and actual ride distance (km)" , value : unsafeToForeign (differenceOfDistance/1000)},
-          {key : "Total Estimated fare (₹)",value : unsafeToForeign (resp.estimatedFare)},
-          {key : "Total Actual fare (₹)",value : unsafeToForeign (finalAmount)},
-          {key : "Difference between estimated and actual fares (₹)",value : unsafeToForeign (resp.estimatedFare - finalAmount)},
-          {key : "Driver pickup charges (₹)",value : unsafeToForeign "10"},
-          {key : "Night ride",value : unsafeToForeign nightChargesVal}]
+          {key : "Total Estimated fare (₹)", value : unsafeToForeign (resp.estimatedFare)},
+          {key : "Total Actual fare (₹)", value : unsafeToForeign (finalAmount)},
+          {key : "Difference between estimated and actual fares (₹)", value : unsafeToForeign (resp.estimatedFare - finalAmount)},
+          {key : "Driver pickup charges (₹)", value : unsafeToForeign "10"},
+          {key : "Night ride", value : unsafeToForeign nightChargesVal},
+          {key : "Actual Toll Charges", value : unsafeToForeign actualTollCharge},
+          {key : "Has Toll", value : unsafeToForeign (maybe false (\charge -> charge /= 0) (Just actualTollCharge))}]
 
 personStatsData :: PersonStatsRes -> GetProfileRes -> Array ClevertapEventParams
 personStatsData (PersonStatsRes resp) (GetProfileRes response) = [{key : "First ride taken" , value : unsafeToForeign if response.hasTakenRide then "true" else "false"},

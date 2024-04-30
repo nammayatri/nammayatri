@@ -82,6 +82,7 @@ initData =
           , serviceTier : ""
           , capacity : Nothing
           , hasToll: false
+          , estimatedTollCharge : Nothing
           }
       , cancelRideModal:
           { selectionOptions: []
