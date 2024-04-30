@@ -35,6 +35,14 @@ findAllByDriverId driverId = do
   regCerts <- getRegCerts rcAssocs
   return $ linkDriversRC rcAssocs regCerts
 
+findAllActiveAssociationByRCId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id VehicleRegistrationCertificate ->
+  m [DriverRCAssociation]
+findAllActiveAssociationByRCId (Id rcId) = do
+  now <- getCurrentTime
+  findAllWithKV [Se.And [Se.Is BeamDRCA.rcId $ Se.Eq rcId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
+
 linkDriversRC :: [DriverRCAssociation] -> [VehicleRegistrationCertificate] -> [(DriverRCAssociation, VehicleRegistrationCertificate)]
 linkDriversRC rcAssocs regCerts = do
   let certHM = buildCertHM regCerts
