@@ -54,7 +54,7 @@ import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Function.Uncurried (runFn2)
 import Data.Function.Uncurried as Uncurried
-import Data.Int (round, toNumber, fromString, ceil)
+import Data.Int (round, toNumber, fromString, ceil, fromNumber)
 import Data.Int as Int
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
@@ -819,8 +819,8 @@ eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickDone odometerR
     let newState = state{ props { odometerFileId = Nothing, enterOtpModal = false, endRideOtpModal = false, odometerValue = odometerReading, endRideOdometerReadingValidationFailed = false } }
     if (state.props.currentStage == ST.RideStarted)
       then do
-        let startOdometerLength = length $ show state.data.activeRide.startOdometerReading
-        let startOdometerValue = maybe "0000.0" show state.data.activeRide.startOdometerReading
+        let startOdometerValue = maybe "0000" show (maybe Nothing fromNumber state.data.activeRide.startOdometerReading)
+        let startOdometerLength = length startOdometerValue
         let startOdometerReading = if startOdometerLength < 4 then (if startOdometerLength == 0 then "0000" else if startOdometerLength == 1 then "000" else if startOdometerLength == 2 then "00" else if startOdometerLength == 3 then "0" else "") <> (startOdometerValue) else startOdometerValue
         let endOdometerReading = if (take 1 startOdometerReading == "9") && (take 1 (odometerReading) == "0") then
             "1" <> odometerReading
