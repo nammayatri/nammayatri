@@ -3544,7 +3544,11 @@ instance encodeCoinTransactionRes :: Encode CoinTransactionRes where encode = de
 
 derive instance genericDriverCoinsFunctionType :: Generic DriverCoinsFunctionType _
 instance showDriverCoinsFunctionType :: Show DriverCoinsFunctionType where show = genericShow
-instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType where decode = defaultEnumDecode
+instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType 
+  where decode body = 
+          case (runExcept $ (readProp "tag" body)) of
+            Right functionType -> defaultEnumDecode $ functionType
+            _ -> defaultEnumDecode body
 instance encodeDriverCoinsFunctionType :: Encode DriverCoinsFunctionType where encode = defaultEncode
 instance eqDriverCoinsFunctionType :: Eq DriverCoinsFunctionType where eq = genericEq
 instance standardEncodeDriverCoinsFunctionType :: StandardEncode DriverCoinsFunctionType
