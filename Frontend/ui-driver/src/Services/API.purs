@@ -985,7 +985,8 @@ newtype DriverRCReq = DriverRCReq {
   operatingCity :: String,
   imageId :: String,
   dateOfRegistration :: Maybe String,
-  vehicleCategory :: Maybe String
+  vehicleCategory :: Maybe String,
+  airConditioned :: Maybe Boolean
 }
 
 newtype DriverRCResp = DriverRCResp ApiSuccessResult
