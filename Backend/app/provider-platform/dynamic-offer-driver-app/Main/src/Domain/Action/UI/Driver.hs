@@ -965,9 +965,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice' = do
       let estimateId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
       when (searchReq.autoAssignEnabled == Just True) $ do
-        whenM (CS.isSearchTryCancelled searchTry.id) $
+        unlessM (CS.lockSearchTry searchTry.id) $
           throwError (InternalError "SEARCH_TRY_CANCELLED")
-        CS.markSearchTryAsAssigned searchTry.id
       logDebug $ "offered fare: " <> show req.offeredFare
       quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq.transactionId (fromMaybe SL.Default searchReq.area)
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
