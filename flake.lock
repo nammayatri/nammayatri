@@ -1895,17 +1895,16 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1697612721,
-        "narHash": "sha256-3ltjWRQs6nZgHX558Mog2GbotmES/prjJhrkGqSZlSs=",
+        "lastModified": 1714263391,
+        "narHash": "sha256-0gTug1LbmkmH014ieR4TJa0HPa7OugRWacXyx3YxRnY=",
         "owner": "nammayatri",
         "repo": "location-tracking-service",
-        "rev": "86def9d54734c0bfd45375ca97ece0a461254745",
+        "rev": "018b67d4a72f5a57f188968c2b5467ad87393daf",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
         "repo": "location-tracking-service",
-        "rev": "86def9d54734c0bfd45375ca97ece0a461254745",
         "type": "github"
       }
     },

@@ -35,9 +35,8 @@ import Domain.Action.UI.Location (makeLocationAPIEntity)
 import qualified Domain.Action.UI.Person as UPerson
 import qualified Domain.Types.Booking as DB
 import Domain.Types.Booking.API (makeRideAPIEntity)
-import qualified Domain.Types.Booking.Type as DB
 import qualified Domain.Types.BookingUpdateRequest as DBUR
-import Domain.Types.Location (LocationAPIEntity, makeLocationAPIEntity)
+import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.LocationMapping as DLM
@@ -53,7 +52,6 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
-import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.CalculateDistance as CD

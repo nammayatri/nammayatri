@@ -1,5 +1,5 @@
 imports:
-  Booking: Domain.Types.Booking.Type
+  Booking: Domain.Types.Booking
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Price: Kernel.Types.Common

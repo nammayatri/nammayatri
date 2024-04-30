@@ -64,6 +64,8 @@ onUpdate _ reqV2 = withFlowHandlerBecknAPI do
             DOnUpdate.OUValidatedSafetyAlertReq req -> return req.booking
             DOnUpdate.OUValidatedStopArrivedReq req -> return req.booking
             DOnUpdate.OUValidatedFarePaidReq req -> return req.booking
+            DOnUpdate.OUValidatedEditDestSoftUpdateReq req -> return req.booking
+            DOnUpdate.OUValidatedEditDestConfirmUpdateReq req -> return req.booking
           void $ pushLogs "on_update" (toJSON reqV2) booking.merchantId.getId
   pure Ack
 

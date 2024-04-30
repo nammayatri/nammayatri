@@ -5,7 +5,7 @@
 module Domain.Types.BookingUpdateRequest where
 
 import Data.Aeson
-import qualified Domain.Types.Booking.Type
+import qualified Domain.Types.Booking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
@@ -15,7 +15,7 @@ import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data BookingUpdateRequest = BookingUpdateRequest
-  { bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Type.Booking,
+  { bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     createdAt :: Kernel.Prelude.UTCTime,
     currentPointLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     currentPointLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -35,6 +35,6 @@ data BookingUpdateRequest = BookingUpdateRequest
 
 data BookingUpdateRequestStatus = SOFT | CONFIRM deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingUpdateRequestStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingUpdateRequestStatus)
 
-$(mkHttpInstancesForEnum (''BookingUpdateRequestStatus))
+$(mkHttpInstancesForEnum ''BookingUpdateRequestStatus)

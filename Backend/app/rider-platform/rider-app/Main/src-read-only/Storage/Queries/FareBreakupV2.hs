@@ -21,8 +21,10 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FareBreakupV2.FareBreakupV2] -> m ())
 createMany = traverse_ create
 
-findAllByEntityIdAndTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Domain.Types.FareBreakupV2.FareBreakupV2Tags -> m ([Domain.Types.FareBreakupV2.FareBreakupV2]))
-findAllByEntityIdAndTag entityId tag = do findAllWithKV [Se.And [Se.Is Beam.entityId $ Se.Eq entityId, Se.Is Beam.tag $ Se.Eq tag]]
+findAllByEntityIdAndEntityType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Domain.Types.FareBreakupV2.FareBreakupV2EntityType -> m [Domain.Types.FareBreakupV2.FareBreakupV2])
+findAllByEntityIdAndEntityType entityId entityType = do findAllWithKV [Se.And [Se.Is Beam.entityId $ Se.Eq entityId, Se.Is Beam.entityType $ Se.Eq entityType]]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FareBreakupV2.FareBreakupV2 -> m (Maybe Domain.Types.FareBreakupV2.FareBreakupV2))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
@@ -38,7 +40,7 @@ updateByPrimaryKey (Domain.Types.FareBreakupV2.FareBreakupV2 {..}) = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.description description,
       Se.Set Beam.entityId entityId,
-      Se.Set Beam.tag tag,
+      Se.Set Beam.entityType entityType,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
@@ -54,8 +56,8 @@ instance FromTType' Beam.FareBreakupV2 Domain.Types.FareBreakupV2.FareBreakupV2 
             createdAt = createdAt,
             description = description,
             entityId = entityId,
+            entityType = entityType,
             id = Kernel.Types.Id.Id id,
-            tag = tag,
             updatedAt = updatedAt,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
@@ -68,8 +70,8 @@ instance ToTType' Beam.FareBreakupV2 Domain.Types.FareBreakupV2.FareBreakupV2 wh
         Beam.createdAt = createdAt,
         Beam.description = description,
         Beam.entityId = entityId,
+        Beam.entityType = entityType,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.tag = tag,
         Beam.updatedAt = updatedAt,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId

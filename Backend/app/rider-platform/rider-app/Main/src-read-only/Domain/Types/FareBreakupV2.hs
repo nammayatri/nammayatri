@@ -4,6 +4,7 @@
 
 module Domain.Types.FareBreakupV2 where
 
+import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
@@ -16,14 +17,14 @@ data FareBreakupV2 = FareBreakupV2
     createdAt :: Kernel.Prelude.UTCTime,
     description :: Kernel.Prelude.Text,
     entityId :: Kernel.Prelude.Text,
+    entityType :: Domain.Types.FareBreakupV2.FareBreakupV2EntityType,
     id :: Kernel.Types.Id.Id Domain.Types.FareBreakupV2.FareBreakupV2,
-    tag :: Domain.Types.FareBreakupV2.FareBreakupV2Tags,
     updatedAt :: Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FareBreakupV2Tags = BOOKING_UPDATE_REQUEST deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FareBreakupV2EntityType = BOOKING_UPDATE_REQUEST deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FareBreakupV2Tags))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FareBreakupV2EntityType)

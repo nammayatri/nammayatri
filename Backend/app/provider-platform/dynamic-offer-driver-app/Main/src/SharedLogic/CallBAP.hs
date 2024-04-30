@@ -603,7 +603,9 @@ sendUpdateEditDestToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -630,7 +632,7 @@ sendUpdateEditDestToBAP booking ride bookingUpdateReqDetails newDestination curr
         sUpdateEditDestToBAPReq = ACL.EditDestinationUpdate ACL.DEditDestinationUpdateReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     sUpdateEditDestToBAP <- ACL.buildOnUpdateMessageV2 merchant booking (Just bookingUpdateReqDetails.bapBookingUpdateRequestId) sUpdateEditDestToBAPReq
-    void $ callOnUpdateV2 sUpdateEditDestToBAP retryConfig
+    void $ callOnUpdateV2 sUpdateEditDestToBAP retryConfig merchant.id
 
 sendSafetyAlertToBAP ::
   ( CacheFlow m r,

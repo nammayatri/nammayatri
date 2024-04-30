@@ -22,12 +22,11 @@ import qualified Domain.Types.BecknConfig as BecknConfig
 import qualified Domain.Types.Booking as BT
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.ClientPersonInfo as DPCI
 import qualified Domain.Types.FareBreakup as DFareBreakup
-import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.FareBreakupV2 as DFareBreakupV2
-import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import Domain.Types.HotSpot
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -417,8 +416,8 @@ getListOfServiceTireTypes BecknConfig.AUTO_RICKSHAW = [DVST.AUTO_RICKSHAW]
 getListOfServiceTireTypes BecknConfig.MOTORCYCLE = [DVST.BIKE]
 getListOfServiceTireTypes BecknConfig.METRO = []
 
-buildFareBreakupV2 :: MonadFlow m => Text -> DFareBreakupV2.FareBreakupV2Tags -> DBUR.BookingUpdateRequest -> DFareBreakup -> m DFareBreakupV2.FareBreakupV2
-buildFareBreakupV2 entityId tag bookingUpdateReq DFareBreakup {..} = do
+buildFareBreakupV2 :: MonadFlow m => Text -> DFareBreakupV2.FareBreakupV2EntityType -> DBUR.BookingUpdateRequest -> DFareBreakup -> m DFareBreakupV2.FareBreakupV2
+buildFareBreakupV2 entityId entityType bookingUpdateReq DFareBreakup {..} = do
   guid <- generateGUID
   now <- getCurrentTime
   pure
@@ -429,7 +428,7 @@ buildFareBreakupV2 entityId tag bookingUpdateReq DFareBreakup {..} = do
         merchantId = Just bookingUpdateReq.merchantId,
         merchantOperatingCityId = Just bookingUpdateReq.merchantOperatingCityId,
         entityId,
-        tag,
+        entityType,
         description,
         amount = amount.amount
       }
