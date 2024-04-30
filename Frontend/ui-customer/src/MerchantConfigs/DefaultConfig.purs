@@ -282,8 +282,8 @@ config =
     {
       cityName : "kochi"
     , cityCode : "std:0484"
-    , customEndTime : "" 
-    , customDates : []
+    , customEndTime : "23:59:59" 
+    , customDates : ["03/05/2024", "04/05/2024", "05/05/2024", "06/05/2024", "07/05/2024", "08/05/2024", "09/05/2024", "10/05/2024","11/05/2024"]
     , metroStationTtl : 10080
     , bookingStartTime : "00:00:00"
     , bookingEndTime : "23:59:59"
