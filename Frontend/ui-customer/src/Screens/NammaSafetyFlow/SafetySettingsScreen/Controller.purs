@@ -16,7 +16,7 @@ module Screens.NammaSafetyFlow.SafetySettingsScreen.Controller where
 
 import JBridge as JB 
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude (class Show, discard, map, not, pure, void, ($), (/=), (==), (/), (<))
+import Prelude 
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..))
 import Components.GenericHeader.Controller as GenericHeaderController
@@ -38,6 +38,8 @@ import Data.Lens ((^.))
 import Accessor (_rideEndTime)
 import Components.PopUpModal as PopUpModal
 import Screens.RideSelectionScreen.Transformer (myRideListTransformer)
+import Helpers.Utils as HU
+import Common.Resources.Constants as Constants
 
 instance showAction :: Show Action where
   show _ = ""
@@ -74,6 +76,7 @@ data Action
   | ShowShareTripOptions
   | ShareTripOptionPopup PopupWithCheckboxController.Action
   | PopUpModalAC PopUpModal.Action
+  | DialPolice
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
@@ -205,5 +208,10 @@ eval (CheckRideListResp (RideBookingListRes listResp)) state = do
           transformedResp = myRideListTransformer true listResp.list
           mbRideData = DA.head transformedResp
       continue state{props{showPastRidePopUp = isRecentRide}, data{lastRideDetails = mbRideData}}
- 
+
+eval DialPolice state = do
+   void $ pure $ HU.performHapticFeedback unit
+   pure $ JB.showDialer Constants.policeNumber false
+   continue state
+
 eval _ state = update state

@@ -282,7 +282,7 @@ eval action state = case action of
         Just follower -> do
           if state.data.config.feature.enableChat && follower.priority == 0 && state.props.isRideStarted && not state.props.currentUserOnRide then do
             if not state.props.chatCallbackInitiated then continue state else do
-              _ <- pure $ performHapticFeedback unit
+              void $ pure $ performHapticFeedback unit
               _ <- pure $ setValueToLocalStore READ_MESSAGES (show (length state.data.messages))
               let allMessages = getChatMessages FunctionCall
               continueWithCmd state {data{messages = allMessages, currentStage = ST.ChatWithEM}, props {sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}} [do 
@@ -352,7 +352,7 @@ eval action state = case action of
       else
         continue state
     MessagingView.BackPressed -> do
-      _ <- pure $ performHapticFeedback unit
+      void $ pure $ performHapticFeedback unit
       _ <- pure $ hideKeyboardOnNavigation true
       continueWithCmd state
         [ do

@@ -201,7 +201,7 @@ config =
       }
       , enableOnlyAuto : false
       , showNearByDrivers: false
-      , enableBookingPreference: false
+      , enableBookingPreference: true
       , textColor: "#6D7280"
       , showInfoIcon : true 
       , genericLoaderLottie : "https://assets.juspay.in/beckn/nammayatri/user/lottie/ny_ic_generic_loader.json"
@@ -397,6 +397,10 @@ config =
               { domain = "https://www.manayatri.in",
                 customerAppId = "in.mobility.manayatri"
               }
+            , iopConfig = {
+                enable : true,
+                autoSelectTime : 8
+              }
           },
         defaultCityConfig
           { cityName = "Kolkata",
@@ -432,9 +436,12 @@ defaultCityConfig :: CityConfig
 defaultCityConfig =
   { cityName : "",
     cityCode : "",
-    estimateAndQuoteConfig : {
-          showInfoIcon : true
+    iopConfig : {
+            enable : false,
+            autoSelectTime : 8
           },
+    estimateAndQuoteConfig : {
+          showInfoIcon : true},
     geoCodeConfig :
       { radius : 100000
       , strictBounds : false

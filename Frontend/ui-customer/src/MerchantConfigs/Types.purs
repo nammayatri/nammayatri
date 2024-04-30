@@ -396,6 +396,7 @@ type CityConfig = {
   cityCode :: String,
   geoCodeConfig :: GeoCodeConfig,
   enableCabs :: Boolean,
+  iopConfig :: InteroperabilityConfig,
   estimateAndQuoteConfig :: EstimateConfig,
   featureConfig :: CityBasedFeatures,
   referral :: ReferalConfig
@@ -426,4 +427,9 @@ type Banners = {
 
 type Safety = {
   pastRideInterval :: Int
+}
+
+type InteroperabilityConfig = {
+  enable :: Boolean,
+  autoSelectTime :: Int
 }

@@ -6,7 +6,7 @@ import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
 import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), negate, (*), (/))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout, onAnimationEnd, shimmerFrameLayout)
 import Common.Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -21,44 +21,43 @@ import Mobility.Prelude (boolToInvisibility)
 import Data.Maybe (isJust, Maybe (..), fromMaybe)
 import Engineering.Helpers.Utils as EHU
 import JBridge as JB
+import PrestoDOM.Elements.Keyed as Keyed
+import Data.Tuple (Tuple(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view push config =
-  cardView push config
-  where
-    isActiveIndex = config.index == config.activeIndex
-
-cardView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-cardView push config =
+view push config = 
   let
     isActiveIndex = config.index == config.activeIndex
-    stroke' = if isActiveIndex && (not config.showEditButton) then "2," <> Color.blue800 else "1," <> Color.white900
-    background' = if isActiveIndex && (not config.showEditButton) then Color.blue600 else Color.white900
+    stroke' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then "2," <> Color.blue800 else "1," <> Color.white900
+    background' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then Color.blue600 else Color.white900
     padding' = PaddingVertical 16 16
-    bounds = JB.getLayoutBounds $ EHC.getNewIDWithTag config.id
+    bounds = JB.getLayoutBounds $ EHC.getNewIDWithTag config.id 
   in
-    frameLayout
+    relativeLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , onClick push $ const $ OnSelect config
       , clickable config.isEnabled
-      ][  PrestoAnim.animationSet
+      ][  
+       PrestoAnim.animationSet
             [ Anim.fadeInWithDuration 100 isActiveIndex
             , Anim.fadeOutWithDuration 100 $ not isActiveIndex
             ]
-            $ linearLayout
+            $ 
+            linearLayout
                 [ width MATCH_PARENT
                 , height $ V bounds.height
                 , background background'
                 , cornerRadius 6.0
                 , stroke stroke'
                 , gravity RIGHT
+                , onAnimationEnd push $ const NoAction
                 ][]
       , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , cornerRadius 6.0
-          , id $ EHC.getNewIDWithTag config.id
+          , id $  EHC.getNewIDWithTag  config.id
           , margin $ config.layoutMargin
           , padding padding'
           , afterRender push (const NoAction)
@@ -66,7 +65,7 @@ cardView push config =
           [ linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
-              , afterRender push (const NoAction)
+              , afterRender push $ const NoAction
               ]
               [ linearLayout
                   [ height $ V 48
@@ -105,7 +104,7 @@ cardView push config =
                               , linearLayout
                                   [ width WRAP_CONTENT
                                   , height WRAP_CONTENT
-                                  , gravity RIGHT
+                                  , orientation VERTICAL
                                   , afterRender push (const NoAction)
                                   ][ priceDetailsView push config ]
                               ]
@@ -123,19 +122,6 @@ cardView push config =
                   ]
               ]
           ]
-      , linearLayout
-        [ height $ V bounds.height
-        , width $ MATCH_PARENT
-        , gravity RIGHT
-        ][linearLayout
-          [ height $ V bounds.height
-          , width $ V ((EHC.screenWidth unit) * 3/10)
-          , clickable true
-          , onClick push $ const $ case isActiveIndex of
-                                    false -> OnSelect config
-                                    true  -> if config.showInfo then ShowRateCard config else NoAction
-          ][]
-       ]
     ]
 
 vehicleDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -228,8 +214,41 @@ priceDetailsView push config =
         , height $ V 15
         , gravity CENTER_VERTICAL
         , margin $ MarginLeft 4
-        , visibility $ boolToVisibility $ config.showInfo && isActiveIndex
+        , visibility $ boolToVisibility $ config.showInfo && (isActiveIndex || config.singleVehicle)
         ]
+    ]
+
+shimmerView :: forall w. Config -> PrestoDOM (Effect Unit) w
+shimmerView state =
+  shimmerFrameLayout
+    [ width $ V 100
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , background Color.transparent
+    , cornerRadius 6.0
+    ] 
+    [ 
+      linearLayout
+    [ height MATCH_PARENT
+    , width $ V 100
+    , orientation HORIZONTAL
+    , padding $ PaddingLeft 8
+    , gravity CENTER_VERTICAL
+    , cornerRadius 6.0
+    , background Color.greyDark
+    ]
+    [ textView
+        [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , color Color.black800
+          ]
+      , imageView
+        [ width $ V 15
+        , height $ V 15
+        , gravity CENTER_VERTICAL
+        , margin $ MarginLeft 4
+        ]
+    ]
     ]
 
 capacityView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w

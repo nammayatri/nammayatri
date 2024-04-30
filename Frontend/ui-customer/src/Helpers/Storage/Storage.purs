@@ -103,6 +103,7 @@ data KeyStore
   | CUSTOMER_FIRST_RIDE
   | HAS_TOLL_CHARGES -- @TODO: Remove this key after toll charges are coming from backend
   | AC_POPUP_SHOWN_FOR_RIDE
+  | STARTED_ESTIMATE_SEARCH
 
 derive instance genericKeyStore :: Generic KeyStore _
 

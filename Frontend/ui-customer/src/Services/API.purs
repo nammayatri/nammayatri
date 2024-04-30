@@ -585,7 +585,7 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   estimatedFare :: Int,
   tripTerms :: Array String,
   id :: String,
-  agencyCompletedRidesCount :: Int,
+  agencyCompletedRidesCount :: Maybe Int,
   estimateFareBreakup :: Maybe (Array EstimateFares),
   totalFareRange :: Maybe FareRange,
   nightShiftRate :: Maybe NightShiftRate,
@@ -594,7 +594,9 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   serviceTierName :: Maybe String,
   serviceTierShortDesc :: Maybe String,
   airConditioned :: Maybe Boolean,
-  isValueAddNP :: Maybe Boolean 
+  providerName :: Maybe String,
+  providerId :: Maybe String,
+  isValueAddNP :: Maybe Boolean --true if entity is from ny
 }
 
 newtype NightShiftRate = NightShiftRate {
@@ -926,7 +928,9 @@ newtype RideBookingRes = RideBookingRes {
   hasNightIssue :: Maybe Boolean,
   sosStatus :: Maybe CTA.SosStatus,
   serviceTierName :: Maybe String,
-  airConditioned :: Maybe Boolean
+  airConditioned :: Maybe Boolean,
+  isValueAddNP :: Maybe Boolean,
+  providerName :: Maybe String
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
@@ -941,7 +945,7 @@ newtype RideAPIEntity = RideAPIEntity {
   createdAt :: String,
   driverNumber :: Maybe String,
   shortRideId :: String,
-  driverRegisteredAt :: String,
+  driverRegisteredAt :: Maybe String,
   vehicleNumber :: String,
   rideOtp :: String,
   driverName :: String,
@@ -1253,10 +1257,10 @@ newtype GetProfileRes = GetProfileRes
   , maskedMobileNumber :: Maybe String
   , email :: Maybe String
   , hasTakenRide :: Boolean
-  , hasTakenValidCabRide :: Boolean
-  , hasTakenValidAutoRide :: Boolean
-  , hasTakenValidBikeRide :: Boolean
-  , hasTakenValidRide :: Boolean
+  , hasTakenValidCabRide :: Maybe Boolean
+  , hasTakenValidAutoRide :: Maybe Boolean
+  , hasTakenValidBikeRide :: Maybe Boolean
+  , hasTakenValidRide :: Maybe Boolean
   , referralCode :: Maybe String
   , language :: Maybe String
   , gender :: Maybe String
@@ -1755,13 +1759,14 @@ data FlowStatusReq = FlowStatusReq
 newtype FlowStatusRes = FlowStatusRes
   { currentStatus :: FlowStatus
   , oldStatus :: Maybe FlowStatus
+  , isValueAddNP :: Maybe Boolean
   }
 
 data FlowStatus = IDLE {}
                 | SEARCHING { requestId :: String , validTill :: String }
                 | GOT_ESTIMATE { requestId :: String , validTill :: String }
-                | WAITING_FOR_DRIVER_OFFERS { validTill :: String , estimateId :: String }
-                | DRIVER_OFFERED_QUOTE { validTill :: String , estimateId :: String }
+                | WAITING_FOR_DRIVER_OFFERS { validTill :: String , estimateId :: String}
+                | DRIVER_OFFERED_QUOTE { validTill :: String , estimateId :: String}
                 | WAITING_FOR_DRIVER_ASSIGNMENT { bookingId :: String , validTill :: String, fareProductType :: Maybe String }
                 | RIDE_ASSIGNED { rideId :: String }
                 | PENDING_RATING { rideId :: String }

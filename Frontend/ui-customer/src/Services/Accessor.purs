@@ -305,3 +305,6 @@ _serviceTierName = lens (unwrap >>> _.serviceTierName) (\oldRec newVal -> wrap (
 
 _hasTakenValidCabRide :: forall a b c. Newtype a { hasTakenValidCabRide :: b | c } => Lens' a b
 _hasTakenValidCabRide = lens (unwrap >>> _.hasTakenValidCabRide) (\oldRec newVal -> wrap ((unwrap oldRec) { hasTakenValidCabRide = newVal }))
+
+_isValueAddNP :: forall a b c. Newtype a { isValueAddNP :: b | c } => Lens' a b
+_isValueAddNP = lens (unwrap >>> _.isValueAddNP) (\oldRec newVal -> wrap ((unwrap oldRec) { isValueAddNP = newVal }))
