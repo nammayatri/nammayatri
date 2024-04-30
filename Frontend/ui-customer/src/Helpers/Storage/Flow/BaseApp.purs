@@ -30,6 +30,9 @@ import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Types.App (FlowBT)
 import ConfigProvider (getAppConfig)
 import Constants as Constants
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Function.Uncurried (runFn3)
+import DecodeUtil (getAnyFromWindow)
 
 baseAppStorage :: FlowBT String Unit
 baseAppStorage = do
@@ -60,8 +63,21 @@ baseAppStorage = do
     setValueToLocalStore BUNDLE_TIME_OUT "1000"
     setValueToLocalStore MESSAGES_DELAY "0"
     setValueToLocalStore REALLOCATE_PRODUCT_ENABLED (show appConfig.feature.enableReAllocation)
+    let getFirstRide = getValueToLocalStore CUSTOMER_FIRST_RIDE 
+        firstRideEvent = if getFirstRide == "__failed" then "false" else getFirstRide
+    setValueToLocalStore CUSTOMER_FIRST_RIDE firstRideEvent
     setValueToLocalStore METRO_PAYMENT_SDK_POLLING "false"
     when (sessionId `elem` ["__failed", "(null)"]) do
         setValueToLocalStore SESSION_ID $ generateSessionId unit
     when (countryCode `elem` ["__failed", "(null)"]) do
         setValueToLocalStore COUNTRY_CODE "+91"
+    let appName =  fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+        clientId = getUserClientId appName
+    setValueToLocalStore CUSTOMER_CLIENT_ID clientId
+
+getUserClientId :: String -> String
+getUserClientId appName = case appName of
+                            "Mana Yatri" -> "a791920b-8271-4536-bd6c-14bd4e329812"
+                            "Yatri" -> "c3784e1b-c092-4e97-8175-0e5fffaefc44"
+                            "Namma Yatri" -> "995ff758-4efa-4d18-8f8f-f779521eb743"
+                            _ -> "cab98477-f759-4467-b936-f6759453bc0b"

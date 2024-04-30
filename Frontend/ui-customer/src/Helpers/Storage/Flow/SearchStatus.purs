@@ -41,7 +41,7 @@ updateFlowStatusStorage response = do
   setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL" --TODO:: How is this being used @rohit??
   setValueToLocalStore DISABILITY_UPDATED $ show $ isJust $ response ^. _hasDisability
   setValueToLocalStore REFERRAL_STATUS userRideStatus
-  setValueToLocalStore HAS_TAKEN_FIRST_RIDE $ show $ response ^. _hasTakenRide
+  setValueToLocalStore HAS_TAKEN_FIRST_RIDE "true"
   setValueToLocalStore USER_NAME name
   void $ pure $ setValueToLocalStore DISABILITY_NAME <$> response ^. _disability
   void $ pure $ setValueToLocalStore USER_EMAIL <$> response ^. _email

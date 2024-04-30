@@ -286,7 +286,8 @@ toggleSplash =
       liftFlowBT $ terminateUI $ Just "SplashScreen"
 
 currentFlowStatus :: FlowBT String Unit
-currentFlowStatus = do  
+currentFlowStatus = do
+  logField_ <- lift $ lift $ getLogFields
   liftFlowBT $ markPerformance "CURRENT_FLOW_STATUS"
   void $ lift $ lift $ toggleLoader false
   liftFlowBT $ markPerformance "VERIFY_PROFILE_CALL_API"
@@ -298,6 +299,9 @@ currentFlowStatus = do
     WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
     RIDE_ASSIGNED _                         -> checkRideStatus true
+    PENDING_RATING _                        -> do
+                                                firstRideCompletedEvent ""
+                                                checkRideStatus false 
     _                                       -> checkRideStatus false
   liftFlowBT $ markPerformance "HIDE_LOADER_FLOW"
   hideLoaderFlow
@@ -959,11 +963,7 @@ homeScreenFlow = do
                                       homeScreenFlow
             "TRIP_FINISHED"       -> do -- TRIP FINISHED
                                       void $ pure $ JB.exitLocateOnMap ""
-                                      if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
-                                        void $ pure $ metaLogEvent "ny_user_first_ride_completed"
-                                        (GetProfileRes response) <- Remote.getProfileBT ""
-                                        setValueToLocalStore HAS_TAKEN_FIRST_RIDE ( show response.hasTakenRide)
-                                        else pure unit
+                                      firstRideCompletedEvent ""
                                       let sourceSpecialTagIcon = zoneLabelIcon state.props.zoneType.sourceTag
                                           destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
                                       void $ pure $ metaLogEvent "ny_user_ride_completed"
@@ -1070,6 +1070,7 @@ homeScreenFlow = do
       void $ pure $ deleteValueFromLocalStore CUSTOMER_ID
       void $ pure $ deleteValueFromLocalStore CONTACTS
       void $ pure $ deleteValueFromLocalStore USER_EMAIL
+      void $ pure $ deleteValueFromLocalStore CUSTOMER_FIRST_RIDE
       void $ pure $ factoryResetApp ""
       void $ pure $ clearCache ""
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_logout"
@@ -4066,4 +4067,29 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
                                                                                 , hotSpot{ centroidPoint = Just { lat : lat, lng : lon } } }})
       liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { points = points, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
     else pure unit
+  else pure unit
+
+firstRideCompletedEvent :: String -> FlowBT String Unit
+firstRideCompletedEvent str = do
+  logField_ <- lift $ lift $ getLogFields
+  let appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+      eventPrefix = case appName of
+                  "Mana Yatri" -> "my_"
+                  "Yatri" -> "y_"
+                  "Namma Yatri" -> "ny_"
+                  _ -> fromMaybe "" $ (DS.split (DS.Pattern " ") appName) !! 0
+      firstRideEventCheck = getValueToLocalStore CUSTOMER_FIRST_RIDE
+  if firstRideEventCheck == "false" then do
+    let clientId = getValueToLocalStore CUSTOMER_CLIENT_ID
+    rideBookingListResponse <- lift $ lift $ HelpersAPI.callApi $ Remote.makeRideBookingListWithStatus "2" "0" "COMPLETED" (Just clientId)
+    case rideBookingListResponse of
+      Right (RideBookingListRes  listResp) -> do
+        let arraySize = Arr.length listResp.list
+        if (arraySize == 1) then do
+          void $ liftFlowBT $ logEvent logField_ $ eventPrefix <> "user_first_ride_completed"
+          setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
+        else if arraySize > 1 then do
+          setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
+        else setValueToLocalStore CUSTOMER_FIRST_RIDE "false"
+      Left (err) -> pure unit
   else pure unit

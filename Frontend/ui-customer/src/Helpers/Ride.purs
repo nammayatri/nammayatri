@@ -104,7 +104,7 @@ checkRideStatus rideAssigned = do
                 pure unit
       else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
         updateLocalStage HomeScreen
-        rideBookingListResponse <- lift $ lift $ Remote.rideBookingListWithStatus "1" "0" "COMPLETED"
+        rideBookingListResponse <- lift $ lift $ Remote.rideBookingListWithStatus "1" "0" "COMPLETED" Nothing
         case rideBookingListResponse of
           Right (RideBookingListRes listResp) -> do
             let (RideBookingRes resp) = fromMaybe HSD.dummyRideBooking $ head listResp.list
