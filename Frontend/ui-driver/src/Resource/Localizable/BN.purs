@@ -1374,3 +1374,4 @@ getBN stringKey =
         IS_YOUR_CAR_AC_WORKING -> "আপনার গাড়ির এসি কি কাজ করছে?"
         HOW_DOES_AC_CONDITION_AFFECT -> "কার এসির অবস্থা আপনাকে কীভাবে প্রভাবিত করে?"
         WE_WILL_USE_THIS_INFO -> "আমরা এসি সম্পর্কিত গ্রাহকদের প্রত্যাশার সাথে মেলে এই তথ্য ব্যবহার করব"
+        YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(আপনি সবসময় প্রোফাইল থেকে এটি পরিবর্তন করতে পারেন)"

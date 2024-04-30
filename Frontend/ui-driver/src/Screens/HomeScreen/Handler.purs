@@ -170,3 +170,6 @@ homeScreen = do
     FetchOdometerReading updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CLEAR_PENDING_DUES)
+    UpdateAirConditioned updatedState isAcWorking -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ UPDATE_AIR_CONDITIONED isAcWorking)

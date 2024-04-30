@@ -986,4 +986,5 @@ getFR stringKey =
         TOLL_ROAD_CHANGED -> "Frais de péage réduits car la route à péage n'a pas été empruntée"
         RIDE_TOLL_FARE_INCLUDES -> "*Le tarif du trajet inclut les frais de péage."
         TOLL_INCLUDED -> "Péage (inclus dans le tarif)"
+        YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(Vous pouvez toujours modifier cela depuis votre profil)"
         _ -> ""

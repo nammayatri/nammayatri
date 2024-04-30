@@ -205,13 +205,14 @@ dummyDriverInfo = GetDriverInfoResp {
     , freeTrialDaysLeft     : Nothing
     , payerVpa              : Nothing
     , currentDues           : Nothing
-    , manualDues           : Nothing
+    , manualDues            : Nothing
     , driverGoHomeInfo      : dummyDriverGoHomeInfo
     , isGoHomeEnabled       : false
     , maskedDeviceToken     : Nothing
     , operatingCity         : Nothing
     , isVehicleSupported    : Nothing
-    , canSwitchToRental      : false
+    , canSwitchToRental     : false
+    , checkIfACWorking    : Nothing
 }
 
 organizationInfo :: OrganizationInfo

@@ -1992,3 +1992,42 @@ introducingCoinsPopup state = PopUpModal.config {
     },
   dismissPopup = false
     }
+
+isAcWorkingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+isAcWorkingPopupConfig state = PopUpModal.config {
+    gravity = CENTER,
+    backgroundClickable = true,
+    optionButtonOrientation = "HORIZONTAL",
+    buttonLayoutMargin = MarginBottom 10,
+    dismissPopup = true,
+    margin = MarginHorizontal 25 25, 
+    primaryText {
+      text = getString IS_YOUR_CAR_AC_WORKING,
+      textStyle = Heading2,
+      margin = Margin 16 0 16 10},
+    secondaryText{
+      text = getString YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE,
+      textStyle = ParagraphText,
+      margin = Margin 16 0 16 15 },
+    option1 {
+      text = getString YES,
+      color = Color.black700,
+      background = Color.blue600,
+      textStyle = FontStyle.SubHeading1,
+      strokeColor = Color.blue600
+    },
+    option2 {
+      text = getString NO,
+      color = Color.black700,
+      background = Color.blue600,
+      strokeColor = Color.blue600
+    },
+    cornerRadius = PTD.Corners 15.0 true true true true,
+    coverImageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_ac_working_popup"
+    , visibility = VISIBLE
+    , margin = Margin 16 20 16 24
+    , width = V 160
+    , height = V 175
+    }
+  }
