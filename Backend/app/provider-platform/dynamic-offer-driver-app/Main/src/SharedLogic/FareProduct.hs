@@ -9,6 +9,7 @@
 
 module SharedLogic.FareProduct where
 
+import Control.Applicative ((<|>))
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Calendar.WeekDate
 import qualified Domain.Types.Common as DTC
@@ -118,14 +119,23 @@ getBoundedFareProduct merchantOpCityId tripCategory serviceTier area = do
   let currTimeOfDay = utcTimeToDiffTime currentIstTime
       currentDay = utctDay currentIstTime
       (_, _, currentDayOfWeek) = toWeekDate currentDay
-  return $
-    find
-      ( \fp ->
-          case fp.timeBounds of
-            DFareProduct.Bounded timeBounds -> isWithin currTimeOfDay (getPeaksForCurrentDay currentDayOfWeek timeBounds)
-            DFareProduct.Unbounded -> False
-      )
-      fareProducts
+  let (fareProductBoundedByWeekday, fareProductBoundedByDay) =
+        foldl
+          ( \acc@(fpBoundedByWeekday, fpBoundedByDay) fp ->
+              case fp.timeBounds of
+                DFareProduct.BoundedByWeekday timeBounds ->
+                  if isWithin currTimeOfDay (getPeaksForCurrentDay currentDayOfWeek timeBounds)
+                    then (Just fp, fpBoundedByDay)
+                    else acc
+                DFareProduct.BoundedByDay days ->
+                  if maybe False (isWithin currTimeOfDay) (snd <$> find (\(day, _) -> day == currentDay) days)
+                    then (fpBoundedByWeekday, Just fp)
+                    else acc
+                DFareProduct.Unbounded -> acc
+          )
+          (Nothing, Nothing)
+          fareProducts
+  return $ fareProductBoundedByDay <|> fareProductBoundedByWeekday
   where
     isWithin _ [] = False
     isWithin currTime [(startTime, endTime)] = currTime > (timeOfDayToTime startTime) && currTime < (timeOfDayToTime endTime)

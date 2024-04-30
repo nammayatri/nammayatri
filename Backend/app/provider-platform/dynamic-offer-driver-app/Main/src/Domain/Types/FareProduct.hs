@@ -42,7 +42,8 @@ data BoundedPeaks = BoundedPeaks
   deriving (PrettyShow) via Showable BoundedPeaks
 
 data TimeBound
-  = Bounded BoundedPeaks
+  = BoundedByWeekday BoundedPeaks
+  | BoundedByDay [(Day, [(TimeOfDay, TimeOfDay)])]
   | Unbounded
   deriving (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
@@ -50,15 +51,19 @@ data TimeBound
 
 instance Show TimeBound where
   show Unbounded = "Unbounded"
-  show (Bounded peaks) = show peaks
+  show (BoundedByWeekday peaks) = show peaks
+  show (BoundedByDay days) = show days
 
 instance Read TimeBound where
   readsPrec _ str
     | str == "Unbounded" = [(Unbounded, "")]
     | otherwise =
-      case readMaybe str :: Maybe BoundedPeaks of
-        Just peaks -> [(Bounded peaks, "")]
-        Nothing -> [(Unbounded, "")]
+      case (readMaybe str :: Maybe BoundedPeaks) of
+        Just bound -> [(BoundedByWeekday bound, "")]
+        Nothing ->
+          case (readMaybe str :: Maybe [(Day, [(TimeOfDay, TimeOfDay)])]) of
+            Just bound -> [(BoundedByDay bound, "")]
+            Nothing -> [(Unbounded, "")]
 
 $(mkBeamInstancesForEnum ''TimeBound)
 
