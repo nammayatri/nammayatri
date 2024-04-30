@@ -3522,12 +3522,12 @@ data DriverCoinsFunctionType
   | LeaderBoardTopFiveHundred
   | TrainingCompleted
   | BulkUploadFunction
-  | BulkUploadFunctionV2 String
+  | BulkUploadFunctionV2
 
 instance makeCoinTransactionReq :: RestEndpoint CoinTransactionReq CoinTransactionRes where
     makeRequest reqBody@(CoinTransactionReq date) headers = defaultMakeRequest GET (EP.getCoinTransactions date) headers reqBody Nothing
     decodeResponse = decodeJSON
-    encodeRequest req = defaultEncode req
+    encodeRequest = standardEncode
 
 derive instance genericCoinTransactionReq :: Generic CoinTransactionReq _
 instance showCoinTransactionReq :: Show CoinTransactionReq where show = genericShow
@@ -3544,13 +3544,12 @@ instance encodeCoinTransactionRes :: Encode CoinTransactionRes where encode = de
 
 derive instance genericDriverCoinsFunctionType :: Generic DriverCoinsFunctionType _
 instance showDriverCoinsFunctionType :: Show DriverCoinsFunctionType where show = genericShow
-instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType where decode = defaultDecode
+instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType where decode = defaultEnumDecode
 instance encodeDriverCoinsFunctionType :: Encode DriverCoinsFunctionType where encode = defaultEncode
 instance eqDriverCoinsFunctionType :: Eq DriverCoinsFunctionType where eq = genericEq
 instance standardEncodeDriverCoinsFunctionType :: StandardEncode DriverCoinsFunctionType
   where
     standardEncode _ = standardEncode {}
-    standardEncode (BulkUploadFunctionV2 param) = standardEncode param
 
 derive instance genericCoinTransactionHistoryItem :: Generic CoinTransactionHistoryItem _
 derive instance newtypeCoinTransactionHistoryItem :: Newtype CoinTransactionHistoryItem _
