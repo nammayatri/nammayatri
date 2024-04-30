@@ -1,0 +1,160 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Driver: Domain.Types.Person
+  Plan: Domain.Types.Plan
+  PaymentMode: Domain.Types.Plan
+  ServiceNames: Domain.Types.Plan
+  Money: Kernel.Types.Common
+  PlatformFee: Domain.Types.DriverFee
+
+DriverFee:
+  tableName: driver_fee
+
+  types:
+    DriverFeeStatus:
+      enum: "ONGOING, PAYMENT_PENDING, PAYMENT_OVERDUE, CLEARED, EXEMPTED, COLLECTED_CASH, INACTIVE, CLEARED_BY_YATRI_COINS, MANUAL_REVIEW_NEEDED"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+    FeeType:
+      enum: "MANDATE_REGISTRATION, RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+
+    AutopayPaymentStage:
+      enum: "NOTIFICATION_SCHEDULED, NOTIFICATION_ATTEMPTING, EXECUTION_SCHEDULED, EXECUTION_ATTEMPTING, EXECUTION_SUCCESS, EXECUTION_FAILED"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+
+    PlatformFee:
+      fee: HighPrecMoney
+      cgst: HighPrecMoney
+      sgst: HighPrecMoney
+      derive': "Generic, Eq, Show, FromJSON, ToJSON, ToSchema"
+
+
+  fields:
+    id : Id DriverFee
+    merchantId : Id Merchant
+    driverId : Id Driver
+    govtCharges : Money
+    platformFee : PlatformFee
+    numRides : Int
+    payBy : UTCTime
+    totalEarnings : Money
+    startTime : UTCTime
+    endTime : UTCTime
+    status : DriverFeeStatus
+    collectedBy : Maybe Text
+    collectedAt : Maybe UTCTime
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    feeType : FeeType
+    offerId : Maybe Text
+    planOfferTitle : Maybe Text
+    billNumber : Maybe Int
+    autopayPaymentStage : Maybe AutopayPaymentStage
+    badDebtDeclarationDate : Maybe UTCTime
+    badDebtRecoveryDate : Maybe UTCTime
+    schedulerTryCount : Int
+    notificationRetryCount : Int
+    merchantOperatingCityId : Id MerchantOperatingCity
+    stageUpdatedAt : Maybe UTCTime
+    amountPaidByCoin : Maybe HighPrecMoney
+    feeWithoutDiscount : Maybe HighPrecMoney
+    overlaySent : Bool
+    specialZoneRideCount : Int
+    specialZoneAmount : HighPrecMoney
+    planId : Maybe (Id Plan)
+    planMode : Maybe PaymentMode
+    serviceName : ServiceNames
+    vehicleNumber : Maybe Text
+  derives: "Generic, Show, Eq"
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <DriverFeeStatus>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <FeeType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <DriverFeeStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <FeeType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AutopayPaymentStage>
+
+  beamType:
+    merchantOperatingCityId: Maybe Text
+    serviceName: Maybe ServiceNames
+
+  beamFields:
+    platformFee:
+      platformFee: HighPrecMoney
+      cgst : HighPrecMoney
+      sgst : HighPrecMoney
+      platformFeeCgst: {}
+      platformFeeSgst: {}
+
+
+  fromTType:
+    platformFee: Domain.Types.DriverFee.PlatformFee platformFee cgst sgst|E
+    merchantOperatingCityId: Storage.Queries.Transformers.DriverFee.getMerchantOperatingCityId merchantOperatingCityId driverId id |EM
+    serviceName: fromMaybe Domain.Types.Plan.YATRI_SUBSCRIPTION serviceName|E
+
+  toTType:
+    platformFee: ((.fee) platformFee)|E
+    cgst: ((.cgst) platformFee)|E
+    sgst: ((.sgst) platformFee)|E
+    serviceName: (Just serviceName)|E
+    merchantOperatingCityId: (Just (Kernel.Types.Id.getId merchantOperatingCityId))|E
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+
+  queries:
+    updateOfferId:
+      kvFunction: updateOneWithKV
+      params: [offerId, updatedAt]
+      where: id
+
+    updateOfferAndPlanDetails:
+      kvFunction: updateOneWithKV
+      params: [offerId, planOfferTitle, planId, planMode]
+      where: id
+
+    updateAutopayPaymentStageById:
+      kvFunction: updateOneWithKV
+      params: [autopayPaymentStage, stageUpdatedAt]
+      where: id
+
+    updateNotificationRetryCountById:
+      kvFunction: updateOneWithKV
+      params: [notificationRetryCount, updatedAt]
+      where: id
+
+    updateAmountPaidByCoins:
+      kvFunction: updateOneWithKV
+      params: [amountPaidByCoin]
+      where: id
+
+    updateBillNumberById:
+      kvFunction: updateWithKV
+      params: [billNumber, updatedAt]
+      where: id
+
+    updateFeeType:
+      kvFunction: updateOneWithKV
+      params: [feeType, updatedAt]
+      where: id
+
+    updateRetryCount:
+      kvFunction: updateOneWithKV
+      params: [schedulerTryCount, updatedAt]
+      where: id
+
+    updateFeeWithoutDiscount:
+      kvFunction: updateOneWithKV
+      params: [feeWithoutDiscount]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
+
+

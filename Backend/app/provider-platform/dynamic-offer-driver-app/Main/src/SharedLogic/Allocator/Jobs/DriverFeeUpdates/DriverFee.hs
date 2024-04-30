@@ -106,7 +106,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               QDF.updateStatus MANUAL_REVIEW_NEEDED driverFeeId now
               return Nothing
             else do
-              QDF.updateRetryCount (count + 1) now driverFeeId
+              QDF.updateRetryCount (count + 1) driverFeeId
               return (Just driverFee)
       )
       driverFees
@@ -133,7 +133,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           ---------------------------------------------------------------------
           ------------- update driver fee with offer and plan details ---------
           let offerAndPlanTitle = Just plan.name <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
-          updateOfferAndPlanDetails offerId offerAndPlanTitle driverFee.id (Just plan.id) (Just plan.paymentMode) now
+          updateOfferAndPlanDetails offerId offerAndPlanTitle (Just plan.id) (Just plan.paymentMode) driverFee.id
           let driverFeeUpdateWithPlanAndOffer =
                 driverFee
                   { offerId = offerId,
@@ -160,7 +160,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                 QDF.updateStatusByIds CLEARED_BY_YATRI_COINS [driverFeeUpdateWithPlanAndOffer.id] now
                 driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId Nothing subscriptionConfigs now
                 invoice <- mkInvoiceAgainstDriverFee driverFeeUpdateWithPlanAndOffer (True, paymentMode == AUTOPAY)
-                updateAmountPaidByCoins driverFeeUpdateWithPlanAndOffer.id (Just totalFee)
+                updateAmountPaidByCoins (Just totalFee) driverFeeUpdateWithPlanAndOffer.id
                 QINV.create invoice
               else do
                 when (coinCashLeft > 0) $ do
@@ -218,7 +218,7 @@ processDriverFee paymentMode driverFee subscriptionConfig = do
           then
             ( do
                 updateStatus PAYMENT_PENDING driverFee.id now
-                updateFeeType RECURRING_INVOICE now driverFee.id
+                updateFeeType RECURRING_INVOICE driverFee.id
             )
           else
             ( do
@@ -227,10 +227,10 @@ processDriverFee paymentMode driverFee subscriptionConfig = do
         )
     AUTOPAY -> do
       updateStatus PAYMENT_PENDING driverFee.id now
-      updateFeeType RECURRING_EXECUTION_INVOICE now driverFee.id
+      updateFeeType RECURRING_EXECUTION_INVOICE driverFee.id
       invoice <- mkInvoiceAgainstDriverFee driverFee (False, True)
       QINV.create invoice
-      QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
+      QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) (Just now) driverFee.id
 
 processRestFee ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
@@ -297,7 +297,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
       if finalOrderAmount + driverFee.specialZoneAmount == 0
         then do
           updateCollectedPaymentStatus CLEARED offerId now driverFee.id
-          updateFeeWithoutDiscount driverFee.id (Just feeWithOutDiscountPlusSpecialZone)
+          updateFeeWithoutDiscount (Just feeWithOutDiscountPlusSpecialZone) driverFee.id
           return (0, 0, offerId, offerTitle)
         else return (feeWithOutDiscountPlusSpecialZone, finalOrderAmount + driverFee.specialZoneAmount, offerId, offerTitle)
 
