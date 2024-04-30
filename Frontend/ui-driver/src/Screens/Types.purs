@@ -1143,7 +1143,8 @@ type ActiveRide = {
   driverVehicle :: String,
   serviceTier :: String,
   capacity :: Maybe Int,
-  hasToll :: Boolean
+  hasToll :: Boolean,
+  estimatedTollCharge :: Maybe Int
 }
 
 type HomeScreenProps =  {

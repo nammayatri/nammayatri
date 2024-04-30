@@ -2316,8 +2316,6 @@ homeScreenFlow = do
             void $ pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
             void $ Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
             void $ pure $ setValueToLocalNativeStore TRIP_STATUS "ended"
-            liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_completed" $ [{key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
-                                                                                            {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle}]
             resp <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (getcurrentdate ""))
             modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverRideStats = Just resp}
             if getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "true" then do
@@ -2387,6 +2385,11 @@ homeScreenFlow = do
                       isFreeRide = fromMaybe false response.isFreeRide
                     }
                   })
+                liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_completed" $ [{key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
+                                                                                            {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle},
+                                                                                            {key : "Actual Toll Charge", value : unsafeToForeign (fromMaybe 0 response.tollCharges)},
+                                                                                            {key : "Estimated Toll Charge", value : unsafeToForeign (fromMaybe 0 response.estimatedTollCharges)},
+                                                                                            {key : "Has Toll", value : unsafeToForeign (maybe false (\charge -> charge /= 0) response.tollCharges)}]
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {enterOtpModal = false, endRideOdometerReadingModal = false, isInvalidOdometer = false,enterOdometerFocusIndex=0, showRideCompleted = true}})
             void $ updateStage $ HomeScreenStage RideCompleted
             void $ lift $ lift $ toggleLoader false
@@ -2486,7 +2489,9 @@ homeScreenFlow = do
           void $ pure $ setValueToLocalStore WAITING_TIME_VAL $ state.data.activeRide.id <> "<$>" <> getCurrentUTC ""
           void $ pure $ JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then (EHS.getMessageFromKey EHS.chatSuggestion "dis1AP" "EN_US") else "dis1AP"
           liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_i_have_arrived_clicked" $ [{key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
-                                                                                                  {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle}]
+                                                                                                  {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle},
+                                                                                                  {key : "Estimated Toll Charge", value : unsafeToForeign (fromMaybe 0 state.data.activeRide.estimatedTollCharge)},
+                                                                                                  {key : "Has Toll", value : unsafeToForeign state.data.activeRide.hasToll}]
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}})
         Left _ -> pure unit
       homeScreenFlow
