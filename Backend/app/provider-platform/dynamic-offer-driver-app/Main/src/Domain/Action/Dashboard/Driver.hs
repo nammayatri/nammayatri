@@ -1041,30 +1041,31 @@ getFleetVehicleAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffse
   where
     createFleetVehicleAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [VehicleRegistrationCertificate] -> m [Common.DriveVehicleAssociationListItem]
     createFleetVehicleAssociationListItem vrcList = do
+      now <- getCurrentTime
       forM vrcList $ \vrc -> do
         decryptedVehicleRC <- decrypt vrc.certificateNumber
         completedRides <- QRD.totalRidesByFleetOwnerPerVehicle (Just fleetOwnerId) decryptedVehicleRC
         earning <- QRide.totalEarningsByFleetOwnerPerVehicle (Just fleetOwnerId) decryptedVehicleRC
-        currentActiveAssociation <- QRCAssociation.findActiveAssociationByRC vrc.id True
-        (currentActiveDriver, status) <- case currentActiveAssociation of
-          Just activeAssociation -> do
-            driver <- QPerson.findById activeAssociation.driverId
+        mbLatestAssociation <- QRCAssociation.findLatestLinkedByRCId vrc.id now
+        (currentActiveDriver, status, isRcAssociated', isDriverActive') <- case mbLatestAssociation of
+          Just latestAssociation -> do
+            driver <- QPerson.findById latestAssociation.driverId
             case driver of
               Just driver' -> do
                 isDriverPartOfFleet <- FDV.findByDriverIdAndFleetOwnerId driver'.id fleetOwnerId
                 case isDriverPartOfFleet of
                   Just _ -> do
                     driverInfo' <- QDriverInfo.findById driver'.id >>= fromMaybeM DriverInfoNotFound
-                    pure (Just driver', driverInfo'.mode)
-                  Nothing -> pure (Nothing, Nothing)
-              Nothing -> pure (Nothing, Nothing)
-          Nothing -> pure (Nothing, Nothing)
+                    pure (Just driver', driverInfo'.mode, latestAssociation.isRcActive, latestAssociation.isRcActive)
+                  Nothing -> pure (Nothing, Nothing, latestAssociation.isRcActive, False)
+              Nothing -> pure (Nothing, Nothing, latestAssociation.isRcActive, False)
+          Nothing -> pure (Nothing, Nothing, False, False)
         (driverName, driverId, driverPhoneNo) <- case currentActiveDriver of
           Just driver -> pure (Just driver.firstName, Just driver.id.getId, driver.unencryptedMobileNumber)
           Nothing -> pure (Nothing, Nothing, Nothing) --- No need to pass driver info if it is not associated with any driver of fleet
         let vehicleType = castVehicleVariantDashboard vrc.vehicleVariant
-        let isDriverActive = isJust currentActiveDriver -- Check if there is a current active driver
-        let isRcAssociated = isJust currentActiveAssociation
+        let isDriverActive = isDriverActive' -- Check if there is a current active driver
+        let isRcAssociated = isRcAssociated'
         let ls =
               Common.DriveVehicleAssociationListItem
                 { vehicleNo = Just decryptedVehicleRC,
@@ -1637,8 +1638,8 @@ fleetVehicleEarning _merchantShortId _ fleetOwnerId vehicleNo mbDriverId = do
       totalRides <- QRD.totalRidesByFleetOwnerPerVehicle (Just fleetOwnerId) vehicleNo
       totalEarning <- QRide.totalEarningsByFleetOwnerPerVehicle (Just fleetOwnerId) vehicleNo
       vehicleRegCert <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (VehicleNotFound vehicleNo)
-      currentActiveAssociation <- QRCAssociation.findActiveAssociationByRC vehicleRegCert.id True
-      currentActiveDriver <- case currentActiveAssociation of
+      latestFleetDriverAssociation <- QRCAssociation.findActiveAssociationByRC vehicleRegCert.id True
+      currentActiveDriver <- case latestFleetDriverAssociation of
         Just activeAssociation -> do
           driver <- QPerson.findById activeAssociation.driverId >>= fromMaybeM (PersonNotFound activeAssociation.driverId.getId)
           pure $ Just driver
