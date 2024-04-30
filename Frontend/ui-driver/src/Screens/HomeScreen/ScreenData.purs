@@ -83,6 +83,7 @@ initData =
           , capacity : Nothing
           , hasToll: false
           , estimatedTollCharge : Nothing
+          , acRide : false
           }
       , cancelRideModal:
           { selectionOptions: []

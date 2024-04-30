@@ -192,7 +192,9 @@ type AddVehicleDetailsScreenProps =  {
   multipleRCstatus :: StageStatus,
   menuOptions :: Boolean,
   confirmChangeVehicle :: Boolean,
-  contactSupportModal :: AnimType
+  contactSupportModal :: AnimType,
+  buttonIndex :: Maybe Int,
+  acModal :: Boolean
  }
 
 data ValidationStatus  =  Success | Failure | InProgress | None
@@ -1144,7 +1146,8 @@ type ActiveRide = {
   serviceTier :: String,
   capacity :: Maybe Int,
   hasToll :: Boolean,
-  estimatedTollCharge :: Maybe Int
+  estimatedTollCharge :: Maybe Int,
+  acRide :: Boolean
 }
 
 type HomeScreenProps =  {

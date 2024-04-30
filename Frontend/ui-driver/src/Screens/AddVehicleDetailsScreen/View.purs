@@ -66,6 +66,7 @@ import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
 import Data.Array as DA
 import Components.BottomDrawerList as BottomDrawerList
 import Screens.Types as ST
+import Components.RequestInfoCard as RequestInfoCard
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -184,6 +185,7 @@ view push state =
       <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else [] 
       <> if state.props.multipleRCstatus /= NOT_STARTED then [addRCFromProfileStatusView state push] else []
       <> if state.props.menuOptions then [menuOptionModal push state] else []
+      <> if state.props.acModal then [RequestInfoCard.view (push <<< RequestInfoCardAction) (acModalConfig state)] else []
 
 menuOptionModal :: forall w. (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
 menuOptionModal push state = 
@@ -414,12 +416,80 @@ vehicleRegistrationNumber state push =
                 , color Color.darkGrey
                 ]
           ]
+        , checkACView state push
         ]
       ]
       where validateRegistrationNumber regNum = regNum `DA.elem` state.data.rcNumberPrefixList
 
 
-
+checkACView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+checkACView state push =
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ MarginTop 22
+    , visibility $ boolToVisibility $ state.data.vehicleCategory == Just ST.CarCategory
+    ]
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        ]
+        [ textView
+            $ [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text $ getString IS_YOUR_CAR_AC_WORKING
+              , color Color.greyTextColor
+              , margin $ MarginVertical 10 10
+              ]
+            <> FontStyle.body3 TypoGraphy
+        , imageView
+            [ width $ V 12
+            , height $ V 12
+            , margin $ MarginLeft 5
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_grey"
+            , onClick push $ const OpenAcModal
+            ]
+        ]
+    , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER
+        ]
+        $ DA.mapWithIndex
+            ( \index item ->
+                linearLayout
+                  ( [ weight 1.0
+                    , height WRAP_CONTENT
+                    , orientation VERTICAL
+                    , cornerRadius 8.0
+                    , gravity CENTER
+                    , onClick push $ const $ SelectButton index
+                    , margin $ MarginLeft if index == 0 then 0 else 10
+                    ]
+                      <> case state.props.buttonIndex of
+                          Just ind ->
+                            [ stroke $ "1," <> if ind == index then Color.blue900 else Color.grey800
+                            , background if ind == index then Color.blue600 else Color.white900
+                            ]
+                          Nothing ->
+                            [ stroke $ "1," <> Color.grey800
+                            , background Color.white900
+                            ]
+                  )
+                  [ textView
+                      $ [ width WRAP_CONTENT
+                        , height WRAP_CONTENT
+                        , text item
+                        , color Color.black800
+                        , padding $ Padding 10 12 10 12
+                        ]
+                      <> FontStyle.subHeading1 TypoGraphy
+                  ]
+            )
+            [ getString YES, getString NO ]
+    ]
 
 
 

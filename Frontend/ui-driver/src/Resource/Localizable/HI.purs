@@ -1370,3 +1370,6 @@ getHI stringKey =
         EARNINGS_PER_KM_DESC_1 -> "आज के लिए कुल आय/कुल सवारी दूरी दर्शाता है।"
         EARNINGS_PER_KM_DESC_2 -> "इस राशि में पार्किंग और टोल शुल्क शामिल नहीं है"
         EARNINGS_P_KM -> "आय/किमी"
+        IS_YOUR_CAR_AC_WORKING -> "क्या आपकी कार का AC काम कर रहा है?"
+        HOW_DOES_AC_CONDITION_AFFECT -> "कार AC की स्थिति आपको कैसे प्रभावित करती है?"
+        WE_WILL_USE_THIS_INFO -> "हम इस जानकारी का उपयोग एसी के संबंध में ग्राहकों की अपेक्षाओं से मेल खाने के लिए करेंगे"

@@ -675,14 +675,15 @@ callDriverToDriverBT rcNo = do
   where
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
 
-makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> Maybe ST.VehicleCategory -> DriverRCReq
-makeDriverRCReq regNo imageId dateOfRegistration multipleRc category = DriverRCReq
+makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> Maybe ST.VehicleCategory -> Maybe Int -> DriverRCReq
+makeDriverRCReq regNo imageId dateOfRegistration multipleRc category airConditioned = DriverRCReq
     {
       "vehicleRegistrationCertNumber" : regNo,
       "operatingCity" : "BANGALORE",
       "imageId" : imageId,
       "dateOfRegistration" : dateOfRegistration,
-      "vehicleCategory" : mkCategory category
+      "vehicleCategory" : mkCategory category,
+      "airConditioned" : maybe Nothing (\ac -> Just (ac == 0)) airConditioned
     }
 
 mkCategory :: Maybe ST.VehicleCategory -> Maybe String

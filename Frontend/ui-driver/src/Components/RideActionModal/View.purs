@@ -813,8 +813,31 @@ rideTierAndCapacity push config =
   , gravity CENTER
   , padding $ Padding 8 8 8 8
   , margin $ MarginBottom 12
-  , cornerRadius 4.0
-  ][ textView $
+  , cornerRadius 18.0
+  ][ linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , cornerRadius 18.0
+      , background Color.blue800
+      , padding $ Padding 8 2 8 2
+      , margin $ MarginRight 6
+      , gravity CENTER_VERTICAL
+      , visibility $ boolToVisibility config.acRide
+      ][ imageView
+          [ height $ V 16
+          , width $ V 16
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_ac_white"
+          ]
+        , textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text "AC"
+          , color Color.white900
+          , margin $ MarginLeft 5
+          , padding $ PaddingBottom 2
+          ] <> FontStyle.subHeading1 TypoGraphy
+      ]
+    , textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , text config.serviceTierAndAC
