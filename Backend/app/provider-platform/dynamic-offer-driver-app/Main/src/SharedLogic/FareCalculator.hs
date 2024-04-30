@@ -192,7 +192,7 @@ calculateFareParameters params = do
           + partOfNightShiftCharge
   let resultNightShiftCharge = (\isCoefIncluded -> if isCoefIncluded then countNightShiftCharge fullRideCost <$> nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded
       resultWaitingCharge = countWaitingCharge =<< waitingChargeInfo
-      congestionChargeResult = fp.congestionChargeMultiplier <&> \congestionCharge -> roundToIntegral $ (fromIntegral fullRideCost * congestionCharge) - fromIntegral fullRideCost
+      congestionChargeResult = fp.congestionChargeMultiplier <&> \congestionCharge -> roundToIntegral $ (fromIntegral partOfNightShiftCharge * congestionCharge) - fromIntegral partOfNightShiftCharge
       fullRideCostN {-without govtCharges and platformFee-} =
         fullRideCost
           + fromMaybe 0 resultNightShiftCharge
