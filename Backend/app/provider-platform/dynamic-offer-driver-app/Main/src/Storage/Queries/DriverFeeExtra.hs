@@ -1,19 +1,7 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.DriverFee where
+module Storage.Queries.DriverFeeExtra where
 
 import Data.Time (Day, UTCTime (UTCTime, utctDay), addDays, fromGregorian, toGregorian)
 import qualified Domain.Types.Booking as SRB
@@ -34,14 +22,11 @@ import Kernel.Types.Time
 import Kernel.Utils.Common (fork, fromMaybeM, getLocalCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
+import Storage.Queries.OrphanInstances.DriverFee
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFee -> m ()
-create = createWithKV
-
-createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [DriverFee] -> m ()
-createMany = traverse_ create
+-- Extra code goes here --
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m (Maybe DriverFee)
 findById (Id driverFeeId) = findOneWithKV [Se.Is BeamDF.id $ Se.Eq driverFeeId]
@@ -481,47 +466,6 @@ resetFee driverFeeId govtCharges platformFee mbFeeWithoutDiscount mbAmountPaidBy
     )
     [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
 
-updateOfferId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Id DriverFee -> UTCTime -> m ()
-updateOfferId offerId driverFeeId now = do
-  updateOneWithKV
-    [Se.Set BeamDF.offerId offerId, Se.Set BeamDF.updatedAt now]
-    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
-
-updateOfferAndPlanDetails ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  Maybe Text ->
-  Maybe Text ->
-  Id DriverFee ->
-  Maybe (Id DPlan.Plan) ->
-  Maybe DPlan.PaymentMode ->
-  UTCTime ->
-  m ()
-updateOfferAndPlanDetails offerId planAndOfferTitle driverFeeId planId paymentMode now = do
-  updateOneWithKV
-    [ Se.Set BeamDF.offerId offerId,
-      Se.Set BeamDF.planOfferTitle planAndOfferTitle,
-      Se.Set BeamDF.planId $ planId <&> getId,
-      Se.Set BeamDF.planMode paymentMode,
-      Se.Set BeamDF.updatedAt now
-    ]
-    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
-
-updateAutopayPaymentStageById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Domain.AutopayPaymentStage -> Id DriverFee -> m ()
-updateAutopayPaymentStageById autopayPaymentStage driverFeeId = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [Se.Set BeamDF.autopayPaymentStage autopayPaymentStage, Se.Set BeamDF.stageUpdatedAt (Just now)]
-    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
-
-updateNotificationRetryCountById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Int -> Id DriverFee -> m ()
-updateNotificationRetryCountById retryCount driverFeeId = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamDF.notificationRetryCount retryCount,
-      Se.Set BeamDF.updatedAt now
-    ]
-    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
-
 updateAutopayPaymentStageByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Domain.AutopayPaymentStage -> [Id DriverFee] -> m ()
 updateAutopayPaymentStageByIds autopayPaymentStage driverFeeIds = do
   now <- getCurrentTime
@@ -585,15 +529,6 @@ updateDriverFeeOverlayScheduledByServiceName driverIds val from to serviceName =
           Se.Is BeamDF.feeType $ Se.Not $ Se.Eq Domain.MANDATE_REGISTRATION
         ]
     ]
-
-updateBillNumberById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Int -> Id DriverFee -> m ()
-updateBillNumberById billNumber driverFeeId = do
-  now <- getCurrentTime
-  updateWithKV
-    [ Se.Set BeamDF.billNumber billNumber,
-      Se.Set BeamDF.updatedAt now
-    ]
-    [Se.Is BeamDF.id $ Se.Eq (driverFeeId.getId)]
 
 updateToManualFeeByDriverFeeIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DriverFee] -> m ()
 updateToManualFeeByDriverFeeIds driverFeeIds = do
@@ -779,12 +714,6 @@ updateStatus status (Id driverFeeId) now = do
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
   fork "set bad recovery date" $ do updateBadDebtRecoveryDate status [Id driverFeeId]
 
-updateFeeType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FeeType -> UTCTime -> Id DriverFee -> m ()
-updateFeeType feeType now (Id driverFeeId) = do
-  updateOneWithKV
-    [Se.Set BeamDF.feeType feeType, Se.Set BeamDF.updatedAt now]
-    [Se.Is BeamDF.id (Se.Eq driverFeeId)]
-
 updateAutoPayToManual :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m ()
 updateAutoPayToManual driverFeeId = do
   now <- getCurrentTime
@@ -819,12 +748,6 @@ updateManualToAutoPay driverFeeId = do
       Se.Set BeamDF.updatedAt now
     ]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
-
-updateRetryCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Int -> UTCTime -> Id DriverFee -> m ()
-updateRetryCount retryCount now (Id driverFeeId) = do
-  updateOneWithKV
-    [Se.Set BeamDF.schedulerTryCount retryCount, Se.Set BeamDF.updatedAt now]
-    [Se.Is BeamDF.id (Se.Eq driverFeeId)]
 
 --- note :- bad debt recovery date set in fork pls remeber to add fork in all places with driver fee status update in future----
 updateRegisterationFeeStatusByDriverIdForServiceName ::
@@ -870,18 +793,6 @@ updateAllExecutionPendingToManualOverdueByDriverIdForServiceName driverId servic
         ]
     ]
 
-updateFeeWithoutDiscount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Maybe HighPrecMoney -> m ()
-updateFeeWithoutDiscount driverFeeId mbFeeWithoutDiscount = do
-  updateOneWithKV
-    [Se.Set BeamDF.feeWithoutDiscount mbFeeWithoutDiscount]
-    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
-
-updateAmountPaidByCoins :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Maybe HighPrecMoney -> m ()
-updateAmountPaidByCoins driverFeeId mbAmountPaidByCoin = do
-  updateOneWithKV
-    [Se.Set BeamDF.amountPaidByCoin mbAmountPaidByCoin]
-    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
-
 updateBadDebtDateAllDriverFeeIds :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> [Id DriverFee] -> TransporterConfig -> m ()
 updateBadDebtDateAllDriverFeeIds merchantId driverFeeIds transporterConfig = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
@@ -908,104 +819,7 @@ updateBadDebtRecoveryDate status driverFeeIds = do
           ]
       ]
 
-updateMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Id MerchantOperatingCity -> m ()
-updateMerchantOperatingCityId driverFeeId merchantOperatingCityId = do
-  updateOneWithKV
-    [Se.Set BeamDF.merchantOperatingCityId (Just merchantOperatingCityId.getId)]
-    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
-
 getLastDayOfMonth :: UTCTime -> Day
 getLastDayOfMonth now = do
   let (year, month, _) = toGregorian (utctDay now)
   addDays (-1) $ fromGregorian year month 1
-
-instance FromTType' BeamDF.DriverFee DriverFee where
-  fromTType' BeamDF.DriverFeeT {..} = do
-    merchantOperatingCityId' <- case merchantOperatingCityId of
-      Nothing -> do
-        person <- QP.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
-        let opCity = person.merchantOperatingCityId
-        updateMerchantOperatingCityId (Id id) opCity
-        return opCity
-      Just mOpCityId -> return $ Id mOpCityId
-    pure $
-      Just
-        DriverFee
-          { id = Id id,
-            merchantId = Id merchantId,
-            driverId = Id driverId,
-            govtCharges = govtCharges,
-            platformFee = Domain.PlatformFee platformFee cgst sgst,
-            numRides = numRides,
-            payBy = payBy,
-            totalEarnings = totalEarnings,
-            startTime = startTime,
-            endTime = endTime,
-            status = status,
-            feeType = feeType,
-            collectedBy = collectedBy,
-            offerId = offerId,
-            planOfferTitle,
-            autopayPaymentStage,
-            collectedAt = collectedAt,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
-            schedulerTryCount,
-            notificationRetryCount,
-            billNumber,
-            stageUpdatedAt,
-            feeWithoutDiscount,
-            amountPaidByCoin,
-            overlaySent = overlaySent,
-            specialZoneRideCount,
-            specialZoneAmount,
-            planId = Id <$> planId,
-            planMode,
-            vehicleNumber,
-            badDebtDeclarationDate,
-            serviceName = fromMaybe YATRI_SUBSCRIPTION serviceName,
-            merchantOperatingCityId = merchantOperatingCityId',
-            badDebtRecoveryDate
-          }
-
-instance ToTType' BeamDF.DriverFee DriverFee where
-  toTType' DriverFee {..} = do
-    BeamDF.DriverFeeT
-      { BeamDF.id = getId id,
-        BeamDF.merchantId = getId merchantId,
-        BeamDF.driverId = getId driverId,
-        BeamDF.govtCharges = govtCharges,
-        BeamDF.platformFee = platformFee.fee,
-        BeamDF.cgst = platformFee.cgst,
-        BeamDF.sgst = platformFee.sgst,
-        BeamDF.numRides = numRides,
-        BeamDF.payBy = payBy,
-        BeamDF.totalEarnings = totalEarnings,
-        BeamDF.startTime = startTime,
-        BeamDF.endTime = endTime,
-        BeamDF.status = status,
-        BeamDF.feeType = feeType,
-        BeamDF.collectedBy = collectedBy,
-        BeamDF.offerId = offerId,
-        BeamDF.planOfferTitle = planOfferTitle,
-        BeamDF.billNumber = billNumber,
-        BeamDF.autopayPaymentStage = autopayPaymentStage,
-        BeamDF.stageUpdatedAt = stageUpdatedAt,
-        BeamDF.feeWithoutDiscount = feeWithoutDiscount,
-        BeamDF.schedulerTryCount = schedulerTryCount,
-        BeamDF.notificationRetryCount = notificationRetryCount,
-        BeamDF.collectedAt = collectedAt,
-        BeamDF.createdAt = createdAt,
-        BeamDF.updatedAt = updatedAt,
-        BeamDF.overlaySent = overlaySent,
-        BeamDF.amountPaidByCoin = amountPaidByCoin,
-        BeamDF.specialZoneRideCount = specialZoneRideCount,
-        BeamDF.specialZoneAmount = specialZoneAmount,
-        BeamDF.vehicleNumber = vehicleNumber,
-        BeamDF.planId = getId <$> planId,
-        BeamDF.planMode = planMode,
-        BeamDF.serviceName = Just serviceName,
-        BeamDF.badDebtDeclarationDate = badDebtDeclarationDate,
-        BeamDF.merchantOperatingCityId = Just merchantOperatingCityId.getId,
-        BeamDF.badDebtRecoveryDate = badDebtRecoveryDate
-      }

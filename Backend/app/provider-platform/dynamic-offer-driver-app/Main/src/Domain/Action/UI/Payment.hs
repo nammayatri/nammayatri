@@ -261,7 +261,7 @@ processPayment _ driver orderId sendNotification (serviceName, subsConfig) invoi
   let driverFeeIds = (.driverFeeId) <$> invoices
   Redis.whenWithLockRedis (paymentProcessingLockKey driver.id.getId) 60 $ do
     when ((invoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE && (invoice <&> (.invoiceStatus)) == Just INV.ACTIVE_INVOICE) $ do
-      maybe (pure ()) (QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS)) (invoice <&> (.driverFeeId))
+      maybe (pure ()) (QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS) (Just now)) (invoice <&> (.driverFeeId))
     QDF.updateStatusByIds CLEARED driverFeeIds now
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
     updatePaymentStatus driver.id driver.merchantOperatingCityId serviceName
@@ -311,6 +311,7 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed ::
   m ()
 notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventName mbBankErrorCode fromWebhook (serviceName, subsConfig) = do
   activeExecutionInvoice <- QIN.findByIdWithPaymenModeAndStatus (cast orderId) INV.AUTOPAY_INVOICE INV.ACTIVE_INVOICE
+  now <- getCurrentTime
   let paymentMode = if isJust activeExecutionInvoice then DP.AUTOPAY else DP.MANUAL
   let (notifyFailure, updateFailure) = toNotifyFailure (isJust activeExecutionInvoice) eventName orderStatus
   when (updateFailure || (not fromWebhook && notifyFailure)) $ do
@@ -318,7 +319,7 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventNa
     case activeExecutionInvoice of
       Just invoice' -> do
         QDF.updateAutoPayToManual invoice'.driverFeeId
-        QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) invoice'.driverFeeId
+        QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) (Just now) invoice'.driverFeeId
       Nothing -> pure ()
     when (subsConfig.sendInAppFcmNotifications) $ do
       notifyPaymentFailureIfNotNotified paymentMode
@@ -388,6 +389,7 @@ processNotification ::
   m ()
 processNotification merchantOpCityId notification notificationStatus respCode respMessage driverFee driver fromWebhook = do
   let driverFeeId = driverFee.id
+  now <- getCurrentTime
   unless (notification.status == Juspay.SUCCESS) $ do
     transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
     case notificationStatus of
@@ -402,7 +404,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
             then do
               QIN.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.ACTIVE_INVOICE [driverFeeId] (Just INV.AUTOPAY_INVOICE)
               QDF.updateManualToAutoPay driverFeeId
-              QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFeeId
+              QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) (Just now) driverFeeId
               QDF.updateNotificationRetryCountById (driverFee.notificationRetryCount + 1) driverFeeId
             else do
               QDF.updateAutoPayToManual driverFeeId
@@ -412,7 +414,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
         unless (driverFee.status == CLEARED) $ do
           QIN.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.ACTIVE_INVOICE [driverFeeId] (Just INV.AUTOPAY_INVOICE)
           QDF.updateManualToAutoPay driverFeeId
-        QDF.updateAutopayPaymentStageById (Just EXECUTION_SCHEDULED) driverFeeId
+        QDF.updateAutopayPaymentStageById (Just EXECUTION_SCHEDULED) (Just now) driverFeeId
       _ -> pure ()
     QNTF.updateNotificationStatusAndResponseInfoById notification.id notificationStatus respCode respMessage
 
