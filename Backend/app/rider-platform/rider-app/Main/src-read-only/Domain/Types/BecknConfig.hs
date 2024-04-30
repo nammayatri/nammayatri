@@ -48,6 +48,6 @@ data PaymentCollectedBy = BAP | BPP deriving (Eq, Ord, Show, Read, Generic, ToJS
 
 data VehicleCategory = CAB | AUTO_RICKSHAW | METRO | MOTORCYCLE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentCollectedBy))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentCollectedBy)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VehicleCategory))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleCategory)
