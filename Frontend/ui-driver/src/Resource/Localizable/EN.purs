@@ -1370,3 +1370,6 @@ getEN stringKey =
         EARNINGS_PER_KM_DESC_1 -> "Indicates Total earnings/Total  ride distance for today."
         EARNINGS_PER_KM_DESC_2 -> "This amount does not include parking and toll charges"
         EARNINGS_P_KM -> "Earnings/km"
+        IS_YOUR_CAR_AC_WORKING -> "Is your car AC working?"
+        HOW_DOES_AC_CONDITION_AFFECT -> "How does the condition of car AC affect you?"
+        WE_WILL_USE_THIS_INFO -> "We will use this information to match with customer expectations regarding the AC"

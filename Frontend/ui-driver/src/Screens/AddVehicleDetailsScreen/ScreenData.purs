@@ -76,6 +76,8 @@ initData = {
       multipleRCstatus : NOT_STARTED,
       menuOptions : false,
       confirmChangeVehicle : false,
-      contactSupportModal : ST.HIDE
+      contactSupportModal : ST.HIDE,
+      buttonIndex : Nothing,
+      acModal : false
     }
 }
