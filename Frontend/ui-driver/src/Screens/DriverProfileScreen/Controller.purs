@@ -188,6 +188,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoToAboutUsScreen
                     | OnBoardingFlow
                     | DocumentsFlow
+                    | DeleteAccount DriverProfileScreenState
                     | GoToHomeScreen DriverProfileScreenState
                     | GoToReferralScreen
                     | GoToLogout
@@ -326,6 +327,7 @@ eval (OptionClick optionIndex) state = do
       _ <- pure $ launchAppSettings unit
       continue state
     LIVE_STATS_DASHBOARD -> continue state {props {showLiveDashboard = true}}
+    DELETE_ACCOUNT -> exit $ DeleteAccount state
     DOCUMENTS -> exit DocumentsFlow --TODO
 
 eval (UpiQrRendered id) state = do
@@ -592,6 +594,7 @@ getTitle menuOption =
     LIVE_STATS_DASHBOARD -> getString STR.LIVE_DASHBOARD
     DRIVER_BOOKING_OPTIONS -> getString STR.BOOKING_OPTIONS
     GO_TO_LOCATIONS -> getString STR.GOTO_LOCATIONS
+    DELETE_ACCOUNT -> getString STR.DEL_ACCOUNT
     DOCUMENTS -> "Documents"--getString STR.DOCUMENTS
 
 getDowngradeOptionsSelected :: SA.GetDriverInfoResp -> Array VehicleP
@@ -659,6 +662,7 @@ optionList state =
     <> ( [ { menuOptions: HELP_AND_FAQS, icon: fetchImage FF_ASSET "ny_ic_head_phones" }
         , { menuOptions: LIVE_STATS_DASHBOARD, icon: fetchImage FF_ASSET "ic_graph_black" }
         , { menuOptions: ABOUT_APP, icon: fetchImage FF_ASSET "ny_ic_about" }
+        , { menuOptions: DELETE_ACCOUNT, icon: fetchImage FF_ASSET "ny_ic_delete_account" }
         , { menuOptions: DRIVER_LOGOUT, icon: fetchImage FF_ASSET "ny_ic_logout_grey" }
         ]
       )

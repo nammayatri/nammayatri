@@ -74,6 +74,9 @@ driverProfileScreen = do
       App.BackT $ App.BackPoint <$> pure SELECT_LANGUAGE_SCREEN
     OnBoardingFlow -> App.BackT $ App.BackPoint <$> pure ON_BOARDING_FLOW
     DocumentsFlow -> App.BackT $ App.BackPoint <$> pure DOCUMENTS_FLOW
+    DeleteAccount state -> do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
+      App.BackT $ App.BackPoint <$> pure DELETE_ACCOUNT_FLOW
     GoToNotifications -> App.BackT $ App.BackPoint <$> pure NOTIFICATIONS_SCREEN
     GoToBookingOptions state -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)

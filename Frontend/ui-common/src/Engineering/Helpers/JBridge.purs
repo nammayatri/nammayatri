@@ -79,6 +79,7 @@ foreign import showLoaderImpl      :: String -> Effect Unit
 -- foreign import showLoader'      :: String -> Effect Unit
 foreign import locateOnMap :: EffectFn1 LocateOnMapConfig Unit
 foreign import fetchPackageName :: Unit -> Effect String
+foreign import validateEmail :: String -> Boolean
 foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
 foreign import shareImageMessage :: String -> ShareImageConfig -> Unit
