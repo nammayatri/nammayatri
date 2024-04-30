@@ -25,6 +25,7 @@ import Data.Maybe (Maybe)
 import PrestoDOM
 import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..))
 import Components.BannerCarousel as BannerCarousel
+import Common.Types.App as CTP
 
 data Action = NoAction
             | PrimaryButtonAC PrimaryButtonController.Action
@@ -106,4 +107,6 @@ type DriverInfoCardData =
   , vehicleModel :: String
   , vehicleColor :: String
   , serviceTierName :: Maybe String
+  , providerName :: String 
+  , providerType :: CTP.ProviderType
   }

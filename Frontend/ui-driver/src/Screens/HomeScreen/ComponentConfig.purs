@@ -792,13 +792,13 @@ getCancelAlertText key = case key of
   _ -> FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
 
 mapRouteConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
-mapRouteConfig srcIcon destIcon isAnim animConfig= {
-    sourceSpecialTagIcon : srcIcon
-  , destSpecialTagIcon : destIcon
-  , vehicleSizeTagIcon : (getMerchantVehicleSize unit)
-  , isAnimation : isAnim 
-  , autoZoom : true
-  , polylineAnimationConfig : animConfig
+mapRouteConfig srcIcon destIcon isAnim animConfig = JB.mapRouteConfig {
+    sourceSpecialTagIcon = srcIcon
+  , destSpecialTagIcon = destIcon
+  , vehicleSizeTagIcon = getMerchantVehicleSize unit
+  , isAnimation = isAnim 
+  , autoZoom = true
+  , polylineAnimationConfig = animConfig
 }
 
 

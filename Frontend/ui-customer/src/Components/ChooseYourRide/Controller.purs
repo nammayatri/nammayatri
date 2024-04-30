@@ -39,6 +39,7 @@ type Config
     , customerTipArray :: Array String
     , customerTipArrayWithValues :: Array Int
     , enableTips :: Boolean
+    , showMultiProvider :: Boolean
     }
 
 config :: Config
@@ -71,4 +72,5 @@ config =
     }
   , tipForDriver : 0
   , enableTips : true
+  , showMultiProvider : false
   }

@@ -297,8 +297,8 @@ currentFlowStatus = do
   flowStatus <- Remote.flowStatusBT "LazyCheck"
   liftFlowBT $ markPerformance "RIDE_LIST_CALL_API"
   case flowStatus ^. _currentStatus of
-    WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
-    DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
+    WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus (flowStatus ^. _isValueAddNP) false
+    DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus (flowStatus ^. _isValueAddNP)true
     WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> goToConfirmRide currentStatus.bookingId currentStatus.fareProductType
     RIDE_ASSIGNED _                         -> checkRideStatus true
     PENDING_RATING _                        -> do
@@ -315,10 +315,10 @@ currentFlowStatus = do
       liftFlowBT $ markPerformance "VERIFY_PROFILE"
       response <- Remote.getProfileBT ""
       config <- getAppConfigFlowBT appConfig
-      let appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+      let appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just 
       case appName of
-        "Namma Yatri" -> logFirstCabRideEvent (response ^. _hasTakenValidCabRide) "ny_cab_firstride"
-        "Mana Yatri" -> logFirstCabRideEvent (response ^. _hasTakenValidCabRide) "my_cab_firstride"
+        "Namma Yatri" -> logFirstCabRideEvent (fromMaybe false $ response ^. _hasTakenValidCabRide) "ny_cab_firstride"
+        "Mana Yatri" -> logFirstCabRideEvent (fromMaybe false $ response ^. _hasTakenValidCabRide) "my_cab_firstride"
         _ -> pure unit
       updateVersion (response ^. _clientVersion) (response ^. _bundleVersion)
       updateFirebaseToken (response ^. _maskedDeviceToken) getUpdateToken
@@ -400,8 +400,10 @@ currentFlowStatus = do
             void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq updateProfileConfig)
       else pure unit
 
-    goToFindingQuotesStage :: String -> Boolean -> FlowBT String Unit
-    goToFindingQuotesStage estimateId driverOfferedQuote = do
+    goToFindingQuotesStage :: { validTill :: String , estimateId :: String} -> Maybe Boolean -> Boolean -> FlowBT String Unit
+    goToFindingQuotesStage currentStatus mbIsValueAddNP driverOfferedQuote = do
+      let estimateId = currentStatus.estimateId
+          providerType = maybe Common.ONUS (\valueAdd -> if valueAdd then Common.ONUS else Common.OFFUS) mbIsValueAddNP -- This defines whether quote selected was ours or not after kill and relaunch
       removeChatService ""
       if any (_ == (getValueToLocalStore FINDING_QUOTES_START_TIME)) ["__failed", ""] then do
         updateFlowStatus SEARCH_CANCELLED
@@ -441,7 +443,11 @@ currentFlowStatus = do
                        , destination = flowStatusData.destination.place
                        , sourceAddress = flowStatusData.sourceAddress
                        , destinationAddress = flowStatusData.destinationAddress
-                       , selectedEstimatesObject{vehicleVariant = getValueToLocalStore SELECTED_VARIANT} }
+                       , selectedEstimatesObject{
+                          vehicleVariant = getValueToLocalStore SELECTED_VARIANT
+                        , providerType = providerType
+                        }
+                    }
                 })
             Nothing -> updateFlowStatus SEARCH_CANCELLED
         else updateFlowStatus SEARCH_CANCELLED
@@ -600,8 +606,18 @@ homeScreenFlow = do
   -- TODO: HANDLE LOCATION LIST INITIALLY
   void $ pure $ firebaseUserID (getValueToLocalStore CUSTOMER_ID)
   void $ lift $ lift $ toggleLoader false
-  let _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" true
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }})
+  let 
+    _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" true
+    currentCityConfig = getCityConfig currentState.homeScreen.data.config.cityConfig $ getValueToLocalStore CUSTOMER_LOCATION
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{
+    props{
+      hasTakenRide = getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE"
+    , isReferred = getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE"
+    }
+  , data {
+      currentCityConfig = currentCityConfig
+    }
+  })
   liftFlowBT $ handleUpdatedTerms $ getString STR.TERMS_AND_CONDITIONS_UPDATED
   flow <- UI.homeScreen
   void $ lift $ lift $ fork $ Remote.pushSDKEvents
@@ -846,7 +862,7 @@ homeScreenFlow = do
           else do
             pure unit
           void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
-          void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing)) (state.props.estimateId)
+          void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing)) (state.data.selectedEstimatesObject.id)
           logStatus "finding_quotes" ("estimateId : " <> state.props.estimateId)
           homeScreenFlow
     SELECT_ESTIMATE state -> do
@@ -1612,6 +1628,9 @@ homeScreenFlow = do
           modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props{reportPastRide = isRideCompleted}, data{lastRideDetails = if isRideCompleted then Arr.head $ myRideListTransformer true [state.data.ratingViewState.rideBookingRes] else Nothing}})
           activateSafetyScreenFlow
         false -> safetySettingsFlow
+    GO_TO_SAFETY_SETTING_SCREEN -> do
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props{isOffUs = true } })
+      safetySettingsFlow
     SAFETY_SUPPORT state isSafe -> do
       res <- lift $ lift $ Remote.sendSafetySupport $ Remote.makeAskSupportRequest state.props.bookingId isSafe $ "User need help - Ride on different route"
       case res of
@@ -1717,6 +1736,7 @@ findEstimates updatedState = do
                                       {key : "Latest Search", value : (unsafeToForeign $ currentDate <> " " <> currentTime)}]
   let rideSearchReq = Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress state.props.rideSearchProps.sourceManuallyMoved state.props.rideSearchProps.destManuallyMoved state.props.rideSearchProps.sessionId state.props.isSpecialZone
   (SearchRes rideSearchRes) <- Remote.rideSearchBT rideSearchReq
+  void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "FALSE"
   routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong srcMarkerConfig destMarkerConfig "NORMAL" rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
   logStatus "ride_search" rideSearchRes
   void $ pure $ deleteValueFromLocalStore TIP_VIEW_DATA
@@ -1883,6 +1903,7 @@ rideSearchFlow flowType = do
                                               {key : "Latest Search", value : unsafeToForeign (currentDate <> " " <> currentTime)}]
           let rideSearchReq = Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress finalState.props.rideSearchProps.sourceManuallyMoved finalState.props.rideSearchProps.destManuallyMoved finalState.props.rideSearchProps.sessionId finalState.props.isSpecialZone
           (SearchRes rideSearchRes) <- Remote.rideSearchBT rideSearchReq
+          void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "FALSE"
           void $ pure $ deleteValueFromLocalStore TIP_VIEW_DATA
           void $ liftFlowBT $ setFlowStatusData 
             ( FlowStatusData 
@@ -2549,17 +2570,6 @@ referralScreenFlow = do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreen.initData)
       void $ lift $ lift $ liftFlow $ adjustViewWithKeyboard "true"
       homeScreenFlow
-
-drawDottedRoute :: HomeScreenState -> FlowBT String Unit
-drawDottedRoute state = do
-  void $ pure $ removeAllPolylines ""
-  let srcMarkerConfig = defaultMarkerConfig{ pointerIcon = "ny_ic_auto_map" }
-      destMarkerConfig = defaultMarkerConfig{ pointerIcon = if state.props.currentStage == RideAccepted then "src_marker" else "dest_marker" }
-      srcLat = state.data.driverInfoCardState.driverLat
-      srcLng = state.data.driverInfoCardState.driverLng
-      destLat = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
-      destLng = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-  void $ liftFlowBT $ runEffectFn9 drawRoute (Remote.walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
 
 isForLostAndFound :: Boolean
 isForLostAndFound = true

@@ -2,7 +2,7 @@ module Screens.RideBookingFlow.HomeScreen.BannerConfig where
 
 import Prelude
 
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), ProviderType(..))
 import Language.Strings (getString)
 import PrestoDOM (Length(..), Margin(..), Padding(..))
 import Components.BannerCarousel as BannerCarousel
@@ -51,7 +51,7 @@ getBannerConfigs state action =
 
 getDriverInfoCardBanners :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
 getDriverInfoCardBanners state action = 
-  if isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow
+  if isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow && state.data.driverInfoCardState.providerType == ONUS
     then [sosSetupBannerConfig state action] 
     else []
 
