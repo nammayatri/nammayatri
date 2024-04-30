@@ -23,6 +23,7 @@ data RiderConfig = RiderConfig
     enableLocalPoliceSupport :: Kernel.Prelude.Bool,
     enableSupportForSafety :: Kernel.Prelude.Bool,
     isAvoidToll :: Kernel.Prelude.Bool,
+    isBlockingFeatureEnabled :: Kernel.Prelude.Bool,
     localPoliceNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

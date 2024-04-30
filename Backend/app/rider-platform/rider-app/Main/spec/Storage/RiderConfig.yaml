@@ -25,6 +25,7 @@ RiderConfig:
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int
     bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
+    isBlockingFeatureEnabled: Bool
 
   constraints:
     merchantOperatingCityId: PrimaryKey

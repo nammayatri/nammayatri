@@ -84,6 +84,7 @@ import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
+import qualified Storage.Queries.RiderConfig as CQRC
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -375,7 +376,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
   now <- getCurrentTime
   let useFakeOtp = req.mobileNumber >>= (\n -> if n `elem` merchant.fakeOtpMobileNumbers then Just "7891" else Nothing)
   personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken req.deviceToken)
-  let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
+  riderConfig <- CQRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  let isBlockedBySameDeviceToken = if riderConfig.isBlockingFeatureEnabled then maybe False (.blocked) personWithSameDeviceToken else False
   useFraudDetection <- do
     if isBlockedBySameDeviceToken
       then do
