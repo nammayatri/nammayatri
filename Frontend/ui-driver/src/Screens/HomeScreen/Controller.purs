@@ -296,6 +296,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | UpdateSpecialLocationList ST.HomeScreenState
                     | FetchOdometerReading ST.HomeScreenState
                     | GoToNewStop ST.HomeScreenState
+                    | UpdateAirConditioned ST.HomeScreenState Boolean
 
 data Action = NoAction
             | BackPressed
@@ -412,7 +413,7 @@ data Action = NoAction
             | SpecialZoneCardAC RequestInfoCard.Action
             | BgLocationAC
             | BgLocationPopupAC PopUpModal.Action
-            
+            | IsAcWorkingPopUpAction PopUpModal.Action
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -1354,6 +1355,12 @@ eval (GoToEarningsScreen showCoinsView) state = do
 
 eval (DriverStats driverStats) state = do
   exit $ DriverStatsUpdate driverStats state
+
+eval (IsAcWorkingPopUpAction PopUpModal.OnButton1Click) state = exit $ UpdateAirConditioned state true
+
+eval (IsAcWorkingPopUpAction PopUpModal.OnButton2Click) state = exit $ UpdateAirConditioned state false
+
+eval (IsAcWorkingPopUpAction PopUpModal.DismissPopup) state = continue state{props{showAcWorkingPopup = false}}
 
 eval _ state = continue state
 

@@ -1373,3 +1373,5 @@ getML stringKey =
         IS_YOUR_CAR_AC_WORKING -> "നിങ്ങളുടെ കാർ എസി പ്രവർത്തിക്കുന്നുണ്ടോ?"
         HOW_DOES_AC_CONDITION_AFFECT -> "കാർ എസിയുടെ അവസ്ഥ നിങ്ങളെ എങ്ങനെ ബാധിക്കുന്നു?"
         WE_WILL_USE_THIS_INFO -> "AC സംബന്ധിച്ച ഉപഭോക്തൃ പ്രതീക്ഷകളുമായി പൊരുത്തപ്പെടുന്നതിന് ഞങ്ങൾ ഈ വിവരങ്ങൾ ഉപയോഗിക്കും"
+        YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(നിങ്ങൾക്ക് എപ്പോഴും പ്രൊഫൈൽ മുതൽ മാറ്റാം)"
+        IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "നിങ്ങളുടെ കാർ എസി പ്രവർത്തിക്കുന്നുണ്ടോ?"

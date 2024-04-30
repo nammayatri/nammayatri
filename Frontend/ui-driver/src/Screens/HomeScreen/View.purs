@@ -320,6 +320,7 @@ view push state =
       , if (state.props.showChatBlockerPopUp || state.data.paymentState.showBlockingPopup) then blockerPopUpView push state else dummyTextView
       , if state.props.currentStage == RideCompleted then RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC) else dummyTextView -- 
       , if state.props.showRideRating then RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state) else dummyTextView
+      , if state.props.showAcWorkingPopup then isAcWorkingPopupView push state else dummyTextView
   ]
   where 
     showPopups = (DA.any (_ == true )
@@ -2024,3 +2025,10 @@ computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit
 computeListItem push = do
   bannerItem <- preComputeListItem $ BannerCarousel.view push (BannerCarousel.config BannerCarousal)
   void $ EHC.liftFlow $ push (SetBannerItem bannerItem)
+
+isAcWorkingPopupView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+isAcWorkingPopupView push state =
+  linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    ][ PopUpModal.view (push <<< IsAcWorkingPopUpAction) (isAcWorkingPopupConfig state) ]

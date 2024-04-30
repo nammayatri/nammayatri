@@ -2654,6 +2654,14 @@ homeScreenFlow = do
       resp <- HelpersAPI.callApiBT $ API.SpecialLocationFullReq
       void $ pure $ HU.transformSpecialLocationList resp
       homeScreenFlow
+    UPDATE_AIR_CONDITIONED isAcWorking -> do
+      resp <- lift $ lift $ HelpersAPI.callApi $ API.UpdateAirConditionUpdateRequest { isAirConditioned : isAcWorking }
+      case resp of
+        Right _ -> do
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { showAcWorkingPopup = false }})
+        Left _ -> do
+          pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+      homeScreenFlow
   homeScreenFlow
 
 categoryTransformer :: Array Category -> String -> Array CategoryListType 
@@ -3416,6 +3424,7 @@ updateBannerAndPopupFlags = do
                 , subscriptionPopupType = subscriptionPopupType
                 , waitTimeStatus = RC.waitTimeConstructor $ getValueToLocalStore WAITING_TIME_STATUS
                 , showCoinsPopup = showCoinPopup
+                , showAcWorkingPopup = fromMaybe false getDriverInfoResp.checkIfACWorking
                 }
               }
         )

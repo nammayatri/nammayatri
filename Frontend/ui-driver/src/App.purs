@@ -410,6 +410,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_EARNINGS_SCREEN
                           | GOT_DRIVER_STATS DriverProfileStatsResp
                           | UPDATE_SPECIAL_LOCATION_LIST
+                          | UPDATE_AIR_CONDITIONED Boolean
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

@@ -1373,3 +1373,5 @@ getHI stringKey =
         IS_YOUR_CAR_AC_WORKING -> "क्या आपकी कार का AC काम कर रहा है?"
         HOW_DOES_AC_CONDITION_AFFECT -> "कार AC की स्थिति आपको कैसे प्रभावित करती है?"
         WE_WILL_USE_THIS_INFO -> "हम इस जानकारी का उपयोग एसी के संबंध में ग्राहकों की अपेक्षाओं से मेल खाने के लिए करेंगे"
+        YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(आप इसे हमेशा प्रोफ़ाइल से बदल सकते हैं)"
+        IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "क्या आपकी कार का एसी चालू और काम कर रहा ह।"
