@@ -298,7 +298,7 @@ currentFlowStatus = do
   case flowStatus ^. _currentStatus of
     WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
-    WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> goToConfirmRide currentStatus.bookingId
+    WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> goToConfirmRide currentStatus.bookingId currentStatus.fareProductType
     RIDE_ASSIGNED _                         -> checkRideStatus true
     PENDING_RATING _                        -> do
                                                 firstRideCompletedEvent ""
@@ -444,11 +444,14 @@ currentFlowStatus = do
             Nothing -> updateFlowStatus SEARCH_CANCELLED
         else updateFlowStatus SEARCH_CANCELLED
 
-    goToConfirmRide :: String -> FlowBT String Unit
-    goToConfirmRide bookingId = do
-      updateLocalStage ConfirmingRide
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp}})
-      homeScreenFlow
+    goToConfirmRide :: String -> Maybe String -> FlowBT String Unit
+    goToConfirmRide bookingId fareProductType = do
+      if any (_ == fareProductType) [Just "ONE_WAY_SPECIAL_ZONE", Nothing] then
+        checkRideStatus false
+      else do
+        updateLocalStage ConfirmingRide
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp}})
+        homeScreenFlow
 
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do

@@ -28,3 +28,7 @@ export const logDebug = function (level) {
     }
   };
 };
+
+export const getWindowKey = function (key) {
+  return window[key] ? window[key] : "";
+}
