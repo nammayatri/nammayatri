@@ -1081,8 +1081,8 @@ export const showMapImpl = function (id) {
               return function (action) {
                 return function () {
                   const callback = callbackMapper.map(function (key, lat, lon) {
-                    console.log("Lat long ::" , lat, lon);
-                    if(lat != 0.0 && lon != 0.0){
+                    console.log("Lat long ::" , sourceLat, sourceLon);
+                    if(sourceLat != 0.0 && sourceLon != 0.0 ){
                       animateCamera(sourceLat)(sourceLon)(zoom)("ZOOM")();
                     }
                     window.x = cb;

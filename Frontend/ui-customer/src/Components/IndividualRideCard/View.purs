@@ -131,6 +131,7 @@ rideDetails push state =
       [ PrestoList.imageUrlHolder "variantImage"
       , height $ V 32
       , width $ V 32
+      , PrestoList.visibilityHolder "vehicleImgVisibility"
       , margin $ MarginRight 8
       ]
     , textView

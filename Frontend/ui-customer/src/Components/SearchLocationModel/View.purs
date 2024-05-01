@@ -100,9 +100,7 @@ view push state =
                   , sourceDestinationImageView state
                   , sourceDestinationEditTextView state push
                   ]]
-                  , PrestoAnim.animationSet
-                    [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]
-                    $ linearLayout
+                  , linearLayout
                       [ height $ V 1
                       , width MATCH_PARENT
                       , background state.appConfig.searchLocationConfig.separatorColor
@@ -113,9 +111,7 @@ view push state =
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , weight 1.0
-                    ][ PrestoAnim.animationSet
-                      [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500]
-                      $ searchResultsParentView state push 
+                    ][ searchResultsParentView state push 
                       , linearLayout
                         [ width MATCH_PARENT
                         , height MATCH_PARENT

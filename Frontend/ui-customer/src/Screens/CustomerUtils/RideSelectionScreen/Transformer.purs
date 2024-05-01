@@ -19,9 +19,9 @@ import Accessor (_computedPrice, _contents, _driverName, _estimatedDistance, _id
 import Common.Types.App (LazyCheck(..))
 import Data.Array (filter, null, (!!))
 import Data.Lens ((^.))
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Data.String (Pattern(..), split)
-import Engineering.Helpers.Commons (convertUTCtoISC)
+import Engineering.Helpers.Commons (convertUTCtoISC, os)
 import Helpers.Utils (FetchImageFrom(..), fetchImage, isHaveFare, withinTimeRange, getCityFromString, getVehicleVariantImage)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
@@ -44,6 +44,11 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
 
   let
     rideApiEntity = fromMaybe dummyRideAPIEntity (ride.rideList !!0)
+    imageInfo = case fetchVehicleVariant (rideApiEntity^._vehicleVariant) of
+                    Just variant -> split (Pattern ",") (getVehicleVariantImage $ show variant)
+                    Nothing -> ["",""]
+    imageName = fromMaybe "" $ imageInfo !!0
+    imageUrl = fromMaybe "" $ imageInfo !!1
   in {
     date : toPropValue (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
     time : toPropValue (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
@@ -65,7 +70,8 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     rideEndTimeUTC : toPropValue $ fromMaybe ride.createdAt ride.rideEndTime,
     alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5",
     zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone",
-    variantImage : toPropValue $ getVehicleVariantImage $ rideApiEntity^._vehicleVariant
+    vehicleImgVisibility : toPropValue $ if imageName == "" && imageUrl == "" then "gone" else "visible",
+    variantImage : toPropValue $ if os == "IOS" then "url->" <> imageUrl <> "," <> imageName else  "url->" <> imageUrl
   })
   
    listRes)

@@ -61,7 +61,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding)
+import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding)
 import JBridge as JB
 import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, zoneLabelIcon, transformGeoJsonFeature, getCityFromString, getMetroConfigFromAppConfig)
 import Language.Strings (getString)
@@ -834,6 +834,7 @@ homeScreenFlow = do
           homeScreenFlow
     SELECT_ESTIMATE state -> do
         logStatus "setting_price" ""
+        void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
         updateLocalStage SettingPrice
         let sourceSpecialTagIcon = zoneLabelIcon state.props.zoneType.sourceTag
             destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
@@ -1735,7 +1736,7 @@ findEstimates updatedState = do
                                                   , destLabelIcon : Just $ zoneLabelIcon state.props.zoneType.destinationTag
                                                   , sourceGeoJson : if DS.null state.data.polygonCoordinates then Nothing else Just $ state.data.polygonCoordinates 
                                                   , sourceGates : if null state.data.nearByPickUpPoints then Nothing else Just $ state.data.nearByPickUpPoints })
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, selectedQuote = Nothing, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, findingQuotesProgress = 0.0}, data{nearByDrivers = Nothing, quoteListModelState = []}})
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, selectedQuote = Nothing, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, findingQuotesProgress = 0.0}, data{nearByDrivers = Nothing}})
   updateLocalStage FindingEstimate
   homeScreenFlow
 
@@ -2396,7 +2397,7 @@ addNewAddressScreenFlow input = do
                                                           }
                                                         } )
         when (not state.props.fromHome) $ do
-          void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
+          void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag if os == "IOS" then "CustomerHomeScreenMap" else "CustomerHomeScreen")
         homeScreenFlow
       else savedLocationFlow
 

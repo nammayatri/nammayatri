@@ -218,7 +218,8 @@ myRideListTransformerProp listRes =  filter (\item -> (any (_ == item.status) [(
     rideEndTimeUTC : toPropValue (fromMaybe ride.createdAt ride.rideEndTime),
     alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5",
     zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone",
-    variantImage : toPropValue $ if os == "IOS" then "url->" <> imageUrl <> "," <> imageName else  "url->" <> imageUrl
+    variantImage : toPropValue $ if os == "IOS" then "url->" <> imageUrl <> "," <> imageName else  "url->" <> imageUrl,
+    vehicleImgVisibility : toPropValue $ if imageName == "" && imageUrl == "" then "gone" else "visible"
   }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
 

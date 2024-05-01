@@ -66,7 +66,7 @@ window.getMerchantConfig = function () {
     "feedbackBackground": "#2C2F3A",
     "profileCompletion" : "#FCC32C",
     "cancelRideColor" : "#E55454",
-    "merchantLogo" : "ic_invoice_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_ny_logo.png",
+    "merchantLogo" : "ny_ic_ny_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_ny_logo.png",
     "infoIconUrl" : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
     "sideBarList": ["MyRides", "Favorites", "NammaSafety", "MetroTickets", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
     "rateCardColor": "#2C2F3A",

@@ -51,14 +51,14 @@ import Engineering.Helpers.Utils(getFlexBoxCompatibleVersion)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
- PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 300 ] $ 
   relativeLayout
   [ height $ MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
   , clickable $ os == "IOS"
   , accessibility DISABLE
-  ][ linearLayout
+  ][ PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 300 ] $ 
+      linearLayout
      [ height $ WRAP_CONTENT
      , width $ MATCH_PARENT
      , clickable $ os == "IOS"
