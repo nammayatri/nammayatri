@@ -486,7 +486,8 @@ type ItemState =
     rideEndTimeUTC :: PropValue,
     alpha :: PropValue,
     zoneVisibility :: PropValue,
-    variantImage :: PropValue
+    variantImage :: PropValue,
+    vehicleImgVisibility :: PropValue
   }
 
 -- ################################################ PermissionScreenState ##################################################

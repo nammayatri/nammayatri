@@ -1366,7 +1366,7 @@ eval BackPressed state = do
         if state.props.isSearchLocation == LocateOnMap then do
           void $ pure $ exitLocateOnMap ""
           void $ pure $ hideKeyboardOnNavigation true
-          continue state{props{isSearchLocation = SearchLocation, locateOnMap = false, isSearchCancelled = false}}
+          continue state{data{nearByPickUpPoints = []},props{defaultPickUpPoint = "" , isSearchLocation = SearchLocation, locateOnMap = false, isSearchCancelled = false}}
         else do
           if (getSearchType unit) == "direct_search" then
             pure $ terminateApp state.props.currentStage false
@@ -2116,7 +2116,7 @@ eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryBut
   _ <- pure $ clearTimerWithId state.props.timerId
   void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), scaleType="CENTER_CROP"}
   let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH, onlyPrimaryText = true}
-  let newState = state{ props{rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }, findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex, isTipSelected = true } }, data{nearByDrivers = Nothing}}
+  let newState = state{ props{rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }, findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 0 (customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex, isTipSelected = true } }, data{nearByDrivers = Nothing}}
   _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
   updateAndExit newState $ RetryFindingQuotes false newState
 
@@ -2528,7 +2528,7 @@ eval (UpdateLocAndLatLong lat lng) state = do
   let slat = fromMaybe 0.0 (NUM.fromString lat)
       slng = fromMaybe 0.0 (NUM.fromString lng)
   continueWithCmd state{props{currentLocation { lat = slat, lng = slng } , sourceLat = slat, sourceLong = slng , locateOnMapLocation {sourceLat = slat, sourceLng = slng, source = state.data.source, sourceAddress = state.data.sourceAddress}}} [do
-    if os == "IOS" then do
+    if os == "IOS" && state.props.currentStage == HomeScreen then do
       _ <- addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 (0.5) (0.9)
       pure unit
       else pure unit
@@ -2609,7 +2609,8 @@ eval MapReadyAction state = do
       permissionConditionA <- isLocationPermissionEnabled unit
       permissionConditionB <- isLocationEnabled unit
       internetCondition <- isInternetAvailable unit
-      _ <- addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 (0.5) (0.9)
+      when (state.props.currentStage == HomeScreen) $ do
+        void $ addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 (0.5) (0.9)
       let action =  if( not internetCondition) then TriggerPermissionFlow INTERNET_ACTION
                     else if ( not (permissionConditionA && permissionConditionB)) then TriggerPermissionFlow LOCATION_DISABLED
                     else CheckAndAskNotificationPermission
@@ -2843,8 +2844,9 @@ updateFeedback feedbackId feedbackItem feedbackList =
 
 showPersonMarker :: HomeScreenState -> String -> JB.Location -> Effect Unit
 showPersonMarker state marker location = do
-  _ <- addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) location.lat location.lng 160 0.5 0.9
-  _ <- pure $ printLog "Location :: " location
+  when (state.props.currentStage == HomeScreen) $ do
+    void $ addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) location.lat location.lng 160 0.5 0.9
+  void $ pure $ printLog "Location :: " location
   animateCamera location.lat location.lng zoomLevel "ZOOM"
 
 cancelReasons :: String -> Array OptionButtonList
@@ -3058,16 +3060,15 @@ tipEnabledState :: HomeScreenState -> HomeScreenState
 tipEnabledState state = do
   let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
       customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+      isTipEnabled = not $ null customerTipArrayWithValues
       tipActiveIndex = if state.props.customerTip.tipActiveIndex == -1 then 1 else state.props.customerTip.tipActiveIndex
-  state { props{customerTip {isTipSelected= true, tipForDriver= (fromMaybe 10 (customerTipArrayWithValues !! tipActiveIndex)), tipActiveIndex = tipActiveIndex}}}
+  state { props{customerTip {isTipSelected = isTipEnabled, tipForDriver= (fromMaybe 0 (customerTipArrayWithValues !! tipActiveIndex)), tipActiveIndex = tipActiveIndex}}}
 
 isTipEnabled :: HomeScreenState -> Boolean
 isTipEnabled state =
-    let tipConfig = state.data.config.customerTip
-    in 
-    case state.data.selectedEstimatesObject.vehicleVariant of 
-      "AUTO_RICKSHAW" -> tipConfig.auto
-      _ -> tipConfig.cabs
+    let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+        customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+    in not $ null customerTipArrayWithValues
 
 specialZoneFlow :: Array OfferRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 specialZoneFlow estimatedQuotes state = do

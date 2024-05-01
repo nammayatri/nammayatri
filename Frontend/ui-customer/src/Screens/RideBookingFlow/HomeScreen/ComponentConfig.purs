@@ -586,6 +586,7 @@ logOutPopUpModelConfig state =
         popUpConfig'
     ST.TipsPopUp -> do 
       let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+          isTipEnabled = state.data.config.tipsEnabled && (DA.length tipConfig.customerTipArray) > 0 
           customerTipArray = tipConfig.customerTipArray
           customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
       PopUpModal.config{
@@ -601,7 +602,7 @@ logOutPopUpModelConfig state =
           , dismissPopup = true
           , customerTipArray = customerTipArray
           , customerTipArrayWithValues = customerTipArrayWithValues
-          , isTipEnabled = state.data.config.tipsEnabled
+          , isTipEnabled = isTipEnabled
           , primaryText {
               text = if isLocalStageOn ST.QuoteList then (getString TRY_AGAIN <> "?") else getString SEARCH_AGAIN_WITH_A_TIP
             , textStyle = FontStyle.Heading1
@@ -609,7 +610,7 @@ logOutPopUpModelConfig state =
           secondaryText {
               text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS)
             , color = Color.black650
-            , visibility = boolToVisibility $ state.data.config.tipsEnabled
+            , visibility = boolToVisibility $ isTipEnabled
             }
           , tipLayoutMargin = (Margin 22 2 22 22)
           , buttonLayoutMargin = (MarginHorizontal 16 16)
@@ -623,7 +624,7 @@ logOutPopUpModelConfig state =
               , padding = (Padding 16 12 16 12)
             },
           option1 {
-            text = if (not state.data.config.tipsEnabled) then getString SEARCH_AGAIN else if state.props.customerTip.tipActiveIndex == 0 then getString SEARCH_AGAIN_WITHOUT_A_TIP else getTipString state customerTipArrayWithValues
+            text = if (not isTipEnabled) then getString SEARCH_AGAIN else if state.props.customerTip.tipActiveIndex == 0 then getString SEARCH_AGAIN_WITHOUT_A_TIP else getTipString state customerTipArrayWithValues
           , width = MATCH_PARENT
           , color = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
@@ -1470,7 +1471,7 @@ getTipViewProps state = do
 getTipViewText :: TipViewProps -> ST.HomeScreenState -> String -> String
 getTipViewText tipViewProps state prefixString = do
   let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
-      tip = show (fromMaybe 10 (tipConfig.customerTipArrayWithValues !! tipViewProps.activeIndex))
+      tip = show (fromMaybe 0 (tipConfig.customerTipArrayWithValues !! tipViewProps.activeIndex))
   if tip == "0" then 
     case tipViewProps.stage of
       TIP_AMOUNT_SELECTED -> getString CONTINUE_SEARCH_WITH_NO_TIP

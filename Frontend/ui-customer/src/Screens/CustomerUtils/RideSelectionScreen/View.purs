@@ -241,7 +241,8 @@ shimmerData i = {
   rideEndTimeUTC : toPropValue "",
   alpha : toPropValue "",
   zoneVisibility : toPropValue "gone",
-  variantImage : toPropValue ""
+  variantImage : toPropValue "",
+  vehicleImgVisibility : toPropValue "visible"
 }
 
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> RideSelectionScreenState ->  Flow GlobalState Unit

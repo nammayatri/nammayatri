@@ -15,6 +15,8 @@
 
 module Resources.Constants where
 
+import ConfigProvider
+
 import Accessor (_description, _amount)
 import Common.Types.App (LazyCheck(..))
 import Data.Array (filter, length, null, reverse, (!!), head, all, elem, foldl)
@@ -23,18 +25,17 @@ import Data.Int (toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
-import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex, formatFareType)
+import Data.String as DS
 import Engineering.Helpers.Commons (os)
+import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex, formatFareType)
+import JBridge as JB
 import Language.Strings (getString)
-import Resources.Localizable.EN (getEN)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (map, show, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
+import Resources.Localizable.EN (getEN)
 import Screens.Types as ST
-import JBridge as JB
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
-import ConfigProvider
-import Data.String as DS
 
 type Language
   = { name :: String
@@ -198,7 +199,7 @@ getGender gender placeHolderText =
     Nothing -> placeHolderText
 
 getFaresList :: Array FareBreakupAPIEntity -> String -> Array ST.FareComponent
-getFaresList fares baseDistance =
+getFaresList fares chargeableRideDistance =
   let currency = (getAppConfig appConfig).currency
   in
   map
@@ -211,7 +212,7 @@ getFaresList fares baseDistance =
               "WAITING_OR_PICKUP_CHARGES" -> item.amount + getFareFromArray fares "PLATFORM_FEE"
               _ -> item.amount)
           , title : case item.description of
-                      "BASE_FARE" -> (getEN BASE_FARES) <> if baseDistance == "0 m" then "" else " (" <> baseDistance <> ")"
+                      "BASE_FARE" -> (getEN BASE_FARES) -- <> if chargeableRideDistance == "0 m" then "" else " (" <> chargeableRideDistance <> ")"
                       "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
                       "DRIVER_SELECTED_FARE" -> getEN DRIVER_ADDITIONS
                       "TOTAL_FARE" -> getEN TOTAL_PAID

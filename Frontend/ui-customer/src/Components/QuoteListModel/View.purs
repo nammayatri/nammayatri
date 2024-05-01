@@ -49,7 +49,6 @@ import Debug
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
-  PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] $
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT

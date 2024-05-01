@@ -2356,7 +2356,7 @@ quoteListModelView push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , accessibility if (state.props.isPopUp /= NoPopUp) then DISABLE_DESCENDANT else DISABLE
-  ][
+  ][ PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] $  
   QuoteListModel.view (push <<< QuoteListModelActionController) $ quoteListModelViewState state]
 
 
