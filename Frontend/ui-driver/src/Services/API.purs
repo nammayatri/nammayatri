@@ -31,12 +31,12 @@ import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Debug (spy)
-import Foreign (ForeignError(..), fail, unsafeFromForeign)
+import Foreign (ForeignError(..), fail, unsafeFromForeign, typeOf)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
 import Foreign.Index (readProp)
-import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=))
+import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=), (==))
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode, defaultDecodeResponse, defaultMakeRequestString)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import Services.EndPoints as EP
@@ -3545,10 +3545,13 @@ instance encodeCoinTransactionRes :: Encode CoinTransactionRes where encode = de
 derive instance genericDriverCoinsFunctionType :: Generic DriverCoinsFunctionType _
 instance showDriverCoinsFunctionType :: Show DriverCoinsFunctionType where show = genericShow
 instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType 
-  where decode body = 
-          case (runExcept $ (readProp "tag" body)) of
-            Right functionType -> defaultEnumDecode $ functionType
-            _ -> defaultEnumDecode body
+  where 
+    decode body =
+      case (typeOf body == "object") of
+        true ->  case (runExcept $ (readProp "tag" body)) of
+                    Right functionType -> defaultEnumDecode $ functionType
+                    _ -> defaultEnumDecode body          
+        false -> defaultEnumDecode body
 instance encodeDriverCoinsFunctionType :: Encode DriverCoinsFunctionType where encode = defaultEncode
 instance eqDriverCoinsFunctionType :: Eq DriverCoinsFunctionType where eq = genericEq
 instance standardEncodeDriverCoinsFunctionType :: StandardEncode DriverCoinsFunctionType
