@@ -58,7 +58,7 @@ data FlowStatus
   | WAITING_FOR_DRIVER_ASSIGNMENT
       { bookingId :: Id DB.Booking,
         validTill :: UTCTime,
-        fareProductType :: DFPT.FareProductType
+        fareProductType :: Maybe DFPT.FareProductType
       }
   | RIDE_ASSIGNED -- deprecated status, kept it for backward compatibility
       { rideId :: Id DRide.Ride
