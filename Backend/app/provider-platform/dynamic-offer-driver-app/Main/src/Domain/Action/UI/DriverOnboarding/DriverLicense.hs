@@ -213,6 +213,7 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
             vehicleCategory = mbVehicleCategory,
             merchantId = Just person.merchantId,
             merchantOperatingCityId = Just merchantOpCityId,
+            airConditioned = Nothing,
             createdAt = now,
             updatedAt = now
           }

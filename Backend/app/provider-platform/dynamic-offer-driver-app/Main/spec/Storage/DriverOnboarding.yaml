@@ -31,6 +31,7 @@ IdfyVerification:
     idfyResponse: Maybe Text
     multipleRC: Maybe Bool
     retryCount: Maybe Int
+    airConditioned: Maybe Bool
     nameOnCard: Maybe Text
   beamInstance: MakeTableInstancesWithTModifier [("multipleRC", "multiple_r_c")]
   types:
@@ -227,6 +228,10 @@ VehicleRegistrationCertificate:
       kvFunction: findAllWithOptionsKV
       where: fleetOwnerId
       orderBy: updatedAt
+    updateAirConditioned:
+      kvFunction: updateOneWithKV
+      params: [airConditioned]
+      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
 

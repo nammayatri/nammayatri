@@ -142,6 +142,7 @@ data TransporterConfigT f = TransporterConfigT
     notificationRetryTimeGap :: B.C f Seconds,
     driverAutoPayExecutionTimeFallBack :: B.C f Seconds,
     orderAndNotificationStatusCheckFallBackTime :: B.C f Seconds,
+    acStatusCheckGap :: B.C f Int,
     kaptureDisposition :: B.C f Text,
     dummyFromLocation :: B.C f (Maybe A.Value),
     arrivedStopThreshold :: B.C f (Maybe HighPrecMeters),

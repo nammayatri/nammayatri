@@ -30,10 +30,22 @@ findById (Kernel.Types.Id.Id driverId) = do findOneWithKV [Se.Is Beam.driverId $
 findByRegistrationNo :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Vehicle.Vehicle))
 findByRegistrationNo registrationNo = do findOneWithKV [Se.Is Beam.registrationNo $ Se.Eq registrationNo]
 
+updateAirConditioned :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateAirConditioned airConditioned (Kernel.Types.Id.Id driverId) = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.airConditioned airConditioned, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
+
 updateSelectedServiceTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ServiceTierType.ServiceTierType] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateSelectedServiceTiers selectedServiceTiers (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.selectedServiceTiers selectedServiceTiers, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
+
+updateVariantAndServiceTiers ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.Vehicle.Variant -> [Domain.Types.ServiceTierType.ServiceTierType] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateVariantAndServiceTiers variant selectedServiceTiers (Kernel.Types.Id.Id driverId) = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.variant variant, Se.Set Beam.selectedServiceTiers selectedServiceTiers, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
 
 updateVehicleModel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateVehicleModel model (Kernel.Types.Id.Id driverId) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.model model, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]

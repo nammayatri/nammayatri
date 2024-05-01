@@ -236,6 +236,7 @@ data UserActionType
   | DRIVER_DOCUMENT_INFO
   | UPDATE_DOCUMENT
   | GET_TICKET_PLACES
+  | REMOVE_AC_USAGE_RESTRICTION
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

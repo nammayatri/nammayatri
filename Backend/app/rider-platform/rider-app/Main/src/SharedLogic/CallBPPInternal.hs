@@ -193,3 +193,29 @@ customerCancellationDuesSync ::
 customerCancellationDuesSync apiKey internalUrl merchantId phoneNumber countryCode cancellationCharges disputeChancesUsed paymentMadeToDriver merchantCity = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (customerCancellationDuesSyncClient merchantId merchantCity (Just apiKey) (CustomerCancellationDuesSyncReq phoneNumber countryCode cancellationCharges disputeChancesUsed paymentMadeToDriver)) "CustomerCancellationDuesSync" customerCancellationDuesSyncApi
+
+type ReportACIssueAPI =
+  "internal"
+    :> Capture "rideId" Text
+    :> "reportACIssue"
+    :> Header "token" Text
+    :> Post '[JSON] APISuccess
+
+reportACIssueClient :: Text -> Maybe Text -> EulerClient APISuccess
+reportACIssueClient = client reportACIssueApi
+
+reportACIssueApi :: Proxy ReportACIssueAPI
+reportACIssueApi = Proxy
+
+reportACIssue ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m APISuccess
+reportACIssue apiKey internalUrl bppRideId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (reportACIssueClient bppRideId (Just apiKey)) "ReportACIssue" reportACIssueApi

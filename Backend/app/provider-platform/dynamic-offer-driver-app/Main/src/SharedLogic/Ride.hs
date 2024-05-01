@@ -219,7 +219,7 @@ pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDrive
     unless (driverId == quoteDriverId) $ do
       DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast driverReq.driverId) driverReq.searchTryId
       DP.removeSearchReqIdFromMap merchantId driverId driverReq.searchTryId
-      void $ QSRD.updateDriverResponse driverReq.id SReqD.Pulled
+      void $ QSRD.updateDriverResponse driverReq.id SReqD.Pulled SReqD.Inactive
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       Notify.notifyDriverClearedFare merchantOpCityId driver_ driverReq.searchTryId estimatedFare
 

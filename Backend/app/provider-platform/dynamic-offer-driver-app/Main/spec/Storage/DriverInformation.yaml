@@ -8,6 +8,8 @@ imports:
 DriverInformation:
   tableName: driver_information
   types:
+    AirConditionedRestrictionType:
+      enum: "NoRestriction, ToggleAllowed, ToggleNotAllowed"
     DriverMode:
       enum: "ONLINE,OFFLINE,SILENT"
       derive: "HttpInstance"
@@ -64,6 +66,9 @@ DriverInformation:
     blockStateModifier: Maybe Text
     driverDob: Maybe UTCTime
     airConditionScore: Maybe Double
+    acUsageRestrictionType: AirConditionedRestrictionType
+    acRestrictionLiftCount: Int
+    lastACStatusCheckedAt: Maybe UTCTime
 
   default:
     active: "false"
@@ -81,6 +86,7 @@ DriverInformation:
     canSwitchToRental: "false"
     canSwitchToInterCity: "false"
     aadhaarVerified: "false"
+    acRestrictionLiftCount: "0"
 
   constraints:
     driverId: PrimaryKey
@@ -88,14 +94,17 @@ DriverInformation:
   beamType:
     canSwitchToRental: Maybe Bool
     canSwitchToInterCity: Maybe Bool
+    acUsageRestrictionType: Maybe AirConditionedRestrictionType
 
   fromTType:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     canSwitchToInterCity: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    acUsageRestrictionType: Kernel.Prelude.fromMaybe Domain.Types.DriverInformation.NoRestriction|I
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
     canSwitchToInterCity: Kernel.Prelude.Just|I
+    acUsageRestrictionType: Kernel.Prelude.Just|I
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -128,6 +137,22 @@ DriverInformation:
     updateDriverInformation: #check
       kvFunction: updateOneWithKV
       params: [canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, canSwitchToInterCity, availableUpiApps]
+      where: driverId
+    updateRentalAndInterCitySwitch:
+      kvFunction: updateOneWithKV
+      params: [canSwitchToRental, canSwitchToInterCity]
+      where: driverId
+    updateAirConditionScore:
+      kvFunction: updateOneWithKV
+      params: [airConditionScore]
+      where: driverId
+    updateAcUsageRestrictionAndScore:
+      kvFunction: updateOneWithKV
+      params: [acUsageRestrictionType, airConditionScore]
+      where: driverId
+    removeAcUsageRestriction:
+      kvFunction: updateOneWithKV
+      params: [airConditionScore, acUsageRestrictionType, acRestrictionLiftCount]
       where: driverId
     updateOnRide:
       kvFunction: updateOneWithKV

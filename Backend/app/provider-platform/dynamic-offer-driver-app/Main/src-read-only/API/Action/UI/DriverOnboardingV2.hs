@@ -26,6 +26,15 @@ type API =
            API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
       :<|> TokenAuth
       :> "driver"
+      :> "updateAirCondition"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "driver"
       :> "vehicleServiceTiers"
       :> Get
            '[JSON]
@@ -42,7 +51,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers
+handler = getOnboardingConfigs :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -53,6 +62,16 @@ getOnboardingConfigs ::
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
   )
 getOnboardingConfigs a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getOnboardingConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postDriverUpdateAirCondition ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postDriverUpdateAirCondition a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverUpdateAirCondition (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDriverVehicleServiceTiers ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

@@ -19,6 +19,8 @@ instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.Driver
       Just
         Domain.Types.DriverInformation.DriverInformation
           { aadhaarVerified = aadhaarVerified,
+            acRestrictionLiftCount = acRestrictionLiftCount,
+            acUsageRestrictionType = Kernel.Prelude.fromMaybe Domain.Types.DriverInformation.NoRestriction acUsageRestrictionType,
             active = active,
             adminId = Kernel.Types.Id.Id <$> adminId,
             airConditionScore = airConditionScore,
@@ -38,6 +40,7 @@ instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.Driver
             driverId = Kernel.Types.Id.Id driverId,
             enabled = enabled,
             enabledAt = enabledAt,
+            lastACStatusCheckedAt = lastACStatusCheckedAt,
             lastEnabledOn = lastEnabledOn,
             mode = mode,
             numOfLocks = numOfLocks,
@@ -59,6 +62,8 @@ instance ToTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverIn
   toTType' (Domain.Types.DriverInformation.DriverInformation {..}) = do
     Beam.DriverInformationT
       { Beam.aadhaarVerified = aadhaarVerified,
+        Beam.acRestrictionLiftCount = acRestrictionLiftCount,
+        Beam.acUsageRestrictionType = Kernel.Prelude.Just acUsageRestrictionType,
         Beam.active = active,
         Beam.adminId = Kernel.Types.Id.getId <$> adminId,
         Beam.airConditionScore = airConditionScore,
@@ -78,6 +83,7 @@ instance ToTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverIn
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.enabled = enabled,
         Beam.enabledAt = enabledAt,
+        Beam.lastACStatusCheckedAt = lastACStatusCheckedAt,
         Beam.lastEnabledOn = lastEnabledOn,
         Beam.mode = mode,
         Beam.numOfLocks = numOfLocks,

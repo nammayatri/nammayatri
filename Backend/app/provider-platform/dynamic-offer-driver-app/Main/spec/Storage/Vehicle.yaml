@@ -86,3 +86,11 @@ Vehicle:
       kvFunction: updateOneWithKV
       params: [selectedServiceTiers]
       where: driverId
+    updateVariantAndServiceTiers:
+      kvFunction: updateOneWithKV
+      params: [variant, selectedServiceTiers]
+      where: driverId
+    updateAirConditioned:
+      kvFunction: updateWithKV
+      params: [airConditioned]
+      where: driverId

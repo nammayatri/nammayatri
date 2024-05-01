@@ -58,6 +58,7 @@ type API =
            :<|> DriverActivityAPI
            :<|> EnableDriverAPI
            :<|> DisableDriverAPI
+           :<|> RemoveACUsageRestrictionAPI
            :<|> BlockDriverWithReasonAPI
            :<|> BlockDriverAPI
            :<|> BlockReasonListAPI
@@ -159,6 +160,10 @@ type EnableDriverAPI =
 type DisableDriverAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DISABLE
     :> Common.DisableDriverAPI
+
+type RemoveACUsageRestrictionAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'REMOVE_AC_USAGE_RESTRICTION
+    :> Common.RemoveACUsageRestrictionAPI
 
 type BlockDriverWithReasonAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'BLOCK_WITH_REASON
@@ -362,6 +367,7 @@ handler merchantId city =
     :<|> driverActivity merchantId city
     :<|> enableDriver merchantId city
     :<|> disableDriver merchantId city
+    :<|> removeACUsageRestriction merchantId city
     :<|> blockDriverWithReason merchantId city
     :<|> blockDriver merchantId city
     :<|> blockReasonList merchantId city
@@ -510,6 +516,13 @@ disableDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI'
   transaction <- buildManagementServerTransaction Common.DisableDriverEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.disableDriver) driverId
+
+removeACUsageRestriction :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
+removeACUsageRestriction merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildManagementServerTransaction Common.RemoveACUsageRestrictionEndpoint apiTokenInfo driverId T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.removeACUsageRestriction) driverId
 
 blockDriverWithReason :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.BlockDriverWithReasonReq -> FlowHandler APISuccess
 blockDriverWithReason merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
