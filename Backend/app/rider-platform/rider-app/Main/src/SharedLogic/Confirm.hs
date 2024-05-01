@@ -165,7 +165,7 @@ confirm DConfirmReq {..} = do
   let fareProduct = QTB.getFareProductType booking.bookingDetails
   -- DB.runTransaction $ do
   _ <- QRideB.createBooking booking
-  _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = fareProduct}
+  _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just fareProduct}
   _ <- QEstimate.updateStatusByRequestId DEstimate.COMPLETED quote.requestId
   QPFS.clearCache searchRequest.riderId
   return $
