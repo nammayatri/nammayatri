@@ -35,10 +35,34 @@ incrementReferralCountByPersonId totalReferred (Kernel.Types.Id.Id driverId) = d
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.totalReferred totalReferred] [Se.Is Beam.driverId $ Se.Eq driverId]
 
+removeAcUsageRestriction ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Domain.Types.DriverInformation.AirConditionedRestrictionType -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+removeAcUsageRestriction airConditionScore acUsageRestrictionType acRestrictionLiftCount (Kernel.Types.Id.Id driverId) = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.airConditionScore airConditionScore,
+      Se.Set Beam.acUsageRestrictionType (Kernel.Prelude.Just acUsageRestrictionType),
+      Se.Set Beam.acRestrictionLiftCount acRestrictionLiftCount
+    ]
+    [Se.Is Beam.driverId $ Se.Eq driverId]
+
 updateAadhaarVerifiedState :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateAadhaarVerifiedState aadhaarVerified (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.aadhaarVerified aadhaarVerified, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
+
+updateAcUsageRestrictionAndScore ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.DriverInformation.AirConditionedRestrictionType -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateAcUsageRestrictionAndScore acUsageRestrictionType airConditionScore (Kernel.Types.Id.Id driverId) = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.acUsageRestrictionType (Kernel.Prelude.Just acUsageRestrictionType),
+      Se.Set Beam.airConditionScore airConditionScore,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq driverId]
 
 updateActivity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -46,6 +70,11 @@ updateActivity ::
 updateActivity active mode (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.active active, Se.Set Beam.mode mode, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
+
+updateAirConditionScore :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateAirConditionScore airConditionScore (Kernel.Types.Id.Id driverId) = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.airConditionScore airConditionScore, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
 
 updateCompAadhaarImagePath :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateCompAadhaarImagePath compAadhaarImagePath (Kernel.Types.Id.Id driverId) = do
@@ -91,6 +120,16 @@ updatePendingPayment paymentPending (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.paymentPending paymentPending, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
 
+updateRentalAndInterCitySwitch :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateRentalAndInterCitySwitch canSwitchToRental canSwitchToInterCity (Kernel.Types.Id.Id driverId) = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.canSwitchToRental (Kernel.Prelude.Just canSwitchToRental),
+      Se.Set Beam.canSwitchToInterCity (Kernel.Prelude.Just canSwitchToInterCity),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq driverId]
+
 updateSubscription :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateSubscription subscribed (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
@@ -104,6 +143,8 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.aadhaarVerified aadhaarVerified,
+      Se.Set Beam.acRestrictionLiftCount acRestrictionLiftCount,
+      Se.Set Beam.acUsageRestrictionType (Kernel.Prelude.Just acUsageRestrictionType),
       Se.Set Beam.active active,
       Se.Set Beam.adminId (Kernel.Types.Id.getId <$> adminId),
       Se.Set Beam.airConditionScore airConditionScore,
@@ -122,6 +163,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.driverDob driverDob,
       Se.Set Beam.enabled enabled,
       Se.Set Beam.enabledAt enabledAt,
+      Se.Set Beam.lastACStatusCheckedAt lastACStatusCheckedAt,
       Se.Set Beam.lastEnabledOn lastEnabledOn,
       Se.Set Beam.mode mode,
       Se.Set Beam.numOfLocks numOfLocks,

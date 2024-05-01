@@ -84,7 +84,7 @@ import qualified Data.Map as M
 import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
-import Data.Time (Day, fromGregorian)
+import Data.Time (Day, diffDays, fromGregorian)
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
 import qualified Domain.Action.UI.Plan as DAPlan
@@ -289,6 +289,7 @@ data DriverEntityRes = DriverEntityRes
     freeTrialDaysLeft :: Int,
     maskedDeviceToken :: Maybe Text,
     blockStateModifier :: Maybe Text,
+    checkIfACWorking :: Bool,
     isVehicleSupported :: Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
@@ -619,6 +620,7 @@ buildDriverEntityRes (person, driverInfo) = do
   transporterConfig <- CQTC.findByMerchantOpCityId person.merchantOperatingCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   driverPlan <- snd <$> DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION person.id
   vehicleMB <- QVehicle.findById person.id
+  now <- getCurrentTime
   decMobNum <- mapM decrypt person.mobileNumber
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
   let maskedDeviceToken = maskText . (.getFCMRecipientToken) <$> person.deviceToken
@@ -634,12 +636,19 @@ buildDriverEntityRes (person, driverInfo) = do
           else person.rating <&> (\(Centesimal x) -> Centesimal (fromInteger (round x)))
   fareProductConfig <- CQFP.findAllFareProductByMerchantOpCityId person.merchantOperatingCityId
   let supportedServiceTiers = nub $ map (.vehicleServiceTier) fareProductConfig
-  mbDefaultServiceTier <-
+  (checkIfACWorking, mbDefaultServiceTier) <-
     case vehicleMB of
-      Nothing -> return Nothing
+      Nothing -> return (False, Nothing)
       Just vehicle -> do
         cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
-        return ((.serviceTierType) <$> (find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers))
+        let mbDefaultServiceTierItem = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
+        let checIfACWorking' =
+              case mbDefaultServiceTierItem >>= (.airConditioned) of
+                Nothing -> False
+                Just acThreshold -> do
+                  (fromMaybe 0 driverInfo.airConditionScore) <= acThreshold
+                    && maybe True (\lastCheckedAt -> fromInteger (diffDays (utctDay now) (utctDay lastCheckedAt)) >= transporterConfig.acStatusCheckGap) driverInfo.lastACStatusCheckedAt
+        return (checIfACWorking', (.serviceTierType) <$> mbDefaultServiceTierItem)
   let isVehicleSupported = maybe False (\d -> d `elem` supportedServiceTiers) mbDefaultServiceTier
   return $
     DriverEntityRes
@@ -676,6 +685,7 @@ buildDriverEntityRes (person, driverInfo) = do
         aadhaarCardPhoto = aadhaarCardPhoto,
         freeTrialDaysLeft = freeTrialDaysLeft,
         maskedDeviceToken = maskedDeviceToken,
+        checkIfACWorking,
         isVehicleSupported = isVehicleSupported
       }
 
@@ -747,10 +757,10 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
           selectedServiceTiers =
             case vehicle.variant of
               SV.AUTO_RICKSHAW -> [DVST.AUTO_RICKSHAW]
-              SV.TAXI -> [DVST.TAXI, DVST.ECO]
-              SV.HATCHBACK -> [DVST.HATCHBACK, DVST.COMFY] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToTaxi]
-              SV.SEDAN -> [DVST.SEDAN, DVST.COMFY] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToTaxi]
-              SV.SUV -> [DVST.SUV] <> [DVST.SEDAN | canDowngradeToSedan] <> [DVST.COMFY | canDowngradeToSedan] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToTaxi]
+              SV.TAXI -> [DVST.TAXI]
+              SV.HATCHBACK -> [DVST.HATCHBACK, DVST.ECO] <> [DVST.TAXI | canDowngradeToTaxi]
+              SV.SEDAN -> [DVST.SEDAN, DVST.COMFY] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
+              SV.SUV -> [DVST.SUV] <> [DVST.SEDAN | canDowngradeToSedan] <> [DVST.COMFY | canDowngradeToSedan] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
               SV.TAXI_PLUS -> [DVST.TAXI_PLUS]
               SV.BIKE -> [DVST.BIKE]
 
@@ -882,14 +892,20 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
     driverFCMPulledList <-
       case req.response of
-        Pulled -> throwError UnexpectedResponseValue
+        Pulled -> do
+          QSRD.updateDriverResponse sReqFD.id Pulled Inactive
+          throwError UnexpectedResponseValue
         Accept -> do
           whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
-          case searchTry.tripCategory of
-            DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice
-            _ -> acceptStaticOfferDriverRequest searchTry driver sReqFD
-        Reject -> pure []
-    QSRD.updateDriverResponse sReqFD.id req.response
+          pullList <-
+            case searchTry.tripCategory of
+              DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice
+              _ -> acceptStaticOfferDriverRequest searchTry driver sReqFD
+          QSRD.updateDriverResponse sReqFD.id Accept Inactive
+          return pullList
+        Reject -> do
+          QSRD.updateDriverResponse sReqFD.id Reject Inactive
+          pure []
     DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id driverFCMPulledList
   pure Success
   where
@@ -1004,7 +1020,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       void $ QDrQt.create driverQuote
       driverFCMPulledList <-
         if (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
-          then QSRD.findAllActiveWithoutRespBySearchTryId searchTry.id
+          then QSRD.findAllActiveBySTId searchTry.id
           else pure []
       pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id driverQuote.estimatedFare
       sendDriverOffer merchant searchReq sReqFD searchTry driverQuote

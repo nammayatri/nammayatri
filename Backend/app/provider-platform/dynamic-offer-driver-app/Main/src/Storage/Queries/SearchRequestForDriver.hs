@@ -56,16 +56,6 @@ findAllActiveBySRId (Id searchReqId) =
         ]
     ]
 
-findAllActiveWithoutRespBySearchTryId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchTry -> m [SearchRequestForDriver]
-findAllActiveWithoutRespBySearchTryId (Id searchTryId) =
-  findAllWithKV
-    [ Se.And
-        ( [Se.Is BeamSRFD.searchTryId $ Se.Eq searchTryId]
-            <> [Se.Is BeamSRFD.status $ Se.Eq Domain.Active]
-            <> [Se.Is BeamSRFD.response $ Se.Eq Nothing]
-        )
-    ]
-
 findByDriverAndSearchTryId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
   findOneWithKV
@@ -100,10 +90,12 @@ setInactiveAndPulledByIds srdIds = do
     ]
     [Se.Is BeamSRFD.id (Se.In $ (.getId) <$> srdIds)]
 
-updateDriverResponse :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequestForDriver -> SearchRequestForDriverResponse -> m ()
-updateDriverResponse (Id id) response =
+updateDriverResponse :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequestForDriver -> SearchRequestForDriverResponse -> DriverSearchRequestStatus -> m ()
+updateDriverResponse (Id id) response status =
   updateOneWithKV
-    [Se.Set BeamSRFD.response (Just response)]
+    [ Se.Set BeamSRFD.response (Just response),
+      Se.Set BeamSRFD.status status
+    ]
     [Se.Is BeamSRFD.id (Se.Eq id)]
 
 instance FromTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where

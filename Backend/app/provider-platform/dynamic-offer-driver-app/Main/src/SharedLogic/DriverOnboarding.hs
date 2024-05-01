@@ -34,13 +34,16 @@ import Domain.Types.Vehicle
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
+import SharedLogic.VehicleServiceTier
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
@@ -50,6 +53,8 @@ import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.Message.Message as MessageQuery
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Vehicle as QVehicle
+import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Error
 import qualified Tools.Ticket as TT
 import Tools.Whatsapp as Whatsapp
@@ -131,32 +136,47 @@ enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified =
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     triggerOnboardingAlertsAndMessages person merchant merchantOpCity
 
-selectVehicleTierForDriver :: Person -> DI.DriverInformation -> Vehicle -> [DVST.VehicleServiceTier] -> [DVST.VehicleServiceTier]
-selectVehicleTierForDriver person driverInfo vehicle cityVehicleServiceTiers =
-  filter filterVehicleTier cityVehicleServiceTiers
+checkAndUpdateAirConditioned :: Bool -> Bool -> Id Person -> [DVST.VehicleServiceTier] -> Flow ()
+checkAndUpdateAirConditioned isDashboard isAirConditioned personId cityVehicleServiceTiers = do
+  driverInfo <- runInReplica $ DIQuery.findById personId >>= fromMaybeM DriverInfoNotFound
+  vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
+  let serviceTierACThresholds = map (\DVST.VehicleServiceTier {..} -> airConditioned) (filter (\v -> vehicle.variant `elem` v.allowedVehicleVariant) cityVehicleServiceTiers)
+
+  when (isAirConditioned && not (checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds))) $ do
+    if isDashboard
+      then do
+        DIQuery.removeAcUsageRestriction (Just 0.0) DI.NoRestriction (driverInfo.acRestrictionLiftCount + 1) personId
+      else do
+        when (driverInfo.acUsageRestrictionType == DI.ToggleNotAllowed) $
+          throwError $ InvalidRequest "AC usage is restricted for the driver, please contact support"
+        when (driverInfo.acUsageRestrictionType == DI.ToggleAllowed) $
+          DIQuery.updateAcUsageRestrictionAndScore DI.ToggleNotAllowed (Just 0.0) personId
+  mbRc <- runInReplica $ QRC.findLastVehicleRCWrapper vehicle.registrationNo
+  QVehicle.updateAirConditioned (Just isAirConditioned) personId
+  whenJust mbRc $ \rc -> QRC.updateAirConditioned (Just isAirConditioned) rc.id
+
+checkIfACAllowedForDriver :: DI.DriverInformation -> [Double] -> Bool
+checkIfACAllowedForDriver driverInfo serviceTierACThresholds = null serviceTierACThresholds || any ((fromMaybe 0 driverInfo.airConditionScore) <=) serviceTierACThresholds
+
+incrementDriverAcUsageRestrictionCount :: [DVST.VehicleServiceTier] -> Id Person -> Flow ()
+incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers personId = do
+  driverInfo <- DIQuery.findById personId >>= fromMaybeM DriverInfoNotFound
+  driver <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let mbMaxACUsageRestrictionThreshold = safeMaximum . mapMaybe (\DVST.VehicleServiceTier {..} -> airConditioned) $ cityVehicleServiceTiers
+  let airConditionScore = (fromMaybe 0 driverInfo.airConditionScore) + 1
+  if maybe False (airConditionScore >) mbMaxACUsageRestrictionThreshold
+    then do
+      let newRestrictionType =
+            if driverInfo.acUsageRestrictionType == DI.NoRestriction
+              then DI.ToggleAllowed
+              else driverInfo.acUsageRestrictionType
+      DIQuery.updateAcUsageRestrictionAndScore newRestrictionType (Just airConditionScore) personId
+      fork "Send AC Restriction Overlay" $ ACOverlay.sendACUsageRestrictionOverlay driver
+    else DIQuery.updateAirConditionScore (Just airConditionScore) personId
   where
-    filterVehicleTier vehicleServiceTier = do
-      let _seatingCapacityCheck = compareNumber vehicle.capacity vehicleServiceTier.seatingCapacity
-      let luggageCapacityCheck = compareNumber vehicle.luggageCapacity vehicleServiceTier.luggageCapacity
-      let airConditionedCheck =
-            (compareNumber driverInfo.airConditionScore vehicleServiceTier.airConditioned)
-              && (isNothing vehicleServiceTier.airConditioned || vehicle.airConditioned /= Just False)
-      let driverRatingCheck = compareNumber person.rating vehicleServiceTier.driverRating
-      let vehicleRatingCheck = compareNumber vehicle.vehicleRating vehicleServiceTier.vehicleRating
-      let variantCheck = vehicle.variant `elem` vehicleServiceTier.allowedVehicleVariant
-
-      -- seatingCapacityCheck &&
-      luggageCapacityCheck
-        && airConditionedCheck
-        && driverRatingCheck
-        && vehicleRatingCheck
-        && variantCheck
-
-    compareNumber :: Ord a => Maybe a -> Maybe a -> Bool
-    compareNumber mbX mbY =
-      case (mbX, mbY) of
-        (Just x, Just y) -> x >= y
-        _ -> True
+    safeMaximum :: Ord a => [a] -> Maybe a
+    safeMaximum [] = Nothing
+    safeMaximum xs = Just (maximum xs)
 
 makeRCAssociation :: (MonadFlow m) => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person -> Id VehicleRegistrationCertificate -> Maybe UTCTime -> m DriverRCAssociation
 makeRCAssociation merchantId merchantOperatingCityId driverId rcId end = do
@@ -211,7 +231,7 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
 makeFullVehicleFromRC :: [DVST.VehicleServiceTier] -> DI.DriverInformation -> Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Vehicle
 makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now = do
   let vehicle = makeVehicleFromRC driver.id merchantId_ certificateNumber rc merchantOpCityId now
-  let availableServiceTiersForDriver = (.serviceTierType) <$> selectVehicleTierForDriver driver driverInfo vehicle vehicleServiceTiers
+  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction driver driverInfo vehicle vehicleServiceTiers
   addSelectedServiceTiers availableServiceTiersForDriver vehicle
   where
     addSelectedServiceTiers :: [DVST.ServiceTierType] -> Vehicle -> Vehicle
@@ -260,6 +280,7 @@ data CreateRCInput = CreateRCInput
     pucValidityUpto :: Maybe UTCTime,
     manufacturer :: Maybe Text,
     manufacturerModel :: Maybe Text,
+    airConditioned :: Maybe Bool,
     bodyType :: Maybe Text,
     fuelType :: Maybe Text,
     color :: Maybe Text
@@ -309,7 +330,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       merchantId = Just merchantId,
       merchantOperatingCityId = Just merchantOperatingCityId,
       userPassedVehicleCategory = input.vehicleCategory,
-      airConditioned = Nothing,
+      airConditioned = input.airConditioned,
       luggageCapacity = Nothing,
       vehicleRating = Nothing,
       failedRules = [],

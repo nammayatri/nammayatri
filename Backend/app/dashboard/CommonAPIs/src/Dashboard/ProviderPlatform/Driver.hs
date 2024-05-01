@@ -71,6 +71,7 @@ data DriverEndpoint
   | UpdateRCInvalidStatusEndPoint
   | UpdateVehicleVariantEndPoint
   | BulkReviewRCVariantEndPoint
+  | RemoveACUsageRestrictionEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "DriverEndpoint"
@@ -378,6 +379,15 @@ type DisableDriverAPI =
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------
+-- remove driver ac restriction ----------------------------------------
+
+type RemoveACUsageRestrictionAPI =
+  Capture "driverId" (Id Driver)
+    :> "acRestriction"
+    :> "remove"
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
 -- block driver with reason ----------------------------------------
 
 type BlockDriverWithReasonAPI =
@@ -497,6 +507,9 @@ data DriverInfoRes = DriverInfoRes
     rating :: Maybe Centesimal,
     availableMerchants :: [Text],
     merchantOperatingCity :: Maybe Context.City,
+    currentAcOffReportCount :: Int,
+    totalAcRestrictionUnblockCount :: Int,
+    lastACStatusCheckedAt :: Maybe UTCTime,
     blockStateModifier :: Maybe Text
   }
   deriving stock (Show, Generic)
@@ -700,6 +713,7 @@ data AddVehicleReq = AddVehicleReq
     energyType :: Maybe Text,
     model :: Text,
     make :: Text,
+    airConditioned :: Maybe Bool,
     driverName :: Text
   }
   deriving stock (Show, Generic)

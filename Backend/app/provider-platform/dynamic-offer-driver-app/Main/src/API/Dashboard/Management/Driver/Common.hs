@@ -35,6 +35,7 @@ type API =
            :<|> Common.DriverListAPI
            :<|> Common.DriverActivityAPI
            :<|> Common.DisableDriverAPI
+           :<|> Common.RemoveACUsageRestrictionAPI
            :<|> BlockDriverWithReasonAPI
            :<|> Common.BlockDriverAPI
            :<|> Common.DriverBlockReasonListAPI
@@ -78,6 +79,7 @@ handler merchantId city =
     :<|> listDrivers merchantId city
     :<|> driverActivity merchantId city
     :<|> disableDriver merchantId city
+    :<|> removeACUsageRestriction merchantId city
     :<|> blockDriverWithReason merchantId city
     :<|> blockDriver merchantId city
     :<|> blockReasonList merchantId city
@@ -117,6 +119,9 @@ driverActivity merchantShortId = withFlowHandlerAPI . DDriver.driverActivity mer
 
 disableDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler APISuccess
 disableDriver merchantShortId opCity = withFlowHandlerAPI . DDriver.disableDriver merchantShortId opCity
+
+removeACUsageRestriction :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler APISuccess
+removeACUsageRestriction merchantShortId opCity = withFlowHandlerAPI . DDriver.removeACUsageRestriction merchantShortId opCity
 
 blockDriverWithReason :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.BlockDriverWithReasonReq -> FlowHandler APISuccess
 blockDriverWithReason merchantShortId opCity driverId dashboardUserName = withFlowHandlerAPI . DDriver.blockDriverWithReason merchantShortId opCity driverId dashboardUserName

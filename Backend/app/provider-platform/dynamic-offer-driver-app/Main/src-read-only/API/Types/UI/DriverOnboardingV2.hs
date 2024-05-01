@@ -5,12 +5,20 @@ module API.Types.UI.DriverOnboardingV2 where
 
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.DocumentVerificationConfig
+import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.ServiceTierType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Servant
 import Tools.Auth
+
+data AirConditionedTier = AirConditionedTier
+  { isWorking :: Kernel.Prelude.Bool,
+    restrictionMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    usageRestrictionType :: Domain.Types.DriverInformation.AirConditionedRestrictionType
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
   { checkExpiry :: Kernel.Prelude.Bool,
@@ -39,6 +47,7 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     isDefault :: Kernel.Prelude.Bool,
     isSelected :: Kernel.Prelude.Bool,
+    isUsageRestricted :: Kernel.Prelude.Bool,
     longDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     name :: Kernel.Prelude.Text,
@@ -49,4 +58,12 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-newtype DriverVehicleServiceTiers = DriverVehicleServiceTiers {tiers :: [API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data DriverVehicleServiceTiers = DriverVehicleServiceTiers
+  { airConditioned :: Kernel.Prelude.Maybe API.Types.UI.DriverOnboardingV2.AirConditionedTier,
+    canSwitchToInterCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    canSwitchToRental :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    tiers :: [API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+newtype UpdateAirConditionUpdateRequest = UpdateAirConditionUpdateRequest {isAirConditioned :: Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema)

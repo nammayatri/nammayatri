@@ -74,7 +74,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.IdfyVerification.IdfyVerification {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.docType docType,
+    [ Se.Set Beam.airConditioned airConditioned,
+      Se.Set Beam.docType docType,
       Se.Set Beam.documentImageId1 (Kernel.Types.Id.getId documentImageId1),
       Se.Set Beam.documentImageId2 (Kernel.Types.Id.getId <$> documentImageId2),
       Se.Set Beam.documentNumberEncrypted (documentNumber & unEncrypted . encrypted),
@@ -102,7 +103,8 @@ instance FromTType' Beam.IdfyVerification Domain.Types.IdfyVerification.IdfyVeri
     pure $
       Just
         Domain.Types.IdfyVerification.IdfyVerification
-          { docType = docType,
+          { airConditioned = airConditioned,
+            docType = docType,
             documentImageId1 = Kernel.Types.Id.Id documentImageId1,
             documentImageId2 = Kernel.Types.Id.Id <$> documentImageId2,
             documentNumber = EncryptedHashed (Encrypted documentNumberEncrypted) documentNumberHash,
@@ -127,7 +129,8 @@ instance FromTType' Beam.IdfyVerification Domain.Types.IdfyVerification.IdfyVeri
 instance ToTType' Beam.IdfyVerification Domain.Types.IdfyVerification.IdfyVerification where
   toTType' (Domain.Types.IdfyVerification.IdfyVerification {..}) = do
     Beam.IdfyVerificationT
-      { Beam.docType = docType,
+      { Beam.airConditioned = airConditioned,
+        Beam.docType = docType,
         Beam.documentImageId1 = Kernel.Types.Id.getId documentImageId1,
         Beam.documentImageId2 = Kernel.Types.Id.getId <$> documentImageId2,
         Beam.documentNumberEncrypted = documentNumber & unEncrypted . encrypted,

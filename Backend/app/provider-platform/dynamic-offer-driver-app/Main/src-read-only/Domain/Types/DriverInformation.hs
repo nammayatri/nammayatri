@@ -16,6 +16,8 @@ import qualified Tools.Beam.UtilsTH
 
 data DriverInformation = DriverInformation
   { aadhaarVerified :: Kernel.Prelude.Bool,
+    acRestrictionLiftCount :: Kernel.Prelude.Int,
+    acUsageRestrictionType :: Domain.Types.DriverInformation.AirConditionedRestrictionType,
     active :: Kernel.Prelude.Bool,
     adminId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     airConditionScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -35,6 +37,7 @@ data DriverInformation = DriverInformation
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     enabled :: Kernel.Prelude.Bool,
     enabledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    lastACStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastEnabledOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     mode :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverMode,
     numOfLocks :: Kernel.Prelude.Int,
@@ -52,6 +55,8 @@ data DriverInformation = DriverInformation
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data AirConditionedRestrictionType = NoRestriction | ToggleAllowed | ToggleNotAllowed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data Badges = Badges {badgeCount :: Kernel.Prelude.Int, badgeName :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -80,6 +85,8 @@ data DriverSummary = DriverSummary
     totalEarnings :: Kernel.Types.Common.Money
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
 

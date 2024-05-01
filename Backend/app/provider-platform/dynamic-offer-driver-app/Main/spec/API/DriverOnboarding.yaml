@@ -3,6 +3,7 @@ imports:
   DocumentVerificationConfig: Domain.Types.DocumentVerificationConfig
   DocumentType: Domain.Types.DocumentVerificationConfig
   ServiceTierType: Domain.Types.ServiceTierType
+  AirConditionedRestrictionType: Domain.Types.DriverInformation
   APISuccess: Kernel.Types.APISuccess
   Centesimal: Kernel.Types.Common
 
@@ -25,12 +26,22 @@ types:
     checkExtraction: Bool
     checkExpiry: Bool
     rcNumberPrefixList: '[Text]'
-  DriverVehicleServiceTiers:
+  UpdateAirConditionUpdateRequest:
     recordType: NewType
+    isAirConditioned: Bool
+  DriverVehicleServiceTiers:
     tiers: [DriverVehicleServiceTier]
+    canSwitchToRental: Maybe Bool
+    canSwitchToInterCity: Maybe Bool
+    airConditioned: Maybe AirConditionedTier
+  AirConditionedTier:
+      isWorking: Bool
+      usageRestrictionType: AirConditionedRestrictionType
+      restrictionMessage: Maybe Text
   DriverVehicleServiceTier:
     serviceTierType: ServiceTierType
     name: Text
+    isUsageRestricted: Bool
     shortDescription: Maybe Text
     longDescription: Maybe Text
     seatingCapacity: Maybe Int
@@ -49,6 +60,13 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: DocumentVerificationConfigList
+  - POST:
+      endpoint: /driver/updateAirCondition
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: UpdateAirConditionUpdateRequest
+      response:
+        type: APISuccess
   - GET:
       endpoint: /driver/vehicleServiceTiers
       auth: TokenAuth PROVIDER_TYPE

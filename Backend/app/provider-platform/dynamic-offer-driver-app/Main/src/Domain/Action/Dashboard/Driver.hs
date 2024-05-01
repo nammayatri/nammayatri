@@ -19,6 +19,7 @@ module Domain.Action.Dashboard.Driver
     driverActivity,
     enableDriver,
     disableDriver,
+    removeACUsageRestriction,
     blockDriverWithReason,
     blockDriver,
     blockReasonList,
@@ -132,6 +133,7 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Kernel.Utils.Validation (runRequestValidation)
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
+import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
@@ -139,6 +141,7 @@ import qualified SharedLogic.EventTracking as SEVT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import SharedLogic.VehicleServiceTier
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQGHC
 import Storage.CachedQueries.DriverBlockReason as DBR
@@ -411,6 +414,26 @@ disableDriver merchantShortId opCity reqDriverId = do
 
   QDriverInfo.updateEnabledVerifiedState driverId False Nothing
   logTagInfo "dashboard -> disableDriver : " (show personId)
+  pure Success
+
+---------------------------------------------------------------------
+removeACUsageRestriction :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
+removeACUsageRestriction merchantShortId opCity reqDriverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+  driver <-
+    QPerson.findById personId
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- merchant access checking
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
+  checkAndUpdateAirConditioned True True personId cityVehicleServiceTiers
+  fork "Send AC Restriction Lifted Overlay" $ ACOverlay.sendACUsageRestrictionLiftedOverlay driver
+
+  logTagInfo "dashboard -> removeACUsageRestriction : " (show personId)
   pure Success
 
 ---------------------------------------------------------------------
@@ -710,7 +733,10 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         alternateNumber = person.unencryptedAlternateMobileNumber,
         availableMerchants = availableMerchants,
         merchantOperatingCity = merchantOperatingCity <&> (.city),
-        blockStateModifier = info.blockStateModifier
+        blockStateModifier = info.blockStateModifier,
+        currentAcOffReportCount = maybe 0 round info.airConditionScore,
+        totalAcRestrictionUnblockCount = info.acRestrictionLiftCount,
+        lastACStatusCheckedAt = info.lastACStatusCheckedAt
       }
 
 buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity
@@ -900,6 +926,7 @@ createRCInputFromVehicle Common.AddVehicleReq {..} =
       fitnessUpto = Nothing,
       fleetOwnerId = Nothing,
       vehicleCategory = Nothing,
+      airConditioned,
       documentImageId = "",
       vehicleClass = Just vehicleClass,
       vehicleClassCategory = Nothing,
@@ -1195,6 +1222,7 @@ runVerifyRCFlow personId merchant merchantOpCityId req = do
             operatingCity = "Bangalore", -- TODO: this needs to be fixed properly
             dateOfRegistration = Nothing,
             vehicleCategory = Nothing,
+            airConditioned = req.airConditioned,
             multipleRC = Nothing
           }
   void $ DomainRC.verifyRC True (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq
@@ -1943,8 +1971,7 @@ updateVehicleVariant _ _ req = do
   let variant = castVehicleVariant req.vehicleVariant
   mVehicle <- QVehicle.findByRegistrationNo rcNumber
   RCQuery.updateVehicleVariant vehicleRC.id (Just variant) Nothing Nothing
-  whenJust mVehicle $ \vehicle -> do
-    QVehicle.updateVehicleVariant variant vehicle.driverId
+  whenJust mVehicle $ \vehicle -> updateVehicleVariantAndServiceTier variant vehicle
   pure Success
 
 bulkReviewRCVariant :: ShortId DM.Merchant -> Context.City -> [Common.ReviewRCVariantReq] -> Flow [Common.ReviewRCVariantRes]
@@ -1965,5 +1992,12 @@ bulkReviewRCVariant _ _ req = do
       mVehicle <- QVehicle.findByRegistrationNo rcNumber
       RCQuery.updateVehicleVariant vehicleRC.id mbVariant rcReq.markReviewed (not <$> rcReq.markReviewed)
       whenJust mVehicle $ \vehicle -> do
-        whenJust mbVariant $ \variant -> do
-          QVehicle.updateVehicleVariant variant vehicle.driverId
+        whenJust mbVariant $ \variant -> updateVehicleVariantAndServiceTier variant vehicle
+
+updateVehicleVariantAndServiceTier :: DVeh.Variant -> DVeh.Vehicle -> Flow ()
+updateVehicleVariantAndServiceTier variant vehicle = do
+  driver <- B.runInReplica $ QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
+  driverInfo' <- QDriverInfo.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
+  vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId
+  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction driver driverInfo' vehicle vehicleServiceTiers
+  QVehicle.updateVariantAndServiceTiers variant availableServiceTiersForDriver vehicle.driverId

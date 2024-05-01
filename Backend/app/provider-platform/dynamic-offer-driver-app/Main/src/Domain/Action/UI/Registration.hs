@@ -215,7 +215,10 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             availableUpiApps = Nothing,
             driverDob = (.driverDob) =<< mbDriverLicense,
             airConditionScore = Nothing,
-            merchantOperatingCityId = Just merchantOpCityId
+            merchantOperatingCityId = Just merchantOpCityId,
+            acRestrictionLiftCount = 0,
+            acUsageRestrictionType = DriverInfo.NoRestriction,
+            lastACStatusCheckedAt = Nothing
           }
   QDriverStats.createInitialDriverStats driverId
   QD.create driverInfo

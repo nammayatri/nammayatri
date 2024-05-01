@@ -70,6 +70,7 @@ library
       API.Internal.DriverInactiveFCM
       API.Internal.DriverReferee
       API.Internal.FeedbackForm
+      API.Internal.ReportACIssue
       API.UI
       API.UI.Call
       API.UI.CallEvent
@@ -160,6 +161,7 @@ library
       Domain.Action.Internal.DriverInactiveFCM
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.FeedbackForm
+      Domain.Action.Internal.ReportACIssue
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
@@ -341,6 +343,7 @@ library
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
       SharedLogic.TollsDetector
+      SharedLogic.VehicleServiceTier
       Storage.Beam.BecknRequest
       Storage.Beam.BlackListOrg
       Storage.Beam.Booking

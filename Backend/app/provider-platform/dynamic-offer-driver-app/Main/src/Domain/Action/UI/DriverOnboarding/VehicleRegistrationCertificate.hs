@@ -80,6 +80,7 @@ data DriverRCReq = DriverRCReq
     operatingCity :: Text,
     dateOfRegistration :: Maybe UTCTime,
     vehicleCategory :: Maybe Vehicle.Category,
+    airConditioned :: Maybe Bool,
     multipleRC :: Maybe Bool
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
@@ -134,6 +135,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverRCReq 
   allLinkedRCs <- DAQuery.findAllLinkedByDriverId personId
   unless (length allLinkedRCs < (transporterConfig.rcLimit + (if isDashboard then 1 else 0))) $ throwError (RCLimitReached transporterConfig.rcLimit)
 
+  let mbAirConditioned = maybe airConditioned (\category -> if category == Vehicle.CAR then airConditioned else Just False) vehicleCategory
   when
     ( isNothing dateOfRegistration && documentVerificationConfig.checkExtraction
         && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
@@ -156,7 +158,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverRCReq 
   Redis.whenWithLockRedis (rcVerificationLockKey vehicleRegistrationCertNumber) 60 $ do
     whenJust mVehicleRC $ \vehicleRC -> do
       when (isNothing multipleRC) $ checkIfVehicleAlreadyExists person.id vehicleRC -- backward compatibility
-    verifyRCFlow person merchantOpCityId documentVerificationConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC req.vehicleCategory
+    verifyRCFlow person merchantOpCityId documentVerificationConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC req.vehicleCategory mbAirConditioned
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
@@ -168,8 +170,8 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverRCReq 
         throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
-verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe Vehicle.Category -> Flow ()
-verifyRCFlow person merchantOpCityId imageExtraction rcNumber imageId dateOfRegistration multipleRC mbVehicleCategory = do
+verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe Vehicle.Category -> Maybe Bool -> Flow ()
+verifyRCFlow person merchantOpCityId imageExtraction rcNumber imageId dateOfRegistration multipleRC mbVehicleCategory mbAirConditioned = do
   now <- getCurrentTime
   encryptedRC <- encrypt rcNumber
   let imageExtractionValidation =
@@ -205,6 +207,7 @@ verifyRCFlow person merchantOpCityId imageExtraction rcNumber imageId dateOfRegi
             idfyResponse = Nothing,
             multipleRC,
             vehicleCategory = mbVehicleCategory,
+            airConditioned = mbAirConditioned,
             retryCount = Just 0,
             nameOnCard = Nothing,
             merchantId = Just person.merchantId,
@@ -220,8 +223,9 @@ onVerifyRC person mbVerificationReq output = do
     else do
       now <- getCurrentTime
       let mbVehicleCategory = mbVerificationReq >>= (.vehicleCategory)
+      let mbAirConditioned = mbVerificationReq >>= (.airConditioned)
       fleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) output.registrationNumber
-      let rcInput = createRCInput mbVehicleCategory fleetOwnerId (maybe "" (.documentImageId1) mbVerificationReq)
+      let rcInput = createRCInput mbVehicleCategory mbAirConditioned fleetOwnerId (maybe "" (.documentImageId1) mbVerificationReq)
       mVehicleRC <- buildRC person.merchantId person.merchantOperatingCityId rcInput
       case mVehicleRC of
         Just vehicleRC -> do
@@ -245,13 +249,14 @@ onVerifyRC person mbVerificationReq output = do
           return Ack
         _ -> return Ack
   where
-    createRCInput :: Maybe Vehicle.Category -> Maybe Text -> Id Image.Image -> CreateRCInput
-    createRCInput vehicleCategory fleetOwnerId documentImageId =
+    createRCInput :: Maybe Vehicle.Category -> Maybe Bool -> Maybe Text -> Id Image.Image -> CreateRCInput
+    createRCInput vehicleCategory mbAirConditioned fleetOwnerId documentImageId =
       CreateRCInput
         { registrationNumber = output.registrationNumber,
           fitnessUpto = convertTextToUTC output.fitnessUpto,
           fleetOwnerId,
           vehicleCategory,
+          airConditioned = mbAirConditioned,
           documentImageId,
           vehicleClass = output.vehicleClass,
           vehicleClassCategory = output.vehicleCategory,
