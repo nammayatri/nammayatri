@@ -113,7 +113,7 @@ import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (flowRunner)
 import Types.App (defaultGlobalState)
 import Services.API as API
-import Services.Accessor (_lat, _lon)
+import Services.Accessor (_lat, _lon, _isVehicleAirConditioned)
 import Services.Backend as Remote
 import Services.Config as SC
 import Services.EndPoints as EP
@@ -128,6 +128,7 @@ import Timers as TF
 import Data.Ord (abs)
 import DecodeUtil
 import LocalStorage.Cache (getValueFromCache, setValueToCache)
+import Common.Resources.Constants as CONST
 
 instance showAction :: Show Action where
   show _ = ""
@@ -432,6 +433,7 @@ data Action = NoAction
             | SwitchBookingStage BookingTypes
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
+            | OnRideAcCheck PopUpModal.Action
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -1185,7 +1187,8 @@ eval (RideActiveAction activeRide mbAdvancedRide) state = do
   let currActiveRideDetails = activeRideDetail state activeRide
       advancedRideDetails = activeRideDetail state <$> mbAdvancedRide
       isOdoReadingsReq = checkIfOdometerReadingsRequired currActiveRideDetails.tripType activeRide
-      updatedState = state { data {activeRide = currActiveRideDetails, advancedRideData = advancedRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag), safetyAudioAutoPlay = false, isOdometerReadingsRequired = isOdoReadingsReq}}
+      isVehicleAirConditioned = fromMaybe false (activeRide ^. _isVehicleAirConditioned)
+      updatedState = state { data {activeRide = currActiveRideDetails, advancedRideData = advancedRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag), safetyAudioAutoPlay = false, isOdometerReadingsRequired = isOdoReadingsReq, onRideAcCheck = isVehicleAirConditioned}}
   updateAndExit updatedState $ UpdateStage ST.RideAccepted updatedState
   where
     checkIfOdometerReadingsRequired tripType (RidesInfo ride) = (tripType == ST.Rental) && (maybe true (\val -> val) ride.isOdometerReadingsRequired)
@@ -1474,7 +1477,21 @@ eval (SwitchBookingStage stage) state = do
       props {bookingStage = stage, currentStage = fetchStageFromRideStatus activeRideData}
     }
 
-eval _ state = continue state
+eval (OnRideAcCheck PopUpModal.OnButton1Click) state = do
+  void $ pure $ setValueToLocalStore AC_CHECK_SHOWN_FOR_RIDE state.data.activeRide.id
+  void $ pure $ sendMessage CONST.acRideCnfSuggestion
+  continue state
+
+eval (OnRideAcCheck PopUpModal.OnButton2Click) state = do
+  void $ pure $ setValueToLocalStore AC_CHECK_SHOWN_FOR_RIDE state.data.activeRide.id
+  void $ pure $ sendMessage CONST.issueWithACSuggestion
+  continueWithCmd state{props{onRideAcCheck = false}} [pure OpenChatScreen]
+
+eval (OnRideAcCheck PopUpModal.DismissPopup) state = do
+  void $ pure $ setValueToLocalStore AC_CHECK_SHOWN_FOR_RIDE state.data.activeRide.id
+  continue state{props{onRideAcCheck = false}}
+
+eval _ state = update state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Boolean -> Effect Unit
 checkPermissionAndUpdateDriverMarker state toAnimateCamera = do

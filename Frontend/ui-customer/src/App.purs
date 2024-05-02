@@ -285,6 +285,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GOTO_PICKUP_INSTRUCTIONS HomeScreenState Number Number String String
                         | EDIT_LOCATION_DEST_SELECTED
                         | EDIT_DEST_BACKPRESSED
+                        | CANCEL_AND_REALLOCATE HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

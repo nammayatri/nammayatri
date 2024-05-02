@@ -1373,7 +1373,7 @@ homeScreenFlow = do
         cancelReasonCode = if cancelType == NORMAL_RIDE_CANCEL then state.props.cancelReasonCode else "Cancelling Rentals Quotes Search"
 
         cancelDescription = if cancelType == NORMAL_RIDE_CANCEL then state.props.cancelDescription else "Rental reallocation"
-      response <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest cancelReasonCode cancelDescription) (state.props.bookingId)
+      response <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest cancelReasonCode cancelDescription false) (state.props.bookingId)
       case response of
         Right _ -> do
           void $ pure $ currentPosition ""
@@ -2208,6 +2208,37 @@ homeScreenFlow = do
       else do
         modifyScreenState $ PickupInstructionsScreenStateType $ \pickupInstructionsScreen -> pickupInstructionsScreen { data { pickupLat = lat, pickupLong = lon, pickupInstructions = pickupInstructions } }
         pickupInstructionsScreenFlow
+    CANCEL_AND_REALLOCATE state -> do
+      response <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest state.props.cancelDescription state.props.cancelReasonCode true) (state.props.bookingId)
+      case response of
+        Right _ -> do
+          void $ pure $ currentPosition ""
+          liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_rider_cancellation" $ [ {key : "Reason code", value : unsafeToForeign state.props.cancelReasonCode},
+                                                                                                          {key : "Additional info", value : unsafeToForeign state.props.cancelDescription},
+                                                                                                          {key : "Pickup", value : unsafeToForeign state.data.driverInfoCardState.source},
+                                                                                                          {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
+                                                                                                          {key : "Night Ride", value : unsafeToForeign state.data.rateCard.isNightShift},
+                                                                                                          {key : "BookingId", value : unsafeToForeign state.props.bookingId}]
+          lift $ lift $ triggerRideStatusEvent "CANCELLED_PRODUCT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
+          void $ pure $ clearTimerWithId <$> state.props.waitingTimeTimerIds
+          logStatus "ride_reallocated_ac_not_working" $ "estimateId : " <> state.props.estimateId
+          void $ pure $ JB.exitLocateOnMap ""
+          void $ pure $ removeAllPolylines ""
+          removeChatService ""
+          updateUserInfoToState state
+          setValueToLocalStore PICKUP_DISTANCE "0"
+          GlobalState updatedState <- getState 
+          let homeScreenState = updatedState.homeScreen{data { quoteListModelState = [] }, props {autoScroll = false, rideRequestFlow = false, isSearchLocation = NoView, isBanner = state.props.isBanner, currentStage = ReAllocated, estimateId = updatedState.homeScreen.props.estimateId, reAllocation { showPopUp = true }, tipViewProps { isVisible = updatedState.homeScreen.props.tipViewProps.activeIndex >= 0 }, selectedQuote = Nothing, isCancelRide = false, cancelSearchCallDriver = false}}
+          let updatedState = case (getTipViewData "LazyCheck") of
+                              Just (TipViewData tipView) -> homeScreenState{ props{ tipViewProps{ stage = tipView.stage , activeIndex = tipView.activeIndex , isVisible = tipView.activeIndex >= 0 } } }
+                              Nothing -> homeScreenState{ props{ tipViewProps = HomeScreenData.initData.props.tipViewProps } }
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState)
+          void $ pure $ setValueToLocalNativeStore FINDING_QUOTES_START_TIME $ getCurrentUTC "LazyCheck"
+          updateLocalStage ReAllocated
+          homeScreenFlow
+        Left err -> do
+          void $ pure $ toast $ getString STR.UNABLE_TO_CANCEL_RIDE
+          homeScreenFlow
     _ -> homeScreenFlow
 
 findEstimates :: HomeScreenState -> FlowBT String Unit
@@ -4306,7 +4337,7 @@ rideScheduledFlow = do
   action <- lift $ lift $ runScreen $ UI.rideScheduledScreen currentState.rideScheduledScreen
   case action of
     RideScheduledScreenOutput.CancelRentalRide state -> do
-      resp <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest state.props.cancelDescription state.props.cancelReasonCode) (state.data.bookingId)
+      resp <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest state.props.cancelDescription state.props.cancelReasonCode false) (state.data.bookingId)
       case resp of
         Right resp -> do
           -- setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ filter (\item -> item.bookingId /= state.data.bookingId) $ decodeBookingTimeList FunctionCall

@@ -146,6 +146,7 @@ import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.Types (FareProductType(..)) as FPT
 import Helpers.TipConfig
 import Helpers.Utils as HU
+import Common.Resources.Constants as CC
 
 instance showAction :: Show Action where
   show _ = ""
@@ -751,6 +752,7 @@ data ScreenOutput = LogoutUser
                   | ExitToPickupInstructions HomeScreenState Number Number String String
                   | EditDestLocSelected HomeScreenState
                   | EditDestBackPressed
+                  | CancelAndReallocate HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -948,6 +950,7 @@ data Action = NoAction
             | UpdateNoInternet
             | InternetCallBackCustomer String
             | MarkerLabelOnClick String 
+            | CancelAndResearch
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1432,6 +1435,8 @@ eval (UpdateNextIssueBanneerSwipe index) state = update state --{data {rideCompl
 
 ------------------------------- ChatService - Start --------------------------
 
+eval CancelAndResearch state = exit $ CancelAndReallocate state{props{cancelDescription = "" , cancelReasonCode = "AC_NOT_WORKING" }}
+
 eval (UpdateMessages message sender timeStamp size) state = do
   if not state.props.chatcallbackInitiated then continue state else do
     continueWithCmd state{data{messagesSize = size}} [do
@@ -1556,7 +1561,8 @@ eval (DriverInfoCardActionController (DriverInfoCardController.WaitingInfo)) sta
     continue state
 
 eval (SendQuickMessage chatSuggestion) state = do
-  if state.props.canSendSuggestion then do
+  if chatSuggestion == CC.cancelRideSuggestion then continue state { props { isPopUp = CnfCancelNonAcRide}}
+  else if state.props.canSendSuggestion then do
     _ <- pure $ sendMessage chatSuggestion
     continue state {props {unReadMessages = false}}
   else continue state
@@ -1594,7 +1600,8 @@ eval MessageViewAnimationEnd state = do
   continue state {props { removeNotification = not state.props.showChatNotification}}
 
 eval (MessagingViewActionController (MessagingView.SendSuggestion chatSuggestion)) state = do
-  if state.props.canSendSuggestion then do
+  if chatSuggestion == CC.cancelRideSuggestion then continue state { props { isPopUp = CnfCancelNonAcRide}}
+  else if state.props.canSendSuggestion then do
     _ <- pure $ sendMessage chatSuggestion
     continue state {data {chatSuggestionsList = []}, props {canSendSuggestion = false}}
   else continue state
@@ -1787,6 +1794,7 @@ eval BackPressed state = do
                       continue state { props { currentStage = if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel}}
     ChatWithDriver -> do
                         if state.props.showCallPopUp then continue state {props{showCallPopUp = false}}
+                        else if state.props.isPopUp == CnfCancelNonAcRide then continue state { props{ isPopUp = NoPopUp } }
                          else do
                             -- let lastStage = if state.props.isChatWithEMEnabled then RideStarted else RideAccepted --todo handle this case
                             -- _ <- pure $ updateLocalStage lastStage
@@ -1835,6 +1843,7 @@ eval BackPressed state = do
                           else if state.props.showSpecialZoneInfoPopup then continue state { props{ showSpecialZoneInfoPopup = false } }
                           else if state.props.zoneOtpExpired then continue state {props {zoneOtpExpired = false}}
                           else if state.props.showScheduledRideExistsPopUp then continue state { props { showScheduledRideExistsPopUp = false }}
+                          else if state.props.isPopUp == CnfCancelNonAcRide then continue state { props{ isPopUp = NoPopUp } }
                           else do
                               pure $ terminateApp state.props.currentStage true
                               continue state{props{showShimmer = false}}
@@ -2547,6 +2556,7 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
     exit $ RetryFindingQuotes true newState
   Logout -> continue state{props{isPopUp = NoPopUp}}
   CancelConfirmingQuotes -> continue state{props{isPopUp = NoPopUp}}
+  CnfCancelNonAcRide -> continue state{props{isPopUp = NoPopUp}}
   _ -> do
     void $ pure $ performHapticFeedback unit
     _ <- pure $ firebaseLogEvent "ny_tip_not_applicable" 
@@ -2592,6 +2602,7 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isP
     ActiveQuotePopUp -> do
       void $ pure $ performHapticFeedback unit
       exit $ CheckCurrentStatus
+    CnfCancelNonAcRide -> continueWithCmd state [pure CancelAndResearch]
 
 eval (PopUpModalAction (PopUpModal.TipsViewActionController (TipsView.TipBtnClick index value))) state = do
   void $ pure $ performHapticFeedback unit

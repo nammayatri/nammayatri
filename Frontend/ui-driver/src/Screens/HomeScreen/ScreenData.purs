@@ -228,6 +228,7 @@ initData =
       , isOdometerReadingsRequired: false
       , toll : initialTollState
       , showInterOperablePopUp : false
+      , onRideAcCheck : false
       }
   }
 

@@ -578,8 +578,35 @@ metroTicketBannerConfig state =
     config'
 
 
+confirmCancelNonAcRidePopup :: ST.HomeScreenState -> PopUpModal.Config
+confirmCancelNonAcRidePopup state = 
+  let
+    config' = PopUpModal.config
+    popUpConfig' =
+      config'
+        { primaryText { text = getString CANCEL_RIDE }
+        , secondaryText { text = getString ARE_YOU_SURE_YOU_WANT_TO_CANCEL}
+        , option1 {
+            background = state.data.config.popupBackground
+          , strokeColor = state.data.config.primaryBackground
+          , color = state.data.config.primaryBackground
+          , text = getString GO_BACK_
+          , enableRipple = true
+          }
+        , option2 {
+            color = state.data.config.primaryTextColor
+          , strokeColor = state.data.config.primaryBackground
+          , background = state.data.config.primaryBackground
+          , text = getString CANCEL_RIDE
+          , enableRipple = true
+          }
+        }
+  in
+    popUpConfig'
+
 logOutPopUpModelConfig :: ST.HomeScreenState -> PopUpModal.Config
 logOutPopUpModelConfig state = case state.props.isPopUp of
+  ST.CnfCancelNonAcRide -> confirmCancelNonAcRidePopup state
   ST.Logout ->
     let
       config' = PopUpModal.config

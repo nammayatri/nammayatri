@@ -351,10 +351,10 @@ view push state =
       , if (state.props.showChatBlockerPopUp || state.data.paymentState.showBlockingPopup) then blockerPopUpView push state else dummyTextView
       , if state.props.currentStage == RideCompleted then RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC) else dummyTextView -- 
       , if state.props.showRideRating then RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state) else dummyTextView
-      , if state.props.showAcWorkingPopup == Just true && isCar then isAcWorkingPopupView push state else dummyTextView 
       , if state.props.currentStage == RideAccepted && state.data.activeRide.hasToll && state.props.toll.showTollChargePopup then PopUpModal.view (push <<< TollChargesPopUpAC) (PopUpConfig.tollChargesIncluded state) else dummyTextView
       , if state.props.currentStage == RideCompleted && state.data.endRideData.tollAmbigous && state.props.toll.showTollChargeAmbigousPopup then PopUpModal.view (push <<< TollChargesAmbigousPopUpAC) (PopUpConfig.finalFareExcludesToll state) else dummyTextView
       , if state.props.showInterOperablePopUp then interOperableInfoPopUpView push state else dummyTextView
+      , if acWorkingPopup then isAcWorkingPopupView push state else dummyTextView
   ]
   where 
     showPopups = (DA.any (_ == true )
@@ -367,6 +367,7 @@ view push state =
         state.props.acExplanationPopup && not onRide && isCar
       ])
     onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
+    acWorkingPopup = isCar && (state.props.showAcWorkingPopup == Just true && not onRide) || (state.props.onRideAcCheck && (getValueToLocalStore AC_CHECK_SHOWN_FOR_RIDE) /= state.data.activeRide.id ) -- // Confirm once - Modified occasional checks, should not be during ride else both popups can conflict
     showEnterOdometerReadingModalView = state.props.isOdometerReadingsRequired && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
     isCar = (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.CarCategory
 
@@ -2316,4 +2317,5 @@ isAcWorkingPopupView push state =
   linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
-    ][ PopUpModal.view (push <<< IsAcWorkingPopUpAction) (isAcWorkingPopupConfig state) ]
+    ][ PopUpModal.view (push <<< action) (isAcWorkingPopupConfig state) ]
+  where action = if (state.props.onRideAcCheck && (getValueToLocalStore AC_CHECK_SHOWN_FOR_RIDE) /= state.data.activeRide.id ) then OnRideAcCheck else IsAcWorkingPopUpAction

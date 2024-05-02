@@ -19,3 +19,12 @@ policeNumber = "112"
 
 assetDomain :: String
 assetDomain = "assets.moving.tech"
+
+cancelRideSuggestion :: String
+cancelRideSuggestion = "cacs3"
+
+acRideCnfSuggestion :: String
+acRideCnfSuggestion = "dacs5"
+
+issueWithACSuggestion :: String
+issueWithACSuggestion = "dacs1"

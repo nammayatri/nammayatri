@@ -1238,7 +1238,8 @@ type HomeScreenProps =  {
   toll :: TollState,
   bookingStage :: BookingTypes,
   showAdvancedRidePopUp :: Boolean,
-  showInterOperablePopUp :: Boolean
+  showInterOperablePopUp :: Boolean,
+  onRideAcCheck :: Boolean
  }
 
 type TollState = {

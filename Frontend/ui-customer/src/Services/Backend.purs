@@ -515,12 +515,13 @@ cancelRide payload bookingId = do
     where
         unwrapResponse (x) = x
 
-makeCancelRequest :: String -> String -> CancelReq
-makeCancelRequest cancelDescription cancelReasonCode = CancelReq {
+makeCancelRequest :: String -> String -> Boolean -> CancelReq
+makeCancelRequest cancelDescription cancelReasonCode reallocate = CancelReq {
     "additionalInfo" : Just cancelDescription
   , "reasonCode" : cancelReasonCode
   , "reasonStage" : "OnAssign"
-  }
+  , "reallocate" : reallocate
+}
 
 ------------------------------------------------------------------------ CallDriver Function ------------------------------------------------------------------------------------------
 

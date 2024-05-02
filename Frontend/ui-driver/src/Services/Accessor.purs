@@ -96,3 +96,6 @@ _languagesAvailableForQuiz = lens (unwrap >>> _.languagesAvailableForQuiz) (\old
 
 _languagesAvailableForVideos :: forall a b c. Newtype a { languagesAvailableForVideos :: b | c } => Lens' a b
 _languagesAvailableForVideos = lens (unwrap >>> _.languagesAvailableForVideos) (\oldRec newVal -> wrap ((unwrap oldRec) { languagesAvailableForVideos = newVal }))
+
+_isVehicleAirConditioned :: forall a b c. Newtype a { isVehicleAirConditioned :: b | c } => Lens' a b
+_isVehicleAirConditioned = lens (unwrap >>> _.isVehicleAirConditioned) (\oldRec newVal -> wrap ((unwrap oldRec) { isVehicleAirConditioned = newVal }))

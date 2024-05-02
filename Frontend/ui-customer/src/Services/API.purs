@@ -1221,7 +1221,8 @@ data CancelRequest = CancelRequest CancelReq String
 newtype CancelReq = CancelReq {
   additionalInfo :: Maybe String,
   reasonCode :: String,
-  reasonStage :: String
+  reasonStage :: String,
+  reallocate :: Boolean
 }
 
 newtype CancelRes = CancelRes {

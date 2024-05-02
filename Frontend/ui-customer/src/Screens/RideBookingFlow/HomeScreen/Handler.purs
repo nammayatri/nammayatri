@@ -265,3 +265,6 @@ homeScreen = do
     ExitToPickupInstructions updatedState lat lon ward spLocationName -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GOTO_PICKUP_INSTRUCTIONS updatedState lat lon ward spLocationName)
+    CancelAndReallocate updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CANCEL_AND_REALLOCATE updatedState)
