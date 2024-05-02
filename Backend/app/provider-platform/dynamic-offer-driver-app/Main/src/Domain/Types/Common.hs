@@ -106,7 +106,7 @@ isEndOtpRequired _ = False
 
 -- Move it to configs later if required
 isOdometerReadingsRequired :: TripCategory -> Bool
-isOdometerReadingsRequired (Rental _) = False
+isOdometerReadingsRequired (Rental _) = True
 isOdometerReadingsRequired _ = False
 
 -- Move it to configs later if required
