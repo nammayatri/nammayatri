@@ -699,8 +699,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
       (pure [])
       ( \v ->
           v.selectedServiceTiers `forM` \serviceTierType -> do
-            serviceTier <- CQVST.findByServiceTierTypeAndCityId serviceTierType person.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTierType))
-            return serviceTier.name
+            mbServiceTier <- CQVST.findByServiceTierTypeAndCityId serviceTierType person.merchantOperatingCityId
+            return $ maybe (show serviceTierType) (.name) mbServiceTier
       )
       vehicle
   pure

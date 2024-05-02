@@ -101,7 +101,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
           then do
             estimate <- QEst.findById driverQuote.estimateId >>= fromMaybeM (EstimateNotFound driverQuote.estimateId.getId)
             DP.addDriverToSearchCancelledList searchReq.id ride.driverId
-            tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier estimate.vehicleServiceTierName booking.estimatedFare (Just 0) (Just $ estimate.maxFare - estimate.minFare) estimate.driverPickUpCharge estimate.id.getId
+            tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee) (Just 0) (Just $ estimate.maxFare - estimate.minFare) estimate.driverPickUpCharge estimate.id.getId
             let driverSearchBatchInput =
                   DriverSearchBatchInput
                     { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
