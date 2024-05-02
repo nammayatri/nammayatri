@@ -13,15 +13,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data IGMConfigT f = IGMConfigT
-  { expectedResolutionTime :: (B.C f Kernel.Prelude.UTCTime),
-    expectedResponseTime :: (B.C f Kernel.Prelude.UTCTime),
-    groEmail :: (B.C f Data.Text.Text),
-    groName :: (B.C f Data.Text.Text),
-    groPhone :: (B.C f Data.Text.Text),
-    id :: (B.C f Data.Text.Text),
-    merchantId :: (B.C f Data.Text.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { expectedResolutionTime :: B.C f Kernel.Prelude.Int,
+    expectedResponseTime :: B.C f Kernel.Prelude.Int,
+    groEmail :: B.C f Data.Text.Text,
+    groName :: B.C f Data.Text.Text,
+    groPhone :: B.C f Data.Text.Text,
+    id :: B.C f Data.Text.Text,
+    merchantId :: B.C f Data.Text.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table IGMConfigT where
 
 type IGMConfig = IGMConfigT Identity
 
-$(enableKVPG (''IGMConfigT) [('id)] [[('merchantId)]])
+$(enableKVPG ''IGMConfigT ['id] [['merchantId]])
 
-$(mkTableInstances (''IGMConfigT) "igm_config")
+$(mkTableInstances ''IGMConfigT "igm_config")

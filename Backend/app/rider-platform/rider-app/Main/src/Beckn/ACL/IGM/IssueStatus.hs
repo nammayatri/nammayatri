@@ -37,7 +37,7 @@ buildIssueStatusReq merchant merchantOperatingCity booking becknIssueId = do
       ttl = diffUTCTime validTill now
   transactionId <- generateGUID
   messageId <- generateGUID
-  context <- Utils.buildContext Spec.ISSUE_STATUS Spec.ON_DEMAND merchant transactionId messageId merchantOperatingCity.city (Just $ Utils.BppData booking.providerId (show booking.providerUrl)) (Just $ Utils.durationToText ttl)
+  context <- Utils.buildContext Spec.ISSUE_STATUS Spec.ON_DEMAND merchant transactionId messageId merchantOperatingCity.city (Just $ Utils.BppData booking.providerId (showBaseUrl booking.providerUrl)) (Just $ Utils.durationToText ttl)
   pure $
     Spec.IssueStatusReq
       { issueStatusReqContext = context,

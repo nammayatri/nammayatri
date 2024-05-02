@@ -19,6 +19,8 @@ import qualified IssueManagement.Domain.Action.UI.Issue as Common
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as Domain
+import qualified IssueManagement.Storage.CachedQueries.Issue.IssueCategory as QIC
+import qualified IssueManagement.Storage.CachedQueries.Issue.IssueOption as QIO
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import Kernel.Beam.Functions
 import qualified Kernel.External.Ticket.Interface.Types as TIT
@@ -203,7 +205,9 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       igmConfig <- QIGMConfig.findByMerchantId merchantId >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchantId)
       merchantOperatingCity <- CQMOC.findById igmReq.booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show igmReq.booking.merchantOperatingCityId)
-      (becknIssueReq, issueId, igmIssue) <- ACL.buildIssueReq igmReq.booking igmReq.ride req.categoryId req.description merchant person igmConfig merchantOperatingCity Nothing Nothing
+      option <- maybe (return Nothing) (\id -> QIO.findById id CUSTOMER) req.optionId
+      category <- QIC.findById req.categoryId CUSTOMER >>= fromMaybeM (InvalidRequest "Issue Category not found")
+      (becknIssueReq, issueId, igmIssue) <- ACL.buildIssueReq igmReq.booking igmReq.ride category option req.description merchant person igmConfig merchantOperatingCity Nothing Nothing
       QIGM.create igmIssue
       fork "sending beckn issue" . withShortRetry $ do
         void $ CallBPP.issue igmReq.booking.providerUrl becknIssueReq
@@ -259,6 +263,8 @@ resolveIGMIssue (personId, merchantId) issueReportId response = withFlowHandlerA
       merchantOperatingCity <- CQMOC.findById igmIssue.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show igmIssue.merchantOperatingCityId)
       booking <- QB.findById igmIssue.bookingId >>= fromMaybeM (BookingNotFound igmIssue.bookingId.getId)
       ride <- runInReplica $ QR.findByRBId booking.id >>= fromMaybeM (RideNotFound booking.id.getId)
-      (becknIssueReq, _, _) <- ACL.buildIssueReq booking ride issueReport.categoryId issueReport.description merchant person igmConfig merchantOperatingCity (Just response) issueReport.becknIssueId
+      option <- maybe (return Nothing) (\id -> QIO.findById id CUSTOMER) issueReport.optionId
+      category <- QIC.findById issueReport.categoryId CUSTOMER >>= fromMaybeM (InvalidRequest "Issue Category not found")
+      (becknIssueReq, _, _) <- ACL.buildIssueReq booking ride category option issueReport.description merchant person igmConfig merchantOperatingCity (Just response) (Just igmIssue)
       fork "sending beckn issue" . withShortRetry $ do
         void $ CallBPP.issue booking.providerUrl becknIssueReq

@@ -4,6 +4,7 @@
 
 module Domain.Types.IGMIssue where
 
+import Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.Booking
 import qualified Domain.Types.Merchant
@@ -18,7 +19,7 @@ data IGMIssue = IGMIssue
     customerName :: Kernel.Prelude.Maybe Data.Text.Text,
     customerPhone :: Kernel.Prelude.Maybe Data.Text.Text,
     id :: Kernel.Types.Id.Id Domain.Types.IGMIssue.IGMIssue,
-    issueRaisedByMerchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    issueRaisedByMerchant :: Data.Text.Text,
     issueStatus :: Domain.Types.IGMIssue.Status,
     issueType :: Domain.Types.IGMIssue.IssueType,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -32,6 +33,6 @@ data IssueType = GRIEVANCE | ISSUE deriving (Eq, Ord, Show, Read, Generic, ToJSO
 
 data Status = OPEN | CLOSED | ESCALATED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''IssueType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''IssueType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''Status))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Status)

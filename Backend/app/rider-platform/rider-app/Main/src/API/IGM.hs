@@ -24,14 +24,14 @@ import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 
 type API =
-  "beckn" :> "igm" :> "v1"
+  "beckn" :> "cab" :> "v1"
     :> SignatureAuth 'Domain.MOBILITY "Authorization"
     :> ( OnIssue.API
            :<|> OnIssueStatus.API
        )
 
 type APIM =
-  "beckn" :> "igm" :> "v1"
+  "beckn" :> "cab" :> "v1"
     :> Capture "merchantId" (Id DM.Merchant)
     :> SignatureAuth 'Domain.MOBILITY "Authorization"
     :> ( OnIssue.API

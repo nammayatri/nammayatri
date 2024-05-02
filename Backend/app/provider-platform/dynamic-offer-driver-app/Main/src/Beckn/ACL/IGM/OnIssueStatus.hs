@@ -126,10 +126,10 @@ tfIssueResolution res =
   Just $
     Spec.IssueResolution
       { issueResolutionAction = res.resolutionAction,
-        issueResolutionActionTriggered = "shrey00 : FIX ME",
+        issueResolutionActionTriggered = show Spec.REFUND,
         issueResolutionGroRemarks = Nothing,
         issueResolutionLongDesc = Nothing,
-        issueResolutionShortDesc = "shrey00 : FIX ME"
+        issueResolutionShortDesc = show Spec.REFUND
       }
 
 tfResolutionProvider :: DIssueStatus.IssueStatusRes -> Maybe Spec.ResolutionProvider
@@ -144,7 +144,7 @@ tfRespondentInfo res =
   Spec.ResolutionProviderRespondentInfo
     { resolutionProviderRespondentInfoOrganization = tfUpdatedBy res,
       resolutionProviderRespondentInfoResolutionSupport = tfResolutionSupport res,
-      resolutionProviderRespondentInfoType = Just $ T.pack "shrey00 : FIX ME"
+      resolutionProviderRespondentInfoType = Just $ show Spec.TRANSACTION_COUNTERPARTY_NP
     }
 
 tfResolutionSupport :: DIssueStatus.IssueStatusRes -> Maybe Spec.ResolutionSupport

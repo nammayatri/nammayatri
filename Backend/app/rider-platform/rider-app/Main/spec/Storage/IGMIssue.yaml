@@ -14,12 +14,14 @@ IGMIssue:
       enum: "OPEN, CLOSED, ESCALATED, RESOLVED"
     Entity:
       enum: "GRO, COUNTERPARTY"
+    IssueType:
+      enum: "GRIEVANCE, ISSUE"
 
   fields:
     id: Id IGMIssue
     riderId: Id Person
     bookingId: Id Booking
-    issueType: Text
+    issueType: IssueType
     issueStatus: Status
     respondentEntityType: Maybe Entity
     respondentName: Maybe Text

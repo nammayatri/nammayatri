@@ -78,9 +78,7 @@ instance FromJSON IssueType where
 
 data IssueCategory
   = -- ..issue.category
-    TRANSACTION
-  | ORDER
-  | ITEM
+    ORDER
   | FULFILLMENT
   | AGENT
   | PAYMENT
@@ -185,16 +183,12 @@ data ResolutionAction
 data ResolutionActionTriggered
   = -- ..issues.resolution.action_triggered
     REFUND
-  | REPLACEMENT
-  | RETURN
   | CANCEL
   | NO_ACTION
   deriving (Eq, Generic)
 
 instance Show ResolutionActionTriggered where
   show REFUND = "REFUND"
-  show REPLACEMENT = "REPLACEMENT"
-  show RETURN = "RETURN"
   show CANCEL = "CANCEL"
   show NO_ACTION = "NO-ACTION"
 
@@ -203,7 +197,6 @@ instance ToJSON ResolutionActionTriggered where
 
 instance FromJSON ResolutionActionTriggered where
   parseJSON (String "REFUND") = return REFUND
-  parseJSON (String "REPLACEMENT") = return REPLACEMENT
   parseJSON (String "CANCEL") = return CANCEL
   parseJSON (String "NO-ACTION") = return NO_ACTION
   parseJSON wrongVal = typeMismatch "Invalid ResolutionActionTriggered" wrongVal
@@ -255,3 +248,22 @@ instance FromJSON RespondentInfo where
   parseJSON (String "TRANSACTION-COUNTERPARTY-NP") = return TRANSACTION_COUNTERPARTY_NP
   parseJSON (String "CASCADED-COUNTERPARTY-NP") = return CASCADED_COUNTERPARTY_NP
   parseJSON wrongVal = typeMismatch "Invalid RespondentInfo" wrongVal
+
+data IssueSubCategory
+  = -- ..issue.sub_category
+    FLM111 -- "Driver unable to end trip"
+  | FLM112 -- "Driver took a circuitious route/longer route  /  Driver took a different route"
+  | FLM113 -- "Trip OTP isn't available in the app"
+  | FLM114 -- "Trip OTP not working when paired with the Driver app"
+  | FLM115 -- "Vehicle brokedown while on trip"
+  | ORD111 -- "Report lost item to support"
+  | PMT111 -- "Driver asked for extra fare / demanded more fare"
+  | PMT112 -- "Mismatch between fare shown at the beginning and at the end of the trip"
+  | PMT113 -- "Amout paid extra by mistake"
+  | PMT114 -- "Driver asked me to pay for airport pickup charges/railway station pickup charges"
+  | PMT115 -- "Customer refused to pay for parking fee during rental ride"
+  | PMT116 -- "Customer refused to pay revised fare (for extra km and time)"
+  | PMT117 -- "Driver asked to pay for toll separately while it was already computed in the initial fare"
+  | PMT118 -- "Driver refused to take the toll road despite the toll fee already being paid"
+  | PMT119 -- "Delayed payment by collector entity and concerns on delayed interest"
+  deriving (Eq, Generic, ToJSON, FromJSON, Show)

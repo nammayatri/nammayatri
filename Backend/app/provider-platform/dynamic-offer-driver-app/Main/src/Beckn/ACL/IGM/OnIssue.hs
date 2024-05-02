@@ -32,7 +32,7 @@ buildOnIssueReq ::
   DIssue.IssueRes ->
   m Spec.OnIssueReq
 buildOnIssueReq txnId msgId bapId bapUri issueRes = do
-  context <- Utils.buildContext Spec.ISSUE Spec.ON_DEMAND bapId issueRes.merchant' txnId msgId issueRes.merchantOperatingCity.city (Just $ Utils.BapData bapId bapUri) (Utils.buildTTL 30 issueRes.updatedAt)
+  context <- Utils.buildContext Spec.ON_ISSUE Spec.ON_DEMAND bapId issueRes.merchant' txnId msgId issueRes.merchantOperatingCity.city (Just $ Utils.BapData bapId bapUri) (Utils.buildTTL 30 issueRes.updatedAt)
   let message = tfOnIssueMessage issueRes
   pure $
     Spec.OnIssueReq
@@ -64,7 +64,7 @@ tfIssue issueRes =
       issueResolution = Nothing,
       issueResolutionProvider = Nothing,
       issueSource = Nothing,
-      issueStatus = Nothing,
+      issueStatus = DIssue.mapDomainStatusToSpecStatus issueRes.issueStatus,
       issueSubCategory = Nothing,
       issueUpdatedAt = issueRes.updatedAt,
       issueRating = Nothing

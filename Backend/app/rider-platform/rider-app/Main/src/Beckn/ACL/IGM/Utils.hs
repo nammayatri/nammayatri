@@ -25,7 +25,6 @@ import Domain.Types.Person
 import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec
 import qualified IssueManagement.Common.UI.Issue as Common
-import IssueManagement.Domain.Types.Issue.IssueCategory
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -88,20 +87,15 @@ tfLocation location_code =
 encodeToText' :: (ToJSON a) => a -> Maybe Text
 encodeToText' = A.decode . A.encode
 
-mapIssueCategory :: Id IssueCategory -> Maybe Text -- TODO : Fix this function to create a proper mapping
-mapIssueCategory _ = Just $ show Spec.FULFILLMENT
-
 mapIssueStatus :: Maybe Common.CustomerResponse -> Maybe Text
 mapIssueStatus mbResp =
   case mbResp of
     Just resp | resp == Common.ACCEPT -> Just $ show Spec.CLOSED
     _ -> Just $ show Spec.OPEN
 
-mapIssueType :: Maybe Common.CustomerResponse -> Maybe Text
-mapIssueType mbResp =
-  case mbResp of
-    Just resp | resp == Common.ESCALATE -> Just $ show Spec.GRIEVANCE -- fix this for case when closing escalated issue
-    _ -> Just $ show Spec.TYPE_ISSUE
+mapIssueType :: Maybe Common.CustomerResponse -> Maybe DIGM.IssueType -> Maybe Text
+mapIssueType (Just Common.ACCEPT) (Just DIGM.ISSUE) = Just $ show Spec.TYPE_ISSUE
+mapIssueType _ _ = Just $ show Spec.GRIEVANCE
 
 timeToText :: UTCTime -> Text
 timeToText = T.pack . show
@@ -110,10 +104,10 @@ buildIGMIssue :: UTCTime -> Text -> Booking -> Person -> Text -> DIGM.IGMIssue
 buildIGMIssue now issueId booking rider transactionId = do
   DIGM.IGMIssue
     { createdAt = now,
-      riderId = show rider.id,
+      riderId = rider.id,
       id = Id issueId,
       issueStatus = DIGM.OPEN,
-      issueType = show Spec.TYPE_ISSUE,
+      issueType = DIGM.ISSUE,
       respondentAction = Nothing,
       respondentEmail = Nothing,
       respondentName = Nothing,

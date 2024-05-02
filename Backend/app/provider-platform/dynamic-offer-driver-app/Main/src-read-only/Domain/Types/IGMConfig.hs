@@ -4,6 +4,7 @@
 
 module Domain.Types.IGMConfig where
 
+import Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.Merchant
 import Kernel.Prelude
@@ -11,8 +12,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data IGMConfig = IGMConfig
-  { expectedResolutionTime :: Kernel.Prelude.UTCTime,
-    expectedResponseTime :: Kernel.Prelude.UTCTime,
+  { expectedResolutionTime :: Kernel.Prelude.Int,
+    expectedResponseTime :: Kernel.Prelude.Int,
     groEmail :: Data.Text.Text,
     groName :: Data.Text.Text,
     groPhone :: Data.Text.Text,

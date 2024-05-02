@@ -43,6 +43,7 @@ import qualified Tools.Payment as TPayment
 
 type API =
   MainAPI
+    :<|> IGM.API
     :<|> IGM.APIM
     :<|> FRFS.APIM
     :<|> Beckn.API -- TODO : Revert after 2.x release
@@ -68,6 +69,7 @@ type MainAPI =
 handler :: FlowServer API
 handler =
   mainServer
+    :<|> IGM.handler
     :<|> const IGM.handler
     :<|> const FRFS.handler
     :<|> Beckn.handler -- TODO : Revert after 2.x release

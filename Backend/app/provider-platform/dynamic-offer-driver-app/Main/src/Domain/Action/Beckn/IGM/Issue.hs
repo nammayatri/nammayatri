@@ -24,6 +24,8 @@ import Environment
 import qualified IGM.Enums as Spec
 import qualified IssueManagement.Common.UI.Issue as Common
 import qualified IssueManagement.Domain.Action.UI.Issue as Common
+import qualified IssueManagement.Storage.Queries.Issue.IssueCategory as QIC
+import qualified IssueManagement.Storage.Queries.Issue.IssueOption as QIO
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.Prelude
@@ -40,6 +42,7 @@ import qualified Storage.Queries.Ride as QRide
 data DIssue = DIssue
   { issueId :: Text,
     issueCategory :: Text,
+    issueSubCategory :: Maybe Text,
     issueTypeText :: Text,
     issueStatusText :: Text,
     bookingId :: Text,
@@ -54,6 +57,7 @@ data DIssue = DIssue
 data ValidatedDIssue = ValidatedDIssue
   { issueId :: Text,
     issueCategory :: Text,
+    issueSubCategory :: Maybe Text,
     issueType :: DIGM.IssueType,
     issueStatus :: DIGM.Status,
     booking :: Booking,
@@ -102,7 +106,7 @@ handler ValidatedDIssue {..} = do
 openBecknIssue :: ValidatedDIssue -> UTCTime -> Flow (IssueRes)
 openBecknIssue dIssue@ValidatedDIssue {..} now = do
   ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
-  riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
+  -- riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id") -- shrey00 : incorporate it back?
   let igmIssue =
         DIGM.IGMIssue
           { DIGM.createdAt = now,
@@ -111,7 +115,7 @@ openBecknIssue dIssue@ValidatedDIssue {..} now = do
             DIGM.customerPhone = customerPhone,
             DIGM.id = Id issueId,
             DIGM.bookingId = booking.id,
-            DIGM.issueRaisedByMerchantId = Id bapId,
+            DIGM.issueRaisedByMerchant = bapId,
             DIGM.issueStatus = issueStatus,
             DIGM.issueType = issueType,
             DIGM.respondentAction = Nothing,
@@ -119,9 +123,13 @@ openBecknIssue dIssue@ValidatedDIssue {..} now = do
             DIGM.updatedAt = now,
             DIGM.merchantId = booking.providerId
           }
+  category <- QIC.findByIGMIssueCategory issueCategory >>= fromMaybeM (InvalidRequest "Issue Category not found")
   QIGM.create igmIssue
-  let issueReport = Common.IssueReportReq (Just $ cast ride.id) [] Nothing (cast booking.providerId) "Description" Nothing (Just True) -- shrey00 : fix me : categoryId, OptionId and Description
-  void $ Common.createIssueReport (cast riderId, cast dIssue.merchant.id, cast booking.merchantOperatingCityId) Nothing issueReport (buildMerchantConfig booking.merchantOperatingCityId ride.driverId) driverIssueHandle Common.CUSTOMER (Just issueId)
+  mbOption <- QIO.findByIGMIssueSubCategory issueSubCategory
+  let optionId = mbOption <&> (.id)
+      description = mbOption <&> (.option) & fromMaybe "No description provided"
+  let issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId category.id description Nothing (Just True)
+  void $ Common.createIssueReport (cast ride.driverId, cast dIssue.merchant.id, cast booking.merchantOperatingCityId) Nothing issueReport (buildMerchantConfig booking.merchantOperatingCityId ride.driverId) driverIssueHandle Common.DRIVER (Just issueId)
   pure $
     IssueRes
       { issueId = issueId,
@@ -196,3 +204,7 @@ mapStatusAndTypeToStatus "OPEN" "ISSUE" = return DIGM.OPEN
 mapStatusAndTypeToStatus "OPEN" "GRIEVANCE" = return DIGM.ESCALATED
 mapStatusAndTypeToStatus "CLOSED" _ = return DIGM.CLOSED
 mapStatusAndTypeToStatus _ _ = throwError $ InvalidRequest "Invalid issue status or type"
+
+mapDomainStatusToSpecStatus :: DIGM.Status -> Maybe Text
+mapDomainStatusToSpecStatus DIGM.CLOSED = Just $ show Spec.CLOSED
+mapDomainStatusToSpecStatus _ = Just $ show Spec.OPEN
