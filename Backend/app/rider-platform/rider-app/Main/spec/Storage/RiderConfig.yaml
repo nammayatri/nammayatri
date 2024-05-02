@@ -25,7 +25,7 @@ RiderConfig:
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int
     bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
-    isBlockingFeatureEnabled: Bool
+    shouldBlockedBySameDeviceToken: Bool
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -44,6 +44,7 @@ RiderConfig:
     distanceWeightage: "70"
     isAvoidToll: "true"
     autoUnblockSafetyCenterAfterDays: "14"
+    shouldBlockedBySameDeviceToken: "false"
 
   queries:
     findByMerchantOperatingCityId:

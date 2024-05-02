@@ -377,7 +377,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
   let useFakeOtp = req.mobileNumber >>= (\n -> if n `elem` merchant.fakeOtpMobileNumbers then Just "7891" else Nothing)
   personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken req.deviceToken)
   riderConfig <- CQRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
-  let isBlockedBySameDeviceToken = if riderConfig.isBlockingFeatureEnabled then maybe False (.blocked) personWithSameDeviceToken else False
+  let isBlockedBySameDeviceToken = if riderConfig.shouldBlockedBySameDeviceToken then maybe False (.blocked) personWithSameDeviceToken else False
   useFraudDetection <- do
     if isBlockedBySameDeviceToken
       then do
@@ -525,7 +525,8 @@ verify tokenId req = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   let deviceToken = Just req.deviceToken
   personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken deviceToken)
-  let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
+  riderConfig <- CQRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  let isBlockedBySameDeviceToken = if riderConfig.shouldBlockedBySameDeviceToken then maybe False (.blocked) personWithSameDeviceToken else False
   cleanCachedTokens person.id
   when isBlockedBySameDeviceToken $ do
     merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
