@@ -255,9 +255,10 @@ checkRideStatus rideAssigned = do
                           }
                         })
                 updateLocalStage RideCompleted
-              when (length listResp.list == 0) $ do 
-                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
-                updateLocalStage HomeScreen
+                -- Uncomment this for No list Ride Edge case 
+              -- when (length listResp.list == 0) $ do 
+              --   modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
+              --   updateLocalStage HomeScreen
           Left err -> do 
             modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
             updateLocalStage HomeScreen
