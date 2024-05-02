@@ -805,6 +805,7 @@ type HomeScreenStateProps =
   , repeatRideServiceTierName :: Maybe String
   , isSearchCancelled :: Boolean
   , referralComponentProps :: ReferralComponentState
+  , showAcWorkingPopup :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

@@ -91,6 +91,7 @@ import LocalStorage.Cache (getValueFromCache)
 import ConfigProvider
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
 import Data.Lens ((^.), view)
+import Components.ServiceTierCard.View as ServiceTierCard
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -2078,3 +2079,57 @@ generateReferralLink source medium term content campaign  =
       <> "utm_campaign%3D" <> campaign 
       -- <> "%26anid%3Dadmob&id=" <> packageId
 -- TODO: Add the above query params when needed
+
+acWorkingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+acWorkingPopupConfig state = let
+  config = PopUpModal.config
+  isAcCabRide = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
+  primaryText_ = getString $ if isAcCabRide 
+                   then HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE 
+                   else ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE
+  optionOneText = getString $ if isAcCabRide 
+                    then YES 
+                    else OK_GOT_IT
+  imageName = if isAcCabRide then "ny_ic_ac_preference_popup" else "ny_ic_non_ac_ride_popup"
+  acWorkingPopupConfig' = config{
+    dismissPopup = true,
+    optionButtonOrientation = if isAcCabRide 
+                               then "VERTICAL"
+                               else "HORIZONTAL",
+    buttonLayoutMargin = Margin 24 0 24 20,
+    gravity = CENTER,
+    margin = MarginHorizontal 20 20,
+    backgroundClickable = true,
+    primaryText{
+      text = primaryText_,
+      margin = MarginTop 0
+    },
+    secondaryText{
+      visibility = GONE
+    },
+    option1{
+      text = optionOneText,
+      color = Color.yellow900,
+      background = Color.black900,
+      strokeColor = Color.transparent,
+      width = MATCH_PARENT,
+      margin = MarginVertical 20 10
+    },
+    option2{
+      text = getString NO_REPORT_AN_ISSUE,
+      color = Color.black700,
+      background = Color.white900,
+      width = MATCH_PARENT,
+      margin = MarginBottom 10,
+      visibility = isAcCabRide
+    },
+    cornerRadius = Corners 15.0 true true true true,
+    coverImageConfig{
+      imageUrl = HU.fetchImage HU.FF_ASSET imageName,
+      visibility = VISIBLE,
+      margin = Margin 16 16 16 0,
+      width = MATCH_PARENT,
+      height = V 225
+    }
+  }
+  in acWorkingPopupConfig'

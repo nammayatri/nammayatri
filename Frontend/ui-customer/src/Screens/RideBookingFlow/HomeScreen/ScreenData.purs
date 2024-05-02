@@ -336,6 +336,7 @@ initData = {
                                , showReferralProgramInfoPopup : false 
                                , isInvalidCode : false 
                                }
+    , showAcWorkingPopup : false
   }
 }
 

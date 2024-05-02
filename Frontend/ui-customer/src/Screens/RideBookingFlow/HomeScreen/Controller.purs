@@ -131,10 +131,12 @@ import Locale.Utils (getLanguageLocale)
 import RemoteConfig as RC
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
-import LocalStorage.Cache (getValueFromCache)
+import LocalStorage.Cache (getValueFromCache, setValueToCache)
 import DecodeUtil (getAnyFromWindow)
 import JBridge as JB
 import Helpers.SpecialZoneAndHotSpots (zoneLabelIcon)
+import Engineering.Helpers.Utils as EHU
+import Components.ServiceTierCard.View as ServiceTierCard
 
 instance showAction :: Show Action where
   show _ = ""
@@ -897,6 +899,7 @@ data Action = NoAction
             | GoToConfirmingLocationStage
             | ReferralComponentAction ReferralComponent.Action
             | GoToHomeScreen
+            | AcWorkingPopupAction PopUpModal.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1844,7 +1847,8 @@ eval (CancelSearchAction PopUpModal.OnButton1Click) state = do
   else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
 
 eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
-  continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
+  let isAcCab = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
+  continue state { props { isCancelRide = true, cancellationReasons = cancelReasons isAcCab, cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state =
   if (state.data.config.driverInfoConfig.showCancelPrevention && not state.props.isSpecialZone) || state.props.zoneType.sourceTag == METRO then
@@ -2783,6 +2787,20 @@ eval GoToHomeScreen state = do
   logStatus "confirming_ride" "no_active_ride"
   exit $ GoToHome state
 
+eval (AcWorkingPopupAction (PopUpModal.OnButton1Click)) state = do
+  let isAcCabRide = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
+  if isAcCabRide then
+    void $ pure $ toast $ getString GREAT_ENJOY_THE_TRIP
+  else pure unit
+  void $ pure $ setValueToCache (show AC_POPUP_SHOWN_FOR_RIDE) state.data.driverInfoCardState.rideId (\id -> id)
+  continue state{props{showAcWorkingPopup = false}}
+
+eval (AcWorkingPopupAction (PopUpModal.OnButton2Click)) state = do
+  void $ pure $ setValueToCache (show AC_POPUP_SHOWN_FOR_RIDE) state.data.driverInfoCardState.rideId (\id -> id)
+  continue state{props{showAcWorkingPopup = false}}
+
+eval (AcWorkingPopupAction PopUpModal.DismissPopup) state = continue state{props{showAcWorkingPopup = false}}
+
 eval _ state = update state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
@@ -2854,14 +2872,24 @@ showPersonMarker state marker location = do
   void $ pure $ printLog "Location :: " location
   animateCamera location.lat location.lng zoomLevel "ZOOM"
 
-cancelReasons :: String -> Array OptionButtonList
-cancelReasons dummy =
-  [ { reasonCode: "CHANGE_OF_PLANS"
+cancelReasons :: Boolean -> Array OptionButtonList
+cancelReasons showAcReason =
+  ([ { reasonCode: "CHANGE_OF_PLANS"
     , description: getString CHANGE_OF_PLANS
     , subtext: Just $ getString NO_LONGER_REQUIRE_A_RIDE_DUE_TO_CHANGE_IN_PLANS
     , textBoxRequired : false
     }
-  , { reasonCode: "GOT_ANOTHER_RIDE"
+  ]) <>
+  (if showAcReason 
+      then [ { reasonCode: "AC_NOT_TURNED_ON"
+              , description: getString AC_IS_NOT_AVAILABLE_ON_THIS_RIDE
+              , subtext: Just $ getString AC_NOT_WORKING_DESC
+              , textBoxRequired : false
+            }]
+      else []
+  ) <>
+  ([
+    { reasonCode: "GOT_ANOTHER_RIDE"
     , description: getString GOT_ANOTHER_RIDE_ELSE_WHERE
     , subtext: Just $ getString CANCELLING_AS_I_GOT_A_RIDE_ON_ANOTHER_APP
     , textBoxRequired : false
@@ -2886,7 +2914,7 @@ cancelReasons dummy =
     , subtext: Just $ getString SOME_OTHER_REASON
     , textBoxRequired : true
     }
-  ]
+  ])
 
 dummyCancelReason :: OptionButtonList
 dummyCancelReason =

@@ -38,6 +38,7 @@ import Screens.NammaSafetyFlow.SosActiveScreen.Controller (Action(..), ScreenOut
 import Screens.Types as ST
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Screens.NammaSafetyFlow.Components.SafetyUtils (getVehicleDetails)
 
 screen :: ST.NammaSafetyScreenState -> Screen Action ST.NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -367,7 +368,7 @@ dialPoliceView state push =
                       ]
                     <> FontStyle.subHeading1 TypoGraphy
                 , textView
-                    $ [ text state.data.vehicleDetails
+                    $ [ text $ getVehicleDetails state
                       , color Color.white900
                       , margin $ MarginTop 4
                       ]

@@ -45,7 +45,8 @@ import Data.Int(toNumber)
 import MerchantConfig.Types (DriverInfoConfig)
 import Mobility.Prelude (boolToVisibility)
 import Data.Function.Uncurried(runFn1)
-
+import Components.ServiceTierCard.View as ServiceTierCard
+ 
 ---------------------------------- driverDetailsView ---------------------------------------
 driverDetailsView :: forall w. DriverDetailsType -> String -> String -> PrestoDOM (Effect Unit) w
 driverDetailsView config uid nid =
@@ -106,20 +107,11 @@ driverDetailsView config uid nid =
           , ellipsize true
           , height WRAP_CONTENT
           , gravity LEFT
+          , margin $ MarginBottom 6
           ] <> FontStyle.captions TypoGraphy)
-        , textView (
-          [ text $ fromMaybe "" config.serviceTierName
-          , color Color.black700
-          , accessibilityHint $ "Driver : " <> config.driverName <> " : Vehicle : " <> getVehicleType
-          , accessibility ENABLE
-          , width WRAP_CONTENT
-          , visibility $ boolToVisibility $ isJust config.serviceTierName
-          , gravity LEFT
-          , background Color.blue600
-          , margin $ MarginTop 6
-          , padding $ Padding 6 4 6 4
-          , cornerRadius 4.0
-          ] <> FontStyle.captions TypoGraphy)
+        , case config.serviceTierName of
+            Just name -> ServiceTierCard.view $ serviceTierConfig name
+            Nothing -> linearLayout [] []
       ]
     , linearLayout
       [ height WRAP_CONTENT
@@ -216,6 +208,12 @@ driverDetailsView config uid nid =
         vehicleMargin = do 
           let width = (runFn1 getLayoutBounds $ getNewIDWithTag nid).width
           if width > 125 then ((width - 125)/2) else 0
+
+        serviceTierConfig name = {
+          name : name,
+          capacity : Nothing,
+          isAc : Nothing
+        }
 
 
 ---------------------------------- ratingView ---------------------------------------
