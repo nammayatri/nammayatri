@@ -23,7 +23,7 @@ import Data.String as DS
 import JBridge (hideKeyboardOnNavigation, shareTextMessage, showKeyboard, copyToClipboard, toast)
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenRender, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, bind, discard, not, pure, void, ($), (==), unit, (<>), (&&))
-import PrestoDOM (class Loggable, Eval, continue, continueWithCmd, exit)
+import PrestoDOM (class Loggable, Eval, update, continue, continueWithCmd, exit)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (ReferralScreenState, ReferralStage(..))
 import Helpers.Referral (generateReferralLink)
@@ -176,4 +176,4 @@ eval CopyToClipboard state =
     pure NoAction
   ]
 
-eval _ state = continue state
+eval _ state = update state

@@ -15,7 +15,7 @@ import JBridge (firebaseLogEvent, getCurrentLatLong, isLocationPermissionEnabled
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Common.Types.Config (CityConfig)
 import Prelude (class Show, bind, pure, ($), (==), (||), unit, not, discard, (<), (&&), (<=))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
@@ -140,4 +140,4 @@ eval (CurrentLocationCallBack lat long _) state = do
   else if driverLat == state.props.lat && driverLon == state.props.lon then continue state
   else updateAndExit newState $ DetectCityAPI driverLat driverLon newState
 
-eval _ state = continue state
+eval _ state = update state

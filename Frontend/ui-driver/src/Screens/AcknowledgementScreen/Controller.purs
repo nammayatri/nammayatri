@@ -3,7 +3,7 @@ module Screens.AcknowledgementScreen.Controller where
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, bind, pure, ($), unit)
-import PrestoDOM (Eval, continue, exit)
+import PrestoDOM (Eval, update, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types (AcknowledgementScreenState)
@@ -36,4 +36,4 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
     PP.Failed -> exit RetryPayment
     _             -> exit HomeScreen
 
-eval _ state = continue state
+eval _ state = update state

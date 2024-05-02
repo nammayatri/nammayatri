@@ -6,7 +6,7 @@ import Data.Array (filter, length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Log (trackAppScreenRender)
 import Prelude (class Show, map, pure, show, unit, (<>), (==), not, ($), (>))
-import PrestoDOM (Eval, continue, exit)
+import PrestoDOM (Eval, update, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (DocumentDetailsScreenState, VehicleP)
 import Common.Types.App (LazyCheck(..))
@@ -29,4 +29,4 @@ data ScreenOutput = GoBack | SelectCab DocumentDetailsScreenState Boolean
 eval :: Action -> DocumentDetailsScreenState -> Eval Action ScreenOutput DocumentDetailsScreenState
 eval BackPressed state = exit GoBack
 
-eval _ state = continue state
+eval _ state = update state

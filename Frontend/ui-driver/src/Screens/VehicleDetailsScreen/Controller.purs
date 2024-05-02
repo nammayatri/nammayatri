@@ -16,7 +16,7 @@
 module Screens.VehicleDetailsScreen.Controller where
 
 import Prelude (class Show, bind, not, pure, unit, ($), (/=), discard)
-import PrestoDOM (Eval, continue, exit, continueWithCmd)
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd)
 import Screens.Types (VehicleDetailsScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import Components.PrimaryButton as PrimaryButton
@@ -97,7 +97,7 @@ eval (CallBackImageUpload base_64 imageName imagePath) state = do
 
 eval SelectVehicleType state = continue state
 
-eval _ state = continue state
+eval _ state = update state
   
 getTitle :: ListOptions -> String
 getTitle listOptions =

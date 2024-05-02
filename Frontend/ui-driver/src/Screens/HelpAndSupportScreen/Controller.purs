@@ -16,7 +16,7 @@
 module Screens.HelpAndSupportScreen.Controller where
 
 import Prelude (class Show, pure, unit, ($), discard, bind,map,(||),(==),(&&),(/=),(>),(<>),(/), void, not, when)
-import PrestoDOM (Eval, continue, exit, continueWithCmd)
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd)
 import Screens.Types (HelpAndSupportScreenState,IssueModalType(..),IssueInfo, UpdateDummyTestPopUpType(..))
 import PrestoDOM.Types.Core (class Loggable)
 import Components.SourceToDestination as SourceToDestinationController
@@ -192,7 +192,7 @@ eval (PopUpModalAction (PopUpModal.OnSecondaryTextClick)) state = do
     else pure unit
    continue state {props{startTimerforDummyRides = false}, data {timerId = ""}}
   
-eval _ state = continue state
+eval _ state = update state
 
 getIssueTitle :: IssueOptions -> String
 getIssueTitle menuOption =

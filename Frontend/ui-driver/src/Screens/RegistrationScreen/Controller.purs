@@ -25,7 +25,7 @@ import JBridge as JB
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Show, class Eq, bind, discard, pure, show, unit, ($), void, (>), (+), (<>), (>=), (-), not, min, (==), (&&), (/=), when, (||))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
@@ -278,7 +278,7 @@ eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
 
 eval ExpandOptionalDocs state = continue state { props { optionalDocsExpanded = not state.props.optionalDocsExpanded}}
 
-eval _ state = continue state
+eval _ state = update state
 
 getStatusValue :: String -> StageStatus
 getStatusValue value = case value of

@@ -699,8 +699,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
       (pure [])
       ( \v ->
           v.selectedServiceTiers `forM` \serviceTierType -> do
-            serviceTier <- CQVST.findByServiceTierTypeAndCityId serviceTierType person.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTierType))
-            return serviceTier.name
+            mbServiceTier <- CQVST.findByServiceTierTypeAndCityId serviceTierType person.merchantOperatingCityId
+            return $ maybe (show serviceTierType) (.name) mbServiceTier
       )
       vehicle
   pure
@@ -1802,7 +1802,7 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
         overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf merchantOpCityId oKey (fromMaybe ENGLISH driver.language) Nothing >>= fromMaybeM (OverlayKeyNotFound oKey)
         let okButtonText = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.okButtonText
         let description = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.description
-        TN.sendOverlay merchantOpCityId driver $ TN.mkOverlayReq overlay description okButtonText overlay.cancelButtonText overlay.endPoint
+        TN.sendOverlay merchantOpCityId driver.id driver.deviceToken $ TN.mkOverlayReq overlay description okButtonText overlay.cancelButtonText overlay.endPoint
       ALERT -> do
         _mId <- fromMaybeM (InvalidRequest "Message Id field is required for channel : ALERT") messageId -- whenJust messageId $ \_mId -> do
         topicName <- asks (.broadcastMessageTopic)

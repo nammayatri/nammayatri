@@ -39,7 +39,6 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude hiding (unwords)
 import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Kernel.Types.Version as Version
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
@@ -104,14 +103,14 @@ notifyOnCancel ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Booking ->
-  Person ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
   SBCR.CancellationSource ->
   m ()
-notifyOnCancel merchantOpCityId booking person cancellationSource = do
+notifyOnCancel merchantOpCityId booking personId mbDeviceToken cancellationSource = do
   cancellationText <- getCancellationText
-  let newCityId = cityFallback person.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPerson transporterConfig.fcmConfig (notificationData cancellationText) $ FCMNotificationRecipient person.id.getId person.deviceToken
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPerson transporterConfig.fcmConfig (notificationData cancellationText) $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notificationData cancellationText =
       FCM.FCMData
@@ -199,7 +198,7 @@ notifyDriver ::
   FCM.FCMNotificationType ->
   Text ->
   Text ->
-  Person ->
+  Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
 notifyDriver merchantOpCityId = sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing
@@ -214,7 +213,7 @@ notifyDevice ::
   FCM.FCMNotificationType ->
   Text ->
   Text ->
-  Person ->
+  Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
 notifyDevice merchantOpCityId = sendNotificationToDriver merchantOpCityId FCM.DO_NOT_SHOW (Just FCM.HIGH)
@@ -229,20 +228,19 @@ sendNotificationToDriver ::
   FCM.FCMNotificationType ->
   Text ->
   Text ->
-  Person ->
+  Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-sendNotificationToDriver merchantOpCityId displayOption priority notificationType notificationTitle message driver mbToken = do
-  let newCityId = cityFallback driver.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority False notificationData $ FCMNotificationRecipient driver.id.getId mbToken
+sendNotificationToDriver merchantOpCityId displayOption priority notificationType notificationTitle message driverId mbToken = do
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority False notificationData $ FCMNotificationRecipient driverId.getId mbToken
   where
     notificationData =
       FCM.FCMData
         { fcmNotificationType = notificationType,
           fcmShowNotification = displayOption,
           fcmEntityType = FCM.Person,
-          fcmEntityIds = getId driver.id,
+          fcmEntityIds = getId driverId,
           fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body notificationType Nothing,
           fcmOverlayNotificationJSON = Nothing,
@@ -262,13 +260,13 @@ sendMessageToDriver ::
   FCM.FCMNotificationType ->
   Text ->
   Text ->
-  Person ->
+  Id Person ->
   Id Message.Message ->
+  Maybe FCM.FCMRecipientToken ->
   m ()
-sendMessageToDriver merchantOpCityId displayOption priority notificationType notificationTitle message driver messageId = do
-  let newCityId = cityFallback driver.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority False notificationData $ FCMNotificationRecipient driver.id.getId driver.deviceToken
+sendMessageToDriver merchantOpCityId displayOption priority notificationType notificationTitle message driverId messageId mbToken = do
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority False notificationData $ FCMNotificationRecipient driverId.getId mbToken
   where
     notificationData =
       FCM.FCMData
@@ -382,14 +380,14 @@ notifyDriverClearedFare ::
     EsqDBFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
-  Person ->
+  Id Person ->
   Id SearchTry ->
   Money ->
+  Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriverClearedFare merchantOpCityId driver sReqId fare = do
-  let newCityId = cityFallback driver.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient driver.id.getId driver.deviceToken
+notifyDriverClearedFare merchantOpCityId driverId sReqId fare mbToken = do
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient driverId.getId mbToken
   where
     title = FCM.FCMNotificationTitle "Clearing Fare!"
     body =
@@ -415,13 +413,13 @@ notifyOnCancelSearchRequest ::
     EsqDBFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
-  Person ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
   Id SearchTry ->
   m ()
-notifyOnCancelSearchRequest merchantOpCityId person searchTryId = do
-  let newCityId = cityFallback person.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
+notifyOnCancelSearchRequest merchantOpCityId personId mbDeviceToken searchTryId = do
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.CANCELLED_SEARCH_REQUEST
     notificationData =
@@ -511,13 +509,13 @@ notifyPaymentSuccess ::
     EsqDBFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
-  Person ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
   Id DOrder.PaymentOrder ->
   m ()
-notifyPaymentSuccess merchantOpCityId person orderId = do
-  let newCityId = cityFallback person.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
+notifyPaymentSuccess merchantOpCityId personId mbDeviceToken orderId = do
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.PAYMENT_SUCCESS
     notificationData =
@@ -605,12 +603,12 @@ notifyPaymentModeManualOnSuspend ::
     EsqDBFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
-  Person ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
   m ()
-notifyPaymentModeManualOnSuspend merchantOpCityId person = do
-  let newCityId = cityFallback person.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
+notifyPaymentModeManualOnSuspend merchantOpCityId personId mbDeviceToken = do
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.PAYMENT_MODE_MANUAL
     notificationData =
@@ -618,7 +616,7 @@ notifyPaymentModeManualOnSuspend merchantOpCityId person = do
         { fcmNotificationType = notifType,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Person,
-          fcmEntityIds = person.id.getId,
+          fcmEntityIds = personId.getId,
           fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body notifType Nothing,
           fcmOverlayNotificationJSON = Nothing,
@@ -636,13 +634,13 @@ sendOverlay ::
     EsqDBFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
-  Person ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
   FCM.FCMOverlayReq ->
   m ()
-sendOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} = do
-  let newCityId = cityFallback person.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
+sendOverlay merchantOpCityId personId mbDeviceToken req@FCM.FCMOverlayReq {..} = do
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.DRIVER_NOTIFY
     notificationData =
@@ -650,7 +648,7 @@ sendOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} = do
         { fcmNotificationType = notifType,
           fcmShowNotification = if isJust req.title then FCM.SHOW else FCM.DO_NOT_SHOW,
           fcmEntityType = FCM.Person,
-          fcmEntityIds = person.id.getId,
+          fcmEntityIds = personId.getId,
           fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification notifTitle body notifType Nothing,
           fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req,
@@ -663,13 +661,14 @@ notifyPickupOrDropLocationChange ::
   ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
-  Person ->
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
   EditLocationReq ->
   m ()
-notifyPickupOrDropLocationChange person entityData = do
-  let newCityId = cityFallback person.clientSdkVersion person.merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
+notifyPickupOrDropLocationChange merchantOpCityId personId mbDeviceToken entityData = do
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.EDIT_LOCATION
     notificationData =
@@ -781,13 +780,14 @@ notifyStopModification ::
   ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
-  Person ->
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
   StopReq ->
   m ()
-notifyStopModification person entityData = do
-  let newCityId = cityFallback person.clientSdkVersion person.merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
+notifyStopModification merchantOpCityId personId mbDeviceToken entityData = do
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = if entityData.isEdit then FCM.EDIT_STOP else FCM.ADD_STOP
     notificationData =
@@ -807,19 +807,3 @@ notifyStopModification person entityData = do
         unwords
           [ if entityData.isEdit then "Customer edited stop!" else "Customer added a stop!"
           ]
-
------------------ we have to remove this once YATRI_PARTNER is migrated to new version ------------------
-
-getNewMerchantOpCityId :: Maybe Version.Version -> Id DMOC.MerchantOperatingCity -> Id DMOC.MerchantOperatingCity
-getNewMerchantOpCityId Nothing currentMerchantCityId = currentMerchantCityId
-getNewMerchantOpCityId (Just version) currentMerchantCityId = do
-  let clientVersion = Version.versionToText version
-  let getClientVersion = clientVersion `compare` "2.3.2" -----2.3.2 is current client version of the apk in prod
-  case getClientVersion of
-    GT -> "3a95be1d-9052-4715-8cf5-ea8f68ffc85a" ------------ Namma Yatri HyderaBad city Id as it is common in both
-    _ -> currentMerchantCityId
-
-cityFallback :: Maybe Version.Version -> Id DMOC.MerchantOperatingCity -> Id DMOC.MerchantOperatingCity
-cityFallback version "2c618bb1-508d-90d6-c8f5-001e9d11c871" = getNewMerchantOpCityId version "2c618bb1-508d-90d6-c8f5-001e9d11c871" ---- PROD Kochi city ID
-cityFallback version "1984f6b4-95eb-4683-b6b5-251b1b008566" = getNewMerchantOpCityId version "1984f6b4-95eb-4683-b6b5-251b1b008566" ---- MASTER Kochi city
-cityFallback _ currentMerchantCityId = currentMerchantCityId

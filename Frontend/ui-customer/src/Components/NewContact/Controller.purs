@@ -5,7 +5,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.GenericHeader.Controller as GenericHeaderController
 import Prelude
 import Screens.Types(NewContacts)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import Data.String as DS
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Data.Array (filter, sortBy)

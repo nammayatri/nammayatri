@@ -136,7 +136,7 @@ cancel req merchant booking mbActiveSearchTry = do
     whenJust mbRide $ \ride ->
       fork "cancelRide - Notify driver" $ do
         driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-        Notify.notifyOnCancel booking.merchantOperatingCityId booking driver bookingCR.source
+        Notify.notifyOnCancel booking.merchantOperatingCityId booking driver.id driver.deviceToken bookingCR.source
 
     whenJust mbActiveSearchTry $ cancelSearch merchant.id
   where
@@ -191,7 +191,7 @@ cancelSearch _merchantId searchTry = do
   QDQ.setInactiveBySRId searchTry.requestId
   for_ driverSearchReqs $ \driverReq -> do
     driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-    Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver_ driverReq.searchTryId
+    Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driverReq.driverId driver_.deviceToken driverReq.searchTryId
 
 validateCancelSearchRequest ::
   ( CacheFlow m r,

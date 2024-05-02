@@ -75,7 +75,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
     triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
     when (bookingCReason.source == SBCR.ByDriver) $
       DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id, rideFare = Just booking.estimatedFare}
-    Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
+    Notify.notifyOnCancel ride.merchantOperatingCityId booking driver.id driver.deviceToken bookingCReason.source
 
   fork "cancelRide - Notify BAP" $ do
     case booking.tripCategory of
@@ -101,7 +101,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
           then do
             estimate <- QEst.findById driverQuote.estimateId >>= fromMaybeM (EstimateNotFound driverQuote.estimateId.getId)
             DP.addDriverToSearchCancelledList searchReq.id ride.driverId
-            tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier estimate.vehicleServiceTierName booking.estimatedFare (Just 0) (Just $ estimate.maxFare - estimate.minFare) estimate.driverPickUpCharge estimate.id.getId
+            tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee) (Just 0) (Just $ estimate.maxFare - estimate.minFare) estimate.driverPickUpCharge estimate.id.getId
             let driverSearchBatchInput =
                   DriverSearchBatchInput
                     { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -116,9 +116,9 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
             case result of
               Right _ -> do
                 if isValueAddNP
-                  then BP.sendEstimateRepetitionUpdateToBAP booking ride (Id searchTry.estimateId) bookingCReason.source driver vehicle
-                  else cancelRideTransactionForNonReallocation booking (Just searchTry.estimateId) merchant bookingCReason.source
-              Left _ -> cancelRideTransactionForNonReallocation booking (Just searchTry.estimateId) merchant bookingCReason.source
+                  then BP.sendEstimateRepetitionUpdateToBAP booking ride estimate.id bookingCReason.source driver vehicle
+                  else cancelRideTransactionForNonReallocation booking (Just estimate.id.getId) merchant bookingCReason.source
+              Left _ -> cancelRideTransactionForNonReallocation booking (Just estimate.id.getId) merchant bookingCReason.source
           else -- repeatSearch merchant farePolicy searchReq searchTry booking ride SBCR.ByDriver now driverPoolCfg
             cancelRideTransactionForNonReallocation booking (Just searchTry.estimateId) merchant bookingCReason.source
       _ -> cancelRideTransactionForNonReallocation booking Nothing merchant bookingCReason.source

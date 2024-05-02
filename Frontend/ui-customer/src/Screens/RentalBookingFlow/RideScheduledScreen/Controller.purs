@@ -21,7 +21,7 @@ import Components.SourceToDestination.Controller as SourceToDestinationActionCon
 import Data.Maybe (Maybe)
 import Log (trackAppActionClick, trackAppEndScreen)
 import Prelude (class Show, discard, pure, unit)
-import PrestoDOM (class Loggable, Eval, continue, exit)
+import PrestoDOM (class Loggable, Eval, update, continue, exit)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types (RideScheduledScreenState)
 
@@ -51,4 +51,4 @@ data ScreenOutput = GoToHomeScreen | GoToSearchLocationScreen
 eval :: Action -> RideScheduledScreenState -> Eval Action ScreenOutput RideScheduledScreenState
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = exit GoToHomeScreen
 eval (AddFirstStop _) _ = exit GoToSearchLocationScreen
-eval _ state = continue state
+eval _ state = update state

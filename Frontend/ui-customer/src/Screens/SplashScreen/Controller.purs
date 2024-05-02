@@ -15,7 +15,7 @@
 module Screens.SplashScreen.Controller where
 
 import Prelude (class Show)
-import PrestoDOM (Eval, defaultPerformLog, exit)
+import PrestoDOM (Eval, update, defaultPerformLog, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (SplashScreenState)
 

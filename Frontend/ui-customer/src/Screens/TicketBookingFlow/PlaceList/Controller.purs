@@ -16,7 +16,7 @@
 module Screens.TicketBookingFlow.PlaceList.Controller where 
 
 import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==))
-import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (TicketingScreenState)
@@ -67,4 +67,4 @@ eval (UpdatePlacesData placesData) state = do
   let API.TicketPlaceResponse ticketPlaceResp = placesData
   continue state { data { placeInfoArray = ticketPlaceResp} }
 
-eval _ state = continue state
+eval _ state = update state

@@ -127,7 +127,7 @@ eval (InfoCardAC (InfoCard.Close)) state =
 
 eval (GetSDKPollingAC createOrderRes) state = exit $ GotoPaymentPage createOrderRes state.data.bookingId
 
-eval _ state = continue state
+eval _ state = update state
 
 
 getquoteData :: ST.MetroTicketBookingScreenState -> Array MetroQuote -> {"price" :: Int, "quoteId" :: String}--Int

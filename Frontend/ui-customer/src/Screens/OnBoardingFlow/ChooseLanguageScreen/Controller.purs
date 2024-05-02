@@ -19,7 +19,7 @@ import Components.MenuButton.Controller (Action(..)) as MenuButtonController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, discard, pure, unit, ($))
-import PrestoDOM (Eval, continue, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (ChooseLanguageScreenState)

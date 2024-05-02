@@ -28,7 +28,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent, trackAppTextInput)
 import Prelude (class Show, pure, unit, not, bind, ($), (>), discard)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (TripDetailsScreenState, TripDetailsGoBackType)
@@ -129,4 +129,4 @@ eval AfterRender state = continue state {props {triggerUIUpdate = not state.prop
 
 eval ListExpandAinmationEnd state = continue state {props {showIssueOptions = false }}
 
-eval _ state = continue state
+eval _ state = update state

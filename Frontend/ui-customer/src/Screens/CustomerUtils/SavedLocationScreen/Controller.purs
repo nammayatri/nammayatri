@@ -18,7 +18,7 @@ module Screens.SavedLocationScreen.Controller where
 
 import Prelude( class Show, pure, unit, bind, map, discard, show, not, void, ($),(==), (&&), (+), (/=), (<>), (||), (>=))
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
-import PrestoDOM (Eval, Visibility(..), continue, exit, continueWithCmd, updateAndExit)
+import PrestoDOM (Eval, update, Visibility(..), continue, exit, continueWithCmd, updateAndExit)
 import Screens.Types(SavedLocationScreenState, SavedLocationData, LocationListItemState, LocationItemType(..))
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.SavedLocationCard as SavedLocationCardController
@@ -145,7 +145,7 @@ eval (ErrorModalAC (ErrorModalController.PrimaryButtonActionController PrimaryBu
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_add_favourite_click_error_model"
   updateAndExit state $ AddLocation state
 
-eval _ state = continue state
+eval _ state = update state
 
 
 

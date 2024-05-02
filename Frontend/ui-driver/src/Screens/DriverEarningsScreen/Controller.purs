@@ -44,7 +44,7 @@ import JBridge (pauseYoutubeVideo)
 import Language.Strings (getString)
 import Language.Types
 import Log
-import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit, continueWithCmd)
+import PrestoDOM (Eval, update, continue, exit, ScrollState(..), updateAndExit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resource.Constants (decodeAddress, rideTypeConstructor)
 import Screens (ScreenName(..), getScreen)
@@ -426,10 +426,10 @@ eval (OpenFaqQuestion faqQuestion) state = do
 eval (OpenTripDetails index) state = do
   let 
       tripDetails = rideHistoryItemTransformer $ fromMaybe dummyRideHistoryItem (state.data.rideHistoryItems !! index)
-      updateState = state { data{selectedRideHistoryItem = tripDetails } }
-  updateAndExit updateState $ TripDetails updateState
+      update = state { data{selectedRideHistoryItem = tripDetails } }
+  updateAndExit update $ TripDetails update
 
-eval _ state = continue state
+eval _ state = update state
 
 mapSummaryListWithWeeklyEarnings :: Array RidesSummary -> Array ST.WeeklyEarning
 mapSummaryListWithWeeklyEarnings ridesSummaryList =

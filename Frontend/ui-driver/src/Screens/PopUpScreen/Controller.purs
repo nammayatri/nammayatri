@@ -101,7 +101,7 @@ eval (PopUpCallBack stringifyPayload) state = do
 
   let availableRide = (transformAllocationData entityPayload)
   continue state { data { availableRides = state.data.availableRides <> availableRide } }
-eval _ state = continue state
+eval _ state = update state
 
 transformAllocationData :: AllocationData -> Array Rides 
 transformAllocationData ride = [{

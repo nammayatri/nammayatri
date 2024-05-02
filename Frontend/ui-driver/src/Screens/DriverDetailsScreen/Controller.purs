@@ -35,7 +35,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, unit, (/=), ($), (<>), (>), (-), (==), (||), (<=), (+), (<), (<=), pure, bind, discard, (&&), show, not)
-import PrestoDOM (Eval, continue, exit, continueWithCmd)
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.DriverDetailsScreen.ComponentConfig (ListOptions(..))
@@ -238,7 +238,7 @@ eval (GenderSelectionModalAction (SelectListModal.Button2 PrimaryButtonControlle
     _ <- pure $ spy "Gender Selected " genderSelected
     exit (UpdateGender state {data = state.data{driverGender = Just (fromMaybe dummyOptions genderSelected).reasonCode},props = state.props{genderSelectionModalShow = false}})
 
-eval _ state = continue state
+eval _ state = update state
 
 genders :: LazyCheck -> Array OptionButtonList
 genders dummy =

@@ -17,7 +17,7 @@ module Screens.NammaSafetyFlow.SafetySettingsScreen.Controller where
 import JBridge as JB 
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, discard, map, not, pure, void, ($), (/=), (==), (/), (<))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..))
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
@@ -206,4 +206,4 @@ eval (CheckRideListResp (RideBookingListRes listResp)) state = do
           mbRideData = DA.head transformedResp
       continue state{props{showPastRidePopUp = isRecentRide}, data{lastRideDetails = mbRideData}}
  
-eval _ state = continue state
+eval _ state = update state

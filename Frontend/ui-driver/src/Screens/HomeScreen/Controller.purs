@@ -86,7 +86,7 @@ import Log (printLog, trackAppActionClick, trackAppBackPress, trackAppEndScreen,
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate, (<<<), (>>=), (<$>))
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Core (getPushFn)
 import PrestoDOM.Types.Core (class Loggable)
 import RemoteConfig as RC
@@ -1362,7 +1362,7 @@ eval (IsAcWorkingPopUpAction PopUpModal.OnButton2Click) state = exit $ UpdateAir
 
 eval (IsAcWorkingPopUpAction PopUpModal.DismissPopup) state = continue state{props{showAcWorkingPopup = false}}
 
-eval _ state = continue state
+eval _ state = update state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Boolean -> Effect Unit
 checkPermissionAndUpdateDriverMarker state toAnimateCamera = do

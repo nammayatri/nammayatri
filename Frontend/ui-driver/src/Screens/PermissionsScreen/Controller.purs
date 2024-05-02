@@ -29,7 +29,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
 import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (==), void)
-import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.PermissionsScreen.ScreenData (Permissions(..))
@@ -209,7 +209,7 @@ eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutA
 
 eval (PopUpModalLogoutAction (PopUpModal.DismissPopup)) state = continue state {props {logoutModalView= false}}
 
-eval _ state = continue state
+eval _ state = update state
 
 getTitle :: Permissions -> String
 getTitle permission = 

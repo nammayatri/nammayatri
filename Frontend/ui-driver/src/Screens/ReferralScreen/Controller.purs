@@ -35,7 +35,7 @@ import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, s
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (bind, class Show, pure, unit, ($), discard, (>=), (<=), (==), (&&), not, (+), show, void, (<>), when, map, (-), (>), (/=))
-import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.ReferralScreen.ScreenData as RSD
@@ -317,7 +317,7 @@ eval (ReferralQrRendered id) state =
     runEffectFn4 generateQR state.data.config.referral.link id 200 0
     pure $ NoAction
   ]
-eval _ state = continue state
+eval _ state = update state
 
 
 transformLeaderBoardList :: (Array DriversInfo) -> Boolean -> Array RankCardData

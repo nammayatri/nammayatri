@@ -47,7 +47,7 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     isDefault :: Kernel.Prelude.Bool,
     isSelected :: Kernel.Prelude.Bool,
-    isUsageRestricted :: Kernel.Prelude.Bool,
+    isUsageRestricted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     longDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     name :: Kernel.Prelude.Text,

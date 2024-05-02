@@ -85,7 +85,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<))
 import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (BottomSheetState(..), Eval, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
+import PrestoDOM (BottomSheetState(..), Eval, update, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (encodeAddress, getAddressFromBooking, decodeAddress, DecodeAddress(..), emergencyContactInitialChatSuggestionId)
 import Constants (defaultDensity)
@@ -2115,9 +2115,8 @@ eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryBut
       customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
   _ <- pure $ clearTimerWithId state.props.timerId
   void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), scaleType="CENTER_CROP"}
-  let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH, onlyPrimaryText = true}
+  let tipViewData = state.props.tipViewProps{stage = TIP_AMOUNT_SELECTED, onlyPrimaryText = true}
   let newState = state{ props{rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }, findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 0 (customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex, isTipSelected = true } }, data{nearByDrivers = Nothing}}
-  _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
   updateAndExit newState $ RetryFindingQuotes false newState
 
 eval (QuoteListModelActionController (QuoteListModelController.TipsViewActionController (TipsView.TipBtnClick index value))) state = do
@@ -2778,7 +2777,7 @@ eval GoToHomeScreen state = do
   logStatus "confirming_ride" "no_active_ride"
   exit $ GoToHome state
 
-eval _ state = continue state
+eval _ state = update state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 validateSearchInput state searchString =

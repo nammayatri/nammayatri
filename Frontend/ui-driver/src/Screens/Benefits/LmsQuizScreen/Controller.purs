@@ -17,7 +17,7 @@ module Screens.Benefits.LmsQuizScreen.Controller where
 
 import Prelude
 import Screens.Types as ST
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
@@ -137,4 +137,4 @@ eval GoToLmsVideosScreen state = exit $ GoToLmsVideosScreenSO state
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {props{ exitPopupVisible = false}}
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = updateAndExit state {props {exitPopupVisible = false}} $ GoToLmsVideosScreenSO  state {props {exitPopupVisible = false}} 
-eval _ state = continue state
+eval _ state = update state
