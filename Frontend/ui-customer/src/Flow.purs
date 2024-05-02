@@ -672,7 +672,7 @@ homeScreenFlow = do
             void $ pure $ firebaseLogEvent "ny_user_estimate_expired"
             updateLocalStage FindEstimateAndSearch
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindEstimateAndSearch, searchAfterEstimate = true } })
-        let tipViewData = if state.props.customerTip.isTipSelected then state.props.tipViewProps else HomeScreenData.initData.props.tipViewProps
+        let tipViewData = if state.props.customerTip.isTipSelected then state.props.tipViewProps{ stage = TIP_ADDED_TO_SEARCH } else HomeScreenData.initData.props.tipViewProps
         void $ pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { customerTip = if homeScreen.props.customerTip.isTipSelected then homeScreen.props.customerTip else HomeScreenData.initData.props.customerTip{enableTips = homeScreen.props.customerTip.enableTips } , tipViewProps = tipViewData, findingQuotesProgress = 0.0 }})
       homeScreenFlow
@@ -2812,13 +2812,9 @@ cancelEstimate bookingId = do
                   void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_cancel_waiting_for_quotes"
                   pure unit
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isSearchCancelled = true}})
-            "BookingAlreadyCreated" -> do
+            _ -> do
               void $ liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_booking_exists_right"
               currentFlowStatus
-            _ -> do
-              void $ pure $ toast $ getString STR.CANCELLATION_UNSUCCESSFULL_PLEASE_TRY_AGAIN
-              void $ liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_failed_right"
-              homeScreenFlow
         Left err -> do
           let errResp = err.response
               codeMessage = decodeError errResp.errorMessage "errorCode"
