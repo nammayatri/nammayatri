@@ -229,7 +229,6 @@ baseAppFlow baseFlow event driverInfoResponse = do
       liftFlowBT $ Events.endMeasuringDuration "Flow.initialFlow"
       liftFlowBT $ markPerformance "INITIAL_FLOW_END"
       if isTokenValid regToken then do
-        -- setValueToLocalNativeStore REGISTERATION_TOKEN regToken -- Redundant, Can be removed as 201 already gets what we set again.
         checkRideAndInitiate event driverInfoResponse
       else if not config.flowConfig.chooseCity.runFlow then
         chooseLanguageFlow
@@ -1606,12 +1605,17 @@ bookingOptionsFlow :: FlowBT String Unit
 bookingOptionsFlow = do
   (API.DriverVehicleServiceTierResponse resp) <- HelpersAPI.callApiBT $ API.DriverVehicleServiceTierReq
   let ridePreferences' = transfromRidePreferences resp.tiers
+      canSwitchToInterCity' = fromMaybe false resp.canSwitchToInterCity
+      canSwitchToRental' = fromMaybe false resp.canSwitchToRental
       defaultRide = find (\item -> item.isDefault) ridePreferences'
-  modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> bookingOptions{ data{ ridePreferences = transfromRidePreferences resp.tiers, defaultRidePreference = fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption defaultRide } })
+  modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> bookingOptions{ data{ airConditioned = resp.airConditioned, canSwitchToInterCity = canSwitchToInterCity', canSwitchToRental = canSwitchToRental', ridePreferences = ridePreferences', defaultRidePreference = fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption defaultRide } })
   action <- UI.bookingOptions
   case action of
+    UPDATE_AC_AVAILABILITY state toggleVal -> do
+      void $ HelpersAPI.callApiBT $ Remote.mkUpdateAirConditionWorkingStatus toggleVal
+      bookingOptionsFlow
     CHANGE_RIDE_PREFERENCE state service -> do
-      resp <- HelpersAPI.callApiBT $ Remote.mkUpdateDriverVehiclesServiceTier service
+      void $ HelpersAPI.callApiBT $ Remote.mkUpdateDriverVehiclesServiceTier service
       bookingOptionsFlow
     SELECT_CAB state toggleDowngrade -> do
       void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
@@ -1651,7 +1655,8 @@ bookingOptionsFlow = do
           seatingCapacity : item.seatingCapacity,
           serviceTierType : item.serviceTierType,
           shortDescription : item.shortDescription,
-          vehicleRating : item.vehicleRating
+          vehicleRating : item.vehicleRating,
+          isUsageRestricted : fromMaybe false item.isUsageRestricted
         }
       )
 

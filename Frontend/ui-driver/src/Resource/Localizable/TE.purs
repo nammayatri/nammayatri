@@ -341,6 +341,7 @@ getTE stringKey =
         ACTIVATED_CUSTOMERS -> "ఆక్టివేట్ అయిన వినియోగదారులు"
         REFERRAL_CODE_LINKING -> "రెఫరల్ కోడ్ లింకింగ్"
         CONTACT_SUPPORT -> "మద్దతును సంప్రదించండి"
+        AC_CHECK_TITILE -> "నా కారు ఏసి పని చేస్తుంది"
         CALL_SUPPORT -> "మద్దతుకు కాల్ చేయండి"
         YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT _ -> "మీరు నమ్మ యాత్రి సపోర్ట్ టీమ్‌కి కాల్ చేయబోతున్నారు. మీరు కొనసాగించాలనుకుంటున్నారా?"
         REFERRAL_ENROLMENT -> "రెఫరల్ నమోదు"

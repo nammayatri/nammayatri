@@ -4461,16 +4461,31 @@ data ServiceTierType
   | RENTALS
   | INTERCITY
 
+data AirConditionedRestrictionType
+  = ToggleAllowed
+  | ToggleNotAllowed
+  | NoRestriction
+
 data DriverVehicleServiceTierReq = DriverVehicleServiceTierReq
 
 data UpdateDriverVehicleServiceTierReq = UpdateDriverVehicleServiceTierReq {
-  tiers :: Array DriverVehicleServiceTier
+  tiers :: Array DriverVehicleServiceTier,
+  airConditioned :: Maybe AirConditionedTier
 }
 
 data UpdateDriverVehicleServiceTierResp = UpdateDriverVehicleServiceTierResp String
 
 newtype DriverVehicleServiceTierResponse = DriverVehicleServiceTierResponse {
-  tiers :: Array DriverVehicleServiceTier
+  tiers :: Array DriverVehicleServiceTier,
+  airConditioned :: Maybe AirConditionedTier,
+  canSwitchToInterCity :: Maybe Boolean,
+  canSwitchToRental :: Maybe Boolean
+}
+
+newtype AirConditionedTier = AirConditionedTier {
+  isWorking :: Boolean,
+  restrictionMessage :: Maybe String,
+  usageRestrictionType :: AirConditionedRestrictionType
 }
 
 newtype DriverVehicleServiceTier = DriverVehicleServiceTier {
@@ -4484,7 +4499,8 @@ newtype DriverVehicleServiceTier = DriverVehicleServiceTier {
   seatingCapacity :: Maybe Int,
   serviceTierType :: ServiceTierType,
   shortDescription :: Maybe String,
-  vehicleRating :: Maybe Number
+  vehicleRating :: Maybe Number,
+  isUsageRestricted :: Maybe Boolean
 }
 
 derive instance genericServiceTierType :: Generic ServiceTierType _
@@ -4519,11 +4535,33 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode RENTALS = standardEncode "RENTALS"
     standardEncode INTERCITY = standardEncode "INTERCITY"
 
+derive instance genericAirConditionedRestrictionType :: Generic AirConditionedRestrictionType _
+instance showAirConditionedRestrictionType :: Show AirConditionedRestrictionType where show = genericShow
+instance decodeAirConditionedRestrictionType :: Decode AirConditionedRestrictionType
+  where decode body = case unsafeFromForeign body of
+                  "ToggleAllowed"        -> except $ Right ToggleAllowed
+                  "ToggleNotAllowed"     -> except $ Right ToggleNotAllowed
+                  "NoRestriction"        -> except $ Right NoRestriction
+                  _                      -> except $ Right NoRestriction
+instance encodeAirConditionedRestrictionType :: Encode AirConditionedRestrictionType where encode = defaultEnumEncode
+instance eqAirConditionedRestrictionType :: Eq AirConditionedRestrictionType where eq = genericEq
+instance standardEncodeAirConditionedRestrictionType :: StandardEncode AirConditionedRestrictionType
+  where
+    standardEncode ToggleAllowed = standardEncode "ToggleAllowed"
+    standardEncode ToggleNotAllowed = standardEncode "ToggleNotAllowed"
+    standardEncode NoRestriction = standardEncode "NoRestriction"
+
 derive instance genericDriverVehicleServiceTierReq :: Generic DriverVehicleServiceTierReq _
 instance standardEncodeDriverVehicleServiceTierReq :: StandardEncode DriverVehicleServiceTierReq where standardEncode (DriverVehicleServiceTierReq) = standardEncode {}
 instance showDriverVehicleServiceTierReq :: Show DriverVehicleServiceTierReq where show = genericShow
 instance decodeDriverVehicleServiceTierReq :: Decode DriverVehicleServiceTierReq where decode = defaultDecode
 instance encodeDriverVehicleServiceTierReq  :: Encode DriverVehicleServiceTierReq where encode = defaultEncode
+
+derive instance genericAirConditionedTier :: Generic AirConditionedTier _
+instance standardEncodeAirConditionedTier :: StandardEncode AirConditionedTier where standardEncode (AirConditionedTier res) = standardEncode res
+instance showAirConditionedTier :: Show AirConditionedTier where show = genericShow
+instance decodeAirConditionedTier :: Decode AirConditionedTier where decode = defaultDecode
+instance encodeAirConditionedTier  :: Encode AirConditionedTier where encode = defaultEncode
 
 derive instance genericDriverVehicleServiceTierResponse :: Generic DriverVehicleServiceTierResponse _
 instance standardEncodeDriverVehicleServiceTierResponse :: StandardEncode DriverVehicleServiceTierResponse where standardEncode (DriverVehicleServiceTierResponse res) = standardEncode res

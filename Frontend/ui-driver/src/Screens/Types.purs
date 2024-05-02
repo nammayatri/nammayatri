@@ -1856,7 +1856,10 @@ type BookingOptionsScreenData = {
   vehicleCapacity :: Int,
   downgradeOptions :: Array ChooseVehicle.Config,
   ridePreferences :: Array RidePreference,
-  defaultRidePreference :: RidePreference
+  defaultRidePreference :: RidePreference,
+  canSwitchToInterCity :: Boolean,
+  canSwitchToRental :: Boolean,
+  airConditioned :: Maybe API.AirConditionedTier
 }
 
 type RidePreference = {
@@ -1870,7 +1873,8 @@ type RidePreference = {
   seatingCapacity :: Maybe Int,
   serviceTierType :: API.ServiceTierType,
   shortDescription :: Maybe String,
-  vehicleRating :: Maybe Number
+  vehicleRating :: Maybe Number,
+  isUsageRestricted :: Boolean
 }
 
 type BookingOptionsScreenProps = {
