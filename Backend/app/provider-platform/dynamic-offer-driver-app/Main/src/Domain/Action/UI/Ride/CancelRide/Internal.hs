@@ -116,9 +116,9 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
             case result of
               Right _ -> do
                 if isValueAddNP
-                  then BP.sendEstimateRepetitionUpdateToBAP booking ride (Id searchTry.estimateId) bookingCReason.source driver vehicle
-                  else cancelRideTransactionForNonReallocation booking (Just searchTry.estimateId) merchant bookingCReason.source
-              Left _ -> cancelRideTransactionForNonReallocation booking (Just searchTry.estimateId) merchant bookingCReason.source
+                  then BP.sendEstimateRepetitionUpdateToBAP booking ride estimate.id bookingCReason.source driver vehicle
+                  else cancelRideTransactionForNonReallocation booking (Just estimate.id.getId) merchant bookingCReason.source
+              Left _ -> cancelRideTransactionForNonReallocation booking (Just estimate.id.getId) merchant bookingCReason.source
           else -- repeatSearch merchant farePolicy searchReq searchTry booking ride SBCR.ByDriver now driverPoolCfg
             cancelRideTransactionForNonReallocation booking (Just searchTry.estimateId) merchant bookingCReason.source
       _ -> cancelRideTransactionForNonReallocation booking Nothing merchant bookingCReason.source

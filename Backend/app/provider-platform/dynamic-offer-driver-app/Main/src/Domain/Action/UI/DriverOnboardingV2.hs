@@ -118,7 +118,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchanOperatingCityId) = do
           API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier
             { isSelected = serviceTierType `elem` vehicle.selectedServiceTiers,
               isDefault = vehicle.variant `elem` defaultForVehicleVariant,
-              isUsageRestricted = usageRestricted,
+              isUsageRestricted = Just usageRestricted,
               ..
             }
 
@@ -138,7 +138,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchanOperatingCityId) = do
         return $
           Just $
             API.Types.UI.DriverOnboardingV2.AirConditionedTier
-              { isWorking = not isACAllowedForDriver && isACWorking,
+              { isWorking = isACAllowedForDriver && isACWorking,
                 restrictionMessage = restrictionMessageItem <&> (.message),
                 usageRestrictionType = driverInfo.acUsageRestrictionType
               }

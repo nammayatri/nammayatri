@@ -49,6 +49,7 @@ data FlowStatus
       }
   | WAITING_FOR_DRIVER_OFFERS
       { estimateId :: Id DE.Estimate,
+        otherSelectedEstimates :: Maybe [Id DE.Estimate],
         validTill :: UTCTime
       }
   | DRIVER_OFFERED_QUOTE

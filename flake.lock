@@ -2072,11 +2072,11 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1713844938,
-        "narHash": "sha256-KmH963P/bEyIo+ZwmQ7EnW3Z60WQW+/OAS41U039jXY=",
+        "lastModified": 1714536160,
+        "narHash": "sha256-4yuepMe+kvyzkEge96y21m3C/SoF0MfvqMeTL6VxG28=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "c18000dd179003c24f098f5f802f23d5117b184e",
+        "rev": "b32c1724c7bd7c979ecf93fe33266384cb9f3f99",
         "type": "github"
       },
       "original": {

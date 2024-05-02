@@ -166,7 +166,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
   _ <- QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
-  _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
+  _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill}
   _ <- QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
   _ <- QDOffer.updateStatus DDO.INACTIVE estimateId
   let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney <$> req.customerExtraFee) -- TODO check for correct currency

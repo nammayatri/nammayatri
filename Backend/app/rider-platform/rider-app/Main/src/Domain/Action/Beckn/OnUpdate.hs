@@ -242,7 +242,7 @@ onUpdate = \case
     _ <- QRB.updateStatus booking.id DRB.REALLOCATED
     _ <- QRide.updateStatus ride.id DRide.CANCELLED
     _ <- QBCR.upsert bookingCancellationReason
-    _ <- QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, validTill = searchReq.validTill}
+    _ <- QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill}
     QPFS.clearCache searchReq.riderId
     -- notify customer
     Notify.notifyOnEstimatedReallocated booking estimate.id

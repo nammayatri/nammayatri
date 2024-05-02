@@ -41,7 +41,7 @@ types:
   DriverVehicleServiceTier:
     serviceTierType: ServiceTierType
     name: Text
-    isUsageRestricted: Bool
+    isUsageRestricted: Maybe Bool
     shortDescription: Maybe Text
     longDescription: Maybe Text
     seatingCapacity: Maybe Int

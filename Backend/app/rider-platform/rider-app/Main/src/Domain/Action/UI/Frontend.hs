@@ -76,7 +76,7 @@ getPersonFlowStatus personId merchantId mIsPolling = do
   case personStatus of
     DPFS.SEARCHING _ _ -> expirePersonStatusIfNeeded personStatus Nothing
     DPFS.GOT_ESTIMATE _ _ -> expirePersonStatusIfNeeded personStatus Nothing
-    DPFS.WAITING_FOR_DRIVER_OFFERS estimateId _ -> do
+    DPFS.WAITING_FOR_DRIVER_OFFERS estimateId _ _ -> do
       estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
       findValueAddNP estimate.providerId personStatus
     DPFS.DRIVER_OFFERED_QUOTE estimateId _ -> do
