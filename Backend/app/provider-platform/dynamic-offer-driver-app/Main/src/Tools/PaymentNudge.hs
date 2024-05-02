@@ -25,10 +25,12 @@ import Data.Ord
 import qualified Data.Text as T
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPlan as DPlan
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.TransporterConfig as TC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import Kernel.Beam.Functions as B
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as Payments
 import Kernel.External.Types (Language (..))
@@ -91,7 +93,7 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
   whenJust mbCurrPlan $ \currPlan -> do
     driver <- QDP.findById (cast driverInfo.driverId) >>= fromMaybeM (PersonNotFound driverInfo.driverId.getId)
     if numRides == currPlan.freeRideCount + 1
-      then notifyPlanActivatedForDay driver
+      then notifyPlanActivatedForDay driver.id driver.merchantId driver.deviceToken driver.language
       else case currPlan.planBaseAmount of
         PERRIDE_BASE amount -> do
           let currentTotal = fromIntegral numRides * amount
@@ -153,7 +155,7 @@ switchPlanNudge driver numOfRides saveUpto planId = do
             . T.replace (templateText "saveUpto") (show saveUpto)
             <$> overlay.description
     let endPoint = T.replace (templateText "planId") planId <$> overlay.endPoint
-    sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay description overlay.okButtonText overlay.cancelButtonText endPoint
+    sendOverlay driver.merchantOperatingCityId driver.id driver.deviceToken $ mkOverlayReq overlay description overlay.okButtonText overlay.cancelButtonText endPoint
 
 notifyPaymentFailure ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -172,28 +174,31 @@ notifyPaymentFailure driverId paymentMode mbBankErrorCode serviceName = do
   whenJust mOverlay $ \overlay -> do
     let description = T.replace (templateText "dueAmount") (show totalDues) <$> overlay.description
     let okButtonText = T.replace (templateText "dueAmount") (show totalDues) <$> overlay.okButtonText
-    sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay description okButtonText overlay.cancelButtonText overlay.endPoint
+    sendOverlay driver.merchantOperatingCityId driver.id driver.deviceToken $ mkOverlayReq overlay description okButtonText overlay.cancelButtonText overlay.endPoint
 
-notifyMandatePaused :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
-notifyMandatePaused driver = do
+notifyMandatePaused :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> Id DM.Merchant -> Maybe FCM.FCMRecipientToken -> Maybe Language -> m ()
+notifyMandatePaused driverId _merchantId deviceToken language = do
   let pnKey = mandatePausedKey
-  mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH driver.language) Nothing
+  driver <- B.runInReplica $ QDP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH language) Nothing
   whenJust mOverlay $ \overlay -> do
-    sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay overlay.description overlay.okButtonText overlay.cancelButtonText overlay.endPoint
+    sendOverlay driver.merchantOperatingCityId driverId deviceToken $ mkOverlayReq overlay overlay.description overlay.okButtonText overlay.cancelButtonText overlay.endPoint
 
-notifyMandateCancelled :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
-notifyMandateCancelled driver = do
+notifyMandateCancelled :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> Id DM.Merchant -> Maybe FCM.FCMRecipientToken -> Maybe Language -> m ()
+notifyMandateCancelled driverId _merchantId deviceToken language = do
   let pnKey = mandateCancelledKey
-  driverInfo <- QDI.findById driver.id >>= fromMaybeM DriverInfoNotFound
+  driver <- B.runInReplica $ QDP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   whenJust driverInfo.autoPayStatus $ \autoPayStatus -> do
     when (autoPayStatus /= DI.PAUSED_PSP) $ do
-      mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH driver.language) Nothing
+      mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH language) Nothing
       whenJust mOverlay $ \overlay -> do
-        sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay overlay.description overlay.okButtonText overlay.cancelButtonText overlay.endPoint
+        sendOverlay driver.merchantOperatingCityId driverId deviceToken $ mkOverlayReq overlay overlay.description overlay.okButtonText overlay.cancelButtonText overlay.endPoint
 
-notifyPlanActivatedForDay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
-notifyPlanActivatedForDay driver = do
+notifyPlanActivatedForDay :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> Id DM.Merchant -> Maybe FCM.FCMRecipientToken -> Maybe Language -> m ()
+notifyPlanActivatedForDay driverId _merchantId deviceToken language = do
   let pnKey = planActivatedKey
-  mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH driver.language) Nothing
+  driver <- B.runInReplica $ QDP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH language) Nothing
   whenJust mOverlay $ \overlay -> do
-    sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay overlay.description overlay.okButtonText overlay.cancelButtonText overlay.endPoint
+    sendOverlay driver.merchantOperatingCityId driverId deviceToken $ mkOverlayReq overlay overlay.description overlay.okButtonText overlay.cancelButtonText overlay.endPoint
