@@ -39,6 +39,7 @@ import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
@@ -143,7 +144,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
           >>= fromMaybeM (PersonNotFound personId.getId)
       (rideCancellationReason, mbCancellationCnt, isGoToDisabled, rideEndedBy) <- case authPerson.role of
         DP.ADMIN -> do
-          unless (authPerson.merchantId == driver.merchantId) $ throwError (RideDoesNotExist rideId.getId)
+          unless (authPerson.merchantId == driver.merchantId) $ throwError (OperatingCityOrMerchantIdMismatch authPerson.merchantId driver.merchantId "merchant")
           logTagInfo "admin -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.CallBased)
         DP.DRIVER -> do
@@ -180,7 +181,10 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
           buildRideCancelationReason currentDriverLocation updatedDisToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled, DRide.Driver)
       return (rideCancellationReason, mbCancellationCnt, isGoToDisabled, rideEndedBy)
     DashboardRequestorId (reqMerchantId, mocId) -> do
-      unless (driver.merchantId == reqMerchantId && mocId == driver.merchantOperatingCityId) $ throwError (RideDoesNotExist rideId.getId)
+      unless (driver.merchantId == reqMerchantId && mocId == driver.merchantOperatingCityId) $ do
+        let entityName = if driver.merchantId == reqMerchantId then "Operating city" else "Merchant"
+        throwError $ OperatingCityOrMerchantIdMismatch driver.merchantId reqMerchantId entityName
+
       logTagInfo "dashboard -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
       buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.Dashboard) -- is it correct DBCR.ByMerchant?
   cancelRide rideId rideEndedBy rideCancelationReason
