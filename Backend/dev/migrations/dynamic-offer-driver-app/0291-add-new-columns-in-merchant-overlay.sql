@@ -11,4 +11,3 @@ update atlas_driver_offer_bpp.merchant_overlay set delay = 0;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_fee_overlay_sending_time_limit_in_days INTEGER DEFAULT 15 NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN overlay_batch_size INTEGER DEFAULT 50 NOT NULL;
 
-ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN overlay_sent boolean DEFAULT false NOT NULL;

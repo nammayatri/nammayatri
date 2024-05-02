@@ -30,7 +30,6 @@ where
 import Data.Text
 import qualified Data.Text as T
 import qualified Domain.Action.UI.CallEvent as DCE
-import qualified Domain.Action.UI.CallStatus as SCS
 import qualified Domain.Types.Booking as BT
 import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as DCS

@@ -4,6 +4,7 @@
 
 module Domain.Types.BookingCancellationReason where
 
+import Data.Aeson
 import qualified Domain.Types.Booking
 import qualified Domain.Types.CancellationReason
 import qualified Domain.Types.Merchant
@@ -24,9 +25,7 @@ data BookingCancellationReason = BookingCancellationReason
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     reasonCode :: Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationReasonCode,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
-    source :: Domain.Types.BookingCancellationReason.CancellationSource,
-    createdAt :: Kernel.Prelude.UTCTime,
-    updatedAt :: Kernel.Prelude.UTCTime
+    source :: Domain.Types.BookingCancellationReason.CancellationSource
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

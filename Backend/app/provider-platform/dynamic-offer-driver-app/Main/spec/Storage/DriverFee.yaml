@@ -72,8 +72,8 @@ DriverFee:
   derives: "Generic, Show, Eq"
 
   domainInstance:
-    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <DriverFeeStatus>
-    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <FeeType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <DriverFeeStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <FeeType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <DriverFeeStatus>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <FeeType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AutopayPaymentStage>
@@ -106,6 +106,25 @@ DriverFee:
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
+
+  sqlType:
+    platformFee: numeric(30,2)
+    cgst: numeric(30,2)
+    sgst: numeric(30,2)
+    status: character varying(255)
+    offerId: character varying(100)
+    planId: text
+    merchantOperatingCityId: text
+
+  default:
+    serviceName: "'YATRI_SUBSCRIPTION'"
+    overlaySent: "false"
+    schedulerTryCount: "1"
+    specialZoneRideCount: "0"
+    specialZoneAmount: "0.0"
+    notificationRetryCount: "0"
+    feeType: "'RECURRING_INVOICE'"
+    merchantId: "'96dd7f78-787e-4a0b-8675-e9e6fe93bb8f'"
 
   queries:
     updateOfferId:
@@ -156,5 +175,3 @@ DriverFee:
   extraOperations:
     - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE
-
-

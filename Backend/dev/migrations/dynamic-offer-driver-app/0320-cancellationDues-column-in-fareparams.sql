@@ -11,13 +11,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD column can_add_cancell
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD column cancellation_dues double precision DEFAULT 0 NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD column dispute_chances_used int DEFAULT 0 NOT NULL;
 
-CREATE TABLE atlas_driver_offer_bpp.cancellation_charges (
-    id CHARACTER(36) PRIMARY KEY NOT NULL,
-    driver_id CHARACTER(36) NOT NULL,
-    ride_id CHARACTER(36),
-    cancellation_charges int
-);
-
 CREATE INDEX ON atlas_driver_offer_bpp.cancellation_charges USING btree (driver_id);
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD column customer_cancellation_dues double precision;

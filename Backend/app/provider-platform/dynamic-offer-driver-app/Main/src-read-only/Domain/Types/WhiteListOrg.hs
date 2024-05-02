@@ -4,6 +4,7 @@
 
 module Domain.Types.WhiteListOrg where
 
+import Data.Aeson
 import Domain.Types.Common (UsageSafety (..))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Domain
@@ -12,10 +13,10 @@ import qualified Kernel.Types.Registry
 import qualified Tools.Beam.UtilsTH
 
 data WhiteListOrgD (s :: UsageSafety) = WhiteListOrg
-  { createdAt :: Kernel.Prelude.UTCTime,
-    domain :: Kernel.Types.Beckn.Domain.Domain,
+  { domain :: Kernel.Types.Beckn.Domain.Domain,
     id :: Kernel.Types.Id.Id Domain.Types.WhiteListOrg.WhiteListOrg,
     subscriberId :: Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber,
+    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)

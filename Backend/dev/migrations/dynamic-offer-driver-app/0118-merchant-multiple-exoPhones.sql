@@ -22,6 +22,3 @@ UPDATE atlas_driver_offer_bpp.booking
     SET provider_exo_phone = 'UNKNOWN';
 
 ALTER TABLE atlas_driver_offer_bpp.booking ALTER COLUMN provider_exo_phone SET NOT NULL;
-
-ALTER TABLE atlas_driver_offer_bpp.call_status
-    RENAME COLUMN exotel_call_sid TO call_id;

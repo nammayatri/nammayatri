@@ -44,9 +44,7 @@ logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distan
             vehicleVariant = variant,
             distance = distance,
             duration = duration,
-            rideId = rideId,
-            createdAt = now,
-            updatedAt = now
+            rideId = rideId
           }
   createWithKV bE
 

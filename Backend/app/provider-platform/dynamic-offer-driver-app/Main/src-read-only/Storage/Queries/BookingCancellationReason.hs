@@ -18,7 +18,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as Beam
 import Storage.Queries.BookingCancellationReasonExtra as ReExport
-import Storage.Queries.Transformers.BookingCancellationReason
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingCancellationReason.BookingCancellationReason -> m ())
 create = createWithKV
@@ -49,8 +48,6 @@ updateByPrimaryKey (Domain.Types.BookingCancellationReason.BookingCancellationRe
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.reasonCode ((\(Domain.Types.CancellationReason.CancellationReasonCode x) -> x) <$> reasonCode),
       Se.Set Beam.rideId (Kernel.Types.Id.getId <$> rideId),
-      Se.Set Beam.source source,
-      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
-      Se.Set Beam.updatedAt (Just _now)
+      Se.Set Beam.source source
     ]
     [Se.And [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)]]

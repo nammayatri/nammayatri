@@ -1,4 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.booking_cancellation_reason ADD COLUMN merchant_id character(36) REFERENCES atlas_driver_offer_bpp.merchant (id);
 
 UPDATE atlas_driver_offer_bpp.booking_cancellation_reason SET merchant_id = NULL;
 

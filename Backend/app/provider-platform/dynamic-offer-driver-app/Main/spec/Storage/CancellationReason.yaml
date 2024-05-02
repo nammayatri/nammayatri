@@ -35,3 +35,4 @@ CancellationReason:
       orderBy: priority
 
   excludedFields: [merchantOperatingCityId, merchantId]
+

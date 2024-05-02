@@ -18,16 +18,6 @@ CallStatus:
     callService : Maybe CallService
     callError : Maybe Text
     createdAt: UTCTime
-    updatedAt: UTCTime
-
-  beamType:
-    updatedAt: Maybe UTCTime
-
-  fromTType:
-    updatedAt: Kernel.Prelude.fromMaybe createdAt|I
-
-  toTType:
-    updatedAt: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -44,5 +34,17 @@ CallStatus:
   excludedDefaultQueries:
     - create
 
-  excludedFields: [merchantOperatingCityId]
+  sqlType:
+    callId: character varying(255)
+    recordingUrl: character varying(255)
+    status: character varying(255)
+    conversationDuration: bigint
+    dtmfNumberUsed: character varying(255)
+    entityId: character (36)
+    merchantId: character (36)
+
+  default:
+    entityId: "'UNKNOWN'"
+
+  excludedFields: [merchantOperatingCityId, updatedAt]
 

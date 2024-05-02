@@ -8,14 +8,12 @@ import qualified Domain.Types.DriverBlockReason
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverBlockReason as Beam
 import Storage.Queries.DriverBlockReasonExtra as ReExport
-import Storage.Queries.Transformers.DriverBlockReason
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverBlockReason.DriverBlockReason -> m ())
 create = createWithKV
@@ -32,9 +30,9 @@ updateByPrimaryKey (Domain.Types.DriverBlockReason.DriverBlockReason {..}) = do
   updateWithKV
     [ Se.Set Beam.blockReason blockReason,
       Se.Set Beam.blockTimeInHours blockTimeInHours,
-      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
-      Se.Set Beam.updatedAt (Just _now),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.reasonCode $ Se.Eq (Kernel.Types.Id.getId reasonCode)]]

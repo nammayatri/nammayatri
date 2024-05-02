@@ -8,7 +8,6 @@ import qualified Domain.Types.BlackListOrg
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Domain
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -16,7 +15,6 @@ import qualified Kernel.Types.Registry
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BlackListOrg as Beam
-import Storage.Queries.Transformers.BlackListOrg
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BlackListOrg.BlackListOrg -> m ())
 create = createWithKV
@@ -35,26 +33,15 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BlackListOrg.BlackListOrg -> m ())
 updateByPrimaryKey (Domain.Types.BlackListOrg.BlackListOrg {..}) = do
   _now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
-      Se.Set Beam.domain domain,
-      Se.Set Beam.subscriberId (Kernel.Types.Id.getShortId subscriberId),
-      Se.Set Beam.updatedAt (Kernel.Prelude.Just updatedAt)
-    ]
-    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+  updateWithKV [Se.Set Beam.domain domain, Se.Set Beam.subscriberId (Kernel.Types.Id.getShortId subscriberId)] [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.BlackListOrg Domain.Types.BlackListOrg.BlackListOrg where
-  fromTType' (Beam.BlackListOrgT {..}) = do
-    createdAt' <- getCreatedAt createdAt
-    updatedAt' <- getUpdatedAt updatedAt
-    pure $ Just Domain.Types.BlackListOrg.BlackListOrg {createdAt = createdAt', domain = domain, id = Kernel.Types.Id.Id id, subscriberId = Kernel.Types.Id.ShortId subscriberId, updatedAt = updatedAt'}
+  fromTType' (Beam.BlackListOrgT {..}) = do pure $ Just Domain.Types.BlackListOrg.BlackListOrg {domain = domain, id = Kernel.Types.Id.Id id, subscriberId = Kernel.Types.Id.ShortId subscriberId}
 
 instance ToTType' Beam.BlackListOrg Domain.Types.BlackListOrg.BlackListOrg where
   toTType' (Domain.Types.BlackListOrg.BlackListOrg {..}) = do
     Beam.BlackListOrgT
-      { Beam.createdAt = Kernel.Prelude.Just createdAt,
-        Beam.domain = domain,
+      { Beam.domain = domain,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId,
-        Beam.updatedAt = Kernel.Prelude.Just updatedAt
+        Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId
       }

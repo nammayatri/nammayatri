@@ -8,7 +8,6 @@ import qualified Domain.Types.BusinessEvent
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -16,7 +15,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.BusinessEvent as Beam
 import Storage.Queries.BusinessEventExtra as ReExport
-import Storage.Queries.Transformers.BusinessEvent
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BusinessEvent.BusinessEvent -> m ())
 create = createWithKV
@@ -32,14 +30,12 @@ updateByPrimaryKey (Domain.Types.BusinessEvent.BusinessEvent {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bookingId (Kernel.Types.Id.getId <$> bookingId),
-      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
       Se.Set Beam.distance (Kernel.Types.Common.getMeters <$> distance),
       Se.Set Beam.driverId (Kernel.Types.Id.getId <$> driverId),
       Se.Set Beam.duration (Kernel.Types.Common.getSeconds <$> duration),
       Se.Set Beam.eventType eventType,
       Se.Set Beam.rideId (Kernel.Types.Id.getId <$> rideId),
       Se.Set Beam.timeStamp timeStamp,
-      Se.Set Beam.updatedAt (Just _now),
       Se.Set Beam.vehicleVariant vehicleVariant,
       Se.Set Beam.whenPoolWasComputed whenPoolWasComputed
     ]

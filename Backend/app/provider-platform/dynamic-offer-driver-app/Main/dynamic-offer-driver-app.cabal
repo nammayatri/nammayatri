@@ -534,19 +534,12 @@ library
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
       Storage.Queries.Status
-      Storage.Queries.Transformers.BlackListOrg
-      Storage.Queries.Transformers.BookingCancellationReason
-      Storage.Queries.Transformers.BusinessEvent
-      Storage.Queries.Transformers.CallStatus
-      Storage.Queries.Transformers.CancellationCharges
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.DocumentVerificationConfig
-      Storage.Queries.Transformers.DriverBlockReason
       Storage.Queries.Transformers.DriverFee
       Storage.Queries.Transformers.QuestionInformation
       Storage.Queries.Transformers.ReelsData
       Storage.Queries.Transformers.Ride
-      Storage.Queries.Transformers.WhiteListOrg
       Storage.Queries.TranslationsExtra
       Storage.Queries.Vehicle.Internal
       Storage.Queries.VehicleExtra
@@ -587,9 +580,9 @@ library
       Domain.Types.AadhaarVerification
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
-      Domain.Types.BookingUpdateRequest
       Domain.Types.BlackListOrg
       Domain.Types.BookingCancellationReason
+      Domain.Types.BookingUpdateRequest
       Domain.Types.BusinessEvent
       Domain.Types.CallStatus
       Domain.Types.CancellationCharges
@@ -642,9 +635,9 @@ library
       Storage.Beam.AadhaarVerification
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
-      Storage.Beam.BookingUpdateRequest
       Storage.Beam.BlackListOrg
       Storage.Beam.BookingCancellationReason
+      Storage.Beam.BookingUpdateRequest
       Storage.Beam.BusinessEvent
       Storage.Beam.CallStatus
       Storage.Beam.CancellationCharges
@@ -697,9 +690,9 @@ library
       Storage.Queries.AadhaarVerification
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
-      Storage.Queries.BookingUpdateRequest
       Storage.Queries.BlackListOrg
       Storage.Queries.BookingCancellationReason
+      Storage.Queries.BookingUpdateRequest
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
       Storage.Queries.CancellationCharges

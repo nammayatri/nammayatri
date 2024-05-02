@@ -14,11 +14,11 @@ import Tools.Beam.UtilsTH
 data DriverBlockReasonT f = DriverBlockReasonT
   { blockReason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     blockTimeInHours :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    createdAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     reasonCode :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 

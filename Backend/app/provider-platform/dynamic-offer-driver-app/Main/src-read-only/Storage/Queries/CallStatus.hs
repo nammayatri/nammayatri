@@ -8,7 +8,6 @@ import qualified Domain.Types.CallStatus
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -38,7 +37,6 @@ updateByPrimaryKey (Domain.Types.CallStatus.CallStatus {..}) = do
       Se.Set Beam.entityId entityId,
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.recordingUrl recordingUrl,
-      Se.Set Beam.status status,
-      Se.Set Beam.updatedAt (Kernel.Prelude.Just updatedAt)
+      Se.Set Beam.status status
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

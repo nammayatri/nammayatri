@@ -13,22 +13,12 @@ CancellationCharges:
     driverId : Id Person
     rideId : Maybe (Id Ride)
     cancellationCharges : HighPrecMoney
-    createdAt: UTCTime
-    updatedAt: UTCTime
-
-  beamType:
-    createdAt: Maybe UTCTime
-    updatedAt: Maybe UTCTime
-
-  fromTType:
-    createdAt: getCreatedAt|M
-    updatedAt: getUpdatedAt|M
-
-  toTType:
-    createdAt: Kernel.Prelude.Just|I
-    updatedAt: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
 
-  excludedFields: [merchantOperatingCityId, merchantId]
+  sqlType:
+    cancellationCharges: integer
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+

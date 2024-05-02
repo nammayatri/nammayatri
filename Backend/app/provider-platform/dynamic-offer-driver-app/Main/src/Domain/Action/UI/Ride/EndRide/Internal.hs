@@ -158,14 +158,11 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     case mbRiderDetails of
       Just riderDetails -> do
         id <- generateGUID
-        now <- getCurrentTime
         let cancellationCharges =
               DCC.CancellationCharges
                 { driverId = cast driverId,
                   rideId = Just ride.id,
                   cancellationCharges = customerCancellationDues,
-                  createdAt = now,
-                  updatedAt = now,
                   ..
                 }
         calDisputeChances <-

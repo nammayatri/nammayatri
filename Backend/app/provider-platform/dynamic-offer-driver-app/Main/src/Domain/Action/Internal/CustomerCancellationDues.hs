@@ -150,14 +150,11 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
         booking <- (QBooking.findLastCancelledByRiderId riderDetails.id) >>= fromMaybeM (BookingDoesNotExist riderDetails.id.getId)
         ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
         id <- generateGUID
-        now <- getCurrentTime
         let cancellationCharges =
               DCC.CancellationCharges
                 { driverId = ride.driverId,
                   rideId = Just ride.id,
                   cancellationCharges = amountPaid,
-                  createdAt = now,
-                  updatedAt = now,
                   ..
                 }
         QCC.create cancellationCharges

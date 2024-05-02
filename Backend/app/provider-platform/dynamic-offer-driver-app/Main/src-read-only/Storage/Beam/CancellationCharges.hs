@@ -14,11 +14,9 @@ import Tools.Beam.UtilsTH
 
 data CancellationChargesT f = CancellationChargesT
   { cancellationCharges :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    createdAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     driverId :: (B.C f Kernel.Prelude.Text),
     id :: (B.C f Kernel.Prelude.Text),
-    rideId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    updatedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime))
+    rideId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
   }
   deriving (Generic, B.Beamable)
 

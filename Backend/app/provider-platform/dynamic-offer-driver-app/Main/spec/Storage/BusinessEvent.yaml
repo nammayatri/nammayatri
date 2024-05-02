@@ -29,24 +29,16 @@ BusinessEvent:
     distance : Maybe Meters
     duration : Maybe Seconds
     rideId : Maybe (Id Ride)
-    createdAt: UTCTime
-    updatedAt: UTCTime
 
   beamType:
     distance: Maybe Int
     duration: Maybe Int
-    createdAt: Maybe UTCTime
-    updatedAt: Maybe UTCTime
 
   fromTType:
-    createdAt: getCreatedAt|M
-    updatedAt: getUpdatedAt|M
     distance: Kernel.Types.Common.Meters <$> distance|E
     duration: Kernel.Types.Common.Seconds <$> distance|E
 
   toTType:
-    createdAt: Kernel.Prelude.Just|I
-    updatedAt: Kernel.Prelude.Just|I
     distance: Kernel.Types.Common.getMeters <$> distance|E
     duration: Kernel.Types.Common.getSeconds <$> duration|E
 
@@ -54,7 +46,14 @@ BusinessEvent:
   constraints:
     id: PrimaryKey
 
+  sqlType:
+    eventType: character varying(255)
+    whenPoolWasComputed: character varying(255)
+    vehicleVariant: character varying(255)
+    distance: double precision
+    duration: double precision
+
   extraOperations:
     - EXTRA_QUERY_FILE
 
-  excludedFields: [merchantId, merchantOperatingCityId]
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

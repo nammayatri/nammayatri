@@ -83,9 +83,9 @@ data FeeType = MANDATE_REGISTRATION | RECURRING_INVOICE | RECURRING_EXECUTION_IN
 data PlatformFee = PlatformFee {cgst :: Kernel.Types.Common.HighPrecMoney, fee :: Kernel.Types.Common.HighPrecMoney, sgst :: Kernel.Types.Common.HighPrecMoney}
   deriving (Generic, (Eq), (Show), (FromJSON), (ToJSON), (ToSchema))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''DriverFeeStatus))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''DriverFeeStatus))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''FeeType))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''FeeType))
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''DriverFeeStatus))
 

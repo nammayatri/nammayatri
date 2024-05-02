@@ -23,9 +23,7 @@ data BookingCancellationReasonT f = BookingCancellationReasonT
     merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     reasonCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     rideId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    source :: (B.C f Domain.Types.BookingCancellationReason.CancellationSource),
-    createdAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    updatedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime))
+    source :: (B.C f Domain.Types.BookingCancellationReason.CancellationSource)
   }
   deriving (Generic, B.Beamable)
 
