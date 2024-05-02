@@ -33,7 +33,7 @@ import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (void, class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard, Ordering, compare, (<=), (>), (>=), (||), (<>))
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants as Const
 import Screens (getScreen, ScreenName(..))
@@ -370,9 +370,9 @@ eval (ShowError errorPayload )state = continue state{props{showError = true, sho
 eval (LoadAlternatePlans plansArray) state = continue state { data { managePlanData { alternatePlans = alternatePlansTransformer plansArray state}}, props {subView = ManagePlan, showShimmer = false}}
 
 eval (TryAgainButtonAC PrimaryButton.OnClick) state = 
-  let updateState = state { props{showShimmer = true}}
-    in if state.props.subView == FindHelpCentre then updateAndExit updateState $ RefreshHelpCentre updateState
-      else updateAndExit updateState $ Refresh
+  let update = state { props{showShimmer = true}}
+    in if state.props.subView == FindHelpCentre then updateAndExit update $ RefreshHelpCentre update
+      else updateAndExit update $ Refresh
 
 eval CallSupport state = do
   _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
@@ -429,7 +429,7 @@ eval (GetCurrentPosition label stringData reelItemData buttonData) state = case 
                 _ -> continue state
   _ -> continue state
 
-eval _ state = continue state
+eval _ state = update state
 
 getPlanPrice :: Array PaymentBreakUp -> String -> String
 getPlanPrice fares priceType = do

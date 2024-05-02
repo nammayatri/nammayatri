@@ -16,7 +16,7 @@
 module Screens.AboutUsScreen.Controller where
 
 import Prelude (class Show, pure, unit, discard, bind, (>=), (==), (||), ($), (&&), (+), (<>), (-), show)
-import PrestoDOM (Eval, exit, continue, updateAndExit)
+import PrestoDOM (Eval, update, exit, continue, updateAndExit)
 import Screens.Types (AboutUsScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -79,7 +79,7 @@ eval (PopUpModalDemoModeAction (PopUpModal.OnImageClick)) state = continue state
 eval (PopUpModalDemoModeAction (PopUpModal.ETextController (PrimaryEditTextController.TextChanged valId newVal))) state = do
   _ <- pure $ setValueToLocalStore DEMO_MODE_PASSWORD newVal
   continue state{ props{ enableConfirmPassword = (validateDemoMode newVal) }}
-eval _ state = continue state
+eval _ state = update state
 
 validateDemoMode :: String -> Boolean
 validateDemoMode newVal = length newVal >= 7 && newVal `elem` ["7891234", "8917234", "9178234", "1789234","7891789","7891788", "7891567", "7891678"]

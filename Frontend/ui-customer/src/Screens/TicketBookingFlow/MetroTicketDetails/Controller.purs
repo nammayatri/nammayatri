@@ -17,7 +17,7 @@ module Screens.TicketBookingFlow.MetroTicketDetails.Controller where
 
 import Log 
 import Prelude 
-import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
 import Screens 
 import Screens.Types 
 import Helpers.Utils 
@@ -201,7 +201,7 @@ eval (ShowMetroBookingCancelledView (MetroBookingHardCancelStatusResp resp)) sta
       }
     }
 
-eval _ state = continue state
+eval _ state = update state
 
 
 shareImageMessageConfig :: String ->  Common.ShareImageConfig 

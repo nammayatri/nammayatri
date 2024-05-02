@@ -17,7 +17,7 @@ module Screens.NammaSafetyFlow.ActivateSafetyScreen.Controller where
 import JBridge as JB
 import Log
 import Prelude (class Show, bind, discard, map, not, pure, show, void, ($), (&&), (/=), (==))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import Screens.Types (NammaSafetyScreenState)
 import Timers (clearTimerWithId)
 import Common.Types.App as CTA
@@ -227,4 +227,4 @@ eval CallSupport state = do
   void $ pure $ JB.showDialer (getSupportNumber "") false
   continue state
 
-eval _ state = continue state
+eval _ state = update state

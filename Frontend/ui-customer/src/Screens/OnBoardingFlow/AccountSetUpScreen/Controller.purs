@@ -29,7 +29,7 @@ import Helpers.Utils (setText)
 import JBridge (hideKeyboardOnNavigation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, bind, discard, pure, unit, not, ($), (/=), (&&), (>=), (==), (<))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, id, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, id, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (AccountSetUpScreenState, Gender(..), ActiveFieldAccountSetup(..), ErrorType(..))
@@ -173,7 +173,7 @@ eval (SpecialAssistanceListAC action) state = case action of
     updateAndExit newState $ GoHome newState
   _ -> continue state
 
-eval _ state = continue state
+eval _ state = update state
 
 
 getBtnActive :: AccountSetUpScreenState -> Boolean

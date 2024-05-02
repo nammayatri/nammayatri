@@ -2,7 +2,7 @@ module Screens.TicketBookingFlow.TicketList.Controller where
 
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, discard, pure, map, unit, min, max, bind, ($), not, (+), (-), (==), (*), (<>), show, void, (+), (==), (-), show, (&&), (>), (/=), (||), (<=), (>=), (<))
-import PrestoDOM (Eval, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
+import PrestoDOM (Eval, update, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (TicketBookingScreenState, TicketBookingScreenStage(..), TicketServiceI(..))
@@ -108,7 +108,7 @@ eval (Copy text) state = continueWithCmd state [ do
     pure NoAction
   ]
 
-eval _ state = continue state
+eval _ state = update state
 
 
 getLimitOfDaysAccToPlaceType :: TicketBookingScreenState -> Int

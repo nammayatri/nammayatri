@@ -85,7 +85,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<))
 import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (BottomSheetState(..), Eval, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
+import PrestoDOM (BottomSheetState(..), Eval, update, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (encodeAddress, getAddressFromBooking, decodeAddress, DecodeAddress(..), emergencyContactInitialChatSuggestionId)
 import Constants (defaultDensity)
@@ -2778,7 +2778,7 @@ eval GoToHomeScreen state = do
   logStatus "confirming_ride" "no_active_ride"
   exit $ GoToHome state
 
-eval _ state = continue state
+eval _ state = update state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 validateSearchInput state searchString =

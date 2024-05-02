@@ -17,7 +17,7 @@ module Screens.Benefits.LmsVideoScreen.Controller where
 
 import Prelude
 import Screens.Types as ST
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
@@ -142,7 +142,7 @@ eval ErrorOccuredAction state = continue state {props{showError = true, showShim
 
 eval SelectLanguage state = exit $ GoToSelectLanguage state
 
-eval _ state = continue state
+eval _ state = update state
 
 defaultReelItem :: Maybe RC.ReelItem
 defaultReelItem = Nothing

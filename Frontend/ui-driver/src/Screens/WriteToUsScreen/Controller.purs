@@ -16,7 +16,7 @@
 module Screens.WriteToUsScreen.Controller where
 
 import Prelude (class Show, pure, unit, ($), discard)
-import PrestoDOM (Eval, continue, exit)
+import PrestoDOM (Eval, update, continue, exit)
 import Screens.Types (WriteToUsScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import Components.PrimaryButton as PrimaryButton
@@ -64,7 +64,7 @@ eval BackPressed state = exit GoBack
 eval (PrimaryButtonActionController primaryButtonState (PrimaryButton.OnClick) ) state = if(state.props.isThankYouScreen) then exit GoToHomeScreen
   else continue $ state {props = state.props {isThankYouScreen = true}}
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = continue state
-eval _ state = continue state
+eval _ state = update state
 
 
 getTitle :: ListOptions -> String

@@ -39,7 +39,7 @@ import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSup
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (pure, (==), unit, void,  ($), class Show, bind, discard, (<), (<>), show, (+), (/=), (/), (&&), not)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, toast, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, toast, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (UploadDrivingLicenseState)
@@ -375,7 +375,7 @@ eval WhatsAppClick state = continueWithCmd state [do
   pure NoAction
   ]
 
-eval _ state = continue state
+eval _ state = update state
 
 dateFormat :: Int -> String
 dateFormat date = if date < 10 then "0" <> (show date) else (show date)

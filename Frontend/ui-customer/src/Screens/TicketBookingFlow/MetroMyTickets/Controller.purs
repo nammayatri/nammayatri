@@ -18,7 +18,7 @@ module Screens.TicketBookingFlow.MetroMyTickets.Controller where
 
 import Log 
 import Prelude 
-import PrestoDOM (Eval, continue, exit)
+import PrestoDOM (Eval, update, continue, exit)
 import Screens 
 import Screens.Types 
 import Helpers.Utils 
@@ -82,4 +82,4 @@ eval BackPressed state =
     HomeScreenToMetroMyTickets -> exit GoToHomeScreen
     MetroTicketBookingToMetroMyTickets -> exit GoToMetroBooking
 
-eval _ state = continue state
+eval _ state = update state

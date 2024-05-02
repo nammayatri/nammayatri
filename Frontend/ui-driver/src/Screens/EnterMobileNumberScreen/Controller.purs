@@ -15,7 +15,7 @@
 
 module Screens.EnterMobileNumberScreen.Controller where
 import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), discard, bind, ($), (>))
-import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
 import Screens.Types (EnterMobileNumberScreenState)
 import Components.PrimaryEditText.Controllers as PrimaryEditText
 import Components.MobileNumberEditor as MobileNumberEditor
@@ -94,4 +94,4 @@ eval (PrimaryEditTextAction (MobileNumberEditor.TextChanged valId newVal)) state
   continue  state { props = state.props { btnActive = if (length newVal == 10 && isValidMobileNumber) then true else false
                                         , isValid = not isValidMobileNumber }
                                         , data = state.data { mobileNumber = if length newVal <= 10 then newVal else state.data.mobileNumber}}
-eval _ state = continue state
+eval _ state = update state

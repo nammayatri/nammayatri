@@ -6,7 +6,7 @@ import Data.Array (filter, length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Log (trackAppScreenRender)
 import Prelude (class Show, map, pure, show, unit, (<>), (==), not, ($), (>))
-import PrestoDOM (Eval, continue, exit)
+import PrestoDOM (Eval, update, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (BookingOptionsScreenState, VehicleP, RidePreference)
 import Common.Types.App (LazyCheck(..))
@@ -39,7 +39,7 @@ eval BackPressed state = exit GoBack
 
 eval (ToggleRidePreference service) state = exit $ ChangeRidePreference state service
 
-eval _ state = continue state
+eval _ state = update state
 
 downgradeOptionsConfig :: Array VehicleP -> String -> ChooseVehicle.Config
 downgradeOptionsConfig vehicles vehicleType =

@@ -16,7 +16,7 @@
 module Screens.EditBankDetailsScreen.Controller where
 
 import Prelude (class Show, bind, pure, unit, ($), discard)
-import PrestoDOM (Eval, continue, exit)
+import PrestoDOM (Eval, update, continue, exit)
 import Screens.Types (EditBankDetailsScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import Components.PrimaryButton.Controller as PrimaryButtonController
@@ -52,7 +52,7 @@ data Action = NoAction
 eval :: Action -> EditBankDetailsScreenState -> Eval Action ScreenOutput EditBankDetailsScreenState
 eval BackPressed state = exit GoBack
 eval AfterRender state = continue state
-eval _ state = continue state
+eval _ state = update state
 
 getTitleFromList :: ListOptions -> String
 getTitleFromList listOptions =

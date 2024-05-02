@@ -16,7 +16,7 @@ module Screens.NammaSafetyFlow.SafetyEducationScreen.Controller where
 
 import Log (trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, discard, pure, unit, void, ($), (+), (<), (==))
-import PrestoDOM (class Loggable, Eval, continue, continueWithCmd, exit)
+import PrestoDOM (class Loggable, Eval, update, continue, continueWithCmd, exit)
 import Screens.Types (NammaSafetyScreenState)
 import Components.GenericHeader.Controller as GenericHeaderController
 import Data.Array as DA
@@ -92,4 +92,4 @@ eval (YoutubeVideoStatus status) state = do
 
 eval (ShowVideoView val) state = continue state { props { showVideoView = val } }
 
-eval _ state = continue state
+eval _ state = update state

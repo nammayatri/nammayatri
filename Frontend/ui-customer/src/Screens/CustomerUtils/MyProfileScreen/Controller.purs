@@ -18,7 +18,7 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import JBridge (hideKeyboardOnNavigation, requestKeyboardShow ,firebaseLogEvent, pauseYoutubeVideo)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, ($), discard, bind, not, void, (<>), (<), (==), (&&), (/=), (||), (>=))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (MyProfileScreenState, DeleteStatus(..), FieldType(..), ErrorType(..), Gender(..), DisabilityT(..), DisabilityData(..))
@@ -194,7 +194,7 @@ eval (AccessibilityPopUpAC (PopUpModal.OnButton1Click)) state = do
   _ <- pure $ pauseYoutubeVideo unit
   continue state {props{showAccessibilityPopUp = false}}
 
-eval _ state = continue state
+eval _ state = update state
 
 
 checkError :: String -> Maybe String -> String -> Maybe ErrorType

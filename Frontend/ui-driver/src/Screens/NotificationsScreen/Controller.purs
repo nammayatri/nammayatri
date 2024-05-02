@@ -42,7 +42,7 @@ import Helpers.Utils (getTimeStampString, setEnabled, setRefreshing, parseNumber
 import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent, metaLogEvent, firebaseLogEvent, setYoutubePlayer, removeMediaPlayer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import PrestoDOM (Eval, ScrollState(..), Visibility(..), continue, exit, toPropValue, continueWithCmd)
+import PrestoDOM (Eval, update, ScrollState(..), Visibility(..), continue, exit, toPropValue, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (AnimationState(..), NotificationCardState, NotificationDetailModelState, NotificationsScreenState, NotificationCardPropState, YoutubeVideoStatus(..))
 import Services.API (MediaFileApiResponse(..), MediaType(..), MessageAPIEntityResponse(..), MessageListRes(..), MessageType(..))
@@ -269,7 +269,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
       exit $ SubscriptionScreen state
     _ -> continue state
 
-eval _ state = continue state
+eval _ state = update state
 
 notifisDetailStateTransformer :: NotificationCardState -> NotificationDetailModelState
 notifisDetailStateTransformer selectedItem =

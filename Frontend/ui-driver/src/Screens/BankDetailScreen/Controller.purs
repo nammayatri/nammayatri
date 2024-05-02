@@ -17,7 +17,7 @@ module Screens.BankDetailScreen.Controller where
 
 import Prelude (Unit, bind, pure, ($), class Show, unit, (==), discard)
 import Effect (Effect)
-import PrestoDOM (Eval, Props, continue, exit)
+import PrestoDOM (Eval, update, Props, continue, exit)
 import Screens.Types (BankDetailScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import Engineering.Helpers.Commons (getNewIDWithTag)
@@ -83,6 +83,6 @@ eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = exit (GoToA
 eval (OnboardingHeaderAction (OnboardingHeaderController.BackPressed)) state = exit GoBack
 eval (RegistrationModalAction (RegistrationModalController.OnCloseClick)) state = do 
   continue state { props = state.props { openRegistrationModal = false } }
-eval _ state = continue state
+eval _ state = update state
 overrides :: String -> (Action -> Effect Unit) -> BankDetailScreenState -> Props (Effect Unit)
 overrides _ push state = []

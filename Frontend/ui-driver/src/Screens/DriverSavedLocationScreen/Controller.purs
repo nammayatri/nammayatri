@@ -35,7 +35,7 @@ import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender, trackAppScreenEvent)
 import Prelude (class Show, Unit, bind, discard, pure, unit, void, ($), (&&), (/=), (<), (<>), (==))
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.DriverSavedLocationScreen.Transformer (getLocationArray, tagAlreadySaved)
@@ -200,4 +200,4 @@ eval (MAPREADY _ _ _) state =
   let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = zoomLevel}
   in continue state
 
-eval _ state = continue state
+eval _ state = update state

@@ -21,7 +21,7 @@ import Components.PrimaryButton.Controller as PrimaryButtonController
 import Log (printLog)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, bind, discard, void, ($), (/=), (==))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (SelectLanguageScreenState)
@@ -82,4 +82,4 @@ eval BackPressed state =
       continue state
     else exit $ GoToHomeScreen
 
-eval _ state = continue state
+eval _ state = update state
