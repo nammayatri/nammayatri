@@ -12,23 +12,20 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.IGM.IssueStatus (buildIssueStatusReq) where
+module API.IGM where
 
-import qualified Domain.Action.Beckn.IGM.IssueStatus as DIssueStatus
-import qualified IGM.Enums as Spec
-import qualified IGM.Types as Spec
-import qualified IGM.Utils as Utils
-import Kernel.Prelude
-import Kernel.Utils.Common
+import qualified API.Beckn.IGM.Issue as Issue
+import qualified API.Beckn.IGM.IssueStatus as IssueStatus
+import Environment
+import Servant hiding (throwError)
 
-buildIssueStatusReq ::
-  (MonadFlow m) =>
-  Spec.IssueStatusReq ->
-  m DIssueStatus.DIssueStatus
-buildIssueStatusReq req = do
-  Utils.validateContext Spec.ISSUE_STATUS req.issueStatusReqContext
-  let issueId = req.issueStatusReqMessage.issueStatusReqMessageIssueId
-  pure $
-    DIssueStatus.DIssueStatus
-      { issueId = issueId
-      }
+type API =
+  "beckn"
+    :> ( Issue.API
+           :<|> IssueStatus.API
+       )
+
+handler :: FlowServer API
+handler =
+  Issue.handler
+    :<|> IssueStatus.handler

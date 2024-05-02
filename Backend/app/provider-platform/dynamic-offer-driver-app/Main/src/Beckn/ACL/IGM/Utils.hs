@@ -34,21 +34,21 @@ mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m B
 mkBapUri merchantId = asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId.getId)
 
 buildContext :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Spec.Action -> Spec.Domain -> Text -> DM.Merchant -> Text -> Text -> Context.City -> Maybe BapData -> Maybe Text -> m Spec.Context
-buildContext action domain bapId merchant txnId msgId city bapData mTTL = do
+buildContext action domain bppId merchant txnId msgId city bapData mTTL = do
   now <- UTCTimeRFC3339 <$> getCurrentTime
-  bapUrl <- mkBapUri merchant.id
-  let contextBppId = bapData <&> (.bapId)
-      contextBppUri = bapData <&> (.bapUri)
+  bppUrl <- mkBapUri merchant.id
+  let contextBapId = bapData <&> (.bapId)
+      contextBapUri = bapData <&> (.bapUri)
   cityCode <- getCodeFromCity city
   pure $
     Spec.Context
       { contextVersion = Just "1.0.0",
         contextDomain = encodeToText' domain,
         contextAction = encodeToText' action,
-        contextBapId = Just bapId,
-        contextBapUri = Just $ showBaseUrl bapUrl,
-        contextBppId,
-        contextBppUri,
+        contextBapId,
+        contextBapUri,
+        contextBppId = Just bppId,
+        contextBppUri = Just $ showBaseUrl bppUrl,
         contextLocation = Just $ tfLocation cityCode,
         contextKey = Nothing,
         contextMessageId = Just msgId,

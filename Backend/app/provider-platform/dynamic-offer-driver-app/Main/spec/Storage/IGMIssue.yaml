@@ -23,7 +23,7 @@ IGMIssue:
     customerPhone: Maybe Text
     respondentAction: Maybe Text
     resolutionAction: Maybe Text
-    issueRaisedByMerchantId: Id Merchant
+    issueRaisedByMerchant: Text
     createdAt: UTCTime
     updatedAt: UTCTime
     merchantId: Id Merchant

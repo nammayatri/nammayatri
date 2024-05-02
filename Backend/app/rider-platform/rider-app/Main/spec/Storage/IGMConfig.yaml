@@ -1,6 +1,5 @@
 imports:
   Merchant: Domain.Types.Merchant
-  UTCTime: Kernel.Prelude
   Text: Data.Text
 
 IGMConfig:
@@ -9,8 +8,8 @@ IGMConfig:
   fields:
     id: Id IGMConfig
     merchantId: Id Merchant
-    expectedResolutionTime: UTCTime
-    expectedResponseTime: UTCTime
+    expectedResolutionTime: Int
+    expectedResponseTime: Int
     groName: Text
     groPhone: Text
     groEmail: Text

@@ -4,6 +4,7 @@
 
 module Domain.Types.IGMIssue where
 
+import Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.Booking
 import qualified Domain.Types.MerchantOperatingCity
@@ -17,7 +18,7 @@ data IGMIssue = IGMIssue
     createdAt :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.IGMIssue.IGMIssue,
     issueStatus :: Domain.Types.IGMIssue.Status,
-    issueType :: Data.Text.Text,
+    issueType :: Domain.Types.IGMIssue.IssueType,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     respondentAction :: Kernel.Prelude.Maybe Data.Text.Text,
     respondentEmail :: Kernel.Prelude.Maybe Data.Text.Text,
@@ -33,8 +34,12 @@ data IGMIssue = IGMIssue
 
 data Entity = GRO | COUNTERPARTY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data IssueType = GRIEVANCE | ISSUE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data Status = OPEN | CLOSED | ESCALATED | RESOLVED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''Entity))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Entity)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''Status))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''IssueType)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Status)

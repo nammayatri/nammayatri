@@ -14,6 +14,7 @@
 
 module IGM.Utils where
 
+import BecknV2.Utils as Utils
 import qualified Data.Aeson as A
 import Data.Text as T
 import Data.Time
@@ -51,7 +52,7 @@ validateAction expectedAction context = do
 
 validateCoreVersion :: MonadFlow m => Spec.Context -> m ()
 validateCoreVersion context = do
-  let supportedVersion = "2.0.0"
+  let supportedVersion = "1.0.0"
   version <- context.contextVersion & fromMaybeM (Error.InvalidRequest "Missing contextVersion")
   unless (version == supportedVersion) $
     throwError Error.UnsupportedCoreVer
@@ -71,3 +72,8 @@ ack =
                 }
           }
     }
+
+computeTtlISO8601 :: Int -> Text
+computeTtlISO8601 ttlInSec =
+  let ttlToNominalDiffTime = intToNominalDiffTime ttlInSec
+   in Utils.formatTimeDifference ttlToNominalDiffTime

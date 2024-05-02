@@ -31,9 +31,10 @@ buildIssueReq req = do
   issueCategory <- req.issueReqMessage.issueReqMessageIssue.issueCategory & fromMaybeM (InvalidRequest "IssueCategory not found")
   issueTypeText <- req.issueReqMessage.issueReqMessageIssue.issueIssueType & fromMaybeM (InvalidRequest "IssueType not found")
   issueStatusText <- req.issueReqMessage.issueReqMessageIssue.issueStatus & fromMaybeM (InvalidRequest "IssueStatus not found")
-  bookingId <- req.issueReqMessage.issueReqMessageIssue.issueOrderDetails >>= (.orderDetailsFulfillments) >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "BookingId not found")
+  bookingId <- req.issueReqMessage.issueReqMessageIssue.issueOrderDetails >>= (.orderDetailsId) & fromMaybeM (InvalidRequest "BookingId not found")
   bapId <- req.context.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
   let issueRaisedBy = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationOrg) >>= (.organizationOrgName)
+      issueSubCategory = req.issueReqMessage.issueReqMessageIssue.issueSubCategory
       issueId = req.issueReqMessage.issueReqMessageIssue.issueId
       customerContact = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationContact)
       customerName = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationPerson) >>= (.complainantPersonName)

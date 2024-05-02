@@ -35,3 +35,9 @@ ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD COLUMN booking_id character var
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.igm_issue ALTER COLUMN merchant_id SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD COLUMN issue_raised_by_merchant text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.igm_issue DROP COLUMN issue_raised_by_merchant_id;

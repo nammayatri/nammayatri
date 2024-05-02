@@ -64,6 +64,7 @@ library
       API.Dashboard.RideBooking.Maps
       API.Dashboard.RideBooking.Ride
       API.Dashboard.RideBooking.Volunteer
+      API.IGM
       API.Internal
       API.Internal.Auth
       API.Internal.BulkLocUpdate

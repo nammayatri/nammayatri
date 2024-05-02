@@ -7,6 +7,7 @@ data IssueCategory = IssueCategory
   { id :: Id IssueCategory,
     category :: Text,
     logoUrl :: Text,
-    priority :: Int
+    priority :: Int,
+    igmCategory :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq)

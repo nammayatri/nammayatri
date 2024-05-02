@@ -26,7 +26,8 @@ data IssueOptionT f = IssueOptionT
     option :: B.C f Text,
     priority :: B.C f Int,
     issueMessageId :: B.C f (Maybe Text),
-    label :: B.C f (Maybe Text)
+    label :: B.C f (Maybe Text),
+    igmSubCategory :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
