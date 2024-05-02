@@ -439,7 +439,8 @@ currentFlowStatus = do
                 , data { source = flowStatusData.source.place
                        , destination = flowStatusData.destination.place
                        , sourceAddress = flowStatusData.sourceAddress
-                       , destinationAddress = flowStatusData.destinationAddress }
+                       , destinationAddress = flowStatusData.destinationAddress
+                       , selectedEstimatesObject{vehicleVariant = getValueToLocalStore SELECTED_VARIANT} }
                 })
             Nothing -> updateFlowStatus SEARCH_CANCELLED
         else updateFlowStatus SEARCH_CANCELLED
