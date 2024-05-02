@@ -57,7 +57,7 @@ getCompletedRidesByDriver ::
 getCompletedRidesByDriver rideIds driverId = do
   res <-
     CH.findAll $
-      CH.select_ (\ride -> CH.groupBy ride.status $ \_status -> CH.count_ ride.id) $
+      CH.select_ (\ride -> CH.aggregate $ CH.count_ ride.id) $
         CH.filter_
           ( \ride _ ->
               ride.status CH.==. Just DRide.COMPLETED
@@ -75,7 +75,7 @@ getRidesByIdAndStatus ::
 getRidesByIdAndStatus rideIds status = do
   res <-
     CH.findAll $
-      CH.select_ (\ride -> CH.groupBy ride.status $ \_status -> CH.count_ ride.id) $
+      CH.select_ (\ride -> CH.aggregate $ CH.count_ ride.id) $
         CH.filter_
           ( \ride _ ->
               ride.status CH.==. Just status
@@ -92,7 +92,7 @@ getEarningsByDriver ::
 getEarningsByDriver rideIds driverId = do
   res <-
     CH.findAll $
-      CH.select_ (\ride -> CH.groupBy ride.status $ \_status -> CH.sum_ ride.fare) $
+      CH.select_ (\ride -> CH.aggregate $ CH.sum_ ride.fare) $
         CH.filter_
           ( \ride _ ->
               ride.status CH.==. Just DRide.COMPLETED
@@ -112,7 +112,7 @@ getEarningsByIds ::
 getEarningsByIds rideIds = do
   res <-
     CH.findAll $
-      CH.select_ (\ride -> CH.groupBy ride.status $ \_status -> CH.sum_ ride.fare) $
+      CH.select_ (\ride -> CH.aggregate $ CH.sum_ ride.fare) $
         CH.filter_
           ( \ride _ ->
               ride.status CH.==. Just DRide.COMPLETED
