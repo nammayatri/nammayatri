@@ -4,6 +4,7 @@
 
 module Domain.Types.BusinessEvent where
 
+import Data.Aeson
 import qualified Domain.Types.Booking
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
@@ -15,7 +16,6 @@ import qualified Tools.Beam.UtilsTH
 
 data BusinessEvent = BusinessEvent
   { bookingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Booking.Booking),
-    createdAt :: Kernel.Prelude.UTCTime,
     distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Driver),
     duration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
@@ -23,7 +23,6 @@ data BusinessEvent = BusinessEvent
     id :: Kernel.Types.Id.Id Domain.Types.BusinessEvent.BusinessEvent,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
     timeStamp :: Kernel.Prelude.UTCTime,
-    updatedAt :: Kernel.Prelude.UTCTime,
     vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant,
     whenPoolWasComputed :: Kernel.Prelude.Maybe Domain.Types.BusinessEvent.WhenPoolWasComputed
   }

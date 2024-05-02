@@ -4,6 +4,7 @@
 
 module Domain.Types.CallStatus where
 
+import Data.Aeson
 import qualified Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Call.Types
 import Kernel.Prelude
@@ -21,7 +22,6 @@ data CallStatus = CallStatus
     id :: Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus,
     merchantId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     recordingUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    status :: Kernel.External.Call.Interface.Types.CallStatus,
-    updatedAt :: Kernel.Prelude.UTCTime
+    status :: Kernel.External.Call.Interface.Types.CallStatus
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

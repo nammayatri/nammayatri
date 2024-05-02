@@ -141,7 +141,6 @@ cancel req merchant booking mbActiveSearchTry = do
     whenJust mbActiveSearchTry $ cancelSearch merchant.id
   where
     buildBookingCancellationReason = do
-      now <- getCurrentTime
       return $
         DBCR.BookingCancellationReason
           { bookingId = req.bookingId,
@@ -153,8 +152,6 @@ cancel req merchant booking mbActiveSearchTry = do
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
-            createdAt = now,
-            updatedAt = now,
             ..
           }
 

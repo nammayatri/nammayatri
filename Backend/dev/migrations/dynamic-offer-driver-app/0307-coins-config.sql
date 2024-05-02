@@ -76,8 +76,6 @@ Alter Table atlas_driver_offer_bpp.driver_plan ADD COLUMN coin_coverted_to_cash_
 
 Alter Table atlas_driver_offer_bpp.driver_plan ADD COLUMN total_coins_converted_cash double precision NOT NULL DEFAULT 0;
 
-ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN amount_paid_by_coin double precision NOT NULL DEFAULT 0;
-
 Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_time_diff INT NOT NULL DEFAULT 120;
 
 Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_dist_diff INT NOT NULL DEFAULT 50;
@@ -85,7 +83,3 @@ Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_di
 ALTER TABLE atlas_driver_offer_bpp.coin_config
 ALTER COLUMN event_function SET NOT NULL,
 ALTER COLUMN event_name SET NOT NULL;
-
-ALTER TABLE atlas_driver_offer_bpp.driver_fee
-ALTER COLUMN amount_paid_by_coin DROP NOT NULL,
-ALTER COLUMN amount_paid_by_coin DROP DEFAULT;

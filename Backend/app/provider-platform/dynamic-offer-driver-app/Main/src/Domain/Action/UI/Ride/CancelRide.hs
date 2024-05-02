@@ -190,7 +190,6 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
       ride.status == DRide.NEW
     buildRideCancelationReason currentDriverLocation disToPickup mbDriverId source ride merchantId = do
       let CancelRideReq {..} = req
-      now <- getCurrentTime
       return $
         DBCR.BookingCancellationReason
           { bookingId = ride.bookingId,
@@ -201,8 +200,6 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
             driverId = mbDriverId,
             driverCancellationLocation = currentDriverLocation,
             driverDistToPickup = disToPickup,
-            createdAt = now,
-            updatedAt = now,
             ..
           }
 

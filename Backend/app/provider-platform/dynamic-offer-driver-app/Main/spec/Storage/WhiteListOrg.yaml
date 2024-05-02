@@ -13,21 +13,7 @@ WhiteListOrg:
     id : Id WhiteListOrg
     subscriberId : ShortId Subscriber
     domain : Domain
-    createdAt: UTCTime
-    updatedAt: UTCTime
   derives: "Generic,'UsageSafety"
-
-  beamType:
-    createdAt: Maybe UTCTime
-    updatedAt: Maybe UTCTime
-
-  fromTType:
-    createdAt: getCreatedAt|M
-    updatedAt: getUpdatedAt|M
-
-  toTType:
-    createdAt: Kernel.Prelude.Just|I
-    updatedAt: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey

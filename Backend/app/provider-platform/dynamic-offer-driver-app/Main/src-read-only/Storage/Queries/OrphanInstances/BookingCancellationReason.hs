@@ -9,17 +9,13 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.BookingCancellationReason as Beam
-import Storage.Queries.Transformers.BookingCancellationReason
 
 instance FromTType' Beam.BookingCancellationReason Domain.Types.BookingCancellationReason.BookingCancellationReason where
   fromTType' (Beam.BookingCancellationReasonT {..}) = do
-    createdAt' <- getCreatedAt createdAt
-    updatedAt' <- getUpdatedAt updatedAt
     pure $
       Just
         Domain.Types.BookingCancellationReason.BookingCancellationReason
@@ -31,9 +27,7 @@ instance FromTType' Beam.BookingCancellationReason Domain.Types.BookingCancellat
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             reasonCode = Domain.Types.CancellationReason.CancellationReasonCode <$> reasonCode,
             rideId = Kernel.Types.Id.Id <$> rideId,
-            source = source,
-            createdAt = createdAt',
-            updatedAt = updatedAt'
+            source = source
           }
 
 instance ToTType' Beam.BookingCancellationReason Domain.Types.BookingCancellationReason.BookingCancellationReason where
@@ -48,7 +42,5 @@ instance ToTType' Beam.BookingCancellationReason Domain.Types.BookingCancellatio
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.reasonCode = (\(Domain.Types.CancellationReason.CancellationReasonCode x) -> x) <$> reasonCode,
         Beam.rideId = Kernel.Types.Id.getId <$> rideId,
-        Beam.source = source,
-        Beam.createdAt = Kernel.Prelude.Just createdAt,
-        Beam.updatedAt = Kernel.Prelude.Just updatedAt
+        Beam.source = source
       }

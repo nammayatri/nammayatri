@@ -72,7 +72,6 @@ cancelBooking booking mbDriver transporter = do
           Notify.notifyOnCancel booking.merchantOperatingCityId booking driver.id driver.deviceToken bookingCancellationReason.source
   where
     buildBookingCancellationReason bookingId driverId ride merchantId = do
-      now <- getCurrentTime
       return $
         DBCR.BookingCancellationReason
           { driverId = driverId,
@@ -83,7 +82,5 @@ cancelBooking booking mbDriver transporter = do
             reasonCode = Nothing,
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
-            driverDistToPickup = Nothing,
-            createdAt = now,
-            updatedAt = now
+            driverDistToPickup = Nothing
           }

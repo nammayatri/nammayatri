@@ -4,6 +4,7 @@
 
 module Domain.Types.CancellationReason where
 
+import Data.Aeson
 import qualified Data.Text
 import Kernel.Prelude
 import qualified Tools.Beam.UtilsTH
@@ -20,4 +21,4 @@ data CancellationReason = CancellationReason
 
 newtype CancellationReasonCode = CancellationReasonCode Data.Text.Text deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationReasonCode)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CancellationReasonCode))

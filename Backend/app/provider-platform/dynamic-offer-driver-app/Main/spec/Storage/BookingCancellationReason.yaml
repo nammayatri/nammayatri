@@ -25,9 +25,8 @@ BookingCancellationReason:
     additionalInfo : Maybe Text
     driverCancellationLocation : Maybe LatLong
     driverDistToPickup : Maybe Meters
+
   beamType:
-    createdAt: Maybe UTCTime
-    updatedAt: Maybe UTCTime
     reasonCode: Maybe Text
 
   beamFields:
@@ -38,15 +37,11 @@ BookingCancellationReason:
   fromTType:
     reasonCode: Domain.Types.CancellationReason.CancellationReasonCode <$> reasonCode|E
     driverCancellationLocation: Kernel.External.Maps.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon|E
-    createdAt: getCreatedAt|M
-    updatedAt: getUpdatedAt|M
 
   toTType:
     reasonCode: (\(Domain.Types.CancellationReason.CancellationReasonCode x) -> x) <$> reasonCode|E
     driverCancellationLocationLat: (driverCancellationLocation <&> (.lat))|E
     driverCancellationLocationLon: (driverCancellationLocation <&> (.lon))|E
-    createdAt: Kernel.Prelude.Just|I
-    updatedAt: Kernel.Prelude.Just|I
 
   constraints:
     bookingId: PrimaryKey
@@ -65,5 +60,5 @@ BookingCancellationReason:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-  excludedFields: [merchantId, merchantOperatingCityId]
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
 

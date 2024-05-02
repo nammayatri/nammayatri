@@ -13,11 +13,11 @@ import qualified Kernel.Types.Beckn.Domain
 import Tools.Beam.UtilsTH
 
 data WhiteListOrgT f = WhiteListOrgT
-  { createdAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    domain :: (B.C f Kernel.Types.Beckn.Domain.Domain),
+  { domain :: (B.C f Kernel.Types.Beckn.Domain.Domain),
     id :: (B.C f Kernel.Prelude.Text),
     subscriberId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime))
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 

@@ -5,29 +5,16 @@ imports:
 DriverBlockReason:
   tableName: driver_block_reason
 
-
   fields:
     reasonCode : Id DriverBlockReason
     blockReason : Maybe Text
     blockTimeInHours : Maybe Int
-    createdAt: UTCTime
-    updatedAt: UTCTime
-
-  beamType:
-    createdAt: Maybe UTCTime
-    updatedAt: Maybe UTCTime
-
-  fromTType:
-    createdAt: getCreatedAt|M
-    updatedAt: getUpdatedAt|M
-
-  toTType:
-    createdAt: Kernel.Prelude.Just|I
-    updatedAt: Kernel.Prelude.Just|I
 
   constraints:
     reasonCode: PrimaryKey
 
+  sqlType:
+    reasonCode: text
+
   extraOperations:
     - EXTRA_QUERY_FILE
-

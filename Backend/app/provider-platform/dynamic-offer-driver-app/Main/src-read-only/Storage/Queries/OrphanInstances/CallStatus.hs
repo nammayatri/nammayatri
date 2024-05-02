@@ -7,7 +7,6 @@ import qualified Domain.Types.CallStatus
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -28,8 +27,7 @@ instance FromTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
             id = Kernel.Types.Id.Id id,
             merchantId = merchantId,
             recordingUrl = recordingUrl,
-            status = status,
-            updatedAt = Kernel.Prelude.fromMaybe createdAt updatedAt
+            status = status
           }
 
 instance ToTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
@@ -45,6 +43,5 @@ instance ToTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = merchantId,
         Beam.recordingUrl = recordingUrl,
-        Beam.status = status,
-        Beam.updatedAt = Kernel.Prelude.Just updatedAt
+        Beam.status = status
       }

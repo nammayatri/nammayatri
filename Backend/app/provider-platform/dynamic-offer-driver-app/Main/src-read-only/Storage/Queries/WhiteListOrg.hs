@@ -8,7 +8,6 @@ import qualified Domain.Types.WhiteListOrg
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Domain
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -16,7 +15,6 @@ import qualified Kernel.Types.Registry
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.WhiteListOrg as Beam
-import Storage.Queries.Transformers.WhiteListOrg
 import Storage.Queries.WhiteListOrgExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.WhiteListOrg.WhiteListOrg -> m ())
@@ -37,9 +35,9 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.WhiteListOrg.WhiteListOrg {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
-      Se.Set Beam.domain domain,
+    [ Se.Set Beam.domain domain,
       Se.Set Beam.subscriberId (Kernel.Types.Id.getShortId subscriberId),
-      Se.Set Beam.updatedAt (Kernel.Prelude.Just updatedAt)
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

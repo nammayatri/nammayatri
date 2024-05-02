@@ -13,27 +13,14 @@ BlackListOrg:
     id : Id BlackListOrg
     subscriberId : ShortId Subscriber
     domain : Domain
-    createdAt: UTCTime
-    updatedAt: UTCTime
   derives: "Generic,'UsageSafety"
-
-  beamType:
-    createdAt: Maybe UTCTime
-    updatedAt: Maybe UTCTime
-
-  fromTType:
-    createdAt: getCreatedAt|M
-    updatedAt: getUpdatedAt|M
-
-  toTType:
-    createdAt: Kernel.Prelude.Just|I
-    updatedAt: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
     subscriberId: SecondaryKey
 
   sqlType:
+    subscriberId: character varying(255)
     domain: character varying(255)
 
   queries:
@@ -42,4 +29,4 @@ BlackListOrg:
       where:
         and: [subscriberId, domain]
 
-  excludedFields: [merchantOperatingCityId, merchantId]
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

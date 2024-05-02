@@ -15,7 +15,6 @@ import Tools.Beam.UtilsTH
 
 data BusinessEventT f = BusinessEventT
   { bookingId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     distance :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     driverId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     duration :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
@@ -23,7 +22,6 @@ data BusinessEventT f = BusinessEventT
     id :: (B.C f Kernel.Prelude.Text),
     rideId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     timeStamp :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     vehicleVariant :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant)),
     whenPoolWasComputed :: (B.C f (Kernel.Prelude.Maybe Domain.Types.BusinessEvent.WhenPoolWasComputed))
   }
