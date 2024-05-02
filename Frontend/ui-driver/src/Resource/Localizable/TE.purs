@@ -1376,3 +1376,4 @@ getTE stringKey =
         WE_WILL_USE_THIS_INFO -> "మేము ఈ సమాచారాన్ని ACకి సంబంధించి కస్టమర్ అంచనాలతో సరిపోల్చడానికి ఉపయోగిస్తాము"
         YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(మీ ప్రొఫైల్ నుండి ఈ వివరాన్ని ఎప్పటికప్పుడు మార్చవచ్చు)"
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "మీ కారు AC పని చేస్తుందా?"
+        PARKING_CHARGES_INCLUDED -> "పార్కింగ్ ఛార్జీలు ఉంటాయి"

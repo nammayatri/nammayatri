@@ -989,4 +989,5 @@ getFR stringKey =
         TOLL_INCLUDED -> "Péage (inclus dans le tarif)"
         YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(Vous pouvez toujours modifier cela depuis votre profil)"
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "Votre voiture est-elle allumée et la climatisation fonctionne-t-elle ?"
+        PARKING_CHARGES_INCLUDED -> "Frais de stationnement inclus"
         _ -> ""

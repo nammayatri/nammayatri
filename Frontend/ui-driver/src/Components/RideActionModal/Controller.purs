@@ -75,7 +75,8 @@ type Config = {
   cityConfig :: CTC.CityConfig,
   capacity :: Mb.Maybe Int,
   serviceTierAndAC :: String,
-  acRide :: Boolean
+  acRide :: Boolean,
+  parkingCharge :: Mb.Maybe Number
   }
 
 type AddressConfig = {
@@ -124,5 +125,6 @@ config = {
   hasToll : false,
   capacity : Mb.Nothing,
   serviceTierAndAC : "",
-  acRide : false
+  acRide : false,
+  parkingCharge : Mb.Nothing
 }

@@ -740,7 +740,8 @@ dummyRideHistoryItem = RidesInfo {
       vehicleServiceTierName : "",
       vehicleServiceTier : "",
       isVehicleAirConditioned : Nothing,
-      vehicleCapacity : Nothing
+      vehicleCapacity : Nothing,
+      parkingCharge : Nothing
   }
 
 dummyLocationInfo :: LocationInfo

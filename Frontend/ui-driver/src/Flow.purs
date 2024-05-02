@@ -2379,7 +2379,10 @@ homeScreenFlow = do
                 let payerVpa = fromMaybe "" response.payerVpa
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
                   { data {
-                      activeRide {endOdometerReading = (\(API.OdometerReading {value}) -> value) <$> response.endOdometerReading}, 
+                      activeRide {
+                        endOdometerReading = (\(API.OdometerReading {value}) -> value) <$> response.endOdometerReading,
+                        parkingCharge = response.parkingCharge
+                      }, 
                       endRideData { 
                         actualTollCharge = fromMaybe 0 response.tollCharges, 
                         estimatedTollCharge = fromMaybe 0 response.estimatedTollCharges, 
@@ -2394,7 +2397,7 @@ homeScreenFlow = do
                         specialZonePickup = if isSpecialPickUpZone then Just true else Nothing,
                         capacity = response.vehicleCapacity,
                         serviceTier = response.vehicleServiceTierName
-                        }
+                      }
                     },
                     props {
                       isFreeRide = fromMaybe false response.isFreeRide

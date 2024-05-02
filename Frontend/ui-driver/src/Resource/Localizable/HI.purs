@@ -1376,3 +1376,4 @@ getHI stringKey =
         WE_WILL_USE_THIS_INFO -> "हम इस जानकारी का उपयोग एसी के संबंध में ग्राहकों की अपेक्षाओं से मेल खाने के लिए करेंगे"
         YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(आप इसे हमेशा प्रोफ़ाइल से बदल सकते हैं)"
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "क्या आपकी कार का एसी चालू और काम कर रहा ह।"
+        PARKING_CHARGES_INCLUDED -> "पार्किंग शुल्क शामिल"

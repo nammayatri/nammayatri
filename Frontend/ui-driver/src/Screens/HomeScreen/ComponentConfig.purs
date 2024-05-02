@@ -124,7 +124,8 @@ rideActionModalConfig state =
     cityConfig = state.data.cityConfig,
     serviceTierAndAC = state.data.activeRide.serviceTier,
     capacity = state.data.activeRide.capacity,
-    acRide = state.data.activeRide.acRide
+    acRide = state.data.activeRide.acRide,
+    parkingCharge = state.data.activeRide.parkingCharge
     }
     in rideActionModalConfig'
 
@@ -1276,8 +1277,7 @@ getAccessibilityHeaderText state =
                           Nothing -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
 
 getRideCompletedConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
-getRideCompletedConfig state = let 
-  
+getRideCompletedConfig state = let
   isRentalRide = state.data.activeRide.tripType == ST.Rental
   config = RideCompletedCard.config
   autoPayBanner = state.props.autoPayBanner
@@ -1329,7 +1329,9 @@ getRideCompletedConfig state = let
         visible = if state.props.isFreeRide then VISIBLE else GONE
       },
       topPill = topPillConfig,
-      bottomText = getString RIDE_DETAILS
+      bottomText = getString RIDE_DETAILS,
+      showParkingCharge = isJust state.data.activeRide.parkingCharge,
+      parkingChargeText = (CP.getCurrency appConfig) <> maybe "" show state.data.activeRide.parkingCharge <> getString PARKING_CHARGES_INCLUDED
     },
     driverBottomCard {
       visible = showDriverBottomCard,

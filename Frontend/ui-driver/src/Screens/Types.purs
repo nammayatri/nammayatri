@@ -1147,7 +1147,8 @@ type ActiveRide = {
   capacity :: Maybe Int,
   hasToll :: Boolean,
   estimatedTollCharge :: Maybe Int,
-  acRide :: Boolean
+  acRide :: Boolean,
+  parkingCharge :: Maybe Number
 }
 
 type HomeScreenProps =  {

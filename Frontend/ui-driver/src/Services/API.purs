@@ -603,7 +603,8 @@ newtype RidesInfo = RidesInfo
       vehicleServiceTierName :: String,
       vehicleServiceTier :: String,
       isVehicleAirConditioned :: Maybe Boolean,
-      vehicleCapacity :: Maybe Int
+      vehicleCapacity :: Maybe Int,
+      parkingCharge :: Maybe Number
   }
 
 newtype OdometerReading = OdometerReading

@@ -125,7 +125,9 @@ config = {
       fontStyle : Tags,
       visible : VISIBLE
     },
-    bottomText : ""
+    bottomText : "",
+    showParkingCharge : false,
+    parkingChargeText : ""
   },
   customerIssueCard : {
     issueFaced : false, 
@@ -245,7 +247,9 @@ type TopCard = {
   gradient :: Array String,
   topPill :: TopPill,
   infoPill :: InfoPill, 
-  bottomText :: String
+  bottomText :: String,
+  showParkingCharge :: Boolean,
+  parkingChargeText :: String
 }
 
 type InfoPill = {

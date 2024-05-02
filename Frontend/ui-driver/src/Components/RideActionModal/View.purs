@@ -883,6 +883,7 @@ normalRideInfoView push config =
               ]
               []
           ]
+      , parkingChargesView
       , linearLayout[
           height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -904,6 +905,33 @@ normalRideInfoView push config =
         ]
       ] 
   ]
+  where
+    currency :: String
+    currency = getCurrency appConfig
+
+    parkingChargesView :: forall w . PrestoDOM (Effect Unit) w
+    parkingChargesView = 
+      linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ MarginTop 12
+      , visibility $ boolToVisibility $ Maybe.isJust config.parkingCharge
+      ]
+      [ textView $
+        [ text "P"
+        , padding $ PaddingHorizontal 4 4
+        , cornerRadius 2.0
+        , color Color.blue800
+        , stroke $ "1," <> Color.blue800
+        ] <> FontStyle.body1 TypoGraphy
+      , textView $
+        [ text $ currency <> " " <> (Maybe.maybe "" show config.parkingCharge) <> getString PARKING_CHARGES_INCLUDED
+        , color Color.blue800
+        , padding $ PaddingVertical 2 2
+        , margin $ MarginLeft 4
+        ] <> FontStyle.body1 TypoGraphy
+      ]
+
 
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w
 separator visibility' =

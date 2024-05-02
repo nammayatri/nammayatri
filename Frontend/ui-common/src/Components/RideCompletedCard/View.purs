@@ -252,6 +252,7 @@ priceAndDistanceUpdateView config push =
               , visibility if config.topCard.fareUpdatedVisiblity then VISIBLE else GONE
               ] <> (FontStyle.title1 TypoGraphy)
           ]
+        , parkingChargesView config push
         , tollTextVew config.toll
         , pillView config push
       ]
@@ -978,3 +979,31 @@ infoCardView config orientation' infoCardConfig =
         ] <> infoCardConfig.subHeading2.fontStyle
         ]
     ]
+
+parkingChargesView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+parkingChargesView config push = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , margin $ MarginBottom 8
+  , gravity CENTER
+  , visibility $ boolToVisibility config.topCard.showParkingCharge
+  ]
+  [ textView $
+    [ text "P"
+    , padding $ PaddingHorizontal 4 4
+    , cornerRadius 2.0
+    , color textColor
+    , stroke $ "1," <> textColor
+    ] <> if (not config.isDriver) then [background Color.black150] else []
+      <> FontStyle.body1 TypoGraphy
+  , textView $
+    [ text $ config.topCard.parkingChargeText
+    , color textColor
+    , padding $ PaddingVertical 2 2
+    , margin $ MarginLeft 4
+    ] <> FontStyle.body1 TypoGraphy
+  ]
+  where
+    textColor :: String
+    textColor = if config.isDriver then Color.blue800 else Color.black600

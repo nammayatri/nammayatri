@@ -84,6 +84,7 @@ initData =
           , hasToll: false
           , estimatedTollCharge : Nothing
           , acRide : false
+          , parkingCharge : Nothing
           }
       , cancelRideModal:
           { selectionOptions: []
