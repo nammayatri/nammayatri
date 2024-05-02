@@ -92,6 +92,7 @@ import CarouselHolder as CarouselHolder
 import PrestoDOM.List
 import Mobility.Prelude
 import Resource.Constants as RC
+import Data.Function.Uncurried (runFn3)
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -217,8 +218,12 @@ screen initialState (GlobalState globalState) =
                                   _ <- JB.startChatListenerService
                                   _ <- pure $ JB.scrollOnResume push ScrollToBottom
                                   push InitializeChat
-
-                                _ <- launchAff $ flowRunner defaultGlobalState $ launchMaps push TriggerMaps
+                                
+                                -- Launching the Google Map with playing the audio 
+                                pushPlayAudioAndLaunchMap <- runEffectFn1 EHC.getValueFromIdMap "PlayAudioAndLaunchMap"
+                                when pushPlayAudioAndLaunchMap.shouldPush $ do 
+                                  void $ pure $ runFn2  EHC.updatePushInIdMap "PlayAudioAndLaunchMap" false
+                                  void $ launchAff $ flowRunner defaultGlobalState $ playAudioAndLaunchMap push TriggerMaps OnAudioCompleted initialState.data.activeRide.acRide initialState.data.activeRide.requestedVehicleVariant
                                 
                                 if (initialState.data.activeRide.tripType == ST.Rental && getValueToLocalStore RENTAL_RIDE_STATUS_POLLING == "False")
                                   then do
@@ -2005,13 +2010,22 @@ getDriverStatusResult index driverStatus currentStatus= case (getValueToLocalSto
                   _ -> if (driverStatus == currentStatus) then ACTIVE
                        else DEFAULT
 
-launchMaps :: forall action. (action -> Effect Unit) ->  action -> Flow GlobalState Unit
-launchMaps push action = do
-  void $ delay $ Milliseconds 2000.0
-  if (getValueToLocalStore TRIGGER_MAPS == "true") then
-    doAff do liftEffect $ push $ action
-    else pure unit
+playAudioAndLaunchMap :: forall action. (action -> Effect Unit) ->  action -> (String -> action) -> Boolean -> Maybe String -> Flow GlobalState Unit
+playAudioAndLaunchMap push action audioCompleted acRide requestedVehicleVariant = do
+  let 
+    driverLocation = DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+
+  if (driverLocation == "bangalore" && isJust requestedVehicleVariant && (not $ requestedVehicleVariant == Just "AUTO_RICKSHAW") && (getValueToLocalStore TRIGGER_MAPS) == "true" ) then  do
+    let 
+      language = "kn"
+      audioFolder = if acRide  then "ac_background" else "non_ac_background" 
+      audioUrl = "https://assets.juspay.in/beckn/audios/" <> audioFolder <> "/" <> language <> ".mp3"
+    void $ pure $ runFn3 JB.startAudioPlayer audioUrl push audioCompleted
+  else do  
+    void $ delay $ Milliseconds 2000.0
+    if (getValueToLocalStore TRIGGER_MAPS == "true") then liftFlow $ push $ action  else pure unit
   pure unit
+
 
 checkBgLocation :: forall action. (action -> Effect Unit) ->  action -> HomeScreenState -> Boolean -> Flow GlobalState Unit
 checkBgLocation push action state bgLocPopupShown = do
