@@ -31,6 +31,7 @@ import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion (..))
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -57,7 +58,7 @@ sendSearchRequestToDrivers ::
     TranslateFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int, "version" ::: DeploymentVersion]
   ) =>
   [SDP.TripQuoteDetail] ->
   DSR.SearchRequest ->
@@ -113,6 +114,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
     buildSearchRequestForDriver ::
       ( MonadFlow m,
         Redis.HedisFlow m r,
+        HasFlowEnv m r '["version" ::: DeploymentVersion],
         EsqDBFlow m r,
         CacheFlow m r
       ) =>
@@ -127,6 +129,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
       let dpRes = dpwRes.driverPoolResult
       tripQuoteDetail <- HashMap.lookup dpRes.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dpRes.serviceTier)
       parallelSearchRequestCount <- Just <$> SDP.getValidSearchRequestCount searchReq.providerId dpRes.driverId now
+      deploymentVersion <- asks (.version)
       let searchRequestForDriver =
             SearchRequestForDriver
               { id = guid,
@@ -170,7 +173,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 clientConfigVersion = dpwRes.driverPoolResult.clientConfigVersion,
                 clientDevice = dpwRes.driverPoolResult.clientDevice,
                 backendConfigVersion = dpwRes.driverPoolResult.backendConfigVersion,
-                backendAppVersion = dpwRes.driverPoolResult.backendAppVersion,
+                backendAppVersion = Just deploymentVersion.getDeploymentVersion,
                 ..
               }
       pure searchRequestForDriver
