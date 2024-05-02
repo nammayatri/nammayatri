@@ -47,7 +47,7 @@ sendACOverlay :: (CacheFlow m r, EsqDBFlow m r) => Text -> DP.Person -> m ()
 sendACOverlay overlayKey person = do
   mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf person.merchantOperatingCityId overlayKey (fromMaybe ENGLISH person.language) Nothing
   whenJust mOverlay $ \overlay -> do
-    TN.sendOverlay person.merchantOperatingCityId person $ TN.mkOverlayReq overlay overlay.description overlay.okButtonText overlay.cancelButtonText overlay.endPoint
+    TN.sendOverlay person.merchantOperatingCityId person.id person.deviceToken $ TN.mkOverlayReq overlay overlay.description overlay.okButtonText overlay.cancelButtonText overlay.endPoint
 
 sendOverlayToDriver ::
   ( CacheFlow m r,
