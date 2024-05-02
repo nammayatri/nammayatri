@@ -52,10 +52,4 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN booking_sync_status_call_seconds_d
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.rider_config ADD COLUMN is_blocking_feature_enabled boolean NOT NULL;
-
-
-------- SQL updates -------
-
 ALTER TABLE atlas_app.rider_config ADD COLUMN should_blocked_by_same_device_token boolean NOT NULL default false;
-ALTER TABLE atlas_app.rider_config DROP COLUMN is_blocking_feature_enabled;
