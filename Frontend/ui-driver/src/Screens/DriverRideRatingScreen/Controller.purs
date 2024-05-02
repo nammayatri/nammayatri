@@ -22,7 +22,7 @@ import Prelude (class Show, pure, unit, ($), bind, discard)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import JBridge (hideKeyboardOnNavigation)
-import PrestoDOM (Eval, continue, exit)
+import PrestoDOM (Eval, update, continue, exit)
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Maybe
@@ -65,7 +65,7 @@ eval (Rating index) state = continue state {data{rating = index}}
 
 eval (FeedBackClick feedBackOption) state = continue state { data {activeFeedBackOption = Just feedBackOption , selectedFeedbackOption = getSelectedFeedbackOption feedBackOption}}
 
-eval _ state = continue state
+eval _ state = update state
 
 
 getFeedBackString :: FeedbackSuggestions -> String

@@ -21,7 +21,7 @@ import Data.String (length)
 import JBridge (hideKeyboardOnNavigation, firebaseLogEvent, toggleBtnLoader)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), ($), discard, bind, (>=))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (EnterOTPScreenState)
@@ -97,4 +97,4 @@ eval (SetToken id )state = do
   _ <-  pure $ setValueToLocalStore FCM_TOKEN  id
   continue state
 
-eval _ state = continue state
+eval _ state = update state

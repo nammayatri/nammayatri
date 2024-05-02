@@ -18,7 +18,7 @@ module Screens.AppUpdatePopUpScreen.Controller where
 import Prelude (Unit, pure, unit, class Show, bind)
 
 import Effect (Effect)
-import PrestoDOM (Eval, Props, exit, continue, continueWithCmd)
+import PrestoDOM (Eval, update, Props, exit, continue, continueWithCmd)
 import Prelude (($))
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (AppUpdatePopUpScreenState)
@@ -87,7 +87,7 @@ eval OnResumeCallBack state = do
 eval (AppUpdatedModelAction (PopUpModal.OnButton1Click)) state = exit Decline
 eval (AppUpdatedModelAction (PopUpModal.OnButton2Click)) state = exit Accept
 eval ExitScreen state = exit Exit
-eval _ state = continue state
+eval _ state = update state
 
 overrides :: String -> (Action -> Effect Unit) -> AppUpdatePopUpScreenState -> Props (Effect Unit)
 overrides _ push state = [] 

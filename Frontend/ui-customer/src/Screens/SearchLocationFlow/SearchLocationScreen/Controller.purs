@@ -16,7 +16,7 @@
 module Screens.SearchLocationScreen.Controller where
 
 import Prelude
-import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd, updateAndExit)
 import Screens.Types
 import Components.LocationTagBarV2 as LocationTagBarController
 import Components.LocationListItem as LocationListItemController
@@ -260,7 +260,7 @@ eval BackPressed state = do
  if state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN then exit $ MetroTicketBookingScreen state 
   else continue state
 
-eval _ state = continue state
+eval _ state = update state
 
 
 autoCompleteAPI state inputStr inputType = do

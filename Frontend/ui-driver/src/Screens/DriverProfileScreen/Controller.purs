@@ -41,7 +41,7 @@ import Language.Strings (getString)
 import Language.Types as STR
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (/=), (<>), void, (>=), (>), (-), (+), (<=), (||), (&&))
-import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resource.Constants (transformVehicleType)
 import Screens (ScreenName(..), getScreen)
@@ -575,7 +575,7 @@ eval (DirectActivateRc rcType) state = continueWithCmd state{data{rcNumber = sta
     pure $ DeactivateRc rcType ""
   ]
 
-eval _ state = continue state
+eval _ state = update state
 
 getTitle :: MenuOptions -> String
 getTitle menuOption =

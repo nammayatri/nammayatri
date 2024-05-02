@@ -24,7 +24,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag, setText, updateIdMap, flowR
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey, emChatSuggestion)
 import JBridge (clearAudioPlayer, getChatMessages, hideKeyboardOnNavigation, scrollToEnd, sendMessage, showDialer, startAudioPlayer, stopChatListenerService, getKeyInSharedPrefKeys, toast, getLayoutBounds, setMapPadding)
 import Prelude
-import PrestoDOM (BottomSheetState(..), Eval, continue, continueWithCmd, defaultPerformLog, exit, updateAndExit)
+import PrestoDOM (BottomSheetState(..), Eval, update, continue, continueWithCmd, defaultPerformLog, exit, updateAndExit)
 import Screens.HomeScreen.Transformer (getDriverInfo, getSpecialTag)
 import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState)
 import Services.API (RideBookingRes(..), Route, GetDriverLocationResp(..))

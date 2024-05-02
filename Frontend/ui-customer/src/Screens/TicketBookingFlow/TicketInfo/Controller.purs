@@ -2,7 +2,7 @@ module Screens.TicketInfoScreen.Controller where
 
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (void, class Show, discard, pure, unit, bind, ($), not, (+), (-), (==), (*), (<>), show, (+), (==), (-), show)
-import PrestoDOM (Eval, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
+import PrestoDOM (Eval, update, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (TicketInfoScreenState)
@@ -87,7 +87,7 @@ eval (Copy text) state = continueWithCmd state [ do
     pure NoAction
   ]
 
-eval _ state = continue state
+eval _ state = update state
 
 shareImageMessageConfig :: String -> Common.ShareImageConfig
 shareImageMessageConfig serviceName = {

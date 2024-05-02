@@ -16,7 +16,7 @@
 module Screens.SelectLanguageScreen.Controller where
 
 import Prelude (class Show, pure, unit, (==), bind, ($), discard)
-import PrestoDOM (Eval, continue, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, exit, updateAndExit)
 import Screens.Types (SelectLanguageScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import Components.SelectMenuButton as MenuButton

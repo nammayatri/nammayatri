@@ -16,7 +16,7 @@
 module Screens.SplashScreen.Controller where
 
 import Prelude (Unit, class Show, pure, unit, bind, ($), discard)
-import PrestoDOM (Eval, continue)
+import PrestoDOM (Eval, update, continue)
 import Screens.Types ( SplashScreenState)
 import Log (trackAppScreenRender, trackAppBackPress, trackAppEndScreen, trackAppActionClick, trackAppScreenEvent)
 import PrestoDOM.Types.Core (class Loggable)

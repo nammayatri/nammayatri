@@ -23,7 +23,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import JBridge (firebaseLogEvent, isInternetAvailable, requestLocation, getLocationPermissionStatus)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, Unit, bind, discard, pure, unit, ($), (==), (&&))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (PermissionScreenState, PermissionScreenStage(..))
@@ -101,4 +101,4 @@ eval RequestLocation state = do
 
 eval Reload state = updateAndExit state $ Refresh
   
-eval _ state = continue state
+eval _ state = update state

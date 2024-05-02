@@ -9,7 +9,7 @@ import Debug (spy)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge as JB
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
@@ -115,4 +115,4 @@ eval (GetCurrentPosition label stringData reelData buttonData) state = do
                           in continue state
     _ -> continue state
 
-eval _ state = continue state
+eval _ state = update state

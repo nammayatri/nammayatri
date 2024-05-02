@@ -32,7 +32,7 @@ import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent, trackAppTextInput)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Show, pure, show, unit, bind, void, ($), discard, (==), (&&), (||), not, (<=), (>=), (/))
-import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (ApplicationStatusScreenState)
@@ -179,4 +179,4 @@ eval (AlternateMobileNumberAction (ReferralMobileNumberController.PrimaryEditTex
       else continue state {props{isValidAlternateNumber =  not isValidMobileNumber,buttonVisibilty = false,isAlternateMobileNumberExists=false}
       }
 eval (AlternateMobileNumberAction (ReferralMobileNumberController.OnSubTextClick)) state = exit $ ResendOtp state
-eval _ state = continue state
+eval _ state = update state

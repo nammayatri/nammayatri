@@ -43,7 +43,7 @@ import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSup
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+), void)
-import PrestoDOM (Eval, Props, continue, continueWithCmd, exit, updateAndExit, toast)
+import PrestoDOM (Eval, update, Props, continue, continueWithCmd, exit, updateAndExit, toast)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..), StageStatus(..))
@@ -468,7 +468,7 @@ eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { prop
 
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { acModal = false}}
 
-eval _ state = continue state
+eval _ state = update state
 
 checkRegNum :: String -> Boolean
 checkRegNum temp = if (length temp > 1) then true else false

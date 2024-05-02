@@ -42,7 +42,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, Ordering, Unit, bind, compare, discard, map, not, pure, unit, void, show, ($), (&&), (+), (-), (/=), (<>), (==), (>), (>=), (||))
-import PrestoDOM (Eval, Visibility(..), continue, exit, updateAndExit, continueWithCmd)
+import PrestoDOM (Eval, update, Visibility(..), continue, exit, updateAndExit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromSaved, getValueByComponent, getWard)
 import Screens (ScreenName(..), getScreen)
@@ -283,7 +283,7 @@ eval (PrimaryEditTextAC (PrimaryEditText.TextChanged id input)) state = do
 eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   void $ pure $ hideKeyboardOnNavigation true
   updateAndExit state $ AddLocation state
-eval _ state = continue state
+eval _ state = update state
 
 validateSearchInput :: AddNewAddressScreenState -> String -> Eval Action ScreenOutput AddNewAddressScreenState
 validateSearchInput state searchString =

@@ -18,7 +18,7 @@ module Screens.DocumentCaptureScreen.Controller where
 import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==), void, (<>))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (DocumentCaptureScreenState)
@@ -146,4 +146,4 @@ eval WhatsAppClick state = continueWithCmd state [do
   pure NoAction
   ]
 
-eval _ state = continue state
+eval _ state = update state
