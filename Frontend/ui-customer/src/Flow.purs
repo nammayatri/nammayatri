@@ -32,7 +32,7 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Control.Transformers.Back.Trans as App
-import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex, elem, nubByEq)
+import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex, elem, nubByEq, find)
 import Data.Array as Arr
 import Data.Either (Either(..), either)
 import Data.Function.Uncurried (runFn3, runFn2, runFn1)
@@ -232,7 +232,10 @@ handleDeepLinks :: Maybe GlobalPayload -> Boolean -> FlowBT String Unit
 handleDeepLinks mBGlobalPayload skipDefaultCase = do
   liftFlowBT $ markPerformance "HANDLE_DEEP_LINKS"
   case mBGlobalPayload of 
-    Just globalPayload ->
+    Just globalPayload -> do
+      case globalPayload ^. _payload ^._widgetData of
+              Just urlData -> handleWidgetData urlData
+              Nothing -> pure unit
       case globalPayload ^. _payload ^._view_param of
         Just screen -> case screen of
           "rides" -> hideSplashAndCallFlow myRidesScreenFlow 
@@ -264,6 +267,24 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
       case mBPayload of
         Just _ -> handleDeepLinks mBPayload skipDefaultCase
         Nothing -> pure unit
+
+handleWidgetData :: String -> FlowBT String Unit
+handleWidgetData urlData = 
+  case urlData of 
+    _ | urlData == "Home" || urlData == "Work" -> do
+      void $ pure $ spy "handleWidgetData" urlData
+      (SavedLocationsListRes savedLocationResp )<- FlowCache.updateAndFetchSavedLocations true 
+      let items =  spy  "getSavedLocations" $ AddNewAddress.getSavedLocations savedLocationResp.list
+          maybeItem = find (\x -> x.tag == urlData  ) items
+      void $ pure $ spy "maybeItem" maybeItem
+      case maybeItem of 
+        Just item -> do
+          updateLocalStage GoToConfirmLocation
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ source = (getString STR.CURRENT_LOCATION), destination = item.description,destinationAddress = item.fullAddress},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon, currentStage = GoToConfirmLocation , isSource = Just false}}) 
+          pure $ setText (getNewIDWithTag "DestinationEditText") item.description
+          pure $ JB.removeMarker $ getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)
+        Nothing -> pure unit
+    _ -> currentFlowStatus
 
 hideSplashAndCallFlow :: FlowBT String Unit -> FlowBT String Unit
 hideSplashAndCallFlow flow = do 

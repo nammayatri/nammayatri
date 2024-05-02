@@ -300,8 +300,13 @@ _rideEndTime = lens (unwrap >>> _.rideEndTime) (\oldRec newVal -> wrap ((unwrap 
 _customerReferralCode :: forall a b c. Newtype a { customerReferralCode :: b | c } => Lens' a b
 _customerReferralCode = lens (unwrap >>> _.customerReferralCode) (\oldRec newVal -> wrap ((unwrap oldRec) { customerReferralCode = newVal }))
 
+<<<<<<< Updated upstream
 _serviceTierName :: forall a b c. Newtype a { serviceTierName :: b | c } => Lens' a b
 _serviceTierName = lens (unwrap >>> _.serviceTierName) (\oldRec newVal -> wrap ((unwrap oldRec) { serviceTierName = newVal }))
 
 _hasTakenValidCabRide :: forall a b c. Newtype a { hasTakenValidCabRide :: b | c } => Lens' a b
 _hasTakenValidCabRide = lens (unwrap >>> _.hasTakenValidCabRide) (\oldRec newVal -> wrap ((unwrap oldRec) { hasTakenValidCabRide = newVal }))
+=======
+_widgetData :: forall a b c. Newtype a { widgetData :: b | c } => Lens' a b
+_widgetData = lens (unwrap >>> _.widgetData) (\oldRec newVal -> wrap ((unwrap oldRec) { widgetData = newVal })) 
+>>>>>>> Stashed changes
