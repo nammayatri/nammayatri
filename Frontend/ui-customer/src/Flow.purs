@@ -989,7 +989,7 @@ homeScreenFlow = do
                                             currentMap = getSuggestionsMapFromLocal FunctionCall
                                             updatedMap = addOrUpdateSuggestedTrips currentSourceGeohash currTrip false currentMap state.data.config.suggestedTripsAndLocationConfig false
                                         void $ pure $ setSuggestionsMap updatedMap
-                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> newState{data{suggestionsData{suggestionsMap = getSuggestionsMapFromLocal FunctionCall }}})
+                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> newState{data{suggestionsData{suggestionsMap = getSuggestionsMapFromLocal FunctionCall }}, props{showAcWorkingPopup = true}})
                                         lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                       removeChatService ""
                                       homeScreenFlow

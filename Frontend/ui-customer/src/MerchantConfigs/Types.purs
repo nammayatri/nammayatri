@@ -258,7 +258,8 @@ type Features = {
   enableAutoReferral :: Boolean,
   enableRepeatTripBackfilling :: Boolean,
   enableCustomerSupportForSafety :: Boolean,
-  enableSpecialPickup :: Boolean
+  enableSpecialPickup :: Boolean,
+  enableAcPopup :: Boolean
   }
 
 type RideCompletedCardConfig = {

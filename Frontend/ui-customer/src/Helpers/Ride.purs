@@ -68,13 +68,16 @@ checkRideStatus rideAssigned = do
                     , sourceAddress = getAddressFromBooking resp.fromLocation
                     , destinationAddress = getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
                     , currentSearchResultType = if isQuotes then QUOTES else ESTIMATES
-                    , vehicleVariant = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._vehicleVariant},
+                    , vehicleVariant = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._vehicleVariant
+                    , startedAtUTC = fromMaybe "" resp.rideStartTime
+                    },
                   props
                     { currentStage = rideStatus
                     , rideRequestFlow = true
                     , bookingId = resp.id
                     , isPopUp = NoPopUp
                     , zoneType = getSpecialTag resp.specialLocationTag
+                    , showAcWorkingPopup = rideStatus == RideStarted
                   }
                 }
         setValueToLocalStore IS_SOS_ACTIVE $ show $ Just Common.Pending == resp.sosStatus
