@@ -416,6 +416,8 @@ data Action = NoAction
             | BgLocationAC
             | BgLocationPopupAC PopUpModal.Action
             | IsAcWorkingPopUpAction PopUpModal.Action
+            | OnAudioCompleted String
+            
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -546,7 +548,18 @@ eval BackPressed state = do
     _ <- pure $ minimizeApp ""
     continue state
 
+eval (OnAudioCompleted status) state = do 
+  let 
+    needToTriggerMap = getValueToLocalStore TRIGGER_MAPS 
+    _ = runFn2  EHC.updatePushInIdMap "PlayAudioAndLaunchMap" true
+
+  if needToTriggerMap == "true" then
+    continueWithCmd state [pure TriggerMaps]
+  else
+    continue state
+
 eval TriggerMaps state = continueWithCmd state[ do
+  let _ = runFn2 EHC.updatePushInIdMap "PlayAudioAndLaunchMap" true
   if state.data.activeRide.tripType == ST.Rental then
       case state.data.activeRide.nextStopLat, state.data.activeRide.nextStopLon of
         Just nextStopLat,Just nextStopLon -> pure $ openNavigation nextStopLat nextStopLon "DRIVE"
@@ -854,7 +867,9 @@ eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
   let isRideStartActive = (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) && ((getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted)
       srcLat = state.data.activeRide.src_lat
       srcLon = state.data.activeRide.src_lon
-  _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
+      _ = runFn2  EHC.updatePushInIdMap "PlayAudioAndLaunchMap" true
+  void $ pure $ setValueToLocalStore TRIGGER_MAPS "false"
+  void $ pure $ JB.clearAudioPlayer ""
   if isRideStartActive then
     action srcLat srcLon
   else if state.data.activeRide.tripType == ST.Rental then do
