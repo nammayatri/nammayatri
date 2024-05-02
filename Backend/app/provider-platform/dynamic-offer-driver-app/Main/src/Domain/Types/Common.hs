@@ -116,7 +116,7 @@ isGoHomeAvailable _ = False
 
 shouldRectifyDistantPointsSnapToRoadFailure :: TripCategory -> Bool
 shouldRectifyDistantPointsSnapToRoadFailure tripCategory = case tripCategory of
-  Rental _ -> True
+  Rental _ -> False
   _ -> False
 
 isRentalTrip :: TripCategory -> Bool
