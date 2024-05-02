@@ -41,10 +41,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import qualified SharedLogic.SearchTryLocker as STL
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.Queries.Booking as QRB
+import Storage.Queries.SearchTry as QST
 import Tools.Error
 import TransactionLogs.PushLogs
 
@@ -98,12 +100,14 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
         Just Enums.CONFIRM_CANCEL -> do
           Redis.whenWithLockRedis (cancelLockKey cancelReq.bookingId.getId) 60 $ do
             (_merchant, _booking) <- DCancel.validateCancelRequest transporterId subscriber cancelReq
-            fork ("cancelBooking:" <> cancelReq.bookingId.getId) $ do
-              DCancel.cancel cancelReq merchant booking
-              buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
-              void $
-                Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
-                  pure buildOnCancelMessageV2
+            mbActiveSearchTry <- QST.findActiveTryByQuoteId _booking.quoteId
+            lockAndCall mbActiveSearchTry $ do
+              fork ("cancelBooking:" <> cancelReq.bookingId.getId) $ do
+                DCancel.cancel cancelReq merchant booking mbActiveSearchTry
+                buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
+                void $
+                  Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
+                    pure buildOnCancelMessageV2
         Just Enums.SOFT_CANCEL -> do
           buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
           void $
@@ -115,6 +119,9 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
       fork ("cancelSearch:" <> cancelSearchReq.transactionId) $
         DCancel.cancelSearch transporterId searchTry
   return Ack
+  where
+    lockAndCall (Just searchTry) action = STL.whenSearchTryCancellable searchTry.id action
+    lockAndCall Nothing action = action
 
 cancelLockKey :: Text -> Text
 cancelLockKey id = "Driver:Cancel:BookingId-" <> id

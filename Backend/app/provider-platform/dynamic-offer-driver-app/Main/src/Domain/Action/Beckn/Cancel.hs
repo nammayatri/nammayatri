@@ -92,8 +92,9 @@ cancel ::
   CancelReq ->
   DM.Merchant ->
   SRB.Booking ->
+  Maybe ST.SearchTry ->
   m ()
-cancel req merchant booking = do
+cancel req merchant booking mbActiveSearchTry = do
   CS.whenBookingCancellable booking.id $ do
     mbRide <- QRide.findActiveByRBId req.bookingId
     whenJust mbRide $ \ride -> do
@@ -137,7 +138,6 @@ cancel req merchant booking = do
         driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
         Notify.notifyOnCancel booking.merchantOperatingCityId booking driver bookingCR.source
 
-    mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
     whenJust mbActiveSearchTry $ cancelSearch merchant.id
   where
     buildBookingCancellationReason = do
@@ -185,14 +185,13 @@ cancelSearch ::
   ST.SearchTry ->
   m ()
 cancelSearch _merchantId searchTry = do
-  CS.whenSearchTryCancellable searchTry.id $ do
-    driverSearchReqs <- QSRD.findAllActiveBySRId searchTry.requestId
-    QST.cancelActiveTriesByRequestId searchTry.requestId
-    QSRD.setInactiveAndPulledByIds $ (.id) <$> driverSearchReqs
-    QDQ.setInactiveBySRId searchTry.requestId
-    for_ driverSearchReqs $ \driverReq -> do
-      driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-      Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver_ driverReq.searchTryId
+  driverSearchReqs <- QSRD.findAllActiveBySRId searchTry.requestId
+  QST.cancelActiveTriesByRequestId searchTry.requestId
+  QSRD.setInactiveAndPulledByIds $ (.id) <$> driverSearchReqs
+  QDQ.setInactiveBySRId searchTry.requestId
+  for_ driverSearchReqs $ \driverReq -> do
+    driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
+    Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver_ driverReq.searchTryId
 
 validateCancelSearchRequest ::
   ( CacheFlow m r,
