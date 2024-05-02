@@ -45,6 +45,7 @@ import Styles.Colors as Color
 import Debug (spy)
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
+import Components.ServiceTierCard.View as ServiceTierCard
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput
 screen initialState =
@@ -126,7 +127,9 @@ tripDetailsLayout state push =
 ---------------------- tripIdView ---------------------------
 tripIdView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 tripIdView push state =
-  let rideType = fromMaybe "" state.data.selectedItem.serviceTierName 
+  let rideType = ServiceTierCard.parseName $ fromMaybe "" state.data.selectedItem.serviceTierName 
+      hasAirConditioned = ServiceTierCard.showACDetails rideType Nothing
+      rideTypeWithAc = if hasAirConditioned && rideType /= "" then "AC •" <> rideType else rideType
   in
   linearLayout
   [ width MATCH_PARENT
@@ -137,19 +140,31 @@ tripIdView push state =
       [ orientation VERTICAL
       , height WRAP_CONTENT
       , width $ V (EHC.screenWidth unit/ 2)
-      , visibility $ boolToVisibility $ isJust state.data.selectedItem.serviceTierName 
+      , visibility $ boolToVisibility $ isJust state.data.selectedItem.serviceTierName && rideType /= ""
       ][  textView $
           [ text $ getString RIDE_TYPE
           , accessibilityHint $ "Ride Type :" <> rideType
           , accessibility ENABLE
           , color Color.black700
           ] <> FontStyle.body1 LanguageStyle
-        , textView $
-          [ text rideType
+        , linearLayout
+          [ height WRAP_CONTENT
           , width WRAP_CONTENT
-          , color Color.black900
-          , accessibility DISABLE_DESCENDANT
-          ] <> FontStyle.paragraphText LanguageStyle
+          , gravity CENTER_VERTICAL
+          ][ imageView
+              [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_ac"
+              , height $ V 12
+              , width $ V 12
+              , margin $ MarginRight 4
+              , visibility $ boolToVisibility hasAirConditioned
+              ]
+            , textView $
+              [ text rideTypeWithAc
+              , width WRAP_CONTENT
+              , color Color.black900
+              , accessibility DISABLE_DESCENDANT
+              ] <> FontStyle.paragraphText LanguageStyle
+          ]
       ]
     , linearLayout
       [ orientation VERTICAL

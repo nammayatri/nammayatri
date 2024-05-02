@@ -230,7 +230,8 @@ config =
     shareWithEmergencyContacts: true,
     enableAutoReferral : true,
     enableCustomerSupportForSafety : false,
-    enableSpecialPickup : JB.jBridgeMethodExists "locateOnMapV2"
+    enableSpecialPickup : JB.jBridgeMethodExists "locateOnMapV2",
+    enableAcPopup : false
   }
 
   , rideCompletedCardConfig : {

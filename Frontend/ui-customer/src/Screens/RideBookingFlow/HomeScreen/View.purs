@@ -66,7 +66,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
@@ -75,7 +75,7 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize)
-import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition)
+import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition, differenceBetweenTwoUTCInMinutes)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (printLog, logStatus)
@@ -138,6 +138,7 @@ import Types.App
 import Mobility.Prelude
 import Screens.Types as ST
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
+import Components.ServiceTierCard.View as ServiceTierCard
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -476,6 +477,7 @@ view push state =
             , if state.props.showShareRide then PopupWithCheckbox.view (push <<< ShareRideAction) (shareRideConfig state) else emptyTextView state
             , if state.props.referral.referralStatus /= NO_REFERRAL || state.props.referral.showAddReferralPopup then referralPopUp push state else emptyTextView state 
             , if state.props.showSpecialZoneInfoPopup then specialZoneInfoPopup push state else emptyTextView state
+            , if showAcView state then isAcWorkingView push state else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -496,6 +498,14 @@ view push state =
                     else [])
         ]
   ]
+  where
+    showAcView :: HomeScreenState -> Boolean
+    showAcView state = (getValueFromCache (show AC_POPUP_SHOWN_FOR_RIDE) getKeyInSharedPrefKeys) /= state.data.driverInfoCardState.rideId 
+                        && state.props.currentStage == RideStarted
+                        && runFn2 differenceBetweenTwoUTCInMinutes (getCurrentUTC "") state.data.startedAtUTC > 4
+                        && state.props.showAcWorkingPopup
+                        && state.data.config.feature.enableAcPopup
+                        && state.data.driverInfoCardState.serviceTierName /= Just "Auto"
 
 bottomNavBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bottomNavBarView push state = let 
@@ -4250,3 +4260,7 @@ newView push state =
 
 extraBottomPadding :: Int 
 extraBottomPadding =  if os == "IOS" then 60 + safeMarginBottom else 112 
+
+isAcWorkingView ::  forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+isAcWorkingView push state = 
+  PopUpModal.view (push <<< AcWorkingPopupAction) (acWorkingPopupConfig state)

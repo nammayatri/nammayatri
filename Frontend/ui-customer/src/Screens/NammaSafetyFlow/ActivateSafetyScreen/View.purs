@@ -46,6 +46,7 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Either (Either (..))
 import PrestoDOM.Animation as PrestoAnim
 import JBridge as JB
+import Screens.NammaSafetyFlow.Components.SafetyUtils (getVehicleDetails)
 
 screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -1114,9 +1115,3 @@ callPoliceView state push =
           ]
         <> FontStyle.subHeading2 TypoGraphy
     ]
-
-getVehicleDetails :: NammaSafetyScreenState -> String
-getVehicleDetails state = 
-  case state.data.lastRideDetails of
-    Nothing -> state.data.vehicleDetails
-    Just rideDetails -> rideDetails.vehicleNumber
