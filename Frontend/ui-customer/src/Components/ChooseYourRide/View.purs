@@ -216,9 +216,9 @@ tipsHorizontalView push state =
             , gravity CENTER
             , padding $ if index == 0 then PaddingHorizontal 10 10 else Padding 0 0 0 0
             , stroke $ "1," <> (if (state.tipViewProps.activeIndex == index) then Color.blue800 else Color.grey900)
-            , onClick push $ const $ TipBtnClick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
+            , onClick push $ const $ TipBtnClick index (fromMaybe 0 (state.customerTipArrayWithValues !! index))
             , accessibility ENABLE
-            , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
+            , accessibilityHint $ "₹" <> show (fromMaybe 0 (state.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
             ][textView $ 
               [ text $ item
               , color $ Color.black800
