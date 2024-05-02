@@ -332,6 +332,7 @@ getFR stringKey =
         ACTIVATED_CUSTOMERS -> "Clients activés"
         REFERRAL_CODE_LINKING -> "Lien avec le code de référence"
         CONTACT_SUPPORT -> "Contactez le support"
+        AC_CHECK_TITILE -> "Mon climatiseur de voiture fonctionne"
         CALL_SUPPORT -> "Support d'appel"
         YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT _ -> "Vous êtes sur le point de passer un appel à l'équipe de soutien Namma Yatri Voulez-vous continuer?"
         REFERRAL_ENROLMENT -> "Inscription de référence"

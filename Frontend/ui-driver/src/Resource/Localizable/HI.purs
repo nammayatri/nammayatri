@@ -341,6 +341,7 @@ getHI stringKey =
         ACTIVATED_CUSTOMERS -> "सक्रिय ग्राहक"
         REFERRAL_CODE_LINKING -> "रेफरल कोड लिंकिंग"
         CONTACT_SUPPORT -> "संपर्क सहायता"
+        AC_CHECK_TITILE -> "मेरी कार का एसी काम कर रहा है"
         CALL_SUPPORT -> "सहायता को कॉल करें"
         YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT _ -> "आप नम्मा यात्री सपोर्ट टीम को कॉल करने वाले हैं। क्या आप आगे बढ़ना चाहते हैं?"
         REFERRAL_ENROLMENT -> "रेफरल नामांकन"

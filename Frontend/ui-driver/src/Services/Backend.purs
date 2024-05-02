@@ -1463,6 +1463,12 @@ getSpecialLocationListBT req = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
+mkUpdateAirConditionWorkingStatus :: Boolean -> UpdateDriverVehicleServiceTierReq
+mkUpdateAirConditionWorkingStatus isAirConditionWorking = UpdateDriverVehicleServiceTierReq {
+    airConditioned : Just $ AirConditionedTier { isWorking : isAirConditionWorking, restrictionMessage: Nothing, usageRestrictionType: NoRestriction},
+    tiers : []
+}
+
 mkUpdateDriverVehiclesServiceTier :: ST.RidePreference -> UpdateDriverVehicleServiceTierReq
 mkUpdateDriverVehiclesServiceTier ridePreferences = 
     let tierArray = [
@@ -1477,10 +1483,12 @@ mkUpdateDriverVehiclesServiceTier ridePreferences =
                 seatingCapacity : Nothing,
                 serviceTierType : ridePreferences.serviceTierType,
                 shortDescription : Nothing,
-                vehicleRating : Nothing
+                vehicleRating : Nothing,
+                isUsageRestricted : Nothing
             }
         ]
     in 
         UpdateDriverVehicleServiceTierReq {
-            tiers : tierArray
+            tiers : tierArray,
+            airConditioned : Nothing
         }

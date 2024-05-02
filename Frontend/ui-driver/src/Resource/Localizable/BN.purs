@@ -341,6 +341,7 @@ getBN stringKey =
         ACTIVATED_CUSTOMERS -> "সক্রিয় গ্রাহক"
         REFERRAL_CODE_LINKING -> "রেফারেল কোড লিঙ্কিং"
         CONTACT_SUPPORT -> "যোগাযোগ সমর্থন"
+        AC_CHECK_TITILE -> "আমার গাড়ির এসি কাজ করছে"
         CALL_SUPPORT -> "কল সমর্থন"
         YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT _ -> "আপনি জাত্রি সাথি সমর্থন দলকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?"
         REFERRAL_ENROLMENT -> "রেফারেল তালিকাভুক্তি"

@@ -340,6 +340,7 @@ getML stringKey =
         ACTIVATED_CUSTOMERS -> "സജീവമായ ഉപഭോക്താക്കൾ"
         REFERRAL_CODE_LINKING -> "റഫറൽ കോഡ് ലിങ്കു ചെയ്യുന്നു"
         CONTACT_SUPPORT -> "സപ്പോർട്ട് ടീമിനെ ബന്ധപെടുക"
+        AC_CHECK_TITILE -> "എന്റെ കാർ എസി പ്രവർത്തിക്കുന്നു"
         CALL_SUPPORT -> "സപ്പോർട്ട് ടീമിനെ വിളിക്കുക"
         YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT _ -> "നിങ്ങൾ നമ്മ യാത്രി സപ്പോർട്ട് ടീമുമായി ബന്ധപ്പെടാൻ പോകുന്നു. തുടരണോ?"
         REFERRAL_ENROLMENT -> "റഫറൽ എൻറോൾമെന്റ്"

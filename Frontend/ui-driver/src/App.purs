@@ -439,7 +439,7 @@ data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState
                                     | CHECK_RIDE_FLOW_STATUS
                                     | NOTIFICATION_SCREEN_NAV NAVIGATION_ACTIONS
 
-data BOOKING_OPTIONS_SCREEN_OUTPUT = SELECT_CAB BookingOptionsScreenState Boolean | ENABLE_RENTAL_RIDE BookingOptionsScreenState Boolean | GO_TO_PROFILE | CHANGE_RIDE_PREFERENCE BookingOptionsScreenState RidePreference
+data BOOKING_OPTIONS_SCREEN_OUTPUT = SELECT_CAB BookingOptionsScreenState Boolean | ENABLE_RENTAL_RIDE BookingOptionsScreenState Boolean | GO_TO_PROFILE | CHANGE_RIDE_PREFERENCE BookingOptionsScreenState RidePreference | UPDATE_AC_AVAILABILITY BookingOptionsScreenState Boolean
 
 data ACKNOWLEDGEMENT_SCREEN_OUTPUT = EXIT_TO_HOME_SCREEN | RETRY_PAYMENT
 

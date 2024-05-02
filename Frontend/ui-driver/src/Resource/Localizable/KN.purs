@@ -341,6 +341,7 @@ getKN stringKey =
         ACTIVATED_CUSTOMERS -> "ಸಕ್ರಿಯ ಗ್ರಾಹಕರು"
         REFERRAL_CODE_LINKING -> "ರೆಫರಲ್ ಕೋಡ್ ಲಿಂಕ್ ಮಾಡುವುದು"
         CONTACT_SUPPORT -> "ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ"
+        AC_CHECK_TITILE -> "ನನ್ನ ಕಾರು ಏಸಿ ಕೆಲಸ ಮಾಡುತ್ತಿದೆ"
         CALL_SUPPORT -> "ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ"
         YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT _ -> "ನೀವು ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲ ತಂಡಕ್ಕೆ ಕರೆ ಮಾಡಲಿರುವಿರಿ. ನೀವು ಮುಂದುವರೆಯಲು ಬಯಸುವಿರಾ?"
         REFERRAL_ENROLMENT -> "ರೆಫರಲ್ ದಾಖಲಾತಿ"

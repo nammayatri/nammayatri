@@ -342,6 +342,7 @@ getEN stringKey =
         ACTIVATED_CUSTOMERS -> "Activated Customers"
         REFERRAL_CODE_LINKING -> "Referral Code Linking"
         CONTACT_SUPPORT -> "Contact Support"
+        AC_CHECK_TITILE -> "My car AC is working"
         CALL_SUPPORT -> "Call Support"
         YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT _ -> "You are about to place a call to the Namma Yatri Support Team. Do you want to proceed?"
         REFERRAL_ENROLMENT -> "Referral Enrolment"

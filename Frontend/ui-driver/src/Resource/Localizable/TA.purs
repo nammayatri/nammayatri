@@ -342,6 +342,7 @@ getTA stringKey =
         ACTIVATED_CUSTOMERS -> "செயல்படுத்தப்பட்ட வாடிக்கையாளர்கள்"
         REFERRAL_CODE_LINKING -> "பரிந்துரை குறியீடு இணைப்பு"
         CONTACT_SUPPORT -> "ஆதரவைத் தொடர்பு கொள்ளவும்"
+        AC_CHECK_TITILE -> "என் வாகனத்தின் ஏசியில் சிக்கல் இல்லை"
         CALL_SUPPORT -> "அழைப்பு ஆதரவு"
         YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT _ -> "நீங்கள் நம்ம யாத்ரி ஆதரவுக் குழுவிற்கு அழைப்பு விடுக்க உள்ளீர்கள். தொடர வேண்டுமா?"
         REFERRAL_ENROLMENT -> "பரிந்துரை பதிவு"

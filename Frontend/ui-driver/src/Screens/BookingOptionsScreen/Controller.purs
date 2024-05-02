@@ -5,15 +5,16 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Array (filter, length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Log (trackAppScreenRender)
-import Prelude (class Show, map, pure, show, unit, (<>), (==), not, ($), (>))
+import Prelude (class Show, map, pure, show, unit, discard, void, (<>), (==), not, ($), (>))
 import PrestoDOM (Eval, update, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (BookingOptionsScreenState, VehicleP, RidePreference)
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Helpers.Utils (getVehicleVariantImage)
+import Helpers.Utils (getVehicleVariantImage, contactSupportNumber)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Effect.Unsafe (unsafePerformEffect)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -29,15 +30,24 @@ data Action
   | AfterRender
   | PrimaryButtonAC PrimaryButton.Action
   | ToggleRidePreference RidePreference
+  | UpdateACAvailability Boolean
+  | CallSupport
 
 data ScreenOutput
   = GoBack
   | ChangeRidePreference BookingOptionsScreenState RidePreference
+  | ToggleACAvailability BookingOptionsScreenState Boolean
 
 eval :: Action -> BookingOptionsScreenState -> Eval Action ScreenOutput BookingOptionsScreenState
 eval BackPressed state = exit GoBack
 
 eval (ToggleRidePreference service) state = exit $ ChangeRidePreference state service
+
+eval (UpdateACAvailability acServiceToggle) state = exit $ ToggleACAvailability state $ not acServiceToggle
+
+eval CallSupport state = do
+  void $ pure $ unsafePerformEffect $ contactSupportNumber ""
+  continue state
 
 eval _ state = update state
 
