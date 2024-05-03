@@ -563,32 +563,32 @@ quoteListView push config isSingleEstimate =
                   ChooseVehicle.view (push <<< ChooseVehicleAC) (item{isSingleEstimate = isSingleEstimate})
               ) config.quoteList
           )]
-    , linearLayout
-      [ height $ WRAP_CONTENT
-      , width $ MATCH_PARENT
-      , gravity TOP_VERTICAL
-      , accessibility DISABLE
-      ][linearLayout
-        [ height $ V 20
-        , width MATCH_PARENT
-        , accessibility DISABLE
-        , gradient $ if EHC.os == "IOS" then (Linear 90.0 [Color.transparent, Color.transparentMid , Color.white900]) else (Linear 180.0 [Color.white900, Color.transparentMid, Color.transparent])
-        ][]  
-      ]
+    -- , linearLayout -- TODO:: Temporary removing gradient for estimates
+    --   [ height $ WRAP_CONTENT
+    --   , width $ MATCH_PARENT
+    --   , gravity TOP_VERTICAL
+    --   , accessibility DISABLE
+    --   ][linearLayout
+    --     [ height $ V 20
+    --     , width MATCH_PARENT
+    --     , accessibility DISABLE
+    --     , gradient $ if EHC.os == "IOS" then (Linear 90.0 [Color.transparent, Color.transparentMid , Color.white900]) else (Linear 180.0 [Color.white900, Color.transparentMid, Color.transparent])
+    --     ][]  
+    --   ]
     
-     , linearLayout
-      [ height $ MATCH_PARENT
-      , width $ MATCH_PARENT
-      , gravity BOTTOM
-      , clickable false
-      , accessibility DISABLE
-      ][linearLayout
-        [ height $ V 20
-        , width MATCH_PARENT
-        , accessibility DISABLE
-        , gradient $ if EHC.os == "IOS" then (Linear 90.0 [Color.white900, Color.transparentMid , Color.transparent]) else Linear 180.0 [Color.transparent, Color.transparentMid, Color.white900] -- $ if EHC.os == "IOS" then (Linear 90.0 [Color.white900, Color.transparentMid , Color.transparent])
-        ][]  
-      ]
+    --  , linearLayout
+    --   [ height $ MATCH_PARENT
+    --   , width $ MATCH_PARENT
+    --   , gravity BOTTOM
+    --   , clickable false
+    --   , accessibility DISABLE
+    --   ][linearLayout
+    --     [ height $ V 20
+    --     , width MATCH_PARENT
+    --     , accessibility DISABLE
+    --     , gradient $ if EHC.os == "IOS" then (Linear 90.0 [Color.white900, Color.transparentMid , Color.transparent]) else Linear 180.0 [Color.transparent, Color.transparentMid, Color.white900] -- $ if EHC.os == "IOS" then (Linear 90.0 [Color.white900, Color.transparentMid , Color.transparent])
+    --     ][]  
+    --   ]
     ]
 
 getQuoteListViewHeight :: Config -> Boolean -> Length
