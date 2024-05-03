@@ -69,5 +69,6 @@ instance ToTType' BeamMOC.MerchantOperatingCity MerchantOperatingCity where
         BeamMOC.lat = location.lat,
         BeamMOC.lon = location.lon,
         BeamMOC.supportNumber = supportNumber,
-        BeamMOC.language = language
+        BeamMOC.language = language,
+        BeamMOC.currency = currency
       }

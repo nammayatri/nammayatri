@@ -82,9 +82,3 @@ getFPSlabDetailsSlab config key' = do
   case NE.nonEmpty fpsdsl of
     Just fpsdsl' -> pure $ Just (FPSlabsDetails fpsdsl')
     Nothing -> pure Nothing
-
-makeFPSlabsDetailsAPIEntity :: FPSlabsDetails -> FPSlabsDetailsAPIEntity
-makeFPSlabsDetailsAPIEntity FPSlabsDetails {..} =
-  FPSlabsDetailsAPIEntity
-    { slabs = makeFPSlabsDetailsSlabAPIEntity <$> slabs
-    }

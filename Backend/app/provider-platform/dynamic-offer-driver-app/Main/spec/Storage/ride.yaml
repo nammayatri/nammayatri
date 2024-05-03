@@ -21,7 +21,7 @@ imports:
 
 Ride:
   tableName: ride
-  derives: "Generic,Show,Eq,ToJSON,FromJSON"
+  derives: "Generic,Show"
   types:
     RideEndedBy:
       enum: "Driver,Dashboard,CallBased,CronJob"
@@ -44,7 +44,8 @@ Ride:
     otp: Text
     endOtp: Maybe Text
     trackingUrl: BaseUrl
-    fare: Maybe Money
+    fare: Maybe HighPrecMoney
+    currency: Currency
     traveledDistance: HighPrecMeters
     chargeableDistance: Maybe Meters
     driverArrivalTime: Maybe UTCTime
@@ -98,7 +99,6 @@ Ride:
     startOdometerReadingFileId: character varying(36)
     endOdometerReadingFileId: character varying(36)
 
-
   default:
     traveledDistance: '0'
     tripStartTime: 'CURRENT_TIMESTAMP'
@@ -123,6 +123,11 @@ Ride:
     endOdometerReading:
       endOdometerReadingValue: Maybe Centesimal
       endOdometerReadingFileId:  Maybe Text
+    fare:
+      fare: Maybe Money
+      fareAmount: Maybe HighPrecMoney
+    currency:
+      currency: Maybe Currency
 
   fromTType:
     toLocation: Storage.Queries.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
@@ -138,6 +143,8 @@ Ride:
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
+    fare: fmap (Kernel.Types.Common.mkAmountWithDefault fareAmount) fare|E
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
@@ -156,6 +163,8 @@ Ride:
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
     clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
     clientOsType:  (clientDevice <&> (.deviceType))|E
+    fare: Kernel.Prelude.fmap roundToIntegral|I
+    currency: Kernel.Prelude.Just|I
 
   beamType:
     trackingUrl: Text

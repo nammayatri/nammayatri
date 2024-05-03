@@ -59,6 +59,7 @@ import qualified Kernel.External.Maps as Maps
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common hiding (mkPrice)
+import qualified Kernel.Types.Common as Common
 import Kernel.Utils.Common hiding (mkPrice)
 import SharedLogic.DriverPool.Types
 import SharedLogic.FareCalculator
@@ -67,8 +68,8 @@ import Tools.Error
 
 data Pricing = Pricing
   { pricingId :: Text,
-    pricingMaxFare :: Money,
-    pricingMinFare :: Money,
+    pricingMaxFare :: HighPrecMoney,
+    pricingMinFare :: HighPrecMoney,
     vehicleServiceTier :: DVST.ServiceTierType,
     serviceTierName :: Text,
     serviceTierDescription :: Maybe Text,
@@ -79,7 +80,8 @@ data Pricing = Pricing
     estimatedDistance :: Maybe Meters,
     specialLocationTag :: Maybe Text,
     fulfillmentType :: Text,
-    distanceToNearestDriver :: Maybe Meters
+    distanceToNearestDriver :: Maybe Meters,
+    currency :: Currency
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
@@ -1047,7 +1049,7 @@ tfCancellationTerms becknConfig =
 
 tfPayments :: DBooking.Booking -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments booking transporter bppConfig = do
-  let mPrice = Just $ mkPriceFromMoney booking.estimatedFare -- FIXME
+  let mPrice = Just $ Common.mkPrice (Just booking.currency) booking.estimatedFare
   let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
   Just . List.singleton $ mkPayment (show transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 

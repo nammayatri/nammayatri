@@ -143,7 +143,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   when (thresholdConfig.subscription) $ do
     maxShards <- asks (.maxShards)
     let serviceName = YATRI_SUBSCRIPTION
-    createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare newFareParams maxShards driverInfo booking serviceName
+    createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams maxShards driverInfo booking serviceName
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
@@ -153,8 +153,9 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   sendReferralFCM ride booking.providerId mbRiderDetails booking.merchantOperatingCityId
   updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride}
-  let customerCancellationDues = fromMaybe 0 newFareParams.customerCancellationDues
-  when (thresholdConfig.canAddCancellationFee && customerCancellationDues > 0) $ do
+  let currency = booking.currency
+  let customerCancellationDues = fromMaybe 0.0 newFareParams.customerCancellationDues
+  when (thresholdConfig.canAddCancellationFee && customerCancellationDues > 0.0) $ do
     case mbRiderDetails of
       Just riderDetails -> do
         id <- generateGUID
@@ -166,7 +167,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
                   ..
                 }
         calDisputeChances <-
-          if thresholdConfig.cancellationFee == 0
+          if thresholdConfig.cancellationFee == 0.0
             then do
               logWarning "Unable to calculate dispute chances used"
               return 0
@@ -285,10 +286,10 @@ getCurrentDate time =
   let currentDate = localDay $ utcToLocalTime timeZoneIST time
    in currentDate
 
-putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()
+putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> HighPrecMoney -> Meters -> m ()
 putDiffMetric merchantId money mtrs = do
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  Metrics.putFareAndDistanceDeviations org.name money mtrs
+  Metrics.putFareAndDistanceDeviations org.name (roundToIntegral money) mtrs
 
 getRouteAndDistanceBetweenPoints ::
   ( EncFlow m r,
@@ -356,26 +357,27 @@ createDriverFee ::
   Id Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
-  Maybe Money ->
+  Maybe HighPrecMoney ->
+  Currency ->
   DFare.FareParameters ->
   Int ->
   DI.DriverInformation ->
   SRB.Booking ->
   ServiceNames ->
   m ()
-createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxShards driverInfo booking serviceName = do
+createDriverFee merchantId merchantOpCityId driverId rideFare currency newFareParams maxShards driverInfo booking serviceName = do
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft
-  let govtCharges = fromMaybe 0 newFareParams.govtCharges
+  let govtCharges = fromMaybe 0.0 newFareParams.govtCharges
   let (platformFee, cgst, sgst) = case newFareParams.fareParametersDetails of
         DFare.ProgressiveDetails _ -> (0, 0, 0)
         DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
         DFare.RentalDetails _ -> (0, 0, 0)
-  let totalDriverFee = fromIntegral govtCharges + platformFee + cgst + sgst
+  let totalDriverFee = govtCharges + platformFee + cgst + sgst
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverIdAndServiceName driverId serviceName
-  driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig (Just booking)
+  driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig (Just booking)
   vehicle <- QV.findById driverId
   let isEnableForVariant = maybe True (`elem` transporterConfig.variantsToEnableForSubscription) (vehicle <&> (.variant))
   let toUpdateOrCreateDriverfee = (totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan)) && isEnableForVariant
@@ -468,21 +470,22 @@ mkDriverFee ::
   Maybe UTCTime ->
   Id Merchant ->
   Id DP.Driver ->
-  Maybe Money ->
-  Money ->
+  Maybe HighPrecMoney ->
   HighPrecMoney ->
   HighPrecMoney ->
   HighPrecMoney ->
+  HighPrecMoney ->
+  Currency ->
   TransporterConfig ->
   Maybe SRB.Booking ->
   m DF.DriverFee
-mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig mbBooking = do
+mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig mbBooking = do
   id <- generateGUID
   let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
       startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
       endTime = addUTCTime transporterConfig.driverPaymentCycleDuration startTime
       payBy = if isNothing transporterConfig.driverFeeCalculationTime then addUTCTime transporterConfig.driverPaymentCycleBuffer endTime else addUTCTime (transporterConfig.driverAutoPayNotificationTime + transporterConfig.driverAutoPayExecutionTime) endTime
-      platformFee_ = if isNothing transporterConfig.driverFeeCalculationTime then DF.PlatformFee platformFee cgst sgst else DF.PlatformFee 0 0 0
+      platformFee_ = if isNothing transporterConfig.driverFeeCalculationTime then DF.PlatformFee platformFee cgst sgst currency else DF.PlatformFee 0 0 0 currency
       govtCharges_ = if isNothing transporterConfig.driverFeeCalculationTime then govtCharges else 0
       isPlanMandatory = transporterConfig.isPlanMandatory
       totalFee = platformFee + cgst + sgst

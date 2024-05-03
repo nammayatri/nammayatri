@@ -72,17 +72,25 @@ data DriverAutoPayStatus
 
 newtype DriverBadges = DriverBadges {driverBadges :: [Domain.Types.DriverInformation.Badges]} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data DriverMissedOpp = DriverMissedOpp {cancellationRate :: Kernel.Prelude.Int, missedEarnings :: Kernel.Types.Common.Money, ridesCancelled :: Kernel.Prelude.Int, totalRides :: Kernel.Prelude.Int}
+data DriverMissedOpp = DriverMissedOpp
+  { cancellationRate :: Kernel.Prelude.Int,
+    missedEarnings :: Kernel.Types.Common.Money,
+    missedEarningsWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
+    ridesCancelled :: Kernel.Prelude.Int,
+    totalRides :: Kernel.Prelude.Int
+  }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data DriverMode = ONLINE | OFFLINE | SILENT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data DriverSummary = DriverSummary
   { bonusEarned :: Kernel.Types.Common.Money,
+    bonusEarnedWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     lastRegistered :: Kernel.Prelude.UTCTime,
     lateNightTrips :: Kernel.Prelude.Int,
     totalCompletedTrips :: Kernel.Prelude.Int,
-    totalEarnings :: Kernel.Types.Common.Money
+    totalEarnings :: Kernel.Types.Common.Money,
+    totalEarningsWithCurrency :: Kernel.Types.Common.PriceAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

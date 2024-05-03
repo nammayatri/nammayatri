@@ -63,6 +63,7 @@ import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
 import SharedLogic.Merchant
+import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
@@ -287,7 +288,7 @@ updatePaymentStatus driverId merchantOpCityId serviceName = do
       map
         ( \dueInvoice ->
             SLDriverFee.roundToHalf $
-              fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst
+              dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst
         )
 
 notifyPaymentSuccessIfNotNotified :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> Id DOrder.PaymentOrder -> m ()
@@ -433,7 +434,8 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
       payerAppName = upiDetails >>= (.payerAppName)
       mandatePaymentFlow = upiDetails >>= (.txnFlowType)
   mbExistingMandate <- QM.findById mandateId
-  when (isNothing mbExistingMandate) $ QM.create =<< mkMandate payerApp payerAppName mandatePaymentFlow
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+  when (isNothing mbExistingMandate) $ QM.create =<< mkMandate currency payerApp payerAppName mandatePaymentFlow
   when (mandateStatus == Payment.ACTIVE) $ do
     Redis.withWaitOnLockRedisWithExpiry (mandateProcessingLockKey driverId.getId) 60 60 $ do
       --- do not update payer vpa from euler for older active mandates also we update only when autopayStatus not suspended because on suspend we make the mandate inactive in table
@@ -484,7 +486,7 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
       Payment.PAUSED -> Just DI.PAUSED_PSP
       Payment.FAILURE -> Just DI.MANDATE_FAILED
       Payment.EXPIRED -> Just DI.MANDATE_EXPIRED
-    mkMandate payerApp payerAppName mandatePaymentFlow = do
+    mkMandate currency payerApp payerAppName mandatePaymentFlow = do
       now <- getCurrentTime
       return $
         DM.Mandate

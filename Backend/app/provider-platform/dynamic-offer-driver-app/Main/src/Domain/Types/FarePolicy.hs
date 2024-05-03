@@ -43,8 +43,9 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
-    serviceCharge :: Maybe Money,
+    serviceCharge :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
+    currency :: Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
@@ -56,6 +57,34 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     updatedAt :: UTCTime
   }
   deriving (Generic, Show)
+
+-- for correct CAC parsing
+-- FIXME use fromTType' instead of creating extra type
+data FarePolicyCAC = FarePolicyCAC
+  { id :: Id FarePolicy,
+    driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
+    serviceCharge :: Maybe Money,
+    serviceChargeAmount :: Maybe HighPrecMoney,
+    currency :: Maybe Currency,
+    nightShiftBounds :: Maybe DPM.NightShiftBounds,
+    allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
+    govtCharges :: Maybe Double,
+    perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
+    congestionChargeMultiplier :: Maybe Centesimal,
+    farePolicyDetails :: FarePolicyDetails,
+    description :: Maybe Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, FromJSON, ToJSON)
+
+mkFarePolicyFromCAC :: FarePolicyCAC -> FarePolicy
+mkFarePolicyFromCAC FarePolicyCAC {..} =
+  FarePolicy
+    { serviceCharge = mkAmountWithDefault serviceChargeAmount <$> serviceCharge,
+      currency = fromMaybe INR currency,
+      ..
+    }
 
 jsonToDriverExtraFeeBounds :: String -> String -> Maybe (NonEmpty DriverExtraFeeBounds)
 jsonToDriverExtraFeeBounds config key' =
@@ -76,8 +105,8 @@ jsonToDriverExtraFeeBounds config key' =
         fromMaybe
           (DA.Array (DV.fromList []))
           (DAKM.lookup (DAK.fromText (Text.pack key')) (DAKM.fromList res'))
-      res = res'' ^? _JSON :: Maybe [DriverExtraFeeBounds]
-   in nonEmpty $ fromMaybe [] res
+      res = res'' ^? _JSON :: Maybe [DriverExtraFeeBoundsCAC]
+   in nonEmpty $ mkDriverExtraFeeBoundsFromCAC <$> fromMaybe [] res
 
 farePolicyMiddleWare :: MonadFlow m => DAKM.KeyMap Value -> String -> String -> m (DAKM.KeyMap Value)
 farePolicyMiddleWare configMap config key' = do
@@ -118,10 +147,10 @@ jsonToFarePolicy config key' = do
                     )
               )
   res'' <- farePolicyMiddleWare (DAKM.fromList res') config key'
-  let res = Object res'' ^? _JSON :: (Maybe FarePolicy)
+  let res = Object res'' ^? _JSON :: (Maybe FarePolicyCAC)
   when (isNothing res) do
     logDebug $ "FarePolicy from CAC Not Parsable: " <> show res' <> " after middle parsing" <> show res'' <> " for key: " <> Text.pack key'
-  pure res
+  pure $ mkFarePolicyFromCAC <$> res
 
 type FarePolicy = FarePolicyD 'DTC.Safe
 
@@ -129,8 +158,10 @@ instance FromJSON (FarePolicyD 'DTC.Unsafe)
 
 instance ToJSON (FarePolicyD 'DTC.Unsafe)
 
+-- FIXME remove
 instance FromJSON FarePolicy
 
+-- FIXME remove
 instance ToJSON FarePolicy
 
 data FarePolicyDetailsD (s :: DTC.UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s) | RentalDetails (FPRentalDetailsD s)
@@ -158,8 +189,9 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     vehicleServiceTier :: DVST.ServiceTierType,
     tripCategory :: DTC.TripCategory,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
-    serviceCharge :: Maybe Money,
+    serviceCharge :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
+    currency :: Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,

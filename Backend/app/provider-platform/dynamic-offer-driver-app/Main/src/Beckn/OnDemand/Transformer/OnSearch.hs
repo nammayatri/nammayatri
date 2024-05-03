@@ -20,7 +20,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (type (:::))
+import Kernel.Utils.Common (highPrecMoneyToText, type (:::))
 
 buildOnSearchMessage :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Maybe BecknV2.OnDemand.Types.OnSearchReqMessage
 buildOnSearchMessage res bppConfig = do
@@ -69,11 +69,11 @@ tfCatalogProviders res bppConfig = do
 tfItemPrice :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Price
 tfItemPrice pricing = do
   let priceComputedValue_ = Nothing
-      priceCurrency_ = Just "INR"
-      priceMaximumValue_ = Beckn.OnDemand.Utils.Common.rationaliseMoney pricing.pricingMaxFare & Just
-      priceMinimumValue_ = Beckn.OnDemand.Utils.Common.rationaliseMoney pricing.pricingMinFare & Just
-      priceOfferedValue_ = Beckn.OnDemand.Utils.Common.rationaliseMoney pricing.pricingMinFare & Just
-      priceValue_ = Beckn.OnDemand.Utils.Common.rationaliseMoney pricing.pricingMinFare & Just
+      priceCurrency_ = Just $ show pricing.currency
+      priceMaximumValue_ = highPrecMoneyToText pricing.pricingMaxFare & Just
+      priceMinimumValue_ = highPrecMoneyToText pricing.pricingMinFare & Just
+      priceOfferedValue_ = highPrecMoneyToText pricing.pricingMinFare & Just
+      priceValue_ = highPrecMoneyToText pricing.pricingMinFare & Just
       returnData = BecknV2.OnDemand.Types.Price {priceComputedValue = priceComputedValue_, priceCurrency = priceCurrency_, priceMaximumValue = priceMaximumValue_, priceMinimumValue = priceMinimumValue_, priceOfferedValue = priceOfferedValue_, priceValue = priceValue_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing

@@ -24,22 +24,43 @@ import Data.Aeson.Lens
 import Data.Text as Text
 import qualified Data.Vector as DV
 import Domain.Types.Common
+import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
 import Kernel.Prelude as KP
 import Kernel.Types.Cac
 import Kernel.Types.Common
 import Kernel.Utils.Logging
 import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 
--- import Data.Maybe
-
 data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
-    baseFare :: Money,
-    waitingChargeInfo :: Maybe WaitingChargeInfo,
+    baseFare :: HighPrecMoney,
+    waitingChargeInfo :: Maybe Domain.WaitingChargeInfo,
     platformFeeInfo :: Maybe PlatformFeeInfo,
-    nightShiftCharge :: Maybe NightShiftCharge
+    nightShiftCharge :: Maybe Domain.NightShiftCharge,
+    currency :: Currency
   }
-  deriving (Generic, Show, Eq, ToSchema)
+  deriving (Generic, Show, Eq)
+
+-- for correct CAC parsing
+-- FIXME use fromTType' instead of creating specific type
+data FPSlabsDetailsSlabCAC = FPSlabsDetailsSlabCAC
+  { startDistance :: Meters,
+    baseFare :: Money,
+    baseFareAmount :: Maybe HighPrecMoney,
+    currency :: Maybe Currency,
+    waitingChargeInfo :: Maybe Domain.WaitingChargeInfo,
+    platformFeeInfo :: Maybe PlatformFeeInfo,
+    nightShiftCharge :: Maybe Domain.NightShiftCharge
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+mkFPSlabsDetailsSlabFromCAC :: FPSlabsDetailsSlabCAC -> FPSlabsDetailsSlab
+mkFPSlabsDetailsSlabFromCAC FPSlabsDetailsSlabCAC {..} =
+  FPSlabsDetailsSlab
+    { baseFare = mkAmountWithDefault baseFareAmount baseFare,
+      currency = fromMaybe INR currency,
+      ..
+    }
 
 type FPSlabsDetailsSlab = FPSlabsDetailsSlabD 'Safe
 
@@ -47,8 +68,10 @@ instance FromJSON (FPSlabsDetailsSlabD 'Unsafe)
 
 instance ToJSON (FPSlabsDetailsSlabD 'Unsafe)
 
+-- FIXME remove
 instance FromJSON (FPSlabsDetailsSlabD 'Safe)
 
+-- FIXME remove
 instance ToJSON (FPSlabsDetailsSlabD 'Safe)
 
 data PlatformFeeCharge = ProgressivePlatformFee HighPrecMoney | ConstantPlatformFee HighPrecMoney
@@ -72,16 +95,16 @@ parseFromCACMiddleware key' k1 = do
     Object config -> do
       let waitingCharge = DAKM.lookup "waitingCharge" config >>= fromJSONHelper
           freeWaitingTime = DAKM.lookup "freeWatingTime" config >>= fromJSONHelper
-          waitingChargeInfo = WaitingChargeInfo <$> freeWaitingTime <*> waitingCharge
+          waitingChargeInfo = Domain.WaitingChargeInfo <$> freeWaitingTime <*> waitingCharge
           platformFeeCharge = DAKM.lookup "platformFeeCharge" config >>= fromJSONHelper
           platformFeeCgst = DAKM.lookup "platformFeeCgst" config >>= fromJSONHelper
           platformFeeSgst = DAKM.lookup "platformFeeSgst" config >>= fromJSONHelper
           platformFeeInfo = PlatformFeeInfo <$> platformFeeCharge <*> platformFeeCgst <*> platformFeeSgst
           newKeyMap = KP.foldr (\(k, v) acc -> DAKM.insert k v acc) config [("waitingChargeInfo", DA.toJSON waitingChargeInfo), ("platformFeeInfo", DA.toJSON platformFeeInfo)]
-      let res = Object newKeyMap ^? _JSON :: Maybe FPSlabsDetailsSlab
+      let res = Object newKeyMap ^? _JSON :: Maybe FPSlabsDetailsSlabCAC
       when (isNothing res) do
         logDebug $ "farePolicySlabsDetailsSlab from CAC Not Parsable: " <> show newKeyMap <> " for key: " <> Text.pack key'
-      pure res
+      pure $ mkFPSlabsDetailsSlabFromCAC <$> res
     val -> do
       logDebug $ "farePolicySlabsDetailsSlab invalidType inCAC: " <> show val <> " for key: " <> Text.pack key'
       pure Nothing
@@ -100,16 +123,11 @@ jsonToFPSlabsDetailsSlab config key' = do
 data FPSlabsDetailsSlabAPIEntity = FPSlabsDetailsSlabAPIEntity
   { startDistance :: Meters,
     baseFare :: Money,
-    waitingChargeInfo :: Maybe WaitingChargeInfo,
+    baseFareWithCurrency :: PriceAPIEntity,
+    waitingChargeInfo :: Maybe WaitingChargeInfoAPIEntity,
     platformFeeInfo :: Maybe PlatformFeeInfo,
-    nightShiftCharge :: Maybe NightShiftCharge
+    nightShiftCharge :: Maybe NightShiftChargeAPIEntity
   }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
-
-makeFPSlabsDetailsSlabAPIEntity :: FPSlabsDetailsSlab -> FPSlabsDetailsSlabAPIEntity
-makeFPSlabsDetailsSlabAPIEntity FPSlabsDetailsSlab {..} =
-  FPSlabsDetailsSlabAPIEntity
-    { ..
-    }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 $(mkBeamInstancesForJSON ''PlatformFeeCharge)

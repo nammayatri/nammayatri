@@ -16,14 +16,15 @@ import qualified Tools.Beam.UtilsTH
 
 data Estimate = Estimate
   { createdAt :: Kernel.Prelude.UTCTime,
-    driverPickUpCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.Money,
+    currency :: Kernel.Types.Common.Currency,
+    driverPickUpCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     fareParams :: Kernel.Prelude.Maybe Domain.Types.FareParameters.FareParameters,
     farePolicy :: Kernel.Prelude.Maybe Domain.Types.FarePolicy.FarePolicy,
     id :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
     isScheduled :: Kernel.Prelude.Bool,
-    maxFare :: Kernel.Types.Common.Money,
-    minFare :: Kernel.Types.Common.Money,
+    maxFare :: Kernel.Types.Common.HighPrecMoney,
+    minFare :: Kernel.Types.Common.HighPrecMoney,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tripCategory :: Domain.Types.Common.TripCategory,

@@ -156,6 +156,7 @@ data TransporterConfigD u = TransporterConfig
     nightSafetyStartTime :: Seconds,
     nightSafetyEndTime :: Seconds,
     cancellationFee :: HighPrecMoney,
+    currency :: Currency,
     driverDistanceTravelledOnPickupThresholdOnCancel :: Meters,
     driverTimeSpentOnPickupThresholdOnCancel :: Seconds,
     cancellationFeeDisputeLimit :: Int,

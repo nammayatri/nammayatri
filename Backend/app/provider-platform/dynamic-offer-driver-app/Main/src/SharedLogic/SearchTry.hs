@@ -178,11 +178,11 @@ buildSearchTry ::
   DSR.SearchRequest ->
   [Text] ->
   Text ->
-  Money ->
+  HighPrecMoney ->
   Int ->
   DST.SearchRepeatType ->
   DTC.TripCategory ->
-  Maybe Money ->
+  Maybe HighPrecMoney ->
   Text ->
   DVST.ServiceTierType ->
   m DST.SearchTry
@@ -207,6 +207,7 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
         status = DST.ACTIVE,
         createdAt = now,
         updatedAt = now,
+        currency = searchReq.currency,
         ..
       }
 
@@ -219,10 +220,10 @@ buildTripQuoteDetail ::
   DTC.TripCategory ->
   DVST.ServiceTierType ->
   Maybe Text ->
-  Money ->
-  Maybe Money ->
-  Maybe Money ->
-  Maybe Money ->
+  HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   Text ->
   m TripQuoteDetail
 buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare mbDriverMinFee mbDriverMaxFee mDriverPickUpCharge estimateOrQuoteId = do
@@ -238,7 +239,7 @@ buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceT
       _ -> do
         farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId (Just searchReq.transactionId) (Just "transactionId")
         let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
-        return $
+        return
           ( DTSRD.extractDriverPickupCharges farePolicy.farePolicyDetails,
             mbDriverExtraFeeBounds <&> (.minFee),
             mbDriverExtraFeeBounds <&> (.maxFee)

@@ -122,7 +122,7 @@ instance FromTType' BeamDQ.DriverQuote DriverQuote where
             createdAt = T.localTimeToUTC T.utc createdAt,
             updatedAt = T.localTimeToUTC T.utc updatedAt,
             validTill = T.localTimeToUTC T.utc validTill,
-            estimatedFare = estimatedFare,
+            estimatedFare = mkAmountWithDefault estimatedFareAmount estimatedFare,
             fareParams = fp,
             providerId = Id providerId,
             goHomeRequestId = Id <$> goHomeRequestId,
@@ -132,6 +132,7 @@ instance FromTType' BeamDQ.DriverQuote DriverQuote where
             clientConfigVersion = clientConfigVersion',
             backendConfigVersion = backendConfigVersion',
             clientDevice = clientDevice',
+            currency = fromMaybe INR currency
             ..
           }
 
@@ -157,7 +158,9 @@ instance ToTType' BeamDQ.DriverQuote DriverQuote where
         BeamDQ.createdAt = T.utcToLocalTime T.utc createdAt,
         BeamDQ.updatedAt = T.utcToLocalTime T.utc updatedAt,
         BeamDQ.validTill = T.utcToLocalTime T.utc validTill,
-        BeamDQ.estimatedFare = estimatedFare,
+        BeamDQ.estimatedFareAmount = Just estimatedFare,
+        BeamDQ.estimatedFare = roundToIntegral estimatedFare,
+        BeamDQ.currency = Just currency,
         BeamDQ.fareParametersId = getId fareParams.id,
         BeamDQ.providerId = getId providerId,
         BeamDQ.goHomeRequestId = getId <$> goHomeRequestId,

@@ -140,6 +140,7 @@ import SharedLogic.DriverOnboarding
 import qualified SharedLogic.EventTracking as SEVT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.VehicleServiceTier
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -314,7 +315,7 @@ getDriverDue merchantShortId _ mbMobileCountryCode phone = do
   driverFees <- findPendingFeesByDriverIdAndServiceName (cast driver.id) YATRI_SUBSCRIPTION
   driverFeeByInvoices <- case driverFees of
     [] -> pure []
-    _ -> SLDriverFee.groupDriverFeeByInvoices driverFees
+    driverFee : _ -> SLDriverFee.groupDriverFeeByInvoices driverFee.currency driverFees
   return $ map (mkPaymentDueResp driver.id) driverFeeByInvoices
   where
     mkPaymentDueResp driverId SLDriverFee.DriverFeeByInvoice {..} = do
@@ -324,13 +325,24 @@ getDriverDue merchantShortId _ mbMobileCountryCode phone = do
           driverId_ = cast driverId
       Common.DriverOutstandingBalanceResp
         { govtCharges = round govtCharges,
+          govtChargesWithCurrency = PriceAPIEntity govtCharges currency,
           platformFee = platformFee_,
           status = status_,
           driverId = driverId_,
+          totalFee = roundToIntegral totalFee,
+          totalEarnings = roundToIntegral totalEarnings,
+          totalFeeWithCurrency = PriceAPIEntity totalFee currency,
+          totalEarningsWithCurrency = PriceAPIEntity totalEarnings currency,
           ..
         }
 
-    mkPlatformFee SLDriverFee.PlatformFee {..} = Common.PlatformFee {..}
+    mkPlatformFee SLDriverFee.PlatformFee {..} =
+      Common.PlatformFee
+        { feeWithCurrency = PriceAPIEntity fee currency,
+          cgstWithCurrency = PriceAPIEntity cgst currency,
+          sgstWithCurrency = PriceAPIEntity sgst currency,
+          ..
+        }
 
     castStatus status = case status of -- only PENDING and OVERDUE possible
       ONGOING -> Common.ONGOING
@@ -542,7 +554,7 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   driverFees <- findPendingFeesByDriverIdAndServiceName driverId serviceName
-  let totalFee = sum $ map (\fee -> fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
+  let totalFee = sum $ map (\fee -> fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   QDriverInfo.updatePendingPayment False driverId
@@ -1442,17 +1454,27 @@ updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId serviceNam
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   maybe (pure ()) (`QDriverInfo.updateSubscription` personId) subscribed
-  dueDriverFee <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName personId serviceName
+  dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName personId serviceName
   let invoicesDataToUpdate = maybe [] mapToInvoiceInfoToUpdateAfterParse invoices
   mapM_ (\inv -> QINV.updateStatusAndTypeByMbdriverFeeIdAndInvoiceId inv.invoiceId inv.invoiceStatus Nothing inv.driverFeeId) invoicesDataToUpdate
   allDriverFeeByIds <- QDF.findAllByDriverFeeIds (maybe [] (map (\df -> cast (Id df.driverFeeId))) driverFees)
-  if isJust mkDuesToAmount
+  let reqMkDuesToAmount = (mkDuesToAmountWithCurrency <&> (.amount)) <|> mkDuesToAmount
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+  SMerchant.checkCurrencies currency $ do
+    let driverFeesFields = flip (maybe []) driverFees $
+          concatMap $ \driverFees' ->
+            [ driverFees'.platformFeeWithCurrency,
+              driverFees'.sgstWithCurrency,
+              driverFees'.cgstWithCurrency
+            ]
+    mkDuesToAmountWithCurrency : driverFeesFields
+  if isJust reqMkDuesToAmount
     then do
-      let amount = maybe 0 (/ (fromIntegral $ length dueDriverFee)) mkDuesToAmount
-      mapM_ (\feeId -> QDF.resetFee feeId 0 (PlatformFee amount 0 0) Nothing Nothing now) (dueDriverFee <&> (.id))
-      return $ mkResponse dueDriverFee
+      let amount = maybe 0.0 (/ (fromIntegral $ length dueDriverFees)) reqMkDuesToAmount
+      mapM_ (\fee -> QDF.resetFee fee.id 0 (PlatformFee amount 0 0 fee.currency) Nothing Nothing now) dueDriverFees
+      return $ mkResponse dueDriverFees
     else do
-      maybe (pure ()) (updateAccordingToProvidedFeeState now) driverFees
+      maybe (pure ()) (updateAccordingToProvidedFeeState currency now) driverFees
       return $ mkResponse allDriverFeeByIds
   where
     mkResponse driverFees' =
@@ -1460,6 +1482,7 @@ updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId serviceNam
         { driverFees = Just $ mapToDriverFeeToUpdate driverFees',
           invoices = Nothing,
           mkDuesToAmount = Nothing,
+          mkDuesToAmountWithCurrency = Nothing,
           subscribed = Nothing
         }
     mapToInvoiceInfoToUpdateAfterParse =
@@ -1482,17 +1505,20 @@ updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId serviceNam
                 mkCleared = Nothing,
                 platformFee = Just $ dfee.platformFee.fee,
                 cgst = Just dfee.platformFee.cgst,
-                sgst = Just dfee.platformFee.sgst
+                sgst = Just dfee.platformFee.sgst,
+                platformFeeWithCurrency = Just $ PriceAPIEntity dfee.platformFee.fee dfee.currency,
+                cgstWithCurrency = Just $ PriceAPIEntity dfee.platformFee.cgst dfee.currency,
+                sgstWithCurrency = Just $ PriceAPIEntity dfee.platformFee.sgst dfee.currency
               }
         )
-    updateAccordingToProvidedFeeState now =
+    updateAccordingToProvidedFeeState currency now =
       mapM_
         ( \fee -> do
             let id = cast (Id fee.driverFeeId)
-                platFormFee' = fromMaybe 0 (fee.platformFee)
-                sgst = fromMaybe 0 (fee.sgst)
-                cgst = fromMaybe 0 (fee.cgst)
-                platFormFee = PlatformFee platFormFee' sgst cgst
+                platFormFee' = fromMaybe 0 ((fee.platformFeeWithCurrency <&> (.amount)) <|> fee.platformFee)
+                sgst = fromMaybe 0 ((fee.sgstWithCurrency <&> (.amount)) <|> fee.sgst)
+                cgst = fromMaybe 0 ((fee.cgstWithCurrency <&> (.amount)) <|> fee.cgst)
+                platFormFee = PlatformFee platFormFee' sgst cgst currency
             QDF.resetFee id 0 platFormFee Nothing Nothing now
             when (fee.mkManualDue == Just True) $ do QDF.updateAutoPayToManual id
             when (fee.mkAutoPayDue == Just True && fee.mkManualDue `elem` [Nothing, Just False]) $ do QDF.updateManualToAutoPay id
@@ -1830,7 +1856,7 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
       return $
         if null filteredDriverFees
           then 0
-          else sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
+          else sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
 
     templateText txt = "{#" <> txt <> "#}"
 

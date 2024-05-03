@@ -9,6 +9,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -40,6 +41,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             clientId = Kernel.Types.Id.Id <$> clientId,
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
+            currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             distanceCalculationFailed = distanceCalculationFailed,
             driverArrivalTime = driverArrivalTime,
             driverDeviatedFromRoute = driverDeviatedFromRoute,
@@ -48,7 +50,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             enableFrequentLocationUpdates = enableFrequentLocationUpdates,
             endOdometerReading = Storage.Queries.Transformers.Ride.mkOdometerReading endOdometerReadingFileId endOdometerReadingValue,
             endOtp = endOtp,
-            fare = fare,
+            fare = fmap (Kernel.Types.Common.mkAmountWithDefault fareAmount) fare,
             fareParametersId = Kernel.Types.Id.Id <$> fareParametersId,
             fromLocation = fromLocation',
             id = Kernel.Types.Id.Id id,
@@ -94,6 +96,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.clientId = Kernel.Types.Id.getId <$> clientId,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = createdAt,
+        Beam.currency = Kernel.Prelude.Just currency,
         Beam.distanceCalculationFailed = distanceCalculationFailed,
         Beam.driverArrivalTime = driverArrivalTime,
         Beam.driverDeviatedFromRoute = driverDeviatedFromRoute,
@@ -103,7 +106,8 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.endOdometerReadingFileId = getEndOdometerReadingFileId endOdometerReading,
         Beam.endOdometerReadingValue = Kernel.Prelude.fmap Domain.Types.Ride.value endOdometerReading,
         Beam.endOtp = endOtp,
-        Beam.fare = fare,
+        Beam.fare = Kernel.Prelude.fmap roundToIntegral fare,
+        Beam.fareAmount = fare,
         Beam.fareParametersId = Kernel.Types.Id.getId <$> fareParametersId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isFreeRide = isFreeRide,

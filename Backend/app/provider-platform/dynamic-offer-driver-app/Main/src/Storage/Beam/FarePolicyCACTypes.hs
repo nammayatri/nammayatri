@@ -3,7 +3,6 @@
 
 module Storage.Beam.FarePolicyCACTypes where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import qualified Domain.Types.FarePolicy as Domain
 import Domain.Types.UtilsTH
 import Kernel.Prelude
@@ -24,12 +23,14 @@ data FarePolicyRentalDetailsDistanceBuffers = FarePolicyRentalDetailsDistanceBuf
 data FarePolicySlabsDetailsSlab = FarePolicySlabsDetailsSlab
   { startDistance :: Meters,
     baseFare :: Money,
+    baseFareAmount :: Maybe HighPrecMoney,
+    currency :: Maybe Currency,
     platformFeeCharge :: Maybe Domain.PlatformFeeCharge,
     platformFeeCgst :: Maybe Double,
     platformFeeSgst :: Maybe Double,
-    waitingCharge :: Maybe DPM.WaitingCharge,
+    waitingCharge :: Maybe Domain.WaitingCharge,
     freeWatingTime :: Maybe Minutes, -- FIXME typo
-    nightShiftCharge :: Maybe DPM.NightShiftCharge
+    nightShiftCharge :: Maybe Domain.NightShiftCharge
   }
   deriving (Generic, FromJSON, ToJSON)
 

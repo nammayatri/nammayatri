@@ -46,7 +46,7 @@ data DSelectReq = DSelectReq
     bapUri :: BaseUrl,
     pickupTime :: UTCTime,
     autoAssignEnabled :: Bool,
-    customerExtraFee :: Maybe Money,
+    customerExtraFee :: Maybe HighPrecMoney,
     customerPhoneNum :: Maybe Text
   }
 
@@ -56,7 +56,7 @@ handler merchant sReq searchReq estimates = do
   now <- getCurrentTime
   case sReq.customerPhoneNum of
     Just number -> do
-      (riderDetails, isNewRider) <- SRD.getRiderDetails merchant.id (fromMaybe "+91" merchant.mobileCountryCode) number now False
+      (riderDetails, isNewRider) <- SRD.getRiderDetails searchReq.currency merchant.id (fromMaybe "+91" merchant.mobileCountryCode) number now False
       when isNewRider $ QRD.create riderDetails
       QSR.updateRiderId searchReq.id riderDetails.id
     Nothing -> do

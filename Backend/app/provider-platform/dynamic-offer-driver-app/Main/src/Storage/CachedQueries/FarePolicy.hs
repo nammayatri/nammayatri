@@ -143,7 +143,7 @@ findById txnId idName id = do
               findFarePolicyFromDB id
           )
       )
-  logDebug $ "farePlicy we recieved for farePolicyId:" <> getId id <> " is:" <> show config
+  logDebug $ "farePolicy we received for farePolicyId:" <> getId id <> " is:" <> show config
   pure config
 
 cacheFarePolicy :: (CacheFlow m r) => FarePolicy -> m ()

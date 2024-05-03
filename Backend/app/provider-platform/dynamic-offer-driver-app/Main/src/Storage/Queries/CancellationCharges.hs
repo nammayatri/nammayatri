@@ -34,7 +34,8 @@ instance FromTType' BeamCC.CancellationCharges CancellationCharges where
           { id = Id id,
             driverId = Id driverId,
             rideId = Id <$> rideId,
-            cancellationCharges = cancellationCharges
+            cancellationCharges = cancellationCharges,
+            currency = fromMaybe INR currency
           }
 
 instance ToTType' BeamCC.CancellationCharges CancellationCharges where
@@ -43,5 +44,6 @@ instance ToTType' BeamCC.CancellationCharges CancellationCharges where
       { BeamCC.id = id.getId,
         BeamCC.driverId = driverId.getId,
         BeamCC.rideId = getId <$> rideId,
-        BeamCC.cancellationCharges = cancellationCharges
+        BeamCC.cancellationCharges = cancellationCharges,
+        BeamCC.currency = Just currency
       }

@@ -27,7 +27,7 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Common (Forkable (fork), MonadTime (getCurrentTime))
+import Kernel.Types.Common (Forkable (fork), MonadTime (getCurrentTime), PriceAPIEntity (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -54,7 +54,8 @@ bookingInfo merchantShortId opCity otpCode = do
           fromLocation = buildBookingLocation fromLocation,
           toLocation = buildBookingLocation <$> toLocation,
           estimatedDistance,
-          estimatedFare,
+          estimatedFare = roundToIntegral estimatedFare,
+          estimatedFareWithCurrency = PriceAPIEntity estimatedFare currency,
           estimatedDuration,
           riderName,
           vehicleVariant = convertVehicleVariant vehicleServiceTier

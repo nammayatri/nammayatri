@@ -61,7 +61,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     estimateId :: Maybe Text,
     merchantId :: Maybe (Id DM.Merchant),
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    baseFare :: Maybe Money,
+    baseFare :: Maybe HighPrecMoney,
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     driverId :: Id Person,
@@ -78,8 +78,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     lon :: Maybe Double,
     createdAt :: UTCTime,
     response :: Maybe SearchRequestForDriverResponse,
-    driverMinExtraFee :: Maybe Money,
-    driverMaxExtraFee :: Maybe Money,
+    driverMinExtraFee :: Maybe HighPrecMoney,
+    driverMaxExtraFee :: Maybe HighPrecMoney,
     rideRequestPopupDelayDuration :: Seconds,
     isPartOfIntelligentPool :: Bool,
     pickupZone :: Bool,
@@ -98,7 +98,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     clientConfigVersion :: Maybe Version,
     clientDevice :: Maybe Device,
     backendConfigVersion :: Maybe Version,
-    backendAppVersion :: Maybe Text
+    backendAppVersion :: Maybe Text,
+    currency :: Currency
   }
   deriving (Generic, Show)
 
@@ -113,6 +114,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     durationToPickup :: Seconds,
     baseFare :: Money,
     customerExtraFee :: Maybe Money,
+    baseFareWithCurrency :: PriceAPIEntity,
+    customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     fromLocation :: DSSL.SearchReqLocation,
     toLocation :: Maybe DSSL.SearchReqLocation,
     newFromLocation :: DLoc.Location,
@@ -124,6 +127,9 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     driverMinExtraFee :: Maybe Money,
     driverMaxExtraFee :: Maybe Money,
     specialZoneExtraTip :: Maybe Money,
+    driverMinExtraFeeWithCurrency :: Maybe PriceAPIEntity,
+    driverMaxExtraFeeWithCurrency :: Maybe PriceAPIEntity,
+    specialZoneExtraTipWithCurrency :: Maybe PriceAPIEntity,
     pickupZone :: Bool,
     rideRequestPopupDelayDuration :: Seconds,
     specialLocationTag :: Maybe Text,
@@ -135,14 +141,19 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     airConditioned :: Maybe Bool,
     isTranslated :: Bool,
     customerCancellationDues :: HighPrecMoney,
+    customerCancellationDuesWithCurrency :: PriceAPIEntity,
     isValueAddNP :: Bool,
     driverPickUpCharges :: Maybe Money,
-    tollCharges :: Maybe HighPrecMoney
+    tollCharges :: Maybe HighPrecMoney,
+    driverPickUpChargesWithCurrency :: Maybe PriceAPIEntity,
+    tollChargesWithCurrency :: Maybe PriceAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe Money -> Seconds -> Variant.Variant -> Bool -> Bool -> Maybe Money -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleVariant isTranslated isValueAddNP driverPickUpCharges =
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> Variant.Variant -> Bool -> Bool -> Maybe HighPrecMoney -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleVariant isTranslated isValueAddNP driverPickUpCharges = do
+  let specialZoneExtraTip =
+        min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation
   SearchRequestForDriverAPIEntity
     { searchRequestId = nearbyReq.searchTryId,
       searchTryId = nearbyReq.searchTryId,
@@ -152,8 +163,10 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       searchRequestValidTill = nearbyReq.searchRequestValidTill,
       distanceToPickup = nearbyReq.actualDistanceToPickup,
       durationToPickup = nearbyReq.durationToPickup,
-      baseFare = fromMaybe searchTry.baseFare nearbyReq.baseFare, -- short term, later remove searchTry.baseFare
-      customerExtraFee = searchTry.customerExtraFee,
+      baseFare = roundToIntegral $ fromMaybe searchTry.baseFare nearbyReq.baseFare, -- short term, later remove searchTry.baseFare
+      baseFareWithCurrency = PriceAPIEntity (fromMaybe searchTry.baseFare nearbyReq.baseFare) nearbyReq.currency,
+      customerExtraFee = roundToIntegral <$> searchTry.customerExtraFee,
+      customerExtraFeeWithCurrency = flip PriceAPIEntity searchTry.currency <$> searchTry.customerExtraFee,
       fromLocation = convertDomainType searchRequest.fromLocation,
       toLocation = convertDomainType <$> searchRequest.toLocation,
       newFromLocation = searchRequest.fromLocation,
@@ -164,26 +177,32 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           { lat = fromMaybe 0.0 nearbyReq.lat,
             lon = fromMaybe 0.0 nearbyReq.lon
           },
-      driverMinExtraFee = nearbyReq.driverMinExtraFee,
-      driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
+      driverMinExtraFee = roundToIntegral <$> nearbyReq.driverMinExtraFee,
+      driverMinExtraFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverMinExtraFee,
+      driverMaxExtraFee = roundToIntegral <$> nearbyReq.driverMaxExtraFee,
+      driverMaxExtraFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverMaxExtraFee,
       rideRequestPopupDelayDuration = delayDuration,
       specialLocationTag = searchRequest.specialLocationTag,
       disabilityTag = searchRequest.disabilityTag,
       keepHiddenForSeconds = keepHiddenForSeconds,
       goHomeRequestId = nearbyReq.goHomeRequestId,
       customerCancellationDues = nearbyReq.customerCancellationDues,
+      customerCancellationDuesWithCurrency = PriceAPIEntity nearbyReq.customerCancellationDues nearbyReq.currency,
       tollCharges = searchRequest.tollCharges,
+      tollChargesWithCurrency = flip PriceAPIEntity searchRequest.currency <$> searchRequest.tollCharges,
       tripCategory = searchTry.tripCategory,
       duration = searchRequest.estimatedDuration,
       pickupZone = nearbyReq.pickupZone,
-      driverPickUpCharges = driverPickUpCharges,
-      specialZoneExtraTip = min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation,
+      driverPickUpCharges = roundToIntegral <$> driverPickUpCharges,
+      driverPickUpChargesWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> driverPickUpCharges,
+      specialZoneExtraTip = roundToIntegral <$> specialZoneExtraTip,
+      specialZoneExtraTipWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> specialZoneExtraTip,
       vehicleServiceTier = nearbyReq.vehicleServiceTierName,
       airConditioned = nearbyReq.airConditioned,
       ..
     }
 
-extractDriverPickupCharges :: DFP.FarePolicyDetailsD s -> Maybe Money
+extractDriverPickupCharges :: DFP.FarePolicyDetailsD s -> Maybe HighPrecMoney
 extractDriverPickupCharges farePolicyDetails =
   case farePolicyDetails of
     DFP.ProgressiveDetails det -> Just det.deadKmFare

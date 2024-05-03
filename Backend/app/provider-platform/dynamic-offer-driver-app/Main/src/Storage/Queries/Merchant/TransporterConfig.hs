@@ -151,6 +151,8 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             canSuvDowngradeToHatchback = fromMaybe False canSuvDowngradeToHatchback,
             arrivedPickupThreshold = fromMaybe 100 arrivedPickupThreshold,
             variantsToEnableForSubscription = variantsToEnableForSubscription,
+            cancellationFee = cancellationFee,
+            currency = fromMaybe INR currency,
             ..
           }
     where
@@ -266,6 +268,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.nightSafetyStartTime = nightSafetyStartTime,
         BeamTC.nightSafetyEndTime = nightSafetyEndTime,
         BeamTC.cancellationFee = cancellationFee,
+        BeamTC.currency = Just currency,
         BeamTC.driverDistanceTravelledOnPickupThresholdOnCancel = driverDistanceTravelledOnPickupThresholdOnCancel,
         BeamTC.driverTimeSpentOnPickupThresholdOnCancel = driverTimeSpentOnPickupThresholdOnCancel,
         BeamTC.driverDistanceToPickupThresholdOnCancel = driverDistanceToPickupThresholdOnCancel,

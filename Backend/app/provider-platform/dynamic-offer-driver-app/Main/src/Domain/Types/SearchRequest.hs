@@ -53,7 +53,8 @@ data SearchRequest = SearchRequest
     estimatedDuration :: Maybe Seconds,
     validTill :: UTCTime,
     isScheduled :: Bool,
-    driverDefaultExtraFee :: Maybe Money,
+    driverDefaultExtraFee :: Maybe HighPrecMoney,
+    currency :: Currency,
     pickupZoneGateId :: Maybe Text,
     startTime :: UTCTime,
     createdAt :: UTCTime

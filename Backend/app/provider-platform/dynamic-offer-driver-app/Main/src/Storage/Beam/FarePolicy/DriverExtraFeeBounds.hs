@@ -26,7 +26,9 @@ data DriverExtraFeeBoundsT f = DriverExtraFeeBoundsT
     farePolicyId :: B.C f Text,
     startDistance :: B.C f Meters,
     minFee :: B.C f Money,
-    maxFee :: B.C f Money
+    maxFee :: B.C f Money,
+    minFeeAmount :: B.C f (Maybe HighPrecMoney),
+    maxFeeAmount :: B.C f (Maybe HighPrecMoney)
   }
   deriving (Generic, B.Beamable)
 

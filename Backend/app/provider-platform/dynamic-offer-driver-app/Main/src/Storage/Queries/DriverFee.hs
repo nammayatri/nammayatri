@@ -28,7 +28,7 @@ import Domain.Types.Plan as DPlan
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.CacheFlow (CacheFlow)
-import Kernel.Types.Common (EsqDBFlow, HighPrecMoney, MonadFlow, Money)
+import Kernel.Types.Common (Currency (INR), EsqDBFlow, HighPrecMoney (..), MonadFlow, mkAmountWithDefault)
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Kernel.Utils.Common (fork, fromMaybeM, getLocalCurrentTime)
@@ -419,8 +419,8 @@ findUnpaidAfterPayByWithServiceName (Id driverId) now serviceName =
 updateFee ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DriverFee ->
-  Maybe Money ->
-  Money ->
+  Maybe HighPrecMoney ->
+  HighPrecMoney ->
   HighPrecMoney ->
   HighPrecMoney ->
   HighPrecMoney ->
@@ -438,16 +438,18 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd boo
       let sgst' = df.platformFee.sgst
       let totalEarnings = df.totalEarnings
       let numRides = df.numRides + if isRideEnd then 1 else 0
-      let fare = fromMaybe 0 mbFare
+      let fare = fromMaybe 0.0 mbFare
           specialZoneRideCount' = df.specialZoneRideCount
           specialZoneAmount' = df.specialZoneAmount
-          totalDriverFee = fromIntegral govtCharges + platformFee + cgst + sgst
+          totalDriverFee = govtCharges + platformFee + cgst + sgst
       updateOneWithKV
-        ( [ Se.Set BeamDF.govtCharges $ govtCharges' + govtCharges,
+        ( [ Se.Set BeamDF.govtCharges $ roundToIntegral $ govtCharges' + govtCharges,
+            Se.Set BeamDF.govtChargesAmount $ Just $ govtCharges' + govtCharges,
             Se.Set BeamDF.platformFee $ platformFee' + platformFee,
             Se.Set BeamDF.cgst $ cgst' + cgst,
             Se.Set BeamDF.sgst $ sgst' + sgst,
-            Se.Set BeamDF.totalEarnings $ totalEarnings + fare,
+            Se.Set BeamDF.totalEarnings $ roundToIntegral $ totalEarnings + fare,
+            Se.Set BeamDF.totalEarningsAmount $ Just $ totalEarnings + fare,
             Se.Set BeamDF.numRides numRides,
             Se.Set BeamDF.updatedAt now
           ]
@@ -462,7 +464,7 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd boo
 resetFee ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DriverFee ->
-  Money ->
+  HighPrecMoney ->
   Domain.PlatformFee ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
@@ -470,7 +472,8 @@ resetFee ::
   m ()
 resetFee driverFeeId govtCharges platformFee mbFeeWithoutDiscount mbAmountPaidByCoin now = do
   updateOneWithKV
-    ( [ Se.Set BeamDF.govtCharges govtCharges,
+    ( [ Se.Set BeamDF.govtCharges $ roundToIntegral govtCharges,
+        Se.Set BeamDF.govtChargesAmount $ Just govtCharges,
         Se.Set BeamDF.platformFee platformFee.fee,
         Se.Set BeamDF.cgst platformFee.cgst,
         Se.Set BeamDF.sgst platformFee.sgst,
@@ -934,11 +937,12 @@ instance FromTType' BeamDF.DriverFee DriverFee where
           { id = Id id,
             merchantId = Id merchantId,
             driverId = Id driverId,
-            govtCharges = govtCharges,
-            platformFee = Domain.PlatformFee platformFee cgst sgst,
+            govtCharges = mkAmountWithDefault govtChargesAmount govtCharges,
+            platformFee = Domain.PlatformFee platformFee cgst sgst (fromMaybe INR currency),
             numRides = numRides,
             payBy = payBy,
-            totalEarnings = totalEarnings,
+            totalEarnings = mkAmountWithDefault totalEarningsAmount totalEarnings,
+            currency = fromMaybe INR currency,
             startTime = startTime,
             endTime = endTime,
             status = status,
@@ -974,13 +978,16 @@ instance ToTType' BeamDF.DriverFee DriverFee where
       { BeamDF.id = getId id,
         BeamDF.merchantId = getId merchantId,
         BeamDF.driverId = getId driverId,
-        BeamDF.govtCharges = govtCharges,
+        BeamDF.govtCharges = roundToIntegral govtCharges,
+        BeamDF.govtChargesAmount = Just govtCharges,
         BeamDF.platformFee = platformFee.fee,
         BeamDF.cgst = platformFee.cgst,
         BeamDF.sgst = platformFee.sgst,
         BeamDF.numRides = numRides,
         BeamDF.payBy = payBy,
-        BeamDF.totalEarnings = totalEarnings,
+        BeamDF.totalEarnings = roundToIntegral totalEarnings,
+        BeamDF.totalEarningsAmount = Just totalEarnings,
+        BeamDF.currency = Just currency,
         BeamDF.startTime = startTime,
         BeamDF.endTime = endTime,
         BeamDF.status = status,

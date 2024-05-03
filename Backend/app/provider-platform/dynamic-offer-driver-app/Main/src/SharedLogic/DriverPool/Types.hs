@@ -124,7 +124,7 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     intelligentScores :: IntelligentScores,
     isPartOfIntelligentPool :: Bool,
     pickupZone :: Bool,
-    specialZoneExtraTip :: Maybe Money,
+    specialZoneExtraTip :: Maybe HighPrecMoney,
     goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest)
   }
   deriving (Generic, Show, FromJSON, ToJSON)
@@ -143,10 +143,10 @@ data TripQuoteDetail = TripQuoteDetail
   { tripCategory :: DTC.TripCategory,
     vehicleServiceTier :: DVST.ServiceTierType,
     vehicleServiceTierName :: Text,
-    baseFare :: Money,
-    driverMinFee :: Maybe Money,
-    driverMaxFee :: Maybe Money,
-    driverPickUpCharge :: Maybe Money,
+    baseFare :: HighPrecMoney,
+    driverMinFee :: Maybe HighPrecMoney,
+    driverMaxFee :: Maybe HighPrecMoney,
+    driverPickUpCharge :: Maybe HighPrecMoney,
     estimateOrQuoteId :: Text
   }
 
@@ -155,7 +155,7 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     merchant :: DM.Merchant,
     searchReq :: DSR.SearchRequest,
     tripQuoteDetails :: [TripQuoteDetail],
-    customerExtraFee :: Maybe Money,
+    customerExtraFee :: Maybe HighPrecMoney,
     messageId :: Text,
     isRepeatSearch :: Bool
   }

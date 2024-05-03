@@ -15,6 +15,7 @@ import Kernel.External.Maps.Types (LatLong)
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Common (Currency)
 import Kernel.Types.Id
 
 data MerchantOperatingCity = MerchantOperatingCity
@@ -26,6 +27,7 @@ data MerchantOperatingCity = MerchantOperatingCity
     country :: Context.Country,
     location :: LatLong,
     supportNumber :: Maybe Text,
-    language :: Language
+    language :: Language,
+    currency :: Currency
   }
-  deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, Show)

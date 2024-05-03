@@ -15,7 +15,6 @@ where
 
 import Control.Lens.Combinators
 import Control.Lens.Fold
-import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant
 import Data.Aeson as DA
 import qualified Data.Aeson.Key as DAK
 import qualified Data.Aeson.KeyMap as DAKM
@@ -23,6 +22,7 @@ import Data.Aeson.Lens
 import Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import Domain.Types.Common
+import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
 import Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffer as Reexport
 import Kernel.Prelude
 import Kernel.Types.Cac
@@ -30,18 +30,53 @@ import Kernel.Types.Common
 import Kernel.Utils.Logging
 
 data FPRentalDetailsD (s :: UsageSafety) = FPRentalDetails
+  { baseFare :: HighPrecMoney,
+    perHourCharge :: HighPrecMoney,
+    distanceBuffers :: NonEmpty (FPRentalDetailsDistanceBuffersD s),
+    perExtraKmRate :: HighPrecMoney,
+    perExtraMinRate :: HighPrecMoney,
+    includedKmPerHr :: Kilometers,
+    plannedPerKmRate :: HighPrecMoney,
+    currency :: Currency,
+    maxAdditionalKmsLimit :: Kilometers,
+    totalAdditionalKmsLimit :: Kilometers,
+    nightShiftCharge :: Maybe Domain.NightShiftCharge
+  }
+  deriving (Generic, Show)
+
+-- for correct CAC parsing
+-- FIXME use fromTType' instead of creating specific type
+data FPRentalDetailsCAC = FPRentalDetailsCAC
   { baseFare :: Money,
     perHourCharge :: Money,
-    distanceBuffers :: NonEmpty (FPRentalDetailsDistanceBuffersD s),
+    distanceBuffers :: NonEmpty FPRentalDetailsDistanceBuffers,
     perExtraKmRate :: Money,
     perExtraMinRate :: Money,
     includedKmPerHr :: Kilometers,
     plannedPerKmRate :: Money,
+    baseFareAmount :: Maybe HighPrecMoney,
+    perHourChargeAmount :: Maybe HighPrecMoney,
+    perExtraMinRateAmount :: Maybe HighPrecMoney,
+    perExtraKmRateAmount :: Maybe HighPrecMoney,
+    plannedPerKmRateAmount :: Maybe HighPrecMoney,
+    currency :: Maybe Currency,
     maxAdditionalKmsLimit :: Kilometers,
     totalAdditionalKmsLimit :: Kilometers,
-    nightShiftCharge :: Maybe NightShiftCharge
+    nightShiftCharge :: Maybe Domain.NightShiftCharge
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+mkFPRentalDetailsFromCAC :: FPRentalDetailsCAC -> FPRentalDetails
+mkFPRentalDetailsFromCAC FPRentalDetailsCAC {..} =
+  FPRentalDetails
+    { baseFare = mkAmountWithDefault baseFareAmount baseFare,
+      perHourCharge = mkAmountWithDefault perHourChargeAmount perHourCharge,
+      perExtraMinRate = mkAmountWithDefault perExtraMinRateAmount perExtraMinRate,
+      perExtraKmRate = mkAmountWithDefault perExtraKmRateAmount perExtraKmRate,
+      plannedPerKmRate = mkAmountWithDefault plannedPerKmRateAmount plannedPerKmRate,
+      currency = fromMaybe INR currency,
+      ..
+    }
 
 type FPRentalDetails = FPRentalDetailsD 'Safe
 
@@ -49,8 +84,10 @@ instance FromJSON (FPRentalDetailsD 'Unsafe)
 
 instance ToJSON (FPRentalDetailsD 'Unsafe)
 
+-- FIXME remove
 instance FromJSON (FPRentalDetailsD 'Safe)
 
+-- FIXME remove
 instance ToJSON (FPRentalDetailsD 'Safe)
 
 parsingMiddlewareForRental :: String -> DAKM.KeyMap Value -> String -> DAKM.KeyMap Value
@@ -62,7 +99,7 @@ jsonToFPRentalDetails :: MonadFlow m => String -> String -> m (Maybe FPRentalDet
 jsonToFPRentalDetails config key' = do
   let fPRD' = config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicyRentalDetails:") (itraversed . indices (Text.isPrefixOf "farePolicyRentalDetails:" . DAK.toText))
       fpRD'' = parsingMiddlewareForRental config (DAKM.fromList fPRD') key'
-      res = Object fpRD'' ^? _JSON :: (Maybe FPRentalDetails)
+      res = Object fpRD'' ^? _JSON :: (Maybe FPRentalDetailsCAC)
   when (isNothing res) do
     logDebug $ "FarePolicyRentalDetails from CAC Not Parsable: " <> show fPRD' <> " after middle parsing" <> show fpRD'' <> " for key: " <> Text.pack key'
-  pure res
+  pure $ mkFPRentalDetailsFromCAC <$> res

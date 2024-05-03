@@ -20,6 +20,9 @@ data FareParametersRentalDetailsT f = FareParametersRentalDetailsT
   { fareParametersId :: B.C f Text,
     timeBasedFare :: B.C f Money,
     distBasedFare :: B.C f Money,
+    timeBasedFareAmount :: B.C f (Maybe HighPrecMoney),
+    distBasedFareAmount :: B.C f (Maybe HighPrecMoney),
+    currency :: B.C f (Maybe Currency),
     extraDuration :: B.C f (Maybe Seconds),
     extraDistance :: B.C f (Maybe Meters)
   }

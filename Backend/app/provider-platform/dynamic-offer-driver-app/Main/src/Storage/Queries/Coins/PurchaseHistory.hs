@@ -49,6 +49,7 @@ instance FromTType' BeamDC.PurchaseHistory PurchaseHistory where
             merchantId = merchantId,
             merchantOptCityId = merchantOptCityId,
             cash = cash,
+            currency = fromMaybe INR currency,
             title = title,
             updatedAt = updatedAt
           }
@@ -63,6 +64,7 @@ instance ToTType' BeamDC.PurchaseHistory PurchaseHistory where
         BeamDC.createdAt = createdAt,
         BeamDC.numCoins = numCoins,
         BeamDC.cash = cash,
+        BeamDC.currency = Just currency,
         BeamDC.title = title,
         BeamDC.updatedAt = updatedAt
       }
