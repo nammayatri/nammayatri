@@ -250,29 +250,30 @@ getContextBppUri context = do
 withTransactionIdLogTag :: (Log m) => Text -> m a -> m a
 withTransactionIdLogTag = withTransactionIdLogTag'
 
-mkStops' :: DLoc.Location -> Maybe DLoc.Location -> Maybe [Spec.Stop]
-mkStops' origin mDestination =
-  let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
-   in Just $
+mkStops' :: Maybe DLoc.Location -> Maybe DLoc.Location -> Maybe [Spec.Stop]
+mkStops' mbOrigin mDestination = do
+  let stops =
         catMaybes
-          [ Just $
-              Spec.Stop
-                { stopLocation =
-                    Just $
-                      Spec.Location
-                        { locationAddress = Just $ mkAddress origin.address,
-                          locationAreaCode = origin.address.areaCode,
-                          locationCity = Just $ Spec.City Nothing origin.address.city,
-                          locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                          locationGps = Utils.gpsToText originGps,
-                          locationState = Just $ Spec.State origin.address.state,
-                          locationId = Nothing,
-                          locationUpdatedAt = Nothing
-                        },
-                  stopType = Just $ show Enums.START,
-                  stopAuthorization = Nothing,
-                  stopTime = Nothing
-                },
+          [ mbOrigin >>= \origin -> do
+              let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
+              Just $
+                Spec.Stop
+                  { stopLocation =
+                      Just $
+                        Spec.Location
+                          { locationAddress = Just $ mkAddress origin.address,
+                            locationAreaCode = origin.address.areaCode,
+                            locationCity = Just $ Spec.City Nothing origin.address.city,
+                            locationCountry = Just $ Spec.Country Nothing origin.address.country,
+                            locationGps = Utils.gpsToText originGps,
+                            locationState = Just $ Spec.State origin.address.state,
+                            locationId = Nothing,
+                            locationUpdatedAt = Nothing
+                          },
+                    stopType = Just $ show Enums.START,
+                    stopAuthorization = Nothing,
+                    stopTime = Nothing
+                  },
             mDestination >>= \destination -> do
               let destinationGps = Gps.Gps {lat = destination.lat, lon = destination.lon}
               Just $
@@ -294,6 +295,30 @@ mkStops' origin mDestination =
                     stopTime = Nothing
                   }
           ]
+  if length stops == 0
+    then Nothing
+    else Just stops
+
+makeStop :: DLoc.Location -> Spec.Stop
+makeStop stop =
+  let gps = Gps.Gps {lat = stop.lat, lon = stop.lon}
+   in Spec.Stop
+        { stopLocation =
+            Just $
+              Spec.Location
+                { locationAddress = Just $ mkAddress stop.address,
+                  locationAreaCode = stop.address.areaCode,
+                  locationCity = Just $ Spec.City Nothing stop.address.city,
+                  locationCountry = Just $ Spec.Country Nothing stop.address.country,
+                  locationGps = Utils.gpsToText gps,
+                  locationState = Just $ Spec.State stop.address.state,
+                  locationId = Just stop.id.getId,
+                  locationUpdatedAt = Nothing
+                },
+          stopType = Just $ show Enums.INTERMEDIATE_STOP,
+          stopAuthorization = Nothing,
+          stopTime = Nothing
+        }
 
 mapVariantToVehicle :: VehVar.VehicleVariant -> VehicleCategory
 mapVariantToVehicle variant = do

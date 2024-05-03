@@ -163,17 +163,18 @@ update providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   callBecknAPIWithSignature req.context.bap_id "update" API.updateAPIV1 providerUrl internalEndPointHashMap req
 
--- updateV2 ::
---   ( MonadFlow m,
---     CoreMetrics m,
---     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
---   ) =>
---   BaseUrl ->
---   UpdateReqV2 ->
---   m UpdateRes
--- updateV2 providerUrl req = do
---   internalEndPointHashMap <- asks (.internalEndPointHashMap)
---   callBecknAPIWithSignature req.context.bap_id "update" API.updateAPIV2 providerUrl internalEndPointHashMap req
+updateV2 ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  BaseUrl ->
+  UpdateReqV2 ->
+  m UpdateRes
+updateV2 providerUrl req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.updateReqContext.contextBapId
+  callBecknAPIWithSignature bapId "update" API.updateAPIV2 providerUrl internalEndPointHashMap req
 
 callTrack ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],

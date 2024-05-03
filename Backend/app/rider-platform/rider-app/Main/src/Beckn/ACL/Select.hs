@@ -88,7 +88,7 @@ tfFulfillment res startLoc endLoc isValueAddNP =
       fulfillmentCustomer = if isValueAddNP then tfCustomer res.phoneNumber else Nothing
       fulfillmentId = Just res.estimate.bppEstimateId.getId
       fulfillmentType = Just $ show Enums.DELIVERY
-      fulfillmentStops = UCommon.mkStops' startLoc (Just endLoc)
+      fulfillmentStops = UCommon.mkStops' (Just startLoc) (Just endLoc)
       fulfillmentVehicle = tfVehicle res
    in Spec.Fulfillment
         { fulfillmentStops = fulfillmentStops,

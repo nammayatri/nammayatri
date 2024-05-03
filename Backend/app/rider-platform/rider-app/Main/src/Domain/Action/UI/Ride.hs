@@ -26,7 +26,6 @@ where
 
 import qualified Beckn.ACL.Update as ACL
 import qualified Beckn.OnDemand.Utils.Common as Common
-import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import qualified Data.HashMap.Strict as HM
 import Data.List (sortBy)
 import Data.Ord
@@ -255,7 +254,7 @@ editLocation rideId (_, merchantId) req = do
       QLM.create pickupMapForBooking
       pickupMapForRide <- SLM.buildPickUpLocationMapping startLocation.id ride.id.getId DLM.RIDE (Just merchantId) ride.merchantOperatingCityId
       QLM.create pickupMapForRide
-      let origin = Just $ mkDomainLocation pickup
+      let origin = Just $ startLocation{id = "0"}
       bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
       uuid <- generateGUID
       let dUpdateReq =
@@ -278,7 +277,7 @@ editLocation rideId (_, merchantId) req = do
                 ..
               }
       becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-      void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
+      void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
       QRide.updateEditLocationAttempts ride.id (Just (attemptsLeft -1))
       pure $ EditLocationResp Nothing
     (_, Just destination) -> do
@@ -296,7 +295,8 @@ editLocation rideId (_, merchantId) req = do
       QLM.create startLocMap
       QLM.create oldDropLocMap
       QLM.create newDropLocationMap
-      let destination' = Just $ mkDomainLocation destination
+      prevOrder <- QLM.maxOrderByEntity booking.id.getId
+      let destination' = Just $ newDropLocation{id = show prevOrder}
       bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
       let dUpdateReq =
             ACL.UpdateBuildReq
@@ -316,7 +316,7 @@ editLocation rideId (_, merchantId) req = do
                 ..
               }
       becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-      void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
+      void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
       QRide.updateEditLocationAttempts ride.id (Just (attemptsLeft -1))
       pure $ EditLocationResp (Just bookingUpdateReq.id)
     (_, _) -> throwError PickupOrDropLocationNotFound
@@ -334,28 +334,6 @@ buildLocation location = do
         lon = location.gps.lon,
         address = location.address
       }
-
-mkDomainLocation :: EditLocation -> Common.Location
-mkDomainLocation EditLocation {..} =
-  Common.Location
-    { gps =
-        Common.Gps
-          { lat = gps.lat,
-            lon = gps.lon
-          },
-      address =
-        Common.Address
-          { locality = address.area,
-            area_code = address.areaCode,
-            state = address.state,
-            country = address.country,
-            building = address.building,
-            street = address.street,
-            city = address.city,
-            ward = address.ward,
-            door = address.door
-          }
-    }
 
 buildbookingUpdateRequest :: MonadFlow m => DB.Booking -> m DBUR.BookingUpdateRequest
 buildbookingUpdateRequest booking = do

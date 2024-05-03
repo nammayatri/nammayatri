@@ -46,6 +46,7 @@ data StopType
   = -- ..fulfillments.stops.type
     START
   | END
+  | INTERMEDIATE_STOP
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data AuthorizationType
@@ -63,6 +64,10 @@ data FulfillmentState
   | RIDE_ENROUTE_PICKUP
   | RIDE_ARRIVED_PICKUP
   | NEW -- Custom type only used for on-us transaction
+  | PAYMENT_COMPLETED -- Custom type only used for on-us transaction
+  | EDIT_LOCATION -- Custom type only used for on-us transaction
+  | ADD_STOP -- Custom type only used for on-us transaction
+  | EDIT_STOP -- Custom type only used for on-us transaction
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data PaymentStatus

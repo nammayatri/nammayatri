@@ -72,12 +72,12 @@ postEditResultConfirm (mbPersonId, merchantId) bookingUpdateReqId = do
                   { bppRideId = ride.bppRideId,
                     origin = Nothing,
                     status = ACL.CONFIRM_UPDATE,
-                    destination = Just $ mkLocation destination'
+                    destination = Just destination'
                   },
             ..
           }
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-  void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
+  void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
   return Success
 
 mkLocation :: QL.Location -> Common.Location
