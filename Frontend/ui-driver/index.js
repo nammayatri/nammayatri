@@ -229,7 +229,10 @@ window.onMerchantEvent = function (_event, payload) {
       window.flowTimeStampObject["bundleLoadTime"] = bundleLoadTime - window.prevTimeStamp;
       window.flowTimeStampObject["bundleToInitiate"] = Date.now() - bundleLoadTime;
       window.prevTimeStamp = Date.now();
-    } catch (err) {}
+    } catch (err) {
+      console.error(err)
+    }
+    purescript.initScreen();
     callInitiateResult();
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
@@ -264,9 +267,9 @@ window.onMerchantEvent = function (_event, payload) {
       }
       JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
       if (parsedPayload.payload.notificationData && parsedPayload.payload.notificationData.notification_type == "NEW_MESSAGE" && parsedPayload.payload.notificationData.entity_ids) {
-        purescript.main(makeEvent("NEW_MESSAGE", parsedPayload.payload.notificationData.entity_ids))();
+        purescript.main(makeEvent("NEW_MESSAGE", parsedPayload.payload.notificationData.entity_ids))(parsedPayload.payload.driverInfoResponse)(true)();
       }else if (parsedPayload.payload.notificationData && parsedPayload.payload.notificationData.notification_type == "PAYMENT_MODE_MANUAL") {
-        purescript.main(makeEvent("PAYMENT_MODE_MANUAL", ""))();
+        purescript.main(makeEvent("PAYMENT_MODE_MANUAL", ""))(parsedPayload.payload.driverInfoResponse)(true)();
       } else if (parsedPayload.payload.viewParam){
         if (!checkForReferral(parsedPayload.payload.viewParam, "REFERRAL_NEW_INTENT")) {
           purescript.onNewIntent(makeEvent("DEEP_VIEW", parsedPayload.payload.viewParam))();
@@ -282,7 +285,7 @@ window.onMerchantEvent = function (_event, payload) {
           purescript.onNewIntent(makeEvent("DEEP_VIEW_NEW_INTENT", parsedPayload.payload.viewParamNewIntent))();
         }
       } else {
-        purescript.main(makeEvent("", ""))(parsedPayload.payload.driverInfoResponse)();
+        purescript.main(makeEvent("", ""))(parsedPayload.payload.driverInfoResponse)(!parsedPayload.payload.onNewIntent)();
       }
     }
   } else {

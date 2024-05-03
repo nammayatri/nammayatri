@@ -1,6 +1,7 @@
 module Api.Types where
 
 import Prelude
+
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
@@ -51,8 +52,8 @@ newtype SearchRequest
   , specialLocationTag :: Maybe String
   , specialZoneExtraTip :: Maybe Int
   , toLocation :: BookingLocationAPIEntity
-  , tollCharges :: Number
-  , tripCategory :: String
+  , tollCharges :: Maybe Number
+  , tripCategory :: TripCategory
   , vehicleServiceTier :: Maybe String
   }
 
@@ -70,6 +71,14 @@ newtype BookingLocationAPIEntity
   , lon :: Number
   , ward :: Maybe String
   , placeId :: Maybe String
+  , full_address :: Maybe String
+  }
+
+
+newtype TripCategory
+  = TripCategory
+  { tag :: String
+  , contents :: String
   }
 
 derive instance genericBookingLocationAPIEntity :: Generic BookingLocationAPIEntity _
@@ -108,4 +117,14 @@ instance standardEncodeNearBySearchRequestRes :: StandardEncode NearBySearchRequ
   standardEncode (NearBySearchRequestRes body) = standardEncode body
 
 instance decodeNearBySearchRequestRes :: Decode NearBySearchRequestRes where
+  decode = defaultDecode
+
+derive instance genericTripCategory :: Generic TripCategory _
+
+derive instance newtypeTripCategory :: Newtype TripCategory _
+
+instance standardEncodeTripCategory :: StandardEncode TripCategory where
+  standardEncode (TripCategory body) = standardEncode body
+
+instance decodeTripCategory :: Decode TripCategory where
   decode = defaultDecode

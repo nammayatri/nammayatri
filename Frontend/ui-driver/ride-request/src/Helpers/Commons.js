@@ -268,9 +268,8 @@ function getPayload(action) {
   return initiatePayload;
 }
 
-export const bootDriverInParallel = function () {
-  console.log("hello -? ")
-  if (JOS) {
+export const bootDriverInParallel = function (c) {
+  if (JOS && !top.mapps["in.yatri.provider"]) {
     JOS.startApp("in.yatri.provider")(getPayload("initiate"))(null)();
   } else {
     console.error("JOS Not Found")
@@ -278,7 +277,7 @@ export const bootDriverInParallel = function () {
 }
 
 export const openDriverApp = function () {
-  if (JOS) {
+  if (JOS && top.mapps["in.yatri.provider"]) {
     JOS.emitEvent("in.yatri.provider")("onMerchantEvent")("process")(JSON.stringify(getPayload()))();
   } else {
     console.error("JOS Not Found")
@@ -286,20 +285,45 @@ export const openDriverApp = function () {
 }
 
 export const waitTillDriverAppBoot = function (cb) {
-  if (window.isDriverAppInitiated || Object.prototype.hasOwnProperty.call(window.parent.mapps, "in.yatri.provider")) {
+  if (window.isDriverAppInitiated || Object.prototype.hasOwnProperty.call(top.mapps, "in.yatri.provider")) {
     cb()();
   } else {
     console.error("Waiting for Driver App to Boot")
-    setTimeout(() => {waitTillDriverAppBoot(cb)},5);
+    setTimeout(() => {
+      waitTillDriverAppBoot(cb)
+    }, 5);
   }
 }
 
-export const getRandomID = function(max) {
+export const getRandomID = function (max) {
   const id = Math.floor(Math.random() * max) + 1;
-  return id.toString(); 
+  return id.toString();
 }
 
 export const emitEvent = function (mapp, eventType, payload) {
   console.log("payload", payload);
   JOS.emitEvent(mapp)(eventType)(JSON.stringify(payload))()()
+};
+
+
+export const hideLoader = function () {
+  JOS.emitEvent("java")("onEvent")(JSON.stringify({
+    event: "hide_loader"
+  }))()()
+};
+
+export const getExpiryTime = function (str1) {
+  try {
+    const expiry = new Date(str1);
+    const current = new Date();
+    let diff = (expiry.getTime() - current.getTime()) / 1000;
+    diff = Math.round(diff);
+    if (diff >= 0)
+      return diff;
+    else
+      return 0;
+  } catch (err) {
+    console.log("error in getExpiryTime " + err);
+    return 0;
+  }
 };

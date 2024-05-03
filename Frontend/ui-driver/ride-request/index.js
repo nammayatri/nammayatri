@@ -3,6 +3,7 @@ import * as purescript from "./output/Main";
 const JBridge = window.JBridge
 const JOS = window.JOS
 
+window.__PROXY_FN = {}
 function callInitiateResult() {
   const payload = {
     event: "initiate_result",
@@ -21,11 +22,21 @@ function callInitiateResult() {
       jp_consuming_backpress: true
     }
   }
+  purescript.initiateDriverMapp();
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
   JOS.emitEvent(JOS.parent)("onEvent")(JSON.stringify(payload))()();
 }
 
   
+function checkAndStart() {
+  window.retry = window.retry || 0;
+  window.retry++;
+  if (window.isDriverAppInitiated) {
+    purescript.main()();
+  } else {
+    setTimeout(() => {checkAndStart()},5);
+  }
+}
   
 window.onMerchantEvent = function (_event, payload) {
   console.log(payload);
@@ -36,7 +47,7 @@ window.onMerchantEvent = function (_event, payload) {
   if (_event == "initiate") {
     callInitiateResult();
   } else if (_event == "process") {
-    purescript.main()();
+    checkAndStart();
   }
 }
 
@@ -51,10 +62,23 @@ window.onResume = function () {
 }
 
 window["onEvent'"] = function (_event, args) {
-  purescript.onEvent(_event)(args)();
 }
 
-window["onEvent"] = function (args) {
+window["onEvent"] = function (_event, args) {
+  console.log("onEvent ->" , args);
+  // function getPayload(action) {
+  //   const innerPayload = Object.assign({}, window.__payload.payload);
+  //   const initiatePayload = Object.assign({}, window.__payload);
+  //   if (action) innerPayload["action"] = action;
+  //   initiatePayload["payload"] = innerPayload;
+  //   initiatePayload["service"] = "in.yatri.provider";
+  //   return initiatePayload;
+  // }  
+  // if (JOS && top.mapps["in.yatri.provider"]) {
+  //   JOS.emitEvent("in.yatri.provider")("onMerchantEvent")("process")(JSON.stringify(getPayload()))();
+  // } else {
+  //   console.error("JOS Not Found")
+  // }
   window.isDriverAppInitiated = true
 }
 

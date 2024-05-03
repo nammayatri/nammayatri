@@ -91,6 +91,10 @@ foreign import getRandomID :: Int -> String
 
 foreign import emitEvent :: EffectFn3 String String Foreign Unit
 
+foreign import hideLoader :: EffectFn1 String Unit
+
+foreign import getExpiryTime :: String -> Int
+
 os :: String
 os = getOs unit
 
@@ -243,3 +247,6 @@ getHeightFromPercent percent =
 -- To get Array of given length
 getArray :: Int -> Array Int
 getArray count = if count == 0 then [ count ] else [ count ] <> (getArray (count - 1))
+
+getValueBtwRange :: forall a. EuclideanRing a => a -> a -> a -> a -> a -> a
+getValueBtwRange  x  in_min  in_max  out_min  out_max = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min

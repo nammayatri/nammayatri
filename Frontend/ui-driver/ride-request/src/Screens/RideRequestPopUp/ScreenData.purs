@@ -1,5 +1,7 @@
 module Screens.RideRequestPopUp.ScreenData where
 
+import Api.Types (SearchRequest(..))
+import Data.Maybe (Maybe(..))
 import Halogen.VDom.DOM.Prop (PropValue)
 import PrestoDOM.List (ListItem)
 import Unsafe.Coerce (unsafeCoerce)
@@ -7,14 +9,16 @@ import Unsafe.Coerce (unsafeCoerce)
 initData :: RideRequestPopUpScreenData
 initData =
   { wasHolderCreated: false
-  , holderView: unsafeCoerce "{}"
+  , holderView: Nothing
   , holderData: []
+  , rideRequests: []
   }
 
 type RideRequestPopUpScreenData
   = { wasHolderCreated :: Boolean
-    , holderView :: ListItem
+    , holderView :: Maybe ListItem
     , holderData :: Array PopupProps
+    , rideRequests :: Array SearchRequest
     }
 
 type PopupProps

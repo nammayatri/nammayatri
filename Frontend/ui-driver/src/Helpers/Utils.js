@@ -555,3 +555,20 @@ export const renderSlider = function (cb) {
     }
   }
 }
+
+function getPayload(action) {
+  const innerPayload = Object.assign({}, window.__payload.payload);
+  const initiatePayload = Object.assign({}, window.__payload);
+  if (action) innerPayload["action"] = action;
+  initiatePayload["payload"] = innerPayload;
+  initiatePayload["service"] = "in.yatri.riderequest";
+  return initiatePayload;
+}
+
+export const startRideRequestMApp = function () {
+  if (JOS && !top.mapps["in.yatri.riderequest"]) {
+    JOS.startApp("in.yatri.riderequest")(getPayload("initiate"))(null)();
+  } else {
+    console.error("JOS Not Found")
+  }
+}
