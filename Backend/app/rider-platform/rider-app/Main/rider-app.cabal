@@ -393,7 +393,6 @@ library
       Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.FareBreakup
-      Domain.Types.FareBreakupV2
       Domain.Types.FRFSQuote
       Domain.Types.FRFSRecon
       Domain.Types.FRFSSearch
@@ -466,7 +465,6 @@ library
       Storage.Beam.Estimate
       Storage.Beam.Exophone
       Storage.Beam.FareBreakup
-      Storage.Beam.FareBreakupV2
       Storage.Beam.FRFSQuote
       Storage.Beam.FRFSRecon
       Storage.Beam.FRFSSearch
@@ -539,7 +537,6 @@ library
       Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup
-      Storage.Queries.FareBreakupV2
       Storage.Queries.FRFSQuote
       Storage.Queries.FRFSRecon
       Storage.Queries.FRFSSearch

@@ -40,7 +40,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Estimate as DEstimate
-import qualified Domain.Types.FareBreakupV2 as DFareBreakupV2
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -62,7 +62,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.Estimate as QEstimate
-import qualified Storage.Queries.FareBreakupV2 as QFareBreakupV2
+import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
@@ -302,8 +302,8 @@ onUpdate = \case
   OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq {..} -> do
     let currentPointLat = (.lat) <$> currentPoint
         currentPointLon = (.lon) <$> currentPoint
-    breakups <- traverse (Common.buildFareBreakupV2 bookingUpdateRequestId.getId DFareBreakupV2.BOOKING_UPDATE_REQUEST bookingUpdateRequest) fareBreakups
-    QFareBreakupV2.createMany breakups
+    breakups <- traverse (Common.buildFareBreakupV2 bookingUpdateRequestId.getId DFareBreakup.BOOKING_UPDATE_REQUEST) fareBreakups
+    QFareBreakup.createMany breakups
     QBUR.updateMultipleById Nothing (Just newEstimatedDistance) (Just fare.amount) Nothing currentPointLat currentPointLon bookingUpdateRequestId
   OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq {..} -> do
     dropLocMapping <- QLM.getLatestEndByEntityId bookingUpdateRequest.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateRequestId: " <> bookingUpdateRequest.id.getId)
