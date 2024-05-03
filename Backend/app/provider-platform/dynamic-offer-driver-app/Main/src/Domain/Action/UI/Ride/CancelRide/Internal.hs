@@ -40,7 +40,6 @@ import SharedLogic.Ride (multipleRouteKey, searchRequestKey)
 import SharedLogic.SearchTry
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
-import Storage.CachedQueries.Merchant.TransporterConfig as QMTC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
@@ -50,6 +49,7 @@ import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
@@ -71,6 +71,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+  now <- getCurrentTime
 
   fork "cancelRide - Notify driver" $ do
     triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
@@ -82,23 +83,10 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
   fork "cancelRide - Notify BAP" $ do
     case booking.tripCategory of
       DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> do
-        -- in this case only do the reallocation
         driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
         searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
         searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-        transpConf <- QTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
-        let searchRepeatLimit = transpConf.searchRepeatLimit
-        now <- getCurrentTime
-        let isSearchTryValid = searchTry.validTill > now
-        transporterConfig <- QMTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-        let arrivedPickupThreshold = highPrecMetersToMeters transporterConfig.arrivedPickupThreshold
-        let driverHasNotArrived = maybe True (> arrivedPickupThreshold) bookingCReason.driverDistToPickup
-        let isRepeatSearch =
-              searchTry.searchRepeatCounter < searchRepeatLimit
-                && bookingCReason.source == SBCR.ByDriver
-                && isSearchTryValid
-                && fromMaybe False searchReq.isReallocationEnabled
-                && driverHasNotArrived
+        isRepeatSearch <- checkIfRepeatSearch searchTry booking ride.driverArrivalTime searchReq.isReallocationEnabled now
         if isRepeatSearch
           then do
             estimate <- QEst.findById driverQuote.estimateId >>= fromMaybeM (EstimateNotFound driverQuote.estimateId.getId)
@@ -120,20 +108,89 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
             case result of
               Right _ -> do
                 if isValueAddNP
-                  then BP.sendEstimateRepetitionUpdateToBAP booking ride estimate.id bookingCReason.source driver vehicle
-                  else cancelRideTransactionForNonReallocation booking (Just estimate.id.getId) merchant bookingCReason.source
-              Left _ -> cancelRideTransactionForNonReallocation booking (Just estimate.id.getId) merchant bookingCReason.source
-          else -- repeatSearch merchant farePolicy searchReq searchTry booking ride SBCR.ByDriver now driverPoolCfg
-            cancelRideTransactionForNonReallocation booking (Just searchTry.estimateId) merchant bookingCReason.source
-      _ -> cancelRideTransactionForNonReallocation booking Nothing merchant bookingCReason.source
+                  then BP.sendEstimateRepetitionUpdateToBAP booking ride (Id searchTry.estimateId) bookingCReason.source driver vehicle
+                  else cancelRideTransactionForNonReallocation Nothing booking (Just searchTry.estimateId) merchant bookingCReason.source
+              Left _ -> cancelRideTransactionForNonReallocation Nothing booking (Just searchTry.estimateId) merchant bookingCReason.source
+          else cancelRideTransactionForNonReallocation Nothing booking (Just searchTry.estimateId) merchant bookingCReason.source
+      DTC.Rental DTC.OnDemandStaticOffer -> do
+        quote <- QQuote.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
+        searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
+        searchTry <- QST.findLastByRequestId quote.searchRequestId >>= fromMaybeM (SearchTryNotFound quote.searchRequestId.getId)
+        isRepeatSearch <- checkIfRepeatSearch searchTry booking ride.driverArrivalTime searchReq.isReallocationEnabled now
+        if isRepeatSearch
+          then do
+            DP.addDriverToSearchCancelledList searchReq.id ride.driverId
+            bookingId <- generateGUID
+            quoteId <- generateGUID
+            fareParamsId <- generateGUID
+            searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+            let newFareParams = quote.fareParams{id = fareParamsId, updatedAt = now}
+                newQuote = quote{id = Id quoteId, fareParams = newFareParams, validTill = searchRequestExpirationSeconds `addUTCTime` now, isScheduled = False} -- check if validTill req'D
+                newBooking = booking{id = bookingId, quoteId = quoteId, status = SRB.NEW, isScheduled = False, startTime = max now booking.startTime, createdAt = now, updatedAt = now}
+            tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare quote.driverMinFee quote.driverMaxFee quote.driverPickUpCharge newQuote.id.getId
+            void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
+            QQuote.create newQuote
+            QRB.createBooking newBooking
+            let driverSearchBatchInput =
+                  DriverSearchBatchInput
+                    { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
+                      merchant,
+                      searchReq,
+                      tripQuoteDetails = [tripQuoteDetail],
+                      customerExtraFee = searchTry.customerExtraFee,
+                      messageId = newBooking.id.getId,
+                      isRepeatSearch
+                    }
+            result <- try @_ @SomeException (initiateDriverSearchBatch driverSearchBatchInput) --  remove CONSTRAINT quote_unique_reqid_bppid_quoteid UNIQUE (request_id, provider_id);, check searchTry key for scheduling
+            case result of
+              Right _ -> do
+                if isValueAddNP
+                  then BP.sendQuoteRepetitionUpdateToBAP booking ride newBooking.id bookingCReason.source driver vehicle
+                  else cancelRideTransactionForNonReallocation (Just newBooking) booking Nothing merchant bookingCReason.source
+              Left _ -> cancelRideTransactionForNonReallocation (Just newBooking) booking Nothing merchant bookingCReason.source
+          else cancelRideTransactionForNonReallocation Nothing booking Nothing merchant bookingCReason.source
+      _ -> cancelRideTransactionForNonReallocation Nothing booking Nothing merchant bookingCReason.source
   where
-    cancelRideTransactionForNonReallocation booking mbEstimateId merchant bookingCancellationReason = do
+    cancelRideTransactionForNonReallocation :: Maybe SRB.Booking -> SRB.Booking -> Maybe Text -> DMerc.Merchant -> SBCR.CancellationSource -> Flow ()
+    cancelRideTransactionForNonReallocation mbNewBooking booking mbEstimateId merchant cancellationSource = do
       Redis.del $ multipleRouteKey booking.transactionId
       Redis.del $ searchRequestKey booking.transactionId
       whenJust mbEstimateId $ \estimateId ->
         void $ clearCachedFarePolicyByEstOrQuoteId estimateId
-      void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
-      BP.sendBookingCancelledUpdateToBAP booking merchant bookingCancellationReason
+      whenJust mbNewBooking $ \newBooking -> do
+        bookingCancellationReason <- buildBookingCancellationReason newBooking
+        QBCR.upsert bookingCancellationReason
+        QRB.updateStatus newBooking.id SRB.CANCELLED
+      void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId -- shouldn't be required for new booking
+      BP.sendBookingCancelledUpdateToBAP booking merchant cancellationSource
+
+    checkIfRepeatSearch searchTry booking driverArrivalTime isReallocationEnabled now = do
+      transporterConfig <- QTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+      let searchRepeatLimit = transporterConfig.searchRepeatLimit
+          isSearchTryValid = searchTry.validTill > now
+          arrivedPickupThreshold = highPrecMetersToMeters transporterConfig.arrivedPickupThreshold
+          driverHasNotArrived = isNothing driverArrivalTime || maybe True (> arrivedPickupThreshold) bookingCReason.driverDistToPickup
+      return $
+        searchTry.searchRepeatCounter < searchRepeatLimit
+          && bookingCReason.source == SBCR.ByDriver
+          && isSearchTryValid
+          && fromMaybe False isReallocationEnabled
+          && driverHasNotArrived
+
+    buildBookingCancellationReason newBooking = do
+      return $
+        SBCR.BookingCancellationReason
+          { bookingId = newBooking.id,
+            rideId = Nothing,
+            merchantId = Just newBooking.providerId,
+            source = SBCR.ByApplication,
+            reasonCode = Nothing,
+            driverId = Nothing,
+            additionalInfo = Just "Reallocation Failed",
+            driverCancellationLocation = Nothing,
+            driverDistToPickup = Nothing,
+            ..
+          }
 
 cancelRideTransaction ::
   ( EsqDBFlow m r,

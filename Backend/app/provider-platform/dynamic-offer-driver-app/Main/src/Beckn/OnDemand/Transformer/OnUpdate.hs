@@ -214,3 +214,32 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
+  OU.QuoteRepetitionBuildReq OU.DQuoteRepetitionReq {..} -> do
+    let BookingDetails {..} = bookingDetails
+    let previousCancellationReasonsTags = Utils.mkPreviousCancellationReasonsTags cancellationSource
+    fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False (Just $ show Event.QUOTE_REPETITION) isValueAddNP
+    pure $
+      Spec.Order
+        { orderId = Just booking.id.getId,
+          orderFulfillments = Just [fulfillment],
+          orderItems =
+            Just . List.singleton $
+              Spec.Item
+                { itemId = Just newBookingId.getId,
+                  itemDescriptor = Nothing,
+                  itemFulfillmentIds = Nothing,
+                  itemLocationIds = Nothing,
+                  itemPaymentIds = Nothing,
+                  itemPrice = Nothing,
+                  itemTags = Utils.mkRateCardTag Nothing Nothing . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
+                },
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Nothing,
+          orderPayments = Utils.tfPayments booking bookingDetails.merchant becknConfig,
+          orderProvider = Nothing,
+          orderQuote = Nothing,
+          orderStatus = Nothing,
+          orderCreatedAt = Just booking.createdAt,
+          orderUpdatedAt = Just booking.updatedAt
+        }

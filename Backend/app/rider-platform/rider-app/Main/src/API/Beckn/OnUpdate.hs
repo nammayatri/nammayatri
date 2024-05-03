@@ -60,6 +60,7 @@ onUpdate _ reqV2 = withFlowHandlerBecknAPI do
             DOnUpdate.OUValidatedBookingReallocationReq req -> return req.booking
             DOnUpdate.OUValidatedDriverArrivedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
             DOnUpdate.OUValidatedEstimateRepetitionReq req -> return req.booking
+            DOnUpdate.OUValidatedQuoteRepetitionReq req -> return req.booking
             DOnUpdate.OUValidatedNewMessageReq req -> return req.booking
             DOnUpdate.OUValidatedSafetyAlertReq req -> return req.booking
             DOnUpdate.OUValidatedStopArrivedReq req -> return req.booking

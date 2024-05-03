@@ -97,6 +97,7 @@ parseEventV2 transactionId messageId order = do
           cancelledReq <- Common.parseBookingCancelledEvent order messageId
           return $ DOnUpdate.OUBookingCancelledReq cancelledReq
         "ESTIMATE_REPETITION" -> parseEstimateRepetitionEvent transactionId order
+        "QUOTE_REPETITION" -> parseQuoteRepetitionEvent transactionId order
         "NEW_MESSAGE" -> parseNewMessageEvent order
         "SAFETY_ALERT" -> parseSafetyAlertEvent order
         "STOP_ARRIVED" -> parseStopArrivedEvent order
@@ -128,6 +129,23 @@ parseEstimateRepetitionEvent transactionId order = do
       DOnUpdate.EstimateRepetitionReq
         { searchRequestId = Id transactionId,
           bppEstimateId = Id bppEstimateId,
+          bppBookingId = Id bppBookingId,
+          bppRideId = Id bppRideId,
+          cancellationSource = Utils.castCancellationSourceV2 cancellationSource
+        }
+
+parseQuoteRepetitionEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
+parseQuoteRepetitionEvent transactionId order = do
+  newBppBookingId <- order.orderItems >>= listToMaybe >>= (.itemId) & fromMaybeM (InvalidRequest "order_id is not present in QuoteRepetition Event.")
+  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in QuoteRepetition Event.")
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in QuoteRepetition Event.")
+  tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in QuoteRepetition Event.")
+  cancellationSource <- Utils.getTagV2 Tag.PREVIOUS_CANCELLATION_REASONS Tag.CANCELLATION_REASON (Just tagGroups) & fromMaybeM (InvalidRequest "previous_cancellation_reasons tag is not present in QuoteRepetition Event.")
+  return $
+    DOnUpdate.OUQuoteRepetitionReq
+      DOnUpdate.QuoteRepetitionReq
+        { searchRequestId = Id transactionId,
+          newBppBookingId = Id newBppBookingId,
           bppBookingId = Id bppBookingId,
           bppRideId = Id bppRideId,
           cancellationSource = Utils.castCancellationSourceV2 cancellationSource

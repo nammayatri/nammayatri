@@ -23,7 +23,6 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.Estimate (Estimate)
-import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -474,12 +473,12 @@ notifyOnBookingReallocated booking = do
           "Please wait until we allocate another driver."
         ]
 
-notifyOnEstimatedReallocated ::
+notifyOnEstOrQuoteReallocated ::
   ServiceFlow m r =>
   SRB.Booking ->
-  Id DEst.Estimate ->
+  Text ->
   m ()
-notifyOnEstimatedReallocated booking estimateId = do
+notifyOnEstOrQuoteReallocated booking estOrQuoteId = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   tag <- getDisabilityTag person.hasDisability person.id
@@ -493,7 +492,7 @@ notifyOnEstimatedReallocated booking estimateId = do
           subCategory = Nothing,
           showNotification = Notification.SHOW,
           messagePriority = Nothing,
-          entity = Notification.Entity Notification.Product estimateId.getId (),
+          entity = Notification.Entity Notification.Product estOrQuoteId (),
           body = body,
           title = title,
           dynamicParams = EmptyDynamicParam,
