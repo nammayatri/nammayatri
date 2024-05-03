@@ -840,7 +840,7 @@ rideTierAndCapacity push config =
     , textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
-      , text config.serviceTierAndAC
+      , text $ serviceTierMapping config.serviceTierAndAC
       , color Color.black700
       ] <> FontStyle.body1 TypoGraphy
     , imageView
@@ -1157,6 +1157,12 @@ getRideStartRemainingTimeTitle config =
       ST.Rental -> getVarString YOUR_RENTAL_RIDE_STARTS_IN time
       ST.Intercity -> getVarString YOUR_INTERCITY_RIDE_STARTS_IN time
       _ -> ""
+
+serviceTierMapping :: String -> String
+serviceTierMapping tierName = 
+  case tierName of
+    "AC Mini" -> "Mini"
+    name -> name
   
 
 showRideStartRemainingTime :: Config -> Boolean
