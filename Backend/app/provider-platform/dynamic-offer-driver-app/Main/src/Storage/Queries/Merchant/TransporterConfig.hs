@@ -64,6 +64,8 @@ update config = do
   updateOneWithKV
     [ Se.Set BeamTC.pickupLocThreshold config.pickupLocThreshold,
       Se.Set BeamTC.dropLocThreshold config.dropLocThreshold,
+      Se.Set BeamTC.editLocTimeThreshold config.editLocTimeThreshold,
+      Se.Set BeamTC.editLocDriverPermissionNeeded config.editLocDriverPermissionNeeded,
       Se.Set BeamTC.rideTimeEstimatedThreshold config.rideTimeEstimatedThreshold,
       Se.Set BeamTC.defaultPopupDelay config.defaultPopupDelay,
       Se.Set BeamTC.popupDelayToAddAsPenalty config.popupDelayToAddAsPenalty,
@@ -166,7 +168,9 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.pickupLocThreshold = pickupLocThreshold,
         BeamTC.dropLocThreshold = dropLocThreshold,
         BeamTC.rideTimeEstimatedThreshold = rideTimeEstimatedThreshold,
+        BeamTC.editLocTimeThreshold = editLocTimeThreshold,
         BeamTC.includeDriverCurrentlyOnRide = includeDriverCurrentlyOnRide,
+        BeamTC.editLocDriverPermissionNeeded = editLocDriverPermissionNeeded,
         BeamTC.defaultPopupDelay = defaultPopupDelay,
         BeamTC.popupDelayToAddAsPenalty = popupDelayToAddAsPenalty,
         BeamTC.thresholdCancellationScore = thresholdCancellationScore,

@@ -179,6 +179,7 @@ library
       Domain.Action.UI.DriverOnboardingV2
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
+      Domain.Action.UI.EditBooking
       Domain.Action.UI.ExotelEndRide
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
@@ -320,6 +321,7 @@ library
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.Types
       SharedLogic.EventTracking
+      SharedLogic.External.LocationTrackingService.API.DriverLocation
       SharedLogic.External.LocationTrackingService.API.DriversLocation
       SharedLogic.External.LocationTrackingService.API.EndRide
       SharedLogic.External.LocationTrackingService.API.NearBy
@@ -582,10 +584,12 @@ library
       Tools.Whatsapp
       API.Action.UI.Cac
       API.Action.UI.DriverOnboardingV2
+      API.Action.UI.EditBooking
       API.Action.UI.LmsModule
       API.Action.UI.Reels
       API.Action.UI.SpecialLocation
       API.Types.UI.DriverOnboardingV2
+      API.Types.UI.EditBooking
       API.Types.UI.LmsModule
       API.Types.UI.Reels
       Domain.Types.AadhaarOtpReq
@@ -593,6 +597,7 @@ library
       Domain.Types.AadhaarVerification
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
+      Domain.Types.BookingUpdateRequest
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.DailyStats
@@ -638,6 +643,7 @@ library
       Storage.Beam.AadhaarVerification
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
+      Storage.Beam.BookingUpdateRequest
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.DailyStats
@@ -683,6 +689,7 @@ library
       Storage.Queries.AadhaarVerification
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
+      Storage.Queries.BookingUpdateRequest
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.DailyStats

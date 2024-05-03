@@ -22,9 +22,11 @@ import qualified Domain.Types.BecknConfig as BecknConfig
 import qualified Domain.Types.Booking as BT
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.ClientPersonInfo as DPCI
 import qualified Domain.Types.FareBreakup as DFareBreakup
+import qualified Domain.Types.FareBreakupV2 as DFareBreakupV2
 import Domain.Types.HotSpot
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -413,6 +415,23 @@ getListOfServiceTireTypes BecknConfig.CAB = [DVST.SEDAN, DVST.SUV, DVST.HATCHBAC
 getListOfServiceTireTypes BecknConfig.AUTO_RICKSHAW = [DVST.AUTO_RICKSHAW]
 getListOfServiceTireTypes BecknConfig.MOTORCYCLE = [DVST.BIKE]
 getListOfServiceTireTypes BecknConfig.METRO = []
+
+buildFareBreakupV2 :: MonadFlow m => Text -> DFareBreakupV2.FareBreakupV2EntityType -> DBUR.BookingUpdateRequest -> DFareBreakup -> m DFareBreakupV2.FareBreakupV2
+buildFareBreakupV2 entityId entityType bookingUpdateReq DFareBreakup {..} = do
+  guid <- generateGUID
+  now <- getCurrentTime
+  pure
+    DFareBreakupV2.FareBreakupV2
+      { id = guid,
+        createdAt = now,
+        updatedAt = now,
+        merchantId = Just bookingUpdateReq.merchantId,
+        merchantOperatingCityId = Just bookingUpdateReq.merchantOperatingCityId,
+        entityId,
+        entityType,
+        description,
+        amount = amount.amount
+      }
 
 farePaidReqHandler :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => ValidatedFarePaidReq -> m ()
 farePaidReqHandler req = void $ QRB.updatePaymentStatus req.booking.id req.paymentStatus

@@ -1,0 +1,36 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Location: Domain.Types.Booking
+
+ ## --------------------Table is added to store fare breakup details of any entity as fare_breakup table was specific to booking, in future need to migrate fare_breakup to fare_breakup_v2  ----------------
+FareBreakupV2:
+  tableName: fare_breakup_v2
+
+  types:
+    FareBreakupV2EntityType:
+      enum: "BOOKING_UPDATE_REQUEST"
+
+  fields:
+    id : Id FareBreakupV2
+    entityType : FareBreakupV2EntityType
+    description : Text
+    amount : HighPrecMoney
+    entityId : Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+    entityId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        and: [id]
+    findAllByEntityIdAndEntityType:
+      kvFunction: findAllWithKV
+      where:
+        and: [entityId, entityType]
+

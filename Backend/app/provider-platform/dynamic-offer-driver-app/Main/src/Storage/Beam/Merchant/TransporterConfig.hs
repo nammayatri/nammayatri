@@ -29,6 +29,8 @@ data TransporterConfigT f = TransporterConfigT
     merchantOperatingCityId :: B.C f Text,
     pickupLocThreshold :: B.C f Meters,
     dropLocThreshold :: B.C f Meters,
+    editLocTimeThreshold :: B.C f Seconds,
+    editLocDriverPermissionNeeded :: B.C f Bool,
     rideTimeEstimatedThreshold :: B.C f Seconds,
     includeDriverCurrentlyOnRide :: B.C f Bool,
     defaultPopupDelay :: B.C f Seconds,

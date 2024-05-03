@@ -246,7 +246,7 @@ updateStop booking mbStopLoc = do
   -- QLM.create locationMapping
 
   updateOneWithKV
-    [ Se.Set BeamB.stopLocationId ((getId . (.id)) <$> mbStopLoc),
+    [ Se.Set BeamB.stopLocationId (getId . (.id) <$> mbStopLoc),
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId booking.id)]
@@ -294,8 +294,6 @@ cancelBookings bookingIds now =
     ]
     [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
 
--- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-
 buildLocation :: (MonadFlow m, EsqDBFlow m r) => DBBL.BookingLocation -> m DL.Location
 buildLocation DBBL.BookingLocation {..} =
   return $
@@ -318,3 +316,16 @@ upsertToLocationAndMappingForOldData toLocationId bookingId merchantId merchantO
   dropLoc <- buildLocation toLocation
   toLocationMapping <- SLM.buildDropLocationMapping dropLoc.id bookingId DLM.BOOKING (Just $ Id merchantId) (Id <$> merchantOperatingCityId)
   void $ QL.create dropLoc >> QLM.create toLocationMapping
+
+updateMultipleById :: (MonadFlow m, EsqDBFlow m r) => HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMeters -> Id Booking -> m ()
+updateMultipleById estimatedFare estimatedTotalFare estimatedDistance bookingId = do
+  let estimatedDistanceValue = (.value) <$> highPrecMetersToDistance <$> estimatedDistance
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.estimatedFare estimatedFare,
+      Se.Set BeamB.estimatedTotalFare estimatedTotalFare,
+      Se.Set BeamB.estimatedDistance estimatedDistance,
+      Se.Set BeamB.estimatedDistanceValue estimatedDistanceValue,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]

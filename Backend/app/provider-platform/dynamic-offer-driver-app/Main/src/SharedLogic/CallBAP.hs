@@ -21,6 +21,7 @@ module SharedLogic.CallBAP
     sendDriverArrivalUpdateToBAP,
     sendStopArrivalUpdateToBAP,
     sendEstimateRepetitionUpdateToBAP,
+    sendUpdateEditDestToBAP,
     sendNewMessageToBAP,
     sendDriverOffer,
     callOnConfirmV2,
@@ -58,13 +59,16 @@ import Domain.Action.UI.DriverOnboarding.AadhaarVerification
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
+import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.DocumentVerificationConfig as DIT
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.OnUpdate as DOU
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
@@ -299,7 +303,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
   isFreeRide <- maybe (return False) (checkIfRideBySpecialDriver ride.driverId) mbTransporterConfig
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq ACL.DRideAssignedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
-  rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking rideAssignedBuildReq
+  rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
   let generatedMsg = A.encode rideAssignedMsgV2
   logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
   void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig merchant.id
@@ -410,7 +414,7 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   let bookingDetails = ACL.BookingDetails {..}
       rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
-  rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking rideCompletedBuildReq
+  rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideCompletedBuildReq
   void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id
 
 sendBookingCancelledUpdateToBAP ::
@@ -522,7 +526,7 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   let bookingDetails = ACL.BookingDetails {..}
       driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
-  driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking driverArrivedBuildReq
+  driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverArrivedBuildReq
   void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
 
 sendStopArrivalUpdateToBAP ::
@@ -553,7 +557,7 @@ sendStopArrivalUpdateToBAP booking ride driver vehicle = do
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
     let bookingDetails = ACL.BookingDetails {..}
         stopArrivedBuildReq = ACL.StopArrivedBuildReq ACL.DStopArrivedBuildReq {..}
-    stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking stopArrivedBuildReq
+    stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing stopArrivedBuildReq
     retryConfig <- asks (.shortDurationRetryCfg)
     void $ callOnUpdateV2 stopArrivedMsgV2 retryConfig merchant.id
 
@@ -589,8 +593,46 @@ sendNewMessageToBAP booking ride message = do
     let bookingDetails = ACL.BookingDetails {..}
         newMessageBuildReq = ACL.NewMessageBuildReq ACL.DNewMessageReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
-    newMessageMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking newMessageBuildReq
+    newMessageMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing newMessageBuildReq
     void $ callOnUpdateV2 newMessageMsgV2 retryConfig merchant.id
+
+sendUpdateEditDestToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  DBUR.BookingUpdateRequest ->
+  Maybe DLoc.Location ->
+  Maybe Maps.LatLong ->
+  DOU.UpdateType ->
+  m ()
+sendUpdateEditDestToBAP booking ride bookingUpdateReqDetails newDestination currentLocation updateType = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  when isValueAddNP $ do
+    merchant <-
+      CQM.findById booking.providerId
+        >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+    driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+    let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+    let paymentUrl = Nothing
+    let bookingDetails = ACL.BookingDetails {..}
+        sUpdateEditDestToBAPReq = ACL.EditDestinationUpdate ACL.DEditDestinationUpdateReq {..}
+    retryConfig <- asks (.shortDurationRetryCfg)
+    sUpdateEditDestToBAP <- ACL.buildOnUpdateMessageV2 merchant booking (Just bookingUpdateReqDetails.bapBookingUpdateRequestId) sUpdateEditDestToBAPReq
+    void $ callOnUpdateV2 sUpdateEditDestToBAP retryConfig merchant.id
 
 sendSafetyAlertToBAP ::
   ( CacheFlow m r,
@@ -625,7 +667,7 @@ sendSafetyAlertToBAP booking ride reason driver vehicle = do
         safetyAlertBuildReq = ACL.SafetyAlertBuildReq ACL.DSafetyAlertReq {..}
 
     retryConfig <- asks (.shortDurationRetryCfg)
-    safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking safetyAlertBuildReq
+    safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing safetyAlertBuildReq
     void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig merchant.id
 
 sendEstimateRepetitionUpdateToBAP ::
@@ -661,7 +703,7 @@ sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource dri
     let bookingDetails = ACL.BookingDetails {..}
         estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq ACL.DEstimateRepetitionReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
-    estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking estimateRepetitionBuildReq
+    estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing estimateRepetitionBuildReq
     void $ callOnUpdateV2 estimateRepMsgV2 retryConfig merchant.id
 
 callBecknAPIWithSignature' ::

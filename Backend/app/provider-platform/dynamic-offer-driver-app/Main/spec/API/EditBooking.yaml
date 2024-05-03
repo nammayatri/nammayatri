@@ -1,0 +1,24 @@
+imports:
+  BookingUpdateRequest: Domain.Types.BookingUpdateRequest
+  ToParamSchema: Data.OpenApi
+
+
+module: EditBooking
+types:
+  EditBookingRespondAction:
+    enum: "ACCEPT, REJECT"
+  EditBookingRespondAPIReq:
+    action : EditBookingRespondAction
+
+apis:
+  - POST:
+      endpoint: /edit/result/{bookingUpdateRequestId}
+      params:
+        bookingUpdateRequestId: Id BookingUpdateRequest
+      request:
+        type: API.Types.UI.EditBooking.EditBookingRespondAPIReq
+      # mandatoryQuery:
+      #   action:  API.Types.UI.EditBooking.EditBookingRespondAction EditBookingRespondAPIReq
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

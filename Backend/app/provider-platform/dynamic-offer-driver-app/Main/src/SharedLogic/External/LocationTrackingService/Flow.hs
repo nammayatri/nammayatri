@@ -26,6 +26,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.External.LocationTrackingService.API.DriverLocation as DriverLocationAPI
 import qualified SharedLogic.External.LocationTrackingService.API.DriversLocation as DriversLocationAPI
 import qualified SharedLogic.External.LocationTrackingService.API.EndRide as EndRideAPI
 import qualified SharedLogic.External.LocationTrackingService.API.NearBy as NearByAPI
@@ -118,3 +119,18 @@ driversLocation driverIds = do
       >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") url)
   logDebug $ "lts driversLocation: " <> show driversLocationRes
   return driversLocationRes
+
+driverLocation :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Id DR.Ride -> Id DM.Merchant -> Id DP.Person -> m DriverLocationResp
+driverLocation rideId merchantId driverId = do
+  ltsCfg <- asks (.ltsCfg)
+  let url = ltsCfg.url
+  let req =
+        DriverLocationReq
+          { driverId,
+            merchantId
+          }
+  driverLocationRes <-
+    callAPI url (DriverLocationAPI.driverLocation rideId req) "driverLocation" DriverLocationAPI.locationTrackingServiceAPI
+      >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVER_LOCATION_API") url)
+  logDebug $ "lts driverLocation: " <> show driverLocationRes
+  return driverLocationRes
