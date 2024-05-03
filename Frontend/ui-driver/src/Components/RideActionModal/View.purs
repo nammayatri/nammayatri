@@ -883,16 +883,26 @@ normalRideInfoView push config =
               ]
               []
           ]
-      , textView
-          $ [ text $ getString RIDE_TOLL_FARE_INCLUDES
-            , color Color.black650
-            , width MATCH_PARENT
-            , height WRAP_CONTENT
-            , margin $ MarginTop 12
-            , visibility $ boolToVisibility config.hasToll
-            ]
-          <> FontStyle.body1 TypoGraphy
-      ]
+      , linearLayout[
+          height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , visibility $ boolToVisibility config.hasToll
+        , margin $ MarginTop 12
+        ][
+          imageView[
+            height $ V 20
+          , width $ V 20
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_toll"
+          ]
+        , textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ getString RIDE_TOLL_FARE_INCLUDES
+          , color Color.blue800
+          , margin $ MarginLeft 4
+          ] <> FontStyle.body1 TypoGraphy
+        ]
+      ] 
   ]
 
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w

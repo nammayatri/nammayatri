@@ -1363,7 +1363,7 @@ getML stringKey =
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "പ്രമാണം വിജയകരമായി അപ്‌ലോഡ് ചെയ്തു"
         TOLL_CHARGES_INCLUDING amount -> "ടോൾ ചാർജുകൾ " <> amount <>" നിരക്കിൽ ഉൾപ്പെടുത്തിയിട്ടുണ്ട്"
         TOLL_ROAD_CHANGED -> "ടോൾ റോഡ് എടുക്കാത്തതിനാൽ ടോൾ നിരക്കുകൾ കുറച്ചു"
-        RIDE_TOLL_FARE_INCLUDES -> "*റൈഡ് നിരക്കിൽ ടോൾ നിരക്കുകളും ഉൾപ്പെടുന്നു."
+        RIDE_TOLL_FARE_INCLUDES -> "ടോൾ നിരക്കുകൾ ഉൾപ്പെടുന്നു"
         TOLL_INCLUDED -> "ടോൾ (നിരക്കിൽ ഉൾപ്പെടുത്തിയിരിക്കുന്നു)"
         TRIP_TIME -> "ട്രിപ്പ് സമയം"
         EARNINGS_PER_KM -> "ഒരു കിലോമീറ്ററിന് വരുമാനം"

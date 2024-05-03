@@ -1071,7 +1071,7 @@ getHI stringKey =
         TOLL_CHARGES -> "टोल शुल्क"
         TOLL_CHARGES_DESC -> "यात्रा के दौरान अर्जित कोई भी टोल शुल्क आपके किराए में शामिल है।"
         TOLL_CHARGES_INCLUDING amount -> "टोल शुल्क " <> amount <> "किराया में शामिल"
-        TOLL_ROAD_CHANGED -> "टोल रोड नहीं लिए जाने से टोल शुल्क कम हो गया"
+        TOLL_ROAD_CHANGED -> "टोल शुल्क लागू नहीं"
         PARKING_CHARGES-> "पार्किंग शुल्क"
         PARKING_CHARGES_DESC -> "ड्राइवर द्वारा अर्जित पार्किंग शुल्क किराए में शामिल नहीं है। इसे ड्राइवर और यात्री के बीच सवारी के बाद तय किया जाना है।"
         TOLL_OR_PARKING_CHARGES -> "^टोल/पार्किंग शुल्क"
@@ -1111,3 +1111,4 @@ getHI stringKey =
         INVALID_CODE -> "अमान्य कोड!"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "नीचे 6 अंकों का रेफ़ेरल कोड दर्ज करें"
         APPLY -> "लागू करें"
+        TOLL_CHARGES_INCLUDED -> "टोल शुल्क समाहित"

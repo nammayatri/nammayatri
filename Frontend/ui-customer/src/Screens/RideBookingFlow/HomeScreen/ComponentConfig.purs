@@ -1655,8 +1655,6 @@ rideCompletedCardConfig state =
             imageVis = VISIBLE,
             visible = if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE
           },
-          tollCharge =  actualTollCharge > 0,
-          tollChargeText = if actualTollCharge > 0 then getString $ TOLL_CHARGES_INCLUDING $ (getCurrency appConfig) <> (show actualTollCharge) else getString TOLL_ROAD_CHANGED,
           bottomText =  getString RIDE_DETAILS
         },
         customerBottomCard {
@@ -1671,6 +1669,13 @@ rideCompletedCardConfig state =
         safetyTitle = getString SAFETY_CENTER,
         needHelpText = getString NEED_HELP,
         serviceTierAndAC = serviceTier
+      , toll {
+          actualAmount = actualTollCharge
+        , text =if actualTollCharge > 0 then getString TOLL_CHARGES_INCLUDED  else getString TOLL_ROAD_CHANGED -- Handle after design finalized 
+        , visibility = boolToVisibility $ actualTollCharge > 0 || (getValueToLocalStore HAS_TOLL_CHARGES == "true") 
+        , image = fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
+        , imageVisibility = boolToVisibility $ actualTollCharge > 0 
+        }
       }
   where 
     mkHeaderConfig :: Boolean -> Boolean -> {title :: String, subTitle :: String}

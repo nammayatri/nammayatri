@@ -1072,7 +1072,7 @@ getKN stringKey =
         TOLL_CHARGES -> "ಟೋಲ್ ಶುಲ್ಕಗಳು"
         TOLL_CHARGES_DESC -> "ಪ್ರವಾಸದ ಸಮಯದಲ್ಲಿ ಸಂಚಿತವಾದ ಯಾವುದೇ ಟೋಲ್ ಶುಲ್ಕವನ್ನು ನಿಮ್ಮ ದರದಲ್ಲಿ ಸೇರಿಸಲಾಗಿದೆ."
         TOLL_CHARGES_INCLUDING amount -> "ಟೋಲ್ ಶುಲ್ಕಗಳು " <> amount <> " ದರದಲ್ಲಿ ಸೇರಿಸಲಾಗಿದೆ"
-        TOLL_ROAD_CHANGED -> "ಟೋಲ್ ರಸ್ತೆಯನ್ನು ತೆಗೆದುಕೊಳ್ಳದ ಕಾರಣ ಟೋಲ್ ಶುಲ್ಕಗಳನ್ನು ಕಡಿಮೆ ಮಾಡಲಾಗಿದೆ"
+        TOLL_ROAD_CHANGED -> "ಟೋಲ್ ಶುಲ್ಕಗಳು ಅನ್ವಯಿಸುವುದಿಲ್ಲ"
         PARKING_CHARGES -> "ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು"
         PARKING_CHARGES_DESC -> "ಚಾಲಕರಿಂದ ಸಂಚಿತವಾದ ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳನ್ನು ಶುಲ್ಕದಲ್ಲಿ ಸೇರಿಸಲಾಗಿಲ್ಲ. ಇದು ಚಾಲಕ ಮತ್ತು ಪ್ರಯಾಣಿಕರ ನಡುವಿನ ಸವಾರಿಯ ನಂತರ ಇತ್ಯರ್ಥಪಡಿಸಬೇಕು."
         TOLL_OR_PARKING_CHARGES -> "^ಟೋಲ್/ ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು"
@@ -1112,3 +1112,4 @@ getKN stringKey =
         INVALID_CODE -> "ಅಮಾನ್ಯ ಕೋಡ್!"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "ಕೆಳಗಿನ 6 ಅಂಕಿಗಳ ರೆಫರಲ್ ಕೋಡ್ ನಮೂದಿಸಿ"
         APPLY -> "ಅನ್ವಯಿಸು"
+        TOLL_CHARGES_INCLUDED -> "ಟೋಲ್ ಶುಲ್ಕಗಳು ಸೇರಿವೆ"

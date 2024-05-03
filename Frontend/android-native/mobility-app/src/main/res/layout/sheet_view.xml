@@ -676,20 +676,42 @@
                                     android:src="@drawable/ic_metro_shape"/>
                             </LinearLayout>
 
-                            <TextView
-                                android:id="@+id/distanceToBeCovered"
+                            <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="85dp"
-                                android:background="@drawable/ic_roundcorner_overlay"
-                                android:elevation="1dp"
-                                android:fontFamily="@font/plus_jakartasans_semibold"
-                                android:paddingHorizontal="8dp"
-                                android:paddingVertical="6dp"
-                                android:text="12Km"
-                                android:lineHeight="20dp"
-                                android:textColor="#2C2F3A"
-                                android:textSize="16dp" />
+                                android:orientation="horizontal">
+                                <TextView
+                                    android:id="@+id/distanceToBeCovered"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="85dp"
+                                    android:background="@drawable/ic_roundcorner_overlay"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="12Km"
+                                    android:lineHeight="20dp"
+                                    android:textColor="#2C2F3A"
+                                    android:textSize="16dp" />
+
+                                <TextView
+                                    android:id="@+id/tollTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="85dp"
+                                    android:background="@drawable/ic_roundcorner_overlay"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="@string/toll_text"
+                                    android:lineHeight="20dp"
+                                    android:textColor="#2C2F3A"
+                                    android:textSize="16dp"
+                                    android:visibility="visible"/>
+                            </LinearLayout>
+
 
                             <LinearLayout
                                 android:layout_width="match_parent"

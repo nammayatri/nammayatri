@@ -134,6 +134,8 @@ import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import LocalStorage.Cache (getValueFromCache)
 import DecodeUtil (getAnyFromWindow)
 import JBridge as JB
+import Engineering.Helpers.Utils as EHU
+
 
 instance showAction :: Show Action where
   show _ = ""
@@ -3098,6 +3100,8 @@ estimatesListFlow estimates state = do
     logStatus "drivers_available" nearByDriversLength
     let _ = runFn2 updatePushInIdMap "EstimatePolling" true
         quoteList = map (\quote -> quote{activeIndex = estimatesInfo.defaultQuote.index}) estimatesInfo.quoteList
+
+    void $ pure $ setValueToLocalStore HAS_TOLL_CHARGES $ show estimatesInfo.hasToll
     exit $ SelectEstimate state 
       { data
         { specialZoneQuoteList = quoteList

@@ -27,6 +27,7 @@ public class SheetModel {
     private final int driverMaxExtraFee;
     private final int rideRequestPopupDelayDuration;
     private final int negotiationUnit;
+    private final int tollCharges;
 
     private final Boolean disabilityTag;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha, distanceToBeCovered;
@@ -35,6 +36,7 @@ public class SheetModel {
 
     public SheetModel(String pickUpDistance,
                       float distanceToBeCovered,
+                      int tollCharges,
                       String durationToPickup,
                       String sourceAddress,
                       String destinationAddress,
@@ -79,6 +81,7 @@ public class SheetModel {
         this.destLng = destLng;
         this.pickUpDistance = pickUpDistance;
         this.distanceToBeCovered = distanceToBeCovered;
+        this.tollCharges = tollCharges;
         this.sourceArea = sourceArea;
         this.sourceAddress = sourceAddress;
         this.destinationArea = destinationArea;
@@ -199,6 +202,10 @@ public class SheetModel {
         DecimalFormat df = new DecimalFormat("###.##", new DecimalFormatSymbols(new Locale("en", "us")));
         df.setMaximumFractionDigits(2);
         return df.format(distanceToBeCovered / 1000);
+    }
+
+    public int getTollCharges() {
+        return tollCharges;
     }
 
     public float getDistanceToBeCovFloat() {

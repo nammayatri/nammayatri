@@ -1083,7 +1083,7 @@ getFR stringKey =
         TOLL_CHARGES -> "Frais de péage"
         TOLL_CHARGES_DESC -> "Tout frais de péage accumulé pendant le voyage est inclus dans votre tarif."
         TOLL_CHARGES_INCLUDING amount-> "Frais de péage " <> amount <> " inclus dans le tarif"
-        TOLL_ROAD_CHANGED -> "Frais de péage réduits car la route à péage n'a pas été empruntée"
+        TOLL_ROAD_CHANGED -> "Frais de péage non applicables"
         PARKING_CHARGES -> "Frais de stationnement"
         PARKING_CHARGES_DESC -> "Les frais de stationnement facturés par le conducteur ne sont pas inclus dans le tarif. Ils doivent être réglés après le trajet entre le conducteur et le passager."
         TOLL_OR_PARKING_CHARGES -> "^Péage/Frais de stationnement"
@@ -1114,3 +1114,4 @@ getFR stringKey =
         INVALID_CODE -> "Code invalide !"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "Entrez un code de parrainage à 6 chiffres ci-dessous"
         APPLY -> "Appliquer"
+        TOLL_CHARGES_INCLUDED -> "Frais de péage inclus"

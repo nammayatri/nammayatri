@@ -1329,9 +1329,7 @@ getRideCompletedConfig state = let
         visible = if state.props.isFreeRide then VISIBLE else GONE
       },
       topPill = topPillConfig,
-      bottomText = getString RIDE_DETAILS,
-      tollCharge = state.data.endRideData.estimatedTollCharge > 0,
-      tollChargeText = getString if state.data.endRideData.actualTollCharge > 0 then TOLL_CHARGES_INCLUDING $ (CP.getCurrency appConfig) <> (show state.data.endRideData.actualTollCharge) else TOLL_ROAD_CHANGED
+      bottomText = getString RIDE_DETAILS
     },
     driverBottomCard {
       visible = showDriverBottomCard,
@@ -1399,6 +1397,14 @@ getRideCompletedConfig state = let
     lottieQRAnim {
       visible = state.data.config.rideCompletedCardConfig.lottieQRAnim,
       url = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/end_ride_qr_anim.json"
+    }
+  , toll {
+      actualAmount =  state.data.endRideData.actualTollCharge
+    , text =if state.data.endRideData.actualTollCharge > 0  then getString RIDE_TOLL_FARE_INCLUDES  else getString TOLL_ROAD_CHANGED
+    , visibility = boolToVisibility $ state.data.endRideData.estimatedTollCharge > 0
+    , image = fetchImage FF_COMMON_ASSET "ny_ic_blue_toll"
+    , textColor = if state.data.endRideData.actualTollCharge > 0 then Color.blue800 else Color.black600
+    , imageVisibility = boolToVisibility $ state.data.endRideData.estimatedTollCharge > 0 && state.data.endRideData.actualTollCharge > 0
     }
   }
   in config'

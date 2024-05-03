@@ -1086,7 +1086,7 @@ getTE stringKey =
     TOLL_CHARGES -> "టోల్ ఛార్జీస్"
     TOLL_CHARGES_DESC -> "పర్యటన సమయంలో ఏర్పడిన ఏదైనా టోల్ ఛార్జీ మీ ఛార్జీలో చేర్చబడుతుంది."
     TOLL_CHARGES_INCLUDING amount -> "టోల్ ఛార్జీలు " <> amount <> " ఛార్జీలో చేర్చబడింది"
-    TOLL_ROAD_CHANGED -> "టోల్ రోడ్ తీసుకోనందున టోల్ ఛార్జీలు తగ్గించబడ్డాయి"
+    TOLL_ROAD_CHANGED -> "టోల్ ఛార్జీలు వర్తించవు"
     PARKING_CHARGES -> "పార్కింగ్ ఛార్జీలు"
     PARKING_CHARGES_DESC -> "డ్రైవర్ ద్వారా వచ్చే పార్కింగ్ ఛార్జీలు ఛార్జీలో చేర్చబడలేదు. ఇది డ్రైవర్ మరియు ప్రయాణీకుల మధ్య ప్రయాణించిన తర్వాత పరిష్కరించబడుతుంది."
     TOLL_OR_PARKING_CHARGES -> "^టోల్/ పార్కింగ్ ఛార్జీలు"
@@ -1126,3 +1126,4 @@ getTE stringKey =
     INVALID_CODE -> "చెల్లని కోడ్!"
     ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "కీల్లో 6 అంకి రిఫరల్ కోడ్ నమోదు చేయండి"
     APPLY -> "అప్లికేషన్ చేయండి"
+    TOLL_CHARGES_INCLUDED -> "టోల్ ఛార్జీలు కలిగి ఉన్నాయి"

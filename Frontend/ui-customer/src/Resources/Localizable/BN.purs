@@ -1073,7 +1073,7 @@ getBN stringKey =
         TOLL_CHARGES -> "টোল চার্জ"
         TOLL_CHARGES_DESC -> "ভ্রমণের সময় যে কোনো টোল চার্জ আপনার ভাড়ার অন্তর্ভুক্ত।"
         TOLL_CHARGES_INCLUDING amount -> "টোল চার্জ " <> amount <> "ভাড়ায় অন্তর্ভুক্ত"
-        TOLL_ROAD_CHANGED -> "টোল রোড নেওয়া না হওয়ায় টোল চার্জ কমে গেছে"
+        TOLL_ROAD_CHANGED -> "টোল চার্জ প্রযোজ্য নয়"
         PARKING_CHARGES -> "পার্কিং চার্জ"
         PARKING_CHARGES_DESC -> "চালকের দ্বারা সংগৃহীত পার্কিং চার্জ ভাড়ার অন্তর্ভুক্ত নয়৷ এটি চালক এবং যাত্রীর মধ্যে রাইডের পরে নিষ্পত্তি করতে হবে৷"
         TOLL_OR_PARKING_CHARGES -> "^টোল/ পার্কিং চার্জ"
@@ -1113,3 +1113,4 @@ getBN stringKey =
         INVALID_CODE -> "অবৈধ কোড!"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "নীচে 6 ডিজিটের রেফারাল কোড লিখুন"
         APPLY -> "প্রয়োগ করুন"
+        TOLL_CHARGES_INCLUDED -> "টোল চার্জ অন্তর্ভুক্ত"

@@ -1080,7 +1080,7 @@ getEN stringKey =
         TOLL_CHARGES -> "Toll Charges"
         TOLL_CHARGES_DESC -> "Any toll charge accrued during the trip is included in your fare."
         TOLL_CHARGES_INCLUDING amount -> "Toll charges " <> amount <> " included in the fare"
-        TOLL_ROAD_CHANGED -> "Toll charges reduced as toll road was not taken"
+        TOLL_ROAD_CHANGED -> "Toll charges not applicable"
         PARKING_CHARGES -> "Parking Charges"
         PARKING_CHARGES_DESC -> "Parking charges accrued by the driver is not included in the fare. This is to be settled post ride between driver and passenger."
         TOLL_OR_PARKING_CHARGES -> "^Toll/ Parking Charges"
@@ -1111,3 +1111,4 @@ getEN stringKey =
         INVALID_CODE -> "Invalid Code!"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "Enter 6 digit referral code below"
         APPLY -> "Apply"
+        TOLL_CHARGES_INCLUDED -> "Toll Charges Included"
