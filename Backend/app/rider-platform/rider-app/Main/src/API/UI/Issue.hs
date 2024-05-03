@@ -104,7 +104,7 @@ castMOCityById moCityId = do
           city = moCity.city
         }
 
-castRideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Ride -> m Common.RideInfoRes
+castRideInfo :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Ride -> Flow Common.RideInfoRes
 castRideInfo merchantId _ rideId = do
   rideInfoRes <- DRide.rideInfo (cast merchantId) (cast rideId)
   return $ castRideInfoRes rideInfoRes

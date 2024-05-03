@@ -200,7 +200,7 @@ Estimate:
     estimatedDistance: (Kernel.Types.Common.distanceToHighPrecMeters <$> estimatedDistance)|E
     estimatedDistanceValue: (Kernel.Types.Common.distanceToHighPrecDistance (estimatedDistance <&> (.unit)) <$> estimatedDistance)|E
     distanceUnit: (estimatedDistance <&> (.unit))|E
-    clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
+    clientBundleVersion: (fmap Kernel.Utils.Version.versionToText clientBundleVersion)|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
@@ -246,6 +246,12 @@ Estimate:
       kvFunction: updateWithKV
       params: [updatedAt, status]
       where: requestId
+
+    findBySRIdAndStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [status,requestId]
+
 
   extraOperations:
     - EXTRA_QUERY_FILE
