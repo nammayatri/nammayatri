@@ -1487,7 +1487,8 @@ eval BackPressed state = do
                               continue state
 
 eval GoBackToSearchLocationModal state = do
-  _ <- pure $ updateLocalStage SearchLocationModel
+  void $ pure $ updateLocalStage SearchLocationModel
+  void $ pure $ exitLocateOnMap ""
   continue state { props { rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation, isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
 
 eval HandleCallback state = do
