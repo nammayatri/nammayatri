@@ -24,6 +24,7 @@ module Domain.Action.Beckn.OnUpdate
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
     EstimateRepetitionReq (..),
+    QuoteRepetitionReq (..),
     NewMessageReq (..),
     SafetyAlertReq (..),
     StopArrivedReq (..),
@@ -40,6 +41,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Extra.Booking as SRB
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DMerchant
@@ -64,8 +66,10 @@ import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.LocationMapping as QLM
+import qualified Storage.Queries.Quote as SQQ
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
+import qualified Storage.Queries.Transformers.Booking as STB
 import Tools.Error
 import Tools.Maps (LatLong)
 import Tools.Metrics (HasBAPMetrics)
@@ -80,6 +84,7 @@ data OnUpdateReq
   | OUBookingReallocationReq BookingReallocationReq -- not used
   | OUDriverArrivedReq Common.DriverArrivedReq
   | OUEstimateRepetitionReq EstimateRepetitionReq
+  | OUQuoteRepetitionReq QuoteRepetitionReq
   | OUNewMessageReq NewMessageReq
   | OUSafetyAlertReq SafetyAlertReq
   | OUStopArrivedReq StopArrivedReq
@@ -95,6 +100,7 @@ data ValidatedOnUpdateReq
   | OUValidatedBookingReallocationReq ValidatedBookingReallocationReq
   | OUValidatedDriverArrivedReq Common.ValidatedDriverArrivedReq
   | OUValidatedEstimateRepetitionReq ValidatedEstimateRepetitionReq
+  | OUValidatedQuoteRepetitionReq ValidatedQuoteRepetitionReq
   | OUValidatedNewMessageReq ValidatedNewMessageReq
   | OUValidatedSafetyAlertReq ValidatedSafetyAlertReq
   | OUValidatedStopArrivedReq ValidatedStopArrivedReq
@@ -167,6 +173,25 @@ data ValidatedEstimateRepetitionReq = ValidatedEstimateRepetitionReq
     ride :: DRide.Ride,
     searchReq :: DSR.SearchRequest,
     estimate :: DEstimate.Estimate
+  }
+
+data QuoteRepetitionReq = QuoteRepetitionReq
+  { searchRequestId :: Id DSR.SearchRequest,
+    newBppBookingId :: Id DRB.BPPBooking,
+    bppBookingId :: Id DRB.BPPBooking,
+    bppRideId :: Id DRide.BPPRide,
+    cancellationSource :: DBCR.CancellationSource
+  }
+
+data ValidatedQuoteRepetitionReq = ValidatedQuoteRepetitionReq
+  { searchRequestId :: Id DSR.SearchRequest,
+    newBppBookingId :: Id DRB.BPPBooking,
+    bppBookingId :: Id DRB.BPPBooking,
+    bppRideId :: Id DRide.BPPRide,
+    cancellationSource :: DBCR.CancellationSource,
+    booking :: DRB.Booking,
+    ride :: DRide.Ride,
+    searchReq :: DSR.SearchRequest
   }
 
 data NewMessageReq = NewMessageReq
@@ -277,8 +302,8 @@ onUpdate = \case
   OUValidatedBookingReallocationReq ValidatedBookingReallocationReq {..} -> do
     mbRide <- QRide.findActiveByRBId booking.id
     bookingCancellationReason <- mkBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
-    _ <- QRB.updateStatus booking.id DRB.AWAITING_REASSIGNMENT
-    _ <- QRide.updateStatus ride.id DRide.CANCELLED
+    void $ QRB.updateStatus booking.id DRB.AWAITING_REASSIGNMENT
+    void $ QRide.updateStatus ride.id DRide.CANCELLED
     QBCR.upsert bookingCancellationReason
     Notify.notifyOnBookingReallocated booking
   OUValidatedDriverArrivedReq req -> Common.driverArrivedReqHandler req
@@ -287,14 +312,33 @@ onUpdate = \case
     bookingCancellationReason <- mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
     logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
 
-    _ <- QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimate.id
-    _ <- QRB.updateStatus booking.id DRB.REALLOCATED
-    _ <- QRide.updateStatus ride.id DRide.CANCELLED
-    _ <- QBCR.upsert bookingCancellationReason
-    _ <- QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill}
+    void $ QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimate.id
+    void $ QRB.updateStatus booking.id DRB.REALLOCATED
+    void $ QRide.updateStatus ride.id DRide.CANCELLED
+    void $ QBCR.upsert bookingCancellationReason
+    void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill}
     QPFS.clearCache searchReq.riderId
     -- notify customer
-    Notify.notifyOnEstimatedReallocated booking estimate.id
+    Notify.notifyOnEstOrQuoteReallocated booking estimate.id.getId
+  OUValidatedQuoteRepetitionReq ValidatedQuoteRepetitionReq {..} -> do
+    bookingCancellationReason <- mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
+    quote <- case booking.quoteId of
+      Just quoteId -> SQQ.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
+      _ -> throwError $ InvalidRequest ("Quote not found for bookingId: " <> booking.id.getId)
+    now <- getCurrentTime
+    bookingId <- generateGUID
+    quoteId_ <- generateGUID
+    let newQuote = quote{id = Id quoteId_, createdAt = now, updatedAt = now}
+        newBooking = booking{id = bookingId, quoteId = Just (Id quoteId_), status = SRB.NEW, isScheduled = False, bppBookingId = Just newBppBookingId, startTime = booking.startTime, createdAt = now, updatedAt = now}
+    void $ SQQ.createQuote newQuote
+    void $ QRB.createBooking newBooking
+    void $ QRB.updateStatus booking.id DRB.REALLOCATED
+    void $ QRide.updateStatus ride.id DRide.CANCELLED
+    void $ QBCR.upsert bookingCancellationReason
+    void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchReq.validTill, fareProductType = Just $ STB.getFareProductType booking.bookingDetails}
+    QPFS.clearCache searchReq.riderId
+    -- notify customer
+    Notify.notifyOnEstOrQuoteReallocated booking quote.id.getId
   OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> Notify.notifySafetyAlert booking code
   OUValidatedStopArrivedReq ValidatedStopArrivedReq {..} -> do
     QRB.updateStop booking Nothing
@@ -357,6 +401,11 @@ validateRequest = \case
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
     estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist bppEstimateId.getId)
     return $ OUValidatedEstimateRepetitionReq ValidatedEstimateRepetitionReq {..}
+  OUQuoteRepetitionReq QuoteRepetitionReq {..} -> do
+    booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
+    searchReq <- QSR.findById searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
+    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    return $ OUValidatedQuoteRepetitionReq ValidatedQuoteRepetitionReq {..}
   OUSafetyAlertReq SafetyAlertReq {..} -> do
     booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
     unless (booking.status == DRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)

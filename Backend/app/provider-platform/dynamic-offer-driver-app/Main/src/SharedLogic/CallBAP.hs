@@ -21,6 +21,7 @@ module SharedLogic.CallBAP
     sendDriverArrivalUpdateToBAP,
     sendStopArrivalUpdateToBAP,
     sendEstimateRepetitionUpdateToBAP,
+    sendQuoteRepetitionUpdateToBAP,
     sendUpdateEditDestToBAP,
     sendNewMessageToBAP,
     sendDriverOffer,
@@ -705,6 +706,42 @@ sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource dri
     retryConfig <- asks (.shortDurationRetryCfg)
     estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing estimateRepetitionBuildReq
     void $ callOnUpdateV2 estimateRepMsgV2 retryConfig merchant.id
+
+sendQuoteRepetitionUpdateToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  Id DRB.Booking ->
+  SRBCR.CancellationSource ->
+  DP.Person ->
+  DVeh.Vehicle ->
+  m ()
+sendQuoteRepetitionUpdateToBAP booking ride newBookingId cancellationSource driver vehicle = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  when isValueAddNP $ do
+    merchant <-
+      CQM.findById booking.providerId
+        >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+    let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+    let paymentUrl = Nothing
+    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+    let bookingDetails = ACL.BookingDetails {..}
+        quoteRepetitionBuildReq = ACL.QuoteRepetitionBuildReq ACL.DQuoteRepetitionReq {..}
+    retryConfig <- asks (.shortDurationRetryCfg)
+    quoteRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing quoteRepetitionBuildReq
+    void $ callOnUpdateV2 quoteRepMsgV2 retryConfig merchant.id
 
 callBecknAPIWithSignature' ::
   ( MonadFlow m,

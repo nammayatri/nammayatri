@@ -18,6 +18,7 @@ module Domain.Types.OnUpdate
   )
 where
 
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Estimate as DEst
@@ -34,6 +35,7 @@ data OnUpdateBuildReq
   | BookingCancelledBuildReq DBookingCancelledReq
   | DriverArrivedBuildReq DDriverArrivedReq
   | EstimateRepetitionBuildReq DEstimateRepetitionReq
+  | QuoteRepetitionBuildReq DQuoteRepetitionReq
   | NewMessageBuildReq DNewMessageReq
   | SafetyAlertBuildReq DSafetyAlertReq
   | StopArrivedBuildReq DStopArrivedBuildReq
@@ -46,6 +48,12 @@ newtype DStopArrivedBuildReq = DStopArrivedBuildReq
 data DEstimateRepetitionReq = DEstimateRepetitionReq
   { bookingDetails :: BookingDetails,
     estimateId :: Id DEst.Estimate,
+    cancellationSource :: SBCR.CancellationSource
+  }
+
+data DQuoteRepetitionReq = DQuoteRepetitionReq
+  { bookingDetails :: BookingDetails,
+    newBookingId :: Id DRB.Booking,
     cancellationSource :: SBCR.CancellationSource
   }
 

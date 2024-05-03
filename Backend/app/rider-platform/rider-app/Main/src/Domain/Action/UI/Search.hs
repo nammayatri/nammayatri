@@ -135,7 +135,8 @@ data RentalSearchReq = RentalSearchReq
     isSpecialLocation :: Maybe Bool,
     startTime :: UTCTime,
     estimatedRentalDistance :: Meters,
-    estimatedRentalDuration :: Seconds
+    estimatedRentalDuration :: Seconds,
+    isReallocationEnabled :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -225,7 +226,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
           OneWaySearch oneWayReq ->
             (SearchRequest.OneWay, oneWayReq.origin, [oneWayReq.destination], oneWayReq.isSourceManuallyMoved, oneWayReq.isSpecialLocation, fromMaybe now oneWayReq.startTime, oneWayReq.isReallocationEnabled)
           RentalSearch rentalReq ->
-            (SearchRequest.Rental, rentalReq.origin, fromMaybe [] rentalReq.stops, rentalReq.isSourceManuallyMoved, rentalReq.isSpecialLocation, rentalReq.startTime, Nothing)
+            (SearchRequest.Rental, rentalReq.origin, fromMaybe [] rentalReq.stops, rentalReq.isSourceManuallyMoved, rentalReq.isSpecialLocation, rentalReq.startTime, rentalReq.isReallocationEnabled)
   unless ((120 `addUTCTime` startTime) >= now) $ throwError (InvalidRequest "Ride time should only be future time") -- 2 mins buffer
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
