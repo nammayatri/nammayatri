@@ -713,7 +713,7 @@ homeScreenFlow = do
         let destServiceable = destServiceabilityResp.serviceable
         setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
         let geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = geoJson, nearByPickUpPoints=pickUpPoints},props{city = getCityNameFromCode sourceServiceabilityResp.city , isSpecialZone =  (srcSpecialLocation.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then (getZoneType srcSpecialLocation.category) else NOZONE, findingQuotesProgress = 0.0, locateOnMapProps{ sourceLocationName = Just srcSpecialLocation.locationName, sourceGates = Just $ pickUpPoints }}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = geoJson, nearByPickUpPoints=pickUpPoints},props{ defaultPickUpPoint = "", city = getCityNameFromCode sourceServiceabilityResp.city , isSpecialZone =  (srcSpecialLocation.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then (getZoneType srcSpecialLocation.category) else NOZONE, findingQuotesProgress = 0.0, locateOnMapProps{ sourceLocationName = Just srcSpecialLocation.locationName, sourceGates = Just $ pickUpPoints }}})
         when (addToRecents) $ do
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
           fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
@@ -2331,7 +2331,7 @@ savedLocationFlow = do
       addNewAddressScreenFlow "edit Location"
 
     GO_BACK_FROM_SAVED_LOCATION -> do
-      void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
+      void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag if os == "IOS" then "CustomerHomeScreenMap" else "CustomerHomeScreen")
       homeScreenFlow
   pure unit
 
