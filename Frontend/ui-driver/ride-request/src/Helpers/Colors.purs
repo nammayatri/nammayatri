@@ -45,3 +45,7 @@ black900 = "#2C2F3A"
 
 purple :: Color
 purple = "#140338"
+
+
+red900 :: Color
+red900 = "#E55454"

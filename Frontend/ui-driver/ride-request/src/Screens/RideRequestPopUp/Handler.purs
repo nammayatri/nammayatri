@@ -16,13 +16,14 @@ import Types (OverlayData(..))
 rideRequestPopUp :: Flow OverlayData ScreenOutput
 rideRequestPopUp = do
   (OverlayData oState) <- validateHolder
-  showScreenWithNameSpace $ View.screen oState.rideRequestPopUpScreen
+  showScreenWithNameSpace $ View.screen (OverlayData oState)
   where
   validateHolder = do
     (OverlayData oState) <- getState
     if (not oState.rideRequestPopUpScreen.wasHolderCreated) then do
       push <- liftFlow $ getPushFn (Just "RideRequestPopUp") "RideRequestPopUp"
       item <- preComputeListItem $ View.sheetViewHolder push oState.rideRequestPopUpScreen
-      modifyState \(OverlayData oState) -> OverlayData oState { rideRequestPopUpScreen { wasHolderCreated = true, holderView = item } }
+      -- topPriceViewpush <- liftFlow $ getPushFn (Just "TopPriceView") "TopPriceView"
+      modifyState \(OverlayData oState) -> OverlayData oState { rideRequestPopUpScreen { wasHolderCreated = true, holderView = Just item } }
     else
       pure (OverlayData oState)

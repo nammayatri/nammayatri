@@ -7,42 +7,57 @@ import Prelude
 import Prelude
 import PrestoDOM
 import Screens.RideRequestPopUp.Controller
-import Api.Types (NearBySearchRequestRes(..))
+
+import Api.Types (NearBySearchRequestRes(..), SearchRequest(..))
 import Components.SeparatorView.View as SeparatorView
-import Data.Array (mapWithIndex)
+import Data.Array (elem, index, mapWithIndex)
 import Data.Either (Either(..))
 import Data.Time (Millisecond)
 import Data.Time.Duration (Milliseconds(..))
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
 import Effect.Aff.Class (liftAff)
+import Effect.Uncurried (runEffectFn1)
 import Font.Style as FontStyle
 import Helpers.Colors as Color
-import Helpers.Commons (flowRunner, getHeightFromPercent, safeMarginBottom, screenHeight)
+import Helpers.Commons (flowRunner, getHeightFromPercent, safeMarginBottom, screenHeight, hideLoader)
+import Helpers.Commons (liftFlow, screenWidth)
 import Helpers.Commons (safeMarginBottom, safeMarginTop, screenWidth)
 import Helpers.Commons (screenWidth)
 import Helpers.Pooling (delayViaTimer)
 import Presto.Core.Types.Language.Flow (Flow)
+import Presto.Core.Types.Language.Interaction (request)
 import PrestoDOM.List (listDataV2, listItem, onClickHolder, textHolder, viewPager2)
 import Screens.RideRequestPopUp.ScreenData (RideRequestPopUpScreenData)
+import Screens.TopPriceView.Handler (topPriceView)
 import Services.Backend (nearBySearchRequest)
 import Types (LazyCheck(..), OverlayData(..), defaultOverlayData)
 
 type Layout w
   = PrestoDOM (Effect Unit) w
 
-screen :: RideRequestPopUpScreenData -> ScopedScreen Action RideRequestPopUpScreenData ScreenOutput
-screen initialState =
-  { initialState
+screen :: OverlayData -> ScopedScreen Action RideRequestPopUpScreenData ScreenOutput
+screen (OverlayData oState) =
+  { initialState : oState.rideRequestPopUpScreen
   , view: view
   , name: "RideRequestPopUp"
   , globalEvents:
       [ ( \push -> do
-            fiber <- launchAff $ flowRunner defaultOverlayData $ getRideRequest push
+            fiber <- launchAff $ flowRunner (OverlayData oState) $ getRideRequest push
             pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
-        )
+        ),
+        (\_ ->  do 
+                void $ runEffectFn1 hideLoader ""
+                pure (pure unit)),
+        (\_->
+          do 
+            fiber <- launchAff $ flowRunner (OverlayData oState) $ showTopPriceView oState.rideRequestPopUpScreen.rideRequests
+            pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber)
       ]
   , parent: Just "RideRequestPopUp"
-  , eval
+  , eval : (\action state -> do
+            let _ = spy "RideRequestPopUp -> action " action
+                _ = spy "RideRequestPopUp -> state " state
+            eval action state)
   }
 
 view :: forall w. (Action -> Effect Unit) -> RideRequestPopUpScreenData -> Layout w
@@ -78,7 +93,7 @@ rideRequestTab push state =
     , margin $ MarginHorizontal 16 16
     ]
     $ []
-    <> (mapWithIndex (\idx item -> singleTabView push state idx) [ 1, 2, 3 ])
+    <> (mapWithIndex (\idx item -> singleTabView push state idx) [1,2,3])
 
 singleTabView :: forall w. (Action -> Effect Unit) -> RideRequestPopUpScreenData -> Int -> Layout w
 singleTabView push state idx =
@@ -92,18 +107,24 @@ singleTabView push state idx =
     , cornerRadius 8.0
     ]
     [ textView
-        $ [ text "$10"
+        $ [ text $ getPriceFromArray state idx
           , color Color.black900
           ]
         <> FontStyle.body10 TypoGraphy
     ]
 
+getPriceFromArray :: RideRequestPopUpScreenData -> Int -> String
+getPriceFromArray state idx = 
+  case index state.rideRequests idx of
+    Nothing -> " -- "
+    Just (SearchRequest request) -> show $ request.baseFare
+
 getSingleTab ∷ Int
 getSingleTab = ((screenWidth unit) - 32) / 3
 
 sheetView :: forall w. (Action -> Effect Unit) -> RideRequestPopUpScreenData -> Layout w
-sheetView push state =
-  linearLayout
+sheetView push state = case state.holderView of
+  Just item -> linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , margin $ MarginTop 16
@@ -111,11 +132,12 @@ sheetView push state =
     [ viewPager2
         [ width $ MATCH_PARENT
         , height $ V $ (getHeightFromPercent 85) - safeMarginTop - safeMarginBottom
-        , listItem $ spy "state.holder" state.holderView
-        , listDataV2 $ getListData state
+        , listItem item
+        , listDataV2 $ state.holderData -- getListData state
         , scrollDirection HORIZONTAL
         ]
     ]
+  Nothing -> linearLayout[][]
 
 sheetViewHolder :: forall w. (Action -> Effect Unit) -> RideRequestPopUpScreenData -> Layout w
 sheetViewHolder push state =
@@ -200,7 +222,7 @@ sourceDestinationImageView vis =
 addressView :: forall w. (Action -> Effect Unit) -> RideRequestPopUpScreenData -> String -> Visibility -> Margin -> Layout w
 addressView push state holder vis newMargin =
   linearLayout
-    [ width MATCH_PARENT
+    [ width $ V $ (screenWidth unit) - 90
     , height WRAP_CONTENT
     , orientation VERTICAL
     , margin $ newMargin
@@ -209,18 +231,21 @@ addressView push state holder vis newMargin =
     [ textView
         $ [ textHolder $ holder <> "Area"
           , color Color.black800
+          , ellipsize true
           ]
         <> FontStyle.subHeading1 TypoGraphy
     , textView
         $ [ textHolder $ holder <> "FullAddress"
           , color Color.black500
           , margin $ MarginTop 5
+          , ellipsize true
           ]
         <> FontStyle.body1 TypoGraphy
     , textView
         $ [ textHolder $ holder <> "Pincode"
           , color Color.black800
           , margin $ MarginTop 5
+          , ellipsize true
           ]
         <> FontStyle.body4 TypoGraphy
     ]
@@ -358,50 +383,19 @@ separatorConfig =
   }
 
 getRideRequest :: (Action -> Effect Unit) -> Flow OverlayData Unit
-getRideRequest push = do
-  eiResp <- nearBySearchRequest
-  case eiResp of
-    Right (NearBySearchRequestRes resp) -> do
-      let
-        _ = spy "Response ->" resp
-      -- void $ modifyState \(OverlayData oState) -> OverlayData oState{rideRequestPopUpScreen{ holderData = toPopupProp resp.searchRequestsForDriver}}
-      -- void $ rideRequestPopUp
-      restart
-    Left _ -> restart
-  where
-  restart = do
-    delayViaTimer $ Milliseconds 1000.0
-    getRideRequest push
+getRideRequest push = do pure unit
+  -- eiResp <- nearBySearchRequest
+  -- case eiResp of
+  --   Right (NearBySearchRequestRes resp) -> do 
+  --     liftFlow $ push $ UpdateRideRequest resp.searchRequestsForDriver
+  --     restart
+  --   Left err -> do
+  --     let _ = spy "Left err ->" err
+  --     restart
+  -- where
+  -- restart = do
+  --   delayViaTimer $ Milliseconds 1000.0
+  --   getRideRequest push
 
-getListData state =
-  [ { tripPrice: toPropValue "hello"
-    , tripDistance: toPropValue "hello"
-    , pickupDistance: toPropValue "hello"
-    , sourceArea: toPropValue "hello"
-    , sourceFullAddress: toPropValue "hello"
-    , sourcePincode: toPropValue "hello"
-    , destinationArea: toPropValue "hello"
-    , destinationFullAddress: toPropValue "hello"
-    , destinationPincode: toPropValue "hello"
-    }
-  , { tripPrice: toPropValue "hello"
-    , tripDistance: toPropValue "hello"
-    , pickupDistance: toPropValue "hello"
-    , sourceArea: toPropValue "hello"
-    , sourceFullAddress: toPropValue "hello"
-    , sourcePincode: toPropValue "hello"
-    , destinationArea: toPropValue "hello"
-    , destinationFullAddress: toPropValue "hello"
-    , destinationPincode: toPropValue "hello"
-    }
-  , { tripPrice: toPropValue "hello"
-    , tripDistance: toPropValue "hello"
-    , pickupDistance: toPropValue "hello"
-    , sourceArea: toPropValue "hello"
-    , sourceFullAddress: toPropValue "hello"
-    , sourcePincode: toPropValue "hello"
-    , destinationArea: toPropValue "hello"
-    , destinationFullAddress: toPropValue "hello"
-    , destinationPincode: toPropValue "hello"
-    }
-  ]
+showTopPriceView :: Array SearchRequest -> Flow OverlayData Unit
+showTopPriceView = topPriceView 

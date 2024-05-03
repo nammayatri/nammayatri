@@ -154,6 +154,8 @@ foreign import downloadQR  :: String -> Effect Unit
 
 foreign import renderSlider :: forall action. (action -> Effect Unit) -> (Int -> action) -> SliderConfig -> Unit
 
+foreign import startRideRequestMApp :: EffectFn1 String Unit
+
 
 decodeGeoJson :: String -> Maybe GeoJson
 decodeGeoJson stringGeoJson = 

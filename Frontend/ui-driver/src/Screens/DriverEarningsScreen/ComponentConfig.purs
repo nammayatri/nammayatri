@@ -40,6 +40,7 @@ import Mobility.Prelude
 import LocalStorage.Cache (getValueFromCache)
 import JBridge as JB
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import Engineering.Helpers.Commons as EHC
 
 primaryButtonConfig :: Boolean -> PrimaryButtonConfig.Config
 primaryButtonConfig isActive =
@@ -74,7 +75,7 @@ genericHeaderConfig state =
   in
     GenericHeaderConfig.config
       { height = WRAP_CONTENT
-      , padding = if state.props.subView == ST.EARNINGS_VIEW then Padding 16 16 16 16 else PaddingVertical 5 5
+      , padding = if state.props.subView == ST.EARNINGS_VIEW then Padding 10 (EHC.safeMarginTopWithDefault 13) 0 13 else PaddingVertical (EHC.safeMarginTopWithDefault 5) 5
       , textConfig
         { text = headerText
         , color = Color.darkCharcoal

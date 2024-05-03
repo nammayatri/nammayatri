@@ -44,6 +44,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn7)
+import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Commons (getCurrentUTC, flowRunner, getFormattedDate, getNewIDWithTag, screenHeight, getVideoID, getDayName, safeMarginBottom, screenWidth, convertUTCtoISC, liftFlow, formatCurrencyWithCommas)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getFixedTwoDecimals)
 import Font.Size as FontSize
@@ -157,8 +158,9 @@ view push state =
     , onBackPressed push (const BackPressed)
     , afterRender push (const AfterRender)
     , background Color.white900
+    , padding $ PaddingBottom EHC.safeMarginBottom
     ]
-    [ frameLayout
+    [ relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
@@ -189,21 +191,21 @@ view push state =
                           , helpButton push
                           ]
                       else
-                        linearLayout [] []
+                        linearLayout [height $ V 0] []
                     _
                       | any (_ == state.props.subView) [ ST.FAQ_VIEW, ST.FAQ_QUESTON_VIEW ] || (not (state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins)) -> GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-                    _ -> linearLayout [] []
-                , if any (_ == state.props.subView) [ ST.FAQ_VIEW, ST.FAQ_QUESTON_VIEW ] then separatorView true state.props.subView else linearLayout [] []
+                    _ -> linearLayout [height $ V 0] []
+                , if any (_ == state.props.subView) [ ST.FAQ_VIEW, ST.FAQ_QUESTON_VIEW ] then separatorView true state.props.subView else linearLayout [height $ V 0] []
                 , if not state.data.anyRidesAssignedEver then
                     noRideHistoryView push state
                   else
-                    scrollView
+                    linearLayout
                       [ height MATCH_PARENT
                       , width MATCH_PARENT
                       , orientation VERTICAL
                       ]
                       [ Keyed.relativeLayout
-                          [ height WRAP_CONTENT
+                          [ height MATCH_PARENT
                           , width MATCH_PARENT
                           , orientation VERTICAL
                           ]
@@ -356,7 +358,8 @@ earningsView push state =
     , afterRender push (const AfterRender)
     , padding $ Padding 16 0 16 70
     ]
-    [ totalEarningsView push state
+    [ 
+      totalEarningsView push state
     , transactionViewForEarnings push state
     ]
 
@@ -1783,18 +1786,20 @@ barView push index item state =
       _ -> MarginHorizontal 6 6
   in
     linearLayout
-      [ height $ WRAP_CONTENT
-      , width $ WRAP_CONTENT
-      , margin setMargin
+      [ height $ V 150
       , weight 1.0
+      , margin setMargin
       , orientation VERTICAL
+      , alignParentBottom "true,-1"
+      , gravity CENTER
       ]
       [ linearLayout
-          [ height $ WRAP_CONTENT
-          , width $ WRAP_CONTENT
+          [ width $ WRAP_CONTENT
+          , height $ V 111
           , onClick push $ const $ BarViewSelected index
+          , gravity BOTTOM
           ]
-          [ PrestoAnim.animationSet [ Anim.translateInYAnim $ animConfig { duration = 1000 + (ceil item.percentLength), fromY = 200 + (ceil item.percentLength) } ]
+          [ PrestoAnim.animationSet (if EHC.os == "IOS" then [] else [ Anim.translateInYAnim $ animConfig { duration = 1000 + (ceil item.percentLength), fromY = 200 + (ceil item.percentLength) } ])
               $ linearLayout
                   [ height $ WRAP_CONTENT
                   , width $ WRAP_CONTENT
