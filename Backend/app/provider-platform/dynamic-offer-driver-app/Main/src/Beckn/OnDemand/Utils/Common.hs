@@ -368,26 +368,24 @@ mkStopsOUS booking ride rideOtp =
                         },
                   stopTime = ride.tripStartTime <&> \tripStartTime' -> Spec.Time {timeTimestamp = Just tripStartTime', timeDuration = Nothing}
                 },
-            ( \destination ->
-                Spec.Stop
-                  { stopLocation =
-                      Just $
-                        Spec.Location
-                          { locationAddress = Just $ mkAddress destination.address,
-                            locationAreaCode = destination.address.areaCode,
-                            locationCity = Just $ Spec.City Nothing destination.address.city,
-                            locationCountry = Just $ Spec.Country Nothing destination.address.country,
-                            locationGps = Utils.gpsToText $ destinationGps destination,
-                            locationState = Just $ Spec.State destination.address.state,
-                            locationId = Nothing,
-                            locationUpdatedAt = Nothing
-                          },
-                    stopType = Just $ show Enums.END,
-                    stopAuthorization = Nothing,
-                    stopTime = ride.tripEndTime <&> \tripEndTime' -> Spec.Time {timeTimestamp = Just tripEndTime', timeDuration = Nothing}
-                  }
-            )
-              <$> mbDestination
+            Just $
+              Spec.Stop
+                { stopLocation =
+                    Just $
+                      Spec.Location
+                        { locationAddress = (\dest -> Just $ mkAddress dest.address) =<< mbDestination,
+                          locationAreaCode = (\dest -> dest.address.areaCode) =<< mbDestination,
+                          locationCity = (\dest -> Just $ Spec.City Nothing $ dest.address.city) =<< mbDestination,
+                          locationCountry = (\dest -> Just $ Spec.Country Nothing $ dest.address.country) =<< mbDestination,
+                          locationGps = (\dest -> Utils.gpsToText (destinationGps dest)) =<< mbDestination,
+                          locationState = (\dest -> Just $ Spec.State dest.address.state) =<< mbDestination,
+                          locationId = Nothing,
+                          locationUpdatedAt = Nothing
+                        },
+                  stopType = Just $ show Enums.END,
+                  stopAuthorization = Nothing,
+                  stopTime = ride.tripEndTime <&> \tripEndTime' -> Spec.Time {timeTimestamp = Just tripEndTime', timeDuration = Nothing}
+                }
           ]
 
 type IsValueAddNP = Bool
