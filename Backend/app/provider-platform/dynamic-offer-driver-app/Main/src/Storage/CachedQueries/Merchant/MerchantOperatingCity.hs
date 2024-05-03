@@ -28,10 +28,13 @@ getMerchantOpCityId mbMerchantOpCityId merchant mbCity =
   case mbMerchantOpCityId of
     Just moCityId -> pure moCityId
     Nothing -> do
+      let merchantId = case merchant.id.getId of
+            "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> Id "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" :: Id Merchant -- TODO: Remove this hardcoding Once Yatri_Partner is Fully migrated to Namma_Yatri_Partner
+            _ -> merchant.id
       let city = fromMaybe merchant.city mbCity
       (.id)
-        <$> ( findByMerchantIdAndCity merchant.id city
-                >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
+        <$> ( findByMerchantIdAndCity merchantId city
+                >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
             )
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantOperatingCity)
