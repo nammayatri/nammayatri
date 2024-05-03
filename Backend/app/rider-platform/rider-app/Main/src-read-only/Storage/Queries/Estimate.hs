@@ -20,7 +20,7 @@ import qualified Storage.Beam.Estimate as Beam
 import Storage.Queries.EstimateExtra as ReExport
 import Storage.Queries.Transformers.Estimate
 
-findAllBySRId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ([Domain.Types.Estimate.Estimate]))
+findAllBySRId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m (([Domain.Types.Estimate.Estimate])))
 findAllBySRId (Kernel.Types.Id.Id requestId) = do findAllWithKV [Se.Is Beam.requestId $ Se.Eq requestId]
 
 findByBPPEstimateId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.BPPEstimate -> m (Maybe Domain.Types.Estimate.Estimate))
@@ -28,6 +28,11 @@ findByBPPEstimateId (Kernel.Types.Id.Id bppEstimateId) = do findOneWithKV [Se.Is
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+
+findBySRIdAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m (Maybe Domain.Types.Estimate.Estimate))
+findBySRIdAndStatus status (Kernel.Types.Id.Id requestId) = do findOneWithKV [Se.And [Se.Is Beam.status $ Se.Eq status, Se.Is Beam.requestId $ Se.Eq requestId]]
 
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
 updateStatus status (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.updatedAt _now, Se.Set Beam.status status] [Se.Is Beam.id $ Se.Eq id]
@@ -45,13 +50,13 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.backendAppVersion backendAppVersion,
-      Se.Set Beam.backendConfigVersion (fmap Kernel.Utils.Version.versionToText backendConfigVersion),
+      Se.Set Beam.backendConfigVersion $ fmap Kernel.Utils.Version.versionToText backendConfigVersion,
       Se.Set Beam.bppEstimateId (Kernel.Types.Id.getId bppEstimateId),
-      Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
-      Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
+      Se.Set Beam.clientBundleVersion $ fmap Kernel.Utils.Version.versionToText clientBundleVersion,
+      Se.Set Beam.clientConfigVersion $ fmap Kernel.Utils.Version.versionToText clientConfigVersion,
       Se.Set Beam.clientOsType ((clientDevice <&> (.deviceType))),
       Se.Set Beam.clientOsVersion ((clientDevice <&> (.deviceVersion))),
-      Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
+      Se.Set Beam.clientSdkVersion $ fmap Kernel.Utils.Version.versionToText clientSdkVersion,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.device device,
       Se.Set Beam.discount ((discount <&> (.amount))),
