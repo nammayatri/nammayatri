@@ -164,6 +164,7 @@ initData = {
     , rentalsInfo : Nothing 
     , rideType : NORMAL_RIDE
     , startTimeUTC : ""
+    , vehicleVariant : ""
     },
     props: {
       rideRequestFlow : false

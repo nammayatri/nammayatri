@@ -783,6 +783,7 @@ type HomeScreenStateData =
   , rideType :: RideType
   , startTimeUTC :: String
   , selectedDateTimeConfig :: DateTimeConfig
+  , vehicleVariant :: String
   }
 
 type RentalsInfo = 

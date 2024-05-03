@@ -1048,6 +1048,9 @@ eval (BannerCarousal (BannerCarousel.OnClick idx)) state =
           BannerCarousel.ZooTicket -> pure $ TicketBookingFlowBannerAC $ Banner.OnClick
           BannerCarousel.MetroTicket -> pure $ MetroTicketBannerClickAC $ Banner.OnClick
           BannerCarousel.Safety -> pure $ SafetyBannerAction $ Banner.OnClick
+          BannerCarousel.Remote link -> do
+            void $ openUrlInApp link
+            pure NoAction
           _ -> pure NoAction
       Nothing -> pure NoAction
   ] 
