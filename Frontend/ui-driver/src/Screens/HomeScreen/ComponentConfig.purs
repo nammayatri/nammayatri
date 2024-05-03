@@ -123,7 +123,8 @@ rideActionModalConfig state =
     driverVehicle = state.data.activeRide.driverVehicle,
     cityConfig = state.data.cityConfig,
     serviceTierAndAC = state.data.activeRide.serviceTier,
-    capacity = state.data.activeRide.capacity
+    capacity = state.data.activeRide.capacity,
+    acRide = state.data.activeRide.acRide
     }
     in rideActionModalConfig'
 
