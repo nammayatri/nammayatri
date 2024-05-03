@@ -339,7 +339,7 @@ getRouteInfoWithShortestDuration (routeInfo : routeInfoArray) =
 pickWaypoints :: [a] -> [a]
 pickWaypoints waypoints = do
   let step = length waypoints `div` 10
-  take 10 $ foldr (\(n, waypoint) list -> if n `safeMod` step == 0 then waypoint : list else list) [] $ zip [1 ..] waypoints
+  take 7 $ foldr (\(n, waypoint) list -> if n `safeMod` step == 0 then waypoint : list else list) [] $ zip [1 ..] waypoints
 
 safeMod :: Int -> Int -> Int
 _ `safeMod` 0 = 0
