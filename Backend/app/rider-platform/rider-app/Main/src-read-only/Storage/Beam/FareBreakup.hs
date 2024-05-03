@@ -6,6 +6,7 @@
 module Storage.Beam.FareBreakup where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.FareBreakup
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -15,8 +16,9 @@ import Tools.Beam.UtilsTH
 data FareBreakupT f = FareBreakupT
   { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
-    bookingId :: B.C f Kernel.Prelude.Text,
     description :: B.C f Kernel.Prelude.Text,
+    bookingId :: B.C f Kernel.Prelude.Text,
+    entityType :: B.C f Domain.Types.FareBreakup.FareBreakupEntityType,
     id :: B.C f Kernel.Prelude.Text
   }
   deriving (Generic, B.Beamable)

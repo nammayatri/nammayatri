@@ -19,8 +19,9 @@ instance FromTType' Beam.FareBreakup Domain.Types.FareBreakup.FareBreakup where
       Just
         Domain.Types.FareBreakup.FareBreakup
           { amount = Kernel.Types.Common.mkPrice currency amount,
-            bookingId = Kernel.Types.Id.Id bookingId,
             description = description,
+            entityId = bookingId,
+            entityType = entityType,
             id = Kernel.Types.Id.Id id
           }
 
@@ -29,7 +30,8 @@ instance ToTType' Beam.FareBreakup Domain.Types.FareBreakup.FareBreakup where
     Beam.FareBreakupT
       { Beam.amount = (.amount) amount,
         Beam.currency = Just $ (.currency) amount,
-        Beam.bookingId = Kernel.Types.Id.getId bookingId,
         Beam.description = description,
+        Beam.bookingId = entityId,
+        Beam.entityType = entityType,
         Beam.id = Kernel.Types.Id.getId id
       }
