@@ -25,6 +25,7 @@ import qualified Domain.Types.ServiceTierType as DVST
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Forkable (fork), MonadTime (getCurrentTime))
@@ -32,6 +33,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Person (findPerson)
+import qualified SharedLogic.Ride as SRide
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import qualified Storage.Queries.Booking as QBooking
@@ -88,11 +90,12 @@ assignCreateAndStartOtpRide _ _ Common.AssignCreateAndStartOtpRideAPIReq {..} = 
   requestor <- findPerson (cast driverId)
   booking <- runInReplica $ QBooking.findById (cast bookingId) >>= fromMaybeM (BookingNotFound bookingId.getId)
   rideOtp <- booking.specialZoneOtpCode & fromMaybeM (InternalError "otpCode not found for special zone booking")
-  ride <- DRide.otpRideCreate requestor rideOtp booking Nothing
-  let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor, odometer = Nothing}
-  fork "sending dashboard sms - start ride" $ do
-    mride <- runInReplica $ QRide.findById ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
-    Sms.sendDashboardSms booking.providerId booking.merchantOperatingCityId Sms.BOOKING (Just mride) mride.driverId (Just booking) 0
-  shandle <- RideStart.buildStartRideHandle requestor.merchantId booking.merchantOperatingCityId
-  void $ RideStart.driverStartRide shandle ride.id driverReq
+  Redis.whenWithLockRedis (SRide.confirmLockKey booking.id) 60 $ do
+    ride <- DRide.otpRideCreate requestor rideOtp booking Nothing
+    let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor, odometer = Nothing}
+    fork "sending dashboard sms - start ride" $ do
+      mride <- runInReplica $ QRide.findById ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
+      Sms.sendDashboardSms booking.providerId booking.merchantOperatingCityId Sms.BOOKING (Just mride) mride.driverId (Just booking) 0
+    shandle <- RideStart.buildStartRideHandle requestor.merchantId booking.merchantOperatingCityId
+    void $ RideStart.driverStartRide shandle ride.id driverReq
   return Success

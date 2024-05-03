@@ -233,3 +233,6 @@ searchRequestKey sId = "Driver:Search:Request:" <> sId
 
 multipleRouteKey :: Text -> Text
 multipleRouteKey id = "multiple-routes-" <> id
+
+confirmLockKey :: Id DBooking.Booking -> Text
+confirmLockKey (Id id) = "Driver:Confirm:BookingId-" <> id

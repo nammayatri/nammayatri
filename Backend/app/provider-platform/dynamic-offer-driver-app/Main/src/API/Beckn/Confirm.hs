@@ -36,6 +36,7 @@ import Servant hiding (throwError)
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.FarePolicy as SFP
+import qualified SharedLogic.Ride as SRide
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -71,7 +72,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
     country <- Utils.getContextCountry context
     isValueAddNP <- CQVAN.isValueAddNP bapId
     dConfirmReq <- ACL.buildConfirmReqV2 reqV2 isValueAddNP
-    Redis.whenWithLockRedis (confirmLockKey dConfirmReq.bookingId.getId) 60 $ do
+    Redis.whenWithLockRedis (SRide.confirmLockKey dConfirmReq.bookingId) 60 $ do
       now <- getCurrentTime
       (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
       fork "confirm" $ do
@@ -107,9 +108,6 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       let pricing = Utils.convertBookingToPricing vehicleServiceTierItem dConfirmRes.booking
           onConfirmMessage = ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig mbFarePolicy
       void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage becknConfig
-
-confirmLockKey :: Text -> Text
-confirmLockKey id = "Driver:Confirm:BookingId-" <> id
 
 confirmProcessingLockKey :: Text -> Text
 confirmProcessingLockKey id = "Driver:Confirm:Processing:BookingId-" <> id
