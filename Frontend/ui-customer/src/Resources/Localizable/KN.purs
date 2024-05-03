@@ -1112,3 +1112,4 @@ getKN stringKey =
         INVALID_CODE -> "ಅಮಾನ್ಯ ಕೋಡ್!"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "ಕೆಳಗಿನ 6 ಅಂಕಿಗಳ ರೆಫರಲ್ ಕೋಡ್ ನಮೂದಿಸಿ"
         APPLY -> "ಅನ್ವಯಿಸು"
+        ADD -> "ಸೇರಿಸು"

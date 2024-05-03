@@ -1114,3 +1114,4 @@ getFR stringKey =
         INVALID_CODE -> "Code invalide !"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "Entrez un code de parrainage à 6 chiffres ci-dessous"
         APPLY -> "Appliquer"
+        ADD -> "ajouter"

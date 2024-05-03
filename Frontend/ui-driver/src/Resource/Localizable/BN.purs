@@ -1377,3 +1377,4 @@ getBN stringKey =
         WE_WILL_USE_THIS_INFO -> "আমরা এসি সম্পর্কিত গ্রাহকদের প্রত্যাশার সাথে মেলে এই তথ্য ব্যবহার করব"
         YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(আপনি সবসময় প্রোফাইল থেকে এটি পরিবর্তন করতে পারেন)"
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "আপনার গাড়ির এসি চালু এবং কাজ করছে?"
+        

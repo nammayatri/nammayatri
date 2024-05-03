@@ -617,6 +617,7 @@ type HomeScreenStateData =
   , followers :: Maybe (Array Followers)
   , vehicleVariant :: String
   , hotSpotInfo :: Array HotSpotData
+  , addStopArray :: Int
   }
 
 type RentalsInfo = 
@@ -2290,3 +2291,6 @@ data ReferralStage = ENTER_REFERRAL_CODE
 
 derive instance genericReferralStage :: Generic ReferralStage _
 instance eqReferralStage :: Eq ReferralStage where eq = genericEq
+type AddStopArray = {
+  textValue :: String
+}

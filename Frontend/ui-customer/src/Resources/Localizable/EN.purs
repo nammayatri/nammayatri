@@ -291,6 +291,7 @@ getEN stringKey =
         SELECT_ON_MAP -> "Select on map"
         FAVOURITE_LOCATION -> "Favourite Location"
         EDIT_FAVOURITE -> "Edit favourite"
+        ADD -> "Add"
         DRAG_THE_MAP -> "Drag the map & set pin to exact location"
         CHOOSE_ON_MAP -> "Choose on map"
         USE_CURRENT_LOCATION -> "Use current location"

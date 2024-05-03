@@ -1111,3 +1111,4 @@ getHI stringKey =
         INVALID_CODE -> "अमान्य कोड!"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "नीचे 6 अंकों का रेफ़ेरल कोड दर्ज करें"
         APPLY -> "लागू करें"
+        ADD -> "जोड़ें"

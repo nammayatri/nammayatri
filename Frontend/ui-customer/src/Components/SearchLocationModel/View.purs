@@ -25,7 +25,7 @@ import Components.LocationTagBar as LocationTagBar
 import Components.PrimaryButton as PrimaryButton
 import Components.SearchLocationModel.Controller (Action(..), SearchLocationModelState)
 import Components.SeparatorView.View as SeparatorView
-import Data.Array (mapWithIndex, length, take, null)
+import Data.Array (mapWithIndex, length, take, null, (..))
 import Data.Function (flip)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Function.Uncurried (runFn3)
@@ -75,7 +75,7 @@ view push state =
             , padding $ PaddingVertical safeMarginTop 16
             ][  linearLayout
                 [ orientation HORIZONTAL
-                , height $ V 105 
+                , height WRAP_CONTENT-- $ V 105 --
                 , width MATCH_PARENT
                  ][ linearLayout
                     [ height WRAP_CONTENT
@@ -239,9 +239,9 @@ sourceDestinationEditTextView state push =
     [ width MATCH_PARENT
     , orientation VERTICAL
     , margin if os == "IOS" then (Margin 0 18 15 0) else (Margin 0 16 16 0)
-    , height $ V 121
-  
-    ][linearLayout
+    , height WRAP_CONTENT -- $ V 121 --
+    ][
+      linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation HORIZONTAL
@@ -311,6 +311,13 @@ sourceDestinationEditTextView state push =
         , visibility if state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
         ]
         []
+
+    , linearLayout [
+      height WRAP_CONTENT,
+      width MATCH_PARENT,
+      orientation VERTICAL
+    ](map (\item -> (addStopView state push)) (1..(state.addStopArray)))
+    -- , addStopView state push
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -385,6 +392,76 @@ sourceDestinationEditTextView state push =
         ]
         []
     ]
+    
+addStopView :: forall w . SearchLocationModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+addStopView state push =
+  -- linearLayout [
+  --   height WRAP_CONTENT
+  --   , width MATCH_PARENT
+  --   , orientation HORIZONTAL
+  --   , background Color.orange
+  -- ][
+  linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , cornerRadius 4.0
+        , orientation HORIZONTAL
+        , margin $ MarginTop 12
+        , background state.appConfig.searchLocationConfig.editTextBackground
+        , stroke if state.isSource == Just false && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
+        ]
+        [ editText
+            ( [ height $ V 37
+              , weight 1.0
+              , text state.destination
+              , color if state.isSource == Just true then state.appConfig.searchLocationConfig.editTextDefaultColor else state.appConfig.searchLocationConfig.editTextColor
+              , stroke $ "0," <> Color.black
+              , padding (Padding 8 7 4 7)
+              , hint (getString WHERE_TO)
+              , hintColor state.appConfig.searchLocationConfig.hintColor
+              , singleLine true
+              , ellipsize true
+              , accessibilityHint "Destination Location Editable field"
+              , accessibility ENABLE
+              , id $ getNewIDWithTag "AddStopEditText"
+              -- , afterRender (\action -> do
+              --     _ <- pure $ showKeyboard case state.isSource of
+              --                               Just true -> (getNewIDWithTag "SourceEditText")
+              --                               Just false -> (getNewIDWithTag "DestinationEditText")
+              --                               Nothing    -> ""
+              --     pure unit
+              --       ) (const NoAction)
+              -- , onChange
+              --     ( \action -> do
+              --         _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack (fromMaybe false state.isSource)
+              --         _ <- push action
+              --         pure unit
+              --     )
+              --     DestinationChanged
+              , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
+              -- , onFocus push $ const $ EditTextFocusChanged "D"S
+              , selectAllOnFocus true
+              , autoCorrectionType 1
+              ]
+                <> FontStyle.subHeading1 TypoGraphy
+            )
+        , linearLayout -- TO BE ADDED LATER FOR CLEARING TEXT
+            [ height $ V 32
+            , width $ V 30
+            , gravity CENTER
+            , margin $ MarginTop 2
+            , visibility VISIBLE--if state.crossBtnDestVisibility && state.isSource == Just false && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+            , onClick push (const AddStopAction)
+            , accessibilityHint "Clear Destination Text : Button"
+            , accessibility ENABLE
+            ]
+            [ imageView
+                [ height $ V 19
+                , width $ V 19
+                , imageWithFallback $ fetchImage FF_ASSET state.appConfig.searchLocationConfig.clearTextImage
+                ]
+            ]
+        ]   
 
 ---------------------------- searchResultsView ---------------------------------
 searchResultsView :: forall w . SearchLocationModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w

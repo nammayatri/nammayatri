@@ -340,7 +340,7 @@ primaryButtonConfirmPickupConfig state =
         }
   in
     primaryButtonConfig'
-
+    
 
 
 cancelRidePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
@@ -1225,7 +1225,8 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , isAutoComplete: state.props.searchLocationModelProps.isAutoComplete
                                     , showLoader: state.props.searchLocationModelProps.showLoader
                                     , prevLocation: state.data.searchLocationModelData.prevLocation
-                                    , currentLocationText : state.props.currentLocation.place 
+                                    , currentLocationText : state.props.currentLocation.place
+                                    , addStopArray : state.data.addStopArray
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState

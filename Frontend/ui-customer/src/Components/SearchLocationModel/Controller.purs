@@ -45,6 +45,7 @@ data Action = GoBack
             | SavedAddressClicked LocationTagBarController.Action
             | UpdateCurrentLocation String String
             | RecenterCurrentLocation
+            | AddStopAction 
 
 type SearchLocationModelState = {
     isSearchLocation :: SearchLocationModelType
@@ -64,6 +65,7 @@ type SearchLocationModelState = {
   , showLoader :: Boolean
   , prevLocation :: String
   , currentLocationText :: String
+  , addStopArray :: Int
 }
 
 dummy_data :: Array LocationListItemState

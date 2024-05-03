@@ -167,6 +167,7 @@ initData = {
     , followers : Nothing
     , vehicleVariant : ""
     , hotSpotInfo : []
+    , addStopArray : 0
     },
     props: {
       rideRequestFlow : false

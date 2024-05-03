@@ -1128,3 +1128,4 @@ getTA stringKey =
     INVALID_CODE -> "தவறான குறியீடு!"
     ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "கீழே 6 இலக்க பரிந்துரை குறியீடு உள்ளிடவும்"
     APPLY -> "விண்ணப்பிக்கவும்"
+    ADD -> "சேர்"

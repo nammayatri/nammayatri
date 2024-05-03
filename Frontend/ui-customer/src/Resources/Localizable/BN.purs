@@ -1113,3 +1113,4 @@ getBN stringKey =
         INVALID_CODE -> "অবৈধ কোড!"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "নীচে 6 ডিজিটের রেফারাল কোড লিখুন"
         APPLY -> "প্রয়োগ করুন"
+        ADD -> "ಸೇರಿಸು"

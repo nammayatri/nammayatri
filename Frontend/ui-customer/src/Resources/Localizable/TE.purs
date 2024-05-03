@@ -1126,3 +1126,4 @@ getTE stringKey =
     INVALID_CODE -> "చెల్లని కోడ్!"
     ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "కీల్లో 6 అంకి రిఫరల్ కోడ్ నమోదు చేయండి"
     APPLY -> "అప్లికేషన్ చేయండి"
+    ADD -> "జోడించు"

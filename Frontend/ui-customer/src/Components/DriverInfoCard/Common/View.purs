@@ -27,7 +27,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (<), (-), (*), bind, pure, discard, not, (&&), (||), (/=),(+), (+))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, alignParentLeft, alignParentRight, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, shimmerFrameLayout, alignParentRight)
+import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, alignParentLeft, alignParentRight, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, shimmerFrameLayout, alignParentRight, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -329,39 +329,66 @@ sourceDestinationView push config =
          ] <> FontStyle.body1 TypoGraphy
       ]
     , separator (MarginVertical 12 12) (V 1) Color.ghostWhite true
-    ,linearLayout
-    [ orientation VERTICAL
+
+    , linearLayout
+      [ orientation HORIZONTAL
+      , width MATCH_PARENT
+      , height MATCH_PARENT
+
+      ][ destinationView push config]
+  ]
+
+destinationView :: forall action w.(action -> Effect Unit) -> TripDetails action -> PrestoDOM (Effect Unit) w
+destinationView push config = 
+  linearLayout
+    [ orientation HORIZONTAL
+    , height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER
+    ][linearLayout
+      [ orientation VERTICAL
       , height WRAP_CONTENT
       , width WRAP_CONTENT
       , gravity LEFT
       , accessibility ENABLE
+      , weight 1.0
       , accessibilityHint $ "Drop : " <> config.destination
-    ][linearLayout
-      [ orientation HORIZONTAL
-      , gravity CENTER
-      ][imageView
-        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_drop"
-        , height $ V 8
-        , width $ V 8
+      ][linearLayout
+        [ orientation HORIZONTAL
+        , gravity CENTER
+        ][imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_drop"
+          , height $ V 8
+          , width $ V 8
+          ]
+          ,textView $
+          [ text $ getString DROP
+          , margin $ MarginLeft 6
+          , color Color.black700
+          ] <> FontStyle.body3 TypoGraphy
+          ]
+        , textView $
+          [ text config.source
+          , maxLines 1
+          , ellipsize true
+          , width $  V ((screenWidth unit) / 100 * 60)
+          , height MATCH_PARENT
+          , gravity LEFT
+          , color Color.black900
+          , margin $ MarginTop 3
+          ] <> FontStyle.body1 TypoGraphy
         ]
       , textView $ 
-        [ text $ getString DROP
-        , margin $ MarginLeft 6
-        , color Color.black700
-        ] <> FontStyle.body3 TypoGraphy
-      ]
-      , textView $
-        [ text config.destination
-        , maxLines 1
-        , ellipsize true
-        , width $ V ((screenWidth unit) / 10 * 8)
-        , height MATCH_PARENT
-        , gravity LEFT
-        , margin $ MarginTop 3
-        , color Color.black900
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text $ getString EDIT <> "/" <> getString ADD
+        , cornerRadius 32.0
+        , stroke $ "1," <> Color.grey900
+        , padding $ Padding 12 8 12 8
+        , visibility VISIBLE
+        , rippleColor Color.rippleShade
         ] <> FontStyle.body1 TypoGraphy
-     ]
-  ]
+      ]
 
 separator :: forall w. Margin -> Length -> String -> Boolean -> PrestoDOM (Effect Unit) w
 separator margin' height' color' isVisible =

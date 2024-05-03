@@ -2778,6 +2778,11 @@ eval GoToHomeScreen state = do
   exit $ GoToHome state
 
 eval _ state = update state
+eval (SearchLocationModelActionController SearchLocationModelController.AddStopAction) state = do
+  continue state { data {addStopArray = state.data.addStopArray + 1}}
+
+
+eval _ state = continue state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 validateSearchInput state searchString =

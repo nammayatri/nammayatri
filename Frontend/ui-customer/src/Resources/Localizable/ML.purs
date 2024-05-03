@@ -1113,3 +1113,4 @@ getML stringKey =
         INVALID_CODE -> "അസാധുവായ കോഡ്!"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "താഴെ 6 അക്കം റെഫറൽ കോഡ് നൽകുക"
         APPLY -> "അപേക്ഷിക്കുക"
+        ADD -> "ചേർക്കുക"
