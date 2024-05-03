@@ -166,9 +166,6 @@ acCheckForDriversView push state =
 
 downgradeVehicleView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 downgradeVehicleView push state =
-  let
-    canDowngrade = not $ DA.null state.data.downgradeOptions
-  in
     linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT

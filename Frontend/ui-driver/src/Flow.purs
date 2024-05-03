@@ -1607,8 +1607,18 @@ bookingOptionsFlow = do
   let ridePreferences' = transfromRidePreferences resp.tiers
       canSwitchToInterCity' = fromMaybe false resp.canSwitchToInterCity
       canSwitchToRental' = fromMaybe false resp.canSwitchToRental
-      defaultRide = find (\item -> item.isDefault) ridePreferences'
-  modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> bookingOptions{ data{ airConditioned = resp.airConditioned, canSwitchToInterCity = canSwitchToInterCity', canSwitchToRental = canSwitchToRental', ridePreferences = ridePreferences', defaultRidePreference = fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption defaultRide } })
+      defaultRide = fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption $ find (\item -> item.isDefault) ridePreferences'
+
+  modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> 
+    bookingOptions{ 
+      data { airConditioned = resp.airConditioned
+           , vehicleType = show defaultRide.serviceTierType
+           , vehicleName = defaultRide.name
+           , canSwitchToInterCity = canSwitchToInterCity'
+           , canSwitchToRental = canSwitchToRental'
+           , ridePreferences = ridePreferences'
+           , defaultRidePreference = defaultRide } })
+
   action <- UI.bookingOptions
   case action of
     UPDATE_AC_AVAILABILITY state toggleVal -> do
@@ -2659,6 +2669,7 @@ homeScreenFlow = do
       resp <- HelpersAPI.callApiBT $ API.SpecialLocationFullReq
       void $ pure $ HU.transformSpecialLocationList resp
       homeScreenFlow
+    GO_TO_BOOKING_PREFERENCES -> bookingOptionsFlow
     UPDATE_AIR_CONDITIONED isAcWorking -> do
       resp <- lift $ lift $ HelpersAPI.callApi $ API.UpdateAirConditionUpdateRequest { isAirConditioned : isAcWorking }
       case resp of
@@ -3213,6 +3224,7 @@ updateDriverDataToStates = do
       showGender = not (isJust (getGenderValue getDriverInfoResp.gender))
       dbClientVersion = getDriverInfoResp.clientVersion
       dbBundleVersion = getDriverInfoResp.bundleVersion
+  modifyScreenState $ BookingOptionsScreenType $ \bookingOptionsScreen -> bookingOptionsScreen { data{ vehicleNumber = linkedVehicle.registrationNo }}
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data {driverName = getDriverInfoResp.firstName
         , vehicleType = linkedVehicle.variant
         , driverAlternateMobile =getDriverInfoResp.alternateNumber
