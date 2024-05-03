@@ -28,10 +28,11 @@ import Kernel.External.Maps
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
+import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.Centesimal
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Types.Price
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (constructorsWithLowerCase)
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
@@ -121,7 +122,8 @@ data RideInfoRes = RideInfoRes
     nextStopLocation :: Maybe Location,
     rideScheduledAt :: UTCTime,
     fareProductType :: FareProductType,
-    endOtp :: Maybe Text
+    endOtp :: Maybe Text,
+    estimateFareBP :: Maybe [EstimateBreakup]
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -148,6 +150,17 @@ data SosStatus
   | MockPending
   | MockResolved
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data EstimateBreakup = EstimateBreakup
+  { title :: Text,
+    price :: EstimateBreakupPrice
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+newtype EstimateBreakupPrice = EstimateBreakupPrice
+  { value :: PriceAPIEntity
+  }
+  deriving (Generic, Show, ToSchema, ToJSON, FromJSON)
 
 data Location = Location
   { id :: Id Location,

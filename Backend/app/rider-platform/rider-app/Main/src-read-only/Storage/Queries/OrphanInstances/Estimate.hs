@@ -116,13 +116,13 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.status = status,
         Beam.tollCharges = ((tollChargesInfo <&> ((.amount) . (.tollCharges)))),
         Beam.tollNames = (tollChargesInfo <&> (.tollNames)),
-        Beam.currency = (Kernel.Prelude.Just $ (.currency) estimatedFare),
-        Beam.maxTotalFare = (mkMaxTotalFare totalFareRange),
-        Beam.minTotalFare = (mkMinTotalFare totalFareRange),
-        Beam.tripTermsId = (Kernel.Types.Id.getId <$> (tripTerms <&> (.id))),
+        Beam.currency = ((Kernel.Prelude.Just $ (.currency) estimatedFare)),
+        Beam.maxTotalFare = ((mkMaxTotalFare totalFareRange)),
+        Beam.minTotalFare = ((mkMinTotalFare totalFareRange)),
+        Beam.tripTermsId = ((Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))),
         Beam.updatedAt = updatedAt,
         Beam.validTill = validTill,
         Beam.vehicleVariant = vehicleServiceTierType,
-        Beam.waitingChargePerMin = ((.waitingChargePerMin) waitingCharges <&> (.amountInt)),
-        Beam.waitingChargePerMinAmount = ((.waitingChargePerMin) waitingCharges <&> (.amount))
+        Beam.waitingChargePerMin = (((.waitingChargePerMin) waitingCharges <&> (.amountInt))),
+        Beam.waitingChargePerMinAmount = (((.waitingChargePerMin) waitingCharges <&> (.amount)))
       }
