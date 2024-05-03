@@ -31,6 +31,8 @@ module BecknV2.OnDemand.Types
     City (..),
     ConfirmReq (..),
     ConfirmReqMessage (..),
+    UpdateReq (..),
+    UpdateReqMessage (..),
     Contact (..),
     Context (..),
     Country (..),
@@ -2031,6 +2033,61 @@ optionsTrackReq =
     table =
       [ ("trackReqContext", "context"),
         ("trackReqMessage", "message")
+      ]
+
+-- |
+data UpdateReq = UpdateReq
+  { -- |
+    updateReqContext :: Context,
+    -- |
+    updateReqMessage :: UpdateReqMessage
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON UpdateReq where
+  parseJSON = genericParseJSON optionsUpdateReq
+
+instance ToJSON UpdateReq where
+  toJSON = genericToJSON optionsUpdateReq
+
+optionsUpdateReq :: Options
+optionsUpdateReq =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("updateReqContext", "context"),
+        ("updateReqMessage", "message")
+      ]
+
+-- |
+-- |
+data UpdateReqMessage = UpdateReqMessage
+  { -- |
+    updateReqMessageOrder :: Order,
+    -- | Comma separated values of order objects being updated. For example: ```\"update_target\":\"item,billing,fulfillment\"```
+    updateReqMessageUpdateTarget :: Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON UpdateReqMessage where
+  parseJSON = genericParseJSON optionsUpdateReqMessage
+
+instance ToJSON UpdateReqMessage where
+  toJSON = genericToJSON optionsUpdateReqMessage
+
+optionsUpdateReqMessage :: Options
+optionsUpdateReqMessage =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("updateReqMessageOrder", "order"),
+        ("updateReqMessageUpdateTarget", "update_target")
       ]
 
 -- |

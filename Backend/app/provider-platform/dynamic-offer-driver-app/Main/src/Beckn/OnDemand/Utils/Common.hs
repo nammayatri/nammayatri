@@ -1150,3 +1150,30 @@ mkFulfillmentV2SoftUpdate mbDriver ride booking mbVehicle mbImage mbTags mbPerso
             name = dName,
             tags = if isValueAddNP then dTags else Nothing
           }
+
+buildLocation :: MonadFlow m => Spec.Stop -> m DL.Location
+buildLocation stop = do
+  location <- stop.stopLocation & fromMaybeM (InvalidRequest "Location not present")
+  guid <- generateGUID
+  now <- getCurrentTime
+  gps <- parseLatLong =<< (location.locationGps & fromMaybeM (InvalidRequest "Location GPS not present"))
+  address <- parseAddress location >>= fromMaybeM (InvalidRequest "Location Address not present")
+  return $
+    DL.Location
+      { DL.id = guid,
+        createdAt = now,
+        updatedAt = now,
+        lat = gps.lat,
+        lon = gps.lon,
+        address
+      }
+
+castPaymentCollector :: MonadFlow m => Text -> m DMPM.PaymentCollector
+castPaymentCollector "BAP" = return DMPM.BAP
+castPaymentCollector "BPP" = return DMPM.BPP
+castPaymentCollector _ = throwM $ InvalidRequest "Unknown Payment Collector"
+
+castPaymentType :: MonadFlow m => Text -> m DMPM.PaymentType
+castPaymentType "ON_ORDER" = return DMPM.ON_FULFILLMENT
+castPaymentType "ON_FULFILLMENT" = return DMPM.POSTPAID
+castPaymentType _ = throwM $ InvalidRequest "Unknown Payment Type"

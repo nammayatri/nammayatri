@@ -14,13 +14,12 @@
 
 module Tools.Notifications where
 
-import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import Data.Aeson
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import Domain.Types.Location (LocationAPIEntity)
+import Domain.Types.Location
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
@@ -52,8 +51,8 @@ instance ToJSON EmptyDynamicParam where
 
 data EditLocationReq = EditLocationReq
   { rideId :: Id DRide.Ride,
-    origin :: Maybe Common.Location,
-    destination :: Maybe Common.Location
+    origin :: Maybe Location,
+    destination :: Maybe Location
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 

@@ -16,7 +16,7 @@ module Domain.Action.Beckn.Update where
 
 import qualified API.Types.UI.EditBooking as EditBooking
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
-import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.EditLocationEvent as EditLocationU
+import qualified BecknV2.OnDemand.Enums as Enums
 import Data.List.NonEmpty (last)
 import Data.Maybe
 import qualified Data.Text as T
@@ -75,20 +75,20 @@ data PaymentCompletedReq = PaymentCompletedReq
 data EditLocationReq = EditLocationReq
   { bookingId :: Id DBooking.Booking,
     rideId :: Id DRide.Ride,
-    origin :: Maybe Common.Location,
-    destination :: Maybe Common.Location,
-    status :: EditLocationU.UpdateStatus,
+    origin :: Maybe DL.Location,
+    destination :: Maybe DL.Location,
+    status :: Enums.OrderStatus,
     bapBookingUpdateRequestId :: Text
   }
 
 data AddStopReq = AddStopReq
   { bookingId :: Id DBooking.Booking,
-    stops :: [Common.Location]
+    stops :: [DL.Location]
   }
 
 data EditStopReq = EditStopReq
   { bookingId :: Id DBooking.Booking,
-    stops :: [Common.Location]
+    stops :: [DL.Location]
   }
 
 getBookingId :: DUpdateReq -> Id DBooking.Booking
@@ -137,8 +137,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   when (ride.status == DRide.COMPLETED || ride.status == DRide.CANCELLED) $ throwError $ RideInvalidStatus "Can't edit destination for completed/cancelled ride."
   person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  whenJust origin $ \pickup -> do
-    startLocation <- buildLocation pickup
+  whenJust origin $ \startLocation -> do
     QL.create startLocation
     pickupMapForBooking <- SLM.buildPickUpLocationMapping startLocation.id bookingId.getId DLM.BOOKING (Just person.merchantId) (Just person.merchantOperatingCityId)
     QLM.create pickupMapForBooking
@@ -147,20 +146,19 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     let entityData = Notify.EditLocationReq {..}
     Notify.notifyPickupOrDropLocationChange person.merchantOperatingCityId person.id person.deviceToken entityData
 
-  whenJust destination $ \drop -> do
+  whenJust destination $ \dropLocation -> do
     --------------------TO DO ----------------------- Dependency on other people changes
     -----------1. Add a check for forward dispatch ride -----------------
     -----------2. Add a check for last location timestamp of driver ----------------- LTS dependency
     booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
     transporterConfig <- CTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     now <- getCurrentTime
-    dropLocation <- buildLocation drop
     QL.create dropLocation
     let dropLatLong = Maps.LatLong {lat = dropLocation.lat, lon = dropLocation.lon}
     let srcPt = Maps.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
     merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
     case status of
-      EditLocationU.SOFT_UPDATE -> do
+      Enums.SOFT_UPDATE -> do
         (pickedWaypoints, currentPoint) <-
           if ride.status == DRide.INPROGRESS
             then do
@@ -217,7 +215,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         QLM.create dropLocMap
         QLM.create destLocMapNew
         sendUpdateEditDestToBAP booking ride bookingUpdateReq (Just dropLocation) currentPoint SOFT_UPDATE
-      EditLocationU.CONFIRM_UPDATE -> do
+      Enums.CONFIRM_UPDATE -> do
         bookingUpdateReq <- QBUR.findByBAPBUReqId bapBookingUpdateRequestId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with BAPBookingUpdateRequestId" <> bapBookingUpdateRequestId)
         when (bookingUpdateReq.validTill < now) $ throwError (InvalidRequest "BookingUpdateRequest is expired")
         when (bookingUpdateReq.status /= DBUR.SOFT) $ throwError (InvalidRequest "BookingUpdateRequest is not in SOFT state")
@@ -227,6 +225,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             let entityData = Notify.EditLocationReq {..}
             Notify.notifyPickupOrDropLocationChange person.merchantOperatingCityId person.id person.deviceToken entityData
           else void $ EditBooking.postEditResult (Just person.id, merchantOperatingCity.merchantId, merchantOperatingCity.id) bookingUpdateReq.id (EditBooking.EditBookingRespondAPIReq {action = EditBooking.ACCEPT})
+      _ -> throwError (InvalidRequest "Invalid status for edit location request")
 
 -- handler _ = throwError (InvalidRequest "Not Implemented")
 
@@ -296,10 +295,9 @@ mkLocationAPIEntity location =
       fullAddress = mkFullAddress location.address
     }
 
-processStop :: DBooking.Booking -> Common.Location -> Bool -> Flow ()
-processStop booking loc isEdit = do
+processStop :: DBooking.Booking -> DL.Location -> Bool -> Flow ()
+processStop booking location isEdit = do
   validateStopReq booking isEdit
-  location <- buildLocation loc
   locationMapping <- buildLocationMapping location.id booking.id.getId isEdit (Just booking.providerId) (Just booking.merchantOperatingCityId)
   QL.create location
   QLM.create locationMapping
@@ -307,7 +305,7 @@ processStop booking loc isEdit = do
   mbRide <- QRide.findActiveByRBId booking.id
   whenJust mbRide $ \ride -> do
     person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-    let entityData = Notify.StopReq {bookingId = booking.id, stop = Just (mkLocationAPIEntity loc), ..}
+    let entityData = Notify.StopReq {bookingId = booking.id, stop = Just (DL.makeLocationAPIEntity location), ..}
     when (ride.status == DRide.INPROGRESS) $ Notify.notifyStopModification person.merchantOperatingCityId person.id person.deviceToken entityData
 
 validateStopReq :: DBooking.Booking -> Bool -> Flow ()

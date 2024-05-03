@@ -18,7 +18,6 @@ import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Status as StatusACL
 import qualified Beckn.ACL.Update as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
-import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import BecknV2.Utils
 import Data.OpenApi (ToSchema (..))
 import qualified Data.Time as DT
@@ -134,7 +133,8 @@ processStop bookingId loc merchantId isEdit = do
   uuid <- generateGUID
   validateStopReq booking isEdit
   location <- buildLocation loc
-  locationMapping <- buildLocationMapping location.id booking.id.getId isEdit (Just booking.merchantId) (Just booking.merchantOperatingCityId)
+  prevOrder <- QLM.maxOrderByEntity booking.id.getId
+  locationMapping <- buildLocationMapping location.id booking.id.getId isEdit (Just booking.merchantId) (Just booking.merchantOperatingCityId) prevOrder
   QL.create location
   QLM.create locationMapping
   QRB.updateStop booking (Just location)
@@ -142,15 +142,17 @@ processStop bookingId loc merchantId isEdit = do
   merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   let details =
         if isEdit
-          then
+          then do
+            let stopLocation = location{id = Id $ show prevOrder}
             ACL.UEditStopBuildReqDetails $
               ACL.EditStopBuildReqDetails
-                { stops = [mkDomainLocation location]
+                { stops = [stopLocation]
                 }
-          else
+          else do
+            let stopLocation = location{id = Id $ show (prevOrder + 1)}
             ACL.UAddStopBuildReqDetails $
               ACL.AddStopBuildReqDetails
-                { stops = [mkDomainLocation location]
+                { stops = [stopLocation]
                 }
   let dUpdateReq =
         ACL.UpdateBuildReq
@@ -162,7 +164,7 @@ processStop bookingId loc merchantId isEdit = do
             ..
           }
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-  void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
+  void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
 
 validateStopReq :: (MonadFlow m) => SRB.Booking -> Bool -> m ()
 validateStopReq booking isEdit = do
@@ -191,11 +193,10 @@ buildLocation req = do
         ..
       }
 
-buildLocationMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Location -> Text -> Bool -> Maybe (Id DM.Merchant) -> Maybe (Id DMOC.MerchantOperatingCity) -> m DLM.LocationMapping
-buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCityId = do
+buildLocationMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Location -> Text -> Bool -> Maybe (Id DM.Merchant) -> Maybe (Id DMOC.MerchantOperatingCity) -> Int -> m DLM.LocationMapping
+buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCityId prevOrder = do
   id <- generateGUID
   now <- getCurrentTime
-  prevOrder <- QLM.maxOrderByEntity entityId
   when isEdit $ QLM.updatePastMappingVersions entityId prevOrder
   let version = QLM.latestTag
       tag = DLM.BOOKING
@@ -206,21 +207,3 @@ buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCity
         updatedAt = now,
         ..
       }
-
-mkDomainLocation :: Location -> Common.Location
-mkDomainLocation Location {..} =
-  Common.Location
-    { gps = Common.Gps {..},
-      address =
-        Common.Address
-          { locality = address.area,
-            area_code = address.areaCode,
-            state = address.state,
-            country = address.country,
-            building = address.building,
-            street = address.street,
-            city = address.city,
-            ward = address.ward,
-            door = address.door
-          }
-    }
