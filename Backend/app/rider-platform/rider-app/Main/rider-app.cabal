@@ -390,7 +390,6 @@ library
       Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.FareBreakup
-      Domain.Types.FareBreakupV2
       Domain.Types.FeedbackForm
       Domain.Types.FRFSQuote
       Domain.Types.FRFSRecon
@@ -468,7 +467,6 @@ library
       Storage.Beam.Estimate
       Storage.Beam.Exophone
       Storage.Beam.FareBreakup
-      Storage.Beam.FareBreakupV2
       Storage.Beam.FeedbackForm
       Storage.Beam.FRFSQuote
       Storage.Beam.FRFSRecon
@@ -546,7 +544,6 @@ library
       Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup
-      Storage.Queries.FareBreakupV2
       Storage.Queries.FeedbackForm
       Storage.Queries.FRFSQuote
       Storage.Queries.FRFSRecon
