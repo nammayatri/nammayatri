@@ -47,6 +47,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
@@ -62,7 +63,6 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
-import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
@@ -193,7 +193,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
           >>= fromMaybeM (PersonNotFound personId.getId)
       (rideCancellationReason, mbCancellationCnt, isGoToDisabled, rideEndedBy) <- case authPerson.role of
         DP.ADMIN -> do
-          unless (authPerson.merchantId == driver.merchantId) $ throwError (RideDoesNotExist rideId.getId)
+          unless (authPerson.merchantId == driver.merchantId) $ throwError (OperatingCityOrMerchantIdMismatch (getId authPerson.merchantId) (getId driver.merchantId) "merchant")
           logTagInfo "admin -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.CallBased)
         _ -> do
@@ -231,6 +231,10 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
       return (rideCancellationReason, mbCancellationCnt, isGoToDisabled, rideEndedBy)
     DashboardRequestorId (reqMerchantId, _) -> do
       unless (driver.merchantId == reqMerchantId) $ throwError (RideDoesNotExist rideId.getId)
+    -- DashboardRequestorId (reqMerchantId, mocId) -> do
+     -- unless (getId driver.merchantId == getId reqMerchantId && getId mocId == getId driver.merchantOperatingCityId) $ do
+       -- let entityName = if getId driver.merchantId == getId reqMerchantId then "Operating city" else "Merchant"
+        -- throwError $ OperatingCityOrMerchantIdMismatch (getId driver.merchantId) (getId reqMerchantId) entityName
       logTagInfo "dashboard -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
       buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.Dashboard) -- is it correct DBCR.ByMerchant?
     ApplicationRequestorId jobId -> do
