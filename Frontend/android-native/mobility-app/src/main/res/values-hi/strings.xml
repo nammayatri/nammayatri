@@ -70,4 +70,5 @@
     <string name="now"> अब</string>
     <string name="rental"> रेंटल</string>
     <string name="intercity"> इंटरसिटी</string>
+    <string name="toll_text">टोल शामिल है</string>
 </resources>

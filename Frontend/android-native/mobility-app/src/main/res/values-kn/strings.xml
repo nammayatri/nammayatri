@@ -69,5 +69,5 @@
     <string name="zone_pickup_extra">ವಲಯ ಪಿಕಪ್ ಹೆಚ್ಚುವರಿ</string>
     <string name="you_are_near_a_special_pickup_zone">ನೀವು ವಿಶೇಷ \n ಪಿಕಪ್ ವಲಯದ ಹತ್ತಿರದಲ್ಲಿದ್ದೀರಿ</string>
     <string name="zone_pickup">ಪಿಕಪ್ ಜೋನ್</string>
-
+    <string name="toll_text">ಟೋಲ್ ಒಳಗೊಂಡಿದೆ</string>
 </resources>

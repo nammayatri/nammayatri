@@ -223,6 +223,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount() + model.getSpecialZoneExtraTip()));
             holder.currency.setText(String.valueOf(model.getCurrency()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
+            holder.tollTag.setVisibility(model.getTollCharges() > 0? View.VISIBLE : View.GONE);
 
             if( key.equals("yatrisathiprovider") && !model.getDurationToPickup().isEmpty()){
                 holder.durationToPickup.setVisibility(View.VISIBLE);
@@ -630,6 +631,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String currency = rideRequestBundle.getString("currency");
                     float distanceToPickup = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_PICKUP));
                     float distanceTobeCovered = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_BE_COVERED));
+                    int tollCharges = rideRequestBundle.getInt("tollCharges");
                     String addressPickUp = rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_PICKUP));
                     String addressDrop = rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_DROP));
                     String sourceArea = rideRequestBundle.getString("sourceArea");
@@ -678,6 +680,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     }
                     SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                             distanceTobeCovered,
+                            tollCharges,
                             RideRequestUtils.calculateDp(durationToPickup, df),
                             addressPickUp,
                             addressDrop,

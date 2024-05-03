@@ -70,4 +70,5 @@
     <string name="now"> இப்போது</string>
     <string name="rental"> வாடகை</string>
     <string name="intercity"> இடர்நகர</string>
+    <string name="toll_text">டோல் சேர்க்கப்பட்டுள்ளது</string>
 </resources>

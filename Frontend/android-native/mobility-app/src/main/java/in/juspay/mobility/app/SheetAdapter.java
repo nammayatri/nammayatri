@@ -67,7 +67,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     }
 
     public static class SheetViewHolder extends RecyclerView.ViewHolder{
-        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, airConditioned, rideStartTime, rideStartDate, rideDuration, rideDistance;
+        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, airConditioned, rideStartTime, rideStartDate, rideDuration, rideDistance, tollTag;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar, vcTierAndACView, rateViewDot;
         ImageView assetZonePickup, assetZoneDrop, rideTypeImage, locationDashedLine;
@@ -84,6 +84,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             destinationArea = itemView.findViewById(R.id.destinationArea);
             destinationAddress = itemView.findViewById(R.id.journeyDestination);
             distanceToBeCovered = itemView.findViewById(R.id.distanceToBeCovered);
+            tollTag = itemView.findViewById(R.id.tollTag);
             durationToPickup = itemView.findViewById(R.id.durationToPickup);
             acceptRejTimer = itemView.findViewById(R.id.acceptRejTimer);
             reqButton = itemView.findViewById(R.id.reqButton);

@@ -64,4 +64,5 @@
     <string name="now"> এখন </string>
     <string name="rental"> রেন্টাল </string>
     <string name="intercity"> ইন্টারসিটি </string>
+    <string name="toll_text">টোল অন্তর্ভুক্ত</string>
 </resources>

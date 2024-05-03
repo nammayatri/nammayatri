@@ -228,6 +228,7 @@ public class NotificationUtils {
                     sheetData.putInt("distanceToPickup", entity_payload.getInt("distanceToPickup"));
                     sheetData.putString("durationToPickup", entity_payload.getString("durationToPickup"));
                     sheetData.putInt("distanceTobeCovered", entity_payload.getInt("distance"));
+                    sheetData.putInt("tollCharges", entity_payload.optInt("tollCharges", 0));
                     sheetData.putString("sourceArea", addressPickUp.getString("area"));
                     sheetData.putString("destinationArea", addressDrop.has("area") && !addressDrop.isNull("area") ? addressDrop.has("area") && !addressDrop.isNull("area") ? addressDrop.getString("area") : "" : "");
                     sheetData.putDouble("srcLat", addressPickUp.has("lat") && !addressPickUp.isNull("lat") ? addressPickUp.getDouble("lat") : 0.0);

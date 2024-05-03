@@ -21,6 +21,7 @@ import Foreign.Generic (class Decode, class Encode)
 import Data.Generic.Rep (class Generic)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import Data.Maybe
+import Styles.Types
 
 data Action = Support
             | RideDetails
@@ -73,6 +74,7 @@ type Config = {
   rentalRideTextConfig :: RentalRideTextConfig,
   capacity :: Maybe Int,
   serviceTierAndAC :: String
+, toll :: Toll
 }
 
 data Theme = DARK | LIGHT
@@ -123,9 +125,7 @@ config = {
       fontStyle : Tags,
       visible : VISIBLE
     },
-    bottomText : "",
-    tollCharge : false,
-    tollChargeText : ""
+    bottomText : ""
   },
   customerIssueCard : {
     issueFaced : false, 
@@ -209,7 +209,15 @@ config = {
     url : ""
   },
   needHelpText : "",
-  safetyTitle : ""
+  safetyTitle : "",
+  toll : {
+    actualAmount : 0,
+    text : "",
+    visibility : GONE,
+    textColor : Color.black600,
+    imageVisibility : GONE,
+    image : ""
+  }
 }
 
 type CustomerIssueCard = {
@@ -237,9 +245,7 @@ type TopCard = {
   gradient :: Array String,
   topPill :: TopPill,
   infoPill :: InfoPill, 
-  bottomText :: String,
-  tollCharge :: Boolean,
-  tollChargeText :: String
+  bottomText :: String
 }
 
 type InfoPill = {
@@ -348,4 +354,13 @@ type RentalRideConfig = {
   actualRideDistance :: String,
   startRideOdometerImage:: String,
   endRideOdometerImage:: String
+}
+
+type Toll = {
+  actualAmount :: Int
+, text :: String
+, visibility :: Visibility
+, textColor :: Color
+, imageVisibility :: Visibility
+, image :: String
 }

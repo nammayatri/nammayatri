@@ -45,10 +45,9 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..),City(..), NavigationMode(..))
-import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
+import Storage ( getValueToLocalStore, KeyStore(..)) as STO
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
-import Storage (KeyStore(..))
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Types.App (defaultGlobalState)
 import JBridge(fromMetersToKm, getLayoutBounds)
@@ -451,7 +450,7 @@ titleAndETA push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
-  ][ if rideNotStarted state then specialZoneHeader (getValueToLocalStore SELECTED_VARIANT)
+  ][ if rideNotStarted state then specialZoneHeader $ STO.getValueToLocalStore STO.SELECTED_VARIANT
      else distanceView push state
   ]
 
@@ -882,8 +881,15 @@ paymentMethodView push state title shouldShowIcon uid =
           ] <> FontStyle.body3 TypoGraphy
         , textView $
           [ text $ state.data.config.currency <> show state.data.price
+          , margin $ MarginTop 4
           , color Color.black800
           ] <> FontStyle.h2 TypoGraphy
+        , textView $
+          [ text $ "(" <> (getString TOLL_CHARGES_INCLUDED) <> ")"
+          , color Color.black900
+          , margin $ MarginTop 4
+          , visibility $ boolToVisibility $ (STO.getValueToLocalStore STO.HAS_TOLL_CHARGES) == "true" -- @TODO: Change once backend was DONE
+          ] <> FontStyle.body3 TypoGraphy
       ]
       , linearLayout
         [ height WRAP_CONTENT

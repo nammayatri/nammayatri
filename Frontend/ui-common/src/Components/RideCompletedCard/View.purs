@@ -1,6 +1,6 @@
 module Components.RideCompletedCard.View where
 
-import Components.RideCompletedCard.Controller (Config, Action(..), Theme(..), RideCompletedElements(..), InfoCardConfig(..))
+import Components.RideCompletedCard.Controller 
 
 import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom, onAnimationEnd, scrollBarY, lottieAnimationView, rippleColor)
 import Components.Banner.View as Banner
@@ -75,20 +75,31 @@ topGradientView config push =
       , rideDetailsButtonView config push 
     ]
 
-tollTextVew :: forall w. Config -> PrestoDOM (Effect Unit) w
+tollTextVew :: forall w. Toll -> PrestoDOM (Effect Unit) w
 tollTextVew config = 
   linearLayout [
     width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER
   , margin $ MarginBottom 16
-  , visibility $ boolToVisibility config.topCard.tollCharge
+  , visibility config.visibility
   ][
-    textView $ [
-      text $ config.topCard.tollChargeText 
-    , color Color.black600
-    ] <> FontStyle.body3 TypoGraphy
+    imageView[
+      height $ V 20
+    , width $ V 20
+    , visibility config.imageVisibility
+    , imageWithFallback config.image 
+    ]
+  , textView $
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , text config.text 
+    , color config.textColor
+    , margin $ MarginLeft 4
+    ] <> FontStyle.body1 TypoGraphy
   ]
+
+
 
 rideTierAndCapacity :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 rideTierAndCapacity push config = 
@@ -241,7 +252,7 @@ priceAndDistanceUpdateView config push =
               , visibility if config.topCard.fareUpdatedVisiblity then VISIBLE else GONE
               ] <> (FontStyle.title1 TypoGraphy)
           ]
-        , tollTextVew config
+        , tollTextVew config.toll
         , pillView config push
       ]
 

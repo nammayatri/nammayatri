@@ -101,6 +101,7 @@ data KeyStore
   | CUSTOMER_REFERRAL_CODE
   | CUSTOMER_CLIENT_ID
   | CUSTOMER_FIRST_RIDE
+  | HAS_TOLL_CHARGES -- @TODO: Remove this key after toll charges are coming from backend
 
 derive instance genericKeyStore :: Generic KeyStore _
 
