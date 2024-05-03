@@ -297,10 +297,12 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | FetchOdometerReading ST.HomeScreenState
                     | GoToNewStop ST.HomeScreenState
                     | UpdateAirConditioned ST.HomeScreenState Boolean
+                    | GoToBookingPreferences ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
             | ScreenClick
+            | BookingOptions
             | Notification String
             | ChangeStatus Boolean
             | GoOffline Boolean
@@ -446,7 +448,9 @@ eval (AccountBlockedAC PopUpModal.OnButton2Click) state = continue state { props
 eval (AccountBlockedAC PopUpModal.OnButton1Click) state = do 
   void $ pure $ showDialer (SC.getSupportNumber "") false 
   continue state
-  
+
+eval BookingOptions state = exit $ GoToBookingPreferences state  
+
 eval UpdateBanner state = do
   if state.data.bannerData.bannerScrollState == "1" then continue state
   else do

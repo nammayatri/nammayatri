@@ -173,3 +173,6 @@ homeScreen = do
     UpdateAirConditioned updatedState isAcWorking -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ UPDATE_AIR_CONDITIONED isAcWorking)
+    GoToBookingPreferences updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_BOOKING_PREFERENCES)
