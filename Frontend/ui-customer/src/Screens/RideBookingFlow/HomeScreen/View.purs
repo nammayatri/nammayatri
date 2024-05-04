@@ -434,8 +434,6 @@ view push state =
                         ]
                     ]
                 ]
-            -- , homeScreenView push state
-            -- , buttonLayoutParentView push state
             , if (not state.props.rideRequestFlow) || any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, HomeScreen] then emptyTextView state else topLeftIconView state push
             , rideRequestFlowView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
@@ -1126,7 +1124,7 @@ emptySuggestionsBanner state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadius 12.0
-    , margin $ Margin 16 10 16 0
+    , margin $ Margin 16 0 16 0
     , gravity CENTER_HORIZONTAL
     , orientation VERTICAL
     , visibility $ boolToVisibility $ (not (suggestionViewVisibility state)) && not (state.props.showShimmer && null state.data.tripSuggestions) && state.data.config.homeScreen.bannerViewVisibility
@@ -3134,20 +3132,6 @@ getInfoCardPeekHeight :: HomeScreenState -> Int
 getInfoCardPeekHeight state = if state.data.infoCardPeekHeight == 0 then (getDefaultPeekHeight state) else state.data.infoCardPeekHeight
 
 
-homeScreenView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-homeScreenView push state =
-  PrestoAnim.animationSet
-    [ fadeOut (state.props.currentStage == SearchLocationModel)
-    ]
-    $ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , padding $ PaddingVertical safeMarginTop safeMarginBottom
-        , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then DISABLE_DESCENDANT else DISABLE
-        , orientation VERTICAL
-        ]
-        [ if not state.props.rideRequestFlow then homeScreenTopIconView push state else emptyTextView state ]
-
 ----------------------------------------- UPDATED HOME SCREEN -------------------------------------------
 
 homeScreenViewV2 :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -3223,10 +3207,10 @@ homeScreenViewV2 push state =
       else if state.data.config.banners.homeScreenCabLaunch && state.props.city == ST.Bangalore then ([
         imageView
           [ imageWithFallback "ny_ic_cab_banner,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_cab_banner.png"
-          , height $ V 120
+          , height $ V 135
           , width MATCH_PARENT
           , gravity CENTER_VERTICAL
-          , margin $ Margin 16 0 16 16
+          , margin $ Margin 16 0 16 18
           , onClick push $ const WhereToClick
           , accessibility DISABLE
           ]
@@ -3472,14 +3456,14 @@ pickupLocationView push state =
                 , clickable $ state.props.isSrcServiceable
                 , alpha $ if state.props.isSrcServiceable then 1.0 else 0.5
                 , gravity CENTER_VERTICAL
-                , background Color.black900
+                , background Color.lightGreyBlue1
                 , shadow $ getShadowFromConfig state.data.config.homeScreen.whereToButton.shadow
                 , cornerRadius $ 8.0 
                 ][  imageView 
                     [ height $ V 20 
                     , width $ V 20 
                     , margin $ MarginRight 8
-                    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_yellow_loc_tag"
+                    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_curved_arrow"
                     ]
                   , textView $
                     [ height WRAP_CONTENT
@@ -3499,17 +3483,17 @@ mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> Pre
 mapView push state idTag = 
   let mapDimensions = getMapDimensions state
       bottomPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize extraBottomPadding else 0
-      banners = getBannerConfigs state BannerCarousel
-      isVisible = if isHomeScreenView state then (null banners) && (not state.props.showShimmer)
+      -- banners = getBannerConfigs state BannerCarousel
+      isVisible = if isHomeScreenView state then (not state.props.showShimmer)
                       else (not (state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == SearchLocation ))
     
   in
   PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
   relativeLayout
-    [ height if (isHomeScreenView state && not (null banners)) || (isHomeScreenView state && state.props.showShimmer) then V 0 else mapDimensions.height
+    [ height if (isHomeScreenView state && state.props.showShimmer) then V 0 else mapDimensions.height
     , width mapDimensions.width 
     -- , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
-    , margin $ if isHomeScreenView state && null banners then MarginTop 16 else MarginTop 0
+    , margin $ if isHomeScreenView state then MarginTop 16 else MarginTop 0
     , visibility $ boolToInvisibility isVisible
     , padding $ PaddingBottom $ bottomPadding
     , onAnimationEnd
@@ -3532,7 +3516,7 @@ mapView push state idTag =
             )
             (const MapReadyAction)
     ]$[  linearLayout
-          [ height  $ if isHomeScreenView state && (not (null banners)) then V 0 else mapDimensions.height
+          [ height mapDimensions.height
           , width $ mapDimensions.width 
           , accessibility DISABLE_DESCENDANT
           , id (getNewIDWithTag idTag)
@@ -3546,7 +3530,7 @@ mapView push state idTag =
         , width MATCH_PARENT
         , alignParentBottom "true,-1"
         , gravity RIGHT
-        , padding $ Padding 0 0 16 16
+        , padding $ Padding 16 0 32 16
         , visibility $ if isHomeScreenView state then VISIBLE else GONE
         ][ imageView
             [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_recenter_btn"
@@ -3613,7 +3597,7 @@ getMapDimensions state =
   let mapHeight = if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver ] && os /= "IOS") then 
                     getMapHeight state
                   else if (isHomeScreenView state) then
-                    V 100
+                    V 120
                   else
                     MATCH_PARENT
       mapWidth =  if state.props.currentStage /= HomeScreen then MATCH_PARENT else V ((screenWidth unit)-32)
@@ -3626,7 +3610,7 @@ suggestionsView push state =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , padding $ PaddingBottom 10
-  , margin $ Margin 8 24 8 0
+  , margin $ Margin 8 0 8 0
   , visibility $ boolToVisibility $ suggestionViewVisibility state && not (state.props.showShimmer && null state.data.tripSuggestions)
   ]
   [ let isTripSuggestionsEmpty = null state.data.tripSuggestions
@@ -3638,7 +3622,7 @@ suggestionsView push state =
       ][ textView $
         [ height MATCH_PARENT
         , width WRAP_CONTENT
-        , text if isTripSuggestionsEmpty then getString SUGGESTED_DESTINATION else getString RECENT_RIDES
+        , text if isTripSuggestionsEmpty then getString SUGGESTED_DESTINATION else getString ONE_CLICK_BOOKINGS
         , color Color.black800
         , gravity CENTER_VERTICAL
         , padding $ PaddingHorizontal 8 8 
@@ -3647,10 +3631,6 @@ suggestionsView push state =
           then "Suggested Destinations" 
           else "Recent Rides"
         ] <> FontStyle.subHeading1 TypoGraphy
-      , pillTagView 
-          if isTripSuggestionsEmpty 
-          then { text: getString SMART, image: "ny_ic_filled_stars" } 
-          else { text: getString ONE_CLICK, image: "ny_ic_filled_lightning" }
       ]
   , textView $
     [ height WRAP_CONTENT
@@ -3829,9 +3809,12 @@ suggestedDestinationCard push state index suggestion =
           , orientation VERTICAL
           , layoutGravity "center_vertical"
           , gravity CENTER
-          , background Color.yellow900
-          , cornerRadius if os == "IOS" then 20.0 else 22.5
-          ][ movingRightArrowView ("movingArrowView" <> show index)]
+          ][ imageView
+              [ height $ V 24 
+              , width $ V 24 
+              , imageWithFallback $ fetchImage FF_ASSET $ "ny_ic_chevron_right"
+              ]
+          ]
     ]
 
 repeatRideCardParentView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -3861,17 +3844,51 @@ repeatRideCard push state index trip =
     , cornerRadii $ Corners 16.0 true true true true
     , onClick push $ const (RepeatRide index trip)
     , rippleColor Color.rippleShade
-    ][ linearLayout
-        [ height WRAP_CONTENT
+    ][ frameLayout
+        [ height $ imageLayoutHeight
         , width WRAP_CONTENT
         , gravity CENTER
-        , margin margin'
-        ][ imageView
-            [ imageWithFallback imageName
-            , height imageDimensions.height
-            , width imageDimensions.width
+        ][ linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , gravity CENTER
+            , margin margin'
+            ][ imageView
+                [ imageWithFallback imageName
+                , height imageDimensions.height
+                , width imageDimensions.width
+                ]
             ]
-        ]
+        , linearLayout
+            [ width MATCH_PARENT -- tag container
+            , height MATCH_PARENT
+            , gravity BOTTOM
+            , alignParentBottom "true,-1"
+            , visibility $ boolToVisibility pillTagVisibility
+            ][ linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , gravity CENTER
+                ][ linearLayout -- tag
+                    [ width MATCH_PARENT
+                    , margin margin'
+                    , height WRAP_CONTENT
+                    , background Color.lightGrey1
+                    , cornerRadius 10.0
+                    , gravity CENTER
+                    , layoutGravity "center_horizontal"
+                    , padding $ Padding 7 3 7 3
+                    ][ textView $
+                        [ text $ vehicleVariant
+                        , width WRAP_CONTENT
+                        , gravity CENTER
+                        , color Color.lightGreyBlue2
+                        , height WRAP_CONTENT
+                        ] <> FontStyle.captions LanguageStyle
+                      ]
+                  ]
+              ]
+          ]
       , linearLayout
         [ height WRAP_CONTENT
         , weight 1.0
@@ -3901,9 +3918,13 @@ repeatRideCard push state index trip =
           , orientation VERTICAL
           , layoutGravity "center_vertical"
           , gravity CENTER
-          , background Color.yellow900
-          , cornerRadius if os == "IOS" then 20.0 else 22.5
-          ][ movingRightArrowView ("movingArrowView" <> show index)]
+          ][
+            imageView
+              [ height $ V 24 
+              , width $ V 24 
+              , imageWithFallback $ fetchImage FF_ASSET $ "ny_ic_chevron_right"
+              ]
+          ]
     ]
   where
     getTripTitle :: String -> String
@@ -3918,13 +3939,20 @@ repeatRideCard push state index trip =
                   Just variant, true -> getVehicleVariantImage variant
                   _,_ -> fetchImage FF_ASSET "ny_ic_green_loc_tag"
     
+    pillTagVisibility = isJust trip.serviceTierNameV2 && isJust trip.vehicleVariant
+    
     imageDimensions = if isVariantStored
-                        then {height : V 40, width : V 60} 
+                        then {height : V 33, width : V 50} 
                         else {height : V 20, width : V 20}
+    
+    imageLayoutHeight = if isVariantStored then V 45 else V 20
+    imageTagMargin = if isVariantStored then MarginLeft 15 else MarginLeft 0
     
     isVariantStored = isJust trip.serviceTierNameV2 && isJust trip.vehicleVariant
 
     paddingLeft = if not isVariantStored then 25 else 0
+
+    vehicleVariant = fromMaybe "" trip.serviceTierNameV2
 
     margin' = if not isVariantStored then MarginRight 25 else MarginHorizontal 5 5
 
@@ -4092,7 +4120,6 @@ additionalServicesView push state =
     , orientation VERTICAL 
     , padding $ PaddingHorizontal 16 16
     , visibility $ boolToVisibility $ not state.props.showShimmer
-    , margin $ MarginTop 20
     ][  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT

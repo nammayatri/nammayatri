@@ -222,7 +222,7 @@ config =
     enableSupport: true,
     enableShareApp: false,
     enableReAllocation : true,
-    enableRepeatTripBackfilling : false,
+    enableRepeatTripBackfilling : true,
     forceLogReferrerUrl : true,
     enableSelfServe : true,
     enableAdditionalServices : false,
