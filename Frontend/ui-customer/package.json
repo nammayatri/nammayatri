@@ -18,7 +18,7 @@
     "start": "npm-run-all -p dev webpack-dev",
     "repl": "spago repl",
     "clean": "sh cleanSpago.sh",
-    "webpack-uglify": "uglifyjs dist/android/index_bundle.js --output dist/android/index_bundle.js --mangle --compress",
+    "webpack-uglify": "uglifyjs dist/android/index_bundle.js --output dist/android/index_bundle.js --mangle --compress"
   },
   "author": "juspay",
   "license": "ISC",
