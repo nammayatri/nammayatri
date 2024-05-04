@@ -408,12 +408,46 @@ driverMapsHeaderView push state =
               ] $ [addAadhaarOrOTPView state push]
                 <> [specialPickupZone push state]
                 <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (state.props.driverStatusSet == ST.Offline) true --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
+                <> if state.data.linkedVehicleCategory /= "AUTO_RICKSHAW" && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [bookingPreferenceNavView push state] else []
             ]
         ]
         , bottomNavBar push state
   ]
   where
     getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || visible then [] else [bannersCarousal item bottomMargin state push]) state.data.bannerData.bannerItem
+
+bookingPreferenceNavView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+bookingPreferenceNavView push state =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , gravity CENTER_VERTICAL
+  , padding $ Padding 12 12 12 12
+  , margin $ Margin 16 0 16 16
+  , onClick push $ const BookingOptions
+  , stroke $ "1," <> Color.darkMint
+  , background Color.white900
+  , cornerRadius 8.0
+  ][
+    imageView
+    [ imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_preferences_filter"
+    , height $ V 20
+    , width $ V 20
+    , margin $ MarginRight 8
+    ],
+    textView
+     $ [ text $ getString BOOKING_OPTIONS
+      , color Color.black900
+      , weight 1.0
+      , textSize FontSize.a_16
+      , fontStyle $ FontStyle.semiBold LanguageStyle
+      ]
+    , imageView
+      [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_arrow_right"
+      , height $ V 18
+      , width $ V 18
+      ]
+  ]
 
 specialPickupZone :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 specialPickupZone push state = 
@@ -759,6 +793,7 @@ offlineView push state =
                                  else if state.data.paymentState.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE
                                  else GO_ONLINE_PROMPT
               ] <> FontStyle.paragraphText TypoGraphy
+              -- , if state.data.linkedVehicleCategory /= "AUTO_RICKSHAW" && state.props.driverStatusSet == ST.Offline then bookingPreferenceNavView push state else dummyTextView
             ]
         ]
     , linearLayout
