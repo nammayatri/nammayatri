@@ -18,8 +18,8 @@ pipeline {
       steps {
         script {
           env.FAILED_STAGE = env.STAGE_NAME
-          sh ("git clone -b ${GIT_BRANCH} https://github.com/nammayatri/nammayatri.git")
-        //   sh ("npm config set package-lock=false; npm i") // npm config is update so as to ignore package-lock.json
+        //   sh ("git clone -b ${GIT_BRANCH} https://github.com/nammayatri/nammayatri.git")
+        //   sh ("npm config set package-lock=false") // npm config is update so as to ignore package-lock.json
         }
       }
     }
@@ -28,8 +28,13 @@ pipeline {
       steps {
         script {
           env.FAILED_STAGE = env.STAGE_NAME
-          sh ("npm install")
-          sh ("npm run compile:purs")
+        //   withNPM(npmrcConfig:'my-custom-npmrc') {
+        //     echo "Performing npm build..."
+        //     sh 'npm install'
+        //   }
+          sh ("cd Frontend/ui-customer; npm i; npm run compile:purs")
+        //   sh ("npm install")
+        //   sh ("npm run compile:purs")
         }
       }
     }
