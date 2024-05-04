@@ -223,24 +223,28 @@ buildTripQuoteDetail ::
   Maybe Money ->
   Maybe Money ->
   Maybe Money ->
+  Maybe Money ->
+  Maybe Money ->
   Text ->
   m TripQuoteDetail
-buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare mbDriverMinFee mbDriverMaxFee mDriverPickUpCharge estimateOrQuoteId = do
+buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge estimateOrQuoteId = do
   vehicleServiceTierName <-
     case mbVehicleServiceTierName of
       Just name -> return name
       _ -> do
         item <- CQDVST.findByServiceTierTypeAndCityId vehicleServiceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
         return item.name
-  (driverPickUpCharge, driverMinFee, driverMaxFee) <-
-    case (mDriverPickUpCharge, mbDriverMinFee, mbDriverMaxFee) of
-      (Just charge, Just minFee, Just maxFee) -> return (Just charge, Just minFee, Just maxFee)
+  (driverPickUpCharge, driverMinFee, driverMaxFee, driverStepFee, driverDefaultStepFee) <-
+    case (mDriverPickUpCharge, mbDriverMinFee, mbDriverMaxFee, mbStepFee, mbDefaultStepFee) of
+      (Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee) -> return (Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee)
       _ -> do
         farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId (Just searchReq.transactionId) (Just "transactionId")
         let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
         return $
           ( DTSRD.extractDriverPickupCharges farePolicy.farePolicyDetails,
             mbDriverExtraFeeBounds <&> (.minFee),
-            mbDriverExtraFeeBounds <&> (.maxFee)
+            mbDriverExtraFeeBounds <&> (.maxFee),
+            mbDriverExtraFeeBounds <&> (.stepFee),
+            mbDriverExtraFeeBounds <&> (.defaultStepFee)
           )
   return $ TripQuoteDetail {..}

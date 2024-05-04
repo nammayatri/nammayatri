@@ -185,11 +185,25 @@ checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafet
       logWarning $ "Ride route info not found for rideId: " <> getId rideId
       return False
 
-getTravelledDistanceAndTollCharges :: Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe HighPrecMoney -> Flow (Meters, Maybe HighPrecMoney)
-getTravelledDistanceAndTollCharges _ Nothing _ estimatedTollCharges = do
+updateTollRouteDeviation :: Id DMOC.MerchantOperatingCity -> Id Person -> Maybe Ride -> [LatLong] -> Flow Bool
+updateTollRouteDeviation _ _ Nothing _ = do
+  logInfo "No ride found to check deviation"
+  return False
+updateTollRouteDeviation merchantOpCityId driverId (Just ride) batchWaypoints = do
+  let driverDeviatedToTollRoute = maybe False (== True) ride.driverDeviatedToTollRoute
+  if driverDeviatedToTollRoute
+    then return driverDeviatedToTollRoute
+    else do
+      isTollRouteDeviation <- isJust <$> TollsDetector.getTollInfoOnRoute merchantOpCityId (Just driverId) batchWaypoints
+      when isTollRouteDeviation $ do
+        QRide.updateDriverDeviatedToTollRoute ride.id isTollRouteDeviation
+      return isTollRouteDeviation
+
+getTravelledDistanceAndTollInfo :: Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe (HighPrecMoney, [Text], Bool) -> Flow (Meters, Maybe (HighPrecMoney, [Text], Bool))
+getTravelledDistanceAndTollInfo _ Nothing _ estimatedTollInfo = do
   logInfo "No ride found to get travelled distance"
-  return (0, estimatedTollCharges)
-getTravelledDistanceAndTollCharges merchantOperatingCityId (Just ride) estimatedDistance estimatedTollCharges = do
+  return (0, estimatedTollInfo)
+getTravelledDistanceAndTollInfo merchantOperatingCityId (Just ride) estimatedDistance estimatedTollInfo = do
   let rideId = ride.id
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let key = multipleRouteKey booking.transactionId
@@ -201,14 +215,14 @@ getTravelledDistanceAndTollCharges merchantOperatingCityId (Just ride) estimated
         Just route -> do
           let distance = RI.distance $ RI.routeInfo route
               routePoints = RI.points $ RI.routeInfo route
-          tollCharges <- join <$> mapM (TollsDetector.getTollChargesOnRoute merchantOperatingCityId Nothing) routePoints
-          return $ (fromMaybe estimatedDistance distance, tollCharges <|> estimatedTollCharges)
+          tollChargesInfo <- join <$> mapM (TollsDetector.getTollInfoOnRoute merchantOperatingCityId Nothing) routePoints
+          return $ (fromMaybe estimatedDistance distance, tollChargesInfo <|> estimatedTollInfo)
         Nothing -> do
           logInfo $ "UndeviatedRoute not found for ride" <> show rideId
-          return (estimatedDistance, estimatedTollCharges)
+          return (estimatedDistance, estimatedTollInfo)
     Nothing -> do
       logInfo $ "MultipleRoutes not found for ride" <> show rideId
-      return (estimatedDistance, estimatedTollCharges)
+      return (estimatedDistance, estimatedTollInfo)
 
 buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (RideInterpolationHandler Person Flow)
 buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
@@ -222,16 +236,18 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
   return $
     mkRideInterpolationHandler
       isEndRide
-      (\driverId dist googleSnapCalls osrmSnapCalls -> void (QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls))
-      (\driverId tollCharges -> void (QRide.updateTollCharges driverId tollCharges))
+      (\driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned -> void (QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned))
+      (\driverId tollCharges tollNames -> void (QRide.updateTollChargesAndNames driverId tollCharges tollNames))
       ( \driverId batchWaypoints -> do
           ride <- QRide.getActiveByDriverId driverId
-          updateDeviation transportConfig enableNightSafety ride batchWaypoints
+          routeDeviation <- updateDeviation transportConfig enableNightSafety ride batchWaypoints
+          tollRouteDeviation <- updateTollRouteDeviation merchantOpCityId driverId ride batchWaypoints
+          return (routeDeviation, tollRouteDeviation)
       )
-      (TollsDetector.getTollChargesOnRoute merchantOpCityId)
-      ( \driverId estimatedDistance estimatedTollCharges -> do
+      (TollsDetector.getTollInfoOnRoute merchantOpCityId)
+      ( \driverId estimatedDistance estimatedTollInfo -> do
           ride <- QRide.getActiveByDriverId driverId
-          getTravelledDistanceAndTollCharges merchantOpCityId ride estimatedDistance estimatedTollCharges
+          getTravelledDistanceAndTollInfo merchantOpCityId ride estimatedDistance estimatedTollInfo
       )
       transportConfig.recomputeIfPickupDropNotOutsideOfThreshold
       snapToRoad'

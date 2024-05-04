@@ -17,8 +17,10 @@ module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Common as DTC
+import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.SearchRequestForDriver as DTSRD
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
@@ -101,7 +103,9 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
           then do
             estimate <- QEst.findById driverQuote.estimateId >>= fromMaybeM (EstimateNotFound driverQuote.estimateId.getId)
             DP.addDriverToSearchCancelledList searchReq.id ride.driverId
-            tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee) (Just 0) (Just $ estimate.maxFare - estimate.minFare) estimate.driverPickUpCharge estimate.id.getId
+            let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
+                driverPickUpCharge = join $ DTSRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
+            tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge estimate.id.getId
             let driverSearchBatchInput =
                   DriverSearchBatchInput
                     { sendSearchRequestToDrivers = sendSearchRequestToDrivers',

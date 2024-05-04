@@ -102,3 +102,12 @@ getDriverOfferId (_, _, _, a, _) = a
 
 getSpecialZoneQuoteId :: (Domain.Types.FarePolicy.FareProductType.FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getSpecialZoneQuoteId (_, _, _, _, a) = a
+
+mkTollChargesInfo :: (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Domain.Types.Quote.TollChargesInfo)
+mkTollChargesInfo tollCharges tollNames currency =
+  ((,) <$> tollCharges <*> tollNames)
+    <&> \(tollCharges', tollNames') ->
+      DQ.TollChargesInfo
+        { tollCharges = mkPriceWithDefault (Just tollCharges') currency (round tollCharges' :: Money),
+          tollNames = tollNames'
+        }

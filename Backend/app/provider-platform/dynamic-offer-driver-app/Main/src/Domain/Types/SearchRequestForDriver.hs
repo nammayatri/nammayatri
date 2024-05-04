@@ -35,6 +35,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.GenericPretty
+import SharedLogic.DriverPool.Types
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data DriverSearchRequestStatus = Active | Inactive
@@ -80,6 +81,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     response :: Maybe SearchRequestForDriverResponse,
     driverMinExtraFee :: Maybe Money,
     driverMaxExtraFee :: Maybe Money,
+    driverStepFee :: Maybe Money,
+    driverDefaultStepFee :: Maybe Money,
     rideRequestPopupDelayDuration :: Seconds,
     isPartOfIntelligentPool :: Bool,
     pickupZone :: Bool,
@@ -137,51 +140,55 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     customerCancellationDues :: HighPrecMoney,
     isValueAddNP :: Bool,
     driverPickUpCharges :: Maybe Money,
-    tollCharges :: Maybe HighPrecMoney
+    tollCharges :: Maybe HighPrecMoney,
+    tollNames :: Maybe [Text]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe Money -> Seconds -> Variant.Variant -> Bool -> Bool -> Maybe Money -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleVariant isTranslated isValueAddNP driverPickUpCharges =
-  SearchRequestForDriverAPIEntity
-    { searchRequestId = nearbyReq.searchTryId,
-      searchTryId = nearbyReq.searchTryId,
-      bapName = bapMetadata <&> (.name),
-      bapLogo = bapMetadata <&> (.logoUrl),
-      startTime = nearbyReq.startTime,
-      searchRequestValidTill = nearbyReq.searchRequestValidTill,
-      distanceToPickup = nearbyReq.actualDistanceToPickup,
-      durationToPickup = nearbyReq.durationToPickup,
-      baseFare = fromMaybe searchTry.baseFare nearbyReq.baseFare, -- short term, later remove searchTry.baseFare
-      customerExtraFee = searchTry.customerExtraFee,
-      fromLocation = convertDomainType searchRequest.fromLocation,
-      toLocation = convertDomainType <$> searchRequest.toLocation,
-      newFromLocation = searchRequest.fromLocation,
-      newToLocation = searchRequest.toLocation,
-      distance = searchRequest.estimatedDistance,
-      driverLatLong =
-        LatLong
-          { lat = fromMaybe 0.0 nearbyReq.lat,
-            lon = fromMaybe 0.0 nearbyReq.lon
-          },
-      driverMinExtraFee = nearbyReq.driverMinExtraFee,
-      driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
-      rideRequestPopupDelayDuration = delayDuration,
-      specialLocationTag = searchRequest.specialLocationTag,
-      disabilityTag = searchRequest.disabilityTag,
-      keepHiddenForSeconds = keepHiddenForSeconds,
-      goHomeRequestId = nearbyReq.goHomeRequestId,
-      customerCancellationDues = nearbyReq.customerCancellationDues,
-      tollCharges = searchRequest.tollCharges,
-      tripCategory = searchTry.tripCategory,
-      duration = searchRequest.estimatedDuration,
-      pickupZone = nearbyReq.pickupZone,
-      driverPickUpCharges = driverPickUpCharges,
-      specialZoneExtraTip = min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation,
-      vehicleServiceTier = nearbyReq.vehicleServiceTierName,
-      airConditioned = nearbyReq.airConditioned,
-      ..
-    }
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe Money -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Maybe Money -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP driverPickUpCharges =
+  let isTollApplicableForServiceTier = DTC.isTollApplicable requestedVehicleServiceTier
+   in SearchRequestForDriverAPIEntity
+        { searchRequestId = nearbyReq.searchTryId,
+          searchTryId = nearbyReq.searchTryId,
+          bapName = bapMetadata <&> (.name),
+          bapLogo = bapMetadata <&> (.logoUrl),
+          startTime = nearbyReq.startTime,
+          searchRequestValidTill = nearbyReq.searchRequestValidTill,
+          distanceToPickup = nearbyReq.actualDistanceToPickup,
+          durationToPickup = nearbyReq.durationToPickup,
+          baseFare = fromMaybe searchTry.baseFare nearbyReq.baseFare, -- short term, later remove searchTry.baseFare
+          customerExtraFee = searchTry.customerExtraFee,
+          fromLocation = convertDomainType searchRequest.fromLocation,
+          toLocation = convertDomainType <$> searchRequest.toLocation,
+          newFromLocation = searchRequest.fromLocation,
+          newToLocation = searchRequest.toLocation,
+          distance = searchRequest.estimatedDistance,
+          driverLatLong =
+            LatLong
+              { lat = fromMaybe 0.0 nearbyReq.lat,
+                lon = fromMaybe 0.0 nearbyReq.lon
+              },
+          driverMinExtraFee = nearbyReq.driverMinExtraFee,
+          driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
+          rideRequestPopupDelayDuration = delayDuration,
+          specialLocationTag = searchRequest.specialLocationTag,
+          disabilityTag = searchRequest.disabilityTag,
+          keepHiddenForSeconds = keepHiddenForSeconds,
+          goHomeRequestId = nearbyReq.goHomeRequestId,
+          customerCancellationDues = nearbyReq.customerCancellationDues,
+          tripCategory = searchTry.tripCategory,
+          duration = searchRequest.estimatedDuration,
+          pickupZone = nearbyReq.pickupZone,
+          driverPickUpCharges = driverPickUpCharges,
+          specialZoneExtraTip = min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation,
+          vehicleServiceTier = nearbyReq.vehicleServiceTierName,
+          airConditioned = nearbyReq.airConditioned,
+          requestedVehicleVariant = castServiceTierToVariant requestedVehicleServiceTier,
+          tollCharges = if isTollApplicableForServiceTier then searchRequest.tollCharges else Nothing,
+          tollNames = if isTollApplicableForServiceTier then searchRequest.tollNames else Nothing,
+          ..
+        }
 
 extractDriverPickupCharges :: DFP.FarePolicyDetailsD s -> Maybe Money
 extractDriverPickupCharges farePolicyDetails =

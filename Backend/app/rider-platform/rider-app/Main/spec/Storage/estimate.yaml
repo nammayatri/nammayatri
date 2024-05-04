@@ -49,6 +49,11 @@ Estimate:
       nightShiftEnd : TimeOfDay
       derive': "Generic, Show"
 
+    TollChargesInfo:
+      tollCharges: Price
+      tollNames: "[Text]"
+      derive': "Generic, Show"
+
     EstimateStatus:
       enum: "NEW, DRIVER_QUOTE_REQUESTED, CANCELLED, GOT_DRIVER_QUOTE, DRIVER_QUOTE_CANCELLED, COMPLETED"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
@@ -92,6 +97,9 @@ Estimate:
     backendConfigVersion: Maybe Version
     backendAppVersion: Maybe Text
     clientDevice: Maybe Device
+    tollChargesInfo: Maybe TollChargesInfo
+    isCustomerPrefferedSearchRoute: Maybe Bool
+    isBlockedRoute: Maybe Bool
     updatedAt : UTCTime
     createdAt : UTCTime
     validTill : UTCTime
@@ -132,6 +140,10 @@ Estimate:
       nightShiftStart : Maybe TimeOfDay
       nightShiftEnd : Maybe TimeOfDay
 
+    tollChargesInfo:
+      tollCharges : Maybe HighPrecMoney
+      tollNames : Maybe [Text]
+
     waitingCharges:
       waitingChargePerMin: Maybe Money
       waitingChargePerMinAmount: Maybe HighPrecMoney
@@ -151,6 +163,7 @@ Estimate:
   fromTType:
     totalFareRange: mkFareRange
     nightShiftInfo: mkNightShiftInfo nightShiftCharge nightShiftChargeAmount nightShiftEnd nightShiftStart oldNightShiftCharge currency|E
+    tollChargesInfo: mkTollChargesInfo tollCharges tollNames currency|E
     estimateBreakupList: Storage.Queries.EstimateBreakup.findAllByEstimateIdT (Kernel.Types.Id.Id id)|EM
     waitingCharges: Domain.Types.Estimate.WaitingCharges $ Kernel.Types.Common.mkPriceWithDefault waitingChargePerMinAmount currency <$> waitingChargePerMin|E
     tripTerms: mKTripTerms|M
@@ -177,6 +190,8 @@ Estimate:
     currency: (Kernel.Prelude.Just $ (.currency) estimatedFare)|E
     providerUrl: showBaseUrl|I
     tripTermsId: (Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))|E
+    tollCharges: (tollChargesInfo <&> ((.amount) . (.tollCharges)))|E
+    tollNames: (tollChargesInfo <&> (.tollNames))|E
     nightShiftCharge: (mknightShiftCharge nightShiftInfo)|E
     nightShiftChargeAmount: (mknightShiftChargeAmount nightShiftInfo)|E
     oldNightShiftCharge: ((.oldNightShiftCharge) =<< nightShiftInfo)|E

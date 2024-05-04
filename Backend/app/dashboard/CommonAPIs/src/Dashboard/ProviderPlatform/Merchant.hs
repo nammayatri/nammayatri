@@ -622,7 +622,9 @@ type CreateFPDriverExtraFee =
 
 data CreateFPDriverExtraFeeReq = CreateFPDriverExtraFeeReq
   { minFee :: Money,
-    maxFee :: Money
+    maxFee :: Money,
+    stepFee :: Money,
+    defaultStepFee :: Money
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

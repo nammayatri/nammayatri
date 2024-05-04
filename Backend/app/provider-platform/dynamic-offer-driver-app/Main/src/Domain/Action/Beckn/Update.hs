@@ -182,7 +182,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show duration
         fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id srcPt (Just dropLatLong) (Just booking.transactionId) (Just "transactionId") booking.tripCategory
         farePolicy <- getFarePolicy merchantOperatingCity.id booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.transactionId) (Just "transactionId")
-        tollCharges <- getTollChargesOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
+        mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
         fareParameters <-
           calculateFareParameters
             CalculateFareParametersParams
@@ -200,7 +200,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                 estimatedDistance = Just estimatedDistance,
                 estimatedRideDuration = Nothing,
                 timeDiffFromUtc = Nothing,
-                tollCharges
+                tollCharges = mbTollInfo <&> (\(tollCharges, _, _) -> tollCharges)
               }
         QFP.create fareParameters
         let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now

@@ -18,12 +18,14 @@ import qualified Data.HashMap.Strict as HM
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverQuote as DDQ
+import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DRD
+import qualified Domain.Types.SearchRequestForDriver as DTSRD
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import Kernel.External.Encryption
@@ -120,7 +122,9 @@ handler merchant req validatedQuote = do
     handleStaticOfferFlow isNewRider quote booking riderDetails = do
       updateBookingDetails isNewRider booking riderDetails
       searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
-      tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare quote.driverMinFee quote.driverMaxFee quote.driverPickUpCharge quote.id.getId
+      let mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> quote.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
+          driverPickUpCharge = join $ DTSRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> quote.farePolicy)
+      tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge quote.id.getId
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',

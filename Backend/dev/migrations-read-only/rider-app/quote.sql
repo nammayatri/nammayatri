@@ -35,3 +35,15 @@ ALTER TABLE atlas_app.quote ADD COLUMN updated_at timestamp with time zone  defa
 ALTER TABLE atlas_app.quote ADD COLUMN valid_till timestamp with time zone NOT NULL;
 ALTER TABLE atlas_app.quote ADD COLUMN vehicle_variant text NOT NULL;
 ALTER TABLE atlas_app.quote ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN is_customer_preffered_search_route boolean ;
+ALTER TABLE atlas_app.quote ADD COLUMN is_blocked_route boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN toll_names text[] ;
+ALTER TABLE atlas_app.quote ADD COLUMN toll_charges double precision ;

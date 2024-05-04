@@ -72,6 +72,8 @@ data QuoteInfo = QuoteInfo
     serviceTierName :: Maybe Text,
     serviceTierType :: Maybe DVST.VehicleServiceTierType,
     serviceTierShortDesc :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
     quoteValidTill :: UTCTime
   }
 
@@ -171,6 +173,13 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             validTill = quoteValidTill,
             estimatedTotalFare = estimatedFare,
             vehicleServiceTierType = fromMaybe (DVST.castVariantToServiceTier vehicleVariant) serviceTierType,
+            tollChargesInfo =
+              ((,) <$> (estimate.tollChargesInfo <&> (.tollCharges)) <*> (estimate.tollChargesInfo <&> (.tollNames)))
+                <&> \(tollCharges', tollNames') ->
+                  DQuote.TollChargesInfo
+                    { tollCharges = tollCharges',
+                      tollNames = tollNames'
+                    },
             ..
           }
   pure quote

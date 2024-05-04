@@ -49,6 +49,8 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     response :: B.C f (Maybe Domain.SearchRequestForDriverResponse),
     driverMinExtraFee :: B.C f (Maybe Money),
     driverMaxExtraFee :: B.C f (Maybe Money),
+    driverStepFee :: B.C f (Maybe Money),
+    driverDefaultStepFee :: B.C f (Maybe Money),
     rideRequestPopupDelayDuration :: B.C f Seconds,
     isPartOfIntelligentPool :: B.C f Bool,
     pickupZone :: B.C f Bool,
