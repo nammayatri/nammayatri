@@ -449,7 +449,7 @@ const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
 //   logger.disableLogger();
 // }
 
-logger.disableLogger();
-Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;","null");
+logger.enableLogger();
+Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;","null");
 
 console.log("APP_PERF INDEX_BUNDLE_END : ", new Date().getTime());
