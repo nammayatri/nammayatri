@@ -109,7 +109,7 @@ notifyOnCancel ::
   m ()
 notifyOnCancel merchantOpCityId booking person cancellationSource = do
   cancellationText <- getCancellationText
-  let newCityId = cityFallback person.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   FCM.notifyPerson transporterConfig.fcmConfig (notificationData cancellationText) $ FCMNotificationRecipient person.id.getId person.deviceToken
   where
@@ -233,7 +233,7 @@ sendNotificationToDriver ::
   Maybe FCM.FCMRecipientToken ->
   m ()
 sendNotificationToDriver merchantOpCityId displayOption priority notificationType notificationTitle message driver mbToken = do
-  let newCityId = cityFallback driver.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   transporterConfig <- findByMerchantOpCityId newCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority False notificationData $ FCMNotificationRecipient driver.id.getId mbToken
   where
@@ -266,7 +266,7 @@ sendMessageToDriver ::
   Id Message.Message ->
   m ()
 sendMessageToDriver merchantOpCityId displayOption priority notificationType notificationTitle message driver messageId = do
-  let newCityId = cityFallback driver.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   transporterConfig <- findByMerchantOpCityId newCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority False notificationData $ FCMNotificationRecipient driver.id.getId driver.deviceToken
   where
@@ -387,7 +387,7 @@ notifyDriverClearedFare ::
   Money ->
   m ()
 notifyDriverClearedFare merchantOpCityId driver sReqId fare = do
-  let newCityId = cityFallback driver.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   transporterConfig <- findByMerchantOpCityId newCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient driver.id.getId driver.deviceToken
   where
@@ -419,7 +419,7 @@ notifyOnCancelSearchRequest ::
   Id SearchTry ->
   m ()
 notifyOnCancelSearchRequest merchantOpCityId person searchTryId = do
-  let newCityId = cityFallback person.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
   where
@@ -515,7 +515,7 @@ notifyPaymentSuccess ::
   Id DOrder.PaymentOrder ->
   m ()
 notifyPaymentSuccess merchantOpCityId person orderId = do
-  let newCityId = cityFallback person.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
   where
@@ -608,7 +608,7 @@ notifyPaymentModeManualOnSuspend ::
   Person ->
   m ()
 notifyPaymentModeManualOnSuspend merchantOpCityId person = do
-  let newCityId = cityFallback person.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
   where
@@ -640,7 +640,7 @@ sendOverlay ::
   FCM.FCMOverlayReq ->
   m ()
 sendOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} = do
-  let newCityId = cityFallback person.clientSdkVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
   where
@@ -667,7 +667,7 @@ notifyPickupOrDropLocationChange ::
   EditLocationReq ->
   m ()
 notifyPickupOrDropLocationChange person entityData = do
-  let newCityId = cityFallback person.clientSdkVersion person.merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  let newCityId = cityFallback person.clientBundleVersion person.merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
   where
@@ -785,7 +785,7 @@ notifyStopModification ::
   StopReq ->
   m ()
 notifyStopModification person entityData = do
-  let newCityId = cityFallback person.clientSdkVersion person.merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  let newCityId = cityFallback person.clientBundleVersion person.merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
   where
@@ -813,9 +813,9 @@ notifyStopModification person entityData = do
 getNewMerchantOpCityId :: Maybe Version.Version -> Id DMOC.MerchantOperatingCity -> Id DMOC.MerchantOperatingCity
 getNewMerchantOpCityId Nothing currentMerchantCityId = currentMerchantCityId
 getNewMerchantOpCityId (Just version) currentMerchantCityId = do
-  let clientVersion = Version.versionToText version
-  let getClientVersion = clientVersion `compare` "2.3.2" -----2.3.2 is current client version of the apk in prod
-  case getClientVersion of
+  let clientBundleVersion = Version.versionToText version
+  let getClientBundleVersion = clientBundleVersion `compare` "1.8.319" ----- 1.8.319 is current client bundle version of the apk in prod
+  case getClientBundleVersion of
     GT -> "3a95be1d-9052-4715-8cf5-ea8f68ffc85a" ------------ Namma Yatri HyderaBad city Id as it is common in both
     _ -> currentMerchantCityId
 
