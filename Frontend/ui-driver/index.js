@@ -443,13 +443,10 @@ if (typeof window.JOS != "undefined") {
 
 const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
 
-// if (sessionInfo.package_name.includes("debug")) {
-//   logger.enableLogger();
-// } else {
-//   logger.disableLogger();
-// }
-
-logger.enableLogger();
-Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;","null");
+if (sessionInfo.package_name.includes("debug")) {
+  logger.enableLogger();
+} else {
+  logger.disableLogger();
+}
 
 console.log("APP_PERF INDEX_BUNDLE_END : ", new Date().getTime());
