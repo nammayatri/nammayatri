@@ -32,7 +32,7 @@ pipeline {
         //     echo "Performing npm build..."
         //     sh 'npm install'
         //   }
-          sh ("cd Frontend/ui-customer; npm --version, npm i; npm run compile:purs")
+          sh ("cd Frontend/ui-customer; npm i; npm run compile:purs")
         //   sh ("npm install")
         //   sh ("npm run compile:purs")
         }
