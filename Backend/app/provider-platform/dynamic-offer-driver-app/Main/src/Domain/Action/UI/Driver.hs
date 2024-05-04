@@ -465,7 +465,7 @@ getInformation ::
   m DriverInformationRes
 getInformation (personId, merchantId, merchantOpCityId) mbToss = do
   let driverId = cast personId
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (InvalidToken personId.getId)
   driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
