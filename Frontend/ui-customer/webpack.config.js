@@ -13,6 +13,10 @@ module.exports = function(env){
     publicPath: '/dist/',
     sourceMapFilename: "index_bundle.map"
   },
+  stats: {
+    errorDetails: true,
+    children: true
+  },
   module: {
     rules: [
       {
