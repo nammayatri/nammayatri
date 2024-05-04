@@ -415,3 +415,12 @@ darkGreyishBlue = "#313440"
 
 lightGreyBlue :: Color
 lightGreyBlue = "#E9EEF2F6"
+
+lightGreyBlue1 :: Color
+lightGreyBlue1 = "#383B46"
+
+lightGreyBlue2 :: Color
+lightGreyBlue2 = "#6C7393"
+
+lightGrey1 :: Color
+lightGrey1 = "#F3F3F3"

@@ -1112,3 +1112,4 @@ getEN stringKey =
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "Enter 6 digit referral code below"
         APPLY -> "Apply"
         TOLL_CHARGES_INCLUDED -> "Toll Charges Included"
+        ONE_CLICK_BOOKINGS ->  "One-Click Bookings"

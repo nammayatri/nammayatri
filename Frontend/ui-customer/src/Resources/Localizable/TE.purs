@@ -1127,3 +1127,4 @@ getTE stringKey =
     ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "కీల్లో 6 అంకి రిఫరల్ కోడ్ నమోదు చేయండి"
     APPLY -> "అప్లికేషన్ చేయండి"
     TOLL_CHARGES_INCLUDED -> "టోల్ ఛార్జీలు కలిగి ఉన్నాయి"
+    ONE_CLICK_BOOKINGS -> "ఒక క్లిక్ బుకింగ్‌లు"
