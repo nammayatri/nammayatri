@@ -45,6 +45,9 @@ module.exports = function(env){
    usedExports: true,
 
   },
+  resolve: {
+    extensions: ['.js', '.jsx']
+  }
   }
   return config;
 }
