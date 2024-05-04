@@ -405,7 +405,9 @@ getDriverInfoFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> Maybe (Either E
 getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription = do
   liftFlowBT $ markPerformance "GET_DRIVER_INFO_FLOW_START"
   case driverInfoResp of
-    Just driverInfoResp -> runDriverInfoFlow driverInfoResp
+    Just driverInfoResp -> do
+      getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+      runDriverInfoFlow driverInfoResp
     Nothing -> do
       getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
       runDriverInfoFlow getDriverInfoApiResp
