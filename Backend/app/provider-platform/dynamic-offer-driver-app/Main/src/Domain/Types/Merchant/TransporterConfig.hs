@@ -126,7 +126,6 @@ data TransporterConfigD u = TransporterConfig
     automaticRCActivationCutOff :: Seconds,
     languagesToBeTranslated :: [Language],
     isAvoidToll :: Bool,
-    allowAutosOnTollRoute :: Bool,
     aadhaarImageResizeConfig :: Maybe AadhaarImageResizeConfig,
     enableFaceVerification :: Bool,
     specialZoneBookingOtpExpiry :: Int,

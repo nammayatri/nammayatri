@@ -15,6 +15,7 @@ import qualified Tools.Beam.UtilsTH
 data Toll = Toll
   { createdAt :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.Toll.Toll,
+    isAutoRickshawAllowed :: Kernel.Prelude.Bool,
     name :: Kernel.Prelude.Text,
     price :: Kernel.Types.Common.Price,
     tollEndGates :: [Kernel.Utils.ComputeIntersection.LineSegment],

@@ -40,22 +40,22 @@ getExitTollAndRemainingRoute (p1 : p2 : ps) tolls = do
     Just toll -> Just (p2 : ps, toll)
     Nothing -> getExitTollAndRemainingRoute (p2 : ps) tolls
 
--- This function is responsible for checking the toll start and exit segments intersection on the route and appropriately update the state in case exit segment is not forund corresponding to the entry segment while On Ride.
-getAggregatedTollChargesOnRoute :: (CacheFlow m r) => Maybe (Id DP.Driver) -> RoutePoints -> [Toll] -> HighPrecMoney -> m HighPrecMoney
-getAggregatedTollChargesOnRoute _ [] _ tollCharges = return tollCharges
-getAggregatedTollChargesOnRoute _ [_] _ tollCharges = return tollCharges
-getAggregatedTollChargesOnRoute _ _ [] tollCharges = return tollCharges
-getAggregatedTollChargesOnRoute mbDriverId route@(p1 : p2 : ps) tolls tollCharges = do
+-- This function is responsible for checking the toll start and exit segments intersection on the route and appropriately update the state in case exit segment is not found corresponding to the entry segment while On Ride.
+getAggregatedTollChargesAndNamesOnRoute :: (CacheFlow m r) => Maybe (Id DP.Driver) -> RoutePoints -> [Toll] -> (HighPrecMoney, [Text], Bool) -> m (HighPrecMoney, [Text], Bool)
+getAggregatedTollChargesAndNamesOnRoute _ [] _ tollChargesAndNames = return tollChargesAndNames
+getAggregatedTollChargesAndNamesOnRoute _ [_] _ tollChargesAndNames = return tollChargesAndNames
+getAggregatedTollChargesAndNamesOnRoute _ _ [] tollChargesAndNames = return tollChargesAndNames
+getAggregatedTollChargesAndNamesOnRoute mbDriverId route@(p1 : p2 : ps) tolls (tollCharges, tollNames, tollIsAutoRickshawAllowed) = do
   let allTollCombinationsWithStartGates = filter (\Toll {..} -> any (doIntersect (LineSegment p1 p2)) tollStartGates) tolls
   if not $ null allTollCombinationsWithStartGates
     then do
       case getExitTollAndRemainingRoute route allTollCombinationsWithStartGates of
-        Just (remainingRoute, toll) -> getAggregatedTollChargesOnRoute mbDriverId remainingRoute tolls (tollCharges + toll.price.amount)
+        Just (remainingRoute, toll) -> getAggregatedTollChargesAndNamesOnRoute mbDriverId remainingRoute tolls (tollCharges + toll.price.amount, tollNames <> [toll.name], toll.isAutoRickshawAllowed)
         Nothing -> do
           whenJust mbDriverId $ \driverId -> do
             Hedis.setExp (tollStartGateTrackingKey driverId) allTollCombinationsWithStartGates 21600 -- 6 hours
-          return tollCharges
-    else getAggregatedTollChargesOnRoute mbDriverId (p2 : ps) tolls tollCharges
+          return (tollCharges, tollNames, tollIsAutoRickshawAllowed)
+    else getAggregatedTollChargesAndNamesOnRoute mbDriverId (p2 : ps) tolls (tollCharges, tollNames, tollIsAutoRickshawAllowed)
 
 {- Author: Khuzema Khomosi
   Best Case Time Complexity - O(No. of points in routes)
@@ -71,8 +71,8 @@ getAggregatedTollChargesOnRoute mbDriverId route@(p1 : p2 : ps) tolls tollCharge
   In that case this function maintains the TollCombinationsWithStartGatesInPrevBatch based on driverId to check for it's corresponding exit segment intersection on route coming in later batches.
   Once the exit segment is found, it deletes the TollCombinationsWithStartGatesInPrevBatch & add's the toll and slices the route further to check for anymore tolls if exists till it reaches the end of the route.
 -}
-getTollChargesOnRoute :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe (Id DP.Driver) -> RoutePoints -> m (Maybe HighPrecMoney)
-getTollChargesOnRoute merchantOperatingCityId mbDriverId route = do
+getTollInfoOnRoute :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe (Id DP.Driver) -> RoutePoints -> m (Maybe (HighPrecMoney, [Text], Bool))
+getTollInfoOnRoute merchantOperatingCityId mbDriverId route = do
   tolls <- B.runInReplica $ findAllTollsByMerchantOperatingCity merchantOperatingCityId
   if not $ null tolls
     then do
@@ -83,21 +83,21 @@ getTollChargesOnRoute merchantOperatingCityId mbDriverId route = do
           mbTollCombinationsWithStartGatesInPrevBatch :: Maybe [Toll] <- Hedis.safeGet (tollStartGateTrackingKey driverId)
           case mbTollCombinationsWithStartGatesInPrevBatch of
             Just tollCombinationsWithStartGatesInPrevBatch -> getAggregatedTollChargesConsideringStartSegmentFromPrevBatchWhileOnRide driverId tollCombinationsWithStartGatesInPrevBatch eligibleTollsThatMaybePresentOnTheRoute
-            Nothing -> getAggregatedTollCharges route eligibleTollsThatMaybePresentOnTheRoute 0
-        Nothing -> getAggregatedTollCharges route eligibleTollsThatMaybePresentOnTheRoute 0
+            Nothing -> getAggregatedTollCharges route eligibleTollsThatMaybePresentOnTheRoute (0, [])
+        Nothing -> getAggregatedTollCharges route eligibleTollsThatMaybePresentOnTheRoute (0, [])
     else return Nothing
   where
-    getAggregatedTollCharges remainingRoute eligibleTollsThatMaybePresentOnTheRoute tollCharges = do
-      aggregatedTollCharges <- getAggregatedTollChargesOnRoute mbDriverId remainingRoute eligibleTollsThatMaybePresentOnTheRoute tollCharges
-      if aggregatedTollCharges > 0
-        then return $ Just aggregatedTollCharges
+    getAggregatedTollCharges remainingRoute eligibleTollsThatMaybePresentOnTheRoute (tollCharges, tollNames) = do
+      (aggregatedTollCharges, aggregatedTollNames, isAutoRickshawAllowed) <- getAggregatedTollChargesAndNamesOnRoute mbDriverId remainingRoute eligibleTollsThatMaybePresentOnTheRoute (tollCharges, tollNames, False)
+      if aggregatedTollCharges > 0 && (not $ null aggregatedTollNames)
+        then return $ Just (aggregatedTollCharges, aggregatedTollNames, isAutoRickshawAllowed)
         else return Nothing
 
     getAggregatedTollChargesConsideringStartSegmentFromPrevBatchWhileOnRide driverId tollCombinationsWithStartGatesInPrevBatch eligibleTollsThatMaybePresentOnTheRoute = do
       case getExitTollAndRemainingRoute route tollCombinationsWithStartGatesInPrevBatch of
         Just (remainingRoute, toll) -> do
           clearTollStartGateBatchCache driverId
-          getAggregatedTollCharges remainingRoute eligibleTollsThatMaybePresentOnTheRoute toll.price.amount
+          getAggregatedTollCharges remainingRoute eligibleTollsThatMaybePresentOnTheRoute (toll.price.amount, [toll.name])
         Nothing -> do
           logWarning $ "No exit segment of tolls with start segment marked from previous batch found for driverId : " <> driverId.getId <> " TollCombinationsWithStartGatesInPrevBatch : " <> show tollCombinationsWithStartGatesInPrevBatch <> " route : " <> show route
           return Nothing

@@ -16,6 +16,7 @@ module Domain.Action.Beckn.OnSearch
   ( DOnSearchReq (..),
     ProviderInfo (..),
     EstimateInfo (..),
+    TollChargesInfo (..),
     DEstimate.FareRange (..),
     QuoteInfo (..),
     QuoteDetails (..),
@@ -105,13 +106,16 @@ data EstimateInfo = EstimateInfo
     descriptions :: [Text],
     estimateBreakupList :: [EstimateBreakupInfo],
     nightShiftInfo :: Maybe NightShiftInfo,
+    tollChargesInfo :: Maybe TollChargesInfo,
     waitingCharges :: Maybe WaitingChargesInfo,
     driversLocation :: [LatLong],
     specialLocationTag :: Maybe Text,
     validTill :: UTCTime,
     serviceTierName :: Maybe Text,
     serviceTierType :: Maybe DVST.VehicleServiceTierType,
-    serviceTierShortDesc :: Maybe Text
+    serviceTierShortDesc :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -119,6 +123,11 @@ data NightShiftInfo = NightShiftInfo
     oldNightShiftCharge :: Maybe Centesimal,
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
+  }
+
+data TollChargesInfo = TollChargesInfo
+  { tollCharges :: Price,
+    tollNames :: [Text]
   }
 
 newtype WaitingChargesInfo = WaitingChargesInfo
@@ -146,7 +155,10 @@ data QuoteInfo = QuoteInfo
     validTill :: UTCTime,
     serviceTierName :: Maybe Text,
     serviceTierType :: Maybe DVST.VehicleServiceTierType,
-    serviceTierShortDesc :: Maybe Text
+    serviceTierShortDesc :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
+    tollChargesInfo :: Maybe TollChargesInfo
   }
 
 data QuoteDetails
@@ -300,6 +312,12 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
                 nightShiftStart = nightShiftInfo'.nightShiftStart,
                 nightShiftEnd = nightShiftInfo'.nightShiftEnd
               },
+        tollChargesInfo =
+          tollChargesInfo <&> \tollChargesInfo' ->
+            DEstimate.TollChargesInfo
+              { tollCharges = tollChargesInfo'.tollCharges,
+                tollNames = tollChargesInfo'.tollNames
+              },
         waitingCharges =
           DEstimate.WaitingCharges
             { waitingChargePerMin = waitingCharges >>= (.waitingChargePerMin)
@@ -351,6 +369,12 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
         clientConfigVersion = searchRequest.clientConfigVersion,
         backendConfigVersion = searchRequest.backendConfigVersion,
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
+        tollChargesInfo =
+          tollChargesInfo <&> \tollChargesInfo' ->
+            DQuote.TollChargesInfo
+              { tollCharges = tollChargesInfo'.tollCharges,
+                tollNames = tollChargesInfo'.tollNames
+              },
         ..
       }
 

@@ -29,9 +29,6 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     vehicleVariant :: B.C f DVST.ServiceTierType,
     estimatedFinishTime :: B.C f (Maybe UTCTime),
     vehicleServiceTierName :: B.C f (Maybe Text),
-    driverMinFee :: B.C f (Maybe Common.Money),
-    driverMaxFee :: B.C f (Maybe Common.Money),
-    driverPickUpCharge :: B.C f (Maybe Common.Money),
     tripCategory :: B.C f (Maybe DTC.TripCategory),
     distance :: B.C f (Maybe Common.Meters),
     validTill :: B.C f LocalTime,
@@ -40,6 +37,9 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     fareParametersId :: B.C f Text,
     farePolicyId :: B.C f (Maybe Text),
     isScheduled :: B.C f (Maybe Bool),
+    isCustomerPrefferedSearchRoute :: B.C f (Maybe Bool),
+    isBlockedRoute :: B.C f (Maybe Bool),
+    tollNames :: B.C f (Maybe [Text]),
     createdAt :: B.C f LocalTime,
     updatedAt :: B.C f LocalTime
   }

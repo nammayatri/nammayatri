@@ -49,8 +49,11 @@ data SearchRequestT f = SearchRequestT
     specialLocationTag :: B.C f (Maybe Text),
     customerCancellationDues :: B.C f (Maybe HighPrecMoney),
     tollCharges :: B.C f (Maybe HighPrecMoney),
+    tollNames :: B.C f (Maybe [Text]),
     isReallocationEnabled :: B.C f (Maybe Bool),
     isScheduled :: B.C f (Maybe Bool),
+    isCustomerPrefferedSearchRoute :: B.C f (Maybe Bool),
+    isBlockedRoute :: B.C f (Maybe Bool),
     startTime :: B.C f (Maybe UTCTime),
     validTill :: B.C f (Maybe UTCTime),
     createdAt :: B.C f UTCTime

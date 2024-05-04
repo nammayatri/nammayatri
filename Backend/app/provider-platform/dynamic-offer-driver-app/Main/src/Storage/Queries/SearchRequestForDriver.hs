@@ -161,6 +161,8 @@ instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
         BeamSRFD.response = response,
         BeamSRFD.driverMinExtraFee = driverMinExtraFee,
         BeamSRFD.driverMaxExtraFee = driverMaxExtraFee,
+        BeamSRFD.driverStepFee = driverStepFee,
+        BeamSRFD.driverDefaultStepFee = driverDefaultStepFee,
         BeamSRFD.rideRequestPopupDelayDuration = rideRequestPopupDelayDuration,
         BeamSRFD.isPartOfIntelligentPool = isPartOfIntelligentPool,
         BeamSRFD.pickupZone = pickupZone,

@@ -239,6 +239,15 @@ updateDriverDeviatedFromRoute rideId deviation = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateDriverDeviatedToTollRoute :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Bool -> m ()
+updateDriverDeviatedToTollRoute rideId deviation = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.driverDeviatedToTollRoute $ Just deviation,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateStartTimeAndLoc :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> LatLong -> m ()
 updateStartTimeAndLoc rideId point = do
   now <- getCurrentTime
@@ -288,22 +297,24 @@ updateStatusByIds rideIds status = do
     ]
     [Se.Is BeamR.id (Se.In $ getId <$> rideIds)]
 
-updateDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMeters -> Int -> Int -> m ()
-updateDistance driverId distance googleSnapCalls osrmSnapsCalls = do
+updateDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMeters -> Int -> Int -> Maybe Int -> m ()
+updateDistance driverId distance googleSnapCalls osrmSnapsCalls selfTunedCount = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamR.traveledDistance distance,
       Se.Set BeamR.numberOfSnapToRoadCalls (Just googleSnapCalls),
       Se.Set BeamR.numberOfOsrmSnapToRoadCalls (Just osrmSnapsCalls),
+      Se.Set BeamR.numberOfSelfTuned selfTunedCount,
       Se.Set BeamR.updatedAt now
     ]
     [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
 
-updateTollCharges :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> m ()
-updateTollCharges driverId tollCharges = do
+updateTollChargesAndNames :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> [Text] -> m ()
+updateTollChargesAndNames driverId tollCharges tollNames = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamR.tollCharges (Just tollCharges),
+      Se.Set BeamR.tollNames (Just tollNames),
       Se.Set BeamR.updatedAt now
     ]
     [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]

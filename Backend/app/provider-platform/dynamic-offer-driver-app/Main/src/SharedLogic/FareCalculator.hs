@@ -28,6 +28,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant hiding (Variant (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
+import Domain.Types.Common
 import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as DFParams
 import Domain.Types.FarePolicy
@@ -228,7 +229,7 @@ calculateFareParameters params = do
                   fareParametersDetails
               DFP.RentalDetails _ -> fareParametersDetails,
             customerCancellationDues = params.customerCancellationDues,
-            tollCharges = params.tollCharges,
+            tollCharges = if isTollApplicable fp.vehicleServiceTier then params.tollCharges else Nothing,
             updatedAt = now,
             ..
           }

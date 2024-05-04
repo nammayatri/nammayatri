@@ -48,6 +48,11 @@ Quote:
       distanceToNearestDriver: HighPrecMeters
       quoteId: Text
 
+    TollChargesInfo:
+      tollCharges: Price
+      tollNames: "[Text]"
+      derive': "Generic, Show"
+
 
   fields:
     id : Id Quote
@@ -72,6 +77,9 @@ Quote:
     clientDevice : Maybe Device
     backendConfigVersion : Maybe Version
     backendAppVersion : Maybe Text
+    isCustomerPrefferedSearchRoute: Maybe Bool
+    isBlockedRoute: Maybe Bool
+    tollChargesInfo: Maybe TollChargesInfo
     createdAt : UTCTime
     updatedAt : UTCTime
     validTill : UTCTime
@@ -96,6 +104,9 @@ Quote:
       clientDevice:
         clientOsType: Maybe DeviceType
         clientOsVersion: Maybe Text
+      tollChargesInfo:
+        tollCharges : Maybe HighPrecMoney
+        tollNames : Maybe [Text]
 
   beamType:
     estimatedFare : HighPrecMoney
@@ -113,6 +124,7 @@ Quote:
   fromTType:
     providerUrl: parseBaseUrl|MI
     tripTerms: getTripTerms|M
+    tollChargesInfo: mkTollChargesInfo tollCharges tollNames currency|E
     quoteDetails: (Storage.Queries.Transformers.Quote.getQuoteDetails fareProductType distanceToNearestDriver rentalDetailsId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue)|EM
     discount: (Kernel.Types.Common.mkPrice currency <$> discount)|E
     merchantOperatingCityId: (backfillMOCId merchantOperatingCityId merchantId)|EM
@@ -131,6 +143,8 @@ Quote:
     currency: (Just ((.currency) estimatedFare))|E
     estimatedFare: ((.amount) estimatedFare)|E
     estimatedTotalFare: ((.amount) estimatedTotalFare)|E
+    tollCharges: (tollChargesInfo <&> ((.amount) . (.tollCharges)))|E
+    tollNames: (tollChargesInfo <&> (.tollNames))|E
     tripTermsId: (Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))|E
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
     distanceToNearestDriver: (Kernel.Types.Common.distanceToHighPrecMeters <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)))|E

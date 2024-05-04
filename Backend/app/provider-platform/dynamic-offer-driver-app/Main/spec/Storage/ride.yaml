@@ -61,14 +61,19 @@ Ride:
     endOdometerReading: Maybe OdometerReading
     createdAt: UTCTime
     updatedAt: UTCTime
+    driverDeviatedToTollRoute: Maybe Bool
     driverDeviatedFromRoute: Maybe Bool
     numberOfSnapToRoadCalls: Maybe Int
     numberOfOsrmSnapToRoadCalls: Maybe Int
+    numberOfSelfTuned: Maybe Int
     numberOfDeviation: Maybe Bool
     uiDistanceCalculationWithAccuracy: Maybe Int
     uiDistanceCalculationWithoutAccuracy: Maybe Int
     isFreeRide: Maybe Bool
+    estimatedTollCharges: Maybe HighPrecMoney
+    estimatedTollNames: Maybe [Text]
     tollCharges: Maybe HighPrecMoney
+    tollNames: Maybe [Text]
     driverGoHomeRequestId: Maybe (Id DriverGoHomeRequest)
     safetyAlertTriggered: Bool
     enableFrequentLocationUpdates: Maybe Bool

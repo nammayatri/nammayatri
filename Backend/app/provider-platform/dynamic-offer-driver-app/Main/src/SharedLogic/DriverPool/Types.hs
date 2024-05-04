@@ -146,6 +146,8 @@ data TripQuoteDetail = TripQuoteDetail
     baseFare :: Money,
     driverMinFee :: Maybe Money,
     driverMaxFee :: Maybe Money,
+    driverStepFee :: Maybe Money,
+    driverDefaultStepFee :: Maybe Money,
     driverPickUpCharge :: Maybe Money,
     estimateOrQuoteId :: Text
   }

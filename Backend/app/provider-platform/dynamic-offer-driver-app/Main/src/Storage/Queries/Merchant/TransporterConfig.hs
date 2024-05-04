@@ -237,7 +237,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.aadhaarImageResizeConfig = toJSON <$> aadhaarImageResizeConfig,
         BeamTC.enableFaceVerification = enableFaceVerification,
         BeamTC.isAvoidToll = isAvoidToll,
-        BeamTC.allowAutosOnTollRoute = allowAutosOnTollRoute,
         BeamTC.specialZoneBookingOtpExpiry = specialZoneBookingOtpExpiry,
         BeamTC.updateNotificationStatusBatchSize = updateNotificationStatusBatchSize,
         BeamTC.updateOrderStatusBatchSize = updateOrderStatusBatchSize,

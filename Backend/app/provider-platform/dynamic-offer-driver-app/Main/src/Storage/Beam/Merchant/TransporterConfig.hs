@@ -71,7 +71,6 @@ data TransporterConfigT f = TransporterConfigT
     automaticRCActivationCutOff :: B.C f Seconds,
     orderAndNotificationStatusCheckTime :: B.C f Seconds,
     isAvoidToll :: B.C f Bool,
-    allowAutosOnTollRoute :: B.C f Bool,
     timeDiffFromUtc :: B.C f Seconds,
     driverFeeOverlaySendingTimeLimitInDays :: B.C f Int,
     overlayBatchSize :: B.C f Int,

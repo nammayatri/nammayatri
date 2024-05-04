@@ -48,3 +48,11 @@ ALTER TABLE atlas_app.estimate ADD COLUMN vehicle_variant character varying(255)
 ALTER TABLE atlas_app.estimate ADD COLUMN waiting_charge_per_min double precision ;
 ALTER TABLE atlas_app.estimate ADD COLUMN waiting_charge_per_min_amount double precision ;
 ALTER TABLE atlas_app.estimate ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN toll_names text[] ;
+ALTER TABLE atlas_app.estimate ADD COLUMN toll_charges double precision ;
+ALTER TABLE atlas_app.estimate ADD COLUMN is_customer_preffered_search_route boolean ;
+ALTER TABLE atlas_app.estimate ADD COLUMN is_blocked_route boolean ;

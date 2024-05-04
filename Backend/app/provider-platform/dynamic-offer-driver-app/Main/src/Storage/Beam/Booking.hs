@@ -59,6 +59,7 @@ data BookingT f = BookingT
     riderName :: B.C f (Maybe Text),
     paymentUrl :: B.C f (Maybe Text),
     paymentMethodId :: B.C f (Maybe Text),
+    tollNames :: B.C f (Maybe [Text]),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     stopLocationId :: B.C f (Maybe Text),

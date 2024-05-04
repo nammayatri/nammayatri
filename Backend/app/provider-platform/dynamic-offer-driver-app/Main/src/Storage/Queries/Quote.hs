@@ -70,9 +70,6 @@ instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
         BeamQSZ.estimatedFinishTime = estimatedFinishTime,
         BeamQSZ.tripCategory = Just tripCategory,
         BeamQSZ.vehicleServiceTierName = vehicleServiceTierName,
-        BeamQSZ.driverMinFee = driverMinFee,
-        BeamQSZ.driverMaxFee = driverMaxFee,
-        BeamQSZ.driverPickUpCharge = driverPickUpCharge,
         BeamQSZ.distance = distance,
         BeamQSZ.createdAt = T.utcToLocalTime T.utc createdAt,
         BeamQSZ.updatedAt = T.utcToLocalTime T.utc updatedAt,
@@ -81,5 +78,8 @@ instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
         BeamQSZ.specialLocationTag = specialLocationTag,
         BeamQSZ.fareParametersId = getId fareParams.id,
         BeamQSZ.isScheduled = Just isScheduled,
+        BeamQSZ.isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
+        BeamQSZ.isBlockedRoute = isBlockedRoute,
+        BeamQSZ.tollNames = tollNames,
         BeamQSZ.farePolicyId = getId . (.id) <$> farePolicy
       }

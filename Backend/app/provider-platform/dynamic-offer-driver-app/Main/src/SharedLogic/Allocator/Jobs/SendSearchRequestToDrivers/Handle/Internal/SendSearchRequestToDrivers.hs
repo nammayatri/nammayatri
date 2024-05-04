@@ -101,7 +101,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
             else searchReq
     isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
     tripQuoteDetail <- HashMap.lookup dPoolRes.driverPoolResult.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dPoolRes.driverPoolResult.serviceTier)
-    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds (SDP.castServiceTierToVariant tripQuoteDetail.vehicleServiceTier) needTranslation isValueAddNP tripQuoteDetail.driverPickUpCharge
+    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP tripQuoteDetail.driverPickUpCharge
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
     notificationData <- Notify.buildSendSearchRequestNotificationData sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData Notify.EmptyDynamicParam
     Notify.sendSearchRequestToDriverNotification searchReq.providerId searchReq.merchantOperatingCityId notificationData
@@ -154,6 +154,8 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 response = Nothing,
                 driverMinExtraFee = tripQuoteDetail.driverMinFee,
                 driverMaxExtraFee = tripQuoteDetail.driverMaxFee,
+                driverStepFee = tripQuoteDetail.driverStepFee,
+                driverDefaultStepFee = tripQuoteDetail.driverDefaultStepFee,
                 rideRequestPopupDelayDuration = dpwRes.intelligentScores.rideRequestPopupDelayDuration,
                 baseFare = Just tripQuoteDetail.baseFare,
                 isPartOfIntelligentPool = dpwRes.isPartOfIntelligentPool,

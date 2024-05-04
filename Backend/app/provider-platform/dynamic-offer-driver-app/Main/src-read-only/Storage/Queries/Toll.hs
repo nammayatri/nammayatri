@@ -37,6 +37,7 @@ updateByPrimaryKey (Domain.Types.Toll.Toll {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.isAutoRickshawAllowed isAutoRickshawAllowed,
       Se.Set Beam.name name,
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
       Se.Set Beam.price ((.amount) price),
@@ -55,6 +56,7 @@ instance FromTType' Beam.Toll Domain.Types.Toll.Toll where
         Domain.Types.Toll.Toll
           { createdAt = createdAt,
             id = Kernel.Types.Id.Id id,
+            isAutoRickshawAllowed = isAutoRickshawAllowed,
             name = name,
             price = Kernel.Types.Common.mkPrice currency price,
             tollEndGates = tollEndGates,
@@ -69,6 +71,7 @@ instance ToTType' Beam.Toll Domain.Types.Toll.Toll where
     Beam.TollT
       { Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.isAutoRickshawAllowed = isAutoRickshawAllowed,
         Beam.name = name,
         Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
         Beam.price = (.amount) price,

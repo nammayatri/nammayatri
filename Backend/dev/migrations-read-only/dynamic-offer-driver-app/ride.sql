@@ -70,3 +70,12 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN client_config_version text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN client_bundle_version text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN backend_config_version text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN backend_app_version text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN toll_names text[] ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN number_of_self_tuned integer ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_toll_names text[] ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_toll_charges double precision ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN driver_deviated_to_toll_route boolean ;
