@@ -78,8 +78,11 @@ data Pricing = Pricing
     farePolicy :: Maybe Policy.FarePolicy,
     estimatedDistance :: Maybe Meters,
     specialLocationTag :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
     fulfillmentType :: Text,
-    distanceToNearestDriver :: Maybe Meters
+    distanceToNearestDriver :: Maybe Meters,
+    tollNames :: Maybe [Text]
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
@@ -952,11 +955,13 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       serviceTierDescription = serviceTier.shortDescription,
       vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = Nothing,
+      isCustomerPrefferedSearchRoute = Nothing,
+      isBlockedRoute = Nothing,
       ..
     }
 
-mkGeneralInfoTagGroup :: Pricing -> Maybe Spec.TagGroup
-mkGeneralInfoTagGroup pricing
+mkGeneralInfoTagGroup :: Pricing -> Bool -> Maybe Spec.TagGroup
+mkGeneralInfoTagGroup pricing isValueAddNP
   | isNothing pricing.specialLocationTag && isNothing pricing.distanceToNearestDriver = Nothing
   | otherwise =
     Just $
@@ -969,7 +974,12 @@ mkGeneralInfoTagGroup pricing
                   descriptorName = Just "Information",
                   descriptorShortDesc = Nothing
                 },
-          tagGroupList = specialLocationTagSingleton pricing.specialLocationTag <> distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
+          tagGroupList =
+            specialLocationTagSingleton pricing.specialLocationTag
+              <> distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
+              <> isCustomerPrefferedSearchRouteSingleton pricing.isCustomerPrefferedSearchRoute
+              <> isBlockedRouteSingleton pricing.isBlockedRoute
+              <> tollNamesSingleton pricing.tollNames
         }
   where
     specialLocationTagSingleton specialLocationTag
@@ -1001,6 +1011,51 @@ mkGeneralInfoTagGroup pricing
                       descriptorShortDesc = Nothing
                     },
               tagValue = show . double2Int . realToFrac <$> distanceToNearestDriver
+            }
+    isCustomerPrefferedSearchRouteSingleton isCustomerPrefferedSearchRoute
+      | isNothing isCustomerPrefferedSearchRoute || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE,
+                      descriptorName = Just "Is Customer Preffered Search Route",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> isCustomerPrefferedSearchRoute
+            }
+    isBlockedRouteSingleton isBlockedRoute
+      | isNothing isBlockedRoute || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.IS_BLOCKED_SEARCH_ROUTE,
+                      descriptorName = Just "Is Blocked Search Route",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> isBlockedRoute
+            }
+    tollNamesSingleton tollNames
+      | isNothing tollNames || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.TOLL_NAMES,
+                      descriptorName = Just "Toll Names",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> tollNames
             }
 
 mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]

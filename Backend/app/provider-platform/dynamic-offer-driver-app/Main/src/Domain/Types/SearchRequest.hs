@@ -47,6 +47,7 @@ data SearchRequest = SearchRequest
     disabilityTag :: Maybe Text,
     customerCancellationDues :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
+    tollNames :: Maybe [Text],
     isReallocationEnabled :: Maybe Bool,
     toLocation :: Maybe DLoc.Location,
     estimatedDistance :: Maybe Meters,
@@ -55,6 +56,8 @@ data SearchRequest = SearchRequest
     isScheduled :: Bool,
     driverDefaultExtraFee :: Maybe Money,
     pickupZoneGateId :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
     startTime :: UTCTime,
     createdAt :: UTCTime
   }

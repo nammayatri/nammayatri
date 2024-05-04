@@ -26,8 +26,10 @@ Estimate:
       fareParams: Maybe FareParameters|WithIdCreate
       farePolicy: Maybe FarePolicy|NoRelation
       specialLocationTag: Maybe Text
-      driverPickUpCharge: Maybe Money
       isScheduled: Bool
+      isCustomerPrefferedSearchRoute: Maybe Bool
+      isBlockedRoute: Maybe Bool
+      tollNames: Maybe [Text]
       createdAt: UTCTime
       updatedAt: UTCTime
 

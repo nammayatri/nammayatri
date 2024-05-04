@@ -50,6 +50,8 @@ instance FromTType' BeamDEFB.DriverExtraFeeBounds DFP.FullDriverExtraFeeBounds w
         ( KTI.Id farePolicyId,
           DFP.DriverExtraFeeBounds
             { startDistance = startDistance,
+              stepFee = stepFee,
+              defaultStepFee = defaultStepFee,
               minFee = minFee,
               maxFee = maxFee
             }
@@ -61,6 +63,8 @@ instance ToTType' BeamDEFB.DriverExtraFeeBounds DFP.FullDriverExtraFeeBounds whe
       { id = Nothing,
         farePolicyId = farePolicyId,
         startDistance = startDistance,
+        stepFee = stepFee,
+        defaultStepFee = defaultStepFee,
         minFee = minFee,
         maxFee = maxFee
       }

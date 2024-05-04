@@ -39,6 +39,8 @@ data Estimate = Estimate
     estimatedFare :: Kernel.Types.Common.Price,
     estimatedTotalFare :: Kernel.Types.Common.Price,
     id :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
+    isBlockedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isCustomerPrefferedSearchRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     itemId :: Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
@@ -53,6 +55,7 @@ data Estimate = Estimate
     serviceTierShortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Domain.Types.Estimate.EstimateStatus,
+    tollChargesInfo :: Kernel.Prelude.Maybe Domain.Types.Estimate.TollChargesInfo,
     totalFareRange :: Domain.Types.Estimate.FareRange,
     tripTerms :: Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms,
     updatedAt :: Kernel.Prelude.UTCTime,
@@ -70,9 +73,9 @@ data EstimateBreakup = EstimateBreakup
     price :: Domain.Types.Estimate.EstimateBreakupPrice,
     title :: Kernel.Prelude.Text
   }
-  deriving (Generic, Show, Kernel.Utils.GenericPretty.PrettyShow)
+  deriving (Generic, (Show), (Kernel.Utils.GenericPretty.PrettyShow))
 
-newtype EstimateBreakupPrice = EstimateBreakupPrice {value :: Kernel.Types.Common.Price} deriving (Generic, Show, Kernel.Utils.GenericPretty.PrettyShow)
+newtype EstimateBreakupPrice = EstimateBreakupPrice {value :: Kernel.Types.Common.Price} deriving (Generic, (Show), (Kernel.Utils.GenericPretty.PrettyShow))
 
 data EstimateStatus
   = NEW
@@ -81,9 +84,9 @@ data EstimateStatus
   | GOT_DRIVER_QUOTE
   | DRIVER_QUOTE_CANCELLED
   | COMPLETED
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
-data FareRange = FareRange {maxFare :: Kernel.Types.Common.Price, minFare :: Kernel.Types.Common.Price} deriving (Generic, Show, Kernel.Utils.GenericPretty.PrettyShow)
+data FareRange = FareRange {maxFare :: Kernel.Types.Common.Price, minFare :: Kernel.Types.Common.Price} deriving (Generic, (Show), (Kernel.Utils.GenericPretty.PrettyShow))
 
 data NightShiftInfo = NightShiftInfo
   { nightShiftCharge :: Kernel.Types.Common.Price,
@@ -91,10 +94,12 @@ data NightShiftInfo = NightShiftInfo
     nightShiftStart :: Kernel.Prelude.TimeOfDay,
     oldNightShiftCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
-data WaitingCharges = WaitingCharges {waitingChargePerMin :: Kernel.Prelude.Maybe Kernel.Types.Common.Price} deriving (Generic, Show)
+data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, (Show))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''EstimateStatus)
+data WaitingCharges = WaitingCharges {waitingChargePerMin :: Kernel.Prelude.Maybe Kernel.Types.Common.Price} deriving (Generic, (Show))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''EstimateStatus)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''EstimateStatus))
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''EstimateStatus))

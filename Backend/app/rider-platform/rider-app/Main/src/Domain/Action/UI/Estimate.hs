@@ -49,6 +49,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     estimateFareBreakup :: [EstimateBreakupAPIEntity],
     nightShiftRate :: Maybe NightShiftRateAPIEntity, -- TODO: doesn't make sense, to be removed
     nightShiftInfo :: Maybe NightShiftInfoAPIEntity,
+    tollChargesInfo :: Maybe TollChargesInfoAPIEntity,
     waitingCharges :: WaitingChargesAPIEntity,
     driversLatLong :: [LatLong],
     specialLocationTag :: Maybe Text,
@@ -58,6 +59,8 @@ data EstimateAPIEntity = EstimateAPIEntity
     providerDescription :: Maybe Text,
     providerId :: Text,
     isValueAddNP :: Bool,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
     validTill :: UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -103,6 +106,7 @@ mkEstimateAPIEntity Estimate {..} = do
         estimatedTotalFareWithCurrency = mkPriceAPIEntity estimatedTotalFare,
         discountWithCurrency = mkPriceAPIEntity <$> discount,
         nightShiftInfo = mkNightShiftInfoAPIEntity <$> nightShiftInfo,
+        tollChargesInfo = mkTollChargesInfoAPIEntity <$> tollChargesInfo,
         waitingCharges = mkWaitingChargesAPIEntity waitingCharges,
         totalFareRange = mkFareRangeAPIEntity totalFareRange,
         vehicleVariant = DVST.castServiceTierToVariant vehicleServiceTierType,
@@ -126,6 +130,17 @@ mkEstimateBreakupAPIEntity EstimateBreakup {..} = do
       price = price.value.amountInt,
       priceWithCurrency = mkPriceAPIEntity price.value
     }
+
+data TollChargesInfoAPIEntity = TollChargesInfoAPIEntity
+  { tollChargesWithCurrency :: PriceAPIEntity,
+    tollNames :: [Text]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+mkTollChargesInfoAPIEntity :: TollChargesInfo -> TollChargesInfoAPIEntity
+mkTollChargesInfoAPIEntity TollChargesInfo {..} = do
+  let tollChargesWithCurrency = mkPriceAPIEntity tollCharges
+  TollChargesInfoAPIEntity {..}
 
 data NightShiftInfoAPIEntity = NightShiftInfoAPIEntity
   { nightShiftCharge :: Money,

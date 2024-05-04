@@ -31,9 +31,6 @@ data Quote = Quote
     providerId :: Id DMerchant.Merchant,
     vehicleServiceTier :: DVST.ServiceTierType,
     vehicleServiceTierName :: Maybe Text,
-    driverMinFee :: Maybe Money,
-    driverMaxFee :: Maybe Money,
-    driverPickUpCharge :: Maybe Money,
     estimatedFinishTime :: Maybe UTCTime,
     tripCategory :: DTC.TripCategory,
     validTill :: UTCTime,
@@ -43,6 +40,9 @@ data Quote = Quote
     fareParams :: Params.FareParameters,
     farePolicy :: Maybe Policy.FarePolicy,
     isScheduled :: Bool,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
+    tollNames :: Maybe [Text],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

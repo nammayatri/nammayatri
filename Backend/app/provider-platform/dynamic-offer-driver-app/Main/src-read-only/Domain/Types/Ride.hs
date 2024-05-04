@@ -36,11 +36,14 @@ data Ride = Ride
     distanceCalculationFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverDeviatedFromRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    driverDeviatedToTollRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverGoHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest.DriverGoHomeRequest),
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     enableFrequentLocationUpdates :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     endOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
     endOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    estimatedTollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    estimatedTollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     fare :: Kernel.Prelude.Maybe Kernel.Types.Common.Money,
     fareParametersId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FareParameters.FareParameters),
     fromLocation :: Domain.Types.Location.Location,
@@ -50,6 +53,7 @@ data Ride = Ride
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
     numberOfDeviation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     numberOfOsrmSnapToRoadCalls :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    numberOfSelfTuned :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     numberOfSnapToRoadCalls :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     otp :: Kernel.Prelude.Text,
     pickupDropOutsideOfThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -60,6 +64,7 @@ data Ride = Ride
     status :: Domain.Types.Ride.RideStatus,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     trackingUrl :: Kernel.Types.Common.BaseUrl,
     traveledDistance :: Kernel.Types.Common.HighPrecMeters,
     tripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
@@ -81,8 +86,8 @@ data RideEndedBy = Driver | Dashboard | CallBased | CronJob deriving (Eq, Ord, S
 
 data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
 
-$(mkHttpInstancesForEnum ''RideStatus)
+$(mkHttpInstancesForEnum (''RideStatus))

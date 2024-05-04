@@ -11,3 +11,13 @@ ALTER TABLE atlas_driver_offer_bpp.toll ADD COLUMN updated_at timestamp with tim
 ALTER TABLE atlas_driver_offer_bpp.toll ADD COLUMN merchant_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.toll ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.toll ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.toll ADD COLUMN is_auto_rickshaw_allowed boolean NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN is_auto_rickshaw_allowed SET DEFAULT false;

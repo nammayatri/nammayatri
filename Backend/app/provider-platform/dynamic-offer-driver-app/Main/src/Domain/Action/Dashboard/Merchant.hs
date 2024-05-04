@@ -781,7 +781,9 @@ createFPDriverExtraFee _ _ farePolicyId startDistance req = do
             DFPEFB.DriverExtraFeeBounds
               { startDistance = strtDistance,
                 minFee = request.minFee,
-                maxFee = request.maxFee
+                maxFee = request.maxFee,
+                stepFee = request.stepFee,
+                defaultStepFee = request.defaultStepFee
               }
       return (fpId, driverExtraFeeBounds)
 

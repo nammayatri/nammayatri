@@ -28,6 +28,15 @@ mkNightShiftInfo nightShiftCharge nightShiftChargeAmount nightShiftEnd nightShif
           nightShiftEnd = nightShiftEnd'
         }
 
+mkTollChargesInfo :: (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Domain.Types.Estimate.TollChargesInfo)
+mkTollChargesInfo tollCharges tollNames currency =
+  ((,) <$> tollCharges <*> tollNames)
+    <&> \(tollCharges', tollNames') ->
+      DE.TollChargesInfo
+        { tollCharges = mkPriceWithDefault (Just tollCharges') currency (round tollCharges' :: Money),
+          tollNames = tollNames'
+        }
+
 mkFareRange :: (Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Common.HighPrecMoney -> Domain.Types.Estimate.FareRange)
 mkFareRange currency maxTotalFare minTotalFare =
   DE.FareRange
