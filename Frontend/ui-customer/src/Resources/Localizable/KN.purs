@@ -1113,3 +1113,4 @@ getKN stringKey =
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "ಕೆಳಗಿನ 6 ಅಂಕಿಗಳ ರೆಫರಲ್ ಕೋಡ್ ನಮೂದಿಸಿ"
         APPLY -> "ಅನ್ವಯಿಸು"
         TOLL_CHARGES_INCLUDED -> "ಟೋಲ್ ಶುಲ್ಕಗಳು ಸೇರಿವೆ"
+        ONE_CLICK_BOOKINGS -> "ಒಂದು ಕ್ಲಿಕ್ ಬುಕ್ಕಿಂಗ್‌ಗಳು"

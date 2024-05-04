@@ -1114,3 +1114,4 @@ getML stringKey =
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "താഴെ 6 അക്കം റെഫറൽ കോഡ് നൽകുക"
         APPLY -> "അപേക്ഷിക്കുക"
         TOLL_CHARGES_INCLUDED -> "ടോൾ ചാർജുകൾ ഉൾപ്പെടുത്തിയിട്ടുണ്ട്"
+        ONE_CLICK_BOOKINGS -> "ഒരു ക്ലിക്ക് ബുക്കിംഗുകൾ"
