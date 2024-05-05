@@ -9,6 +9,7 @@ import qualified Domain.Action.UI.DriverOnboardingV2 as Domain.Action.UI.DriverO
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.ServiceTierType
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -24,6 +25,15 @@ type API =
       :> Get
            '[JSON]
            API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
+      :<|> TokenAuth
+      :> "driver"
+      :> Capture
+           "vehicleServiceTier"
+           Domain.Types.ServiceTierType.ServiceTierType
+      :> "rateCard"
+      :> Get
+           '[JSON]
+           [API.Types.UI.DriverOnboardingV2.RateCardItem]
       :<|> TokenAuth
       :> "driver"
       :> "updateAirCondition"
@@ -51,7 +61,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers
+handler = getOnboardingConfigs :<|> getDriverRateCard :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -62,6 +72,16 @@ getOnboardingConfigs ::
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
   )
 getOnboardingConfigs a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getOnboardingConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getDriverRateCard ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Domain.Types.ServiceTierType.ServiceTierType ->
+    Environment.FlowHandler [API.Types.UI.DriverOnboardingV2.RateCardItem]
+  )
+getDriverRateCard a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRateCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postDriverUpdateAirCondition ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
