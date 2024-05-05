@@ -7,6 +7,7 @@ import qualified API.Types.UI.DriverOnboardingV2
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.DocumentVerificationConfig
 import Domain.Types.DriverInformation
+import Domain.Types.DriverSSN
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -16,6 +17,8 @@ import Domain.Types.VehicleServiceTier
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
+import Kernel.External.Encryption (encrypt)
 import Kernel.External.Types (Language (..))
 import qualified Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -28,6 +31,7 @@ import SharedLogic.VehicleServiceTier
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverSSN as QDriverSSN
 import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -188,3 +192,25 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchanOperatingCityId) API.Types.U
     QDI.updateRentalAndInterCitySwitch canSwitchToRental' canSwitchToInterCity' personId
 
   return Success
+
+postDriverRegisterSsn ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.SSNReq ->
+    Environment.Flow APISuccess
+  )
+postDriverRegisterSsn (mbPersonId, _, _) API.Types.UI.DriverOnboardingV2.SSNReq {..} = do
+  ssn' <- encrypt ssn
+  id' <- generateGUID
+  driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  QDriverSSN.create (buildDriverSSN id' ssn' driverId)
+  return Success
+  where
+    buildDriverSSN id' ssn' driverId' =
+      Domain.Types.DriverSSN.DriverSSN
+        { id = id',
+          driverId = driverId',
+          ssn = ssn'
+        }

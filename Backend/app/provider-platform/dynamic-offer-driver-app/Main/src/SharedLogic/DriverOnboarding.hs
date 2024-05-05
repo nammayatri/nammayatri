@@ -320,6 +320,8 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       vehicleCapacity = input.seatingCapacity,
       vehicleModel = mbVehicleModel,
       vehicleColor = input.color,
+      vehicleDoors = Nothing,
+      vehicleSeatBelts = Nothing,
       manufacturerModel = input.manufacturerModel,
       vehicleEnergyType = input.fuelType,
       reviewedAt = Nothing,

@@ -21,6 +21,7 @@ import Domain.Types.Location (DummyLocationInfo)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.Vehicle as Vehicle
+import qualified Email.Types
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (Language)
@@ -183,7 +184,8 @@ data TransporterConfigD u = TransporterConfig
     considerDriversForSearch :: Bool,
     dlNumberVerification :: Maybe Bool,
     pastDaysRideCounter :: Int,
-    placeNameCacheExpiryDays :: Maybe Int
+    placeNameCacheExpiryDays :: Maybe Int,
+    emailOtpConfig :: Maybe Email.Types.EmailOTPConfig
   }
   deriving (Generic, Show)
 

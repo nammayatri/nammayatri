@@ -19,6 +19,7 @@ data RiderConfigT f = RiderConfigT
     collectAutoCompleteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     collectMMIRouteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     distanceWeightage :: B.C f Kernel.Prelude.Int,
+    emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     enableEmergencyContactAddedMessage :: B.C f Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: B.C f Kernel.Prelude.Bool,
     enableSupportForSafety :: B.C f Kernel.Prelude.Bool,

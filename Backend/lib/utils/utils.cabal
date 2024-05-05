@@ -90,6 +90,7 @@ library
     , geohash ==1.0.1
     , hspec
     , http-client
+    , http-conduit
     , http-types
     , lens
     , location-updates

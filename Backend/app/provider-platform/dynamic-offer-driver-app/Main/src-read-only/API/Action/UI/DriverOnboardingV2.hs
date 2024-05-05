@@ -48,10 +48,20 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "driver"
+      :> "register"
+      :> "ssn"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.SSNReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers
+handler = getOnboardingConfigs :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -91,3 +101,13 @@ postDriverUpdateServiceTiers ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postDriverUpdateServiceTiers a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverUpdateServiceTiers (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postDriverRegisterSsn ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.SSNReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postDriverRegisterSsn a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterSsn (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

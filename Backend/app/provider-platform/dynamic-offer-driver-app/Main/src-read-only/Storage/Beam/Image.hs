@@ -14,16 +14,16 @@ import Tools.Beam.UtilsTH
 import qualified Tools.Error
 
 data ImageT f = ImageT
-  { failureReason :: B.C f (Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError),
-    id :: B.C f Kernel.Prelude.Text,
-    imageType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
-    isValid :: B.C f Kernel.Prelude.Bool,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    personId :: B.C f Kernel.Prelude.Text,
-    rcId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    s3Path :: B.C f Kernel.Prelude.Text,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { failureReason :: (B.C f (Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError)),
+    id :: (B.C f Kernel.Prelude.Text),
+    imageType :: (B.C f Domain.Types.DocumentVerificationConfig.DocumentType),
+    isValid :: (B.C f Kernel.Prelude.Bool),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    personId :: (B.C f Kernel.Prelude.Text),
+    rcId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    s3Path :: (B.C f Kernel.Prelude.Text),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +33,6 @@ instance B.Table ImageT where
 
 type Image = ImageT Identity
 
-$(enableKVPG ''ImageT ['id] [['personId]])
+$(enableKVPG (''ImageT) [('id)] [[('personId)]])
 
-$(mkTableInstances ''ImageT "image")
+$(mkTableInstances (''ImageT) "image")

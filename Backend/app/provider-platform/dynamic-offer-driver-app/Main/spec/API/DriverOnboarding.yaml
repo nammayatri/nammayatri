@@ -22,10 +22,10 @@ types:
     isDisabled: Bool
     disableWarning: Maybe Text
     isHidden: Bool
-    dependencyDocumentType: '[DocumentType]'
+    dependencyDocumentType: "[DocumentType]"
     checkExtraction: Bool
     checkExpiry: Bool
-    rcNumberPrefixList: '[Text]'
+    rcNumberPrefixList: "[Text]"
   UpdateAirConditionUpdateRequest:
     recordType: NewType
     isAirConditioned: Bool
@@ -35,9 +35,9 @@ types:
     canSwitchToInterCity: Maybe Bool
     airConditioned: Maybe AirConditionedTier
   AirConditionedTier:
-      isWorking: Bool
-      usageRestrictionType: AirConditionedRestrictionType
-      restrictionMessage: Maybe Text
+    isWorking: Bool
+    usageRestrictionType: AirConditionedRestrictionType
+    restrictionMessage: Maybe Text
   DriverVehicleServiceTier:
     serviceTierType: ServiceTierType
     name: Text
@@ -51,6 +51,8 @@ types:
     vehicleRating: Maybe Double
     isDefault: Bool
     isSelected: Bool
+  SSNReq:
+    ssn: Text
 
 apis:
   - GET:
@@ -77,5 +79,12 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: DriverVehicleServiceTiers
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /driver/register/ssn
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: SSNReq
       response:
         type: APISuccess

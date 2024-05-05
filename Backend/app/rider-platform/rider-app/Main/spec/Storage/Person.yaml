@@ -5,7 +5,7 @@ imports:
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
   Centesimal: Kernel.Types.Common
-  Version : Kernel.Types.Version
+  Version: Kernel.Types.Version
   OptApiMethods: Kernel.External.Whatsapp.Interface.Types
   MerchantConfig: Domain.Types.MerchantConfig
   Language: Kernel.External.Maps
@@ -23,7 +23,7 @@ Person:
 
     IdentifierType:
       enum: "MOBILENUMBER, AADHAAR, EMAIL"
-      derive': "Show, Eq, Read, Ord, Generic, ToJSON, FromJSON,ToParamSchema"
+      derive': "Show, Eq, Read, Ord, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
     Gender:
       enum: "MALE, FEMALE, OTHER, UNKNOWN, PREFER_NOT_TO_SAY"
@@ -34,62 +34,62 @@ Person:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   fields:
-    id : Id Person
-    firstName : Maybe Text
-    middleName : Maybe Text
-    lastName : Maybe Text
-    role : Role
-    gender : Gender
-    identifierType : IdentifierType
-    email : Maybe (EncryptedHashedField e Text)
-    unencryptedMobileNumber : Maybe Text
-    mobileNumber : Maybe (EncryptedHashedField e Text)
-    mobileCountryCode : Maybe Text
-    passwordHash : Maybe DbHash
-    identifier : Maybe Text
-    rating : Maybe Centesimal
-    totalRatings : Int
-    totalRatingScore : Int
-    isValidRating : Bool
-    language : Maybe Language
-    isNew : Bool
-    enabled : Bool
-    blocked : Bool
-    deviceToken : Maybe Text
-    notificationToken : Maybe Text
-    description : Maybe Text
-    merchantId : Id Merchant
-    currentCity : City
-    merchantOperatingCityId : Id MerchantOperatingCity
-    whatsappNotificationEnrollStatus : Maybe OptApiMethods
-    referralCode : Maybe Text
-    referredAt : Maybe UTCTime
-    hasTakenValidRide : Bool
-    hasDisability : Maybe Bool
-    blockedAt : Maybe UTCTime
-    blockedByRuleId : Maybe (Id MerchantConfig)
-    aadhaarVerified : Bool
-    createdAt : UTCTime
-    updatedAt : UTCTime
-    shareEmergencyContacts : Bool
-    nightSafetyChecks : Bool
-    shareTripWithEmergencyContactOption : Maybe RideShareOptions
-    hasCompletedMockSafetyDrill : Maybe Bool
-    hasCompletedSafetySetup : Bool
-    registrationLat : Maybe Double
-    registrationLon : Maybe Double
-    useFakeOtp : Maybe Text
-    followsRide : Bool
-    falseSafetyAlarmCount : Int
-    safetyCenterDisabledOnDate : Maybe UTCTime
+    id: Id Person
+    firstName: Maybe Text
+    middleName: Maybe Text
+    lastName: Maybe Text
+    role: Role
+    gender: Gender
+    identifierType: IdentifierType
+    email: Maybe (EncryptedHashedField e Text)
+    unencryptedMobileNumber: Maybe Text
+    mobileNumber: Maybe (EncryptedHashedField e Text)
+    mobileCountryCode: Maybe Text
+    passwordHash: Maybe DbHash
+    identifier: Maybe Text
+    rating: Maybe Centesimal
+    totalRatings: Int
+    totalRatingScore: Int
+    isValidRating: Bool
+    language: Maybe Language
+    isNew: Bool
+    enabled: Bool
+    blocked: Bool
+    deviceToken: Maybe Text
+    notificationToken: Maybe Text
+    description: Maybe Text
+    merchantId: Id Merchant
+    currentCity: City
+    merchantOperatingCityId: Id MerchantOperatingCity
+    whatsappNotificationEnrollStatus: Maybe OptApiMethods
+    referralCode: Maybe Text
+    referredAt: Maybe UTCTime
+    hasTakenValidRide: Bool
+    hasDisability: Maybe Bool
+    blockedAt: Maybe UTCTime
+    blockedByRuleId: Maybe (Id MerchantConfig)
+    aadhaarVerified: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    shareEmergencyContacts: Bool
+    nightSafetyChecks: Bool
+    shareTripWithEmergencyContactOption: Maybe RideShareOptions
+    hasCompletedMockSafetyDrill: Maybe Bool
+    hasCompletedSafetySetup: Bool
+    registrationLat: Maybe Double
+    registrationLon: Maybe Double
+    useFakeOtp: Maybe Text
+    followsRide: Bool
+    falseSafetyAlarmCount: Int
+    safetyCenterDisabledOnDate: Maybe UTCTime
     referredByCustomer: Maybe Text
     customerReferralCode: Maybe Text
-    clientSdkVersion : Maybe Version
-    clientBundleVersion : Maybe Version
-    clientConfigVersion : Maybe Version
-    clientDevice : Maybe Device
-    backendAppVersion : Maybe Text
-    blockedCount : Maybe Int
+    clientSdkVersion: Maybe Version
+    clientBundleVersion: Maybe Version
+    clientConfigVersion: Maybe Version
+    clientDevice: Maybe Device
+    backendAppVersion: Maybe Text
+    blockedCount: Maybe Int
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -113,7 +113,7 @@ Person:
       emailHash: Maybe DbHash
     rating: {}
   intermediateTransformers:
-      fromTType:
+    fromTType:
       - updateMerchantOpIdAndCity: Storage.Queries.Transformers.Person.backfillCityAndMOCId currentCity merchantOperatingCityId merchantId|EM
   beamType:
     currentCity: Maybe City
@@ -125,7 +125,6 @@ Person:
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
     clientOsVersion: Maybe Text
-
 
   fromTType:
     merchantOperatingCityId: Kernel.Prelude.fst updateMerchantOpIdAndCity|E
@@ -139,8 +138,7 @@ Person:
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
-    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
-
+    clientDevice: (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
 
   toTType:
     blockedAt: (Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt)|E
@@ -155,8 +153,8 @@ Person:
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
-    clientOsType:  (clientDevice <&> (.deviceType))|E
+    clientOsVersion: (clientDevice <&> (.deviceVersion))|E
+    clientOsType: (clientDevice <&> (.deviceType))|E
 
   constraints:
     id: PrimaryKey
@@ -201,9 +199,6 @@ Person:
     totalRatings: "0"
     enabled: "true"
     merchantId: "'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51'"
-
-
-
 
   queries:
     findById:
@@ -281,4 +276,3 @@ Person:
     - EXTRA_QUERY_FILE
 
   excludedFields: [merchantOperatingCityId]
-

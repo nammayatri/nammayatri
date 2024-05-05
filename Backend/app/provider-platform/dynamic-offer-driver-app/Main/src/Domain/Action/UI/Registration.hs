@@ -23,10 +23,11 @@ module Domain.Action.UI.Registration
     resend,
     logout,
     cleanCachedTokens,
+    createDriverWithDetails,
   )
 where
 
-import Data.OpenApi hiding (info, url)
+import Data.OpenApi hiding (email, info, name, url)
 import Domain.Action.UI.DriverReferral
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
@@ -34,6 +35,8 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.TransporterConfig as TC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
+import qualified Email.AWS.Flow as Email
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
@@ -72,10 +75,13 @@ import Tools.SMS as Sms hiding (Success)
 import Tools.Whatsapp as Whatsapp
 
 data AuthReq = AuthReq
-  { mobileNumber :: Text,
-    mobileCountryCode :: Text,
+  { mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text,
     merchantId :: Text,
     merchantOperatingCity :: Maybe Context.City,
+    email :: Maybe Text,
+    name :: Maybe Text,
+    identifierType :: Maybe SP.IdentifierType,
     registrationLat :: Maybe Double,
     registrationLon :: Maybe Double
   }
@@ -84,8 +90,8 @@ data AuthReq = AuthReq
 validateInitiateLoginReq :: Validate AuthReq
 validateInitiateLoginReq AuthReq {..} =
   sequenceA_
-    [ validateField "mobileNumber" mobileNumber P.mobileNumber,
-      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+    [ whenJust mobileNumber $ \justMobileNumber -> validateField "mobileNumber" justMobileNumber P.mobileNumber,
+      whenJust mobileCountryCode $ \countryCode -> validateField "mobileCountryCode" countryCode P.mobileCountryCode
     ]
 
 data AuthRes = AuthRes
@@ -134,21 +140,36 @@ auth ::
   Maybe Text ->
   m AuthRes
 auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
-  let req = if req'.merchantId == "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" then req' {merchantId = "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f", merchantOperatingCity = Just City.Kochi} else req' ---   "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID  , "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
+  let req = if req'.merchantId == "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" then req' {merchantId = "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f", merchantOperatingCity = Just City.Kochi} :: AuthReq else req' ---   "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID  , "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
   deploymentVersion <- asks (.version)
   runRequestValidation validateInitiateLoginReq req
+  let identifierType = fromMaybe SP.MOBILENUMBER req'.identifierType
+
   smsCfg <- asks (.smsCfg)
-  let mobileNumber = req.mobileNumber
-      countryCode = req.mobileCountryCode
-  mobileNumberHash <- getDbHash mobileNumber
   let merchantId = Id req.merchantId :: Id DO.Merchant
   merchant <-
     QMerchant.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req.merchantOperatingCity
-  person <-
-    QP.findByMobileNumberAndMerchant countryCode mobileNumberHash merchant.id
-      >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
+
+  (person, otpChannel) <-
+    case identifierType of
+      SP.MOBILENUMBER -> do
+        countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
+        mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
+        mobileNumberHash <- getDbHash mobileNumber
+        person <-
+          QP.findByMobileNumberAndMerchant countryCode mobileNumberHash merchant.id
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
+        return (person, SP.MOBILENUMBER)
+      SP.EMAIL -> do
+        email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
+        person <-
+          QP.findByEmailAndMerchant merchant.id email
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
+        return (person, SP.EMAIL)
+      SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
@@ -160,17 +181,28 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDe
   whenNothing_ useFakeOtpM $ do
     let otpHash = smsCfg.credConfig.otpHash
     let otpCode = SR.authValueHash token
-        phoneNumber = countryCode <> mobileNumber
-        sender = smsCfg.sender
-    withLogTag ("personId_" <> getId person.id) $ do
-      message <-
-        MessageBuilder.buildSendOTPMessage merchantOpCityId $
-          MessageBuilder.BuildSendOTPMessageReq
-            { otp = otpCode,
-              hash = otpHash
-            }
-      Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
-        >>= Sms.checkSmsResult
+    case otpChannel of
+      SP.MOBILENUMBER -> do
+        countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
+        mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
+        let phoneNumber = countryCode <> mobileNumber
+            sender = smsCfg.sender
+        withLogTag ("personId_" <> getId person.id) $ do
+          message <-
+            MessageBuilder.buildSendOTPMessage merchantOpCityId $
+              MessageBuilder.BuildSendOTPMessageReq
+                { otp = otpCode,
+                  hash = otpHash
+                }
+          Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
+            >>= Sms.checkSmsResult
+      SP.EMAIL -> do
+        receiverEmail <- req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
+        transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+        emailOTPConfig <- transporterConfig.emailOtpConfig & fromMaybeM (TransporterConfigNotFound $ "merchantOperatingCityId:- " <> merchantOpCityId.getId)
+        L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
+      SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+
   let attempts = SR.attempts token
       authId = SR.id token
   return $ AuthRes {attempts, authId}
@@ -229,24 +261,37 @@ makePerson :: EncFlow m r => AuthReq -> TC.TransporterConfig -> Maybe Version ->
 makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOperatingCityId isDashboard = do
   pid <- BC.generateGUID
   now <- getCurrentTime
-  let useFakeOtp = if req.mobileNumber `elem` transporterConfig.fakeOtpMobileNumbers then Just "7891" else Nothing
-  encMobNum <- encrypt req.mobileNumber
+  let identifierType = fromMaybe SP.MOBILENUMBER req.identifierType
+  (email, encMobNum, useFakeOtp) <-
+    case identifierType of
+      SP.MOBILENUMBER -> do
+        case (req.mobileNumber, req.mobileCountryCode) of
+          (Just mn, Just _) -> do
+            let useFakeOtp = if mn `elem` transporterConfig.fakeOtpMobileNumbers then Just "7891" else Nothing
+            encMobNum <- encrypt mn
+            return (Nothing, Just encMobNum, useFakeOtp)
+          (_, _) -> throwError $ InvalidRequest "phone number and country code required"
+      SP.EMAIL -> do
+        case req.email of
+          Just email -> pure (Just email, Nothing, Nothing)
+          Nothing -> throwError $ InvalidRequest "Email is required"
+      SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
   return $
     SP.Person
       { id = pid,
-        firstName = "Driver",
+        firstName = fromMaybe "Driver" req.name,
         middleName = Nothing,
         lastName = Nothing,
         role = SP.DRIVER,
         gender = SP.UNKNOWN,
         hometown = Nothing,
         languagesSpoken = Nothing,
-        identifierType = SP.MOBILENUMBER,
-        email = Nothing,
+        identifierType = identifierType,
+        email = email,
         passwordHash = Nothing,
-        unencryptedMobileNumber = Just req.mobileNumber,
-        mobileNumber = Just encMobNum,
-        mobileCountryCode = Just $ req.mobileCountryCode,
+        unencryptedMobileNumber = req.mobileNumber,
+        mobileNumber = encMobNum,
+        mobileCountryCode = req.mobileCountryCode,
         identifier = Nothing,
         rating = Nothing,
         merchantId = merchantId,

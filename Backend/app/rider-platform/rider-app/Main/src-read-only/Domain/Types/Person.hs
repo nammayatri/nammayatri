@@ -220,7 +220,7 @@ instance EncryptedItem' Person where
 
 data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, Eq, Read, Ord, Generic, ToJSON, FromJSON, ToParamSchema)
+data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, Eq, Read, Ord, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data RideShareOptions = ALWAYS_SHARE | SHARE_WITH_TIME_CONSTRAINTS | NEVER_SHARE deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

@@ -12,6 +12,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Text
 import qualified Sequelize as Se
 import qualified Storage.Beam.RiderConfig as Beam
 
@@ -39,6 +40,7 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
       Se.Set Beam.collectAutoCompleteData collectAutoCompleteData,
       Se.Set Beam.collectMMIRouteData collectMMIRouteData,
       Se.Set Beam.distanceWeightage distanceWeightage,
+      Se.Set Beam.emailOtpConfig (Just $ Kernel.Utils.Text.encodeToText emailOtpConfig),
       Se.Set Beam.enableEmergencyContactAddedMessage enableEmergencyContactAddedMessage,
       Se.Set Beam.enableLocalPoliceSupport enableLocalPoliceSupport,
       Se.Set Beam.enableSupportForSafety enableSupportForSafety,
@@ -68,6 +70,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             collectAutoCompleteData = collectAutoCompleteData,
             collectMMIRouteData = collectMMIRouteData,
             distanceWeightage = distanceWeightage,
+            emailOtpConfig = Kernel.Utils.Text.decodeFromText =<< emailOtpConfig,
             enableEmergencyContactAddedMessage = enableEmergencyContactAddedMessage,
             enableLocalPoliceSupport = enableLocalPoliceSupport,
             enableSupportForSafety = enableSupportForSafety,
@@ -95,6 +98,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Beam.collectAutoCompleteData = collectAutoCompleteData,
         Beam.collectMMIRouteData = collectMMIRouteData,
         Beam.distanceWeightage = distanceWeightage,
+        Beam.emailOtpConfig = Just $ Kernel.Utils.Text.encodeToText emailOtpConfig,
         Beam.enableEmergencyContactAddedMessage = enableEmergencyContactAddedMessage,
         Beam.enableLocalPoliceSupport = enableLocalPoliceSupport,
         Beam.enableSupportForSafety = enableSupportForSafety,

@@ -39,10 +39,10 @@ import Tools.Error
 findByPId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person))
 findByPId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is BeamP.id $ Se.Eq id]
 
-findByEmail :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Text -> m (Maybe Person)
-findByEmail email_ = do
+findByEmailAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Merchant -> Text -> m (Maybe Person)
+findByEmailAndMerchantId (Id merchantId) email_ = do
   emailDbHash <- getDbHash email_
-  findOneWithKV [Se.Is BeamP.emailHash $ Se.Eq (Just emailDbHash)]
+  findOneWithKV [Se.And [Se.Is BeamP.emailHash $ Se.Eq (Just emailDbHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
 findByMobileNumberAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByMobileNumberAndMerchantId countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]

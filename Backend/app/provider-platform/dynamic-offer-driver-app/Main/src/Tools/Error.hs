@@ -1025,6 +1025,25 @@ instance IsHTTPError LmsError where
 
 instance IsAPIError LmsError
 
+------------ OAuth Errors ------------
+
+data OAuthError = FailedToVerifyIdToken Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''OAuthError
+
+instance IsBaseError OAuthError where
+  toMessage = \case
+    FailedToVerifyIdToken provider -> Just $ "Failed to verify identity token with " <> show provider
+
+instance IsHTTPError OAuthError where
+  toErrorCode = \case
+    FailedToVerifyIdToken provider -> "OAUTH_ERROR_" <> provider
+  toHttpCode = \case
+    FailedToVerifyIdToken _ -> E401
+
+instance IsAPIError OAuthError
+
 ------------------ CAC ---------------------
 -- This is for temporary implementation of the CAC auth API. This will be depcricated once we have SSO for CAC.
 data CacAuthError = CacAuthError | CacInvalidToken

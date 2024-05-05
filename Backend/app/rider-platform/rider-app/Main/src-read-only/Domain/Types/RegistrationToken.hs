@@ -28,9 +28,9 @@ data RegistrationToken = RegistrationToken
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data LoginType = OTP | PASSWORD | DIRECT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data LoginType = OTP | PASSWORD | DIRECT | OAUTH deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data Medium = SMS | EMAIL | SIGNATURE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data Medium = SMS | WHATSAPP | EMAIL | SIGNATURE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data RTEntityType = CUSTOMER | USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

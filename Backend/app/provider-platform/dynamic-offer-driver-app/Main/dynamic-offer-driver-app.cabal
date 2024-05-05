@@ -204,8 +204,10 @@ library
       Domain.Action.UI.RideSummary
       Domain.Action.UI.Route
       Domain.Action.UI.SafetyWebhook
+      Domain.Action.UI.SocialLogin
       Domain.Action.UI.SpecialLocation
       Domain.Action.UI.Transporter
+      Domain.Action.UI.VehicleDetails
       Domain.Action.UI.Whatsapp
       Domain.Types.Beckn.Status
       Domain.Types.BlackListOrg
@@ -456,6 +458,7 @@ library
       Storage.CachedQueries.SubscriptionConfig
       Storage.CachedQueries.Toll
       Storage.CachedQueries.ValueAddNP
+      Storage.CachedQueries.VehicleDetails
       Storage.CachedQueries.VehicleServiceTier
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.DriverEdaKafka
@@ -557,6 +560,7 @@ library
       Storage.Queries.Transformers.Ride
       Storage.Queries.TranslationsExtra
       Storage.Queries.Vehicle.Internal
+      Storage.Queries.VehicleDetailsExtra
       Storage.Queries.VehicleExtra
       Storage.Queries.VehicleRegistrationCertificateExtra
       Storage.Queries.WhiteListOrg
@@ -584,10 +588,14 @@ library
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.LmsModule
       API.Action.UI.Reels
+      API.Action.UI.SocialLogin
       API.Action.UI.SpecialLocation
+      API.Action.UI.VehicleDetails
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.LmsModule
       API.Types.UI.Reels
+      API.Types.UI.SocialLogin
+      API.Types.UI.VehicleDetails
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
       Domain.Types.AadhaarVerification
@@ -603,6 +611,7 @@ library
       Domain.Types.DriverPoolConfig
       Domain.Types.DriverRCAssociation
       Domain.Types.DriverReferral
+      Domain.Types.DriverSSN
       Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.IdfyVerification
@@ -626,6 +635,7 @@ library
       Domain.Types.Translations
       Domain.Types.ValueAddNP
       Domain.Types.Vehicle
+      Domain.Types.VehicleDetails
       Domain.Types.VehicleFitnessCertificate
       Domain.Types.VehicleInsurance
       Domain.Types.VehiclePermit
@@ -648,6 +658,7 @@ library
       Storage.Beam.DriverPoolConfig
       Storage.Beam.DriverRCAssociation
       Storage.Beam.DriverReferral
+      Storage.Beam.DriverSSN
       Storage.Beam.Estimate
       Storage.Beam.Exophone
       Storage.Beam.IdfyVerification
@@ -671,6 +682,7 @@ library
       Storage.Beam.Translations
       Storage.Beam.ValueAddNP
       Storage.Beam.Vehicle
+      Storage.Beam.VehicleDetails
       Storage.Beam.VehicleFitnessCertificate
       Storage.Beam.VehicleInsurance
       Storage.Beam.VehiclePermit
@@ -693,6 +705,7 @@ library
       Storage.Queries.DriverPoolConfig
       Storage.Queries.DriverRCAssociation
       Storage.Queries.DriverReferral
+      Storage.Queries.DriverSSN
       Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.IdfyVerification
@@ -718,6 +731,7 @@ library
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.Vehicle
+      Storage.Queries.OrphanInstances.VehicleDetails
       Storage.Queries.OrphanInstances.VehicleRegistrationCertificate
       Storage.Queries.OrphanInstances.Volunteer
       Storage.Queries.PlanTranslation
@@ -731,6 +745,7 @@ library
       Storage.Queries.Translations
       Storage.Queries.ValueAddNP
       Storage.Queries.Vehicle
+      Storage.Queries.VehicleDetails
       Storage.Queries.VehicleFitnessCertificate
       Storage.Queries.VehicleInsurance
       Storage.Queries.VehiclePermit
@@ -809,6 +824,8 @@ library
     , haskell-cac
     , hspec
     , http-client
+    , http-client-tls
+    , http-conduit
     , http-types
     , lens
     , lens-aeson
@@ -928,6 +945,8 @@ executable dynamic-offer-driver-app-exe
     , haskell-cac
     , hspec
     , http-client
+    , http-client-tls
+    , http-conduit
     , http-types
     , lens
     , lens-aeson

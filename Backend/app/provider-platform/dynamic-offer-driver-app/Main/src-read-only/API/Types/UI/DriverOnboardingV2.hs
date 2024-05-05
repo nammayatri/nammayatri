@@ -66,4 +66,6 @@ data DriverVehicleServiceTiers = DriverVehicleServiceTiers
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data SSNReq = SSNReq {ssn :: Kernel.Prelude.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 newtype UpdateAirConditionUpdateRequest = UpdateAirConditionUpdateRequest {isAirConditioned :: Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema)

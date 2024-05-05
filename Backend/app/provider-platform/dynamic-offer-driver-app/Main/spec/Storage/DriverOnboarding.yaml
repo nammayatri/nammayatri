@@ -141,7 +141,8 @@ AadhaarVerification:
       where: aadhaarNumberHash
     findByPhoneNumberAndUpdate:
       kvFunction: updateWithKV
-      params: [driverName, driverGender, driverDob, aadhaarNumberHash, isVerified]
+      params:
+        [driverName, driverGender, driverDob, aadhaarNumberHash, isVerified]
       where: driverId
     updateDriverImagePath:
       kvFunction: updateOneWithKV
@@ -159,8 +160,8 @@ DriverLicense:
     driverName: Maybe Text
     licenseNumber: EncryptedHashedField e Text
     licenseExpiry: UTCTime
-    classOfVehicles: '[Text]'
-    failedRules: '[Text]'
+    classOfVehicles: "[Text]"
+    failedRules: "[Text]"
     verificationStatus: VerificationStatus
     consent: Bool
     consentTimestamp: UTCTime
@@ -194,13 +195,15 @@ VehicleRegistrationCertificate:
     insuranceValidity: Maybe UTCTime
     vehicleClass: Maybe Text
     vehicleVariant: Maybe Variant
-    failedRules: '[Text]'
+    failedRules: "[Text]"
     vehicleManufacturer: Maybe Text
     vehicleCapacity: Maybe Int
     vehicleModel: Maybe Text
     manufacturerModel: Maybe Text
     vehicleColor: Maybe Text
     vehicleEnergyType: Maybe Text
+    vehicleDoors: Maybe Int
+    vehicleSeatBelts: Maybe Int
     reviewedAt: Maybe UTCTime
     reviewRequired: Maybe Bool
     verificationStatus: VerificationStatus
@@ -330,7 +333,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix"
   fields:
@@ -344,16 +347,18 @@ DocumentVerificationConfig:
     isDisabled: Bool
     disableWarning: Maybe Text
     isHidden: Bool
-    dependencyDocumentType: '[DocumentType]'
+    dependencyDocumentType: "[DocumentType]"
     checkExtraction: Bool
     checkExpiry: Bool
     supportedVehicleClasses: SupportedVehicleClasses
     vehicleClassCheckType: VehicleClassCheckType
-    rcNumberPrefixList: '[Text]'
+    rcNumberPrefixList: "[Text]"
     maxRetryCount: Int
+    isDefaultEnabledOnManualVerification: Bool
     order: Int
   default:
     order: "0"
+    isDefaultEnabled: "true"
   constraints:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey
@@ -363,7 +368,7 @@ DocumentVerificationConfig:
     supportedVehicleClassesJSON: json
   beamFields:
     supportedVehicleClasses:
-     supportedVehicleClassesJSON: Value
+      supportedVehicleClassesJSON: Value
   toTType:
     supportedVehicleClassesJSON: getConfigJSON
   fromTType:
@@ -453,3 +458,18 @@ VehiclePUC:
       kvFunction: findAllWithKV
       where:
         and: [rcId, driverId]
+
+DriverSSN:
+  tableName: driver_ssn
+  fields:
+    id: Id DriverSSN
+    driverId: Id Person
+    ssn: EncryptedHashedField e Text
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+  queries:
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

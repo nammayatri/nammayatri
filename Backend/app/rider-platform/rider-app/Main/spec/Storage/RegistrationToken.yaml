@@ -8,30 +8,30 @@ RegistrationToken:
 
   types:
     Medium:
-      enum: "SMS, EMAIL, SIGNATURE"
+      enum: "SMS, WHATSAPP, EMAIL, SIGNATURE"
 
     RTEntityType:
       enum: "CUSTOMER, USER"
 
     LoginType:
-      enum: "OTP,PASSWORD,DIRECT"
+      enum: "OTP,PASSWORD,DIRECT,OAUTH"
 
   fields:
-    id : Id RegistrationToken
-    token : Text
-    attempts : Int
-    authMedium : Medium
-    authType : LoginType
-    authValueHash : Text
-    verified : Bool
-    authExpiry : Int
-    tokenExpiry : Int
-    entityId : Text
-    merchantId : Text
-    entityType : RTEntityType
-    createdAt : UTCTime
-    updatedAt : UTCTime
-    info : Maybe Text
+    id: Id RegistrationToken
+    token: Text
+    attempts: Int
+    authMedium: Medium
+    authType: LoginType
+    authValueHash: Text
+    verified: Bool
+    authExpiry: Int
+    tokenExpiry: Int
+    entityId: Text
+    merchantId: Text
+    entityType: RTEntityType
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    info: Maybe Text
 
   excludedFields: [merchantOperatingCityId]
   constraints:

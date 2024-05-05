@@ -95,8 +95,9 @@ callLogout personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DRegist
 buildAuthReq :: ShortId DM.Merchant -> CustomerAuthReq -> DRegistration.AuthReq
 buildAuthReq merchantShortId req =
   DRegistration.AuthReq
-    { mobileNumber = req.mobileNumber,
-      mobileCountryCode = req.mobileCountryCode,
+    { mobileNumber = Just req.mobileNumber,
+      mobileCountryCode = Just req.mobileCountryCode,
+      identifierType = Nothing,
       merchantId = merchantShortId,
       deviceToken = Nothing,
       notificationToken = Nothing,

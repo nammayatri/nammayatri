@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByFleetOwnerId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate])
+  (Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate]))
 findAllByFleetOwnerId limit offset fleetOwnerId = do findAllWithOptionsKV [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId] (Se.Desc Beam.updatedAt) limit offset
 
 findById ::
@@ -59,8 +59,8 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.airConditioned airConditioned,
-      Se.Set Beam.certificateNumberEncrypted (certificateNumber & unEncrypted . encrypted),
-      Se.Set Beam.certificateNumberHash (certificateNumber & hash),
+      Se.Set Beam.certificateNumberEncrypted (((certificateNumber & unEncrypted . encrypted))),
+      Se.Set Beam.certificateNumberHash ((certificateNumber & hash)),
       Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
       Se.Set Beam.failedRules failedRules,
       Se.Set Beam.fitnessExpiry fitnessExpiry,
@@ -76,10 +76,12 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.vehicleCapacity vehicleCapacity,
       Se.Set Beam.vehicleClass vehicleClass,
       Se.Set Beam.vehicleColor vehicleColor,
+      Se.Set Beam.vehicleDoors vehicleDoors,
       Se.Set Beam.vehicleEnergyType vehicleEnergyType,
       Se.Set Beam.vehicleManufacturer vehicleManufacturer,
       Se.Set Beam.vehicleModel vehicleModel,
       Se.Set Beam.vehicleRating vehicleRating,
+      Se.Set Beam.vehicleSeatBelts vehicleSeatBelts,
       Se.Set Beam.vehicleVariant vehicleVariant,
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
