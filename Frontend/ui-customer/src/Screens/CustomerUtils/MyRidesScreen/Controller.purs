@@ -34,7 +34,7 @@ import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&
 import PrestoDOM (Eval, update, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Screens (ScreenName(..), getScreen)
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getSpecialTag)
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..), ZoneType(..), VehicleVariant(..),City(..))
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..))
 import Storage (isLocalStageOn, getValueToLocalStore,  KeyStore(..))
@@ -50,6 +50,7 @@ import ConfigProvider
 import PrestoDOM.List as PrestoList
 import JBridge (toast, differenceBetweenTwoUTCInMinutes)
 import Data.Function.Uncurried (runFn2)
+import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 
 instance showAction :: Show Action where
   show _ = ""

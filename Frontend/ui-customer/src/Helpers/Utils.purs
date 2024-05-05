@@ -93,13 +93,6 @@ import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function.Uncurried (runFn1)
 import Constants (defaultDensity)
 import Mobility.Prelude
-import Data.Array as DA
-import Data.Argonaut.Decode.Class as AD
-import Data.Argonaut.Encode.Class as AE
-import Data.Argonaut.Core as AC
-import Data.Argonaut.Decode.Parser as ADP
-import Common.DefaultConfig as CC
-import Common.Types.Config as CCT
 import MerchantConfig.Types 
 
 foreign import shuffle :: forall a. Array a -> Array a
@@ -195,40 +188,10 @@ foreign import incrOrDecrTimeFrom :: Fn3 String Int Boolean String
 
 foreign import getMockFollowerName :: String -> String
 
-decodeGeoJson :: String -> Maybe CCT.GeoJson
-decodeGeoJson stringGeoJson = 
-  case (AD.decodeJson =<< ADP.parseJson stringGeoJson) of
-    Right resp -> Just resp
-    Left err   -> Nothing
-
 data TimeUnit
   = HOUR
   | MINUTE
   | SECOND
-
-type SpecialZoneTagConfig = {
-    icon :: String
-  , text :: String
-  , infoPopUpConfig :: Maybe SpecialZoneInfoPopUp
-  , backgroundColor :: String
-}
-
-type SpecialZoneInfoPopUp = {
-    title :: String
-  , primaryText :: String
-  , secondaryText :: String
-  , primaryButtonText :: String
-  , icon :: String
-}
-
-type SpecialLocationList = {
-    geoJson :: String
-  , gates :: Array Location
-  , locationName :: String
-  , category :: String
-  , city :: String
-}
-
 
 convertUTCToISTAnd12HourFormat :: String -> Maybe String
 convertUTCToISTAnd12HourFormat inputTime = do
@@ -817,101 +780,6 @@ formatFareType fareType =
   let str = DS.replace (DS.Pattern "_") (DS.Replacement " ") fareType
   in
   spaceSeparatedPascalCase str
-  
-specialZoneTagConfig :: ZoneType -> SpecialZoneTagConfig
-specialZoneTagConfig zoneType =
-  case zoneType of
-    SPECIAL_PICKUP -> 
-      { icon : "ny_ic_location_pin_white"
-      , text : if isLocalStageOn ConfirmingLocation then getString SPECIAL_PICKUP_ZONE else getString SPECIAL_PICKUP_ZONE_RIDE
-      , infoPopUpConfig : Just $ { title : getString SPECIAL_PICKUP_ZONE
-                                 , primaryText : getString WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE
-                                 , secondaryText : getString THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE
-                                 , primaryButtonText : getString GOT_IT
-                                 , icon : "ny_ic_sp_pickup_zone_map" }
-      , backgroundColor : Color.green900
-      }
-    AUTO_BLOCKED -> 
-      { icon : "ny_ic_zone_walk"
-      , text : getString GO_TO_SELECTED_PICKUP_SPOT_AS_AUTOS_ARE_RESTRICTED
-      , infoPopUpConfig : Nothing
-      , backgroundColor : Color.blue800
-      }
-    METRO ->
-      { icon : "ny_ic_metro_white"
-      , text : getString METRO_RIDE
-      , infoPopUpConfig : Nothing
-      , backgroundColor : Color.blue800
-      }
-    HOTSPOT onSpot ->
-      { icon : if onSpot then "ny_ic_zone_walk" else "ny_ic_select_spot"
-      , text : getString $ if onSpot then GO_TO_SELECTED_SPOT_FOR_PICKUP else SELECT_POPULAR_SPOT_FOR_HASSLE_FREE_PICKUP
-      , infoPopUpConfig : Nothing
-      , backgroundColor : Color.blue800
-      }
-    _ ->
-      { icon : "ny_ic_zone_walk"
-      , text : getString GO_TO_SELECTED_SPOT_FOR_PICKUP
-      , infoPopUpConfig : Nothing
-      , backgroundColor : Color.blue800
-      }
-
-zoneLabelIcon :: ZoneType -> String
-zoneLabelIcon zoneType =
-  case zoneType of
-    METRO -> "ny_ic_metro_white"
-    _ -> ""
-
-transformGeoJsonFeature :: Maybe String -> Array GateInfoFull -> String
-transformGeoJsonFeature geoJson gateInfoFulls =
-  if DS.null (fromMaybe "" geoJson) && DA.null gateInfoFulls then ""
-  else
-    AC.stringify $ AE.encodeJson CC.defaultGeoJson { features = geoJsonFeatures }
-    where
-      geoJsonFeatures :: Array CCT.GeoJsonFeature
-      geoJsonFeatures = 
-        DA.foldr (\(GateInfoFull gateInfoFull) specialZones -> 
-                  case gateInfoFull.geoJson of
-                    Just _ -> specialZones <> [createGeoJsonFeature (GateInfoFull gateInfoFull)]
-                    Nothing -> specialZones
-                 ) [] gateInfoFulls
-        <> case geoJson of
-              Just geoJson' -> DA.singleton CC.defaultGeoJsonFeature{ geometry = fromMaybe CC.defaultGeoJsonGeometry (decodeGeoJsonGeometry geoJson') }
-              Nothing -> []
-
-      decodeGeoJsonGeometry :: String -> Maybe CCT.GeoJsonGeometry
-      decodeGeoJsonGeometry stringGeometry =
-        case (AD.decodeJson =<< ADP.parseJson stringGeometry) of
-          Right resp -> Just resp
-          Left err   -> Nothing
-      
-      createGeoJsonFeature :: GateInfoFull -> CCT.GeoJsonFeature
-      createGeoJsonFeature (GateInfoFull gateInfoFull) = 
-        CC.defaultGeoJsonFeature {
-            properties {
-                name = gateInfoFull.name
-              , defaultDriverExtra = fromMaybe 0 gateInfoFull.defaultDriverExtra
-              , canQueueUpOnGate = fromMaybe false gateInfoFull.canQueueUpOnGate
-            }
-          , geometry = case gateInfoFull.geoJson of
-                          Just geoJson -> fromMaybe CC.defaultGeoJsonGeometry (decodeGeoJsonGeometry geoJson)
-                          Nothing      -> CC.defaultGeoJsonGeometry
-        }
-
-findSpecialPickupZone :: Maybe String -> Maybe (Array Location) -> Number -> Number -> Maybe SpecialLocationList
-findSpecialPickupZone stringGeoJson gates lat lon =
-  case stringGeoJson, gates of
-    Just stringGeoJson', Just gates' -> 
-      case decodeGeoJson stringGeoJson' of
-        Just geoJson -> 
-          let gate = DA.find (\gate -> gate.lat == lat && gate.lng == lon) gates'
-          in case gate of
-                Just gate' -> 
-                  let feature = DA.find (\feature -> feature.properties.name == gate'.place) geoJson.features
-                  in Just { geoJson : AC.stringify $ AE.encodeJson geoJson{ features = [feature] }, gates : [gate'], locationName : "", category : "", city : "" }
-                Nothing -> Nothing
-        Nothing -> Nothing
-    _, _ -> Nothing
 
 newtype CityMetroConfig = CityMetroConfig { 
     logoImage :: String

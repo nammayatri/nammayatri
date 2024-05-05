@@ -46,7 +46,8 @@ import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
 import Debug(spy)
 import Control.Monad.Free (runFree)
-import Helpers.Utils (fetchAndUpdateCurrentLocation, specialZoneTagConfig)
+import Helpers.Utils (fetchAndUpdateCurrentLocation)
+import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig)
 import Data.Maybe (isNothing, maybe, Maybe(..), isJust, fromMaybe ) as MB
 import Resources.Constants (getDelayForAutoComplete)
 import Engineering.Helpers.Commons as EHC

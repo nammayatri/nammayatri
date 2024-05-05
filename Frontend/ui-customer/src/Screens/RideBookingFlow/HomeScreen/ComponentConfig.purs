@@ -2029,7 +2029,7 @@ defaultTipConfig variant =
     "TAXI_PLUS" -> mkTipConfig []
     _ -> mkTipConfig []
 
-specialZoneInfoPopupConfig :: HU.SpecialZoneInfoPopUp -> RequestInfoCard.Config
+specialZoneInfoPopupConfig :: ST.SpecialZoneInfoPopUp -> RequestInfoCard.Config
 specialZoneInfoPopupConfig infoConfig = let
   config = RequestInfoCard.config
   specialZonePopupConfig = config{

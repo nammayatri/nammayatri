@@ -46,6 +46,7 @@ import Screens(ScreenName)
 import PrestoDOM.List
 import JBridge (Location)
 import Data.HashMap as DHM
+import Data.Map as DM
 
 type Contacts = {
   name :: String,
@@ -2290,3 +2291,28 @@ data ReferralStage = ENTER_REFERRAL_CODE
 
 derive instance genericReferralStage :: Generic ReferralStage _
 instance eqReferralStage :: Eq ReferralStage where eq = genericEq
+
+type SpecialLocationMap = DM.Map String SpecialLocationList
+
+type SpecialLocationList = {
+    geoJson :: String
+  , gates :: Array Location
+  , locationName :: String
+  , category :: String
+  , city :: String
+}
+
+type SpecialZoneTagConfig = {
+    icon :: String
+  , text :: String
+  , infoPopUpConfig :: Maybe SpecialZoneInfoPopUp
+  , backgroundColor :: String
+}
+
+type SpecialZoneInfoPopUp = {
+    title :: String
+  , primaryText :: String
+  , secondaryText :: String
+  , primaryButtonText :: String
+  , icon :: String
+}
