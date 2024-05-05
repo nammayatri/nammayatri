@@ -32,8 +32,9 @@ import Tools.Error
 buildCancelReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
   DCancel.CancelRes ->
+  Maybe Bool ->
   m Spec.CancelReq
-buildCancelReqV2 res = do
+buildCancelReqV2 res reallocate = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
@@ -43,14 +44,15 @@ buildCancelReqV2 res = do
   pure
     Spec.CancelReq
       { cancelReqContext = context,
-        cancelReqMessage = mkCancelMessageV2 res -- soft cancel and confirm cancel
+        cancelReqMessage = mkCancelMessageV2 res reallocate -- soft cancel and confirm cancel
       }
 
-mkCancelMessageV2 :: DCancel.CancelRes -> Spec.CancelReqMessage
-mkCancelMessageV2 res =
+mkCancelMessageV2 :: DCancel.CancelRes -> Maybe Bool -> Spec.CancelReqMessage
+mkCancelMessageV2 res reallocate =
   Spec.CancelReqMessage
     { cancelReqMessageCancellationReasonId = Just (show Enums.CANCELLED_BY_CUSTOMER),
       cancelReqMessageOrderId = res.bppBookingId.getId,
+      cancelReqMessageReallocate = reallocate,
       cancelReqMessageDescriptor =
         Just $
           Spec.Descriptor
@@ -81,6 +83,7 @@ mkCancelSearchMessageV2 :: DCancel.CancelSearch -> Spec.CancelReqMessage
 mkCancelSearchMessageV2 res =
   Spec.CancelReqMessage
     { cancelReqMessageCancellationReasonId = Just (show Enums.CANCELLED_BY_CUSTOMER),
+      cancelReqMessageReallocate = Nothing,
       cancelReqMessageOrderId = res.searchReqId.getId,
       cancelReqMessageDescriptor = Nothing
     }

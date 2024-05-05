@@ -80,7 +80,7 @@ bookingStatus bookingId _ = do
       ttlUtcTime = addDurationToUTCTime booking.createdAt ttlToNominalDiffTime
   when (booking.status == SRB.NEW && (ttlUtcTime < now)) do
     dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-    void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+    void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
     throwError $ RideInvalidStatus "Booking Invalid"
   SRB.buildBookingAPIEntity booking booking.riderId
   where
@@ -88,7 +88,8 @@ bookingStatus bookingId _ = do
       DCancel.CancelReq
         { reasonCode = CancellationReasonCode "External/Beckn API failure",
           reasonStage = OnConfirm,
-          additionalInfo = Nothing
+          additionalInfo = Nothing,
+          reallocate = Nothing
         }
 
 checkBookingsForStatus :: [SRB.Booking] -> Flow ()

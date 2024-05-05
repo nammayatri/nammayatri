@@ -79,13 +79,14 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
 
     errHandlerAction booking cancelReq = do
       dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-      void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+      void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
 
     buildCancelReq cancellationReason reasonStage =
       DCancel.CancelReq
         { reasonCode = CancellationReasonCode cancellationReason,
           reasonStage,
-          additionalInfo = Nothing
+          additionalInfo = Nothing,
+          reallocate = Nothing
         }
 
 onInitLockKey :: Text -> Text

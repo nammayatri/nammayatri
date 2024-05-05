@@ -14,6 +14,7 @@ import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -27,13 +28,14 @@ type API =
            API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
       :<|> TokenAuth
       :> "driver"
-      :> Capture
+      :> "rateCard"
+      :> QueryParam "distance" Kernel.Types.Common.Meters
+      :> QueryParam
            "vehicleServiceTier"
            Domain.Types.ServiceTierType.ServiceTierType
-      :> "rateCard"
       :> Get
            '[JSON]
-           [API.Types.UI.DriverOnboardingV2.RateCardItem]
+           [API.Types.UI.DriverOnboardingV2.RateCardResp]
       :<|> TokenAuth
       :> "driver"
       :> "updateAirCondition"
@@ -88,10 +90,11 @@ getDriverRateCard ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Domain.Types.ServiceTierType.ServiceTierType ->
-    Environment.FlowHandler [API.Types.UI.DriverOnboardingV2.RateCardItem]
+    Kernel.Prelude.Maybe Kernel.Types.Common.Meters ->
+    Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType ->
+    Environment.FlowHandler [API.Types.UI.DriverOnboardingV2.RateCardResp]
   )
-getDriverRateCard a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRateCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getDriverRateCard a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRateCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postDriverUpdateAirCondition ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

@@ -34,6 +34,7 @@ buildCancelReqV2 req = do
     then do
       let bookingId = Id $ req.cancelReqMessage.cancelReqMessageOrderId
       let descriptor = fromJust $ req.cancelReqMessage.cancelReqMessageDescriptor
+      let userReallocationEnabled = req.cancelReqMessage.cancelReqMessageReallocate
       return $
         Left $
           DCancel.CancelReq
