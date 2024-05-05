@@ -1,0 +1,31 @@
+imports:
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  ReelsData: Domain.Types.ReelsData
+  Language: Kernel.External.Types
+
+module: SocialLogin
+
+types:
+  OAuthProvider:
+    enum: "Google | IOS"
+  SocialLoginReq:
+    name: Maybe Text
+    email: Text
+    tokenId: Text
+    oauthProvider: OAuthProvider
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    registrationLat: Maybe Double
+    registrationLon: Maybe Double
+  SocialLoginRes:
+    token: Text
+
+apis:
+  - POST:
+      endpoint: /social/login
+      auth: NoAuth
+      request:
+        type: API.Types.UI.SocialLogin.SocialLoginReq
+      response:
+        type: API.Types.UI.SocialLogin.SocialLoginRes

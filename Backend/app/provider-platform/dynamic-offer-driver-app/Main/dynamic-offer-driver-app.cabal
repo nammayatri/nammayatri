@@ -206,6 +206,7 @@ library
       Domain.Action.UI.RideSummary
       Domain.Action.UI.Route
       Domain.Action.UI.SafetyWebhook
+      Domain.Action.UI.SocialLogin
       Domain.Action.UI.SpecialLocation
       Domain.Action.UI.Transporter
       Domain.Action.UI.Whatsapp
@@ -568,11 +569,13 @@ library
       API.Action.UI.EditBooking
       API.Action.UI.LmsModule
       API.Action.UI.Reels
+      API.Action.UI.SocialLogin
       API.Action.UI.SpecialLocation
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.EditBooking
       API.Types.UI.LmsModule
       API.Types.UI.Reels
+      API.Types.UI.SocialLogin
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
       Domain.Types.AadhaarVerification
@@ -837,6 +840,8 @@ library
     , haskell-cac
     , hspec
     , http-client
+    , http-client-tls
+    , http-conduit
     , http-types
     , lens
     , lens-aeson
@@ -956,6 +961,8 @@ executable dynamic-offer-driver-app-exe
     , haskell-cac
     , hspec
     , http-client
+    , http-client-tls
+    , http-conduit
     , http-types
     , lens
     , lens-aeson
