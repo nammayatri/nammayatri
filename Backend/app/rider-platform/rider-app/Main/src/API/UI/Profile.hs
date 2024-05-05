@@ -84,7 +84,7 @@ getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Flo
 getPersonDetails (personId, merchantId) = withFlowHandlerAPI . DProfile.getPersonDetails (personId, merchantId)
 
 updatePerson :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler APISuccess.APISuccess
-updatePerson (personId, _) req mbBundleVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updatePerson personId req mbBundleVersion mbClientVersion mbClientConfigVersion
+updatePerson (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientConfigVersion
 
 updateDefaultEmergencyNumbers :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileDefaultEmergencyNumbersReq -> FlowHandler DProfile.UpdateProfileDefaultEmergencyNumbersResp
 updateDefaultEmergencyNumbers (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updateDefaultEmergencyNumbers personId merchantId
