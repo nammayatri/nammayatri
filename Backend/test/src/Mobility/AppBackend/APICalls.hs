@@ -102,8 +102,9 @@ appAuth
 mkAuthReq :: Reg.AuthReq
 mkAuthReq =
   Reg.AuthReq
-    { mobileNumber = "9000090000",
-      mobileCountryCode = "+91",
+    { mobileNumber = Just "9000090000",
+      mobileCountryCode = Just "+91",
+      identifierType = Nothing,
       merchantId = "FIXME",
       deviceToken = Nothing,
       notificationToken = Nothing,

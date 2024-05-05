@@ -227,9 +227,9 @@ validRideCount hasTakenValidRide vehicleCategory =
     Just info -> info.rideCount == 1
     Nothing -> False
 
-updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion]) => Id Person.Person -> UpdateProfileReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
-updatePerson personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
-  mPerson <- join <$> QPerson.findByEmail `mapM` req.email
+updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion]) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
+updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
+  mPerson <- join <$> QPerson.findByEmailAndMerchantId merchantId `mapM` req.email
   whenJust mPerson (\_ -> throwError PersonEmailExists)
   mbEncEmail <- encrypt `mapM` req.email
   refCode <- join <$> validateRefferalCode personId `mapM` req.referralCode

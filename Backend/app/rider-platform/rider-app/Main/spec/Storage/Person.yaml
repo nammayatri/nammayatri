@@ -23,7 +23,7 @@ Person:
 
     IdentifierType:
       enum: "MOBILENUMBER, AADHAAR, EMAIL"
-      derive': "Show, Eq, Read, Ord, Generic, ToJSON, FromJSON,ToParamSchema"
+      derive': "Show, Eq, Read, Ord, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
     Gender:
       enum: "MALE, FEMALE, OTHER, UNKNOWN, PREFER_NOT_TO_SAY"
