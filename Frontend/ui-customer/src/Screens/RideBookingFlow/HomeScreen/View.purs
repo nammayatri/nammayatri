@@ -74,7 +74,7 @@ import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize)
 import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -137,6 +137,7 @@ import Engineering.Helpers.Events as Events
 import Types.App
 import Mobility.Prelude
 import Screens.Types as ST
+import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -4207,15 +4208,6 @@ specialZoneInfoPopup push state =
                 , width MATCH_PARENT
                 ][ RequestInfoCard.view (push <<< RequestInfoCardAction) (specialZoneInfoPopupConfig infoPopUpConfig) ]
         Nothing -> emptyTextView state
-
-getConfirmLocationCategory :: HomeScreenState -> ZoneType
-getConfirmLocationCategory state = 
-  if state.props.locateOnMapProps.isSpecialPickUpGate then 
-    SPECIAL_PICKUP 
-  else if isJust state.props.hotSpot.centroidPoint then
-    HOTSPOT (isJust state.props.hotSpot.selectedSpot)
-  else 
-    state.props.confirmLocationCategory
 
 newView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 newView push state = 

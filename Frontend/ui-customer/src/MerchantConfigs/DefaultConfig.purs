@@ -259,6 +259,7 @@ config =
               { goToNearestPointWithinRadius : 12.0
               , showHotSpotsWithinRadius : 150.0
               , enableHotSpot : JB.jBridgeMethodExists "locateOnMapV2"
+              , updateHotSpotOutSideRange : 200.0
               }
           }
       , labelTextSize : 30

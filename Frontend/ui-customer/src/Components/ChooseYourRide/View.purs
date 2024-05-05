@@ -31,6 +31,7 @@ import Data.Int (toNumber,ceil)
 import MerchantConfig.Types(AppConfig(..))
 import Mobility.Prelude
 import Screens.Types (ZoneType(..), TipViewStage(..))
+import Helpers.SpecialZoneAndHotSpots as HS
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -394,7 +395,7 @@ chooseYourRideView push config isSingleEstimate =
       anims = if EHC.os == "IOS"
               then [fadeIn true]
               else [translateYAnimFromTop $ Animation.chooseRideAnimConfig]
-      tagConfig = HU.specialZoneTagConfig config.zoneType
+      tagConfig = HS.specialZoneTagConfig config.zoneType
       showTag = any (_ == config.zoneType) [SPECIAL_PICKUP, METRO]
   in
   PrestoAnim.animationSet anims $

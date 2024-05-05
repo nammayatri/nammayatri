@@ -25,7 +25,7 @@ import Engineering.Helpers.Suggestions (getSuggestionsfromKey, emChatSuggestion)
 import JBridge (clearAudioPlayer, getChatMessages, hideKeyboardOnNavigation, scrollToEnd, sendMessage, showDialer, startAudioPlayer, stopChatListenerService, getKeyInSharedPrefKeys, toast, getLayoutBounds, setMapPadding)
 import Prelude
 import PrestoDOM (BottomSheetState(..), Eval, update, continue, continueWithCmd, defaultPerformLog, exit, updateAndExit)
-import Screens.HomeScreen.Transformer (getDriverInfo, getSpecialTag)
+import Screens.HomeScreen.Transformer (getDriverInfo)
 import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState)
 import Services.API (RideBookingRes(..), Route, GetDriverLocationResp(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, setValueToLocalStore)
@@ -57,6 +57,7 @@ import Language.Types (STR(..))
 import Timers (clearTimerWithId)
 import Storage (getValueToLocalStore)
 import DecodeUtil (stringifyJSON, decodeForeignAny, parseJSON)
+import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 
 instance showAction :: Show Action where
   show _ = ""

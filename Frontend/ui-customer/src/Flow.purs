@@ -63,7 +63,7 @@ import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding)
 import JBridge as JB
-import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, zoneLabelIcon, transformGeoJsonFeature, getCityFromString, getMetroConfigFromAppConfig)
+import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
 import Log (logInfo, logStatus)
@@ -96,7 +96,7 @@ import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getSpecialTag, getTripFromRideHistory, getZoneType, getFormattedContacts, transformHotSpotInfo, filterHotSpots, mapSpecialZoneGates)
+import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getTripFromRideHistory, getFormattedContacts)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
@@ -197,6 +197,7 @@ import Services.FlowCache as FlowCache
 import Data.HashMap as DHM
 import Helpers.API as HelpersAPI
 import Helpers.Referral (applyReferralCode)
+import Helpers.SpecialZoneAndHotSpots
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -715,7 +716,18 @@ homeScreenFlow = do
         let destServiceable = destServiceabilityResp.serviceable
         setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
         let geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = geoJson, nearByPickUpPoints=pickUpPoints},props{ defaultPickUpPoint = "", city = getCityNameFromCode sourceServiceabilityResp.city , isSpecialZone =  (srcSpecialLocation.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then (getZoneType srcSpecialLocation.category) else NOZONE, findingQuotesProgress = 0.0, locateOnMapProps{ sourceLocationName = Just srcSpecialLocation.locationName, sourceGates = Just $ pickUpPoints }}})
+            isHotSpot = null srcSpecialLocation.gatesInfo && not (null pickUpPoints)
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{ data{ polygonCoordinates = geoJson
+                                                                                              , nearByPickUpPoints=pickUpPoints}
+                                                                                        , props { defaultPickUpPoint = ""
+                                                                                                , city = getCityNameFromCode sourceServiceabilityResp.city 
+                                                                                                , isSpecialZone =  (srcSpecialLocation.geoJson) /= Nothing
+                                                                                                , confirmLocationCategory = if length pickUpPoints > 0 then (getZoneType srcSpecialLocation.category) else NOZONE
+                                                                                                , findingQuotesProgress = 0.0
+                                                                                                , locateOnMapProps{ sourceLocationName = Just srcSpecialLocation.locationName
+                                                                                                                  , sourceGates = Just $ pickUpPoints }
+                                                                                                , hotSpot{ centroidPoint = Just { lat : bothLocationChangedState.props.sourceLat, lng : bothLocationChangedState.props.sourceLong } }
+                                                                                        }})
         when (addToRecents) $ do
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
           fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
@@ -4050,7 +4062,7 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
       pickUpPoints = mapSpecialZoneGates srcSpecialLocation.gatesInfo
       geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
       zoneType = getZoneType srcSpecialLocation.category
-      canUpdateHotSpots = maybe true (\point -> (getDistanceBwCordinates lat lon point.lat point.lng) * 1000.0 > 150.0) state.props.hotSpot.centroidPoint
+      canUpdateHotSpots = maybe true (\point -> (getDistanceBwCordinates lat lon point.lat point.lng) * 1000.0 > state.data.config.mapConfig.locateOnMapConfig.hotSpotConfig.updateHotSpotOutSideRange) state.props.hotSpot.centroidPoint
       locationName = srcSpecialLocation.locationName
 
   if not (DS.null geoJson) && not (null pickUpPoints) then do

@@ -30,7 +30,7 @@ import Services.API
 import Data.Array (any, null, head, length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust, maybe', maybe)
 import Screens.HomeScreen.ScreenData (dummyRideBooking, initData) as HSD
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getSpecialTag)
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo)
 import Data.Lens ((^.))
 import Accessor
 import Screens.Types (Stage(..), SearchResultType(..), PopupType(..), FlowStatusData(..))
@@ -43,6 +43,7 @@ import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Common.Types.App as Common
+import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
