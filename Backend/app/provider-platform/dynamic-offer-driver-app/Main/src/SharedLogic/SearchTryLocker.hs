@@ -82,14 +82,16 @@ isBookingAssignmentInprogress bookingId = do
 whenBookingCancellable ::
   CacheFlow m r =>
   Id Booking ->
-  m () ->
-  m ()
+  m a ->
+  m a
 whenBookingCancellable bookingId actions = do
   isBookingCancelled' <- isBookingCancelled bookingId
   isBookingAssignmentInprogress' <- isBookingAssignmentInprogress bookingId
-  unless (isBookingCancelled' || isBookingAssignmentInprogress') $ do
-    Hedis.setExp (mkBookingCancelledKey bookingId) True 120
-    actions
+  if (isBookingCancelled' || isBookingAssignmentInprogress')
+    then throwError (InternalError "BOOKING_CANCELLED")
+    else do
+      Hedis.setExp (mkBookingCancelledKey bookingId) True 120
+      actions
 
 markBookingAssignmentInprogress ::
   CacheFlow m r =>

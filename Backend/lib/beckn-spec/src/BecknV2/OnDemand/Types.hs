@@ -297,6 +297,8 @@ data CancelReqMessage = CancelReqMessage
   { -- |
     cancelReqMessageCancellationReasonId :: Maybe Text,
     -- |
+    cancelReqMessageReallocate :: Maybe Bool,
+    -- |
     cancelReqMessageDescriptor :: Maybe Descriptor,
     -- |
     cancelReqMessageOrderId :: Text
@@ -318,6 +320,7 @@ optionsCancelReqMessage =
   where
     table =
       [ ("cancelReqMessageCancellationReasonId", "cancellation_reason_id"),
+        ("cancelReqMessageReallocate", "reallocate"),
         ("cancelReqMessageDescriptor", "descriptor"),
         ("cancelReqMessageOrderId", "order_id")
       ]

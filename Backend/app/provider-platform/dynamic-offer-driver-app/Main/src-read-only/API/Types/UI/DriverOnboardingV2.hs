@@ -4,6 +4,7 @@
 module API.Types.UI.DriverOnboardingV2 where
 
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.Common
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.ServiceTierType
@@ -66,7 +67,20 @@ data DriverVehicleServiceTiers = DriverVehicleServiceTiers
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data FarePolicyHour = Peak | NonPeak | Night deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
 data RateCardItem = RateCardItem {price :: Kernel.Types.Common.Money, priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity, title :: Kernel.Prelude.Text}
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data RateCardResp = RateCardResp
+  { farePolicyHour :: API.Types.UI.DriverOnboardingV2.FarePolicyHour,
+    perKmRate :: Kernel.Types.Common.PriceAPIEntity,
+    perMinuteRate :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    rateCardItems :: [API.Types.UI.DriverOnboardingV2.RateCardItem],
+    serviceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
+    totalFare :: Kernel.Types.Common.PriceAPIEntity,
+    tripCategory :: Domain.Types.Common.TripCategory
+  }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data SSNReq = SSNReq {ssn :: Kernel.Prelude.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)

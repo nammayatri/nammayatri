@@ -19,6 +19,7 @@ module SharedLogic.FareCalculator
     CalculateFareParametersParams (..),
     calculateFareParameters,
     isNightShift,
+    isNightAllowanceApplicable,
     timeZoneIST,
     UTCTime (UTCTime, utctDay),
   )
