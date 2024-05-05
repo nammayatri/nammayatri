@@ -8,7 +8,7 @@ RegistrationToken:
 
   types:
     Medium:
-      enum: "SMS, EMAIL, SIGNATURE"
+      enum: "SMS, WHATSAPP, EMAIL, SIGNATURE"
 
     RTEntityType:
       enum: "CUSTOMER, USER"
