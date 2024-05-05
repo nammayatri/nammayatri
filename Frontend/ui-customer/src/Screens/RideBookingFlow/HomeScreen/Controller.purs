@@ -2994,12 +2994,12 @@ specialZoneFlow estimatedQuotes state = do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
     _ <- pure $ updateLocalStage SettingPrice
     _ <- pure $ setValueToLocalStore SELECTED_VARIANT (defaultQuote.vehicleVariant)
-    continue state { data {specialZoneQuoteList = quoteList, currentSearchResultType = QUOTES, specialZoneSelectedQuote = Just defaultQuote.id, specialZoneSelectedVariant = Just defaultQuote.vehicleVariant}, props {currentStage = SettingPrice, specialZoneType = "OneWaySpecialZoneAPIDetails"}}
+    continue state { data {specialZoneQuoteList = quoteList, currentSearchResultType = QUOTES, specialZoneSelectedQuote = Just defaultQuote.id, specialZoneSelectedVariant = Just defaultQuote.vehicleVariant, intercity = false }, props {currentStage = SettingPrice, specialZoneType = "OneWaySpecialZoneAPIDetails"}}
   else do
     _ <- pure $ hideKeyboardOnNavigation true
     _ <- pure $ updateLocalStage SearchLocationModel
     _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
-    continue state { props {currentStage = SearchLocationModel}, data{currentSearchResultType = QUOTES}}
+    continue state { props {currentStage = SearchLocationModel}, data{currentSearchResultType = QUOTES, intercity = false}}
     -- updateAndExit newState $ Go_To_Search_Location_Flow newState true
 
 estimatesListFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -3027,6 +3027,7 @@ estimatesListFlow estimates state = do
         , selectedEstimatesObject = estimatesInfo.defaultQuote
         , pickUpCharges = estimatesInfo.pickUpCharges
         , nearByDrivers = if nearByDriversLength > 0 then Just nearByDriversLength else Nothing
+        , intercity = false
         }
       , props
         { currentStage = SettingPrice
