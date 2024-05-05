@@ -213,11 +213,12 @@ processActiveBooking booking cancellationStage = do
                 DCancel.CancelReq
                   { reasonCode = CancellationReasonCode "Active booking",
                     reasonStage = cancellationStage,
-                    additionalInfo = Nothing
+                    additionalInfo = Nothing,
+                    reallocate = Nothing
                   }
           fork "active booking processing" $ do
             dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-            void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+            void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
         else throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
 
 isRentalOrInterCity :: DBooking.BookingDetails -> Bool

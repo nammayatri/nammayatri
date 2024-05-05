@@ -70,7 +70,8 @@ import qualified Tools.Maps as Maps
 data CancelReq = CancelReq
   { reasonCode :: SCR.CancellationReasonCode,
     reasonStage :: SCR.CancellationStage,
-    additionalInfo :: Maybe Text
+    additionalInfo :: Maybe Text,
+    reallocate :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

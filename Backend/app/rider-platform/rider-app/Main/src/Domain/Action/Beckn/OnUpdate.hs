@@ -309,19 +309,25 @@ onUpdate = \case
   OUValidatedDriverArrivedReq req -> Common.driverArrivedReqHandler req
   OUValidatedNewMessageReq ValidatedNewMessageReq {..} -> Notify.notifyOnNewMessage booking message
   OUValidatedEstimateRepetitionReq ValidatedEstimateRepetitionReq {..} -> do
-    bookingCancellationReason <- mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
+    when (cancellationSource /= DBCR.ByUser) $ do
+      -- in case cancellation is by user, we don't need to create a new booking cancellation reason as already created in the previous step
+      bookingCancellationReason <- mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
+      void $ QBCR.upsert bookingCancellationReason
     logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
 
     void $ QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimate.id
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
-    void $ QBCR.upsert bookingCancellationReason
     void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill}
     QPFS.clearCache searchReq.riderId
     -- notify customer
-    Notify.notifyOnEstOrQuoteReallocated booking estimate.id.getId
+    Notify.notifyOnEstOrQuoteReallocated cancellationSource booking estimate.id.getId
   OUValidatedQuoteRepetitionReq ValidatedQuoteRepetitionReq {..} -> do
-    bookingCancellationReason <- mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
+    when (cancellationSource /= DBCR.ByUser) $ do
+      -- in case cancellation is by user, we don't need to create a new booking cancellation reason as already created in the previous step
+      bookingCancellationReason <- mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
+      void $ QBCR.upsert bookingCancellationReason
+
     quote <- case booking.quoteId of
       Just quoteId -> SQQ.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
       _ -> throwError $ InvalidRequest ("Quote not found for bookingId: " <> booking.id.getId)
@@ -334,11 +340,10 @@ onUpdate = \case
     void $ QRB.createBooking newBooking
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
-    void $ QBCR.upsert bookingCancellationReason
     void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = bookingId, validTill = searchReq.validTill, fareProductType = Just $ STB.getFareProductType booking.bookingDetails}
     QPFS.clearCache searchReq.riderId
     -- notify customer
-    Notify.notifyOnEstOrQuoteReallocated booking quote.id.getId
+    Notify.notifyOnEstOrQuoteReallocated cancellationSource booking quote.id.getId
   OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> Notify.notifySafetyAlert booking code
   OUValidatedStopArrivedReq ValidatedStopArrivedReq {..} -> do
     QRB.updateStop booking Nothing

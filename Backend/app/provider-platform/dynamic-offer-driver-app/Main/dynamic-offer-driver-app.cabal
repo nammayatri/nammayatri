@@ -308,6 +308,7 @@ library
       SharedLogic.Cac
       SharedLogic.CallBAP
       SharedLogic.CallBAPInternal
+      SharedLogic.Cancel
       SharedLogic.DeleteDriver
       SharedLogic.DriverFee
       SharedLogic.DriverOnboarding
