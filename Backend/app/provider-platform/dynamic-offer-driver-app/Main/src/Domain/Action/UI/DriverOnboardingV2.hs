@@ -5,8 +5,10 @@ module Domain.Action.UI.DriverOnboardingV2 where
 
 import qualified API.Types.UI.DriverOnboardingV2
 import Data.OpenApi (ToSchema)
+import Domain.Types.Common
 import qualified Domain.Types.DocumentVerificationConfig
 import Domain.Types.DriverInformation
+import Domain.Types.FarePolicy
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -15,15 +17,18 @@ import qualified Domain.Types.Vehicle as DTV
 import Domain.Types.VehicleServiceTier
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Prelude
 import Kernel.Beam.Functions
 import Kernel.External.Types (Language (..))
 import qualified Kernel.Prelude
 import Kernel.Types.APISuccess
+import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import SharedLogic.DriverOnboarding
+import SharedLogic.FarePolicy
 import SharedLogic.VehicleServiceTier
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -34,6 +39,16 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Auth
 import Tools.Error
+
+stringToPrice :: Currency -> Text -> Maybe Price
+stringToPrice currency value = do
+  (DecimalValue.DecimalValue v) <- DecimalValue.valueFromString value
+  return $
+    Price
+      { amountInt = Money $ Kernel.Prelude.roundToIntegral v,
+        amount = HighPrecMoney v,
+        currency
+      }
 
 mkDocumentVerificationConfigAPIEntity :: Language -> Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig -> Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity
 mkDocumentVerificationConfigAPIEntity language Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} = do
@@ -56,7 +71,7 @@ getOnboardingConfigs ::
   )
 getOnboardingConfigs (mbPersonId, _, merchanOperatingCityId) mbOnlyVehicle = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let personLangauge = fromMaybe ENGLISH person.language
   cabConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchanOperatingCityId DTV.CAR
   autoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchanOperatingCityId DTV.AUTO_CATEGORY
@@ -83,6 +98,30 @@ getOnboardingConfigs (mbPersonId, _, merchanOperatingCityId) mbOnlyVehicle = do
         then filter (\Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} -> documentType `elem` vehicleDocumentTypes) docs
         else docs
 
+getDriverRateCard ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Domain.Types.ServiceTierType.ServiceTierType ->
+    Environment.Flow [API.Types.UI.DriverOnboardingV2.RateCardItem]
+  )
+getDriverRateCard (mbPersonId, _, merchantOperatingCityId) serviceTierType = do
+  _personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  fullFarePolicy <- getFarePolicy merchantOperatingCityId (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing Nothing
+  let rateCard = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id mkBreakupItem Nothing Nothing (fullFarePolicyToFarePolicy fullFarePolicy)
+  return rateCard
+  where
+    mkBreakupItem :: Text -> Text -> Maybe API.Types.UI.DriverOnboardingV2.RateCardItem
+    mkBreakupItem title valueInText = do
+      priceObject <- stringToPrice INR valueInText -- change INR to proper currency after Roman changes
+      return $
+        API.Types.UI.DriverOnboardingV2.RateCardItem
+          { title,
+            price = priceObject.amountInt,
+            priceWithCurrency = mkPriceAPIEntity priceObject
+          }
+
 postDriverUpdateAirCondition ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -106,7 +145,7 @@ getDriverVehicleServiceTiers ::
   )
 getDriverVehicleServiceTiers (mbPersonId, _, merchanOperatingCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchanOperatingCityId
@@ -162,7 +201,7 @@ postDriverUpdateServiceTiers ::
   )
 postDriverUpdateServiceTiers (mbPersonId, _, merchanOperatingCityId) API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchanOperatingCityId
 
   whenJust airConditioned $ \ac -> checkAndUpdateAirConditioned False ac.isWorking personId cityVehicleServiceTiers

@@ -6,6 +6,8 @@ imports:
   AirConditionedRestrictionType: Domain.Types.DriverInformation
   APISuccess: Kernel.Types.APISuccess
   Centesimal: Kernel.Types.Common
+  PriceAPIEntity: Kernel.Types.Common
+  Money: Kernel.Types.Common
 
 module: DriverOnboardingV2
 types:
@@ -51,6 +53,10 @@ types:
     vehicleRating: Maybe Double
     isDefault: Bool
     isSelected: Bool
+  RateCardItem:
+    title: Text
+    price: Money
+    priceWithCurrency: PriceAPIEntity
 
 apis:
   - GET:
@@ -60,6 +66,13 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: DocumentVerificationConfigList
+  - GET:
+      endpoint: /driver/{vehicleServiceTier}/rateCard
+      params:
+        vehicleServiceTier: ServiceTierType
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: '[RateCardItem]'
   - POST:
       endpoint: /driver/updateAirCondition
       auth: TokenAuth PROVIDER_TYPE
