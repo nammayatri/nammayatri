@@ -36,6 +36,7 @@ data RTEntityType
 data LoginType
   = OTP
   | PASSWORD
+  | OAUTH
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 

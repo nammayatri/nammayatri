@@ -81,6 +81,9 @@ create = createWithKV
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Person)
 findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
 
+findByEmail :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> m (Maybe Person)
+findByEmail email = findOneWithKV [Se.Is BeamP.email $ Se.Eq email]
+
 findAllDriversWithInfoAndVehicle ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Merchant ->
