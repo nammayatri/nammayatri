@@ -29,7 +29,7 @@ import Prelude (map, show, ($), (&&), (+), (-), (/=), (<>), (==), (||))
 import PrestoDOM.Types.Core (toPropValue)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getKmMeter, fetchVehicleVariant)
 import Resources.Localizable.EN (getEN)
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getSpecialTag)
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.Types (Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..), City(..))
 import Services.API (FareBreakupAPIEntity, RideAPIEntity(..), RideBookingRes(..))
 import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
@@ -38,6 +38,7 @@ import ConfigProvider
 import Screens.RideSelectionScreen.ScreenData 
 import JBridge (differenceBetweenTwoUTCInMinutes)
 import Data.Function.Uncurried (runFn2)
+import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 
 myRideListTransformerProp :: Array RideBookingRes  -> Array ItemState
 myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropValue "COMPLETED") || item.status == (toPropValue "CANCELLED"))) (map (\(RideBookingRes ride) -> 

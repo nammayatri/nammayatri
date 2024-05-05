@@ -386,7 +386,8 @@ type VariantInfo = {
 type HotSpotConfig = {
   goToNearestPointWithinRadius :: Number,
   showHotSpotsWithinRadius :: Number,
-  enableHotSpot :: Boolean
+  enableHotSpot :: Boolean,
+  updateHotSpotOutSideRange :: Number
 }
 
 type CityConfig = {
