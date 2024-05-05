@@ -726,7 +726,9 @@ homeScreenFlow = do
                                                                                                 , findingQuotesProgress = 0.0
                                                                                                 , locateOnMapProps{ sourceLocationName = Just srcSpecialLocation.locationName
                                                                                                                   , sourceGates = Just $ pickUpPoints }
-                                                                                                , hotSpot{ centroidPoint = Just { lat : bothLocationChangedState.props.sourceLat, lng : bothLocationChangedState.props.sourceLong } }
+                                                                                                , hotSpot{ centroidPoint = if isHotSpot then
+                                                                                                                            Just { lat : bothLocationChangedState.props.sourceLat, lng : bothLocationChangedState.props.sourceLong }
+                                                                                                                           else Nothing }
                                                                                         }})
         when (addToRecents) $ do
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
