@@ -1025,6 +1025,31 @@ instance IsHTTPError LmsError where
 
 instance IsAPIError LmsError
 
+------------ OAuth Errors ------------
+
+data OAuthError = FailedToVerifyGoogleTokenId Text | FailedToVerifyIosTokenId Text | UserWithSameEmailAlreadyExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''OAuthError
+
+instance IsBaseError OAuthError where
+  toMessage = \case
+    FailedToVerifyGoogleTokenId tokenId -> Just $ "Failed to verify token with google " <> tokenId
+    FailedToVerifyIosTokenId tokenId -> Just $ "Failed to verify token with IOS " <> tokenId
+    UserWithSameEmailAlreadyExist email -> Just $ "User with same email already exist " <> email
+
+instance IsHTTPError OAuthError where
+  toErrorCode = \case
+    FailedToVerifyGoogleTokenId tokenId -> "OAUTH_ERROR_GOOGLE_" <> tokenId
+    FailedToVerifyIosTokenId tokenId -> "OAUTH_ERROR_IOS_" <> tokenId
+    UserWithSameEmailAlreadyExist email -> "OAUTH_ERROR_USER_ALREADY_EXIST" <> email
+  toHttpCode = \case
+    FailedToVerifyGoogleTokenId _ -> E401
+    FailedToVerifyIosTokenId _ -> E401
+    UserWithSameEmailAlreadyExist _ -> E400
+
+instance IsAPIError OAuthError
+
 ------------------ CAC ---------------------
 -- This is for temporary implementation of the CAC auth API. This will be depcricated once we have SSO for CAC.
 data CacAuthError = CacAuthError | CacInvalidToken
