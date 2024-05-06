@@ -9,6 +9,7 @@ type AppConfigDriver a =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
+    secondaryBackground :: String,
     languageList :: Array Language,
     popupBackground :: String,
     rideCompletedCardConfig :: RideCompletedCardConfig, 

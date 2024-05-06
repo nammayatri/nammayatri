@@ -104,11 +104,11 @@ view push state =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , PP.sheetState EXPANDED
       , background Color.white900
       , onBackPressed push (const BackPressed state.props.openRCManual)
       , onClick push (const ScreenClick)
       , afterRender push (const AfterRender)
+      , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom 
       ][  PrestoAnim.animationSet
           [ Anim.fadeIn true
           ] $  headerView state push

@@ -43,6 +43,7 @@ import ConfigProvider
 import Mobility.Prelude
 import Components.OptionsMenu as OptionsMenuConfig
 import Components.BottomDrawerList as BottomDrawerList
+import Debug
 
 ------------------------------ primaryButtonConfig --------------------------------
 primaryButtonConfig :: ST.UploadDrivingLicenseState -> PrimaryButton.Config
@@ -53,7 +54,7 @@ primaryButtonConfig state = let
     id = "UploadDrivingLicenseButton"
     driverLicenseLengthValid = DS.length state.data.driver_license_number >= 9
     dateOfIssueNotEmpty = state.data.dateOfIssue /= Just ""
-    isDriverInfoValid = dobNotEmpty 
+    isDriverInfoValid = spy "driver_license_number" $ dobNotEmpty 
                         && driverLicenseLengthValid
                         && dateOfIssueNotEmpty
     primaryButtonConfig' = config 
@@ -62,8 +63,7 @@ primaryButtonConfig state = let
                            else getString UPLOAD_DRIVING_LICENSE
       }
       , width = MATCH_PARENT
-      , background = Color.black900
-      , margin = if imageUploadCondition then Margin 15 0 15 10 else Margin 15 0 15 30
+      , margin = if imageUploadCondition then Margin 15 0 15 (EHC.safeMarginBottomWithDefault 10) else Margin 15 0 15 (EHC.safeMarginBottomWithDefault 30)
       , cornerRadius = 6.0
       , height = V 50
       , isClickable = isDriverInfoValid
@@ -182,7 +182,7 @@ genericHeaderConfig state = let
   genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
-    , background = state.data.config.primaryBackground
+    , background = state.data.config.secondaryBackground
     , prefixImageConfig {
        visibility = VISIBLE
       , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"

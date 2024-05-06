@@ -6,7 +6,7 @@ var path = require('path');
 const packageJSON = require("./package.json");
 
 const getOutputFileDir = (mode) => mode ==  "development" ? "" :"ios/";
-const getOutputFileName =  (mode) => "v1-index_bundle.js";
+const getOutputFileName =  (mode) => "v1-ride_request.js";
 const getOutputFileLocation = (mode) => getOutputFileDir(mode) + getOutputFileName(mode);
 
 module.exports = (env, argv) => {

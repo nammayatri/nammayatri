@@ -475,10 +475,10 @@ export const scanQrCode = function (requestCode) {
 export const timePicker = function (cb) {
   return function (action) {
     return function () {
-      const callback = callbackMapper.map(function (resp, hour, min) {
+      const callback = callbackMapper.map(function (resp, _year, _mon, _day, hour, min) {
         cb(action(resp)(hour)(min))();
       });
-      return window.JBridge.timePicker(callback);
+      return window.__OS == "IOS" ? window.JBridge.datePicker(callback, "") : window.JBridge.timePicker(callback);
     };
   };
 };
@@ -536,7 +536,9 @@ export const dateTimePicker = function (cb) {
 };
 
 export const disableActionEditText = function (str) {
-  return window.JBridge.disableActionEditText(str);
+  if (window.JBridge.disableActionEditText) {
+    window.JBridge.disableActionEditText(str);
+  }
 };
 
 export const getNearbyPlaces = function (cb) {

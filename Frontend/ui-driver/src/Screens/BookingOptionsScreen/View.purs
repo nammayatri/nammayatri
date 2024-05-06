@@ -10,9 +10,10 @@ import Font.Style as FontStyle
 import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariantRideType, getVehicleVariantImage, getDowngradeOptionsText, getUIDowngradeOptions)
 import Language.Strings (getString)
 import Engineering.Helpers.Utils as EHU
+import Engineering.Helpers.Commons as EHC
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, ($), (<<<), (<>), (==), (<>), (&&), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, imageUrl)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, imageUrl, rippleColor)
 import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -42,6 +43,7 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
+  Anim.screenAnimation $
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -49,7 +51,7 @@ view push state =
     , onBackPressed push $ const BackPressed
     , afterRender push $ const AfterRender
     , background Color.white900
-    , padding $ PaddingBottom 24
+    , padding $ PaddingBottom $ EHC.safeMarginBottomWithDefault 24
     ]
     $ [ headerLayout push state
       , defaultVehicleView push state
@@ -90,13 +92,12 @@ acCheckForDriversView push state =
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           ]
-          [ textView
+          [ textView $
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , weight 1.0
               , color Color.black800
               , text $ getString AC_CHECK_TITILE
-              ]
+              ] <> FontStyle.subHeading1 TypoGraphy
           , linearLayout
               [ width $ V 40
               , height $ V 22
@@ -123,14 +124,14 @@ acCheckForDriversView push state =
                   ]
               ]
           ]
-      , textView
+      , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , visibility $ MP.boolToVisibility $ MB.isJust airConditionedData.restrictionMessage
           , color messageColor
           , margin $ MarginTop 8
           , text $ fromMaybe "" airConditionedData.restrictionMessage
-          ]
+          ] <> FontStyle.tags TypoGraphy
       , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
@@ -196,7 +197,7 @@ downgradeVehicleView push state =
             , color Color.black700
             , margin $ MarginBottom 16
             , text $ getString RIDE_TYPE_SELECT
-            ]
+            ] <> FontStyle.body1 TypoGraphy
       , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
@@ -246,14 +247,14 @@ serviceTierItem push service enabled opacity =
             , width $ V 35
             , height $ V 35
             ]
-        , textView
+        , textView $
             [ weight 1.0
             , height WRAP_CONTENT
             , text service.name
             , margin (MarginHorizontal 12 2)
             , color Color.black800
             , singleLine true
-            ]
+            ] <> FontStyle.body1 TypoGraphy
         , linearLayout
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -287,7 +288,7 @@ toggleView push enabled default service =
     linearLayout
       [ width $ V 40
       , height $ V 22
-      , cornerRadius 100.0
+      , cornerRadius 11.0
       , alpha if default then 0.5 else 1.0
       , background backgroundColor
       , stroke $ "1," <> backgroundColor
@@ -296,7 +297,7 @@ toggleView push enabled default service =
       , clickable $ not $ default || service.isUsageRestricted 
       ]
       [ linearLayout
-          [ width MATCH_PARENT
+          [ width $ V 40
           , height WRAP_CONTENT
           , gravity align
           ]
@@ -304,7 +305,7 @@ toggleView push enabled default service =
               [ width $ V 16
               , height $ V 16
               , background Color.white900
-              , cornerRadius 100.0
+              , cornerRadius 8.0
               , gravity CENTER_VERTICAL
               , margin (MarginHorizontal 2 2)
               ]
@@ -411,29 +412,25 @@ headerLayout push state =
     ]
     [ linearLayout
         [ width MATCH_PARENT
-        , height MATCH_PARENT
+        , height WRAP_CONTENT
         , orientation HORIZONTAL
-        , layoutGravity "center_vertical"
-        , padding $ PaddingVertical 10 10
+        , gravity CENTER_VERTICAL
+        , padding $ Padding 10 (EHC.safeMarginTopWithDefault 13) 10 13
         ]
         [ imageView
             [ width $ V 30
             , height $ V 30
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
-            , gravity CENTER_VERTICAL
             , onClick push $ const BackPressed
-            , padding $ Padding 2 2 2 2
-            , margin $ MarginLeft 5
+            , rippleColor Color.rippleShade
             ]
         , textView
             $ [ width WRAP_CONTENT
-              , height MATCH_PARENT
+              , height WRAP_CONTENT
               , text $ getString BOOKING_OPTIONS
-              , margin $ MarginLeft 20
-              , color Color.black
-              , weight 1.0
-              , gravity CENTER_VERTICAL
-              , alpha 0.8
+              , margin $ MarginLeft 10
+              , padding $ PaddingBottom 2
+              , color Color.black900
               ]
             <> FontStyle.h3 TypoGraphy
         ]

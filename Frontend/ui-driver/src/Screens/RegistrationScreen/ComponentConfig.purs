@@ -55,10 +55,10 @@ primaryButtonConfig state = let
 appOnboardingNavBarConfig :: ST.RegistrationScreenState -> AppOnboardingNavBar.Config
 appOnboardingNavBarConfig state = 
   AppOnboardingNavBar.config
-  { prefixImageConfig = AppOnboardingNavBar.config.prefixImageConfig{visibility = GONE},
+  { prefixImageConfig {visibility = GONE,height = V 0, width = V 0},
     genericHeaderConfig = genericHeaderConfig state,
     appConfig = state.data.config,
-    headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{
+    headerTextConfig {
       text = case state.data.vehicleCategory of
               _ | state.props.manageVehicle -> getString ADD_VEHICLE
               Just ST.CarCategory -> getString REGISTER_YOUR_CAR
@@ -195,15 +195,17 @@ genericHeaderConfig state = let
   genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
-    , background = state.data.config.primaryBackground
+    , background = state.data.config.secondaryBackground
     , prefixImageConfig {
        visibility = VISIBLE
       , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"
-      , height = (V 25)
-      , width = (V 25)
-      , margin = (Margin 0 5 5 5)
+      , height = V 25
+      , width = V 25
+      , margin = MarginTop 0
+      , padding = PaddingTop 0
+      , cornerRadius = 0.0
       }
-    , padding = (PaddingVertical 5 5)
+    , padding = PaddingVertical 5 5
     , textConfig {
         text = (getValueToLocalStore MOBILE_NUMBER_KEY)
       , color = Color.white900
@@ -213,6 +215,7 @@ genericHeaderConfig state = let
     , suffixImageConfig {
         visibility = GONE
       }
+    , width = WRAP_CONTENT
     }
   in genericHeaderConfig'
 

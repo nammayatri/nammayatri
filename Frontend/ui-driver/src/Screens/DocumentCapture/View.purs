@@ -24,6 +24,7 @@ import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
+import Engineering.Helpers.Commons as EHC
 import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=))
 import Screens.DocumentCaptureScreen.Controller (Action(..), eval, ScreenOutput(..))
 import Screens.DocumentCaptureScreen.ComponentConfig
@@ -79,6 +80,7 @@ view push state =
       , orientation VERTICAL
       , background Color.white900
       , onBackPressed push $ const BackPressed 
+      , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
       ][ AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
         , linearLayout
           [ width MATCH_PARENT
