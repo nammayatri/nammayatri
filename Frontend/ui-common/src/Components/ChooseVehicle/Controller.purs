@@ -36,16 +36,18 @@ type Config
     , showInfo :: Boolean
     , searchResultType :: SearchType
     , isBookingOption :: Boolean
-    , pickUpCharges :: Int 
+    , pickUpCharges :: Number 
     , isSingleEstimate :: Boolean
-    , tollCharge :: Int
+    , tollCharge :: Number
     , serviceTierShortDesc :: Maybe String
     , serviceTierName :: Maybe String
     , extraFare :: Array FareList
     , additionalFare :: Int
-    , nightShiftMultiplier :: Number
-    , nightCharges :: Boolean
-    , baseFare :: Int
+    , driverAdditions :: Array FareList
+    , fareInfoDescription :: Array String
+    , isNightShift :: Boolean
+    , nightChargeTill :: String
+    , nightChargeFrom :: String
     , airConditioned :: Maybe Boolean
     , showEditButton :: Boolean
     , editBtnText :: String
@@ -85,17 +87,19 @@ config =
   , showInfo : false
   , searchResultType : QUOTES
   , isBookingOption : false
-  , pickUpCharges : 0
+  , pickUpCharges : 0.0
   , layoutMargin : MarginHorizontal 12 12
   , isSingleEstimate : false
-  , tollCharge : 0
+  , tollCharge : 0.0
   , serviceTierShortDesc : Nothing
   , serviceTierName : Nothing
   , extraFare: []
   , additionalFare: 0
-  , nightShiftMultiplier: 0.0
-  , nightCharges: false
-  , baseFare : 0
+  , fareInfoDescription: []
+  , driverAdditions: []
+  , isNightShift : false
+  , nightChargeTill : ""
+  , nightChargeFrom : ""
   , airConditioned : Nothing
   , showEditButton : false
   , editBtnText : ""

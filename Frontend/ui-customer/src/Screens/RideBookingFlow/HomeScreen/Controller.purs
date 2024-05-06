@@ -15,7 +15,7 @@
 
 module Screens.HomeScreen.Controller where
 
-import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes, _specialLocationTag, _contents, _toLocation, _lat, _lon, _otpCode, _list)
+import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes, _specialLocationTag, _contents, _toLocation, _lat, _lon, _otpCode, _list)
 import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), OptionButtonList, Payload(..), RateCardType(..), FeedbackAnswer(..), ProviderType(..))
 import Components.Banner as Banner
 import Components.MessagingView as MessagingView
@@ -926,10 +926,11 @@ eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) s
         , pickUpCharges = config.pickUpCharges 
         , tollCharge = config.tollCharge
         , extraFare = config.extraFare
-        , additionalFare = config.additionalFare
-        , nightShiftMultiplier = config.nightShiftMultiplier
-        , nightCharges = config.nightCharges
-        , baseFare = config.baseFare
+        , driverAdditions = config.driverAdditions
+        , fareInfoDescription = config.fareInfoDescription
+        , isNightShift = config.isNightShift
+        , nightChargeTill = config.nightChargeTill
+        , nightChargeFrom = config.nightChargeFrom
         }
       }
     }
@@ -2695,10 +2696,12 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
                                     , pickUpCharges = config.pickUpCharges
                                     , tollCharge = config.tollCharge
                                     , extraFare = config.extraFare
+                                    , fareInfoDescription = config.fareInfoDescription
                                     , additionalFare = config.additionalFare
-                                    , nightShiftMultiplier = config.nightShiftMultiplier
-                                    , nightCharges = config.nightCharges
-                                    , baseFare = config.baseFare
+                                    , isNightShift = config.isNightShift
+                                    , nightChargeTill = config.nightChargeTill
+                                    , nightChargeFrom = config.nightChargeFrom
+                                    , driverAdditions = config.driverAdditions
                                     }}}
 
 
@@ -3023,10 +3026,10 @@ cancelReasons showAcReason =
     }
   ]) <>
   (if showAcReason 
-      then [ { reasonCode: "AC_NOT_TURNED_ON"
-              , description: getString AC_IS_NOT_AVAILABLE_ON_THIS_RIDE
-              , subtext: Just $ getString AC_NOT_WORKING_DESC
-              , textBoxRequired : false
+      then [{ reasonCode: "AC_NOT_TURNED_ON"
+            , description: getString AC_IS_NOT_AVAILABLE_ON_THIS_RIDE
+            , subtext: Just $ getString AC_NOT_WORKING_DESC
+            , textBoxRequired : false
             }]
       else []
   ) <>

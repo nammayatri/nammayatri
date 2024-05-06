@@ -611,7 +611,7 @@ newtype FareRange = FareRange {
 }
 
 newtype EstimateFares = EstimateFares {
-  price :: Int,
+  priceWithCurrency :: CTA.Price,
   title :: String
 }
 

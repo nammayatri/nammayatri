@@ -106,6 +106,10 @@ foreign import getRandomID :: Int -> String
 foreign import toStringJSON :: forall a. a -> String
 
 foreign import isTrue :: forall a. a -> Boolean
+
+foreign import parseSecondsOfDayToUTC :: Int -> String
+foreign import getMidnightUTC :: Unit -> String
+
 os :: String
 os = getOs unit
 

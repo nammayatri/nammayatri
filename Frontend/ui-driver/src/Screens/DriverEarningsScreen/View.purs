@@ -45,7 +45,7 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn7)
 import Engineering.Helpers.Commons (getCurrentUTC, flowRunner, getFormattedDate, getNewIDWithTag, screenHeight, getVideoID, getDayName, safeMarginBottom, screenWidth, convertUTCtoISC, liftFlow, formatCurrencyWithCommas)
-import Engineering.Helpers.Utils (loaderText, toggleLoader)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, getFixedTwoDecimals)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign.Generic (decodeJSON)
@@ -1394,7 +1394,7 @@ coinsUsageAlertView push state =
     ]
     [ maybe dummyView (\val -> alertView push "ny_ic_check_green" (getVarString HAS_BEEN_ADJUSTED_IN_YOUR_SUBSCRIPTION_DUES [ show val ]) "" "" true Color.transparent 0.0 (Margin 0 0 0 0)) $ state.data.coinConvertedToCashUsedForLatestDues
     , if state.data.coinConvertedTocashLeft /= 0.0 then
-        alertView push "ny_ic_info_yellow" (getVarString WILL_BE_ADJUSTED_IN_YOUR_FUTURE_SUBSCRIPTION_DUES [ getFixedTwoDecimals state.data.coinConvertedTocashLeft ]) "" "" false Color.transparent 0.0 (Margin 0 0 0 0)
+        alertView push "ny_ic_info_yellow" (getVarString WILL_BE_ADJUSTED_IN_YOUR_FUTURE_SUBSCRIPTION_DUES [getFixedTwoDecimals state.data.coinConvertedTocashLeft ]) "" "" false Color.transparent 0.0 (Margin 0 0 0 0)
       else
         dummyView
     ]
