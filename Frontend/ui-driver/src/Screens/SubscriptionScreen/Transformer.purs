@@ -31,7 +31,7 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number.Format (fixed, toStringWith)
 import Data.String (Pattern(..), split, toLower, null)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getFixedTwoDecimals, splitBasedOnLanguage)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), splitBasedOnLanguage)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import MerchantConfig.Types (SubscriptionConfig, GradientConfig, AppConfig)
@@ -44,6 +44,7 @@ import Services.API as API
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Foldable (foldl)
 import Common.Types.Config (CityConfig, StaticViewPlans)
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
 
 type PlanData = {
     title :: String,

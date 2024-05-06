@@ -21,7 +21,6 @@ import Domain.Payments
 import Data.Array (length, mapWithIndex, (!!), filter)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Engineering.Helpers.Commons (convertUTCtoISC)
-import Helpers.Utils (getFixedTwoDecimals)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Types (GradientConfig)
@@ -32,6 +31,7 @@ import Services.API (FeeType(..), OfferEntity(..))
 import Services.API as API
 import Data.Int as INT
 import Styles.Colors as Color
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
 
 buildTransactionDetails :: API.HistoryEntryDetailsEntityV2Resp -> Array GradientConfig -> Boolean -> ST.TransactionInfo
 buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfig showFeeBreakup =

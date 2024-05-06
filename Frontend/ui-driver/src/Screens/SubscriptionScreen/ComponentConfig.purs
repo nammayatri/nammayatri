@@ -53,16 +53,17 @@ import Styles.Colors as Color
 import Data.Tuple as TPL
 import Control.Apply as CA
 import Locale.Utils
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
 
 clearDueButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 clearDueButtonConfig state = let
     config = PrimaryButton.config
     buttonText = 
       case state.data.myPlanData.manualDueAmount > 0.0, state.data.myPlanData.autoPayStatus, isJust state.data.orderId of
-        true, ACTIVE_AUTOPAY, true  -> (getString RETRY_STR) <> " " <>  if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(₹" <> HU.getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
-        true, ACTIVE_AUTOPAY, false  -> if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(₹" <> HU.getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
-        true, _, true  -> (getString RETRY_AUTOPAY) <> " & " <>  (getString CLEAR_DUES) <> " (₹" <> HU.getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")" 
-        true, _, false  -> (getString SETUP_AUTOPAY_STR) <> " & " <>  (getString CLEAR_DUES) <> " (₹" <> HU.getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")" 
+        true, ACTIVE_AUTOPAY, true  -> (getString RETRY_STR) <> " " <>  if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(₹" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
+        true, ACTIVE_AUTOPAY, false  -> if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(₹" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
+        true, _, true  -> (getString RETRY_AUTOPAY) <> " & " <>  (getString CLEAR_DUES) <> " (₹" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")" 
+        true, _, false  -> (getString SETUP_AUTOPAY_STR) <> " & " <>  (getString CLEAR_DUES) <> " (₹" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")" 
         false,_, _ -> getString SETUP_AUTOPAY_STR
     primaryButtonConfig' = config 
       { textConfig { text = buttonText }
@@ -456,7 +457,7 @@ dueDetailsListState :: ST.SubscriptionScreenState -> DueDetailsListState
 dueDetailsListState state = let 
     calculateCharges count charges = 
       if count == 0 || charges == 0.0 then Nothing 
-      else Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x ₹" <> HU.getFixedTwoDecimals (charges / DI.toNumber count) <> " " <> getString GST_INCLUDE
+      else Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x ₹" <> getFixedTwoDecimals (charges / DI.toNumber count) <> " " <> getString GST_INCLUDE
   in
   {
   dues : map (\ item -> do

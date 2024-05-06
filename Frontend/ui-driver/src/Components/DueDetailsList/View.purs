@@ -24,7 +24,7 @@ import Data.Maybe as Mb
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getFixedTwoDecimals)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, show, unit, void, ($), (&&), (/=), (<>), (==), (||), (<), not)
@@ -34,6 +34,7 @@ import Screens.Types (PromoConfig)
 import Services.API (FeeType(..))
 import Styles.Colors as Color
 import Data.String as DS
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
 
 view :: forall w . (Action -> Effect Unit) -> DueDetailsListState -> PrestoDOM (Effect Unit) w
 view push state =

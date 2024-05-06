@@ -105,8 +105,8 @@ _estimateFareBreakup = lens (unwrap >>> _.estimateFareBreakup) (\oldRec newVal -
 _title :: forall a b c. Newtype a {title :: b | c } => Lens' a b
 _title = lens (unwrap >>> _.title) (\oldRec newVal -> wrap ((unwrap oldRec) { title = newVal }))
 
-_price :: forall a b c. Newtype a {price :: b | c } => Lens' a b
-_price = lens (unwrap >>> _.price) (\oldRec newVal -> wrap ((unwrap oldRec) { price = newVal }))
+_priceWithCurrency :: forall a b c. Newtype a {priceWithCurrency :: b | c } => Lens' a b
+_priceWithCurrency = lens (unwrap >>> _.priceWithCurrency) (\oldRec newVal -> wrap ((unwrap oldRec) { priceWithCurrency = newVal }))
 
 _totalFareRange :: forall a b c. Newtype a {totalFareRange :: b | c } => Lens' a b
 _totalFareRange = lens (unwrap >>> _.totalFareRange) (\oldRec newVal -> wrap ((unwrap oldRec) { totalFareRange = newVal }))

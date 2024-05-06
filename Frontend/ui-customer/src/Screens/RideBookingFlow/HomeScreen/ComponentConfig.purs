@@ -89,7 +89,7 @@ import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDri
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController 
 import LocalStorage.Cache (getValueFromCache)
 import ConfigProvider
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
 import Data.Lens ((^.), view)
 import Components.ServiceTierCard.View as ServiceTierCard
 
@@ -862,30 +862,15 @@ rateCardConfig state =
   let
     config' = RateCard.config
     bangaloreCode = HU.getCityCodeFromCity Bangalore
-    fareInfoText =  mkFareInfoText state.props.city state.data.rateCard.vehicleVariant
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-    nightShiftMultiplier = if city == Delhi then "1.25" else 
-                              if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then "1.5"
-                              else "1.1"
-    nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
-    nightChargeTill = "5 AM"
-    dayChargeFrom = "5 AM"
-    dayChargeTill = if city == Delhi then "11 PM" else "10 PM"
-    freeWaitingTime = " 3 "
-    waitingChargesPerMin = cityBasedWaitingCharge city
     rateCardConfig' =
       config'
-        { nightCharges = state.data.rateCard.nightCharges
-        , nightShiftMultiplier = nightShiftMultiplier --HU.toStringJSON (state.data.rateCard.nightShiftMultiplier) -- Change when we have the actual value
+        { isNightShift = state.data.rateCard.isNightShift
         , currentRateCardType = state.data.rateCard.currentRateCardType
         , onFirstPage = state.data.rateCard.onFirstPage
         , showDetails = state.data.config.searchLocationConfig.showRateCardDetails
-        , alertDialogPrimaryColor = state.data.config.alertDialogPrimaryColor
-        , description = if state.data.rateCard.nightCharges then (getString $ NIGHT_TIME_CHARGES nightChargeFrom nightChargeTill) else (getString $ DAY_TIME_CHARGES dayChargeFrom dayChargeTill )
+        , description = if state.data.rateCard.isNightShift then (getString $ NIGHT_TIME_CHARGES state.data.rateCard.nightChargeFrom state.data.rateCard.nightChargeTill) else (getString $ DAY_TIME_CHARGES state.data.rateCard.nightChargeTill state.data.rateCard.nightChargeFrom )
         , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
-        , driverAdditionsImage = fetchImage FF_ASSET $ if (state.data.config.autoVariantEnabled && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW") then "ny_ic_driver_addition_table2"  else "ny_ic_driver_additions_yatri" 
-        , applicableCharges = if state.data.rateCard.nightCharges && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then (getString NIGHT_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString $ DAYTIME_CHARGES_APPLIED_AT_NIGHT nightChargeFrom nightChargeTill)
-                                 else (getString DAY_TIMES_OF) <> (nightShiftMultiplier) <> (getString $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill)
         , title = case MU.getMerchant FunctionCall of
                       MU.NAMMAYATRI ->  case city of
                                         Delhi -> getString RATE_CARD
@@ -899,18 +884,9 @@ rateCardConfig state =
                       _ -> ""
         , fareList = 
             state.data.rateCard.extraFare 
-              <>
-                  (case MU.getMerchant FunctionCall of
-                      MU.NAMMAYATRI -> case city of
-                                        Delhi -> nyRateCardListForDelhi state
-                                        Kochi -> yatriRateCardList state.data.rateCard.vehicleVariant state
-                                        Bangalore -> nyRateCardList state
-                                        _ -> []
-                      MU.YATRI -> yatriRateCardList state.data.rateCard.vehicleVariant state
-                      _ -> []) 
-
-        , otherOptions  = cityBasedOtherOptions city
-        , fareInfoText = fareInfoText
+        , driverAdditions = state.data.rateCard.driverAdditions
+        , otherOptions  = otherOptions $ not DA.null state.data.rateCard.driverAdditions
+        , fareInfoDescription = state.data.rateCard.fareInfoDescription
         , additionalStrings = [
           {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
           {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)},
@@ -919,10 +895,8 @@ rateCardConfig state =
                                                                    else getString $ DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE" )},
           {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)},
           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-          {key : "WAITING_CHARGE_RATECARD_DESCRIPTION", val : (getString $ WAITING_CHARGE_RATECARD_DESCRIPTION waitingChargesPerMin freeWaitingTime)},
           {key : "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS", val : (getString YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS)},
           {key : "REASON_CHANGE_IN_ROUTE", val : ("<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B))},
-          {key : "WAITING_CHARGES_APPLICABLE", val : ("<span style=\"color:black;\">" <> "2." <> (getString WAITING_CHARGE) <> "</span>" <> " "  <> (getString $ WAITING_CHARGE_INFO waitingChargesPerMin freeWaitingTime) )},
           {key : "TOLL_OR_PARKING_CHARGES", val : (getString TOLL_OR_PARKING_CHARGES)},
           {key : "TOLL_CHARGES", val : (getString TOLL_CHARGES)},
           {key : "TOLL_CHARGES_DESC", val : (getString TOLL_CHARGES_DESC)},
@@ -932,71 +906,12 @@ rateCardConfig state =
         }
   in
     rateCardConfig'
-  where 
-
-    mkFareInfoText :: City -> String -> String
-    mkFareInfoText city vehicleVariant = 
-      if DA.any ( _ == city) [ Bangalore, Tumakuru , Mysore] && vehicleVariant == "AUTO_RICKSHAW" 
-        then (getString $ FARE_INFO_TEXT "FARE_INFO_TEXT") 
-        else ""
-    
-    cityBasedOtherOptions :: City -> Array FareList
-    cityBasedOtherOptions city = case city of 
-                                    Delhi -> [
-                                                  {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                                  {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
-                                                 ]
-                                    Kochi -> [
-                                                  {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                                  {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
-                                                 ]
-                                    Hyderabad -> [
-                                                  {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                                  {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
-                                                 ]
-                                    Chennai -> [
-                                                  {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                                  {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
-                                                 ]
-                                    Pondicherry -> []
-                                    Bangalore -> [
-                                                  {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
-                                                  {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                                  {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
-                                                 ]
-                                    _ -> [
-                                          {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
-                                          {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-                                          {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }
-                                          ]
-
-    cityBasedWaitingCharge :: City -> String
-    cityBasedWaitingCharge city = case city of
-                                      Delhi -> "₹0.75"
-                                      Kochi -> "₹1.50"
-                                      Hyderabad -> "₹2.00"
-                                      Chennai -> "₹1.00"
-                                      Pondicherry -> ""
-                                      Bangalore -> "₹1.50"
-                                      _ -> "₹1.50"
-
-
-yatriRateCardList :: String -> ST.HomeScreenState -> Array FareList
-yatriRateCardList vehicleVariant state = do
-  let lang = getLanguageLocale languageKey
-  case vehicleVariant of
-    "HATCHBACK" -> [ { key : (getString DRIVER_ADDITIONS) , val : "₹0 - ₹60"}]
-
-    "SEDAN"     -> [{ key : (getString DRIVER_ADDITIONS) ,val : "₹0 - ₹60"}]
-
-    "SUV"       -> [ { key : (getString DRIVER_ADDITIONS) ,val : "₹0 - ₹60"}]
-
-    "AUTO_RICKSHAW"  -> [ { key : (getString DRIVER_ADDITIONS) , val : "10% of the base fare"}]
-
-    _ -> []
-
-
-
+  where     
+    otherOptions :: Boolean -> Array FareList
+    otherOptions showAdditions = (if showAdditions then 
+                                    [ {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)}] 
+                                    else [])
+                                  <>  [{key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }]
 
 getVehicleTitle :: String -> String
 getVehicleTitle vehicle =
@@ -1007,20 +922,6 @@ getVehicleTitle vehicle =
     "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
     _ -> "") <> " - " <> (getString RATE_CARD)
 
-nyRateCardList :: ST.HomeScreenState -> Array FareList
-nyRateCardList state = let
-  isCab = state.data.selectedEstimatesObject.vehicleVariant /= "AUTO_RICKSHAW"
-  minFareUpto = if isCab then " 4.0 km" else " 2.0 km"
-  in
-  (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) 
-    then [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] 
-    else [])
-
-nyRateCardListForDelhi :: ST.HomeScreenState -> Array FareList
-nyRateCardListForDelhi state = 
-  (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) 
-      then [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] 
-      else [])
 
 estimateChangedPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 estimateChangedPopupConfig state =
@@ -1663,10 +1564,7 @@ chooseVehicleConfig state = let
     , serviceTierShortDesc = selectedEstimates.serviceTierShortDesc
     , airConditioned = selectedEstimates.airConditioned
     , extraFare = selectedEstimates.extraFare
-    , additionalFare = selectedEstimates.additionalFare
-    , nightShiftMultiplier = selectedEstimates.nightShiftMultiplier
-    , nightCharges = selectedEstimates.nightCharges
-    , baseFare = selectedEstimates.baseFare
+    , driverAdditions = selectedEstimates.driverAdditions
     , showEditButton = true
     , editBtnText = getString CHANGE
     }
