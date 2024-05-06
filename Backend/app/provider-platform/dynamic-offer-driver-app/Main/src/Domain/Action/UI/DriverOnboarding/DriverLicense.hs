@@ -261,7 +261,7 @@ onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificat
     Just driverLicense -> do
       Query.upsert driverLicense
       case driverLicense.driverName of
-        Just name_ -> void $ Person.updateName person.id name_
+        Just name_ -> void $ Person.updateName name_ person.id
         Nothing -> pure ()
       pure ()
     Nothing -> pure ()

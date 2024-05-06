@@ -30,6 +30,7 @@ where
 
 import Data.OpenApi hiding (email, info, name, url)
 import Domain.Action.UI.DriverReferral
+import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -402,9 +403,9 @@ verify tokenId req = do
   cleanCachedTokens person.id
   QR.deleteByPersonIdExceptNew person.id tokenId
   _ <- QR.setVerified tokenId
-  _ <- QP.updateDeviceToken person.id deviceToken
+  _ <- QP.updateDeviceToken deviceToken person.id
   when isNewPerson $
-    QP.setIsNewFalse person.id
+    QP.setIsNewFalse False person.id
   updPers <- QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
   decPerson <- decrypt updPers
   unless (decPerson.whatsappNotificationEnrollStatus == req.whatsappNotificationEnroll && isJust req.whatsappNotificationEnroll) $ do
@@ -433,7 +434,7 @@ callWhatsappOptApi ::
 callWhatsappOptApi mobileNo personId hasOptedIn merchantId merchantOpCityId = do
   let status = fromMaybe Whatsapp.OPT_IN hasOptedIn
   void $ Whatsapp.whatsAppOptAPI merchantId merchantOpCityId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
-  QP.updateWhatsappNotificationEnrollStatus personId $ Just status
+  QP.updateWhatsappNotificationEnrollStatus (Just status) personId
 
 checkRegistrationTokenExists :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id SR.RegistrationToken -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
@@ -493,7 +494,7 @@ logout (personId, _, _) = do
   uperson <-
     QP.findById personId
       >>= fromMaybeM (PersonNotFound personId.getId)
-  _ <- QP.updateDeviceToken uperson.id Nothing
+  _ <- QP.updateDeviceToken Nothing uperson.id
   QR.deleteByPersonId personId
   when (uperson.role == SP.DRIVER) $ void (QD.updateActivity False (Just DriverInfo.OFFLINE) (cast uperson.id))
   pure Success

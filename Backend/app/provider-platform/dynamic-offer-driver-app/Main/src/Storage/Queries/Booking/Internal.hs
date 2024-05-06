@@ -21,7 +21,7 @@ import Kernel.Prelude
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.Booking as BeamB
-import Storage.Queries.Instances.Person ()
+import Storage.Queries.OrphanInstances.Person ()
 
 getBookingInfo ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

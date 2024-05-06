@@ -20,7 +20,7 @@ import Kernel.Prelude
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.DriverQuote as BeamDQ
-import Storage.Queries.Instances.Person ()
+import Storage.Queries.OrphanInstances.Person ()
 
 getDriverQuote ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) =>
