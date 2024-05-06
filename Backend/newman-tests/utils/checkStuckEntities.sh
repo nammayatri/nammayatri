@@ -21,6 +21,9 @@ if [ $dobpp_stuck_driver -gt 0 ]; then
 fi
 
 # Customer app
+# wait for customer app to finish, so added sleep for sync
+sleep 1
+
 app_stuck_booking=$(psql -h localhost -p 5434 -U atlas_app_user atlas_dev -c "select count(*) from atlas_app.booking where status not in ('CANCELLED', 'COMPLETED');" | awk 'NR==3 {print $1}')
 app_stuck_ride=$(psql -h localhost -p 5434 -U atlas_app_user atlas_dev -c "select count(*) from atlas_app.ride where status not in ('CANCELLED', 'COMPLETED');" | awk 'NR==3 {print $1}')
 
