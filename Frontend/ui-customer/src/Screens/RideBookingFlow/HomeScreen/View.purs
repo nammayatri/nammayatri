@@ -1506,6 +1506,7 @@ topLeftIconView state push =
 estimatedFareView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 estimatedFareView push state =
   let tagConfig = specialZoneTagConfig state.props.zoneType.priorityTag
+      showTag = any (_ == state.props.zoneType.priorityTag) [SPECIAL_PICKUP, METRO]
   in
   linearLayout
   [ orientation VERTICAL
@@ -1530,7 +1531,7 @@ estimatedFareView push state =
       , orientation HORIZONTAL
       , gravity CENTER
       , padding (Padding 8 4 8 4)
-      , visibility if state.props.zoneType.priorityTag /= NOZONE then VISIBLE else GONE
+      , visibility $ boolToVisibility showTag
       , clickable $ isJust tagConfig.infoPopUpConfig
       , onClick push $ const $ SpecialZoneInfoTag
       ] [ imageView
