@@ -14,12 +14,12 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data FareBreakupT f = FareBreakupT
-  { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
-    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
-    description :: B.C f Kernel.Prelude.Text,
-    bookingId :: B.C f Kernel.Prelude.Text,
-    entityType :: B.C f Domain.Types.FareBreakup.FareBreakupEntityType,
-    id :: B.C f Kernel.Prelude.Text
+  { amount :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
+    description :: (B.C f Kernel.Prelude.Text),
+    bookingId :: (B.C f Kernel.Prelude.Text),
+    entityType :: (B.C f Domain.Types.FareBreakup.FareBreakupEntityType),
+    id :: (B.C f Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table FareBreakupT where
 
 type FareBreakup = FareBreakupT Identity
 
-$(enableKVPG ''FareBreakupT ['id] [['bookingId]])
+$(enableKVPG (''FareBreakupT) [('id)] [[('bookingId)]])
 
-$(mkTableInstances ''FareBreakupT "fare_breakup")
+$(mkTableInstances (''FareBreakupT) "fare_breakup")
