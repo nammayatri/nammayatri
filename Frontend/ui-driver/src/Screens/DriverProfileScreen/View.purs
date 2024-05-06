@@ -122,6 +122,7 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 view push state =
+  Anim.screenAnimation $
   relativeLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT

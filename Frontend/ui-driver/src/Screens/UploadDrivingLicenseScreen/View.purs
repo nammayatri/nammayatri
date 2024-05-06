@@ -104,6 +104,7 @@ linearLayout
     , width MATCH_PARENT
     , orientation VERTICAL
     , background Color.white900
+    , padding $ PaddingTop EHC.safeMarginTop
     , onBackPressed push (const BackPressed state.props.openLicenseManual)
     , afterRender  (\action -> do
                       _<- push action
@@ -117,10 +118,10 @@ linearLayout
         , orientation VERTICAL
         ][ scrollView
             [ width MATCH_PARENT
-            , height MATCH_PARENT
+            , height WRAP_CONTENT
             , scrollBarY false
             ][ linearLayout
-                [ height MATCH_PARENT
+                [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
                 , padding (PaddingHorizontal 20 20)

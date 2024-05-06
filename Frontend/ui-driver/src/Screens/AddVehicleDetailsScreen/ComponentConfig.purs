@@ -62,7 +62,6 @@ primaryButtonConfig state = let
                            else getString UPLOAD_REGISTRATION_CERTIFICATE}
       , width = MATCH_PARENT
       , height = (V 50)
-      , background = Color.black900 
       , margin = if imageUploadCondition then Margin 15 0 15 10 else Margin 15 0 15 30
       , cornerRadius = 6.0
       , alpha = if activate then 1.0 else 0.8
@@ -148,7 +147,7 @@ genericHeaderConfig state = let
   genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
-    , background = state.data.config.primaryBackground
+    , background = state.data.config.secondaryBackground
     , prefixImageConfig {
        visibility = VISIBLE
       , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"

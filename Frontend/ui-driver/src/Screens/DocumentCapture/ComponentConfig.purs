@@ -35,6 +35,7 @@ import Data.Maybe (isJust, fromMaybe)
 import Components.OptionsMenu as OptionsMenuConfig
 import Storage (KeyStore(..), getValueToLocalStore)
 import Components.BottomDrawerList as BottomDrawerList
+import ConfigProvider
 
 
 primaryButtonConfig :: ST.DocumentCaptureScreenState -> PrimaryButton.Config
@@ -51,10 +52,11 @@ primaryButtonConfig state = let
 genericHeaderConfig :: ST.DocumentCaptureScreenState -> GenericHeader.Config
 genericHeaderConfig state = let 
   config = GenericHeader.config
+  uiConfig = getAppConfig appConfig
   genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
-    , background = "#2C2F3A"
+    , background = uiConfig.secondaryBackground
     , prefixImageConfig {
        visibility = VISIBLE
       , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"

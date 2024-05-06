@@ -94,12 +94,8 @@ view push state =
           , background Color.white900
           , clickable true
           , onBackPressed push (const BackPressed)
-          , afterRender
-              ( \action -> do
-                  _ <- push action
-                  pure unit
-              )
-              $ const (AfterRender)
+          , padding (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom)
+          , afterRender push $ const AfterRender
           ]
       $ [ chooseVehicleView push state
         , linearLayout
@@ -204,8 +200,7 @@ view push state =
             , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
-                , margin $ Margin 16 0 16 16
-                , clickable false
+                , margin $ Margin 16 20 16 16
                 , visibility $ boolToVisibility $ state.data.cityConfig.showDriverReferral || state.data.config.enableDriverReferral
                 ][enterReferralCode push state]
             , linearLayout
@@ -291,15 +286,13 @@ cardsListView :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState
 cardsListView push state =
   scrollView
     [ width MATCH_PARENT
-    , height WRAP_CONTENT
+    , height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - 300 - EHC.safeMarginBottom else WRAP_CONTENT
     , scrollBarY false
     , fillViewport true
-    , margin $ MarginBottom 20
     ][ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , weight 1.0
         ][ if state.data.vehicleCategory == Just ST.CarCategory then
             vehicleSpecificList push state state.data.registerationStepsCabs
           else

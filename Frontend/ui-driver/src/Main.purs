@@ -77,9 +77,6 @@ main event driverInfoRespFiber callInitUI = do
   void $ markPerformance "MAIN_END"
   pure unit
 
-initScreen :: Effect Unit
-initScreen = void $  launchAff $ flowRunner defaultGlobalState $ void $ initUI
-
 mainAllocationPop :: String -> AllocationData -> Effect Unit
 mainAllocationPop payload_type entityPayload = do
   _ <- pure $ printLog "entity_payload" entityPayload

@@ -17,6 +17,7 @@ import Language.Types (STR(..))
 import Screens.DeleteAccountScreen.ComponentConfig
 import Components.PopUpModal as PopUpModal
 import Common.Types.App
+import Animation as Anim
 
 screen :: State -> Screen Action State ScreenOutput
 screen initialState =
@@ -30,6 +31,7 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> State -> PrestoDOM (Effect Unit) w
 view push state =
+  Anim.screenAnimation $
   relativeLayout
   [
     height MATCH_PARENT

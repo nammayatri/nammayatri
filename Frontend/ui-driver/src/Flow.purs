@@ -161,7 +161,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
     updateNightSafetyPopup
     void $ liftFlowBT initiateLocationServiceClient
     updateOperatingCity
-    -- when baseFlow $ lift $ lift $ initUI
+    when baseFlow $ lift $ lift $ initUI
     void $ pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     void $ pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getCurrency Constants.appConfig)
@@ -3498,6 +3498,7 @@ logoutFlow = do
   deleteValueFromLocalStore FREE_TRIAL_DAYS
   deleteValueFromLocalStore REFERRAL_CODE_ADDED
   deleteValueFromLocalStore ENTERED_RC
+  deleteValueFromLocalStore VEHICLE_CATEGORY
   pure $ factoryResetApp ""
   void $ lift $ lift $ liftFlow $ logEvent logField_ "logout"
   isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit

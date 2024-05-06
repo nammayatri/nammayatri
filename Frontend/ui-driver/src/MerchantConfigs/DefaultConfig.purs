@@ -5,7 +5,7 @@ import Common.DefaultConfig
 import Common.Types.Config as CTC
 import JBridge as JB
 import Foreign.Object (fromHomogeneous)
-import Prelude (($))
+import Prelude (($),negate)
 
 config :: AppConfig
 config =
@@ -463,6 +463,39 @@ config =
               },
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig
+            }, { 
+              cityName: "Minneapolis"
+            , mapImage: "ny_ic_minneapolis_map"
+            , cityCode: "td:01189"
+            , showSubscriptions: false
+            , cityLat: 44.977753
+            , cityLong: - 93.2650108
+            , supportNumber: "+918069724848"
+            , languageKey: "EN_US"
+            , showDriverReferral: true
+            , showCustomerReferral: true
+            , uploadRCandDL: true
+            , enableYatriCoins: false
+            , vehicleNSImg : ""
+            , registration:
+                { supportWAN: "919625724848"
+                , callSupport: true
+                , whatsappSupport: true
+                }
+            , variantSubscriptionConfig:
+                { enableVariantBasedSubscription: false
+                , variantList: []
+                , enableCabsSubscriptionView: false
+                , staticViewPlans: getStaticViewPlans
+                }
+            , showEarningSection: false
+            , referral:
+                { domain: "https//nammayatri.in"
+                , customerAppId: "in.juspay.nammayatri"
+                , driverAppId: "in.juspay.nammayatripartner"
+                }
+            , waitingCharges : 1.50
+            , waitingChargesConfig : defWaitingChargesConfig
             }
             --, For future use
             -- {
@@ -603,7 +636,8 @@ config =
     headerBackground: "#2C2F3A"
   }
   , defaultCountryCodeConfig : countryCode
-}
+  , secondaryBackground : "#2C2F3A"
+  }
 
 registrationConfig :: CTC.RegistrationConfig
 registrationConfig = {
