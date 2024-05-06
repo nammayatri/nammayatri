@@ -154,6 +154,8 @@ parseRideAssignedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> 
 parseRideAssignedEvent order msgId txnId = do
   let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
   let tagGroupsFullfillment = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
+  fareParamsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideAssigned Event.")
+  fareParams <- traverse mkDFareBreakup fareParamsQuotationBreakup
   let castToBool mbVar = case T.toLower <$> mbVar of
         Just "true" -> True
         _ -> False
@@ -167,7 +169,8 @@ parseRideAssignedEvent order msgId txnId = do
         transactionId = txnId,
         isDriverBirthDay,
         isFreeRide,
-        previousRideEndPos
+        previousRideEndPos,
+        fareParams
       }
 
 parseRideStartedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.RideStartedReq
@@ -217,8 +220,8 @@ parseRideCompletedEvent order msgId = do
       traveledDistance :: Maybe Distance = (highPrecMetersToDistance <$>) $ readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.TRAVELED_DISTANCE tagGroups
       endOdometerReading = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.END_ODOMETER_READING tagGroups
       tollConfidence :: Maybe Confidence = readMaybe . T.unpack =<< getTagV2' Tag.TOLL_CONFIDENCE_INFO Tag.TOLL_CONFIDENCE tagGroups
-  fareBreakups' <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideCompleted Event.")
-  fareBreakups <- traverse mkDFareBreakup fareBreakups'
+  fareBreakupsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideCompleted Event.")
+  fareBreakups <- traverse mkDFareBreakup fareBreakupsQuotationBreakup
   let personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
       tripEndLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
       rideEndTime = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) >>= Utils.getDropLocation >>= (.stopTime) >>= (.timeTimestamp)

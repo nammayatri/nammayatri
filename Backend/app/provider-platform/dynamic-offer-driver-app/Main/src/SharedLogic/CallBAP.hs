@@ -305,6 +305,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
   let image = join (eitherToMaybe resp)
   isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) driverInfo.driverDob
   isFreeRide <- maybe (return False) (checkIfRideBySpecialDriver ride.driverId) mbTransporterConfig
+  let fareParams = booking.fareParams --adding fareParams in DRideAssignReq
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq ACL.DRideAssignedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
   rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
