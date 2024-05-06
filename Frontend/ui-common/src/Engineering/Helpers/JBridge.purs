@@ -461,6 +461,7 @@ type LocateOnMapConfig = {
   , locationName :: String
   , locateOnMapPadding :: LocateOnMapPadding
   , enableMapClickListener :: Boolean
+  , thresholdDistToSpot :: Int
 }
 
 locateOnMapConfig :: LocateOnMapConfig
@@ -488,6 +489,7 @@ locateOnMapConfig = {
   , locationName : ""
   , locateOnMapPadding : { left : 1.0, top : 1.0, right : 1.0, bottom : 1.0 }
   , enableMapClickListener : false
+  , thresholdDistToSpot : 3
 }
 
 type LocateOnMapPadding = {
