@@ -719,7 +719,7 @@ homeScreenFlow = do
               _          -> pure unit
         updateSourceLocation ""
         (GlobalState updatedState) <- getState
-        let bothLocationChangedState = updatedState.homeScreen
+        let bothLocationChangedState = updatedState.homeScreen{ props{ hotSpot{ selectedSpot = Nothing, centroidPoint = Nothing } } }
         (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq bothLocationChangedState.props.sourceLat bothLocationChangedState.props.sourceLong)
         let srcServiceable = sourceServiceabilityResp.serviceable
         let (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
