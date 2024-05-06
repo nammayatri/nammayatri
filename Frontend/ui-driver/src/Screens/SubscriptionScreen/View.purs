@@ -78,6 +78,7 @@ import Types.App (GlobalState(..), defaultGlobalState)
 import Locale.Utils
 import RemoteConfig (ReelItem(..))
 import Mobility.Prelude as MP
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
 screen initialState globalState =
@@ -772,7 +773,7 @@ myPlanBodyview push state =
     , offerCardBannerView push true (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && (any (_ == state.data.myPlanData.planEntity.id) state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans)) false state.props.offerBannerProps isFreezed
     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil true isFreezed
     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (any (_ == state.data.myPlanData.autoPayStatus) [CANCELLED_PSP, SUSPENDED]) state.props.isSelectedLangTamil false isFreezed
-    , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (DS.replace (DS.Pattern "<X>") (DS.Replacement $ HU.getFixedTwoDecimals $ fromMaybe 0.0 state.data.myPlanData.lowAccountBalance) (getString LOW_ACCOUNT_BALANCE_DESC)) "" NoAction (Mb.isJust state.data.myPlanData.lowAccountBalance) state.props.isSelectedLangTamil false isFreezed
+    , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (DS.replace (DS.Pattern "<X>") (DS.Replacement $ getFixedTwoDecimals $ fromMaybe 0.0 state.data.myPlanData.lowAccountBalance) (getString LOW_ACCOUNT_BALANCE_DESC)) "" NoAction (Mb.isJust state.data.myPlanData.lowAccountBalance) state.props.isSelectedLangTamil false isFreezed
     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString SWITCH_AND_SAVE) (getString SWITCH_AND_SAVE_DESC) (getString SWITCH_NOW) NoAction state.data.myPlanData.switchAndSave state.props.isSelectedLangTamil false isFreezed
   ]
 ]
@@ -812,7 +813,7 @@ duesView push state =
               , color if state.props.myPlanProps.overDue then Color.red else Color.black800
               ]  <> if state.props.isSelectedLangTamil then FontStyle.body9 TypoGraphy else FontStyle.body6 TypoGraphy
             , textView $
-              [ text $  "₹" <> HU.getFixedTwoDecimals state.data.myPlanData.totalDueAmount
+              [ text $  "₹" <> getFixedTwoDecimals state.data.myPlanData.totalDueAmount
               , color if state.props.myPlanProps.overDue then Color.red else Color.blue800
               , padding $ PaddingBottom 2
               , visibility if state.props.myPlanProps.isDueViewExpanded then GONE else VISIBLE
@@ -865,14 +866,14 @@ duesView push state =
             , width MATCH_PARENT
             , gravity CENTER_VERTICAL
             ][ textView $
-              [ text $  "₹" <> HU.getFixedTwoDecimals state.data.myPlanData.totalDueAmount
+              [ text $  "₹" <> getFixedTwoDecimals state.data.myPlanData.totalDueAmount
               , color if state.props.myPlanProps.overDue then Color.red 
                       else if state.props.myPlanProps.multiTypeDues then Color.black900 
                       else Color.blue800
               , weight 1.0
               ] <> if state.props.isSelectedLangTamil then FontStyle.body7 TypoGraphy else FontStyle.h2 TypoGraphy
             , textView $
-              [ text $ "₹" <>  HU.getFixedTwoDecimals state.data.myPlanData.maxDueAmount
+              [ text $ "₹" <>  getFixedTwoDecimals state.data.myPlanData.maxDueAmount
               , color Color.black700
               ] <> if state.props.isSelectedLangTamil then FontStyle.body7 TypoGraphy else FontStyle.h2 TypoGraphy
             ]
@@ -1756,7 +1757,7 @@ dueOverViewCard push state isManual =
           ) (const NoAction)
         ]
       , textView $
-        [ text $  "₹" <> HU.getFixedTwoDecimals if isManual then state.data.myPlanData.manualDueAmount else state.data.myPlanData.autoPayDueAmount
+        [ text $  "₹" <> getFixedTwoDecimals if isManual then state.data.myPlanData.manualDueAmount else state.data.myPlanData.autoPayDueAmount
         , weight 1.0
         , gravity RIGHT
         , color if isManual then Color.orange900 else Color.blue800
@@ -1832,7 +1833,7 @@ tripList push trips isManual isExpanded viewDatailsText useFixedHeight =
                   , weight 1.0
                   ] <> FontStyle.body15 TypoGraphy
                 , textView $
-                  [ text $ "₹" <>  HU.getFixedTwoDecimals item.amount
+                  [ text $ "₹" <>  getFixedTwoDecimals item.amount
                   , color Color.black700
                   ] <> FontStyle.body15 TypoGraphy
                 ]

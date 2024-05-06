@@ -553,3 +553,14 @@ export const markPerformance = function (str) {
 export const toStringJSON = function (attr) {
   return JSON.stringify(attr);
 };
+
+export const parseSecondsOfDayToUTC = function (seconds) {
+  const midnight = new Date().setHours(0, 0, 0, 0);
+  const utcTime = new Date(midnight + (seconds * 1000));
+  return utcTime.toISOString();
+}
+
+export const getMidnightUTC = function () {
+  const midnight = new Date().setHours(0, 0, 0, 0);
+  return midnight.toISOString();
+}

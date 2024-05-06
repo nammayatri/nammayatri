@@ -42,7 +42,7 @@ import Font.Style (Style(..), getFontStyle)
 import Font.Style as FontStyle
 import Foreign (Foreign, unsafeToForeign)
 import Foreign.Generic (decode)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getFixedTwoDecimals)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, ($), (&&), (-), (<<<), (<>), (==), (>), (/), (/=), (||))
@@ -62,6 +62,7 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Mobility.Prelude
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
 
 screen :: PaymentHistoryScreenState -> Screen Action PaymentHistoryScreenState ScreenOutput
 screen initialState =

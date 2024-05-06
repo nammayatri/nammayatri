@@ -83,7 +83,6 @@ import Styles.Colors as Color
 import Screens.Types (LocalStoreSubscriptionInfo)
 import Data.Int (fromString, even, fromNumber)
 import Data.Int as Int
-import Data.Number.Format (fixed, toStringWith)
 import Data.Function.Uncurried (Fn1)
 import Storage (getValueToLocalStore)
 import Services.Config (getWhatsAppSupportNo, getSupportNumber)
@@ -616,11 +615,6 @@ getStatus status = case status of
   "Failed" -> Failed
   "Scheduled" -> Scheduled
   _ -> Pending
-
-getFixedTwoDecimals :: Number -> String
-getFixedTwoDecimals amount = case (fromNumber amount) of
-                                Just value -> show value
-                                Nothing ->  toStringWith (fixed 2) amount
 
 incrementValueOfLocalStoreKey :: KeyStore -> Effect Unit
 incrementValueOfLocalStoreKey key = do

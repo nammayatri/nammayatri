@@ -959,15 +959,18 @@ type RateCard =
   {
     baseFare :: Int,
     extraFare :: Array FareList,
-    pickUpCharges :: Int,
+    driverAdditions :: Array FareList,
+    fareInfoDescription :: Array String,
+    pickUpCharges :: Number,
     additionalFare :: Int,
-    nightShiftMultiplier :: Number,
-    nightCharges :: Boolean,
+    isNightShift :: Boolean,
+    nightChargeTill :: String,
+    nightChargeFrom :: String,
     currentRateCardType :: RateCardType,
     onFirstPage :: Boolean,
     vehicleVariant :: String,
     createdTime :: String,
-    tollCharge :: Int
+    tollCharge :: Number
   }
 
 type RateCardDetails = {

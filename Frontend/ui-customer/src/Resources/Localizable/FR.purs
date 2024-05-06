@@ -259,7 +259,7 @@ getFR stringKey =
         DAY_TIMES_OF -> ""
         DAYTIME_CHARGES_APPLICABLE_AT_NIGHT from till -> "X des frais diurnes applicables la nuit de 22 h à 5 h"
         NIGHT_TIMES_OF -> ""
-        DAYTIME_CHARGES_APPLIED_AT_NIGHT from till -> "x des frais de jour appliqués au tarif de nuit (🌙) de 22 heures à 5 heures du matin"
+        DAYTIME_CHARGES_APPLIED_AT_NIGHT percentage from till -> percentage <> "x des frais diurnes appliqués au tarif de nuit (🌙) de "<> from <>" à " <> till
         DRIVERS_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC -> "* Le conducteur peut éventuellement demander 10% des tarifs de base (arrondi à Rs.10 le plus proche) pour couvrir le trafic, les chances de retour, etc."
         GOT_IT -> "J'ai compris!"
         DAY_TIME_CHARGES from till -> "Frais diurnes (de 5 h à 22 h)"
@@ -1144,3 +1144,6 @@ getFR stringKey =
         LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> "En savoir plus sur les fonctionnalités de sécurité exclusives sur " <> merchantName
         OTHER_PROVIDER_NO_RECEIPT -> "Les reçus du conducteur pour les courses effectuées par d'autres prestataires ne sont pas encore disponibles."
         RIDE_FULFILLED_BY merchantName -> "Trajet effectué par : " <> merchantName
+        RUSH_HOUR_CHARGES -> "Frais de pointe*"
+        TIP_CAN_BE_ADDED maxTip -> "Un pourboire allant jusqu'à "<> maxTip <>" peut être ajouté au tarif de la course."
+        RUSH_HOURS_DESC charges -> "*Frais de pointe de " <> charges <> " applicables"

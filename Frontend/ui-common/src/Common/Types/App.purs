@@ -546,3 +546,8 @@ instance eqProviderType :: Eq ProviderType where eq = genericEq
 instance showProviderType :: Show ProviderType where show = genericShow
 instance encodeProviderType :: Encode ProviderType where encode = defaultEnumEncode
 instance decodeProviderType :: Decode ProviderType where decode = defaultEnumDecode
+
+type Price = {
+    amount :: Number
+  , currency :: String
+}

@@ -659,7 +659,7 @@ homeScreenFlow = do
                                                                                                       {key : "Estimate Fare (₹)", value : unsafeToForeign (state.data.suggestedAmount + state.data.rateCard.additionalFare)},
                                                                                                       {key : "Customer tip (₹)", value : unsafeToForeign state.props.customerTip.tipForDriver},
                                                                                                       {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
-                                                                                                      {key : "Night Ride", value : unsafeToForeign state.data.rateCard.nightCharges}]
+                                                                                                      {key : "Night Ride", value : unsafeToForeign state.data.rateCard.isNightShift}]
       if (not (isLocalStageOn QuoteList)) then do
         void $ pure $ firebaseLogEvent "ny_user_cancel_and_retry_request_quotes"
         cancelEstimate state.props.estimateId
@@ -854,7 +854,7 @@ homeScreenFlow = do
           liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_request_quote" $ [ {key : "Request Type", value : unsafeToForeign if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then "Auto Assign" else "Manual Assign"},
                                                                                                           {key : "Estimate Fare (₹)", value : unsafeToForeign (state.data.suggestedAmount + state.data.rateCard.additionalFare)},
                                                                                                           {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
-                                                                                                          {key : "Night Ride", value : unsafeToForeign state.data.rateCard.nightCharges}]
+                                                                                                          {key : "Night Ride", value : unsafeToForeign state.data.rateCard.isNightShift}]
           if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then do
             void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_auto_confirm"
             pure unit
@@ -941,7 +941,7 @@ homeScreenFlow = do
                                                                                                           {key : "Additional info", value : unsafeToForeign state.props.cancelDescription},
                                                                                                           {key : "Pickup", value : unsafeToForeign state.data.driverInfoCardState.source},
                                                                                                           {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
-                                                                                                          {key : "Night Ride", value : unsafeToForeign state.data.rateCard.nightCharges},
+                                                                                                          {key : "Night Ride", value : unsafeToForeign state.data.rateCard.isNightShift},
                                                                                                           {key : "BookingId", value : unsafeToForeign state.props.bookingId}]
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{autoScroll = false, isCancelRide = false,currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = NoView }})
           lift $ lift $ triggerRideStatusEvent "CANCELLED_PRODUCT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
