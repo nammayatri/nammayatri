@@ -352,7 +352,8 @@ data DriverStatsRes = DriverStatsRes
     totalEarningsOfDay :: Money,
     totalEarningsOfDayPerKm :: Money,
     bonusEarning :: Money,
-    coinBalance :: Int
+    coinBalance :: Int,
+    totalValidRidesOfDay :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -1055,6 +1056,7 @@ getStats (driverId, _, merchantOpCityId) date = do
   let fareParamId = mapMaybe (.fareParametersId) rides
   fareParameters <- (runInReplica . QFP.findAllIn) fareParamId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
+  validRideCountOfDriver <- fromMaybe 0 <$> Coins.getValidRideCountByDriverIdKey driverId
   let totalEarningsOfDay = sum (mapMaybe (.fare) rides)
       totalDistanceTravelledInKilometers = sum (mapMaybe (.chargeableDistance) rides) `div` 1000
       totalEarningOfDayExcludingTollCharges = totalEarningsOfDay - (round $ sum (mapMaybe (.tollCharges) rides) :: Money)
@@ -1063,6 +1065,7 @@ getStats (driverId, _, merchantOpCityId) date = do
       { coinBalance = coinBalance_,
         totalRidesOfDay = length rides,
         totalEarningsOfDay = totalEarningsOfDay,
+        totalValidRidesOfDay = validRideCountOfDriver,
         totalEarningsOfDayPerKm =
           if totalDistanceTravelledInKilometers.getMeters == 0
             then Money 0
