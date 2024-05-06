@@ -28,8 +28,8 @@ instance FromTType' Beam.FareBreakup Domain.Types.FareBreakup.FareBreakup where
 instance ToTType' Beam.FareBreakup Domain.Types.FareBreakup.FareBreakup where
   toTType' (Domain.Types.FareBreakup.FareBreakup {..}) = do
     Beam.FareBreakupT
-      { Beam.amount = (.amount) amount,
-        Beam.currency = Just $ (.currency) amount,
+      { Beam.amount = ((.amount) amount),
+        Beam.currency = (Just $ (.currency) amount),
         Beam.description = description,
         Beam.bookingId = entityId,
         Beam.entityType = entityType,

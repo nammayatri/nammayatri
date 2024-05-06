@@ -45,7 +45,7 @@ FareBreakup:
       amountWithCurrency: PriceAPIEntity
       derive': "Generic, Show, FromJSON, ToJSON, ToSchema"
     FareBreakupEntityType:
-      enum: "BOOKING_UPDATE_REQUEST, BOOKING"
+      enum: "BOOKING_UPDATE_REQUEST, BOOKING, RIDE"
 
   constraints:
     bookingId: SecondaryKey

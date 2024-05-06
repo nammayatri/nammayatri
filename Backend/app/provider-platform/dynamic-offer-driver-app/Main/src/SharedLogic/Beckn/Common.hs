@@ -42,7 +42,8 @@ data DRideAssignedReq = DRideAssignedReq
   { bookingDetails :: BookingDetails,
     image :: Maybe Text,
     isDriverBirthDay :: Bool,
-    isFreeRide :: Bool
+    isFreeRide :: Bool,
+    fareParams :: Fare.FareParameters
   }
 
 data DRideStartedReq = DRideStartedReq
