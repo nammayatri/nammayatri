@@ -425,7 +425,6 @@ bookingPreferenceNavView push state =
   , padding $ Padding 12 12 12 12
   , margin $ Margin 16 0 16 16
   , onClick push $ const BookingOptions
-  , stroke $ "1," <> Color.darkMint
   , background Color.white900
   , cornerRadius 8.0
   ][
