@@ -85,6 +85,7 @@ data RideAssignedReq = RideAssignedReq
     transactionId :: Text,
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool,
+    fareParams :: [DFareBreakup],
     previousRideEndPos :: Maybe LatLong,
     fareParams :: [DFareBreakup]
   }
