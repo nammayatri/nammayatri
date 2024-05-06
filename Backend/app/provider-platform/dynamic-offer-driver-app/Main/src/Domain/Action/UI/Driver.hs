@@ -358,6 +358,7 @@ data DriverStatsRes = DriverStatsRes
     totalEarningsOfDayPerKm :: Money,
     bonusEarning :: Money,
     totalEarningsOfDayWithCurrency :: PriceAPIEntity,
+    totalEarningsOfDayPerKmWithCurrency :: PriceAPIEntity,
     bonusEarningWithCurrency :: PriceAPIEntity,
     coinBalance :: Int
   }
@@ -1086,18 +1087,19 @@ getStats (driverId, _, merchantOpCityId) date = do
   let bonusEarning = GHCL.sum driverSelFares + GHCL.sum customerExtFees + GHCL.sum deadKmFares
   let totalEarningsOfDay = sum (mapMaybe (.fare) rides)
       totalDistanceTravelledInKilometers = sum (mapMaybe (.chargeableDistance) rides) `div` 1000
-      totalEarningOfDayExcludingTollCharges = totalEarningsOfDay - (round $ sum (mapMaybe (.tollCharges) rides) :: Money)
+      totalEarningOfDayExcludingTollCharges = totalEarningsOfDay - (sum (mapMaybe (.tollCharges) rides) :: HighPrecMoney)
+      totalEarningsOfDayPerKm =
+        if totalDistanceTravelledInKilometers.getMeters == 0
+          then HighPrecMoney 0.0
+          else toHighPrecMoney $ roundToIntegral totalEarningOfDayExcludingTollCharges `div` totalDistanceTravelledInKilometers.getMeters
   return $
     DriverStatsRes
       { coinBalance = coinBalance_,
         totalRidesOfDay = length rides,
         totalEarningsOfDay = roundToIntegral totalEarningsOfDay,
         totalEarningsOfDayWithCurrency = PriceAPIEntity totalEarningsOfDay currency,
-        totalEarningsOfDayPerKm = -- FIXME with currency
-          if totalDistanceTravelledInKilometers.getMeters == 0
-            then Money 0
-            else Money $ totalEarningOfDayExcludingTollCharges.getMoney `div` totalDistanceTravelledInKilometers.getMeters,
-        totalRidesDistanceOfDay = sum (mapMaybe (.chargeableDistance) rides),
+        totalEarningsOfDayPerKm = roundToIntegral totalEarningsOfDayPerKm,
+        totalEarningsOfDayPerKmWithCurrency = PriceAPIEntity totalEarningsOfDayPerKm currency,
         bonusEarning = roundToIntegral bonusEarning,
         bonusEarningWithCurrency = PriceAPIEntity bonusEarning currency
       }

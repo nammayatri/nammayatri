@@ -70,7 +70,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbNightShiftChargeItem = fmap (mkBreakupItem nightShiftCaption) (mkPrice <$> fareParams.nightShiftCharge)
 
       parkingChargeCaption = show Enums.PARKING_CHARGE
-      mbParkingChargeItem = mkBreakupItem parkingChargeCaption . (mkPrice . round) <$> fareParams.parkingCharge
+      mbParkingChargeItem = mkBreakupItem parkingChargeCaption . mkPrice <$> fareParams.parkingCharge
 
       waitingChargesCaption = show Enums.WAITING_OR_PICKUP_CHARGES
       mbWaitingChargesItem = mkBreakupItem waitingChargesCaption . mkPrice <$> fareParams.waitingCharge
@@ -155,7 +155,7 @@ pureFareSum fareParams = do
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
     + platformFee
-    + round (fromMaybe 0 fareParams.customerCancellationDues + fromMaybe 0 fareParams.tollCharges + fromMaybe 0 fareParams.parkingCharge)
+    + (fromMaybe 0.0 fareParams.customerCancellationDues + fromMaybe 0.0 fareParams.tollCharges + fromMaybe 0.0 fareParams.parkingCharge)
 
 data CalculateFareParametersParams = CalculateFareParametersParams
   { farePolicy :: FullFarePolicy,

@@ -855,7 +855,7 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemId = Just $ Common.mkItemId shortId booking.vehicleServiceTier,
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
-          itemPrice = tfItemPrice $ HighPrecMoney $ toRational booking.estimatedFare.getMoney,
+          itemPrice = tfItemPrice $ booking.estimatedFare,
           itemTags = mkRateCardTag estimatedDistance Nothing mbFarePolicy
         }
     ]

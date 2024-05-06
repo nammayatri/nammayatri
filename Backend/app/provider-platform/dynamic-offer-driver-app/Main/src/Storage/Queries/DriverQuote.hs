@@ -132,7 +132,7 @@ instance FromTType' BeamDQ.DriverQuote DriverQuote where
             clientConfigVersion = clientConfigVersion',
             backendConfigVersion = backendConfigVersion',
             clientDevice = clientDevice',
-            currency = fromMaybe INR currency
+            currency = fromMaybe INR currency,
             ..
           }
 

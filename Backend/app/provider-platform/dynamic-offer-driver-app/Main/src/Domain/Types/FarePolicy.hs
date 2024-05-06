@@ -64,6 +64,7 @@ data FarePolicyCAC = FarePolicyCAC
   { id :: Id FarePolicy,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
     serviceCharge :: Maybe Money,
+    parkingCharge :: Maybe HighPrecMoney,
     serviceChargeAmount :: Maybe HighPrecMoney,
     currency :: Maybe Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,

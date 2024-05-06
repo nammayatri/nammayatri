@@ -202,7 +202,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                 estimatedDistance = Just estimatedDistance,
                 estimatedRideDuration = Nothing,
                 timeDiffFromUtc = Nothing,
-                tollCharges
+                tollCharges,
+                currency = booking.currency
               }
         QFP.create fareParameters
         let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now
@@ -321,7 +322,7 @@ buildbookingUpdateRequest :: MonadFlow m => DBooking.Booking -> Id DM.Merchant -
 buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParams farePolicyId maxEstimatedDistance currentPoint estimatedDistance validTill = do
   guid <- generateGUID
   now <- getCurrentTime
-  let (Money fare) = booking.estimatedFare
+  -- let (Money fare) = booking.estimatedFare
   return $
     DBUR.BookingUpdateRequest
       { id = guid,
@@ -336,7 +337,7 @@ buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParam
         currentPointLon = (.lon) <$> currentPoint,
         estimatedFare = HighPrecMoney $ toRational $ fareSum fareParams,
         estimatedDistance = Just $ metersToHighPrecMeters estimatedDistance,
-        oldEstimatedFare = HighPrecMoney $ toRational fare,
+        oldEstimatedFare = booking.estimatedFare,
         maxEstimatedDistance = metersToHighPrecMeters <$> maxEstimatedDistance,
         oldEstimatedDistance = metersToHighPrecMeters <$> booking.estimatedDistance,
         totalDistance = Nothing,
