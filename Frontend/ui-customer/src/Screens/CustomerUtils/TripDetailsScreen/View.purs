@@ -153,8 +153,8 @@ tripIdView push state =
           , gravity CENTER_VERTICAL
           ][ imageView
               [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_ac"
-              , height $ V 12
-              , width $ V 12
+              , height $ V 16
+              , width $ V 16
               , margin $ MarginRight 4
               , visibility $ boolToVisibility hasAirConditioned
               ]
