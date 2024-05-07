@@ -22,6 +22,7 @@ module Domain.Action.UI.Registration
     OTPChannel (..),
     auth,
     signatureAuth,
+    createPerson,
     verify,
     resend,
     logout,

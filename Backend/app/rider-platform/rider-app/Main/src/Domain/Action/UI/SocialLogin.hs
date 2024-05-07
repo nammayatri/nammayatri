@@ -3,23 +3,19 @@
 
 module Domain.Action.UI.SocialLogin where
 
-import qualified API.Types.UI.SocialLogin
 import qualified API.Types.UI.SocialLogin as SL
-import Control.Monad (mzero)
 import Data.Aeson
-import Data.ByteString.Lazy (ByteString)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
-import qualified Domain.Action.UI.Registration as DR
+import qualified Domain.Action.UI.Registration as PR
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
+import Kernel.External.Encryption (encrypt)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -28,9 +24,11 @@ import Network.HTTP.Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Types.Status (statusCode)
 import Servant hiding (throwError)
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant as CQMOC
 import qualified Storage.Queries.Person as PQ
+import qualified Storage.Queries.PersonExtra as PQ
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified Storage.Queries.RegistrationTokenExtra as QR
 import Tools.Auth
 import Tools.Error
 
@@ -71,30 +69,36 @@ postSocialLogin req = do
   result <- L.runIO $ fetchTokenInfo iosValidateEnpoint req.oauthProvider req.tokenId
   case result of
     Right info -> do
-      oldPerson <- PQ.findByEmail (Just info.email)
+      oldPerson <- PQ.findByEmailAndMerchantId req.merchantId info.email
       person <-
         case oldPerson of
           Just person' -> pure person'
           Nothing -> do
-            deploymentVersion <- asks (.version)
-            moc <- CQMOC.findById req.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound req.merchantOperatingCityId.getId)
-            let createPersonInput = buildCreatePersonInput moc.city req.name info.email
-            DR.createDriverWithDetails createPersonInput Nothing Nothing Nothing Nothing (Just deploymentVersion.getDeploymentVersion) req.merchantId req.merchantOperatingCityId False
+            merchant <- CQMOC.findById req.merchantId >>= fromMaybeM (MerchantNotFound req.merchantId.getId)
+            let authReq = buildAuthReq info.email
+            PR.createPerson authReq SP.EMAIL Nothing Nothing Nothing Nothing Nothing merchant
       QR.deleteByPersonId person.id
-      token <- makeSession person.id.getId req.merchantId.getId req.merchantOperatingCityId.getId
+      token <- makeSession person.id.getId req.merchantId.getId
       _ <- QR.create token
       pure $ SL.SocialLoginRes token.token
-    Left _ -> throwError . FailedToVerifyIdToken $ show req.oauthProvider <> ", idToken: " <> req.tokenId <> " error: "
+    Left _ -> throwError . InternalError $ show req.oauthProvider <> ", idToken: " <> req.tokenId <> " error: "
   where
-    buildCreatePersonInput city name email =
-      DR.CreatePersonInput
+    buildAuthReq email =
+      PR.AuthReq
         { mobileNumber = Nothing,
           mobileCountryCode = Nothing,
-          name = name,
-          merchantId = req.merchantId.getId,
-          merchantOperatingCity = Just city,
+          identifierType = Just SP.EMAIL,
+          merchantId = req.merchantShortId,
+          deviceToken = Nothing,
+          notificationToken = Nothing,
+          whatsappNotificationEnroll = Nothing,
+          firstName = req.name,
+          middleName = Nothing,
+          lastName = Nothing,
           email = Just email,
-          identifierType = SP.EMAIL,
+          language = Nothing,
+          gender = Nothing,
+          otpChannel = Nothing,
           registrationLat = req.registrationLat,
           registrationLon = req.registrationLon
         }
@@ -102,43 +106,39 @@ postSocialLogin req = do
 makeSession ::
   Text ->
   Text ->
-  Text ->
   Environment.Flow SR.RegistrationToken
-makeSession entityId merchantId merchantOpCityId = do
+makeSession entityId merchantId = do
   otp <- generateOTPCode
-  rtid <- generateGUID
-  token <- generateGUID
+  rtid <- L.generateGUID
+  token <- L.generateGUID
   now <- getCurrentTime
   return $
     SR.RegistrationToken
       { id = Id rtid,
         token = token,
-        attempts = 3, -- TODO: maybe change later
+        attempts = 3,
         authMedium = SR.EMAIL,
         authType = SR.OAUTH,
         authValueHash = otp,
-        verified = True,
+        verified = False,
         authExpiry = 3,
-        tokenExpiry = 365,
+        tokenExpiry = 356,
         entityId = entityId,
         merchantId = merchantId,
-        merchantOperatingCityId = merchantOpCityId,
         entityType = SR.USER,
         createdAt = now,
         updatedAt = now,
-        info = Nothing,
-        alternateNumberAttempts = 3 -- TODO: change later
+        info = Nothing
       }
 
 postUiSocialUpdateProfile ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    API.Types.UI.SocialLogin.SocialUpdateProfileReq ->
+    SL.SocialUpdateProfileReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postUiSocialUpdateProfile (mbPersonId, _, _) req = do
+postUiSocialUpdateProfile (mbPersonId, _) req = do
   case mbPersonId of
     Nothing -> throwError $ InternalError "Not Implemented for dashboard"
     Just personId -> do
@@ -151,8 +151,8 @@ postUiSocialUpdateProfile (mbPersonId, _, _) req = do
               { SP.mobileCountryCode = req.mobileCountryCode,
                 SP.mobileNumber = encNewPhoneNumber,
                 SP.unencryptedMobileNumber = req.mobileNumber,
-                SP.firstName = fromMaybe person.firstName req.firstName,
+                SP.firstName = req.firstName <|> person.firstName,
                 SP.lastName = req.lastName <|> person.lastName
               }
-      PQ.updateMobileNumberAndCode updPerson
+      PQ.updateByPrimaryKey updPerson
       pure Kernel.Types.APISuccess.Success

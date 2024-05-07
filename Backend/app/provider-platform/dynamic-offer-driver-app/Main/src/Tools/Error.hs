@@ -1027,26 +1027,20 @@ instance IsAPIError LmsError
 
 ------------ OAuth Errors ------------
 
-data OAuthError = FailedToVerifyGoogleTokenId Text | FailedToVerifyIosTokenId Text | UserWithSameEmailAlreadyExist Text
+data OAuthError = FailedToVerifyIdToken Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''OAuthError
 
 instance IsBaseError OAuthError where
   toMessage = \case
-    FailedToVerifyGoogleTokenId tokenId -> Just $ "Failed to verify token with google " <> tokenId
-    FailedToVerifyIosTokenId tokenId -> Just $ "Failed to verify token with IOS " <> tokenId
-    UserWithSameEmailAlreadyExist email -> Just $ "User with same email already exist " <> email
+    FailedToVerifyIdToken provider -> Just $ "Failed to verify identity token with " <> show provider
 
 instance IsHTTPError OAuthError where
   toErrorCode = \case
-    FailedToVerifyGoogleTokenId tokenId -> "OAUTH_ERROR_GOOGLE_" <> tokenId
-    FailedToVerifyIosTokenId tokenId -> "OAUTH_ERROR_IOS_" <> tokenId
-    UserWithSameEmailAlreadyExist email -> "OAUTH_ERROR_USER_ALREADY_EXIST" <> email
+    FailedToVerifyIdToken provider -> "OAUTH_ERROR_" <> provider
   toHttpCode = \case
-    FailedToVerifyGoogleTokenId _ -> E401
-    FailedToVerifyIosTokenId _ -> E401
-    UserWithSameEmailAlreadyExist _ -> E400
+    FailedToVerifyIdToken _ -> E401
 
 instance IsAPIError OAuthError
 
