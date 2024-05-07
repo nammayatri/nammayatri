@@ -291,7 +291,7 @@ public class RideRequestActivity extends AppCompatActivity {
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
-            RideRequestUtils.updateTierAndAC(holder, model);
+            RideRequestUtils.updateTierAndAC(holder, model, RideRequestActivity.this);
             RideRequestUtils.updateRateView(holder, model);
             RideRequestUtils.updateRentalView(holder, model, RideRequestActivity.this);
             RideRequestUtils.updateIntercityView(holder, model, RideRequestActivity.this);

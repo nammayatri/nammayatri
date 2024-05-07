@@ -251,7 +251,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
             RideRequestUtils.updateRateView(holder, model);
-            RideRequestUtils.updateTierAndAC(holder, model);
+            RideRequestUtils.updateTierAndAC(holder, model, OverlaySheetService.this);
             RideRequestUtils.updateRentalView(holder, model, OverlaySheetService.this);
             RideRequestUtils.updateIntercityView(holder, model, OverlaySheetService.this);
             RideRequestUtils.updateExtraChargesString(holder, model, OverlaySheetService.this);
