@@ -399,7 +399,10 @@ type CityConfig = {
   iopConfig :: InteroperabilityConfig,
   estimateAndQuoteConfig :: EstimateConfig,
   featureConfig :: CityBasedFeatures,
-  referral :: ReferalConfig
+  referral :: ReferalConfig,
+  dashboardUrl :: String,
+  appLogo :: String,
+  appLogoLight :: String
 }
 
 type CityBasedFeatures = {

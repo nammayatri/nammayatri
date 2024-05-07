@@ -3135,7 +3135,8 @@ homescreenHeader push state =
 
 pickupLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 pickupLocationView push state = 
-  linearLayout
+  let headerLogo = if DS.null state.data.currentCityConfig.appLogoLight then "ny_ic_logo_light" else state.data.currentCityConfig.appLogoLight
+  in linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -3196,7 +3197,7 @@ pickupLocationView push state =
                 , gravity CENTER_VERTICAL
                 , layoutGravity "center_vertical"
                 ][ imageView
-                    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_logo_light"
+                    [ imageWithFallback $ fetchImage FF_ASSET headerLogo 
                     , height $ V 50
                     , width $ V 110
                     , margin $ MarginHorizontal 10 10

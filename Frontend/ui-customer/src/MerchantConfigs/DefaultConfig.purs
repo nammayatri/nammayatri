@@ -344,7 +344,7 @@ config =
   , privacyLink : "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F"
   , shareAppConfig : {
       title : "Share Namma Yatri!"
-    , description : "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n#beOpen #chooseOpen \n\nDownload Namma Yatri now! \n"--https://nammayatri.in/link/rider/SJ8D"
+    , description : "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n#beOpen #chooseOpen \n\n"--https://nammayatri.in/link/rider/SJ8D"
   }
   , dashboard :{
       url : "https://nammayatri.in/open?source=in-app"
@@ -400,7 +400,10 @@ config =
             , iopConfig = {
                 enable : true,
                 autoSelectTime : 8
-              }
+              },
+            dashboardUrl = "https://www.manayatri.in/open?source=in-app",
+            appLogoLight = "ny_ic_logo_light_my,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_logo_light_my.png",
+            appLogo = "ic_namma_yatri_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ic_namma_yatri_logo.png"
           },
         defaultCityConfig
           { cityName = "Kolkata",
@@ -454,5 +457,8 @@ defaultCityConfig =
     referral : {
       domain : "https://nammayatri.in",
       customerAppId : "in.juspay.nammayatri"
-    }
+    },
+    appLogo : "",
+    dashboardUrl : "",
+    appLogoLight : ""
   }

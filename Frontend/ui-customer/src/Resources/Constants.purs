@@ -316,3 +316,4 @@ maxImageUploadInIssueReporting = 3
 -- Id for emergency contact initial chat suggestion on remote config
 emergencyContactInitialChatSuggestionId :: String
 emergencyContactInitialChatSuggestionId = "d6cddbb1a6aee372c0c7f05173da8f95"
+
