@@ -293,7 +293,8 @@ rideListResponseTransformer list =
         tollCharge : fromMaybe 0 ride.tollCharges,
         rideType : ride.vehicleServiceTierName,
         tripStartTime : ride.tripStartTime,
-        tripEndTime : ride.tripEndTime
+        tripEndTime : ride.tripEndTime,
+        acRide : fromMaybe false ride.isVehicleAirConditioned
       }) list
 
 
@@ -336,5 +337,6 @@ dummyCard =  {
     tollCharge : 0,
     rideType : "",
     tripStartTime : Nothing,
-    tripEndTime : Nothing
+    tripEndTime : Nothing,
+    acRide : false
   }

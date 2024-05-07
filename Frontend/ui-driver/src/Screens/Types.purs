@@ -803,7 +803,8 @@ type IndividualRideCardState =
     tollCharge :: Int,
     rideType :: String,
     tripStartTime :: Maybe String,
-    tripEndTime :: Maybe String
+    tripEndTime :: Maybe String,
+    acRide :: Boolean
   }
 
 
@@ -1351,7 +1352,8 @@ type TripDetailsScreenData =
     rideType :: String,
     tripStartTime :: Maybe String,
     tripEndTime :: Maybe String,
-    vehicleModel :: String
+    vehicleModel :: String,
+    acRide :: Boolean
   }
 
 type TripDetailsScreenProps =

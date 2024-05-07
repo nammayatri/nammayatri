@@ -510,7 +510,8 @@ rideHistoryItemTransformer (RidesInfo ride) =
     tollCharge : fromMaybe 0 ride.tollCharges,
     rideType : ride.vehicleServiceTierName,
     tripStartTime : ride.tripStartTime,
-    tripEndTime : ride.tripEndTime
+    tripEndTime : ride.tripEndTime,
+    acRide : fromMaybe false ride.isVehicleAirConditioned
   }
 
 getDisabilityType :: Maybe String -> Maybe DisabilityType

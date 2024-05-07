@@ -78,7 +78,8 @@ initData =
             tollCharge : 0,
             rideType : "",
             tripStartTime : Nothing,
-            tripEndTime : Nothing
+            tripEndTime : Nothing,
+            acRide : false
         }
       , logField : empty
       }

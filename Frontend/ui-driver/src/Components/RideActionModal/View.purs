@@ -809,7 +809,7 @@ rideTierAndCapacity push config =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
-  , background Color.grey700 
+  , background Color.blue600 
   , gravity CENTER
   , padding $ Padding 8 8 8 8
   , margin $ MarginBottom 12
@@ -820,7 +820,6 @@ rideTierAndCapacity push config =
       , cornerRadius 18.0
       , background Color.blue800
       , padding $ Padding 8 2 8 2
-      , margin $ MarginRight 6
       , gravity CENTER_VERTICAL
       , visibility $ boolToVisibility config.acRide
       ][ imageView
@@ -842,18 +841,29 @@ rideTierAndCapacity push config =
       , width WRAP_CONTENT
       , text $ serviceTierMapping config.serviceTierAndAC
       , color Color.black700
+      , margin $ MarginLeft 6
+      , padding $ PaddingBottom 1
       ] <> FontStyle.body1 TypoGraphy
+    , linearLayout
+      [ width $ V 5
+      , height $ V 5
+      , background Color.black700
+      , cornerRadius 4.0
+      , margin $ MarginHorizontal 6 6
+      ][]
     , imageView
       [ height $ V 16
       , width $ V 16
       , imageWithFallback $ fetchImage FF_ASSET "ic_profile_active"
       , visibility $ boolToVisibility $ Maybe.isJust config.capacity
-      , margin $ MarginHorizontal 4 2
+      , alpha 0.9
+      , margin $ MarginRight 2
       ]
     , textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , color Color.black700
+      , margin $ MarginRight 6
       ] <> FontStyle.body1 TypoGraphy
         <> case config.capacity of
             Maybe.Just cap -> [text $ show cap]

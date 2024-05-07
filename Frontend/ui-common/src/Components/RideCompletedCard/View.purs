@@ -111,7 +111,7 @@ rideTierAndCapacity push config =
   , padding $ Padding 8 8 8 8
   , margin $ MarginVertical 12 12
   , cornerRadius 4.0
-  , visibility $ boolToVisibility $ config.isDriver
+  , visibility GONE
   ][ textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
