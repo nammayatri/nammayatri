@@ -4,6 +4,7 @@
 
 module Domain.Types.VehicleFitnessCertificate where
 
+import Data.Aeson
 import qualified Domain.Types.IdfyVerification
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
@@ -35,9 +36,9 @@ data VehicleFitnessCertificateE e = VehicleFitnessCertificate
   }
   deriving (Generic)
 
-type VehicleFitnessCertificate = VehicleFitnessCertificateE 'AsEncrypted
+type VehicleFitnessCertificate = VehicleFitnessCertificateE ('AsEncrypted)
 
-type DecryptedVehicleFitnessCertificate = VehicleFitnessCertificateE 'AsUnencrypted
+type DecryptedVehicleFitnessCertificate = VehicleFitnessCertificateE ('AsUnencrypted)
 
 instance EncryptedItem VehicleFitnessCertificate where
   type Unencrypted VehicleFitnessCertificate = (DecryptedVehicleFitnessCertificate, HashSalt)

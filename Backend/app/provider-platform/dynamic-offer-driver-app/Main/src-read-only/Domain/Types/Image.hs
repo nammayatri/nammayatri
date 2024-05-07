@@ -4,6 +4,7 @@
 
 module Domain.Types.Image where
 
+import Data.Aeson
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person

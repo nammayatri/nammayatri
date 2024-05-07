@@ -4,6 +4,7 @@
 
 module Domain.Types.VehicleInsurance where
 
+import Data.Aeson
 import qualified Domain.Types.IdfyVerification
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
@@ -34,9 +35,9 @@ data VehicleInsuranceE e = VehicleInsurance
   }
   deriving (Generic)
 
-type VehicleInsurance = VehicleInsuranceE 'AsEncrypted
+type VehicleInsurance = VehicleInsuranceE ('AsEncrypted)
 
-type DecryptedVehicleInsurance = VehicleInsuranceE 'AsUnencrypted
+type DecryptedVehicleInsurance = VehicleInsuranceE ('AsUnencrypted)
 
 instance EncryptedItem VehicleInsurance where
   type Unencrypted VehicleInsurance = (DecryptedVehicleInsurance, HashSalt)
