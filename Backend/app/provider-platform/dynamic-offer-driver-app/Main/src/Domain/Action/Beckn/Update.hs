@@ -222,12 +222,25 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         QBUR.updateStatusById DBUR.USER_CONFIRMED bookingUpdateReq.id
         if transporterConfig.editLocDriverPermissionNeeded
           then do
-            let entityData = Notify.EditLocationReq {..}
-            Notify.notifyPickupOrDropLocationChange person entityData
+            newEstimatedDistance <- bookingUpdateReq.estimatedDistance & fromMaybeM (InternalError $ "No estimated distance found for bookingUpdateReq with Id :" <> bookingUpdateReq.id.getId)
+            oldEstimatedDistance <- bookingUpdateReq.oldEstimatedDistance & fromMaybeM (InternalError $ "No estimated distance found for booking with Id :" <> booking.id.getId)
+            let entityData =
+                  Notify.UpdateLocationNotificationReq
+                    { rideId = ride.id,
+                      origin = Nothing,
+                      destination = Just dropLocation,
+                      stops = Nothing,
+                      bookingUpdateRequestId = bookingUpdateReq.id,
+                      newEstimatedDistance,
+                      newEstimatedFare = bookingUpdateReq.estimatedFare,
+                      oldEstimatedDistance,
+                      oldEstimatedFare = bookingUpdateReq.oldEstimatedFare,
+                      validTill = bookingUpdateReq.validTill
+                    }
+            let fcmOverlayReq = Notify.buildFCMOverlayReq bookingUpdateReq.id.getId
+            Notify.sendUpdateLocOverlay merchantOperatingCity.id person fcmOverlayReq entityData
           else void $ EditBooking.postEditResult (Just person.id, merchantOperatingCity.merchantId, merchantOperatingCity.id) bookingUpdateReq.id (EditBooking.EditBookingRespondAPIReq {action = EditBooking.ACCEPT})
       _ -> throwError (InvalidRequest "Invalid status for edit location request")
-
--- handler _ = throwError (InvalidRequest "Not Implemented")
 
 buildLocation :: MonadFlow m => Common.Location -> m DL.Location
 buildLocation location = do
