@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findByRcIdAndDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehicleInsurance.VehicleInsurance])
+  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.VehicleInsurance.VehicleInsurance]))
 findByRcIdAndDriverId (Kernel.Types.Id.Id rcId) (Kernel.Types.Id.Id driverId) = do findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.driverId $ Se.Eq driverId]]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleInsurance.VehicleInsurance -> m (Maybe Domain.Types.VehicleInsurance.VehicleInsurance))
@@ -40,8 +40,8 @@ updateByPrimaryKey (Domain.Types.VehicleInsurance.VehicleInsurance {..}) = do
       Se.Set Beam.issueDate issueDate,
       Se.Set Beam.limitsOfLiability limitsOfLiability,
       Se.Set Beam.policyExpiry policyExpiry,
-      Se.Set Beam.policyNumberEncrypted (policyNumber & unEncrypted . encrypted),
-      Se.Set Beam.policyNumberHash (policyNumber & hash),
+      Se.Set Beam.policyNumberEncrypted (((policyNumber & unEncrypted . encrypted))),
+      Se.Set Beam.policyNumberHash ((policyNumber & hash)),
       Se.Set Beam.policyProvider policyProvider,
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
       Se.Set Beam.verificationStatus verificationStatus,
@@ -84,8 +84,8 @@ instance ToTType' Beam.VehicleInsurance Domain.Types.VehicleInsurance.VehicleIns
         Beam.issueDate = issueDate,
         Beam.limitsOfLiability = limitsOfLiability,
         Beam.policyExpiry = policyExpiry,
-        Beam.policyNumberEncrypted = policyNumber & unEncrypted . encrypted,
-        Beam.policyNumberHash = policyNumber & hash,
+        Beam.policyNumberEncrypted = ((policyNumber & unEncrypted . encrypted)),
+        Beam.policyNumberHash = (policyNumber & hash),
         Beam.policyProvider = policyProvider,
         Beam.rcId = Kernel.Types.Id.getId rcId,
         Beam.verificationStatus = verificationStatus,

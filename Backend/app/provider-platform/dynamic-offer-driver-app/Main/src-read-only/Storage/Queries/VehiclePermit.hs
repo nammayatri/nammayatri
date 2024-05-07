@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findByRcIdAndDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehiclePermit.VehiclePermit])
+  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.VehiclePermit.VehiclePermit]))
 findByRcIdAndDriverId (Kernel.Types.Id.Id rcId) (Kernel.Types.Id.Id driverId) = do findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.driverId $ Se.Eq driverId]]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehiclePermit.VehiclePermit -> m (Maybe Domain.Types.VehiclePermit.VehiclePermit))
@@ -39,8 +39,8 @@ updateByPrimaryKey (Domain.Types.VehiclePermit.VehiclePermit {..}) = do
       Se.Set Beam.issueDate issueDate,
       Se.Set Beam.nameOfPermitHolder nameOfPermitHolder,
       Se.Set Beam.permitExpiry permitExpiry,
-      Se.Set Beam.permitNumberEncrypted (permitNumber & unEncrypted . encrypted),
-      Se.Set Beam.permitNumberHash (permitNumber & hash),
+      Se.Set Beam.permitNumberEncrypted (((permitNumber & unEncrypted . encrypted))),
+      Se.Set Beam.permitNumberHash ((permitNumber & hash)),
       Se.Set Beam.purposeOfJourney purposeOfJourney,
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
       Se.Set Beam.regionCovered regionCovered,
@@ -83,8 +83,8 @@ instance ToTType' Beam.VehiclePermit Domain.Types.VehiclePermit.VehiclePermit wh
         Beam.issueDate = issueDate,
         Beam.nameOfPermitHolder = nameOfPermitHolder,
         Beam.permitExpiry = permitExpiry,
-        Beam.permitNumberEncrypted = permitNumber & unEncrypted . encrypted,
-        Beam.permitNumberHash = permitNumber & hash,
+        Beam.permitNumberEncrypted = ((permitNumber & unEncrypted . encrypted)),
+        Beam.permitNumberHash = (permitNumber & hash),
         Beam.purposeOfJourney = purposeOfJourney,
         Beam.rcId = Kernel.Types.Id.getId rcId,
         Beam.regionCovered = regionCovered,
