@@ -8,7 +8,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import Sequelize as Se
 import qualified Storage.Beam.VehicleDetails as BeamVD
 import Storage.Queries.OrphanInstances.VehicleDetails
