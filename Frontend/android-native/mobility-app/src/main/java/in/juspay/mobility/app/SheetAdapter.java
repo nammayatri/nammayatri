@@ -67,7 +67,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     }
 
     public static class SheetViewHolder extends RecyclerView.ViewHolder{
-        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, airConditioned, rideStartTime, rideStartDate, rideDuration, rideDistance, tollTag;
+        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, rideStartTime, rideStartDate, rideDuration, rideDistance, tollTag;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar, vcTierAndACView, rateViewDot;
         ImageView assetZonePickup, assetZoneDrop, rideTypeImage, locationDashedLine;
@@ -115,7 +115,6 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             rateText = itemView.findViewById(R.id.rateText);
             vehicleServiceTier = itemView.findViewById(R.id.vehicleServiceTier);
             acNonAcView = itemView.findViewById(R.id.acNonAcView);
-            airConditioned = itemView.findViewById(R.id.airConditioned);
             vcTierAndACView = itemView.findViewById(R.id.vcTierAndACView);
             rentalDurationDistanceTag = itemView.findViewById(R.id.rentalDurationDistanceTag);
             rideDuration = itemView.findViewById(R.id.rideDuration);
