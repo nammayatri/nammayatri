@@ -96,7 +96,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, dummyEstimateEntity)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..))
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..), City(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -1767,25 +1767,9 @@ eval (SettingSideBarActionController (SettingSideBarController.GoToFavourites)) 
 eval (SettingSideBarActionController (SettingSideBarController.GoToMyProfile)) state = exit $ GoToMyProfile state { data { settingSideBar { opened = SettingSideBarController.OPEN } } } false
 
 
-eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboard)) state = do
-  void $ pure $ setValueToLocalStore LIVE_DASHBOARD "LIVE_DASHBOARD_SELECTED"
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_live_stats_dashboard"
-  if os == "IOS" then do
-    continueWithCmd state [do
-      void $ openUrlInApp state.data.config.dashboard.url
-      pure NoAction
-    ]
-  else continue state {props {showLiveDashboard = true}}
+eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboard)) state = openLiveDashboard state
 
-eval OpenLiveDashboard state = do
-  void $ pure $ setValueToLocalStore LIVE_DASHBOARD "LIVE_DASHBOARD_SELECTED"
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_live_stats_dashboard"
-  if os == "IOS" then do
-    continueWithCmd state{props{showShimmer = false}} [do
-      void $ openUrlInApp state.data.config.dashboard.url
-      pure NoAction
-    ]
-  else continue state {props {showShimmer = false,showLiveDashboard = true}}
+eval OpenLiveDashboard state = openLiveDashboard state{props{showShimmer = false}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = do
   void $ pure $ performHapticFeedback unit
@@ -3480,3 +3464,15 @@ checkRecentRideVariant state = any (\item -> item.providerType == ONUS && isJust
 
 checkRecentRideVariantInEstimates :: Array EstimateAPIEntity -> Maybe String -> Boolean
 checkRecentRideVariantInEstimates estimates repeatRideServiceName = any (\(EstimateAPIEntity item) -> item.isValueAddNP == Just true && isJust item.serviceTierName && item.serviceTierName == repeatRideServiceName) estimates 
+
+openLiveDashboard :: HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+openLiveDashboard state = do 
+  void $ pure $ setValueToLocalStore LIVE_DASHBOARD "LIVE_DASHBOARD_SELECTED"
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_live_stats_dashboard"
+      dashboardUrl = if STR.null state.data.currentCityConfig.dashboardUrl then state.data.config.dashboard.url else state.data.currentCityConfig.dashboardUrl
+  if os == "IOS" then do
+    continueWithCmd state [do
+      void $ openUrlInApp dashboardUrl
+      pure NoAction
+    ]
+  else continue state {props {showLiveDashboard = true}}
