@@ -28,7 +28,7 @@ module Domain.Action.UI.Registration
   )
 where
 
-import Data.OpenApi hiding (email, info, url)
+import Data.OpenApi hiding (email, info, name, url)
 import Domain.Action.UI.DriverReferral
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
@@ -89,6 +89,7 @@ data CreatePersonInput = CreatePersonInput
     merchantId :: Text,
     merchantOperatingCity :: Maybe Context.City,
     email :: Maybe Text,
+    name :: Maybe Text,
     identifierType :: SP.IdentifierType,
     registrationLat :: Maybe Double,
     registrationLon :: Maybe Double
@@ -189,7 +190,7 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDe
       authId = SR.id token
   return $ AuthRes {attempts, authId}
   where
-    buildCreatePersonInput AuthReq {..} = CreatePersonInput {mobileNumber = Just mobileNumber, mobileCountryCode = Just mobileCountryCode, email = Nothing, identifierType = SP.MOBILENUMBER, ..}
+    buildCreatePersonInput AuthReq {..} = CreatePersonInput {mobileNumber = Just mobileNumber, mobileCountryCode = Just mobileCountryCode, email = Nothing, identifierType = SP.MOBILENUMBER, name = Nothing, ..}
 
 createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> m ()
 createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
@@ -262,7 +263,7 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
   return $
     SP.Person
       { id = pid,
-        firstName = "Driver",
+        firstName = fromMaybe "Driver" req.name,
         middleName = Nothing,
         lastName = Nothing,
         role = SP.DRIVER,

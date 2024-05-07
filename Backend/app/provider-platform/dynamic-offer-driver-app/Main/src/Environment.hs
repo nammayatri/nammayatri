@@ -148,7 +148,8 @@ data AppCfg = AppCfg
     superPositionConfig :: SuperPositionConfig,
     maxStraightLineRectificationThreshold :: HighPrecMeters,
     singleBatchProcessingTempDelay :: NominalDiffTime,
-    ondcTokenMap :: M.Map KeyConfig TokenConfig
+    ondcTokenMap :: M.Map KeyConfig TokenConfig,
+    iosValidateEnpoint :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -233,7 +234,8 @@ data AppEnv = AppEnv
     kafkaProducerForART :: Maybe KafkaProducerTools,
     maxStraightLineRectificationThreshold :: HighPrecMeters,
     singleBatchProcessingTempDelay :: NominalDiffTime,
-    ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig
+    ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
+    iosValidateEnpoint :: Text
   }
   deriving (Generic)
 

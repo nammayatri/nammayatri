@@ -7,7 +7,6 @@ import qualified API.Types.UI.SocialLogin
 import qualified Control.Lens
 import qualified Domain.Action.UI.SocialLogin as Domain.Action.UI.SocialLogin
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
@@ -20,18 +19,18 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( "social" :> "login" :> ReqBody '[JSON] API.Types.UI.SocialLogin.SocialLoginReq
+  ( "social" :> "login" :> ReqBody ('[JSON]) API.Types.UI.SocialLogin.SocialLoginReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.SocialLogin.SocialLoginRes
       :<|> TokenAuth
       :> "ui"
       :> "social"
       :> "update"
       :> "profile"
-      :> ReqBody '[JSON] API.Types.UI.SocialLogin.SocialUpdateProfileReq
+      :> ReqBody ('[JSON]) API.Types.UI.SocialLogin.SocialUpdateProfileReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -43,8 +42,7 @@ postSocialLogin a1 = withFlowHandlerAPI $ Domain.Action.UI.SocialLogin.postSocia
 
 postUiSocialUpdateProfile ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     API.Types.UI.SocialLogin.SocialUpdateProfileReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess

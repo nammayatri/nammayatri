@@ -150,7 +150,8 @@ data AppCfg = AppCfg
     collectRouteData :: Bool,
     cacConfig :: CacConfig,
     superPositionConfig :: SuperPositionConfig,
-    ondcTokenMap :: M.Map KeyConfig TokenConfig
+    ondcTokenMap :: M.Map KeyConfig TokenConfig,
+    iosValidateEnpoint :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -226,7 +227,8 @@ data AppEnv = AppEnv
     shouldLogRequestId :: Bool,
     requestId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig
+    ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig,
+    iosValidateEnpoint :: Text
   }
   deriving (Generic)
 
