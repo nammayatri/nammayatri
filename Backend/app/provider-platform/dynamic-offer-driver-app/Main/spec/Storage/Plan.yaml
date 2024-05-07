@@ -1,0 +1,106 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  PlanBaseAmount: Domain.Types.Extra.Plan
+
+Plan:
+  tableName: plan
+
+  types:
+    PaymentMode:
+      enum: "MANUAL, AUTOPAY"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+    Frequency:
+      enum: "DAILY, WEEKLY, MONTHLY"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+    PlanType:
+      enum: "DEFAULT, SUBSCRIPTION"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+
+    BasedOnEntity:
+      enum: "RIDE, NONE, VEHICLE, VEHICLE_AND_RIDE"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+    ServiceNames:
+      enum: "YATRI_SUBSCRIPTION, YATRI_RENTAL"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+
+  fields:
+    id : Id Plan
+    paymentMode : PaymentMode
+    merchantId : Id Merchant
+    name : Text
+    description : Text
+    maxAmount : HighPrecMoney
+    registrationAmount : HighPrecMoney
+    isOfferApplicable : Bool
+    maxCreditLimit : HighPrecMoney
+    maxMandateAmount : HighPrecMoney
+    planBaseAmount : PlanBaseAmount
+    freeRideCount : Int
+    frequency : Frequency
+    planType : PlanType
+    cgstPercentage : HighPrecMoney
+    sgstPercentage : HighPrecMoney
+    subscribedFlagToggleAllowed : Bool
+    isDeprecated : Bool
+    eligibleForCoinDiscount : Bool
+    merchantOpCityId : Id MerchantOperatingCity
+    basedOnEntity : BasedOnEntity
+    serviceName : ServiceNames
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentMode>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PaymentMode>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <Frequency>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <Frequency>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PlanType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PlanType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <BasedOnEntity>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <BasedOnEntity>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ServiceNames>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <ServiceNames>
+
+  constriants:
+    id: PrimaryKey
+    paymentMode: SecondaryKey
+    merchantId: SecondaryKey
+
+  queries:
+    findByIdAndPaymentModeWithServiceName:
+      kvFunction: findOneWithKV
+      where:
+        and: [id, paymentMode, serviceName]
+
+    findByMerchantOpCityIdWithServiceName:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOpCityId, serviceName]
+
+    findByMerchantOpCityIdAndTypeWithServiceName:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOpCityId, planType, serviceName]
+
+  sqlType:
+    maxAmount: integer
+    registrationAmount: integer
+    maxCreditLimit: integer
+    freeRideCount: integer
+    merchantOpCityId: text
+
+  default:
+    subscribedFlagToggleAllowed: "true"
+    isDeprecated: "false"
+    eligibleForCoinDiscount: "true"
+    serviceName: YATRI_SUBSCRIPTION
+    basedOnEntity: "'RIDE'"
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE

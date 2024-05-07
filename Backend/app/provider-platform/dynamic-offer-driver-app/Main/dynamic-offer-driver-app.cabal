@@ -232,6 +232,7 @@ library
       Domain.Types.DriverStats
       Domain.Types.Extra.DriverFee
       Domain.Types.Extra.Person
+      Domain.Types.Extra.Plan
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
       Domain.Types.FarePolicy.DriverExtraFeeBounds
@@ -270,7 +271,6 @@ library
       Domain.Types.Notification
       Domain.Types.OnCancel
       Domain.Types.OnUpdate
-      Domain.Types.Plan
       Domain.Types.Quote
       Domain.Types.RegistrationToken
       Domain.Types.RegistryMapFallback
@@ -399,7 +399,6 @@ library
       Storage.Beam.Message.MessageTranslation
       Storage.Beam.Notification
       Storage.Beam.Payment
-      Storage.Beam.Plan
       Storage.Beam.Quote
       Storage.Beam.RegistrationToken
       Storage.Beam.RegistryMapFallback
@@ -539,6 +538,7 @@ library
       Storage.Queries.PersonExtra
       Storage.Queries.Plan
       Storage.Queries.PurchaseHistoryExtra
+      Storage.Queries.PlanExtra
       Storage.Queries.Quote
       Storage.Queries.RatingExtra
       Storage.Queries.RegistrationToken
@@ -643,6 +643,7 @@ library
       Domain.Types.MetaData
       Domain.Types.ModuleCompletionInformation
       Domain.Types.Person
+      Domain.Types.Plan
       Domain.Types.PlanTranslation
       Domain.Types.PurchaseHistory
       Domain.Types.QuestionInformation
@@ -707,6 +708,7 @@ library
       Storage.Beam.MetaData
       Storage.Beam.ModuleCompletionInformation
       Storage.Beam.Person
+      Storage.Beam.Plan
       Storage.Beam.PlanTranslation
       Storage.Beam.PurchaseHistory
       Storage.Beam.QuestionInformation
@@ -789,6 +791,7 @@ library
       Storage.Queries.OrphanInstances.Image
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.PurchaseHistory
+      Storage.Queries.OrphanInstances.Plan
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.Translations
@@ -798,6 +801,7 @@ library
       Storage.Queries.OrphanInstances.Volunteer
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Person
+      Storage.Queries.Plan
       Storage.Queries.PlanTranslation
       Storage.Queries.PurchaseHistory
       Storage.Queries.QuestionInformation
