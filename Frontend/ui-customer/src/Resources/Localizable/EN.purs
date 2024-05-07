@@ -1143,3 +1143,4 @@ getEN stringKey =
         RUSH_HOUR_CHARGES -> "Rush Hour Charges*"
         TIP_CAN_BE_ADDED maxTip -> "Tip of upto ₹" <> maxTip <> " can be added to the ride fare."
         RUSH_HOURS_DESC charges -> "*During Rush hours, "<> charges <>"% additional fare is applicable to compensate driver’s time for high traffic."
+        AC_TURNED_OFF -> "AC Turned Off"

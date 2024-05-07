@@ -1654,28 +1654,39 @@ getFareUpdatedStr diffInDist waitingChargeApplied = do
     false, false -> getString FARE_UPDATED
 
 customerFeedbackPillData :: ST.HomeScreenState -> Array (Array (Array RatingCard.FeedbackItem)) 
-customerFeedbackPillData state = [feedbackPillDataWithRating1 Language, feedbackPillDataWithRating2 Language, feedbackPillDataWithRating3 state, feedbackPillDataWithRating4 state, feedbackPillDataWithRating5 state]
+customerFeedbackPillData state = [feedbackPillDataWithRating1 state, feedbackPillDataWithRating2 state, feedbackPillDataWithRating3 state, feedbackPillDataWithRating4 state, feedbackPillDataWithRating5 state]
 
-feedbackPillDataWithRating1 :: LazyCheck -> Array (Array RatingCard.FeedbackItem)
-feedbackPillDataWithRating1 lazycheck = [
+feedbackPillDataWithRating1 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+feedbackPillDataWithRating1 state = [
   [{id : "6", text : getString RUDE_DRIVER},
   {id : "1", text : getString FELT_UNSAFE},
   {id : "1", text : getString TOO_MANY_CALLS}],
   [{id : "6", text : getString RECKLESS_DRIVING},
   {id : "6", text : getString DRIVER_CHARGED_MORE}],
-  [{id : "1", text : getString LATE_DROP_OFF},
-  {id : "1", text : getString LATE_PICK_UP}]
+  ([{id : "1", text : getString LATE_DROP_OFF},
+    {id : "1", text : getString LATE_PICK_UP}]
+  <> acNotWorkingPill state)
 ]
 
-feedbackPillDataWithRating2 :: LazyCheck -> Array (Array RatingCard.FeedbackItem)
-feedbackPillDataWithRating2 lazycheck = [
+acNotWorkingPill :: ST.HomeScreenState -> Array RatingCard.FeedbackItem
+acNotWorkingPill state = 
+  (case state.data.ratingViewState.rideBookingRes ^. _serviceTierName  of
+      Just serviceTierName -> 
+        if ServiceTierCard.showACDetails serviceTierName Nothing
+          then [{id : "14", text : getString AC_TURNED_OFF}] 
+          else []
+      Nothing -> [])
+
+feedbackPillDataWithRating2 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+feedbackPillDataWithRating2 state = [
   [{id : "7", text : getString RUDE_DRIVER},
   {id : "2", text : getString FELT_UNSAFE},
   {id : "2", text : getString TOO_MANY_CALLS}],
   [{id : "7", text : getString RECKLESS_DRIVING},
   {id : "7", text : getString DRIVER_CHARGED_MORE}],
-  [{id : "2", text : getString LATE_DROP_OFF},
-  {id : "2", text : getString LATE_PICK_UP}]
+  ([{id : "2", text : getString LATE_PICK_UP},
+    {id : "2", text : getString LATE_DROP_OFF}]
+  <> acNotWorkingPill state)
 ]
 
 feedbackPillDataWithRating3 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)

@@ -1147,3 +1147,4 @@ getFR stringKey =
         RUSH_HOUR_CHARGES -> "Frais de pointe*"
         TIP_CAN_BE_ADDED maxTip -> "Un pourboire allant jusqu'à "<> maxTip <>" peut être ajouté au tarif de la course."
         RUSH_HOURS_DESC charges -> "*Frais de pointe de " <> charges <> " applicables"
+        AC_TURNED_OFF -> "Climatisation éteinte"

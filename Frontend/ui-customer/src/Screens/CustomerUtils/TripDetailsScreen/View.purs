@@ -155,7 +155,7 @@ tripIdView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState ->
 tripIdView push state =
   let rideType = ServiceTierCard.parseName $ fromMaybe "" state.data.selectedItem.serviceTierName 
       hasAirConditioned = ServiceTierCard.showACDetails rideType Nothing
-      rideTypeWithAc = if hasAirConditioned && rideType /= "" then "AC •" <> rideType else rideType
+      rideTypeWithAc = if hasAirConditioned && rideType /= "" then "AC • " <> rideType else rideType
   in
   linearLayout
   [ width MATCH_PARENT
@@ -179,9 +179,9 @@ tripIdView push state =
           , gravity CENTER_VERTICAL
           ][ imageView
               [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_ac"
-              , height $ V 16
-              , width $ V 16
-              , margin $ MarginRight 4
+              , height $ V 18
+              , width $ V 18
+              , margin $ Margin 0 1 3 0
               , visibility $ boolToVisibility hasAirConditioned
               ]
             , textView $

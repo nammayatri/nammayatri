@@ -155,7 +155,7 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config is
                   , recencyDate = if isPastTrip then existingTrip.recencyDate else Just $ getCurrentUTC ""
                   , locationScore = Just $ calculateScore (toNumber ((fromMaybe 0 existingTrip.frequencyCount) +  1)) (getCurrentUTC "") config.frequencyWeight
                   , serviceTierNameV2 = if isBackFilling || isJust existingTrip.serviceTierNameV2 then existingTrip.serviceTierNameV2 else trip.serviceTierNameV2
-                  , vehicleVariant = if isBackFilling || isJust existingTrip.vehicleVariant then existingTrip.vehicleVariant else trip.vehicleVariant
+                  , vehicleVariant = if isBackFilling || isJust existingTrip.serviceTierNameV2 then existingTrip.vehicleVariant else trip.vehicleVariant
                   }
             else existingTrip
                   { locationScore = Just $ calculateScore (toNumber (fromMaybe 0 existingTrip.frequencyCount)) (fromMaybe (getCurrentUTC "") existingTrip.recencyDate) config.frequencyWeight
