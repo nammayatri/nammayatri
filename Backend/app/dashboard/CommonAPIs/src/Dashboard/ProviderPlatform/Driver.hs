@@ -72,6 +72,7 @@ data DriverEndpoint
   | UpdateVehicleVariantEndPoint
   | BulkReviewRCVariantEndPoint
   | RemoveACUsageRestrictionEndpoint
+  | UpdateDriverTagEndPoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "DriverEndpoint"
@@ -516,7 +517,8 @@ data DriverInfoRes = DriverInfoRes
     currentAcOffReportCount :: Int,
     totalAcRestrictionUnblockCount :: Int,
     lastACStatusCheckedAt :: Maybe UTCTime,
-    blockStateModifier :: Maybe Text
+    blockStateModifier :: Maybe Text,
+    driverTag :: Maybe [Text]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1180,4 +1182,20 @@ data ReviewRCVariantRes = ReviewRCVariantRes
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance HideSecrets [ReviewRCVariantReq] where
+  hideSecrets = identity
+
+----------------UPDATE DRIVER TAG---------------------------------------------
+type UpdateDriverTagAPI =
+  Capture "driverId" (Id Driver)
+    :> "updateDriverTag"
+    :> ReqBody '[JSON] UpdateDriverTagReq
+    :> Post '[JSON] APISuccess
+
+data UpdateDriverTagReq = UpdateDriverTagReq
+  { driverTag :: Text,
+    isAddingTag :: Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+instance HideSecrets UpdateDriverTagReq where
   hideSecrets = identity

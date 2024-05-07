@@ -79,7 +79,8 @@ instance FromTType' BeamP.Person Person where
             registrationLat = registrationLat,
             registrationLon = registrationLon,
             useFakeOtp = useFakeOtp,
-            clientDevice = clientDevice'
+            clientDevice = clientDevice',
+            driverTag = driverTag
           }
 
 instance ToTType' BeamP.Person Person where
@@ -127,5 +128,6 @@ instance ToTType' BeamP.Person Person where
         BeamP.registrationLon = registrationLon,
         BeamP.useFakeOtp = useFakeOtp,
         BeamP.clientOsType = clientDevice <&> (.deviceType),
-        BeamP.clientOsVersion = clientDevice <&> (.deviceVersion)
+        BeamP.clientOsVersion = clientDevice <&> (.deviceVersion),
+        BeamP.driverTag = driverTag
       }

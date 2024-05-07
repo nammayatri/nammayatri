@@ -103,7 +103,8 @@ data PersonE e = Person
     clientConfigVersion :: Maybe Version,
     clientDevice :: Maybe Device,
     backendConfigVersion :: Maybe Version,
-    backendAppVersion :: Maybe Text
+    backendAppVersion :: Maybe Text,
+    driverTag :: Maybe [Text]
   }
   deriving (Generic)
 
