@@ -87,14 +87,14 @@ postSocialLogin req = do
     Left _ -> throwError . FailedToVerifyIdToken $ show req.oauthProvider <> ", idToken: " <> req.tokenId <> " error: "
   where
     buildCreatePersonInput city name email =
-      DR.CreatePersonInput
+      DR.AuthReq
         { mobileNumber = Nothing,
           mobileCountryCode = Nothing,
           name = name,
           merchantId = req.merchantId.getId,
           merchantOperatingCity = Just city,
           email = Just email,
-          identifierType = SP.EMAIL,
+          identifierType = Just SP.EMAIL,
           registrationLat = req.registrationLat,
           registrationLon = req.registrationLon
         }

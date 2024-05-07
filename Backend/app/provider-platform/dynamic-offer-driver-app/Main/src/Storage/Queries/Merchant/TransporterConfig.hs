@@ -30,6 +30,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Text as T
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 
@@ -95,7 +96,8 @@ update config = do
       Se.Set BeamTC.orderAndNotificationStatusCheckTimeLimit (nominalDiffTimeToSeconds config.orderAndNotificationStatusCheckTimeLimit),
       Se.Set BeamTC.snapToRoadConfidenceThreshold config.snapToRoadConfidenceThreshold,
       Se.Set BeamTC.useWithSnapToRoadFallback config.useWithSnapToRoadFallback,
-      Se.Set BeamTC.updatedAt now
+      Se.Set BeamTC.updatedAt now,
+      Se.Set BeamTC.emailOtpConfig (Just $ T.encodeToText config.emailOtpConfig)
     ]
     [Se.Is BeamTC.merchantOperatingCityId (Se.Eq $ getId config.merchantOperatingCityId)]
 
@@ -151,6 +153,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             canSuvDowngradeToHatchback = fromMaybe False canSuvDowngradeToHatchback,
             arrivedPickupThreshold = fromMaybe 100 arrivedPickupThreshold,
             variantsToEnableForSubscription = variantsToEnableForSubscription,
+            emailOtpConfig = T.decodeFromText =<< emailOtpConfig,
             ..
           }
     where
@@ -295,5 +298,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.variantsToEnableForSubscription = variantsToEnableForSubscription,
         BeamTC.dlNumberVerification = dlNumberVerification,
         BeamTC.pastDaysRideCounter = pastDaysRideCounter,
-        BeamTC.placeNameCacheExpiryDays = placeNameCacheExpiryDays
+        BeamTC.placeNameCacheExpiryDays = placeNameCacheExpiryDays,
+        BeamTC.emailOtpConfig = Just $ T.encodeToText emailOtpConfig
       }

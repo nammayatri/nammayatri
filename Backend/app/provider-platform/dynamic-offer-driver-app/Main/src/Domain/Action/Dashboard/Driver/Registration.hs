@@ -37,6 +37,7 @@ import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.FleetDriverAssociation as FDV
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import Environment
 import Kernel.Beam.Functions
@@ -158,12 +159,15 @@ auth merchantShortId opCity req = do
     DReg.auth
       True
       DReg.AuthReq
-        { mobileNumber = req.mobileNumber,
-          mobileCountryCode = req.mobileCountryCode,
+        { mobileNumber = Just req.mobileNumber,
+          mobileCountryCode = Just req.mobileCountryCode,
           merchantId = merchant.id.getId,
           merchantOperatingCity = Just opCity,
           registrationLat = Nothing,
-          registrationLon = Nothing
+          registrationLon = Nothing,
+          name = Nothing,
+          email = Nothing,
+          identifierType = Just SP.MOBILENUMBER
         }
       Nothing
       Nothing
