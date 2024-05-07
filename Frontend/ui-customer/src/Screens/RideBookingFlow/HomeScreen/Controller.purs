@@ -1450,11 +1450,21 @@ eval BackPressed state = do
           void $ pure $ setValueToLocalStore SESSION_ID (generateSessionId unit)
           void $ pure $ enableMyLocation true
           void $ pure $ setValueToLocalStore NOTIFIED_CUSTOMER "false"
+          let 
+            { savedLocationsWithOtherTag
+            , recentlySearchedLocations
+            , suggestionsMap
+            , trips
+            , suggestedDestinations
+            } = getHelperLists state.data.savedLocations state.data.recentSearchs state state.props.currentLocation.lat state.props.currentLocation.lng
           recenterCurrentLocation $ 
             HomeScreenData.initData
               { data
                 { disability = state.data.disability
                 , bannerData = state.data.bannerData
+                , tripSuggestions = trips
+                , recentSearchs {predictionArray = recentlySearchedLocations}
+                , destinationSuggestions = suggestedDestinations
                 , settingSideBar
                   { gender = state.data.settingSideBar.gender
                   , email = state.data.settingSideBar.email
@@ -1465,7 +1475,8 @@ eval BackPressed state = do
               , props { 
                   isBanner = state.props.isBanner
                 , sourceLat = state.props.sourceLat
-                , showShimmer = true
+                , showShimmer = false
+                , city = state.props.city
                 , sourceLong = state.props.sourceLong
                 , currentLocation = state.props.currentLocation
                 , sosBannerType = state.props.sosBannerType 

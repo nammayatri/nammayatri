@@ -22,13 +22,14 @@ import Prelude
 import Data.Array(singleton,catMaybes, any, sortWith, reverse, take, filter, (:), length, (!!), fromFoldable, toUnfoldable, snoc, cons, concat, null, head)
 import Data.Ord (comparing)
 import Screens.Types (LocationListItemState(..),SourceGeoHash, DestinationGeoHash,SuggestionsMap(..), Suggestions(..), Trip(..), LocationItemType(..), HomeScreenState(..), Address, LocationType(..))
-import Helpers.Utils(getDistanceBwCordinates, getDifferenceBetweenDates, parseSourceHashArray, toStringJSON, fetchImage, FetchImageFrom(..))
+import Helpers.Utils(getDistanceBwCordinates, getDifferenceBetweenDates, parseSourceHashArray, toStringJSON, fetchImage, FetchImageFrom(..), differenceOfLocationLists, checkPrediction, updateLocListWithDistance)
 import Data.Int(toNumber)
 import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..), getValueToLocalNativeStore)
 import MerchantConfig.Types (SuggestedDestinationAndTripsConfig)
 import Data.Function.Uncurried (runFn2, Fn3)
 import Data.Argonaut.Core
 import Data.Argonaut.Decode.Class as Decode
+import Data.Foldable (foldMap, maximumBy)
 import Data.Argonaut.Encode.Class as Encode
 import Data.Argonaut.Decode.Error
 import Data.Either (Either(..))
@@ -358,3 +359,87 @@ correctServiceTierName serviceTierName =
     Just "AUTO_RICKSHAW" -> Just "Auto"
     Just "HATCHBACK" -> Just "Hatchback"
     _ -> serviceTierName
+
+removeDuplicateTrips :: Array Trip -> Int -> Array Trip
+removeDuplicateTrips trips precision = 
+  let 
+    grouped = DA.groupBy 
+      (\trip1 trip2 -> 
+        (getGeoHash trip1.destLat trip1.destLong precision) 
+        == 
+        (getGeoHash trip2.destLat trip2.destLong precision)
+        && trip1.serviceTierNameV2 == trip2.serviceTierNameV2
+      ) 
+      trips
+
+    maxScoreTrips = map 
+      (maximumBy (comparing (\trip -> trip.locationScore))) 
+      grouped
+  in 
+    catMaybes maxScoreTrips
+
+isPointWithinXDist :: Trip -> Number -> Number -> Number -> Boolean
+isPointWithinXDist item lat lon thresholdDist =
+  let sourceLat = if lat == 0.0 then fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT else lat
+      sourceLong = if lon == 0.0 then fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON else lon
+  in
+    getDistanceBwCordinates 
+      item.sourceLat 
+      item.sourceLong 
+      sourceLat
+      sourceLong
+      <= thresholdDist
+      
+locationEquality :: LocationListItemState -> LocationListItemState -> Boolean
+locationEquality a b = a.lat == b.lat && a.lon == b.lon
+
+
+getMapValuesArray :: forall k v. Map k v -> Array v
+getMapValuesArray = foldMap singleton
+
+getHelperLists savedLocationResp recentPredictionsObject state lat lon = 
+  let suggestionsConfig = state.data.config.suggestedTripsAndLocationConfig
+      homeWorkImages = [fetchImage FF_ASSET "ny_ic_home_blue", fetchImage FF_ASSET "ny_ic_work_blue"]
+      isHomeOrWorkImage = \listItem -> any (_ == listItem.prefixImageUrl) homeWorkImages
+      savedLocationWithHomeOrWorkTag = filter isHomeOrWorkImage savedLocationResp
+      recentlySearchedLocations = differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag
+      savedLocationsWithOtherTag = filter (not <<< isHomeOrWorkImage) savedLocationResp
+      suggestionsMap = getSuggestionsMapFromLocal FunctionCall
+      currentGeoHash = getGeoHash lat lon suggestionsConfig.geohashPrecision
+      geohashNeighbors = DA.cons currentGeoHash $ geohashNeighbours currentGeoHash
+      currentGeoHashDestinations = fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations currentGeoHash suggestionsMap suggestionsConfig.geohashLimitForMap)
+      arrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).destinationSuggestions) geohashNeighbors)
+      tripArrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).tripSuggestions) geohashNeighbors)
+      sortedDestinationsList = DA.take 30 (DA.reverse (DA.sortWith (\d -> fromMaybe 0.0 d.locationScore) arrWithNeighbors))
+      suggestedDestinationsArr = differenceOfLocationLists sortedDestinationsList savedLocationWithHomeOrWorkTag
+
+      allValuesFromMap = concat $ map (\item -> item.tripSuggestions)(getMapValuesArray suggestionsMap)
+      sortedValues = DA.sortWith (\d -> fromMaybe 0.0 d.locationScore) allValuesFromMap
+      reversedValues = DA.reverse sortedValues
+      topValues = DA.take 30 reversedValues
+      topTripDestinatiions = map (\item -> getLocationFromTrip Destination item lat lon) topValues
+      
+      recentSearchesWithoutSuggested =  differenceOfLocationLists recentlySearchedLocations suggestedDestinationsArr
+      topTripDestinatiionsWoutSuggested = differenceOfLocationLists (differenceOfLocationLists topTripDestinatiions suggestedDestinationsArr) savedLocationWithHomeOrWorkTag
+      smartSuggestions = if null suggestedDestinationsArr then topTripDestinatiionsWoutSuggested else suggestedDestinationsArr
+      sugestedFinalList =  DA.nubByEq locationEquality $ smartSuggestions <> (DA.take (suggestionsConfig.locationsToBeStored - (length smartSuggestions)) recentSearchesWithoutSuggested)
+      
+
+      updateFavIcon = 
+        map (\item ->
+            item { postfixImageUrl =  
+                    if not (checkPrediction item savedLocationsWithOtherTag) 
+                      then fetchImage FF_ASSET "ny_ic_fav_red"
+                      else fetchImage FF_ASSET "ny_ic_fav" 
+                }
+            ) sugestedFinalList
+      suggestedDestinations = updateLocListWithDistance updateFavIcon lat lon true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
+      sortedTripList =  
+          DA.take 30 
+            $ filter 
+                (\item -> isPointWithinXDist item lat lon state.data.config.suggestedTripsAndLocationConfig.tripWithinXDist) 
+            $ DA.reverse 
+                (DA.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors)
+        
+      trips = map (\item -> transformTrip item) sortedTripList
+  in {savedLocationsWithOtherTag, recentlySearchedLocations, suggestionsMap, trips, suggestedDestinations}
