@@ -63,7 +63,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Decode, class Encode, encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Foreign.Generic (decode)
-import JBridge (emitJOSEvent, Location)
+import JBridge (emitJOSEvent, Location, defaultCircleConfig, CircleConfig(..))
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
@@ -592,6 +592,7 @@ getScreenFromStage stage = case stage of
   TryAgain -> "finding_rides_screen"
   PickUpFarFromCurrentLocation -> "finding_driver_loader"
   LoadMap -> "map_loader"
+  EditPickUpLocation -> "edit_pickup_location_screen"
   ProviderSelection -> "provider_selection_screen"
   RideSearch -> "ride_search"
   ConfirmRentalRide -> "confirm_rental_ride"
@@ -1180,3 +1181,9 @@ breakPrefixAndId str = do
           Just [_ , prefix] -> Just $ Tuple (fromMaybe "" prefix) Nothing
           _ -> Nothing
     Left _ -> Nothing
+
+editPickupCircleConfig :: CircleConfig
+editPickupCircleConfig =
+  let config = getAppConfig appConfig
+  in
+  defaultCircleConfig {radius = config.mapConfig.locateOnMapConfig.editPickUpThreshold, primaryStrokeColor = Color.yellow900, fillColor = Color.yellowOpacity23, strokeWidth = 4, secondaryStrokeColor =Color.red900 , circleId = "edit_location_circle" }

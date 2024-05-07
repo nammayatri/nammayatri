@@ -671,7 +671,7 @@ instance encodeStopLocation :: Encode StopLocation where encode = defaultEncode
 
 newtype TripCategory = TripCategory
     {
-      contents :: String,
+      contents :: Maybe String,
       tag :: String
     }
 

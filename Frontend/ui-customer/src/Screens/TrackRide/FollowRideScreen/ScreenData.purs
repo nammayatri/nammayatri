@@ -187,6 +187,8 @@ mockDriverInfo =
   , destinationLng: 77.611986
   , driverLat: 0.0
   , driverLng: 0.0
+  , initialPickupLat : 0.0
+  , initialPickupLon : 0.0
   , distance: 0
   , waitingTime: "--"
   , driverArrived: false
@@ -201,6 +203,7 @@ mockDriverInfo =
   , vehicleVariant: ""
   , sourceAddress: dummyAddress
   , destinationAddress: dummyAddress
+  , editPickupAttemptsLeft : 0
   , status : ""
   , serviceTierName : Nothing
   , vehicleModel : ""
