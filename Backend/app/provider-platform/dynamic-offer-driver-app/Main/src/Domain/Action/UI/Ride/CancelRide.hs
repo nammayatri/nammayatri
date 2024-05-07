@@ -39,6 +39,7 @@ import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
@@ -50,7 +51,6 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
-import Tools.Error
 import qualified Tools.Maps as Maps
 
 data ServiceHandle m = ServiceHandle
@@ -143,7 +143,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
           >>= fromMaybeM (PersonNotFound personId.getId)
       (rideCancellationReason, mbCancellationCnt, isGoToDisabled, rideEndedBy) <- case authPerson.role of
         DP.ADMIN -> do
-          unless (authPerson.merchantId == driver.merchantId) $ throwError (RideDoesNotExist rideId.getId)
+          unless (authPerson.merchantId == driver.merchantId) $ throwError (OperatingCityOrMerchantIdMismatch (getId authPerson.merchantId) (getId driver.merchantId) "merchant")
           logTagInfo "admin -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.CallBased)
         DP.DRIVER -> do
@@ -180,7 +180,9 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
           buildRideCancelationReason currentDriverLocation updatedDisToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled, DRide.Driver)
       return (rideCancellationReason, mbCancellationCnt, isGoToDisabled, rideEndedBy)
     DashboardRequestorId (reqMerchantId, mocId) -> do
-      unless (driver.merchantId == reqMerchantId && mocId == driver.merchantOperatingCityId) $ throwError (RideDoesNotExist rideId.getId)
+      unless (getId driver.merchantId == getId reqMerchantId && getId mocId == getId driver.merchantOperatingCityId) $ do
+        let entityName = if getId driver.merchantId == getId reqMerchantId then "Operating city" else "Merchant"
+        throwError $ OperatingCityOrMerchantIdMismatch (getId driver.merchantId) (getId reqMerchantId) entityName
       logTagInfo "dashboard -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
       buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.Dashboard) -- is it correct DBCR.ByMerchant?
   cancelRide rideId rideEndedBy rideCancelationReason
