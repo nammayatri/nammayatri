@@ -62,7 +62,8 @@ initData = {
     tollCharge : 0,
     rideType : "",
     tripStartTime : Nothing,
-    tripEndTime : Nothing
+    tripEndTime : Nothing,
+    acRide : false
   },
   offsetValue: 0,
   loaderButtonVisibility: false,
