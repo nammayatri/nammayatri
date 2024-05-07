@@ -108,7 +108,7 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
-import Screens.RideBookingFlow.HomeScreen.Config (reportIssueOptions, metersToKm, safetyIssueOptions)
+import Screens.RideBookingFlow.HomeScreen.Config (reportIssueOptions, safetyIssueOptions)
 import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..), SuggestionsMap(..), SosBannerType(..), ReferralType(..), ReferralStage(..))
 import Screens.Types as ST
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
@@ -665,6 +665,8 @@ instance loggableAction :: Loggable Action where
   --   StopAutoScrollTimer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stop_auto_scroll_timer" 
   --   UpdateRepeatTrips arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_repeat_trips"
   --   RemoveShimmer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_shimmer"
+    -- EditLocation _ -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "edit_location"
+    -- OnCamerMoveHandler _ -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "map_drag_action_triggered"
   --   ReportIssueClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "report_issue_click"
   --   ChooseSingleVehicleAction act -> case act of 
   --         ChooseVehicleController.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "no_action"
@@ -674,6 +676,7 @@ instance loggableAction :: Loggable Action where
 
 data ScreenOutput = LogoutUser
                   | RefreshHomeScreen HomeScreenState
+                  | RestartTracking HomeScreenState
                   | GoToHelp HomeScreenState
                   | ConfirmRide HomeScreenState
                   | GoToAbout HomeScreenState
@@ -723,6 +726,8 @@ data ScreenOutput = LogoutUser
                   | GoToMyTickets HomeScreenState
                   | RepeatTrip HomeScreenState Trip
                   | ExitToTicketing HomeScreenState
+                  | EditLocationScreenOutput HomeScreenState
+                  | EditTheLocation HomeScreenState
                   | GoToHelpAndSupport HomeScreenState
                   | ReAllocateRide HomeScreenState
                   | GoToRentalsFlow HomeScreenState
@@ -795,6 +800,7 @@ data Action = NoAction
             | ShowCallDialer CallType
             | CloseShowCallDialer
             | StartLocationTracking String
+            | OnCamerMoveHandler String 
             | ExitLocationSelected LocationListItemState Boolean
             | DistanceOutsideLimitsActionController PopUpModal.Action
             | ShortDistanceActionController PopUpModal.Action
@@ -898,6 +904,7 @@ data Action = NoAction
             | StopAutoScrollTimer 
             | UpdateRepeatTrips RideBookingListRes 
             | RemoveShimmer 
+            | EditLocation String
             | ReportIssueClick
             | DateTimePickerAction String Int Int Int String Int Int
             | ChooseSingleVehicleAction ChooseVehicleController.Action
@@ -1095,6 +1102,7 @@ eval (MarkerLabelOnClick markerName) state =
     let isSource = Just (markerName == "ny_ic_src_marker")
     let updatedState = state{props{isSource = isSource, hasEstimateBackpoint = true, currentStage = SearchLocationModel}}
     continue updatedState
+  else if state.props.currentStage == RideAccepted then continueWithCmd state [pure $ EditLocation ""]
   else continue state
 
 eval (Scroll item) state = do
@@ -1239,6 +1247,17 @@ eval (IsMockLocation isMock) state = do
   let val = isMock == "true"
       _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
   continue state{props{isMockLocation = false}}
+
+eval (EditLocation editLocation) state = do
+  if (getValueToLocalNativeStore DRIVER_WITHIN_PICKUP_THRESHOLD)  == "false" then do
+    void $ pure $ toast $ getString DRIVER_ALMOST_AT_PICKUP
+    continue state
+  else if (state.data.driverInfoCardState.editPickupAttemptsLeft <= 0) then do
+    void $ pure $ toast $ getString MAXIMUM_EDIT_PICKUP_ATTEMPTS_REACHED
+    continue state
+  else do 
+    void $ pure $ updateLocalStage EditPickUpLocation
+    exit $ EditLocationScreenOutput state{props{currentStage = EditPickUpLocation}}
 
 eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
   _ <- pure $ spy "updateCurrentStage" stage
@@ -1763,7 +1782,11 @@ eval BackPressed state = do
                       _ <- pure $ removeAllPolylines ""
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
-
+    EditPickUpLocation -> do 
+                      void $ pure $ exitLocateOnMap ""
+                      void $ pure $ removeAllPolylines ""
+                      void $ pure $ updateLocalStage RideAccepted
+                      updateAndExit state{props{defaultPickUpPoint = "", currentStage = RideAccepted, markerLabel = ""}} $ RestartTracking state{props{defaultPickUpPoint = "",currentStage = RideAccepted, markerLabel = ""}}
     FindingEstimate -> do
                       void $ pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage SearchLocationModel
@@ -1925,9 +1948,9 @@ eval (UpdateLocation key lat lon) state = do
     case key of
       "LatLon" -> do
         let selectedSpot = head (filter (\spots -> (getDistanceBwCordinates latitude longitude spots.lat spots.lng) * 1000.0 < (toNumber JB.locateOnMapConfig.thresholdDistToSpot)  ) updatedState.data.nearByPickUpPoints)
-        exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved }, hotSpot{ selectedSpot = selectedSpot }, locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude
+        exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = "", markerLabel = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved }, hotSpot{ selectedSpot = selectedSpot }, locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude
       _ ->  case (filter(\item -> item.place == key) updatedState.data.nearByPickUpPoints) !! 0 of
-              Just spot -> exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot.lat spot.lng
+              Just spot -> exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = key, markerLabel = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot.lat spot.lng
               Nothing -> continue updatedState
     
 
@@ -1942,18 +1965,20 @@ eval (UpdatePickupLocation key lat lon) state = do
   else do
     let updatedState = state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } }
         sourceManuallyMoved = true
-    case key of
+    case (STR.replace (STR.Pattern "LocationIsFar") (STR.Replacement "") key) of
       "LatLon" -> do
         let selectedSpot = head (filter (\spots -> (getDistanceBwCordinates (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon)) spots.lat spots.lng) * 1000.0 < (toNumber JB.locateOnMapConfig.thresholdDistToSpot) ) updatedState.data.nearByPickUpPoints)
-        exit $ UpdatePickupName updatedState{props{defaultPickUpPoint = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, hotSpot{ selectedSpot = selectedSpot }, locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude
+        exit $ UpdatePickupName updatedState{props{defaultPickUpPoint = "", markerLabel = if STR.contains (STR.Pattern "LocationIsFar") key then getString LOCATION_IS_TOO_FAR else "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, hotSpot{ selectedSpot = selectedSpot }, locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude
       _ -> do
-        let focusedIndex = findIndex (\item -> item.place == key) updatedState.data.nearByPickUpPoints
-            spot = (filter(\item -> item.place == key) updatedState.data.nearByPickUpPoints) !! 0
+        let key' = STR.replace (STR.Pattern "LocationIsFar") (STR.Replacement "") key
+            focusedIndex = findIndex (\item -> item.place == key') updatedState.data.nearByPickUpPoints
+            spot = (filter(\item -> item.place == key' ) updatedState.data.nearByPickUpPoints) !! 0
         case focusedIndex, spot of
           Just index, Just spot' -> do
             _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
-            exit $ UpdatePickupName updatedState{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot'.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot'.lat spot'.lng
+            exit $ UpdatePickupName updatedState{props{defaultPickUpPoint = key', markerLabel = if STR.contains (STR.Pattern "LocationIsFar") key then getString LOCATION_IS_TOO_FAR else key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot'.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot'.lat spot'.lng
           _, _ -> continue updatedState
+
 
 eval (CheckBoxClick autoAssign) state = do
   void $ pure $ performHapticFeedback unit
@@ -2080,6 +2105,12 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState 
         let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_confirm_pickup"
         let updatedState = state{props{currentStage = FindingEstimate, locateOnMap = false}, data { iopState { showMultiProvider = false}}}
         updateAndExit updatedState $  (UpdatedSource updatedState)
+      EditPickUpLocation -> do
+        void $ pure $ performHapticFeedback unit
+        void $ pure $ exitLocateOnMap ""
+        let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_confirm_pickup"
+        let updatedState = state{props{locateOnMap = false}}
+        updateAndExit updatedState $ (EditTheLocation updatedState)
       SettingPrice -> do
                         void $ pure $ performHapticFeedback unit
                         void $ pure $ setValueToLocalStore SELECTED_VARIANT state.data.selectedEstimatesObject.vehicleVariant
@@ -2235,6 +2266,8 @@ eval OpenOffUsSOS state = do
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{currentSheetState = if state.props.currentSheetState == EXPANDED then COLLAPSED else EXPANDED}}
 
+eval (DriverInfoCardActionController (DriverInfoCardController.EditingPickupLocation)) state = continueWithCmd state [pure $ EditLocation ""]
+
 eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = 
   if state.props.isOffline then do
     void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
@@ -2244,6 +2277,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state
     then exit $ GoToShareRide state
     else continueWithCmd state [pure ShareRide]
 
+eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = continueWithCmd state [pure $ ShareRide]
 eval ShareRide state = do
   continueWithCmd state
         [ do
@@ -2913,6 +2947,7 @@ eval (UpdateETA currentETA currentDistance) state = do
 eval (RepeatRide index item) state = do 
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_repeat_trip"
   let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.RepeatRide" "true"
+  pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
   void $ pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS (show true)
   void $ pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ "4" 
   void $ pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ "8000.0" 
@@ -3681,7 +3716,7 @@ flowWithoutOffers dummy = not $ (getValueToLocalStore FLOW_WITHOUT_OFFERS) == "f
 
 recenterCurrentLocation :: HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 recenterCurrentLocation state = continueWithCmd state [ do
-    if state.props.locateOnMap || (not state.props.locateOnMap && state.props.currentStage == ConfirmingLocation) then do
+    if state.props.locateOnMap || (not state.props.locateOnMap && state.props.currentStage == ConfirmingLocation) || state.props.currentStage == EditPickUpLocation then do
       _ <- pure $ currentPosition "NO_ZOOM"
       pure unit
     else do

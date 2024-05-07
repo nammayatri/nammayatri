@@ -337,6 +337,7 @@ window.getMerchantConfig = function () {
     , "feature" : {
         "enableSupport" : false
       , "enableSuggestions" : true
+      , "enableEditPickupLocation" : true
       , "enableRepeatTripBackfilling" : true
       , "enableEditDestination" : false
     }

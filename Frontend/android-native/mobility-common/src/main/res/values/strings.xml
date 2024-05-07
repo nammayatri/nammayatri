@@ -19,4 +19,5 @@
     <string name="TIME_STAMP_FILE_UPLOAD" translatable="false">TIME_STAMP_FILE_UPLOAD</string>
     <string name="please_allow_permission_to_capture_the_image">Please allow permissions to capture the image</string>
     <string name="unable_to_upload_image">Unable to Upload Image</string>
+    <string name="location_is_too_far">Location is too far!</string>
 </resources>

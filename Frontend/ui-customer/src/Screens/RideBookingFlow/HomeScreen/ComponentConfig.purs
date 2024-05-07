@@ -400,7 +400,9 @@ primaryButtonConfirmPickupConfig state =
         , margin = (MarginTop 8)
         , id = "ConfirmLocationButton"
         , background = state.data.config.primaryBackground
-        , enableRipple = true
+        , isClickable = (state.props.currentStage == EditPickUpLocation && state.props.markerLabel /= getString(LOCATION_IS_TOO_FAR)) || state.props.currentStage == ConfirmingLocation
+        , alpha = if (state.props.currentStage == EditPickUpLocation && state.props.markerLabel /= getString(LOCATION_IS_TOO_FAR)) || state.props.currentStage == ConfirmingLocation then 1.0 else 0.5
+        , enableRipple = (state.props.currentStage == EditPickUpLocation && state.props.markerLabel /= getString(LOCATION_IS_TOO_FAR)) || state.props.currentStage == ConfirmingLocation
         , rippleColor = Color.rippleShade
         }
   in

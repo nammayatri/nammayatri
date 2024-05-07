@@ -41,12 +41,22 @@ public class CircleRippleEffect {
     public void draw(@NonNull GoogleMap googleMap, LatLng center) {
         ExecutorManager.runOnMainThread(() -> this.circle = googleMap.addCircle(new CircleOptions()
                 .center(center)
+                .fillColor(mOptions.getFillColor())
                 .strokeColor(Color.parseColor(mOptions.getFromStrokeColor()))
                 .strokeWidth(mOptions.getStrokeWidth())
                 .visible(true)
+
                 .radius(mOptions.getRadius())));
     }
 
+    public void updateCircle (CircleRippleEffectOptions config) {
+        if (circle != null) {
+            if (config.getRadius() != 0) circle.setRadius(config.getRadius());
+            if (config.getFromStrokeColor().equals("#000000")) circle.setStrokeColor(Color.parseColor(config.getFromStrokeColor()));
+            if (config.getFillColor() != 0) circle.setFillColor(config.getFillColor());
+            if (config.getStrokeWidth() != 0) circle.setStrokeWidth(config.getStrokeWidth());
+        }
+    }
 
     public void startAnimation() {
         mAnimator = ValueAnimator.ofFloat(0, mOptions.getMaxRadius(), 0);

@@ -1080,7 +1080,6 @@ getTicketStatus :: String -> Flow GlobalState (Either ErrorResponse GetTicketSta
 getTicketStatus shortId = do
   headers <- getHeaders "" false
   withAPIResult (EP.ticketStatus shortId) identity $ callAPI headers (GetTicketStatusReq shortId)
- 
 
 ----------------------------------- fetchIssueList ----------------------------------------
 
@@ -1396,22 +1395,31 @@ mkRentalSearchReq slat slong dlat dlong srcAdd desAdd startTime estimatedRentalD
                     "fareProductType" : "RENTAL"
                    }
 
-------------------------------------------------------------------------- Edit Destination -----------------------------------------------------------------------------
-makeEditLocationRequest :: String -> Number -> Number -> Address -> EditLocationRequest
-makeEditLocationRequest rideId dlat dlong desAdd =
-    EditLocationRequest rideId $ makeEditLocationReq dlat dlong desAdd
+------------------------------------------------------------------------- Edit Location API -----------------------------------------------------------------------------
 
-makeEditLocationReq :: Number -> Number -> Address -> EditLocationReq
-makeEditLocationReq dlat dlong desAdd =
+editLocationBT :: String -> EditLocationReq -> FlowBT String EditLocationRes
+editLocationBT rideId payload = do 
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.editLocation rideId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (EditLocationRequest rideId payload))
+    where
+    errorHandler errorPayload = do
+            BackT $ pure GoBack
+
+editLocation rideId payload = do 
+    headers <- getHeaders "" false
+    withAPIResult (EP.editLocation rideId) unwrapResponse $ callAPI headers (EditLocationRequest rideId payload)
+    where
+    unwrapResponse x = x
+
+makeEditLocationRequest :: String -> Maybe SearchReqLocation -> Maybe SearchReqLocation -> EditLocationRequest
+makeEditLocationRequest rideId srcAddress destAddress =
+    EditLocationRequest rideId $ makeEditLocationReq srcAddress destAddress
+
+makeEditLocationReq :: Maybe SearchReqLocation -> Maybe SearchReqLocation -> EditLocationReq
+makeEditLocationReq srcAddress destAddress = 
     EditLocationReq {
-        "destination" : Just $ SearchReqLocation {
-            "gps" : LatLong {
-                        "lat" : dlat ,
-                        "lon" : dlong 
-                    },
-            "address" : LocationAddress desAdd
-        }, 
-        "origin" : Nothing
+        "origin" : srcAddress,
+        "destination" : destAddress
     }
 
 makeEditLocationResultRequest :: String -> GetEditLocResultReq

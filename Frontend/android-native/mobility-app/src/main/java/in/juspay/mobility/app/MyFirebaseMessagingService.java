@@ -233,7 +233,17 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 }
                             }
                             break;
-
+                        case NotificationTypes.EDIT_LOCATION :
+                            if (remoteMessage.getData().containsKey("driver_notification_payload")) {
+                                String driverNotification = remoteMessage.getData().get("driver_notification_payload");
+                                String jsonData = remoteMessage.getData().get("entity_data");
+                                if (jsonData != null) {
+                                    JSONObject dataModel = new JSONObject(jsonData);
+                                    JSONObject driverNotificationModel = new JSONObject(driverNotification);
+                                    locationChanged(dataModel, driverNotificationModel);
+                                }
+                            }
+                            break;
                         case NotificationTypes.TRIGGER_SERVICE:
                             if (merchantType.equals("DRIVER")) {
                                 if (title!=null && title.equals("You were inactive")) FirebaseAnalytics.getInstance(this).logEvent("notification_trigger_service_inactive", new Bundle());
@@ -493,6 +503,32 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
 
+    public void locationChanged(JSONObject dataModel, JSONObject driverNotification) {
+        try {
+            Boolean hasAdvancedBooking = dataModel.getBoolean("hasAdvanceBooking");
+            if (hasAdvancedBooking) return;
+            JSONObject originData = dataModel.getJSONObject("origin");
+            String lat = originData.getString("lat");
+            String lon = originData.getString("lon");
+            JSONObject locationChanged = new JSONObject();
+            locationChanged.put("okButtonText", driverNotification.getString("okButtonText"));
+            locationChanged.put("buttonOkVisibility",true);
+            locationChanged.put("imageVisibility",true);
+            locationChanged.put("imageUrl",driverNotification.getString("imageUrl"));
+            locationChanged.put("buttonLayoutVisibility",true);
+            locationChanged.put("titleVisibility",true);
+            JSONArray arr = new JSONArray();
+            arr.put("EDIT_LOCATION");
+            locationChanged.put("actions",arr);
+            locationChanged.put("title",driverNotification.getString("title"));
+            locationChanged.put("lat", lat);
+            locationChanged.put("lon", lon);
+            showOverlayMessage(locationChanged);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e("MyFirebaseMessagingService", "Error in EDIT_LOCATION " + e);
+        }
+    }
     public void startFCMBundleUpdateService(RemoteMessage remoteMessage, String merchantType) {
         try {
             Context context = getApplicationContext();
@@ -745,6 +781,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         public static final String UPDATE_STORAGE = "UPDATE_STORAGE";
         public static final String CALL_API = "CALL_API";
         public static final String CHAT_MESSAGE = "CHAT_MESSAGE";
+        private static final String EDIT_LOCATION = "EDIT_LOCATION";
         public static final String DRIVER_NOTIFY = "DRIVER_NOTIFY";
         public static final String DRIVER_NOTIFY_LOCATION_UPDATE = "DRIVER_NOTIFY_LOCATION_UPDATE";
         public static final String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";

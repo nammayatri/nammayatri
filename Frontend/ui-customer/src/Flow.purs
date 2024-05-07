@@ -36,7 +36,7 @@ import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, so
 import Data.Array as Arr
 import Helpers.Utils as HU
 import Data.Either (Either(..), either)
-import Data.Function.Uncurried (runFn3, runFn2, runFn1)
+import Data.Function.Uncurried (runFn3, runFn2, runFn1, mkFn1)
 import Data.Int as INT
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
@@ -62,7 +62,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import JBridge (getCurrentLatLong, showMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, defaultMarkerImageConfig, timeValidity, removeMarker)
+import JBridge (getCurrentLatLong, showMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, removeAllPolygons, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, defaultMarkerImageConfig, timeValidity, removeMarker, defaultMarkerImageConfig)
 import JBridge as JB
 import Helpers.Utils (compareDate, convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList, bufferTimePerKm, invalidBookingTime, getAndRemoveLatestNotificationType, normalRoute)
 import Language.Strings (getString)
@@ -72,13 +72,13 @@ import Log (logInfo, logStatus)
 import MerchantConfig.Types (AppConfig(..), MetroConfig(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils as MU
-import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, identity, otherwise, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*), max, min, (>>>))
+import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, identity, otherwise, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*), max, min, (>>>), (>>>))
 import Mobility.Prelude (capitalize)
 import ModifyScreenState (modifyScreenState, updateRepeatRideDetails, FlowState(..))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
 import Helpers.Pooling (delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
-import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, dummyPrice, estimateLabelMaxWidth, locateOnMapLabelMaxWidth, markerArrowSize)
+import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, dummyPrice, estimateLabelMaxWidth, locateOnMapLabelMaxWidth, markerArrowSize, estimateLabelMaxWidth, locateOnMapLabelMaxWidth, markerArrowSize)
 import Screens (getScreen)
 import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, getAddressFromBooking, dummyPrice)
 import Screens.AccountSetUpScreen.ScreenData as AccountSetUpScreenData
@@ -93,14 +93,13 @@ import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.Handlers as UI
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.HelpAndSupportScreen.Transformer (reportIssueMessageTransformer)
-import Screens.HomeScreen.Controller (Action(..), flowWithoutOffers, getSearchExpiryTime, findingQuotesSearchExpired, tipEnabledState)
+import Screens.HomeScreen.Controller (Action(..), Action(..), flowWithoutOffers, getSearchExpiryTime, findingQuotesSearchExpired, tipEnabledState)
+import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getTripFromRideHistory, getFormattedContacts, getFareProductType)
-import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
-import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
@@ -865,7 +864,8 @@ homeScreenFlow = do
             currentFlowStatus
 
     EDIT_DESTINATION_SOFT state -> do
-      resp <- lift $ lift $ HelpersAPI.callApi $ Remote.makeEditLocationRequest state.data.driverInfoCardState.rideId state.props.destinationLat state.props.destinationLong state.data.destinationAddress
+      let destAddress = SearchReqLocation { gps : LatLong { lat : state.props.destinationLat , lon : state.props.destinationLong } , address : (LocationAddress state.data.destinationAddress)} 
+      resp <- lift $ lift $ HelpersAPI.callApi $ Remote.makeEditLocationRequest state.data.driverInfoCardState.rideId Nothing (Just destAddress)
       case resp of
         Right (EditLocationRes editDestinationSoftResp) -> do
           if (editDestinationSoftResp.bookingUpdateRequestId == Nothing) then do
@@ -1232,7 +1232,9 @@ homeScreenFlow = do
             destMarker = (normalRoute "").destMarker
         case state.props.routeEndPoints of
           Just points -> do
-            let sourceAddress = if state.props.isSpecialZone && not (DS.null state.props.defaultPickUpPoint)
+            push <- lift $ lift $ liftFlow $ getPushFn Nothing "HomeScreen"
+            let callback = runFn2 EHC.getMarkerCallback push MarkerLabelOnClick 
+                sourceAddress = if state.props.isSpecialZone && not (DS.null state.props.defaultPickUpPoint)
                                   then state.props.defaultPickUpPoint
                                   else state.data.source
             push <- lift $ lift $ liftFlow $ getPushFn Nothing "HomeScreen"
@@ -1460,6 +1462,22 @@ homeScreenFlow = do
         pure unit
       homeScreenFlow
     REFRESH_HOME_SCREEN -> homeScreenFlow
+    TRACKING_RESTART -> do 
+      setValueToLocalStore TRACKING_DRIVER "False" 
+      homeScreenFlow
+    EDIT_THE_LOCATION state -> do 
+      let srcAddress = SearchReqLocation { gps : state.props.editedPickUpLocation.gps , address : (LocationAddress state.props.editedPickUpLocation.address)} 
+      res <- lift $ lift $ HelpersAPI.callApi $ Remote.makeEditLocationRequest state.data.driverInfoCardState.rideId (Just srcAddress) Nothing
+      case res of
+        Right _  -> pure unit
+        Left err -> do
+          void $ pure $ toast $ getString STR.DRIVER_ALMOST_AT_PICKUP
+          pure unit
+      updateLocalStage RideAccepted
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = RideAccepted, locateOnMap = false}})
+      setValueToLocalStore TRACKING_DRIVER "False" 
+      checkRideStatus true
+      homeScreenFlow
     RELOAD saveToCurrLocs -> do
       (GlobalState state) <- getState
       void $ liftFlowBT $ setMapPadding 0 0 0 0
@@ -1533,6 +1551,18 @@ homeScreenFlow = do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { isSrcServiceable = true, showlocUnserviceablePopUp = false, showShimmer = false } })
       homeScreenFlow
     RETRY -> homeScreenFlow
+    EDIT_LOCATION_FLOW finalState -> do 
+      pure $ removeAllPolylines ""
+      (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq finalState.data.driverInfoCardState.initialPickupLat finalState.data.driverInfoCardState.initialPickupLon) ORIGIN
+      let isServiceable = sourceServiceabilityResp.serviceable
+          (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
+          pickUpPoints = mapSpecialZoneGates srcSpecialLocation.gatesInfo
+          geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
+          gateAddress = (fromMaybe HomeScreenData.dummyLocation ((filter( \ (item) -> (item.place == finalState.props.defaultPickUpPoint)) pickUpPoints) !! 0))
+      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = finalState.data.driverInfoCardState.initialPickupLat, lon = finalState.data.driverInfoCardState.initialPickupLon , geoJson = geoJson, points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", editPickUpThreshold = finalState.data.config.mapConfig.locateOnMapConfig.editPickUpThreshold, editPickupLocation = true }
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{nearByPickUpPoints = pickUpPoints, polygonCoordinates = geoJson, source = finalState.data.driverInfoCardState.source },props{currentStage = EditPickUpLocation,rideRequestFlow = true, locateOnMapLocation{sourceLat = finalState.props.sourceLat, sourceLng = finalState.props.sourceLong, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress}}})
+      void $ pure $ updateLocalStage EditPickUpLocation
+      homeScreenFlow
     REALLOCATE_RIDE state -> do
       if DS.null state.props.estimateId then
         currentFlowStatus
@@ -1730,6 +1760,10 @@ homeScreenFlow = do
                   { props
                     { sourceLat = lat
                     , sourceLong = lon
+                    , editedPickUpLocation {gps = LatLong {lat : lat
+                                                    , lon : lon 
+                                                    }  
+                                  }
                     , confirmLocationCategory = getZoneType srcSpecialLocation.category
                     , city = cityName
                     }
@@ -1748,6 +1782,9 @@ homeScreenFlow = do
                           { source = address.formattedAddress
                           , sourceAddress = encodeAddress address.formattedAddress address.addressComponents Nothing lat lon
                           }
+                        , props
+                          { editedPickUpLocation {address = encodeAddress address.formattedAddress address.addressComponents Nothing lat lon }
+                          }
                         }
                   )
           Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
@@ -1760,6 +1797,9 @@ homeScreenFlow = do
                     { data
                       { source = state.props.locateOnMapLocation.source
                       , sourceAddress = state.props.locateOnMapLocation.sourceAddress
+                      }
+                    , props
+                      { editedPickUpLocation {address = state.props.locateOnMapLocation.sourceAddress }
                       }
                     }
               )
@@ -2475,8 +2515,9 @@ editDestinationFlow = do
       srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
       destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = primaryText, anchorU = 0.5, anchorV = 1.0}
       routeConfig = JB.mkRouteConfig (Remote.walkCoordinate srcLat srcLon dstLat dstLon) srcMarkerConfig destMarkerConfig Nothing "NORMAL_ROUTE" "DOT" false JB.DEFAULT (JB.mapRouteConfig{vehicleSizeTagIcon = HU.getVehicleSize unit, polylineAnimationConfig = getPolylineAnimationConfig})
+      destAddress = SearchReqLocation { gps : LatLong { lat : homeScreenState.props.destinationLat , lon : homeScreenState.props.destinationLong } , address : (LocationAddress homeScreenState.data.destinationAddress)} 
   liftFlowBT $ drawRoute [routeConfig] (getNewIDWithTag "CustomerHomeScreenEditDest")
-  resp <- lift $ lift $ HelpersAPI.callApi $ Remote.makeEditLocationRequest homeScreenState.data.driverInfoCardState.rideId homeScreenState.props.destinationLat homeScreenState.props.destinationLong homeScreenState.data.destinationAddress
+  resp <- lift $ lift $ HelpersAPI.callApi $ Remote.makeEditLocationRequest homeScreenState.data.driverInfoCardState.rideId Nothing (Just destAddress)
   case resp of
     Right (EditLocationRes editDestinationSoftResp) -> do
       if (editDestinationSoftResp.bookingUpdateRequestId == Nothing) then do
@@ -5307,18 +5348,20 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
                     }
                   }
             )
-      void $ pure $ removeAllPolylines ""
+      if isLocalStageOn EditPickUpLocation && os == "IOS" then void $ pure $ removeAllPolygons "" else void $ pure $ removeAllPolylines ""
       liftFlowBT
         $ runEffectFn1 locateOnMap
             locateOnMapConfig
-              { lat = lat
-              , lon = lon
+              { lat = if isLocalStageOn EditPickUpLocation then state.data.driverInfoCardState.initialPickupLat else lat
+              , lon = if isLocalStageOn EditPickUpLocation then state.data.driverInfoCardState.initialPickupLon else lon
               , geoJson = geoJson
               , points = pickUpPoints
               , zoomLevel = zoomLevel
               , labelId = getNewIDWithTag "LocateOnMapPin"
               , locationName = locationName
               , specialZoneMarkerConfig { labelImage = zoneLabelIcon zoneType }
+              , editPickUpThreshold = state.data.config.mapConfig.locateOnMapConfig.editPickUpThreshold
+              , editPickupLocation = if isLocalStageOn EditPickUpLocation then true else false
               }
       homeScreenFlow
     else
@@ -5327,7 +5370,7 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
     let
       points = filterHotSpots state serviceabilityResp.hotSpotInfo lat lon
     if (state.data.nearByPickUpPoints /= points && not (null points)) then do
-      void $ pure $ removeAllPolylines ""
+      if isLocalStageOn EditPickUpLocation && os == "IOS" then void $ pure $ removeAllPolygons "" else void $ pure $ removeAllPolylines ""
       modifyScreenState
         $ HomeScreenStateType
             ( \homeScreen ->
@@ -5344,7 +5387,7 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
                     }
                   }
             )
-      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { points = points, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin" }
+      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = if isLocalStageOn EditPickUpLocation then state.data.driverInfoCardState.initialPickupLat else 0.0, lon = if isLocalStageOn EditPickUpLocation then state.data.driverInfoCardState.initialPickupLon else 0.0, points = points, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", editPickUpThreshold = state.data.config.mapConfig.locateOnMapConfig.editPickUpThreshold, editPickupLocation = if isLocalStageOn EditPickUpLocation then true else false}
     else
       pure unit
   else

@@ -21,7 +21,7 @@ import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller as CV
 import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..))
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), LatLong(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
 import Prelude(negate)
@@ -256,6 +256,7 @@ initData = let
     , isMockLocation: false
     , isSpecialZone : false
     , defaultPickUpPoint : ""
+    , markerLabel : ""
     , showChatNotification : false
     , cancelSearchCallDriver : false
     , zoneType : dummyZoneType
@@ -318,6 +319,24 @@ initData = let
     , autoScrollTimer : ""
     , autoScrollTimerId : ""
     , autoScroll : true
+    , editedPickUpLocation : {
+      gps : LatLong{
+        lat : 0.0 ,
+        lon : 0.0
+      },
+      address : {
+        area : Nothing,
+        state : Nothing,
+        country : Nothing,
+        building : Nothing, 
+        door : Nothing,
+        street : Nothing,
+        city : Nothing,
+        areaCode : Nothing,
+        ward : Nothing,
+        placeId : Nothing
+      }
+    }
     , enableChatWidget : false
     , sosBannerType : Nothing
     , showShareRide : false
@@ -347,6 +366,7 @@ initData = let
     , repeatRideVariant : ""
     , hasToll : false
     , repeatRideServiceTierName : Nothing
+    , hasEstimateBackpoint : false
     , isSearchCancelled : false
     , referralComponentProps : { stage : NO_REFERRAL_STAGE
                                , referralCode : Nothing
@@ -369,7 +389,6 @@ initData = let
     , isBannerDataComputed : false
     , showScheduledRideExistsPopUp : false
     , isOffline : false
-    , hasEstimateBackpoint : false
     , shimmerViewTimer : config.homeScreen.shimmerTimer
     , shimmerViewTimerId : ""
     , isKeyBoardOpen : false
@@ -455,6 +474,8 @@ dummyDriverInfo =
   , price : 0
   , sourceLat : 0.0
   , sourceLng : 0.0
+  , initialPickupLat : 0.0
+  , initialPickupLon : 0.0
   , destinationLat : 0.0
   , destinationLng : 0.0
   , driverLat : 0.0
@@ -473,6 +494,7 @@ dummyDriverInfo =
   , vehicleVariant : ""
   , sourceAddress : dummyAddress
   , destinationAddress : dummyAddress
+  , editPickupAttemptsLeft : 0
   , status : ""
   , serviceTierName : Nothing
   , vehicleModel : ""
@@ -593,10 +615,12 @@ dummyRideBooking = RideBookingRes
   updatedAt : "",
   bookingDetails : dummyRideBookingAPIDetails ,
   fromLocation :  dummyBookingDetails,
+  initialPickupLocation : dummyBookingDetails,
   merchantExoPhone : "",
   specialLocationTag : Nothing,
   hasDisability : Nothing,
   sosStatus: Nothing,
+  editPickupAttemptsLeft : 0,
   serviceTierName : Nothing, 
   airConditioned : Nothing,
   isValueAddNP : Nothing,

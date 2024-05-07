@@ -35,4 +35,7 @@ type TripDetails a
   , fareProductType :: FareProductType
   , enableEditDestination :: Boolean
   , editingDestinationLoc :: a
+  , rideAccepted :: Boolean
+  , editingPickupLocation :: a
+  , isEditPickupEnabled :: Boolean
     }
