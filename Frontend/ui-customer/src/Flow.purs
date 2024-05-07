@@ -187,7 +187,6 @@ import Services.Config(getNumbersToWhiteList)
 import SessionCache(getValueFromWindow, setValueInWindow)
 import LocalStorage.Cache (clearCache)
 import DecodeUtil (getAnyFromWindow)
-import Data.Foldable (foldMap)
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.FollowRideScreen.Controller (deleteDismisedMockDrills)
 import Data.Map as Map
@@ -2627,108 +2626,29 @@ fetchAndModifyLocationLists savedLocationResp = do
     let state = currentState.homeScreen
         suggestionsConfig = state.data.config.suggestedTripsAndLocationConfig
     recentPredictionsObject <- lift $ lift $ getObjFromLocal currentState.homeScreen
-    let {savedLocationsWithOtherTag, recents, suggestionsMap, tripArrWithNeighbors, updateFavIcon} = getHelperLists savedLocationResp recentPredictionsObject currentState.homeScreen
-        sortedTripList =  
-          Arr.take 30 
-            $ filter 
-                (\item -> isPointWithinXDist item state state.data.config.suggestedTripsAndLocationConfig.tripWithinXDist) 
-            $ Arr.reverse 
-                (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors)
-        
-        updatedLocationList = updateLocListWithDistance updateFavIcon state.props.sourceLat state.props.sourceLong true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
-        correctedList = map (\item -> transformTrip item) sortedTripList
+    let 
+      { savedLocationsWithOtherTag
+      , recentlySearchedLocations
+      , suggestionsMap
+      , trips
+      , suggestedDestinations
+      } = getHelperLists savedLocationResp recentPredictionsObject currentState.homeScreen state.props.sourceLat state.props.sourceLong
     updateSavedLocations savedLocationResp 
-    modifyScreenState $ GlobalPropsType (\globalProps -> globalProps{cachedSearches = updatedLocationList , recentSearches = recents, savedLocations = savedLocationResp})
-    modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{data{locationList = updatedLocationList}})
+    modifyScreenState $ GlobalPropsType (\globalProps -> globalProps{cachedSearches = suggestedDestinations , recentSearches = recentlySearchedLocations, savedLocations = savedLocationResp})
+    modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{data{locationList = suggestedDestinations}})
     modifyScreenState $ 
       HomeScreenStateType 
         (\homeScreen -> 
           homeScreen
             { data
               { savedLocations = savedLocationResp
-              , recentSearchs {predictionArray = recents}
-              , locationList = updatedLocationList
-              , destinationSuggestions = updatedLocationList
+              , recentSearchs {predictionArray = recentlySearchedLocations}
+              , locationList = suggestedDestinations
+              , destinationSuggestions = suggestedDestinations
               , suggestionsData{suggestionsMap = suggestionsMap}
-              , tripSuggestions = removeDuplicateTrips correctedList suggestionsConfig.destinationGeohashPrecision
+              , tripSuggestions = removeDuplicateTrips trips suggestionsConfig.destinationGeohashPrecision
               }
             })
-    where
-
-      removeDuplicateTrips :: Array Trip -> Int -> Array Trip
-      removeDuplicateTrips trips precision = 
-        let 
-          grouped = groupBy 
-            (\trip1 trip2 -> 
-              (getGeoHash trip1.destLat trip1.destLong precision) 
-              == 
-              (getGeoHash trip2.destLat trip2.destLong precision)
-              && trip1.serviceTierNameV2 == trip2.serviceTierNameV2
-            ) 
-            trips
-
-          maxScoreTrips = map 
-            (maximumBy (comparing (\trip -> trip.locationScore))) 
-            grouped
-        in 
-          catMaybes maxScoreTrips
-
-      isPointWithinXDist :: Trip -> HomeScreenState -> Number -> Boolean
-      isPointWithinXDist item state thresholdDist =
-        let sourceLat = if state.props.sourceLat == 0.0 then fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT else state.props.sourceLat
-            sourceLong = if state.props.sourceLong == 0.0 then fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON else state.props.sourceLong
-        in
-          getDistanceBwCordinates 
-            item.sourceLat 
-            item.sourceLong 
-            sourceLat
-            sourceLong
-            <= thresholdDist
-      
-      locationEquality :: LocationListItemState -> LocationListItemState -> Boolean
-      locationEquality a b = a.lat == b.lat && a.lon == b.lon
-
-
-      getMapValuesArray :: forall k v. Map.Map k v -> Array v
-      getMapValuesArray = foldMap singleton
-
-      getHelperLists savedLocationLists recentPredictionsObject state = 
-        let suggestionsConfig = state.data.config.suggestedTripsAndLocationConfig
-            homeWorkImages = [fetchImage FF_ASSET "ny_ic_home_blue", fetchImage FF_ASSET "ny_ic_work_blue"]
-            isHomeOrWorkImage = \listItem -> any (_ == listItem.prefixImageUrl) homeWorkImages
-            savedLocationWithHomeOrWorkTag = filter isHomeOrWorkImage savedLocationResp
-            recents = differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag
-            savedLocationsWithOtherTag = filter (not <<< isHomeOrWorkImage) savedLocationResp
-            suggestionsMap = getSuggestionsMapFromLocal FunctionCall
-            currentGeoHash = getGeoHash state.props.sourceLat state.props.sourceLong suggestionsConfig.geohashPrecision
-            geohashNeighbors = Arr.cons currentGeoHash $ geohashNeighbours currentGeoHash
-            currentGeoHashDestinations = fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations currentGeoHash suggestionsMap suggestionsConfig.geohashLimitForMap)
-            arrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).destinationSuggestions) geohashNeighbors)
-            tripArrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).tripSuggestions) geohashNeighbors)
-            sortedDestinationsList = Arr.take 30 (Arr.reverse (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) arrWithNeighbors))
-            suggestedDestinationsArr = differenceOfLocationLists sortedDestinationsList savedLocationWithHomeOrWorkTag
-
-            allValuesFromMap = concat $ map (\item -> item.tripSuggestions)(getMapValuesArray suggestionsMap)
-            sortedValues = Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) allValuesFromMap
-            reversedValues = Arr.reverse sortedValues
-            topValues = Arr.take 30 reversedValues
-            topTripDestinatiions = map (\item -> getLocationFromTrip Destination item state.props.sourceLat state.props.sourceLong) topValues
-            
-            recentSearchesWithoutSuggested =  differenceOfLocationLists recents suggestedDestinationsArr
-            topTripDestinatiionsWoutSuggested = differenceOfLocationLists (differenceOfLocationLists topTripDestinatiions suggestedDestinationsArr) savedLocationWithHomeOrWorkTag
-            smartSuggestions = if null suggestedDestinationsArr then topTripDestinatiionsWoutSuggested else suggestedDestinationsArr
-            sugestedFinalList =  nubByEq locationEquality $ smartSuggestions <> (Arr.take (suggestionsConfig.locationsToBeStored - (length smartSuggestions)) recentSearchesWithoutSuggested)
-            
-
-            updateFavIcon = 
-              map (\item ->
-                  item { postfixImageUrl =  
-                          if not (checkPrediction item savedLocationsWithOtherTag) 
-                            then fetchImage FF_ASSET "ny_ic_fav_red"
-                            else fetchImage FF_ASSET "ny_ic_fav" 
-                      }
-                  ) sugestedFinalList
-        in {savedLocationsWithOtherTag, recents, suggestionsMap, tripArrWithNeighbors, updateFavIcon}
 
 
 addLocToCurrLoc :: Number -> Number -> String -> FlowBT String Unit

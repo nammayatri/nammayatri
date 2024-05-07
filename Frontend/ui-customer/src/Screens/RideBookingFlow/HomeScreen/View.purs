@@ -2983,7 +2983,7 @@ homeScreenViewV2 push state =
                           , orientation VERTICAL
                           , id $ getNewIDWithTag "homescreenContent"
                           , gravity $ CENTER_HORIZONTAL
-                          ]$ [ savedLocationsView state push ] <>
+                          ]$ -- [ savedLocationsView state push ] <>
                           ((if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
                             [locationUnserviceableView push state]
                           else 
@@ -3022,7 +3022,7 @@ homeScreenViewV2 push state =
           , height $ V 135
           , width MATCH_PARENT
           , gravity CENTER_VERTICAL
-          , margin $ Margin 16 0 16 18
+          , margin $ Margin 16 0 16 8
           , onClick push $ const WhereToClick
           , accessibility DISABLE
           ]
@@ -3311,7 +3311,9 @@ mapView push state idTag =
     , onAnimationEnd
             ( \action -> do
                 _ <- push action
-                _ <- getCurrentPosition push CurrentLocation
+                if state.props.sourceLat == 0.0 && state.props.sourceLong == 0.0 then do
+                  void $ getCurrentPosition push CurrentLocation
+                else do push RemoveShimmer
                 _ <- showMap (getNewIDWithTag idTag) isCurrentLocationEnabled "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
                 if os == "IOS" then
                   case state.props.currentStage of  
@@ -3342,8 +3344,8 @@ mapView push state idTag =
         , width MATCH_PARENT
         , alignParentBottom "true,-1"
         , gravity RIGHT
-        , padding $ Padding 16 0 32 16
-        , visibility $ if isHomeScreenView state then VISIBLE else GONE
+        , padding $ Padding 16 0 22 16
+        , visibility $ boolToVisibility $ isHomeScreenView state
         ][ imageView
             [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_recenter_btn"
             , accessibility DISABLE
@@ -3422,7 +3424,7 @@ suggestionsView push state =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , padding $ PaddingBottom 10
-  , margin $ Margin 8 0 8 0
+  , margin $ Margin 8 10 8 0
   , visibility $ boolToVisibility $ suggestionViewVisibility state && not (state.props.showShimmer && null state.data.tripSuggestions)
   ]
   [ let isTripSuggestionsEmpty = null state.data.tripSuggestions
