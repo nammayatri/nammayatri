@@ -19,6 +19,7 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.BookingUpdateRequest as DBUR
 import Domain.Types.Location
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -54,6 +55,20 @@ data EditLocationReq = EditLocationReq
   { rideId :: Id DRide.Ride,
     origin :: Maybe Location,
     destination :: Maybe Location
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data UpdateLocationNotificationReq = UpdateLocationNotificationReq
+  { rideId :: Id DRide.Ride,
+    origin :: Maybe Location,
+    destination :: Maybe Location,
+    stops :: Maybe [Location],
+    bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest,
+    newEstimatedDistance :: HighPrecMeters,
+    newEstimatedFare :: HighPrecMoney,
+    oldEstimatedDistance :: HighPrecMeters,
+    oldEstimatedFare :: HighPrecMoney,
+    validTill :: UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -657,6 +672,58 @@ sendOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} = do
         }
     notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title -- if nothing then anyways fcmShowNotification is false
     body = FCMNotificationBody $ fromMaybe "Description" description
+
+sendUpdateLocOverlay ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  FCM.FCMOverlayReq ->
+  UpdateLocationNotificationReq ->
+  m ()
+sendUpdateLocOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} entityData = do
+  let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
+  where
+    notifType = FCM.DRIVER_NOTIFY_LOCATION_UPDATE
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = if isJust req.title then FCM.SHOW else FCM.DO_NOT_SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = person.id.getId,
+          fcmEntityData = Just entityData,
+          fcmNotificationJSON = FCM.createAndroidNotification notifTitle body notifType Nothing,
+          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req,
+          fcmNotificationId = Nothing
+        }
+    notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title -- if nothing then anyways fcmShowNotification is false
+    body = FCMNotificationBody $ fromMaybe "Description" description
+
+buildFCMOverlayReq :: Text -> FCM.FCMOverlayReq
+buildFCMOverlayReq bookingUpdateReqId =
+  FCM.FCMOverlayReq
+    { title = Just "Trip Update !",
+      description = Nothing,
+      imageUrl = Just "https://firebasestorage.googleapis.com/v0/b/jp-beckn-dev.appspot.com/o/add_first_stop.png?alt=media&token=e2cb516b-d6e3-4980-8c1e-999bcf43b9ab",
+      okButtonText = Just "Accept & Navigate",
+      cancelButtonText = Just "Decline",
+      actions = [],
+      actions2 = [FCM.CALL_API FCM.CallAPIDetails {endPoint = "https://api.beckn.juspay.in/dobpp/ui/edit/result/" <> bookingUpdateReqId, method = "POST", reqBody = object ["action" .= String "ACCEPT"]}],
+      secondaryActions2 = Just [FCM.CALL_API FCM.CallAPIDetails {endPoint = "https://api.beckn.juspay.in/dobpp/ui/edit/result/" <> bookingUpdateReqId, method = "POST", reqBody = object ["action" .= String "REJECT"]}],
+      link = Nothing,
+      endPoint = Nothing,
+      method = Nothing,
+      reqBody = Null,
+      delay = Nothing,
+      contactSupportNumber = Nothing,
+      toastMessage = Nothing,
+      secondaryActions = Nothing,
+      socialMediaLinks = Nothing,
+      showPushNotification = Just True
+    }
 
 notifyPickupOrDropLocationChange ::
   ( CacheFlow m r,
