@@ -7,6 +7,7 @@ module Domain.Types.RiderConfig where
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Email.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -19,6 +20,7 @@ data RiderConfig = RiderConfig
     collectAutoCompleteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     collectMMIRouteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     distanceWeightage :: Kernel.Prelude.Int,
+    emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
     enableEmergencyContactAddedMessage :: Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: Kernel.Prelude.Bool,
     enableSupportForSafety :: Kernel.Prelude.Bool,
