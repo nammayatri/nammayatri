@@ -311,7 +311,7 @@ currentFlowStatus = do
   case flowStatus ^. _currentStatus of
     WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId (flowStatus ^. _isValueAddNP) currentStatus.otherSelectedEstimates false
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId (flowStatus ^. _isValueAddNP) (Just []) true
-    WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> goToConfirmRide currentStatus.bookingId currentStatus.fareProductType
+    WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> goToConfirmRide currentStatus
     RIDE_ASSIGNED _                         -> checkRideStatus true
     PENDING_RATING _                        -> do
                                                 firstRideCompletedEvent ""
@@ -322,14 +322,8 @@ currentFlowStatus = do
   void $ pure $ hideKeyboardOnNavigation true -- TODO:: Why is this added here @ashkriti?  
   homeScreenFlow
   where
-    checkForOneWaySpecialZone :: {bookingId :: String, validTill :: String} -> FlowBT String Unit
-    checkForOneWaySpecialZone currentStatus = do
-      (RideBookingRes resp) <- Remote.rideBookingBT (currentStatus.bookingId)
-      let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
-          fareProductType = getFareProductType bookingDetails.fareProductType
-      if fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then checkRideStatus false else goToConfirmingQuotesStage currentStatus
-    
-    goToConfirmingQuotesStage :: {bookingId :: String, validTill :: String} -> FlowBT String Unit
+
+    goToConfirmingQuotesStage :: {bookingId :: String, validTill :: String, fareProductType :: Maybe String} -> FlowBT String Unit
     goToConfirmingQuotesStage currentStatus = do
       let currentTimeToValid = EHC.getUTCAfterNSeconds (getCurrentUTC "") 1800
           diffFromValidToCurrent = EHC.compareUTCDate currentStatus.validTill currentTimeToValid
@@ -487,14 +481,20 @@ currentFlowStatus = do
             Nothing -> updateFlowStatus SEARCH_CANCELLED
         else updateFlowStatus SEARCH_CANCELLED
 
-    goToConfirmRide :: String -> Maybe String -> FlowBT String Unit
-    goToConfirmRide bookingId fareProductType = do
-      if any (_ == fareProductType) [Just "ONE_WAY_SPECIAL_ZONE", Nothing] then
-        checkRideStatus false
-      else do
-        updateLocalStage ConfirmingRide
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp}})
-        homeScreenFlow
+    goToConfirmRide :: {bookingId :: String, validTill :: String, fareProductType :: Maybe String} -> FlowBT String Unit
+    goToConfirmRide currentStatus = 
+      let 
+        bookingId = currentStatus.bookingId
+        fareProductType = currentStatus.fareProductType
+      in 
+        if any (_ == fareProductType) [Just "ONE_WAY_SPECIAL_ZONE", Nothing] then
+          checkRideStatus false
+          else if (fareProductType == Just "ONE_WAY") then do
+            updateLocalStage ConfirmingRide
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp}})
+            homeScreenFlow
+          else goToConfirmingQuotesStage currentStatus
+
 
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do
