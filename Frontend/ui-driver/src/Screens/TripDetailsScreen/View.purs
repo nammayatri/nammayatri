@@ -263,8 +263,8 @@ tripDetailsView state =
           ] <> FontStyle.body14 TypoGraphy
         , textView $
           [ text $ getString(PAID)<> "  " <> if state.data.paymentMode == ST.CASH then (getString BY_CASH) else (getString ONLINE_)
-          , color Color.greyDarker
-          ] <> FontStyle.body16 TypoGraphy
+          , color Color.black700
+          ] <> FontStyle.captions TypoGraphy
         ]
     ]
 
@@ -288,7 +288,8 @@ type TripDetailsRow = {
   leftAsset :: String,
   rightAsset :: String,
   leftVisibility :: Boolean,
-  rightVisibility :: Boolean
+  rightVisibility :: Boolean,
+  leftItemLeftAsset :: Maybe String
 }
 
 tripDataView ::  forall w . (Action -> Effect Unit) ->  ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
@@ -298,9 +299,9 @@ tripDataView push state =
   , width MATCH_PARENT
   , orientation VERTICAL
   , gravity CENTER_VERTICAL
-  ][  tripDetailsRow push {  keyLeft : getString RIDE_TYPE, valLeft : state.data.rideType, keyRight : (getString TRIP_ID), valRight : state.data.tripId, leftClick : NoAction, rightClick : Copy, leftAsset : "", rightAsset : "ny_ic_copy", leftVisibility : true, rightVisibility : true},
-      tripDetailsRow push {  keyLeft : getString DISTANCE, valLeft : (state.data.distance <> " km"), keyRight : getString TRIP_TIME, valRight : tripTime, leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : true, rightVisibility : true},
-      tripDetailsRow push {  keyLeft : getString EARNINGS_PER_KM, valLeft : earningPerKm, keyRight : (getString TOLL_INCLUDED), valRight : currency <> (show state.data.tollCharge), leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : true, rightVisibility : state.data.tollCharge /= 0}
+  ][  tripDetailsRow push {  keyLeft : getString RIDE_TYPE, valLeft : state.data.rideType, keyRight : (getString TRIP_ID), valRight : state.data.tripId, leftClick : NoAction, rightClick : Copy, leftAsset : "", rightAsset : "ny_ic_copy", leftVisibility : true, rightVisibility : true, leftItemLeftAsset : if state.data.acRide then Just "ny_ic_ac" else Nothing},
+      tripDetailsRow push {  keyLeft : getString DISTANCE, valLeft : (state.data.distance <> " km"), keyRight : getString TRIP_TIME, valRight : tripTime, leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : true, rightVisibility : true, leftItemLeftAsset : Nothing},
+      tripDetailsRow push {  keyLeft : getString EARNINGS_PER_KM, valLeft : earningPerKm, keyRight : (getString TOLL_INCLUDED), valRight : currency <> (show state.data.tollCharge), leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : true, rightVisibility : state.data.tollCharge /= 0, leftItemLeftAsset : Nothing}
   ]
   where 
     tripTime = case state.data.tripStartTime, state.data.tripEndTime of
@@ -335,7 +336,15 @@ tripDetailsRow push tripDetailsRowItem =
             , width WRAP_CONTENT
             , orientation HORIZONTAL
             , onClick push $ const tripDetailsRowItem.leftClick
-            ][ textView $
+            , gravity CENTER_VERTICAL
+            ][  imageView $
+                [ height $ V 15
+                , width $ V 13
+                , margin $ MarginRight 5
+                ] <> case tripDetailsRowItem.leftItemLeftAsset of
+                        Just asset -> [imageWithFallback $ fetchImage FF_ASSET asset]
+                        Nothing -> [visibility GONE]
+              , textView $
                 [ text tripDetailsRowItem.valLeft
                 , width WRAP_CONTENT
                 , color Color.black900

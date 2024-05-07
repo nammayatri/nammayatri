@@ -2374,7 +2374,8 @@ homeScreenFlow = do
                     vehicleModel = response.vehicleModel,
                     rideType = response.vehicleServiceTierName,
                     tripStartTime = response.tripStartTime,
-                    tripEndTime = response.tripEndTime
+                    tripEndTime = response.tripEndTime,
+                    acRide = fromMaybe false response.isVehicleAirConditioned 
                   }})
                 let payerVpa = fromMaybe "" response.payerVpa
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
@@ -3798,7 +3799,8 @@ driverEarningsFlow = do
       rideType = selectedCard.rideType,
       tripStartTime = selectedCard.tripStartTime,
       tripEndTime = selectedCard.tripEndTime,
-      vehicleModel = selectedCard.vehicleModel
+      vehicleModel = selectedCard.vehicleModel,
+      acRide = selectedCard.acRide
       }})
       tripDetailsScreenFlow
     LOAD_MORE_HISTORY state -> do
