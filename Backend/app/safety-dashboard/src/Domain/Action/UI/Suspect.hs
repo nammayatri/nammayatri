@@ -105,7 +105,7 @@ getValidSuspectsToFlagAndAlreadyFlagged merchantId suspects = do
       onlyApprovedDlList = mapMaybe (.dl) onlyApproved
       onlyApprovedVoterIdList = mapMaybe (.voterId) onlyApproved
   let validSuspectAlreadyApproved = filter (\suspect -> (isSearchParamPresent suspect.dl onlyApprovedDlList) || (isSearchParamPresent suspect.voterId onlyApprovedVoterIdList)) validSuspects
-  suspectCleanedByAdmin <- findAllByDlOrVoterIdAndFlaggedStatus onlyApprovedDlList onlyApprovedVoterIdList Domain.Types.Suspect.Clean
+  suspectCleanedByAdmin <- findAllByDlOrVoterIdAndFlaggedStatus onlyApprovedDlList onlyApprovedVoterIdList Domain.Types.Suspect.NotConfirmed
   let dlListForCleaned = mapMaybe (.dl) suspectCleanedByAdmin
       voterIdListForCleaned = mapMaybe (.voterId) suspectCleanedByAdmin
       suspectNeedToFlagAgain = filter (\suspect -> (isSearchParamPresent suspect.dl dlListForCleaned) || (isSearchParamPresent suspect.voterId voterIdListForCleaned)) validSuspectAlreadyApproved
@@ -169,7 +169,7 @@ validateChangeRequest suspectId = do
 getRecieverIdListByAcessType :: DashboardAccessType -> Environment.Flow [Id Domain.Types.Person.Person]
 getRecieverIdListByAcessType acessName = do
   role <- QRole.findByDashboardAccessType acessName >>= fromMaybeM (RoleDoesNotExist (show acessName))
-  receiversList <- QP.findAllByRole role.id
+  receiversList <- QP.findAllByRoleAndReciveNotification role.id
   return $ map (\receiver -> receiver.id) receiversList
 
 getAllMerchantAdminIdList :: Id Merchant.Merchant -> Environment.Flow [Id Domain.Types.Person.Person]
@@ -177,7 +177,7 @@ getAllMerchantAdminIdList merchantId = do
   adminRole <- QRole.findByDashboardAccessType MERCHANT_ADMIN >>= fromMaybeM (RoleDoesNotExist "MERCHANT_ADMIN")
   allMerchantUsers <- QMerchantAccess.findAllUserAccountForMerchant merchantId
   let personIds = map (\merchantUser -> merchantUser.personId) allMerchantUsers
-  merchantAdminList <- QP.findAllByIdAndRoleId personIds adminRole.id
+  merchantAdminList <- QP.findAllByIdRoleIdAndReceiveNotification personIds adminRole.id
   return $ map (\receiver -> receiver.id) merchantAdminList
 
 findSuspect :: Maybe Text -> Maybe Text -> Environment.Flow (Maybe Domain.Types.Suspect.Suspect)
@@ -238,7 +238,10 @@ buildSuspectFlagRequest req tokenInfo merchantShortId name approval = do
         lastName = req.lastName,
         approvedBy = Nothing,
         updatedAt = now,
-        flaggedCategory = req.flaggedCategory
+        flaggedCategory = req.flaggedCategory,
+        mobileNumber = req.mobileNumber,
+        firDetails = req.firDetails,
+        totalComplaintsCount = req.totalComplaintsCount
       }
 
 buildNotification :: Id Merchant.Merchant -> Text -> Int -> Domain.Types.Notification.NotificationCategory -> Text -> Text -> Text -> Environment.Flow Domain.Types.Notification.Notification
@@ -289,7 +292,7 @@ buildSuspectStatusHistory tokenInfo approvedBy' approval flaggedStatus' Domain.T
         flaggedStatus = flaggedStatus',
         statusChangedReason = Just flaggedReason,
         voterId = voterId,
-        flaggedBy = Just [Domain.Types.Suspect.FlaggedBy {flaggedCategory = flaggedCategory, partnerName = merchantShortId, flaggedReason = Just flaggedReason}],
+        flaggedBy = Just [Domain.Types.Suspect.FlaggedBy {flaggedCategory = flaggedCategory, partnerName = merchantShortId, flaggedReason = Just flaggedReason, agentContactNumber = Nothing, firDetails = Nothing, totalComplaintsCount = Nothing}],
         createdAt = now,
         updatedAt = now,
         merchantId = Just tokenInfo.merchantId,

@@ -470,6 +470,7 @@ buildPerson req dashboardAccessType = do
         mobileCountryCode = req.mobileCountryCode,
         passwordHash = Just passwordHash,
         dashboardAccessType = Just dashboardAccessType,
+        receiveNotification = Nothing,
         createdAt = now,
         updatedAt = now,
         verified = Nothing

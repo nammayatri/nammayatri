@@ -217,6 +217,7 @@ buildPersonCreateReq req role = do
         roleId = role.id,
         dashboardAccessType = Just role.dashboardAccessType,
         verified = Nothing,
+        receiveNotification = Nothing,
         createdAt = now,
         updatedAt = now
       }

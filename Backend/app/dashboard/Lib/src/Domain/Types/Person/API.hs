@@ -32,7 +32,8 @@ data PersonAPIEntity = PersonAPIEntity
     availableMerchants :: [ShortId DMerchant.Merchant],
     availableCitiesForMerchant :: Maybe [AvailableCitiesForMerchant],
     registeredAt :: UTCTime,
-    verified :: Maybe Bool
+    verified :: Maybe Bool,
+    receiveNotification :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 

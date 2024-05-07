@@ -102,6 +102,7 @@ updateByPrimaryKey (Domain.Types.SuspectFlagRequest.SuspectFlagRequest {..}) = d
       Se.Set Beam.approvedBy approvedBy,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.dl dl,
+      Se.Set Beam.firDetails firDetails,
       Se.Set Beam.firstName firstName,
       Se.Set Beam.flaggedBy flaggedBy,
       Se.Set Beam.flaggedCategory flaggedCategory,
@@ -109,6 +110,8 @@ updateByPrimaryKey (Domain.Types.SuspectFlagRequest.SuspectFlagRequest {..}) = d
       Se.Set Beam.flaggedStatus flaggedStatus,
       Se.Set Beam.lastName lastName,
       Se.Set Beam.merchantShortId merchantShortId,
+      Se.Set Beam.mobileNumber mobileNumber,
+      Se.Set Beam.totalComplaintsCount totalComplaintsCount,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.voterId voterId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId)

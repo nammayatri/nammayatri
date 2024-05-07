@@ -348,6 +348,7 @@ buildFleetOwner req mbPersonId roleId dashboardAccessType = do
         mobileCountryCode = req.mobileCountryCode,
         passwordHash = Nothing,
         dashboardAccessType = Just dashboardAccessType,
+        receiveNotification = Nothing,
         createdAt = now,
         updatedAt = now,
         verified = Nothing

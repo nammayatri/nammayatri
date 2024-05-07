@@ -152,7 +152,7 @@ deleteMerchantUserDelete tokenInfo req = do
 buildUpdateSuspectRequest :: API.Types.UI.Admin.SuspectFlagChangeRequestList -> Domain.Types.Suspect.Suspect -> Environment.Flow Domain.Types.Suspect.Suspect
 buildUpdateSuspectRequest req Domain.Types.Suspect.Suspect {..} = do
   now <- getCurrentTime
-  newFlaggedCounter <- if req.flaggedStatus == Domain.Types.Suspect.Clean then pure 0 else pure flaggedCounter
+  newFlaggedCounter <- if req.flaggedStatus == Domain.Types.Suspect.NotConfirmed then pure 0 else pure flaggedCounter
   let suspect =
         Domain.Types.Suspect.Suspect
           { flaggedStatus = req.flaggedStatus,
@@ -192,6 +192,6 @@ selectNotificationType roleName flaggedStatus = do
     "MERCHANT_ADMIN" -> Domain.Types.Notification.PARTNER_FLAGGED_SUSPECT
     _ -> do
       case flaggedStatus of
-        Domain.Types.Suspect.Clean -> Domain.Types.Notification.ADMIN_CLEAN_SUSPECT
-        Domain.Types.Suspect.Charged -> Domain.Types.Notification.ADMIN_CHARGED_SUSPECT
+        Domain.Types.Suspect.NotConfirmed -> Domain.Types.Notification.ADMIN_CLEAN_SUSPECT
+        Domain.Types.Suspect.Confirmed -> Domain.Types.Notification.ADMIN_CHARGED_SUSPECT
         _ -> Domain.Types.Notification.ADMIN_FLAGGED_SUSPECT

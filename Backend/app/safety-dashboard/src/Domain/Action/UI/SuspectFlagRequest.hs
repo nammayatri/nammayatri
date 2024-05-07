@@ -127,7 +127,8 @@ handlePendingRequests tokenInfo adminApproval pendingFlagReqList = do
   DS.updateSuspectStatusHistoryByRequest tokenInfo adminApproval approvedBy Domain.Types.Suspect.Flagged pendingFlagReqList
   allMerchantUsers <- QMerchantAccess.findAllUserAccountForMerchant merchant.id
   let allMerchantUserExceptHim = filter (\user -> user.personId /= tokenInfo.personId) allMerchantUsers
-  let merchantUsersReceiversIdList = map (\user -> user.personId) allMerchantUserExceptHim
+  merchantReceivers <- QP.findAllByIdsAndReceiveNotification $ map (.personId) allMerchantUserExceptHim
+  let merchantUsersReceiversIdList = map (.id) merchantReceivers
   updatePendingFlaggedRequestStaus adminApproval pendingFlagReqList
   case adminApproval of
     Domain.Types.SuspectFlagRequest.Approved -> do
@@ -166,7 +167,7 @@ addOrUpdateSuspect req merchantShortId flaggedStatus = do
 
 updateSuspect :: Domain.Types.Suspect.Suspect -> Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> Text -> Domain.Types.Suspect.FlaggedStatus -> Environment.Flow Domain.Types.Suspect.Suspect
 updateSuspect suspect req merchantShortId flaggedStatus = do
-  let flaggedBy = Domain.Types.Suspect.FlaggedBy {flaggedCategory = req.flaggedCategory, partnerName = Just merchantShortId, flaggedReason = Just req.flaggedReason} : suspect.flaggedBy
+  let flaggedBy = Domain.Types.Suspect.FlaggedBy {flaggedCategory = req.flaggedCategory, partnerName = Just merchantShortId, flaggedReason = Just req.flaggedReason, agentContactNumber = req.mobileNumber, firDetails = req.firDetails, totalComplaintsCount = req.totalComplaintsCount} : suspect.flaggedBy
   updateFlaggedCounterByKey (suspect.flaggedCounter + 1) flaggedStatus flaggedBy (getUpdateKey req)
   buildUpdatedSuspect (suspect.flaggedCounter + 1) flaggedBy flaggedStatus suspect
 
@@ -194,7 +195,7 @@ buildSuspect flaggedStatus' Domain.Types.SuspectFlagRequest.SuspectFlagRequest {
         voterId = voterId,
         flaggedStatus = flaggedStatus',
         flagUpdatedAt = now,
-        flaggedBy = [Domain.Types.Suspect.FlaggedBy {flaggedCategory = flaggedCategory, partnerName = merchantShortId, flaggedReason = Just flaggedReason}],
+        flaggedBy = [Domain.Types.Suspect.FlaggedBy {flaggedCategory = flaggedCategory, partnerName = merchantShortId, flaggedReason = Just flaggedReason, agentContactNumber = mobileNumber, firDetails = firDetails, totalComplaintsCount = totalComplaintsCount}],
         statusChangedReason = Nothing,
         flaggedCounter = 1,
         createdAt = now,
