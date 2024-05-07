@@ -404,7 +404,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig
       },
       {
-        "cityName" : "Puducherry",
+        "cityName" : "Pondicherry",
         "mapImage" : "ny_ic_puducherry_map",
         "cityCode" : "std:0413",
         "showSubscriptions" : false,
