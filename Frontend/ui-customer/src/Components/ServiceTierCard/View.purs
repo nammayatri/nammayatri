@@ -16,6 +16,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude as MP
+import Engineering.Helpers.Commons as EHC
 
 view :: forall w. Config -> PrestoDOM (Effect Unit) w
 view config =
@@ -25,7 +26,7 @@ view config =
     , padding $ Padding 8 4 8 4
     , background Color.blue600
     , gravity CENTER_VERTICAL
-    , cornerRadius 18.0
+    , cornerRadius if EHC.os == "IOS" then 14.0 else 18.0
     ]
     [ linearLayout
         [ height WRAP_CONTENT
@@ -34,8 +35,7 @@ view config =
         , padding $ Padding 4 3 4 3
         , visibility $ MP.boolToVisibility $ showACDetails config.name config.isAc
         , gravity CENTER_VERTICAL
-        , cornerRadius 18.0
-        , margin $ MarginRight 3
+        , cornerRadius if EHC.os == "IOS" then 11.0 else 18.0
         ]
         [ imageView
             [ height $ V 12
@@ -56,6 +56,7 @@ view config =
           , width WRAP_CONTENT
           , text $ parseName config.name
           , color Color.black700
+          , margin $ MarginLeft 3
           ]
         <> FontStyle.tags TypoGraphy
     , case config.capacity of
