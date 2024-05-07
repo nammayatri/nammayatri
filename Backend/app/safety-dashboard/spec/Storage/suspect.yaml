@@ -8,6 +8,7 @@ imports:
   WebHookHeaders: Domain.Types.MerchantConfigs
   FlaggedBy : Domain.Types.Suspect
   Value: Data.Aeson
+  FIRDetails : Domain.Types.Suspect
 
 Suspect:
   tableName: suspect
@@ -46,9 +47,16 @@ Suspect:
       partnerName : Maybe Text
       flaggedCategory : Text
       flaggedReason : Maybe Text
+      agentContactNumber : Maybe Text
+      totalComplaintsCount : Maybe Int
+      firDetails : Maybe FIRDetails
+      derive: "Ord,Eq,Read,'ListInstance"
+    FIRDetails:
+      firNumber : Maybe Text
+      policeStation : Maybe Text
       derive: "Ord,Eq,Read,'ListInstance"
     FlaggedStatus:
-      enum: "Flagged,Charged,Clean"
+      enum: "Flagged,Confirmed,NotConfirmed"
       derive: HttpInstance
 
   queries:
@@ -120,6 +128,9 @@ SuspectFlagRequest:
     flaggedBy : Text
     firstName : Text
     lastName : Text
+    mobileNumber : Maybe Text
+    firDetails : Maybe FIRDetails
+    totalComplaintsCount : Maybe Int
     adminApproval : AdminApproval
     approvedBy : Maybe Text
     merchantShortId : Maybe Text
@@ -285,6 +296,10 @@ Notification :
       kvFunction: findOneWithKV
       where:
         and: [receiverId, id]
+    findByReceiverIdAndReadStatus:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [receiverId, readStatus]
 
 
 SuspectStatusChangeRequest:

@@ -61,11 +61,23 @@ findAllByIds ::
   m [Person]
 findAllByIds personIds = findAllWithKV [Se.Is BeamP.id $ Se.In $ getId <$> personIds]
 
+findAllByIdsAndReceiveNotification ::
+  BeamFlow m r =>
+  [Id Person] ->
+  m [Person]
+findAllByIdsAndReceiveNotification personIds = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In $ getId <$> personIds, Se.Or [Se.Is BeamP.receiveNotification $ Se.Eq $ Just True, Se.Is BeamP.receiveNotification $ Se.Eq Nothing]]]
+
 findAllByRole ::
   BeamFlow m r =>
   Id Role ->
   m [Person]
 findAllByRole roleId = findAllWithKV [Se.Is BeamP.roleId $ Se.Eq $ getId roleId]
+
+findAllByRoleAndReciveNotification ::
+  BeamFlow m r =>
+  Id Role ->
+  m [Person]
+findAllByRoleAndReciveNotification roleId = findAllWithKV [Se.And [Se.Is BeamP.roleId $ Se.Eq $ getId roleId, Se.Or [Se.Is BeamP.receiveNotification $ Se.Eq $ Just True, Se.Is BeamP.receiveNotification $ Se.Eq Nothing]]]
 
 findByEmailAndPassword ::
   (BeamFlow m r, EncFlow m r) =>
@@ -202,8 +214,21 @@ updatePersonMobile personId encMobileNumber = do
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
-findAllByIdAndRoleId :: BeamFlow m r => [Id Person] -> Id Role -> m [Person]
-findAllByIdAndRoleId personIds roleId = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In $ getId <$> personIds, Se.Is BeamP.roleId $ Se.Eq $ getId roleId]]
+-- findAllByIdAndRoleId :: BeamFlow m r => [Id Person] -> Id Role -> m [Person]
+-- findAllByIdAndRoleId personIds roleId = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In $ getId <$> personIds, Se.Is BeamP.roleId $ Se.Eq $ getId roleId]]
+
+updatePersonReceiveNotificationStatus :: BeamFlow m r => Id Person -> Bool -> m ()
+updatePersonReceiveNotificationStatus personId receiveNotification = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.receiveNotification $ Just receiveNotification,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
+findAllByIdRoleIdAndReceiveNotification :: BeamFlow m r => [Id Person] -> Id Role -> m [Person]
+findAllByIdRoleIdAndReceiveNotification personIds roleId = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In $ getId <$> personIds, Se.Is BeamP.roleId $ Se.Eq $ getId roleId, Se.Or [Se.Is BeamP.receiveNotification $ Se.Eq $ Just True, Se.Is BeamP.receiveNotification $ Se.Eq Nothing]]]
 
 instance FromTType' BeamP.Person Person.Person where
   fromTType' BeamP.PersonT {..} = do

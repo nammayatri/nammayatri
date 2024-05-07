@@ -20,3 +20,22 @@ ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN merchant_short_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN total_complaints_count integer ;
+ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN mobile_number text ;
+ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN fir_details text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN f_ir_details text ;
+ALTER TABLE atlas_safety_dashboard.suspect_flag_request DROP COLUMN fir_details;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN fir_details text ;
+ALTER TABLE atlas_safety_dashboard.suspect_flag_request DROP COLUMN f_ir_details;

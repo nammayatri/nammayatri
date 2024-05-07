@@ -17,6 +17,7 @@ data SuspectFlagRequest = SuspectFlagRequest
     approvedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     dl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    firDetails :: Kernel.Prelude.Maybe Domain.Types.Suspect.FIRDetails,
     firstName :: Kernel.Prelude.Text,
     flaggedBy :: Kernel.Prelude.Text,
     flaggedCategory :: Kernel.Prelude.Text,
@@ -25,6 +26,8 @@ data SuspectFlagRequest = SuspectFlagRequest
     id :: Kernel.Types.Id.Id Domain.Types.SuspectFlagRequest.SuspectFlagRequest,
     lastName :: Kernel.Prelude.Text,
     merchantShortId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    totalComplaintsCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
     voterId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)

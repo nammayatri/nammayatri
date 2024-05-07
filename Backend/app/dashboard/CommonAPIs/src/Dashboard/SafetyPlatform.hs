@@ -25,13 +25,13 @@ data SafetyEndpoint
   | AddFlagCategoryEndpoint
   | DeleteFlagCategoryEndpoint
   | SetMerchantConfigEndpoint
-  | ReadNotificationEndpoint
   | UploadSuspectEndpoint
   | UploadBulkSuspectEndpoint
   | ChangeFlagRequestEndpoint
   | ProcessSuspectFlagRequestEndpoint
   | ProcessSuspectFlagRequestListEndpoint
   | ResetPasswordEndpoint
+  | UpdateReceiveNotificationStatusEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "SafetyEndpoint"

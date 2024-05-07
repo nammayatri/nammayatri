@@ -16,3 +16,5 @@ data NotificationList = NotificationList {list :: [Domain.Types.Notification.Not
 data NotificationReadRequest = NotificationReadRequest {id :: Data.Text.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data Summary = Summary {count :: Kernel.Prelude.Int, totalCount :: Kernel.Prelude.Int} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data UpdateRecieveNotificationStatusRequest = UpdateRecieveNotificationStatusRequest {readStatus :: Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema)

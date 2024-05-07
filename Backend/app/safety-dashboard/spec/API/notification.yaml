@@ -26,6 +26,9 @@ types:
   NotificationReadRequest:
     id : Text
 
+  UpdateRecieveNotificationStatusRequest:
+    readStatus : Bool
+
 
 apis:
     - GET:
@@ -34,6 +37,7 @@ apis:
         query:
           limit: Int
           offset: Int
+          readStatus: Bool
         response:
           type: API.Types.UI.Notification.NotificationList
 
@@ -42,5 +46,12 @@ apis:
         auth: DashboardAuth DASHBOARD_USER
         request:
           type: API.Types.UI.Notification.NotificationReadRequest
+        response:
+          type: APISuccess
+    - POST:
+        endpoint: /update/receive/notificationStatus
+        auth: DashboardAuth DASHBOARD_USER
+        request:
+          type: API.Types.UI.Notification.UpdateRecieveNotificationStatusRequest
         response:
           type: APISuccess

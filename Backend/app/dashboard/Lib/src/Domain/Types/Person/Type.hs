@@ -31,6 +31,7 @@ data PersonE e = Person
     passwordHash :: Maybe DbHash,
     dashboardAccessType :: Maybe DRole.DashboardAccessType,
     createdAt :: UTCTime,
+    receiveNotification :: Maybe Bool,
     updatedAt :: UTCTime,
     verified :: Maybe Bool
   }
