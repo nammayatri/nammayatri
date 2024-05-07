@@ -56,7 +56,9 @@ data CreateOverlayReq = CreateOverlayReq
     contactSupportNumber :: Maybe Text,
     toastMessage :: Maybe Text,
     secondaryActions :: Maybe [Text],
+    actions2 :: Maybe [FCM.FCMOverlayAction],
     socialMediaLinks :: Maybe [FCM.FCMMediaLink],
+    secondaryActions2 :: Maybe [FCM.FCMOverlayAction],
     showPushNotification :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
@@ -93,6 +95,7 @@ createOverlay merchantShortId opCity req = do
           { id = guid,
             merchantId,
             merchantOperatingCityId = merchantOpCityId,
+            actions2 = fromMaybe [] actions2,
             ..
           }
 
@@ -183,6 +186,7 @@ overlayInfo merchantShortId opCity overlayReqKey udf1Req = do
           return
             CreateOverlayReq
               { contents = groupedContents,
+                actions2 = Just actions2,
                 ..
               }
 
