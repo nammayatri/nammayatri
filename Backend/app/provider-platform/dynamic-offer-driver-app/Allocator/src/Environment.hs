@@ -30,6 +30,7 @@ import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
 import Kernel.Streaming.Kafka.Producer.Types
@@ -98,6 +99,7 @@ data HandlerEnv = HandlerEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
+    serviceClickhouseEnv :: ClickhouseEnv,
     singleBatchProcessingTempDelay :: NominalDiffTime,
     ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig
   }
@@ -131,6 +133,7 @@ buildHandlerEnv HandlerCfg {..} = do
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
+  serviceClickhouseEnv <- createConn driverClickhouseCfg
   return HandlerEnv {..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()

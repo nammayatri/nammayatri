@@ -172,3 +172,12 @@ VALUES
         '102',
         'abcdbb0b-b012-4d1a-abed-32555212e213'
     );
+
+
+INSERT INTO atlas_driver_offer_bpp.govt_data (id, merchant_operating_city_id, owner_serial_number, registration_number, permit_validity_from, permit_validity_upto, manufacturer, body_type, number_of_cylinder, fuel_type, seating_capacity, from_date, to_date, created_at)
+VALUES
+('1', 'b7e43ce1-ae00-082a-5fad-7fc81b86646a', 'SN1', 'TS12345', '2024-01-01', '2027-01-01', 'Manufacturer1', 'Monocoque', 4, 'Petrol', 4, '2021-01-01', '2021-12-31', now()),
+('2', 'b7e43ce1-ae00-082a-5fad-7fc81b86646a', 'SN2', 'TS23456', '2024-02-01', '2028-02-01', 'Manufacturer2', 'Monocoque', 6, 'Diesel', 4, '2021-02-01', '2021-12-31', now()),
+('3', 'b7e43ce1-ae00-082a-5fad-7fc81b86646a', 'SN3', 'TS14355', '2024-03-01', '2029-03-01', 'Manufacturer3', 'Hackney', 4, 'Electric', 4, '2021-03-01', '2021-12-31', now()),
+('4', 'b7e43ce1-ae00-082a-5fad-7fc81b86646a', 'SN4', 'RN4', '2023-04-01', '2028-04-01', 'Manufacturer4', 'Type4', 8, 'Hybrid', 6, '2021-04-01', '2021-12-31', now()),
+('5', 'b7e43ce1-ae00-082a-5fad-7fc81b86646a', 'SN5', 'RN5', '2023-05-01', '2029-05-01', 'Manufacturer5', 'Type5', 6, 'Gas', 4, '2021-05-01', '2021-12-31', now());
