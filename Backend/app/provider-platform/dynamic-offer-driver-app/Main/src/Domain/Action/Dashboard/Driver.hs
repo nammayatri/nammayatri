@@ -73,6 +73,7 @@ module Domain.Action.Dashboard.Driver
     updateRCInvalidStatus,
     updateVehicleVariant,
     bulkReviewRCVariant,
+    updateDriverTag,
   )
 where
 
@@ -749,7 +750,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         blockStateModifier = info.blockStateModifier,
         currentAcOffReportCount = maybe 0 round info.airConditionScore,
         totalAcRestrictionUnblockCount = info.acRestrictionLiftCount,
-        lastACStatusCheckedAt = info.lastACStatusCheckedAt
+        lastACStatusCheckedAt = info.lastACStatusCheckedAt,
+        driverTag = person.driverTag
       }
 
 buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity
@@ -2029,3 +2031,26 @@ updateVehicleVariantAndServiceTier variant vehicle = do
   vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId
   let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction driver driverInfo' vehicle vehicleServiceTiers
   QVehicle.updateVariantAndServiceTiers variant availableServiceTiersForDriver vehicle.driverId
+
+updateDriverTag :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverTagReq -> Flow APISuccess
+updateDriverTag merchantShortId opCity driverId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- merchant access checking
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  let tag =
+        if req.isAddingTag
+          then addDriverTag driver.driverTag (T.toUpper req.driverTag)
+          else removeDriverTag driver.driverTag (T.toUpper req.driverTag)
+  QPerson.updateTag personId tag
+  pure Success
+
+addDriverTag :: Maybe [Text] -> Text -> [Text]
+addDriverTag Nothing tag = [tag]
+addDriverTag (Just tags) tag = tags ++ [tag]
+
+removeDriverTag :: Maybe [Text] -> Text -> [Text]
+removeDriverTag Nothing _ = []
+removeDriverTag (Just tags) tag = filter (/= tag) tags

@@ -56,6 +56,7 @@ type API =
            :<|> Common.UpdateRCInvalidStatusAPI
            :<|> Common.UpdateVehicleVariantAPI
            :<|> Common.BulkReviewRCVariantAPI
+           :<|> Common.UpdateDriverTagAPI
        )
 
 type BlockDriverWithReasonAPI =
@@ -100,6 +101,7 @@ handler merchantId city =
     :<|> updateRCInvalidStatus merchantId city
     :<|> updateVehicleVariant merchantId city
     :<|> bulkReviewRCVariant merchantId city
+    :<|> updateDriverTag merchantId city
 
 driverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocumentsInfo merchantShortId = withFlowHandlerAPI . DDriver.driverDocumentsInfo merchantShortId
@@ -182,3 +184,6 @@ updateVehicleVariant merchantShortId opCity _ req = withFlowHandlerAPI $ DDriver
 
 bulkReviewRCVariant :: ShortId DM.Merchant -> Context.City -> [Common.ReviewRCVariantReq] -> FlowHandler [Common.ReviewRCVariantRes]
 bulkReviewRCVariant merchantShortId opCity req = withFlowHandlerAPI $ DDriver.bulkReviewRCVariant merchantShortId opCity req
+
+updateDriverTag :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverTagReq -> FlowHandler APISuccess
+updateDriverTag merchantShortId opCity driverId req = withFlowHandlerAPI $ DDriver.updateDriverTag merchantShortId opCity driverId req
