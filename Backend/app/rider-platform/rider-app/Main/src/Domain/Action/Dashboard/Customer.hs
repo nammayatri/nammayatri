@@ -46,6 +46,7 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.Clickhouse.Sos as CHSos
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SavedReqLocation as QSRL
@@ -130,11 +131,14 @@ customerInfo merchantShortId opCity customerId = do
   unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
 
   numberOfRides <- fromMaybe 0 <$> runInReplica (QP.fetchRidesCount personId)
+  sos <- CHSos.findAllByPersonId personId
+  let totalSosCount = length sos
   pure $
     Common.CustomerInfoRes
       { numberOfRides,
         falseSafetyAlarmCount = customer.falseSafetyAlarmCount,
-        safetyCenterDisabledOnDate = customer.safetyCenterDisabledOnDate
+        safetyCenterDisabledOnDate = customer.safetyCenterDisabledOnDate,
+        ..
       }
 
 ---------------------------------------------------------------------

@@ -76,7 +76,8 @@ type CustomerInfoAPI =
 data CustomerInfoRes = CustomerInfoRes
   { numberOfRides :: Int,
     falseSafetyAlarmCount :: Int,
-    safetyCenterDisabledOnDate :: Maybe UTCTime
+    safetyCenterDisabledOnDate :: Maybe UTCTime,
+    totalSosCount :: Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

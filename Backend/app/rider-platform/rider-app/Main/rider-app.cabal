@@ -282,6 +282,7 @@ library
       Storage.Clickhouse.FareBreakup
       Storage.Clickhouse.Location
       Storage.Clickhouse.Ride
+      Storage.Clickhouse.Sos
       Storage.Queries.AppInstallsExtra
       Storage.Queries.BookingCancellationReasonExtra
       Storage.Queries.BookingExtra
