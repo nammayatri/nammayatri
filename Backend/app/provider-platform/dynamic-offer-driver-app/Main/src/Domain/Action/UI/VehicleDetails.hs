@@ -18,8 +18,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
 import Servant
-import qualified Storage.Queries.VehicleDetails as QVehicleDetails
-import qualified Storage.Queries.VehicleDetailsExtra as QVehicleDetailsExtra
+import qualified Storage.CachedQueries.VehicleDetails as QCVehicleDetails
 import Tools.Auth
 import Tools.Error
 
@@ -31,7 +30,7 @@ getVehicleMakes ::
     Environment.Flow API.Types.UI.VehicleDetails.VehicleModelsResp
   )
 getVehicleMakes (_, _, _) = do
-  vehicleDetails <- QVehicleDetailsExtra.findAllVehicleDetails
+  vehicleDetails <- QCVehicleDetails.findAllVehicleDetails
   let makes = map Domain.Types.VehicleDetails.make vehicleDetails
   let makesWithoutDuplicates = nub makes
   pure $ API.Types.UI.VehicleDetails.VehicleModelsResp makesWithoutDuplicates
@@ -45,7 +44,7 @@ getVehicleModels ::
     Environment.Flow API.Types.UI.VehicleDetails.VehicleVariantsResp
   )
 getVehicleModels (_, _, _) (API.Types.UI.VehicleDetails.VehicleVariantsReq make) = do
-  vehicleDetails <- QVehicleDetails.findByMake make
+  vehicleDetails <- QCVehicleDetails.findByMake make
   let models = map Domain.Types.VehicleDetails.model vehicleDetails
   pure $ API.Types.UI.VehicleDetails.VehicleVariantsResp models
 
@@ -57,4 +56,4 @@ getVehicleDetails ::
     API.Types.UI.VehicleDetails.VehicleDetailsReq ->
     Environment.Flow Domain.Types.VehicleDetails.VehicleDetails
   )
-getVehicleDetails (_, _, _) (API.Types.UI.VehicleDetails.VehicleDetailsReq make model) = QVehicleDetails.findByMakeAndModel make model >>= fromMaybeM (InvalidRequest "vehicle detail not found")
+getVehicleDetails (_, _, _) (API.Types.UI.VehicleDetails.VehicleDetailsReq make model) = QCVehicleDetails.findByMakeAndModel make model >>= fromMaybeM (InvalidRequest "vehicle detail not found")
