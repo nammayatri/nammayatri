@@ -29,6 +29,7 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as CommonUtils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as CommonUtils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Text as T
@@ -90,6 +91,8 @@ buildUpdateReq ::
   m Spec.UpdateReq
 buildUpdateReq res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
+  ---------------Need to fix as per use case---------
+  let ttl = CommonUtils.computeTtlISO8601 30
   context <-
     ContextV2.buildContextV2
       Context.UPDATE
@@ -102,7 +105,7 @@ buildUpdateReq res = do
       (Just res.bppUrl)
       res.city
       res.merchant.country
-      Nothing
+      (Just ttl)
 
   pure $ Spec.UpdateReq context $ mkUpdateMessage res res.details
 
