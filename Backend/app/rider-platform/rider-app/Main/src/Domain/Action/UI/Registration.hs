@@ -30,8 +30,6 @@ module Domain.Action.UI.Registration
   )
 where
 
-import qualified Amazonka as AWS
-import Amazonka.SES
 import qualified Data.Aeson as A
 import Data.Aeson.Types ((.:), (.:?))
 import Data.Maybe (listToMaybe)
@@ -47,6 +45,7 @@ import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.PersonStats as DPS
 import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
+import qualified Email.AWS.Flow as Email
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
@@ -78,6 +77,7 @@ import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CRC
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.Person as Person
@@ -280,9 +280,11 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
               void $ callWhatsappOptApi phoneNumber person.id merchant.id (Just Whatsapp.OPT_IN)
               result <- Whatsapp.whatsAppOtpApi person.merchantId merchantOperatingCityId (Whatsapp.SendOtpApiReq phoneNumber otpCode)
               when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
-          EMAIL -> do
+          EMAIL -> withLogTag ("personId_" <> getId person.id) $ do
             receiverEmail <- req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
-            L.runIO $ sendEmail receiverEmail otpCode
+            riderConfig <- CRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+            emailOTPConfig <- riderConfig.emailOtpConfig & fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+            L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
   return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked
   where
@@ -290,20 +292,6 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
     castChannelToMedium SMS = SR.SMS
     castChannelToMedium WHATSAPP = SR.WHATSAPP
     castChannelToMedium EMAIL = SR.EMAIL
-
--- Move this code to shared-kernel or configs for now keeping it here
-sendEmail :: Text -> Text -> IO ()
-sendEmail receiverEmail otpCode = do
-  env <- AWS.newEnv AWS.discover
-  let to = [receiverEmail]
-      from = "alerts@nammayatri.in"
-      subject = "OTP to Verify Your Account"
-      textBody = "Your One-Time Password (OTP) for account verification is: " <> otpCode <> ". Please do not share this OTP with anyone."
-      destination = Destination' Nothing Nothing (Just to)
-      message = newMessage (newContent subject) (Body' Nothing (Just $ newContent textBody))
-      sendReq = newSendEmail from destination message
-
-  void $ AWS.runResourceT $ AWS.send env sendReq
 
 signatureAuth ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
@@ -667,9 +655,11 @@ resend tokenId = do
       withLogTag ("personId_" <> getId person.id) $ do
         result <- Whatsapp.whatsAppOtpApi person.merchantId merchantOperatingCityId (Whatsapp.SendOtpApiReq phoneNumber otpCode)
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
-    EMAIL -> do
+    EMAIL -> withLogTag ("personId_" <> getId person.id) $ do
       receiverEmail <- mapM decrypt person.email >>= fromMaybeM (PersonFieldNotPresent "email")
-      L.runIO $ sendEmail receiverEmail otpCode
+      riderConfig <- CRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+      emailOTPConfig <- riderConfig.emailOtpConfig & fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+      L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
 
   void $ RegistrationToken.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing person.blocked

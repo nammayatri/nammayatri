@@ -54,3 +54,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN booking_sync_status_call_seconds_d
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN kapture_queue text NOT NULL default '';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN email_otp_config text ;
