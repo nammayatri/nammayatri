@@ -156,6 +156,7 @@ public class GRPCNotificationService extends Service implements NotificationList
 
         try {
             JSONObject entity_payload = new JSONObject(notification.getEntity().getData());
+            Log.e("onMessageReceived", String.valueOf(entity_payload));
             JSONObject payload = new JSONObject();
             String notificationType = notification.getCategory();
 
