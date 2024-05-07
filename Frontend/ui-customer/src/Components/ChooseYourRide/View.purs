@@ -499,7 +499,7 @@ chooseYourRideView push config isSingleEstimate =
                 ] <> FontStyle.h1 TypoGraphy)
                 , estimatedTimeAndDistanceView push config
                 , textView $
-                  [ text $ getString TOLL_CHARGES_WILL_BE_EXTRA
+                  [ textFromHtml $ getString TOLL_CHARGES_WILL_BE_EXTRA
                   , color Color.black650
                   , gravity CENTER_HORIZONTAL
                   , height WRAP_CONTENT
