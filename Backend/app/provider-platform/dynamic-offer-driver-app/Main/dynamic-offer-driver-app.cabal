@@ -443,6 +443,7 @@ library
       Storage.CachedQueries.SubscriptionConfig
       Storage.CachedQueries.Toll
       Storage.CachedQueries.ValueAddNP
+      Storage.CachedQueries.VehicleDetails
       Storage.CachedQueries.VehicleServiceTier
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.DriverEdaKafka
