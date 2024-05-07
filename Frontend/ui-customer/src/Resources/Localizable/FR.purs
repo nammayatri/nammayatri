@@ -1063,6 +1063,10 @@ getFR stringKey =
         MESSAGE_FROM name -> "Message de " <> name
         RIDE_CANCELLED -> "Trajet annulé"
         TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 Salut,\n\nJe suis en train de rouler avec le chauffeur " <> driverName <> " de " <> appName <> "! Suivez ce trajet sur : " <> trackLink <> "\n\nNuméro de véhicule : " <> vehicleNumber        
+        DRIVER_ALMOST_AT_PICKUP -> "le chauffeur est presque au moment de la prise en charge, veuillez le contacter pour modifier la prise en charge"
+        MAXIMUM_EDIT_PICKUP_ATTEMPTS_REACHED -> "Vous avez atteint le nombre maximum de tentatives pour modifier le lieu de retrait"
+        MOVE_PIN_TO_THE_DESIRED_PICKUP_POINT -> "Déplacez la goupille vers le point de ramassage souhaité (dans la zone indiquée)"
+        CHANGE_PICKUP_LOCATION -> "Changer le lieu de prise en charge"        
         SAFETY_CENTER_IS_DISABLED -> "La fonction SOS est désactivée car elle a été utilisée de manière abusive trois fois"
         TRACK_ON_GOOGLE_MAP -> "Suivre sur Google Maps >"
         SHOW_WALKING_DIRECTION -> "Afficher les directions pour marcher >"
@@ -1070,7 +1074,6 @@ getFR stringKey =
         SPECIAL_PICKUP_ZONE_RIDE -> "Ride en zone de ramassage spéciale"
         WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "Nous essaierons de vous connecter avec un chauffeur dans la zone de ramassage spéciale la plus proche."
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "Cela vous offre une expérience de ramassage instantanée."
-        DRIVER_AT_PICKUP_LOCATION -> "est au lieu de ramassage"
         A_TIP_HELPS_FIND_A_RIDE_QUICKER -> "Un conseil permet de trouver un trajet plus rapidement !"
         TIP_ADDED -> "astuce ajoutée !"
         CONTINUE_SEARCH_WITH_NO_TIP -> "Continuer la recherche sans pourboire"
@@ -1090,6 +1093,7 @@ getFR stringKey =
         CONTINUE_WITH_SAFETY_SETTINGS -> "Continuer avec les paramètres de sécurité"
         TAP_WHERE_TO_TO_BOOK_RIDE -> "Appuyez sur 'Où aller ?' pour réserver votre trajet !"
         LAST_CHOSEN_VARIANT_NOT_AVAILABLE -> "Le dernier type de trajet choisi n'est pas disponible. Veuillez choisir une autre option de trajet."
+        LOCATION_IS_TOO_FAR -> "L'emplacement est trop loin !"
         TOLL_CHARGES -> "Frais de péage"
         TOLL_CHARGES_DESC -> "Tout frais de péage accumulé pendant le voyage est inclus dans votre tarif."
         TOLL_CHARGES_INCLUDING amount-> "Frais de péage " <> amount <> " inclus dans le tarif"

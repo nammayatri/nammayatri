@@ -351,6 +351,7 @@ window.getMerchantConfig = function () {
       "enableShareRide" : false,
       "enableAdditionalServices" : true,
       "enableSafetyFlow" : false,
+      "enableEditPickupLocation" : false,
       "enableCustomerSupportForSafety" : true, 
       "enableHelpAndSupport" : false,
       "enableEditDestination" : true

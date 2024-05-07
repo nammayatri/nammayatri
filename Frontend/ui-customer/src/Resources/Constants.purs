@@ -350,7 +350,6 @@ maxImageUploadInIssueReporting = 3
 emergencyContactInitialChatSuggestionId :: String
 emergencyContactInitialChatSuggestionId = "d6cddbb1a6aee372c0c7f05173da8f95"
 
-
 cancelReasons :: Boolean -> Array OptionButtonList
 cancelReasons showAcReason =
   ([ { reasonCode: "CHANGE_OF_PLANS"

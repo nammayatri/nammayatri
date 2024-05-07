@@ -1054,6 +1054,10 @@ getHI stringKey =
         MESSAGE_FROM name -> name <> " की तरफ से संदेश"
         RIDE_CANCELLED -> "सफर रद्द कर दिया गया है"
         TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 नमस्ते, मैं" <> appName <> "ड्राइवर," <> driverName <> "के साथ सवारी कर रहा हूँ! इस सवारी का ट्रैकिंग करें:" <> trackLink <> "वाहन नंबर:" <> vehicleNumber        
+        DRIVER_ALMOST_AT_PICKUP -> "ड्राइवर लगभग पिकअप पर है, कृपया पिकअप बदलने के लिए उनसे संपर्क करें"
+        MAXIMUM_EDIT_PICKUP_ATTEMPTS_REACHED -> "आप पिकअप स्थान बदलने के प्रयासों की अधिकतम संख्या तक पहुंच गए हैं"
+        MOVE_PIN_TO_THE_DESIRED_PICKUP_POINT -> "पिन को इच्छित पिकअप बिंदु पर ले जाएँ (संकेतित क्षेत्र के भीतर)"
+        CHANGE_PICKUP_LOCATION -> "पिकअप स्थान बदलें"
         SAFETY_CENTER_IS_DISABLED -> "एसओएस सुविधा तीन बार दुरुपयोग की वजह से अक्षम की गई है"
         TRACK_ON_GOOGLE_MAP -> "Google मैप पर ट्रैक करें >"
         SHOW_WALKING_DIRECTION -> "पैदल चलने के निर्देश दिखाएं >"
@@ -1062,6 +1066,7 @@ getHI stringKey =
         WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "हम आपको निकटतम विशेष पिकअप जोन में ड्राइवर से जोड़ने की कोशिश करेंगे।"
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "यह आपको तत्काल पिकअप अनुभव प्रदान करता है।"
         DRIVER_AT_PICKUP_LOCATION -> "आपका ड्राइवर पिकअप स्थान पर है"
+        LOCATION_IS_TOO_FAR -> "स्थान बहुत दूर है!"
         A_TIP_HELPS_FIND_A_RIDE_QUICKER -> "टिप्स तेजी से सवारी ढूंढने में मदद करते हैं!"
         TIP_ADDED -> "टिप जोड़ी गई!"
         CONTINUE_SEARCH_WITH_NO_TIP -> "बिना किसी टिप के खोज जारी रखें"

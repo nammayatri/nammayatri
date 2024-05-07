@@ -107,7 +107,7 @@ screen initialState =
 
                             datesList = getDatesList currentDate initialState
                           (GetRidesSummaryListResp rideSummaryResp) <- Remote.getRideSummaryListReqBT datesList
-                          liftFlowBT $ push $ RideSummaryAPIResponseAction rideSummaryResp.list (spy "printing currentDate" currentDate) datesList
+                          liftFlowBT $ push $ RideSummaryAPIResponseAction rideSummaryResp.list currentDate datesList
                         else
                           pure unit
                         (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "100" "0" "false" "null" (convertUTCtoISC initialState.props.date "YYYY-MM-DD")

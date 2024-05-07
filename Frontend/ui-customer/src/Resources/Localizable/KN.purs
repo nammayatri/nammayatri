@@ -1054,7 +1054,7 @@ getKN stringKey =
         YET_TO_START name -> name <> " ಇನ್ನೂ ಪ್ರಯಾಣವನ್ನು ಆರಂಭಿಸಿಲ್ಲ"
         MESSAGE_FROM name -> name <> " ಇಂದ ಸಂದೇಶ"
         RIDE_CANCELLED -> "ಸವಾರಿ ರದ್ದು ಮಾಡಲಾಗಿದೆ"
-        TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 ಹಲೋ,\n\nನಾನು " <> appName <> " ಡ್ರೈವರ್ " <> driverName <> " ಜೊತೆ ಸವಾರಿ ಮಾಡುತ್ತಿದ್ದೇನೆ! ಈ ಸವಾರಿಯನ್ನು ಟ್ರ್ಯಾಕ್ ಮಾಡಲು: " <> trackLink <> "\n\nವಾಹನ ಸಂಖ್ಯೆ: " <> vehicleNumber        
+        TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 ಹಲೋ,\n\nನಾನು " <> appName <> " ಡ್ರೈವರ್ " <> driverName <> " ಜೊತೆ ಸವಾರಿ ಮಾಡುತ್ತಿದ್ದೇನೆ! ಈ ಸವಾರಿಯನ್ನು ಟ್ರ್ಯಾಕ್ ಮಾಡಲು: " <> trackLink <> "\n\nವಾಹನ ಸಂಖ್ಯೆ: " <> vehicleNumber                
         SAFETY_CENTER_IS_DISABLED -> "ಮೂರು ಬಾರಿ ತಪ್ಪಿನ ಬಳಕೆಯಿಂದ SOS ವೈಶಿಷ್ಟ್ಯವನ್ನು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ"
         TRACK_ON_GOOGLE_MAP -> "ಗೂಗಲ್ ಮ್ಯಾಪ್‌ನಲ್ಲಿ ಟ್ರ್ಯಾಕ್ ಮಾಡಿ >"
         SHOW_WALKING_DIRECTION -> "ನಡೆಯುವ ಮಾರ್ಗದರ್ಶನ ತೋರಿಸು >"
@@ -1063,6 +1063,11 @@ getKN stringKey =
         WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "ನಾವು ನಿಕಟವಾದ ವಿಶೇಷ ಪಿಕಪ್ ವಿಭಾಗದಲ್ಲಿರುವ ಚಾಲಕನೊಂದಿಗೆ ನೀವನ್ನು ಸಂಪರ್ಕಿಸಲು ಪ್ರಯತ್ನಿಸುತ್ತಿದ್ದೇವೆ."
         THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "ಇದು ನಿಮಗೆ ತತ್ಕಾಲದ ಪಿಕಪ್ ಅನುಭವವನ್ನು ಒದಗಿಸುತ್ತದೆ."
         DRIVER_AT_PICKUP_LOCATION -> "ನಿಮ್ಮ ಚಾಲಕ ಪಿಕಪ್ ಸ್ಥಳದಲ್ಲಿದ್ದಾರೆ"
+        DRIVER_ALMOST_AT_PICKUP -> "ಚಾಲಕ ಬಹುತೇಕ ಪಿಕಪ್‌ನಲ್ಲಿದ್ದಾನೆ, ಪಿಕಪ್ ಬದಲಾಯಿಸಲು ದಯವಿಟ್ಟು ಅವರನ್ನು ಸಂಪರ್ಕಿಸಿ"
+        MAXIMUM_EDIT_PICKUP_ATTEMPTS_REACHED -> "ಪಿಕಪ್ ಸ್ಥಳವನ್ನು ಬದಲಾಯಿಸಲು ನೀವು ಗರಿಷ್ಠ ಸಂಖ್ಯೆಯ ಪ್ರಯತ್ನಗಳನ್ನು ತಲುಪಿರುವಿರಿ"
+        MOVE_PIN_TO_THE_DESIRED_PICKUP_POINT -> "ಪಾಯಿಂಟರ್ ಅನ್ನು ಅಪೇಕ್ಷಿತ ಪಿಕಪ್ ಪಾಯಿಂಟ್‌ಗೆ ಸ್ಥಳಾಂತರಿಸಿ (ಸೂಚಿಸಲಾದ ಪ್ರದೇಶದೊಳಗೆ)"
+        CHANGE_PICKUP_LOCATION -> "ಪಿಕಪ್ ಸ್ಥಳವನ್ನು ಬದಲಾಯಿಸಿ"
+        LOCATION_IS_TOO_FAR -> "ಸ್ಥಳ ತುಂಬಾ ದೂರದಲ್ಲಿದೆ!"
         DRIVER_IS_ON_THE_WAY -> "ನಿಮ್ಮ ಡ್ರೈವರ್ ದಾರಿಯಲ್ಲಿದ್ದಾರೆ"
         DRIVER_IS_WAITING_AT_PICKUP -> "ನಿಮ್ಮ ಚಾಲಕ ಪಿಕಪ್‌ನಲ್ಲಿ ಕಾಯುತ್ತಿದ್ದಾನೆ"
         A_TIP_HELPS_FIND_A_RIDE_QUICKER -> "ಟಿಪ್ ಸವಾರಿಯನ್ನು ತ್ವರಿತವಾಗಿ ಹುಡುಕಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ!"

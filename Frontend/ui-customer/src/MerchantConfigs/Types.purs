@@ -262,6 +262,7 @@ type Features = {
   shareWithEmergencyContacts :: Boolean,
   enableAutoReferral :: Boolean,
   enableRepeatTripBackfilling :: Boolean,
+  enableEditPickupLocation :: Boolean,
   enableCustomerSupportForSafety :: Boolean,
   enableSpecialPickup :: Boolean,
   enableAcPopup :: Boolean,
@@ -318,6 +319,7 @@ type LocateOnMapConfigs = {
 , apiTriggerRadius :: Number
 , pickUpToSourceThreshold :: Number
 , hotSpotConfig :: HotSpotConfig
+, editPickUpThreshold :: Number
 }
 
 type DottedLineConfig = {
