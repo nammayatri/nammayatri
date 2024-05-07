@@ -8,7 +8,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   SuspectUploadReq: API.Types.UI.SuspectUploadReq
-
+  FIRDetails: Domain.Types.Suspect
 
 importPackageOverrides:
     Domain.Types.Merchant: lib-dashboard
@@ -26,6 +26,9 @@ types:
     lastName : Text
     flaggedReason : Text
     flaggedCategory : Text
+    mobileNumber : Maybe Text
+    firDetails : Maybe FIRDetails
+    totalComplaintsCount : Maybe Int
 
   SuspectBulkUploadReq:
     suspects : [SuspectUploadReq]

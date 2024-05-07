@@ -42,6 +42,18 @@ findByReceiverIdAndId ::
   (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Notification.Notification -> m (Maybe Domain.Types.Notification.Notification))
 findByReceiverIdAndId receiverId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.receiverId $ Se.Eq receiverId, Se.Is Beam.id $ Se.Eq id]]
 
+findByReceiverIdAndReadStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m ([Domain.Types.Notification.Notification]))
+findByReceiverIdAndReadStatus limit offset receiverId readStatus = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.receiverId $ Se.Eq receiverId,
+          Se.Is Beam.readStatus $ Se.Eq readStatus
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
+
 updateReadStatusById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Notification.Notification -> m ())
 updateReadStatusById readStatus (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.readStatus readStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 

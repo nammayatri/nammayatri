@@ -21,6 +21,7 @@ instance FromTType' Beam.SuspectFlagRequest Domain.Types.SuspectFlagRequest.Susp
             approvedBy = approvedBy,
             createdAt = createdAt,
             dl = dl,
+            firDetails = firDetails,
             firstName = firstName,
             flaggedBy = flaggedBy,
             flaggedCategory = flaggedCategory,
@@ -29,6 +30,8 @@ instance FromTType' Beam.SuspectFlagRequest Domain.Types.SuspectFlagRequest.Susp
             id = Kernel.Types.Id.Id id,
             lastName = lastName,
             merchantShortId = merchantShortId,
+            mobileNumber = mobileNumber,
+            totalComplaintsCount = totalComplaintsCount,
             updatedAt = updatedAt,
             voterId = voterId,
             merchantId = Kernel.Types.Id.Id <$> merchantId
@@ -41,6 +44,7 @@ instance ToTType' Beam.SuspectFlagRequest Domain.Types.SuspectFlagRequest.Suspec
         Beam.approvedBy = approvedBy,
         Beam.createdAt = createdAt,
         Beam.dl = dl,
+        Beam.firDetails = firDetails,
         Beam.firstName = firstName,
         Beam.flaggedBy = flaggedBy,
         Beam.flaggedCategory = flaggedCategory,
@@ -49,6 +53,8 @@ instance ToTType' Beam.SuspectFlagRequest Domain.Types.SuspectFlagRequest.Suspec
         Beam.id = Kernel.Types.Id.getId id,
         Beam.lastName = lastName,
         Beam.merchantShortId = merchantShortId,
+        Beam.mobileNumber = mobileNumber,
+        Beam.totalComplaintsCount = totalComplaintsCount,
         Beam.updatedAt = updatedAt,
         Beam.voterId = voterId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId

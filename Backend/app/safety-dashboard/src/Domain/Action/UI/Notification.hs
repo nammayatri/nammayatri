@@ -20,6 +20,7 @@ import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import Storage.Queries.Notification as SQN
+import qualified "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Tools.Auth
 import Tools.Error
 import "lib-dashboard" Tools.Error
@@ -34,18 +35,25 @@ buildTransaction ::
 buildTransaction endpoint tokenInfo request =
   T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo) request
 
-getListNotification :: TokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.Flow API.Types.UI.Notification.NotificationList
-getListNotification tokenInfo mbLimit mbOffset = do
-  list <- SQN.findByReceiverId mbLimit mbOffset (tokenInfo.personId.getId)
+getListNotification :: TokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.Flow API.Types.UI.Notification.NotificationList
+getListNotification tokenInfo mbLimit mbOffset readStatus = do
+  list <- case readStatus of
+    Just status -> SQN.findByReceiverIdAndReadStatus mbLimit mbOffset (tokenInfo.personId.getId) status
+    Nothing -> SQN.findByReceiverId mbLimit mbOffset (tokenInfo.personId.getId)
   let count = length list
       summary = Summary {totalCount = 10000, count = count}
   return $ NotificationList {list = list, summary = summary}
 
 postReadNotification :: TokenInfo -> API.Types.UI.Notification.NotificationReadRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postReadNotification tokenInfo req = do
-  transaction <- buildTransaction Safety.ReadNotificationEndpoint tokenInfo (encodeToText req)
+  isNotificationPresent <- SQN.findByReceiverIdAndId tokenInfo.personId.getId (Kernel.Types.Id.Id $ req.id)
+  when (isNothing isNotificationPresent) $ throwError NotificationNotFound
+  SQN.updateReadStatusById True (Kernel.Types.Id.Id $ req.id)
+  pure Kernel.Types.APISuccess.Success
+
+postUpdateReceiveNotificationStatus :: TokenInfo -> API.Types.UI.Notification.UpdateRecieveNotificationStatusRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postUpdateReceiveNotificationStatus tokenInfo req = do
+  transaction <- buildTransaction Safety.UpdateReceiveNotificationStatusEndpoint tokenInfo (encodeToText req)
   T.withTransactionStoring transaction $ do
-    isNotificationPresent <- SQN.findByReceiverIdAndId tokenInfo.personId.getId (Kernel.Types.Id.Id $ req.id)
-    when (isNothing isNotificationPresent) $ throwError NotificationNotFound
-    SQN.updateReadStatusById True (Kernel.Types.Id.Id $ req.id)
+    QP.updatePersonReceiveNotificationStatus tokenInfo.personId req.readStatus
     pure Kernel.Types.APISuccess.Success

@@ -18,6 +18,7 @@ data SuspectFlagRequestT f = SuspectFlagRequestT
     approvedBy :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     dl :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    firDetails :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Suspect.FIRDetails)),
     firstName :: (B.C f Kernel.Prelude.Text),
     flaggedBy :: (B.C f Kernel.Prelude.Text),
     flaggedCategory :: (B.C f Kernel.Prelude.Text),
@@ -26,6 +27,8 @@ data SuspectFlagRequestT f = SuspectFlagRequestT
     id :: (B.C f Kernel.Prelude.Text),
     lastName :: (B.C f Kernel.Prelude.Text),
     merchantShortId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    mobileNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    totalComplaintsCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime),
     voterId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
