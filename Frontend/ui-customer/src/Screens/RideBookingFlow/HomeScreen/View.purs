@@ -101,9 +101,7 @@ import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2,runEffectFn3, runEffectFn9)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, compareUTCDate, getCurrentUTC)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC, convertUTCtoISC)
-import Engineering.Helpers.Events as Events
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC, convertUTCtoISC, compareUTCDate, getCurrentUTC, getMarkerCallback)
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
@@ -115,9 +113,8 @@ import Halogen.VDom.DOM.Prop (Prop)
 import Helpers.API as HelpersAPI
 import Helpers.Pooling (delay)
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
-import Helpers.Utils (decodeBookingTimeList )
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..))
-import JBridge (showMarker, animateCamera, reallocateMapFragment, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, differenceBetweenTwoUTCInMinutes, differenceBetweenTwoUTC, mkRouteConfig)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..), getDistanceBwCordinates, decodeBookingTimeList)
+import JBridge (showMarker, animateCamera, reallocateMapFragment, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, defaultMarkerImageConfig, defaultActionImageConfig, differenceBetweenTwoUTCInMinutes, ActionImageConfig(..), handleLocateOnMapCallback, differenceBetweenTwoUTC, mkRouteConfig)
 import JBridge as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -159,6 +156,7 @@ import Data.Function.Uncurried (runFn1, runFn2)
 import Components.CommonComponentConfig as CommonComponentConfig
 import Constants.Configs 
 import Common.Resources.Constants (zoomLevel)
+import Resources.Constants (markerArrowSize)
 import Constants (defaultDensity)
 import Resources.Constants (getEditDestPollingCount)
 import Animation as Anim
@@ -242,7 +240,7 @@ screen initialState =
               SearchLocationModel -> case initialState.props.isSearchLocation of
                 LocateOnMap -> do
                   void $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
-                  void $ storeCallBackLocateOnMap push LocateOnMapCallBack
+                  void $ runEffectFn2 storeCallBackLocateOnMap (\key lat lon -> push $ LocateOnMapCallBack key lat lon) (handleLocateOnMapCallback "HomeScreen")
                   pure unit
                 _ -> do
                   case initialState.props.isSource of
@@ -254,7 +252,7 @@ screen initialState =
               EditingDestinationLoc -> case initialState.props.isSearchLocation of
                 LocateOnMap -> do
                   void $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
-                  void $ storeCallBackLocateOnMap push LocateOnMapCallBack
+                  void $ runEffectFn2 storeCallBackLocateOnMap (\key lat lon -> push $ LocateOnMapCallBack key lat lon) (handleLocateOnMapCallback "HomeScreen")
                   pure unit
                 _ -> pure unit
               FindingEstimate -> do
@@ -353,6 +351,10 @@ screen initialState =
                   --when (initialState.data.driverInfoCardState.providerType == CTP.ONUS) $ void $ JB.showInAppNotification JB.inAppNotificationPayload{title = "Showing Approximate Location", message = "Driver locations of other providers are only approximate", channelId = "ApproxLoc", showLoader = true}
                   startChatServices push initialState.data.driverInfoCardState.bppRideId "Customer" false
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
+              EditPickUpLocation -> do
+                void $ pure $ enableMyLocation true
+                void $ runEffectFn2 storeCallBackLocateOnMap (\key lat lon -> push $ UpdatePickupLocation key lat lon) (handleLocateOnMapCallback "HomeScreen")
+                pure unit
               RideStarted -> do
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
@@ -379,7 +381,7 @@ screen initialState =
               GoToConfirmLocation -> do
                 void $ pure $ enableMyLocation true
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                void $ storeCallBackLocateOnMap push UpdatePickupLocation
+                void $ runEffectFn2 storeCallBackLocateOnMap (\key lat lon -> push $ UpdatePickupLocation key lat lon) (handleLocateOnMapCallback "HomeScreen")
                 void $ push $ GoToConfirmingLocationStage
               ConfirmingEditDestinationLoc -> do
                 when ((getValueToLocalStore FINDING_EDIT_LOC_RESULTS) /= "true") $ do
@@ -434,9 +436,10 @@ isCurrentLocationEnabled = isLocalStageOn HomeScreen
 view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 view push state =
   let 
-    showLabel = not $ DS.null state.props.defaultPickUpPoint
-    isEditDestination = spy "isEditDestination -> " $ any (_ == state.props.currentStage) [ConfirmEditDestinationLoc, ConfirmingEditDestinationLoc, RevisedEstimate]
-    extraPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize (if os == "IOS" then 50 else 112) else 0
+    showLabel = not (state.props.defaultPickUpPoint == "" && DS.null state.props.markerLabel)
+    isEditDestination = any (_ == state.props.currentStage) [ConfirmEditDestinationLoc, ConfirmingEditDestinationLoc, RevisedEstimate]
+    extraPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize (if os == "IOS" then 50 else 112) else (if os == "IOS" then 50 else 0)
+    confirmingLocOrEditPickupStage = any (_ == state.props.currentStage) [ConfirmingLocation, EditPickUpLocation]
   in
   (if os == "IOS" then emptyScreenAnimation else PrestoAnim.animationSet[])  $ 
   frameLayout
@@ -506,26 +509,27 @@ view push state =
                         [ width WRAP_CONTENT
                         , height WRAP_CONTENT
                         , background Color.black800
-                        , color Color.white900
+                        , color $ Color.white900
                         , accessibility DISABLE_DESCENDANT
-                        , text if DS.length state.props.defaultPickUpPoint > state.data.config.mapConfig.labelTextSize then
+                        , text if state.props.markerLabel /= "" then state.props.markerLabel 
+                               else if DS.length state.props.defaultPickUpPoint > state.data.config.mapConfig.labelTextSize then
                                   (DS.take (state.data.config.mapConfig.labelTextSize - 3) state.props.defaultPickUpPoint) <> "..."
                                else
                                   state.props.defaultPickUpPoint
                         , padding (Padding 5 5 5 5)
                         , margin (MarginBottom 5)
                         , cornerRadius 5.0
-                        , visibility $ boolToInvisibility $ showLabel && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)
+                        , visibility $ boolToInvisibility $ showLabel && (confirmingLocOrEditPickupStage || state.props.locateOnMap)
                         , id (getNewIDWithTag "LocateOnMapPin")
                         ]
                     , imageView
                         [ width $ V 35
                         , height $ V 35
                         , accessibility DISABLE
-                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ case (state.props.currentStage == ConfirmingLocation) || state.props.isSource == (Just true) of
+                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ case confirmingLocOrEditPickupStage || state.props.isSource == (Just true) of
                             true  -> "ny_ic_src_marker"
                             false -> "ny_ic_dest_marker"
-                        , visibility $ boolToVisibility ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)
+                        , visibility $ boolToVisibility (confirmingLocOrEditPickupStage ||  state.props.locateOnMap)
                         ]
                     ]
                   else
@@ -537,12 +541,12 @@ view push state =
                     , gravity CENTER
                     , accessibility DISABLE
                     , orientation VERTICAL
-                    , visibility $ boolToVisibility $ state.data.config.feature.enableSpecialPickup && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)
+                    , visibility $ boolToVisibility $ state.data.config.feature.enableSpecialPickup && (confirmingLocOrEditPickupStage || state.props.locateOnMap)
                     ][ imageView
                         [ width WRAP_CONTENT
                         , height WRAP_CONTENT
                         , accessibility DISABLE_DESCENDANT
-                        , visibility $ boolToInvisibility (showLabel && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap))
+                        , visibility $ boolToInvisibility (showLabel && (confirmingLocOrEditPickupStage || state.props.locateOnMap))
                         , id (getNewIDWithTag "LocateOnMapPin")
                         ]
                      ]
@@ -554,16 +558,16 @@ view push state =
                     , gravity CENTER
                     , accessibility DISABLE
                     , orientation VERTICAL
-                    , visibility $ boolToVisibility $ state.data.config.feature.enableSpecialPickup && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)
+                    , visibility $ boolToVisibility $ state.data.config.feature.enableSpecialPickup && (confirmingLocOrEditPickupStage || state.props.locateOnMap)
                     ]
                     [ imageView
                         [ width $ V 35
                         , height $ V 35
                         , accessibility DISABLE
-                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ case (state.props.currentStage == ConfirmingLocation) || state.props.isSource == (Just true) of
+                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ case confirmingLocOrEditPickupStage || state.props.isSource == (Just true) of
                             true  -> "ny_ic_src_marker"
                             false -> "ny_ic_dest_marker"
-                        , visibility $ boolToVisibility ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)
+                        , visibility $ boolToVisibility (confirmingLocOrEditPickupStage || state.props.locateOnMap)
                         ]
                     ]
                 ]
@@ -1032,7 +1036,7 @@ recenterButtonView push state =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , background Color.transparent
-        , visibility if state.props.rideRequestFlow && state.props.currentStage /= ConfirmingLocation then GONE else VISIBLE
+        , visibility $ boolToVisibility $ state.props.rideRequestFlow && any (_ == state.props.currentStage) [ConfirmingLocation, EditPickUpLocation]
         , gravity RIGHT
         , alignParentBottom "true,-1"
         , padding $ Padding 0 0 16 14
@@ -1556,7 +1560,7 @@ rideRequestFlowView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadii $ Corners 24.0 true true false false
-    , visibility $ boolToVisibility $ isStageInList state.props.currentStage [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingEditDestinationLoc, ConfirmingRide, FindingQuotes, TryAgain, RideRating, ReAllocated, LoadMap, RevisedEstimate] 
+    , visibility $ boolToVisibility $ isStageInList state.props.currentStage [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingEditDestinationLoc, ConfirmingRide, FindingQuotes, TryAgain, RideRating, ReAllocated, LoadMap, RevisedEstimate, EditPickUpLocation] 
     , alignParentBottom "true,-1"
     ]
     [ -- TODO Add Animations
@@ -1586,8 +1590,7 @@ rideRequestFlowView push state =
             then estimatedFareView push state
           else
             ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
-        else if state.props.currentStage == RevisedEstimate then revisedEstimatedFareView push state
-        else if state.props.currentStage == ConfirmingLocation then
+        else if (state.props.currentStage == ConfirmingLocation || state.props.currentStage == EditPickUpLocation) then
           confirmPickUpLocationView push state
         else
           emptyTextView state
@@ -1626,9 +1629,9 @@ commonTextView state push text' color' fontStyle marginTop =
 ----------- topLeftIconView -------------
 topLeftIconView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 topLeftIconView state push =
-  let image = if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then fetchImage FF_COMMON_ASSET "ny_ic_chevron_left" else if state.data.config.dashboard.enable && (checkVersion "LazyCheck") then fetchImage FF_ASSET "ic_menu_notify" else fetchImage FF_ASSET "ny_ic_hamburger"
-      onClickAction = if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
-      isBackPress = (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) 
+  let image = if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, EditPickUpLocation, DistanceOutsideLimits ]) then fetchImage FF_COMMON_ASSET "ny_ic_chevron_left" else if state.data.config.dashboard.enable && (checkVersion "LazyCheck") then fetchImage FF_ASSET "ic_menu_notify" else fetchImage FF_ASSET "ny_ic_hamburger"
+      onClickAction = if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, EditPickUpLocation, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
+      isBackPress = (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, EditPickUpLocation, DistanceOutsideLimits ]) 
       followerBar = (showFollowerBar (fromMaybe [] state.data.followers) state) && (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver])
       isEditDestination = any (_ == state.props.currentStage) [EditingDestinationLoc, ConfirmEditDestinationLoc, ConfirmingEditDestinationLoc, RevisedEstimate]
       isVisible = state.data.config.showHamMenu && not isEditDestination && not ((not state.props.rideRequestFlow) || any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, HomeScreen])
@@ -2384,10 +2387,12 @@ confirmPickUpLocationView push state =
     , disableClickFeedback true
     , background Color.transparent
     , accessibility DISABLE
-    , visibility if state.props.currentStage == ConfirmingLocation then VISIBLE else GONE
+    , visibility if state.props.currentStage == ConfirmingLocation || state.props.currentStage == EditPickUpLocation then VISIBLE else GONE
     , padding $ PaddingTop 16
     , cornerRadii $ Corners 24.0 true true false false
     , gravity CENTER
+    , clickable true
+    , onClick push $ const NoAction
     ]
     [ recenterButtonView push state
     , linearLayout
@@ -2440,13 +2445,23 @@ confirmPickUpLocationView push state =
             , background Color.white900
             , accessibility DISABLE
             ] [ textView $
-                [ text (getString CONFIRM_PICKUP_LOCATION)
+                [ text if state.props.currentStage == EditPickUpLocation then getString CHANGE_PICKUP_LOCATION else (getString CONFIRM_PICKUP_LOCATION)
                 , color Color.black800
                 , accessibility DISABLE
                 , gravity CENTER_HORIZONTAL
                 , height WRAP_CONTENT
                 , width MATCH_PARENT
                 ] <> FontStyle.h1 TypoGraphy
+              , textView $ [
+                  text $ getString MOVE_PIN_TO_THE_DESIRED_PICKUP_POINT
+                , color Color.black800
+                , accessibility DISABLE
+                , gravity CENTER_HORIZONTAL
+                , height WRAP_CONTENT
+                , visibility $ boolToInvisibility $ isLocalStageOn EditPickUpLocation
+                , width MATCH_PARENT
+                ] <> FontStyle.body2 TypoGraphy
+
               , currentLocationView push state
               , nearByPickUpPointsView state push
               , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
@@ -3089,117 +3104,134 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
             if ((getValueToLocalStore TRACKING_ID) == trackingId) then do
               if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
                 let srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker }
-                    destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, anchorV = 1.0 }
+                    destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, anchorV = 1.0}
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
                 
                 if (srcLat /= 0.0 && srcLon /= 0.0 && dstLat /= 0.0 && dstLon /= 0.0) then do 
-                  _ <- pure $ removeAllPolylines ""
+                  void $ pure $ removeAllPolylines ""
                   let routeConfig = mkRouteConfig (walkCoordinate srcLat srcLon dstLat dstLon) srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" ( if os == "IOS" then "LineString" else "DOT") false JB.DEFAULT mapRouteConfig
-                  void $ liftFlow $ drawRoute [routeConfig] (getNewIDWithTag "CustomerHomeScreen")
+                  when (not $ isLocalStageOn EditPickUpLocation) $ void $ liftFlow $ drawRoute [routeConfig] (getNewIDWithTag "CustomerHomeScreen")
                   else pure unit
                 void $ delay $ Milliseconds duration
                 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
               else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) || (hasCurrentLocAndPrevDropLoc && isNothing state.data.routeCacheForAdvancedBooking) || hasCurrentLocAndPrevDropLoc /= state.data.previousRideDrop then do
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
                 routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
-                routeResponseAdvanced <- do
-                  case state.data.routeCacheForAdvancedBooking, mbPreviousDropLat, mbPreviousDropLon, routeResponse of
-                    Nothing , Just previousDropLat, Just previousDropLon, Right (GetRouteResp routeResp) -> do
-                      let routes = maybe (Nothing) (\(Route route) -> Just route) (routeResp !! 0)
-                      {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon dstLat dstLon routes
-                      let normalRoutePoints = fromMaybe {points : []} points
-                          lastPointInRoute = Arr.last normalRoutePoints.points
-                          previousDropLat' = maybe previousDropLat (\resp -> resp.lat) lastPointInRoute
-                          previousDropLon' = maybe previousDropLon (\resp -> resp.lng) lastPointInRoute
-                      let routeReq = makeGetRouteReq previousDropLat' previousDropLon' state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng
-                      Just <$> getRoute routeState routeReq
-                    Just advRoute, Just previousDropLat, Just previousDropLon, _ -> pure $ Just (Right (GetRouteResp ([advRoute])))
-                    _, _, _, _ -> pure $ Just (Right (GetRouteResp []))
+                when (not $ isLocalStageOn EditPickUpLocation) $ do
+                    routeResponseAdvanced <- do
+                      case state.data.routeCacheForAdvancedBooking, mbPreviousDropLat, mbPreviousDropLon, routeResponse of
+                        Nothing , Just previousDropLat, Just previousDropLon, Right (GetRouteResp routeResp) -> do
+                          let routes = maybe (Nothing) (\(Route route) -> Just route) (routeResp !! 0)
+                          {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon dstLat dstLon routes
+                          let normalRoutePoints = fromMaybe {points : []} points
+                              lastPointInRoute = Arr.last normalRoutePoints.points
+                              previousDropLat' = maybe previousDropLat (\resp -> resp.lat) lastPointInRoute
+                              previousDropLon' = maybe previousDropLon (\resp -> resp.lng) lastPointInRoute
+                          let routeReq = makeGetRouteReq previousDropLat' previousDropLon' state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng
+                          Just <$> getRoute routeState routeReq
+                        Just advRoute, Just previousDropLat, Just previousDropLon, _ -> pure $ Just (Right (GetRouteResp ([advRoute])))
+                        _, _, _, _ -> pure $ Just (Right (GetRouteResp []))
 
-                case routeResponse, routeResponseAdvanced of
-                  Right (GetRouteResp routeResp), (Just (Right (GetRouteResp routeRespAdvanced)))  -> do
-                    case ((routeResp) !! 0), ((routeRespAdvanced) !! 0), hasCurrentLocAndPrevDropLoc of
-                      Just (Route routes), Just (Route routesAdvanced), true -> do
-                        _ <- pure $ removeAllPolylines ""    
-                        {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon dstLat dstLon (Just routes)
-                        let newPoints = points
-                            newRoute = route
-                            routeDistanceNormal = fromMaybe 0 routeDistance
-                            routeDurationNormal = fromMaybe 0 routeDuration
-                        {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng (Just routesAdvanced)
-                        let newPointsAdv = points
-                            newRouteAdv = route
-                            routeDistanceAdvanced = fromMaybe 0 routeDistance 
-                            routeDurationAdvanced = fromMaybe 0 routeDuration
-                            srcMarkerConfig = defaultMarkerConfig{ markerId = markers'.srcMarker, pointerIcon = markers'.srcMarker }
-                            srcMarkerConfig' = defaultMarkerConfig{ markerId = "dummy_src", pointerIcon = "" , primaryText = "", anchorV = 1.0  }
-                            destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = "Completing ride nearby" , anchorV = 0.8, markerSize = if os == "IOS" then 30.0 else 70.0, labelMaxWidth = 350, useMarkerSize = true, useAnchorConfig = true, markerSizeWidth = 30.0  --- use in case of ios
-  , markerSizeHeight = 30.0}
-                            destMarkerConfig' = defaultMarkerConfig{ markerId = markers'.destMarker, pointerIcon = markers'.destMarker, primaryText = getMarkerPrimaryText (routes.distance + routesAdvanced.distance) , anchorV = 1.0 }
-                            normalRoutePoints = fromMaybe {points : []} newPoints
-                            normalAdvRoutePoints = fromMaybe {points : []} newPointsAdv
-                            normalRoute = mkRouteConfig normalRoutePoints srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig{isAnimation = true}
-                            normalAdvRouteConfig = mkRouteConfig normalAdvRoutePoints srcMarkerConfig' destMarkerConfig' Nothing "ADVANCED_ROUTE" ( if os == "IOS" then "LineString" else "DOT") true JB.ADVANCED mapRouteConfig{isAnimation = false}
-                        liftFlow $ drawRoute [normalRoute,normalAdvRouteConfig] (getNewIDWithTag "CustomerHomeScreen")
-                        _ <- doAff do liftEffect $ push $ updateState (routes.duration + routesAdvanced.duration) (routes.distance + routesAdvanced.distance)
-                        void $ delay $ Milliseconds duration
-                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = newRoute, routeCacheForAdvancedBooking = newRouteAdv, previousRideDrop = true, speed = (routeDistanceNormal + routeDistanceAdvanced) / (routeDurationNormal + routeDurationAdvanced) } } routeState expCounter
-                      Just (Route routes), Nothing, false -> do
-                        {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon ( maybe (0.0) (\loc -> loc.lat) state.props.stopLoc) (maybe 0.0 (\loc -> loc.lng) state.props.stopLoc) Nothing--state.data.driverInfoCardState.destinationLng
-                        let rentalPoints = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideAccepted then points else Nothing
-                            rentalRoute = route 
-                            rentalDistance = routeDistance
-                            rentalDuration = routeDuration
-                            destLat = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideStarted then (maybe dstLat (\loc -> loc.lat) state.props.stopLoc) else dstLat 
-                            destLon = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideStarted then (maybe dstLon (\loc -> loc.lng) state.props.stopLoc) else dstLon
-                        {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon destLat destLon (Just routes)
-                        if (srcLat /= 0.0 && srcLon /= 0.0 && destLat /= 0.0 && destLon /= 0.0) then do 
-                          _ <- pure $ removeAllPolylines ""
-                          let srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker }
-                              destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = getMarkerPrimaryText (fromMaybe 0 routeDistance), anchorV = 1.0  }
-                              srcRentalMarkerConfig = defaultMarkerConfig{ markerId = "", pointerIcon = "" , primaryText = ""}
-                              destRentalMarkerConfig = defaultMarkerConfig{ markerId = "ny_ic_blue_marker", pointerIcon = "ny_ic_blue_marker", primaryText = "", anchorV = 1.0  }
-                              normalRoutePoints = fromMaybe {points : []} points
-                              rentalRoutePoints = fromMaybe {points : []} rentalPoints
-                              normalRoute = mkRouteConfig  normalRoutePoints srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig
-                              rentalRouteConfig = mkRouteConfig rentalRoutePoints srcRentalMarkerConfig destRentalMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" ( if os == "IOS" then "LineString" else "DOT") true JB.RENTAL mapRouteConfig{isAnimation = false}
-                              routeArray = ([normalRoute] <> if isNothing rentalPoints then [] else [rentalRouteConfig] )
-                          liftFlow $ drawRoute routeArray (getNewIDWithTag "CustomerHomeScreen")
-                        else pure unit
-                        _ <- doAff do liftEffect $ push $ updateState (fromMaybe 1 routeDuration) $ fromMaybe 1 routeDistance
-                        let duration' = if isJust route then duration else getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
-                            expCounter' = if isJust route then expCounter else expCounter + 1
-                        void $ delay $ Milliseconds duration'
-                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = route, speed = (fromMaybe 0 routeDistance) / (fromMaybe 1 routeDuration), routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState expCounter'
-                      _, _, _ -> do
-                        if (state.data.fareProductType == FPT.RENTAL && not hasCurrentLocAndPrevDropLoc && srcLat /= 0.0 && srcLon /= 0.0) then do
-                          void $ pure $ removeAllPolylines ""
-                          void $ doAff $ liftEffect $ JB.showMarker defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker } srcLat srcLon 160 0.5 0.5 (getNewIDWithTag "CustomerHomeScreen")
-                          void $ doAff $ liftEffect $ animateCamera srcLat srcLon zoomLevel "ZOOM"
-                        else pure unit
+                    case routeResponse, routeResponseAdvanced of
+                      Right (GetRouteResp routeResp), (Just (Right (GetRouteResp routeRespAdvanced)))  -> do
+                        case ((routeResp) !! 0), ((routeRespAdvanced) !! 0), hasCurrentLocAndPrevDropLoc of
+                          Just (Route routes), Just (Route routesAdvanced), true -> do
+                            when (not $ isLocalStageOn EditPickUpLocation) $ void $ pure $ removeAllPolylines ""    
+                            {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon dstLat dstLon (Just routes)
+                            let newPoints = points
+                                newRoute = route
+                                routeDistanceNormal = fromMaybe 0 routeDistance
+                                routeDurationNormal = fromMaybe 0 routeDuration
+                            {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng (Just routesAdvanced)
+                            let newPointsAdv = points
+                                newRouteAdv = route
+                                routeDistanceAdvanced = fromMaybe 0 routeDistance 
+                                routeDurationAdvanced = fromMaybe 0 routeDuration
+                                distanceBwDriverAndPickup = (getDistanceBwCordinates srcLat srcLon state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng) * 1000.0
+                                driverWithinPickupThreshold = distanceBwDriverAndPickup > state.data.config.mapConfig.locateOnMapConfig.editPickUpThreshold
+                                callback = if state.data.config.feature.enableEditPickupLocation then runFn2 getMarkerCallback push MarkerLabelOnClick else ""
+                                srcMarkerConfig = defaultMarkerConfig{ markerId = markers'.srcMarker, pointerIcon = markers'.srcMarker }
+                                srcMarkerConfig' = defaultMarkerConfig{ markerId = "dummy_src", pointerIcon = "" , primaryText = "", anchorV = 1.0  }
+                                destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = "Completing ride nearby" , anchorV = 0.8, markerSize = if os == "IOS" then 30.0 else 70.0, labelMaxWidth = 350, useMarkerSize = true, useAnchorConfig = true, markerSizeWidth = 30.0 , markerSizeHeight = 30.0}  --- markerSizeWidth, markerSizeHeight use in case of ios
+                                destMarkerConfig' = defaultMarkerConfig{ markerId = markers'.destMarker, pointerIcon = markers'.destMarker, primaryText = state.data.driverInfoCardState.source, anchorV = 1.0, markerCallback = callback, actionImage = getPickupMarkerActionImageConifg state.data.config.feature.enableEditPickupLocation driverWithinPickupThreshold}
+                                normalRoutePoints = fromMaybe {points : []} newPoints
+                                normalAdvRoutePoints = fromMaybe {points : []} newPointsAdv
+                                normalRoute = mkRouteConfig normalRoutePoints srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig{isAnimation = true}
+                                normalAdvRouteConfig = mkRouteConfig normalAdvRoutePoints srcMarkerConfig' destMarkerConfig' Nothing "ADVANCED_ROUTE" ( if os == "IOS" then "LineString" else "DOT") true JB.ADVANCED mapRouteConfig{isAnimation = false}
+                            void $ pure $ setValueToLocalStore ADVANCED_ROUTE_DISTANCE (show routesAdvanced.distance)
+                            void $ pure $ setValueToLocalStore DRIVER_WITHIN_PICKUP_THRESHOLD $ show driverWithinPickupThreshold
+                            when (not $ isLocalStageOn EditPickUpLocation) $ liftFlow $ drawRoute [normalRoute,normalAdvRouteConfig] (getNewIDWithTag "CustomerHomeScreen")
+                            _ <- doAff do liftEffect $ push $ updateState (routes.duration + routesAdvanced.duration) (routes.distance + routesAdvanced.distance)
+                            void $ delay $ Milliseconds duration
+                            driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = newRoute, routeCacheForAdvancedBooking = newRouteAdv, previousRideDrop = true, speed = (routeDistanceNormal + routeDistanceAdvanced) / (routeDurationNormal + routeDurationAdvanced) } } routeState expCounter
+                          Just (Route routes), Nothing, false -> do
+                            {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon ( maybe (0.0) (\loc -> loc.lat) state.props.stopLoc) (maybe 0.0 (\loc -> loc.lng) state.props.stopLoc) Nothing--state.data.driverInfoCardState.destinationLng
+                            let rentalPoints = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideAccepted then points else Nothing
+                                rentalRoute = route 
+                                callback = if state.data.config.feature.enableEditPickupLocation then runFn2 getMarkerCallback push MarkerLabelOnClick else ""
+                                distanceBwDriverAndPickup = (getDistanceBwCordinates srcLat srcLon state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng) * 1000.0
+                                driverWithinPickupThreshold = distanceBwDriverAndPickup > state.data.config.mapConfig.locateOnMapConfig.editPickUpThreshold
+                                rentalDistance = routeDistance
+                                rentalDuration = routeDuration
+                                destLat = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideStarted then (maybe dstLat (\loc -> loc.lat) state.props.stopLoc) else dstLat 
+                                destLon = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideStarted then (maybe dstLon (\loc -> loc.lng) state.props.stopLoc) else dstLon
+                            {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon destLat destLon (Just routes)
+                            if (srcLat /= 0.0 && srcLon /= 0.0 && destLat /= 0.0 && destLon /= 0.0) then do 
+                              when (not $ isLocalStageOn EditPickUpLocation) $ void $ pure $ removeAllPolylines ""
+                              let srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker, primaryText = getMarkerPrimaryText routes.distance }
+                                  destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = state.data.driverInfoCardState.source, anchorV = 1.0, markerCallback = callback, actionImage = getPickupMarkerActionImageConifg state.data.config.feature.enableEditPickupLocation driverWithinPickupThreshold }
+                                  srcRentalMarkerConfig = defaultMarkerConfig{ markerId = "", pointerIcon = "" , primaryText = ""}
+                                  destRentalMarkerConfig = defaultMarkerConfig{ markerId = "ny_ic_blue_marker", pointerIcon = "ny_ic_blue_marker", primaryText = "", anchorV = 1.0  }
+                                  normalRoutePoints = fromMaybe {points : []} points
+                                  rentalRoutePoints = fromMaybe {points : []} rentalPoints
+                                  normalRoute = mkRouteConfig  normalRoutePoints srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig
+                                  rentalRouteConfig = mkRouteConfig rentalRoutePoints srcRentalMarkerConfig destRentalMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" ( if os == "IOS" then "LineString" else "DOT") true JB.RENTAL mapRouteConfig{isAnimation = false}
+                                  routeArray = ([normalRoute] <> if isNothing rentalPoints then [] else [rentalRouteConfig] )
+                              void $ pure $ setValueToLocalStore ADVANCED_ROUTE_DISTANCE "0"
+                              void $ pure $ setValueToLocalStore DRIVER_WITHIN_PICKUP_THRESHOLD $ if driverWithinPickupThreshold then "true" else "false"
+                              when (not $ isLocalStageOn EditPickUpLocation) $  liftFlow $ drawRoute routeArray (getNewIDWithTag "CustomerHomeScreen")
+                            else pure unit
+                            _ <- doAff do liftEffect $ push $ updateState (fromMaybe 1 routeDuration) $ fromMaybe 1 routeDistance
+                            let duration' = if isJust route then duration else getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
+                                expCounter' = if isJust route then expCounter else expCounter + 1
+                            void $ delay $ Milliseconds duration'
+                            driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = route, speed = (fromMaybe 0 routeDistance) / (fromMaybe 1 routeDuration), routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState expCounter'
+                          _, _, _ -> do
+                            if (state.data.fareProductType == FPT.RENTAL && not hasCurrentLocAndPrevDropLoc && srcLat /= 0.0 && srcLon /= 0.0) then do
+                              when (not $ isLocalStageOn EditPickUpLocation) $  void $ pure $ removeAllPolylines ""
+                              void $ doAff $ liftEffect $ JB.showMarker defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker } srcLat srcLon 160 0.5 0.5 (getNewIDWithTag "CustomerHomeScreen")
+                              void $ doAff $ liftEffect $ animateCamera srcLat srcLon zoomLevel "ZOOM"
+                            else pure unit
+                            void $ delay $ Milliseconds $ getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
+                            driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing, routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState (expCounter + 1)
+                      _ , _-> do
                         void $ delay $ Milliseconds $ getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
                         driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing, routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState (expCounter + 1)
-                  _ , _-> do
-                    void $ delay $ Milliseconds $ getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
-                    driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing, routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState (expCounter + 1)
               else do
-                case state.data.route, (state.data.previousRideDrop == hasCurrentLocAndPrevDropLoc )of
-                  Just (Route route), _  -> do
-                        locationResp <- liftFlow $ isCoordOnPath (walkCoordinates route.points) (resp ^. _lat) (resp ^. _lon) (state.data.speed)
-                        if locationResp.isInPath then do
-                          let newPoints = { points : locationResp.points}
-                              specialLocationTag =  if (any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver]) then
-                                                      specialLocationConfig "" sourceSpecialTagIcon onUsRide getPolylineAnimationConfig
-                                                    else
-                                                      specialLocationConfig "" destSpecialTagIcon false getPolylineAnimationConfig
-                              mapRouteConfig = if onUsRide then specialLocationTag else specialLocationTag{dashUnit = 30, gapUnit = 20}
-                          liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  if hasCurrentLocAndPrevDropLoc then "dummy_dest" else markers.destMarker, eta = if hasCurrentLocAndPrevDropLoc then "" else getMarkerPrimaryText locationResp.distance, srcMarker = markers.srcMarker, specialLocation = mapRouteConfig, zoomLevel = zoomLevel, pureScriptID = (getNewIDWithTag "CustomerHomeScreen"),  polylineKey = "DEFAULT"}
-                          _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
-                          void $ delay $ Milliseconds duration
-                          driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
-                        else do
-                          driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing, routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState expCounter
-                  _ , _ -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing, routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState expCounter
+                  when (not $ isLocalStageOn EditPickUpLocation) $ do
+                    case state.data.route, (state.data.previousRideDrop == hasCurrentLocAndPrevDropLoc )of
+                      Just (Route route), _  -> do
+                            locationResp <- liftFlow $ isCoordOnPath (walkCoordinates route.points) (resp ^. _lat) (resp ^. _lon) (state.data.speed)
+                            if locationResp.isInPath then do
+                              let newPoints = { points : locationResp.points}
+                                  distanceBwDriverAndPickup = (getDistanceBwCordinates srcLat srcLon state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng) * 1000.0
+                                  driverWithinPickupThreshold = distanceBwDriverAndPickup > state.data.config.mapConfig.locateOnMapConfig.editPickUpThreshold
+                                  specialLocationTag =  if (any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver]) then
+                                                          specialLocationConfig "" sourceSpecialTagIcon onUsRide getPolylineAnimationConfig
+                                                        else
+                                                          specialLocationConfig "" destSpecialTagIcon false getPolylineAnimationConfig
+                                  mapRouteConfig = if onUsRide then specialLocationTag else specialLocationTag{dashUnit = 30, gapUnit = 20}
+                                  callback = if state.data.config.feature.enableEditPickupLocation then runFn2 getMarkerCallback push MarkerLabelOnClick else ""
+                                  destMarkerConfig =  defaultMarkerConfig { markerId = markers.destMarker, pointerIcon = if hasCurrentLocAndPrevDropLoc then "dummy_dest" else markers.destMarker, markerCallback = callback, actionImage = getPickupMarkerActionImageConifg state.data.config.feature.enableEditPickupLocation driverWithinPickupThreshold}
+                                  eta = if not hasCurrentLocAndPrevDropLoc || any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] then getMarkerPrimaryText (locationResp.distance + fromMaybe 0 (fromString $  getValueToLocalStore ADVANCED_ROUTE_DISTANCE)) else ""
+                              void $ pure $ setValueToLocalStore DRIVER_WITHIN_PICKUP_THRESHOLD $ if driverWithinPickupThreshold then "true" else "false"
+                              liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarkerConfig = destMarkerConfig, locationName = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.source else state.data.driverInfoCardState.destination, eta = eta, srcMarker = markers.srcMarker, specialLocation = mapRouteConfig, zoomLevel = zoomLevel, pureScriptID = (getNewIDWithTag "CustomerHomeScreen"),  polylineKey = "DEFAULT"}
+                              _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
+                              void $ delay $ Milliseconds duration
+                              driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
+                            else do
+                              driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing, routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState expCounter
+                      _ , _ -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing, routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState expCounter
             else pure unit
           Left _ -> do
             void $ delay $ Milliseconds $ getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
@@ -3311,8 +3343,9 @@ editButtontView push state =
   , stroke $ "1," <> state.data.config.confirmPickUpLocationBorder
   , cornerRadius if (os == "IOS") then 15.0 else 20.0
   , padding (Padding 10 6 10 6)
-  , margin $ MarginLeft 10 
+  , margin $ MarginLeft 10
   , accessibilityHint "Edit Pickup Location : Button"
+  , visibility $ boolToVisibility $ state.props.currentStage /= EditPickUpLocation
   ][ textView 
       $
       [ text (getString EDIT)
@@ -3331,6 +3364,7 @@ currentLocationView push state =
             , height WRAP_CONTENT
             , orientation HORIZONTAL
             , margin $ MarginVertical 20 10
+            , clickable $ state.props.currentStage /= EditPickUpLocation
             , onClick push $ const GoBackToSearchLocationModal
             , padding $ PaddingHorizontal 15 15
             , stroke $ "1," <> state.data.config.confirmPickUpLocationBorder

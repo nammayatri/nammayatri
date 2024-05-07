@@ -979,6 +979,7 @@ newtype RideBookingRes = RideBookingRes {
   estimatedTotalFare :: Int,
   fareBreakup :: Array FareBreakupAPIEntity,
   fromLocation ::  BookingLocationAPIEntity,
+  initialPickupLocation :: BookingLocationAPIEntity,
   hasDisability :: Maybe Boolean,
   hasNightIssue :: Maybe Boolean,
   sosStatus :: Maybe CTA.SosStatus,
@@ -1035,7 +1036,8 @@ newtype RideAPIEntity = RideAPIEntity {
   endOtp :: Maybe String,
   startOdometerReading :: Maybe Number,
   endOdometerReading :: Maybe Number,
-  tollConfidence :: Maybe CTA.Confidence
+  tollConfidence :: Maybe CTA.Confidence, 
+  allowedEditPickupLocationAttempts :: Maybe Int
 }
 
 newtype RideBookingAPIDetails = RideBookingAPIDetails {
@@ -2514,6 +2516,7 @@ instance standardEncodeBusinessHoursResp :: StandardEncode BusinessHoursResp whe
 instance showBusinessHoursResp :: Show BusinessHoursResp where show = genericShow
 instance decodeBusinessHoursResp :: Decode BusinessHoursResp where decode = defaultDecode
 instance encodeBusinessHoursResp :: Encode BusinessHoursResp where encode = defaultEncode
+
 -------------------------------------------- FetchIssueList -------------------------------------------
 
 
@@ -3537,7 +3540,7 @@ instance makeEditStopReq :: RestEndpoint EditStopRequest  where
 
 
 
------------------------Edit Location API --------------------------------------------
+----------------------- Edit Location API --------------------------------------------
 
 data EditLocationRequest = EditLocationRequest String EditLocationReq
 

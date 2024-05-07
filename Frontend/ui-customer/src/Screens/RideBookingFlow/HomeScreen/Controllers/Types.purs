@@ -96,6 +96,8 @@ data ScreenOutput = LogoutUser
   | GoToMyTickets HomeScreenState
   | RepeatTrip HomeScreenState Trip
   | ExitToTicketing HomeScreenState
+  | EditLocationScreenOutput HomeScreenState
+  | ConfirmEditedPickup HomeScreenState
   | GoToHelpAndSupport HomeScreenState
   | ReAllocateRide HomeScreenState
   | GoToRentalsFlow HomeScreenState
@@ -272,6 +274,7 @@ data Action = NoAction
   | UpdateRepeatTrips RideBookingListRes 
   | RemoveShimmer 
   | ReportIssueClick
+  | EditLocation String
   | DateTimePickerAction String Int Int Int String Int Int
   | ChooseSingleVehicleAction ChooseVehicleController.Action
   | LocationTagBarAC LocationTagBarV2Controller.Action

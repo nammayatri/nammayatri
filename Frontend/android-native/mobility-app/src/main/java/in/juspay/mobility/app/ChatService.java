@@ -206,15 +206,12 @@ public class ChatService extends Service {
 
     private void handleMessages() {
         int count = 1;
+        shouldNotify = false;
         isChatServiceRunning = false;
         int messageSize = messages.size();
         for (Message message : messages) {
-            shouldNotify = true;
             if (count == messageSize && !isChatServiceRunning) {
                 isChatServiceRunning = true;
-                if (count != 1) {
-                    shouldNotify = false;
-                }
             }
             count++;
             handleMessage(message, String.valueOf(messageSize - 1));

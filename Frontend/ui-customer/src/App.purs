@@ -263,6 +263,8 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_TICKET_BOOKING_FLOW HomeScreenState
                         | REPEAT_RIDE_FLOW_HOME Trip
                         | EXIT_TO_TICKETING HomeScreenState
+                        | EDIT_LOCATION_FLOW HomeScreenState
+                        | CONFIRM_EDITED_PICKUP HomeScreenState
                         | GO_TO_HELP_AND_SUPPORT 
                         | REALLOCATE_RIDE HomeScreenState
                         | GO_TO_SCHEDULED_RIDES

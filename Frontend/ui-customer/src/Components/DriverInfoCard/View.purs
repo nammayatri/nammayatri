@@ -77,6 +77,7 @@ import Mobility.Prelude (boolToVisibility, capitalize)
 import Locale.Utils
 import Components.DriverInfoCard.Common.View
 import Components.DriverInfoCard.Common.Types
+import Components.DriverInfoCard.Controller as Controller
 import Data.Function.Uncurried (runFn1)
 import CarouselHolder as CarouselHolder
 import Components.BannerCarousel as BannerCarousel
@@ -1527,7 +1528,7 @@ endOTPAnimConfig state =
       , ifAnim = state.props.showEndOTP
       }
 
-getTripDetails :: DriverInfoCardState -> TripDetails Action
+getTripDetails :: DriverInfoCardState -> TripDetails Action 
 getTripDetails state = {
   rideStarted : state.props.currentStage == RideStarted
   , source : state.data.source
@@ -1537,7 +1538,10 @@ getTripDetails state = {
   , enablePaddingBottom : true
   , fareProductType : state.data.fareProductType
   , enableEditDestination : state.data.config.feature.enableEditDestination
-  , editingDestinationLoc : EditingDestination
+  , editingDestinationLoc : EditingLocation Controller.DESTINATION
+  , rideAccepted : state.props.currentStage == RideAccepted
+  , editingPickupLocation : EditingLocation Controller.SOURCE
+  , isEditPickupEnabled : state.data.config.feature.enableEditPickupLocation
   , isOtpRideFlow : state.props.isOtpRideFlow
 }
 

@@ -1646,6 +1646,12 @@ export const removeAllPolylines = function (str) {
   window.JBridge.removeAllPolylines(str);
 }
 
+export const removeAllPolygons = function(str) {
+  if (window.JBridge.removeAllPolygons) {
+    window.JBridge.removeAllPolygons(str);
+  }
+}
+
 export const removeAllPolylinesAndMarkers = function (array, unit) {
   const stringifiedArray = JSON.stringify(array);
   window.JBridge.removeAllPolylines(stringifiedArray);
@@ -2526,23 +2532,39 @@ export const addCarouselImpl = function (carouselModalJson, id) {
   }
 };
 
-export const storeCallBackLocateOnMap = function (cb) {
-  return function (action) {
-    return function () {
-      try {
-        const callback = callbackMapper.map(function (key, lat, lon) {
-          if (timerIdDebounce) {
-            clearTimeout(timerIdDebounce);
-          }
-          timerIdDebounce = setTimeout(() => {
-            cb(action(key)(lat)(lon))();
-          }, 100);
-        });
-        window.JBridge.storeCallBackLocateOnMap(callback);
-      } catch (error) {
-        console.log("Error occurred ", error);
+export const storeCallBackLocateOnMap = function (push, cb) {
+  try {
+    triggerCallBackQueue();
+    const callback = callbackMapper.map(function (key, lat, lon) {
+      if (timerIdDebounce) {
+        clearTimeout(timerIdDebounce);
+        timerIdDebounce = undefined;
       }
-    }
+      timerIdDebounce = setTimeout(() => {
+        cb(push)(key)(lat)(lon)();
+      }, 100);
+    });
+    window.JBridge.storeCallBackLocateOnMap(callback);
+  } catch (error) {
+    console.log("Error occurred ", error);
+  }
+}
+
+let arr = [];
+export const updateQueue = function (key,lat,lon,handler) {
+  if (arr.length > 0) {
+    arr = [];
+  }
+    arr.push(function(){
+    handler(key)(lat)(lon)();
+  })
+}
+
+export const triggerCallBackQueue = function () {
+  let a = arr.shift();
+  if (a) {
+    a();
+    triggerCallBackQueue();
   }
 }
 

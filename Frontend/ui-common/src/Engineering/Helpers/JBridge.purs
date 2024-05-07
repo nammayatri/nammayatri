@@ -29,6 +29,7 @@ import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, Fiber, Aff, launchAff)
+import PrestoDOM.Core (isScreenActive)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried
@@ -166,6 +167,7 @@ foreign import getAAID :: String -> String
 -- -- foreign import removePolyLineById :: Int -> Effect Unit
 foreign import removeAllPolylinesAndMarkers :: Fn2 (Array String) Unit Unit
 -- foreign import removeAllPolylines :: String -> Unit
+foreign import removeAllPolygons :: String -> Unit
 foreign import currentPosition  :: String -> Unit
 foreign import openNavigation  :: Number -> Number -> String -> Unit
 foreign import stopLocationPollingAPI :: Effect Unit
@@ -260,7 +262,7 @@ foreign import clearChatMessages :: Effect Unit
 foreign import getLocationPermissionStatus :: Fn1 Unit String 
 foreign import pauseYoutubeVideo :: Unit -> Unit 
 foreign import releaseYoutubeView :: Unit -> Unit 
-foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
+foreign import storeCallBackLocateOnMap :: EffectFn2 (String -> String -> String -> Effect Unit) ((String -> String -> String -> Effect Unit) -> String -> String -> String -> Effect Unit) Unit
 foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> Boolean -> action) -> Boolean -> Effect Unit
 foreign import updateInputString :: String -> Unit
 foreign import downloadMLTranslationModel :: EffectFn1 String Unit
@@ -285,6 +287,8 @@ foreign import timePickerImpl :: forall action. EffectFn2 (action -> Effect Unit
 foreign import setMapPaddingImpl :: EffectFn4 Int Int Int Int Unit
 
 foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
+foreign import triggerCallBackQueue :: EffectFn1 String  Unit
+foreign import updateQueue :: EffectFn4 String String String (String -> String -> String -> Effect Unit) Unit
 foreign import drawRouteV2 :: DrawRouteConfig -> Effect Unit 
 foreign import renderSliderImpl :: forall action. EffectFn3 (action -> Effect Unit) (Int -> action) SliderConfig Unit
 
@@ -517,7 +521,10 @@ type LocateOnMapConfig = {
   , locationName :: String
   , locateOnMapPadding :: LocateOnMapPadding
   , enableMapClickListener :: Boolean
+  , editPickUpThreshold :: Number
+  , editPickupLocation :: Boolean
   , thresholdDistToSpot :: Int
+  , circleConfig :: CircleConfig
 }
 
 locateOnMapConfig :: LocateOnMapConfig
@@ -529,6 +536,8 @@ locateOnMapConfig = {
   , points : []
   , zoomLevel : Constant.zoomLevel
   , labelId : ""
+  , editPickUpThreshold : 100.0
+  , editPickupLocation : false
   , markerCallbackForTags : []
   , markerCallback : ""
   , specialZoneMarkerConfig : {
@@ -547,6 +556,7 @@ locateOnMapConfig = {
   , locateOnMapPadding : { left : 1.0, top : 1.0, right : 1.0, bottom : 1.0 }
   , enableMapClickListener : false
   , thresholdDistToSpot : 3
+  , circleConfig : defaultCircleConfig
 }
 
 type ShowMarkerConfig = {
@@ -604,6 +614,36 @@ defaultMarkerImageConfig = {
   width : 28
 }
 
+type ActionImageConfig = {
+  image :: String,
+  height :: Int,
+  width :: Int,
+  orientation :: String,
+  background :: String,
+  padding :: EdgeInsets,
+  layoutMargin :: EdgeInsets,
+  layoutPadding :: EdgeInsets
+}
+
+type EdgeInsets = {
+    left :: Int
+  , top :: Int
+  , right :: Int
+  , bottom :: Int
+}
+
+defaultActionImageConfig :: ActionImageConfig
+defaultActionImageConfig = {
+    image : ""
+  , height : 30
+  , width : 30
+  , orientation : "VERTICAL"
+  , background : ""
+  , padding : dummyMarkerEdgeInsets
+  , layoutMargin : dummyMarkerEdgeInsets
+  , layoutPadding : dummyMarkerEdgeInsets
+}
+
 type MarkerConfig = {
     showPointer :: Boolean
   , pointerIcon :: String
@@ -633,6 +673,15 @@ type MarkerConfig = {
   , markerSizeHeight :: Number
   , anchorV :: Number
   , anchorU :: Number
+  , actionImage :: ActionImageConfig
+}
+
+dummyMarkerEdgeInsets :: EdgeInsets
+dummyMarkerEdgeInsets = {
+  left : -1,
+  top : -1,
+  right : -1,
+  bottom : -1
 }
 
 defaultMarkerConfig :: MarkerConfig
@@ -665,6 +714,26 @@ defaultMarkerConfig = {
   , markerSizeHeight : 40.0 --- use in case of ios
   , useDestPoints : true
   , usePosition : false
+  , actionImage : defaultActionImageConfig
+}
+
+type CircleConfig = {
+  radius :: Number,
+  primaryStrokeColor :: String,
+  fillColor :: String,
+  strokeWidth :: Int,
+  secondaryStrokeColor :: String,
+  circleId :: String
+}
+
+defaultCircleConfig :: CircleConfig
+defaultCircleConfig = {
+  radius : 0.0,
+  primaryStrokeColor : "#00FFFFFF",
+  fillColor : "#00FFFFFF",
+  strokeWidth : 0,
+  secondaryStrokeColor : "#00FFFFFF",
+  circleId : ""
 }
 
 type AnimationConfig = {
@@ -721,7 +790,7 @@ type SuggestionDefinitions = Array
 
 type UpdateRouteConfig = {
     json :: Locations
-  , destMarker :: String
+  , destMarkerConfig :: MarkerConfig
   , eta :: String
   , srcMarker :: String
   , specialLocation :: MapRouteConfig
@@ -729,6 +798,7 @@ type UpdateRouteConfig = {
   , autoZoom :: Boolean
   , pureScriptID :: String
   , polylineKey :: String
+  , locationName :: String
 }
 
 type InAppNotificationPayload = {
@@ -763,7 +833,7 @@ inAppNotificationPayload = {
 updateRouteConfig :: UpdateRouteConfig
 updateRouteConfig = {
     json : {points: []}
-  , destMarker : ""
+  , destMarkerConfig : defaultMarkerConfig
   , eta : ""
   , srcMarker : ""
   , specialLocation : mapRouteConfig
@@ -771,6 +841,7 @@ updateRouteConfig = {
   , autoZoom : true
   , pureScriptID : ""
   , polylineKey : ""
+  , locationName : ""
 }
 
 mapRouteConfig :: MapRouteConfig
@@ -787,7 +858,7 @@ mapRouteConfig = {
         draw: 0, 
         fade: 0, 
         delay: 0
-      } 
+      }
   }
 
 -- type Point = Array Number
@@ -954,3 +1025,14 @@ defaultShakeListenerConfig = {
   consecutiveShakeInterval : 500,
   shakeCountResetTime : 3000
 }
+
+handleLocateOnMapCallback :: String -> ((String -> String -> String -> Effect Unit) -> String -> String -> String -> Effect Unit)
+handleLocateOnMapCallback screenName = (\push key lat lon -> do
+                  isSuccess <- handleCallback screenName key lat lon push
+                  when (not isSuccess) $ runEffectFn4 updateQueue key lat lon (handleLocateOnMapCallback screenName push))
+  where
+  handleCallback :: String -> String -> String -> String -> (String -> String -> String -> Effect Unit) -> Effect Boolean
+  handleCallback screenName key lat lon push = do
+    isActive <- isScreenActive "default" screenName
+    when isActive $ do push key lat lon
+    pure isActive

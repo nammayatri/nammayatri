@@ -85,6 +85,9 @@ yellow900 = "#FCC32C"
 yellow600 :: Color
 yellow600 = "#FCF6E7"
 
+yellowOpacity23 :: Color
+yellowOpacity23 = "#3BFCC32C"
+
 shadowGray :: Color
 shadowGray = "#D1D5DB"
 -- Theme Colors

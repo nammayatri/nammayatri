@@ -1803,6 +1803,7 @@ data NotificationType =  DRIVER_REACHED
                       | DRIVER_ASSIGNMENT
                       | RIDE_REQUESTED
                       | TRIP_STARTED
+                      | EDIT_LOCATION
 
 derive instance genericNotificationType :: Generic NotificationType _
 instance showNotificationType :: Show NotificationType where show = genericShow

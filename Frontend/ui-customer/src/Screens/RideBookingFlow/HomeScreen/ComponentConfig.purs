@@ -54,7 +54,7 @@ import Components.SelectListModal as CancelRidePopUpConfig
 import Components.ServiceTierCard.View as ServiceTierCard
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except (runExcept)
-import Data.Array ((!!), sortBy, mapWithIndex, elem, length)
+import Data.Array ((!!), sortBy, mapWithIndex, elem, length, any)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3)
@@ -390,7 +390,7 @@ primaryButtonConfirmPickupConfig :: ST.HomeScreenState -> PrimaryButton.Config
 primaryButtonConfirmPickupConfig state =
   let
     config = PrimaryButton.config
-
+    isBtnClickable = (state.props.currentStage == EditPickUpLocation && state.props.markerLabel /= getString(LOCATION_IS_TOO_FAR)) || state.props.currentStage == ConfirmingLocation
     primaryButtonConfig' =
       config
         { textConfig
@@ -402,7 +402,9 @@ primaryButtonConfirmPickupConfig state =
         , margin = (MarginTop 8)
         , id = "ConfirmLocationButton"
         , background = state.data.config.primaryBackground
-        , enableRipple = true
+        , isClickable = isBtnClickable
+        , alpha = if isBtnClickable then 1.0 else 0.5
+        , enableRipple = isBtnClickable
         , rippleColor = Color.rippleShade
         }
   in
@@ -2466,3 +2468,19 @@ scheduledRideExistsPopUpConfig state =
 
   formatDateInHHMM :: String -> String
   formatDateInHHMM timeUTC = EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"
+
+
+getPickupMarkerActionImageConifg :: Boolean -> Boolean -> JB.ActionImageConfig 
+getPickupMarkerActionImageConifg pickupFeatureEnabled driverWithinPickupThreshold = 
+  if ((any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver]) && pickupFeatureEnabled && driverWithinPickupThreshold) then 
+    JB.defaultActionImageConfig {
+      image = "ic_edit_pencil_white",
+      height = 30,
+      width = 30,
+      background = if EHC.os == "IOS" then "#2194FF" else "ic_blue_bg",
+      orientation = "HORIZONTAL",
+      padding = if EHC.os == "IOS" then {left : 12, top : 12, right : 12, bottom : 12} else {left : 16, top : 16, right : 16, bottom : 16},
+      layoutMargin = {left : 15, top : 13, right : 15, bottom : 15},
+      layoutPadding = {left : 0, top : 0, right : 0, bottom : 0}
+    }
+    else JB.defaultActionImageConfig

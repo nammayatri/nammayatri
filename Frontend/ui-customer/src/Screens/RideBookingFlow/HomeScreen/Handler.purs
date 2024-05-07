@@ -115,11 +115,14 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ FCM_NOTIFICATION notification updatedState)
     RefreshHomeScreen updatedState -> do
-        modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-        App.BackT $ App.NoBack <$> (pure $ REFRESH_HOME_SCREEN)
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ REFRESH_HOME_SCREEN)
     Retry updatedState -> do
         modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
         App.BackT $ App.NoBack <$> (pure $ RETRY)
+    EditLocationScreenOutput updatedState -> do
+        modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+        App.BackT $ App.NoBack <$> (pure $ EDIT_LOCATION_FLOW updatedState)
     GoToHome state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
       App.BackT $ App.NoBack <$> (pure $ HOME_SCREEN)
@@ -189,6 +192,9 @@ homeScreen = do
     ExitToTicketing updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ EXIT_TO_TICKETING updatedState)
+    ConfirmEditedPickup updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CONFIRM_EDITED_PICKUP updatedState)
     GoToHelpAndSupport updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_HELP_AND_SUPPORT)

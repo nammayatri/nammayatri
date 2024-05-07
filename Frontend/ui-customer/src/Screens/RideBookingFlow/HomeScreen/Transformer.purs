@@ -23,7 +23,7 @@ import Engineering.Helpers.LogEvent
 import Locale.Utils
 import Prelude
 
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt, _fareProductType, _stopLocation)
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt, _fareProductType, _fareProductType, _stopLocation)
 import Common.Types.App (LazyCheck(..), Paths)
 import Components.ChooseVehicle (Config, config, SearchResultType(..), FareProductType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (config) as QLI
@@ -179,6 +179,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
       , price : resp.estimatedTotalFare
       , sourceLat : resp.fromLocation ^._lat
       , sourceLng : resp.fromLocation ^._lon
+      , initialPickupLat : resp.initialPickupLocation ^._lat
+      , initialPickupLon : resp.initialPickupLocation ^._lon
       , destinationLat : (toLocation.lat)
       , destinationLng : (toLocation.lon)
       , sourceAddress : getAddressFromBooking resp.fromLocation
@@ -202,6 +204,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
                             then rideList.vehicleVariant 
                          else
                             fromMaybe "" vehicleVariant
+      , editPickupAttemptsLeft : fromMaybe 0 rideList.allowedEditPickupLocationAttempts
       , status : rideList.status
       , rentalData : dummyRentalBookingConfig{
           baseDistance = (fromMaybe 20000 resp.estimatedDistance)/1000
@@ -273,6 +276,7 @@ dummyRideAPIEntity = RideAPIEntity{
   startOdometerReading : Nothing,
   endOdometerReading : Nothing
 , tollConfidence : Nothing
+, allowedEditPickupLocationAttempts : Nothing
   }
 
 isForLostAndFound :: Boolean

@@ -154,7 +154,7 @@ public class OverlayMessagingService extends Service {
         params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
         messageView = LayoutInflater.from(getApplicationContext()).inflate(R.layout.message_overlay, null);
 
-        setViewListeners(messageView);
+        setViewListeners(messageView, intentMessage);
         windowManager.addView(messageView, params);
         setDataToViews(intentMessage);
         return START_STICKY;
@@ -439,19 +439,19 @@ public class OverlayMessagingService extends Service {
         }
     }
 
-    private void setViewListeners(View messageView) {
+    private void setViewListeners(View messageView, String intentMessage) {
         messageView.findViewById(R.id.button_ok).setOnClickListener(view -> {
             try {
                 for (int i = 0; i < actions2.length(); i++) {
                     if (actions2.getJSONObject(i) != null ) {
                     JSONObject action2 = actions2.getJSONObject(i);
-                    performAction2(action2);
+                    performAction2(action2, intentMessage);
                     }
                 }
                 if (actions2.length() == 0) {
                     for (int i = 0; i < actions.length(); i++) {
                         String action = String.valueOf(actions.get(i));
-                        performAction(action);
+                        performAction(action, intentMessage);
                     }
                 }
                 if(countDownTimer != null){
@@ -467,17 +467,15 @@ public class OverlayMessagingService extends Service {
                 for (int i = 0; i < secondaryActions2.length(); i++) {
                     if (secondaryActions2.getJSONObject(i) != null ) {
                         JSONObject action2 = secondaryActions2.getJSONObject(i);
-                        performAction2(action2);
+                        performAction2(action2, intentMessage);
                     }
                 }
                 if (secondaryActions2.length() == 0) {
-                for (int i = 0; i < secondaryActions.length(); i++) {
-                    String action = String.valueOf(secondaryActions.get(i));
-                    performAction(action);
+                    for (int i = 0; i < secondaryActions.length(); i++) {
+                        String action = String.valueOf(secondaryActions.get(i));
+                        performAction(action,intentMessage);
+                    }
                 }
-                }
-                if(countDownTimer != null){
-                countDownTimer.cancel();}
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -498,7 +496,7 @@ public class OverlayMessagingService extends Service {
         }
     }
 
-    void performAction(String action){
+    void performAction(String action, String intentMessage){
         switch (action) {
             case "SET_DRIVER_ONLINE":
                 RideRequestUtils.updateDriverStatus(true, "ONLINE", this, false);
@@ -558,13 +556,22 @@ public class OverlayMessagingService extends Service {
                 } catch (Exception e){
                     System.out.println(e.toString());
                 }
-
+                break;
+            case "EDIT_LOCATION" :
+                try {
+                    JSONObject data = new JSONObject(intentMessage);
+                    double latitude = Double.parseDouble(data.optString("lat", "0.0"));
+                    double longitude = Double.parseDouble(data.optString("lon", "0.0"));
+                        openNavigation(latitude, longitude);
+                } catch (Exception e) {
+                    System.out.println(e.toString());
+                }
                 break;
         }
         stopSelf();
     }
 
-    void performAction2(JSONObject action){
+    void performAction2(JSONObject action, String intentMessage){
         try {
             JSONObject primaryAction = action.has("primaryAction") ? action.getJSONObject("primaryAction") : null;
             if (primaryAction != null) {
@@ -575,18 +582,18 @@ public class OverlayMessagingService extends Service {
                 case "SET_DRIVER_ONLINE":
                     RideRequestUtils.updateDriverStatus(true, "ONLINE", this, false);
                     RideRequestUtils.restartLocationService(this);
-                    performDependentAction(dependentActions);
+                    performDependentAction(dependentActions, intentMessage);
                     break;
                 case "NAVIGATE":
                     Double lat = actionDetails.optDouble("lat", 0.0);
                     Double lon = actionDetails.optDouble("long", 0.0);
                     openNavigation(lat, lon);
-                    performDependentAction(dependentActions);
+                    performDependentAction(dependentActions, intentMessage);
                     break;
                 case "OPEN_LINK":
                     String link = actionDetails.optString("link", null);
                     openLink(link);
-                    performDependentAction(dependentActions);
+                    performDependentAction(dependentActions, intentMessage);
                     break;
                 case "CALL_API":
                     try{
@@ -608,7 +615,7 @@ public class OverlayMessagingService extends Service {
                                             {
                                                 if (toastMessage != null)
                                                     Toast.makeText(OverlayMessagingService.this, toastMessage, Toast.LENGTH_SHORT).show();
-                                                performDependentAction(dependentActions);
+                                                performDependentAction(dependentActions, intentMessage);
                                             }
                                             else
                                             {
@@ -630,7 +637,7 @@ public class OverlayMessagingService extends Service {
                     break;
                 case "OPEN_APP":
                     RideRequestUtils.openApplication(this);
-                    performDependentAction(dependentActions);
+                    performDependentAction(dependentActions, intentMessage);
                     break;
                 case "OPEN_SUBSCRIPTION" :
                     Intent intent = getApplicationContext().getPackageManager().getLaunchIntentForPackage(getApplicationContext().getPackageName());
@@ -640,7 +647,7 @@ public class OverlayMessagingService extends Service {
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(intent);
                     Utils.logEvent("ny_driver_overlay_join_now", getApplicationContext());
-                    performDependentAction(dependentActions);
+                    performDependentAction(dependentActions, intentMessage);
                     break;
                 case "CALL_SUPPORT" :
                     try {
@@ -649,11 +656,20 @@ public class OverlayMessagingService extends Service {
                         intent.setData(Uri.parse("tel:" + contactSupportNumber));
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         startActivity(intent);
-                        performDependentAction(dependentActions);
+                        performDependentAction(dependentActions, intentMessage);
                     } catch (Exception e){
                         System.out.println("Error : " + e);
                     }
-
+                    break;
+                case "EDIT_LOCATION" :
+                    try {
+                        JSONObject data = new JSONObject(intentMessage);
+                        double latitude = Double.parseDouble(data.optString("lat", "0.0"));
+                        double longitude = Double.parseDouble(data.optString("lon", "0.0"));
+                        openNavigation(latitude, longitude);
+                    } catch (Exception e) {
+                        System.out.println(e.toString());
+                    }
                     break;
             }
             stopSelf();
@@ -664,7 +680,7 @@ public class OverlayMessagingService extends Service {
             }
     }
 
-    private void performDependentAction(JSONArray dependentActions)
+    private void performDependentAction(JSONArray dependentActions, String intentMessage)
     {
         try{
         if (dependentActions != null && dependentActions.length() > 0)
@@ -672,7 +688,7 @@ public class OverlayMessagingService extends Service {
             for (int i =0; i< dependentActions.length(); i++)
             {
                 JSONObject dependentAction = dependentActions.getJSONObject(i);
-                performAction2(dependentAction);
+                performAction2(dependentAction, intentMessage);
             }
         }
         }

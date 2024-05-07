@@ -37,4 +37,7 @@ type TripDetails a
   , enableEditDestination :: Boolean
   , isOtpRideFlow :: Boolean
   , editingDestinationLoc :: a
+  , rideAccepted :: Boolean
+  , editingPickupLocation :: a
+  , isEditPickupEnabled :: Boolean
     }
