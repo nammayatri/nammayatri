@@ -205,6 +205,9 @@ import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 
+import in.juspay.mobility.common.DatabaseHelper;
+import android.database.sqlite.SQLiteDatabase;
+
 public class MobilityCommonBridge extends HyperBridge {
 
     public static final int REQUEST_CONTACTS = 7;
@@ -394,6 +397,135 @@ public class MobilityCommonBridge extends HyperBridge {
         return mapRemoteConfig;
     }
 
+    //region SQLite
+    @JavascriptInterface
+    public void createDb(String dbName){
+        DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName);
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+    }
+
+    @JavascriptInterface
+    public void deleteDb(String dbName){
+        Context context = bridgeComponents.getContext();
+        try (DatabaseHelper dbHelper = new DatabaseHelper(context, dbName)) {
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            dbHelper.deleteDb(context);
+        } catch (Exception e) {
+            Log.e("SQLiteLog", "Exception while deleting db ", e);
+            // Handle the exception here
+        }
+    }
+
+    @JavascriptInterface
+    public void createTable(String dbName, String tableName, String _columns){
+        try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)){
+            JSONArray columns = new JSONObject(_columns).getJSONArray("columns");
+            System.out.println("zxc createTable 1 -> " + columns);
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            dbHelper.createTable(db, tableName, columns);
+            System.out.println("Table Created "+ tableName + " in " + dbName + " with columns " + columns);
+        } catch (Exception e){
+            Log.i("SQLiteLog", "Error creating table : " + e);
+        }
+    }
+
+    @JavascriptInterface
+    public void deleteTable(String dbName, String tableName){
+        try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)) {
+            Log.i("SQLiteLog", "deleting table" + tableName);
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            db.execSQL("DROP TABLE IF EXISTS " + tableName);
+        } catch (Exception e){
+            Log.i("SQLiteLog", "Error deleting table : " + e);
+        }
+    }
+
+    @JavascriptInterface
+    public int addToSqlite(String dbName, String tableName, String record){
+        try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)){
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            JSONObject recordObj = new JSONObject(record);
+            System.out.println("Adding to zxc" + tableName + " : " + recordObj);
+            return dbHelper.createRecord(db, tableName, recordObj);
+        } catch (Exception e){
+            Log.i("SQLiteLog", "Error writing to " + tableName + ":" + e);
+            return -1;
+        }
+    }
+
+    @JavascriptInterface
+    public String readFromSqlite(String dbName, String tableName, String selection, String _selectionArgs){
+        try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)){
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            JSONArray selectionArgs = new JSONObject(_selectionArgs).getJSONArray("selectionArgs");
+            String[] selectionArgsArr = new String[selectionArgs.length()];
+            if (selection.equals("null")) {
+                selection = null;
+                selectionArgsArr = null;
+            } else {
+                for (int i = 0; i < selectionArgs.length(); i++) selectionArgsArr[i] = selectionArgs.get(i).toString();
+            }
+            System.out.println("selectionArgs zxc "+ selectionArgs);
+            String d = dbHelper.readRecord(db, tableName, selection, selectionArgsArr).toString();
+            System.out.println("zxc readFromSqlite -> " + d);
+            return d;
+        } catch (Exception e){
+            Log.i("SQLiteLog", "Error reading from " + tableName + ": " + e);
+            return "NULL";
+        }
+    }
+
+    @JavascriptInterface
+    public String executeQuery(String dbName, String query){
+        try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)){
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            return dbHelper.executeQuery(db, query).toString();
+        } catch (Exception e){
+            Log.i("SQLiteLog", "Error executing query: " + e);
+            return new JSONArray().toString();
+        }
+    } 
+
+    @JavascriptInterface
+    public int updateInSqlite(String dbName, String tableName, String selection, String _selectionArgs, String _record){
+        try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)){
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            JSONArray selectionArgs = new JSONObject(_selectionArgs).getJSONArray("selectionArgs");
+            JSONObject record = new JSONObject(_record);
+            String[] selectionArgsArr = new String[selectionArgs.length()];
+            if (selection.equals("null")) {
+                selection = null;
+                selectionArgsArr = null;
+            } else {
+                for (int i = 0; i < selectionArgs.length(); i++) selectionArgsArr[i] = selectionArgs.get(i).toString();
+            }
+            return dbHelper.updateRecord(db, tableName, record, selection, selectionArgsArr);
+        } catch (Exception e){
+            Log.i("SQLiteLog", "Error updating from " + tableName + ": " + e);
+            return -1;
+        }
+    }
+
+    @JavascriptInterface
+    public Boolean deleteFromSqlite(String dbName, String tableName, String selection, String _selectionArgs){
+        try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)){
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            JSONArray selectionArgs = new JSONObject(_selectionArgs).getJSONArray("selectionArgs");
+            String[] selectionArgsArr = new String[selectionArgs.length()];
+            if (selection.equals("null")) {
+                selection = null;
+                selectionArgsArr = null;
+            } else {
+                for (int i = 0; i < selectionArgs.length(); i++) selectionArgsArr[i] = selectionArgs.get(i).toString();
+            }
+            return dbHelper.deleteRecord(db, tableName, selection, selectionArgsArr);
+        } catch (Exception e){
+            Log.i("SQLiteLog", "Error deleting from " + tableName + ": " + e);
+            return false;
+        }
+    }
+    // endregion
+
     private void fetchAndUpdateLastKnownLocation() {
         String lat = getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT");
         String lon = getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON");
@@ -443,6 +575,8 @@ public class MobilityCommonBridge extends HyperBridge {
         if(mediaPlayer != null) mediaPlayer.audioPlayers = new ArrayList<>();
         Utils.deRegisterCallback(callBack);
     }
+
+
 
     // region Store and Trigger CallBack
     @JavascriptInterface
@@ -3819,8 +3953,9 @@ public class MobilityCommonBridge extends HyperBridge {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     if (!isNetworkAvailable(bridgeComponents.getContext())) {
-                        invokeOnEvent(bridgeComponents.getJsCallback(), "onInternetChanged");
+                        invokeOnEvent(bridgeComponents.getJsCallback(), "onInternetDisconnected");
                     } else {
+                        invokeOnEvent(bridgeComponents.getJsCallback(), "onInternetReconnected");
                         callInternetActionCallBack(bridgeComponents.getJsCallback(), "true");
                     }
                 }

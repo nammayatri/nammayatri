@@ -7,7 +7,9 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Handler;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
@@ -68,6 +70,7 @@ public class InAppNotification extends AppCompatActivity {
             notificationChannels.put(channelId, notification);
             // adding new notification to the main layout .
             mainLayout.addView(notification.view);
+            mainLayout.bringToFront();
         } else {
             notification = (Notification) notificationChannels.get(channelId);
         }
@@ -103,7 +106,8 @@ public class InAppNotification extends AppCompatActivity {
         }
         notification.setContent(title, message, action1Text, action2Text, action1Image, action2Image, showLoader);
         notification.handleNotificationHandler(durationInMilliSeconds);
-        notification.ring();
+        System.out.println("notificationStack: zxc" + notificationStack.toString());
+//        notification.ring();
     }
 
     private void refreshView() throws JSONException {
@@ -213,6 +217,7 @@ public class InAppNotification extends AppCompatActivity {
 
             // adding new postDelay .
             handler.postDelayed(() -> {
+
                 if (notificationStack.get(notificationStack.size() - 1).equals(channelId)) {
                     view.startAnimation(AnimationUtils.loadAnimation(context, R.anim.bottom_to_top));
                 }

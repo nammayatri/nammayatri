@@ -150,7 +150,7 @@ defaultGlobalState = GlobalState {
   , globalProps : defaultGlobalProps
   , metroTicketBookingScreen : MetroTicketBookingScreenData.initData
   , metroTicketStatusScreen : MetroTicketStatusScreenData.initData
-  , globalFlowCache : defaultGlobalFlowCache 
+  , globalFlowCache : defaultGlobalFlowCache
   }
 
 defaultGlobalProps :: GlobalProps 
@@ -162,7 +162,8 @@ defaultGlobalProps = {
 
 defaultGlobalFlowCache :: GlobalFlowCache
 defaultGlobalFlowCache = {
-  savedLocations : Nothing
+  savedLocations : Nothing,
+  isOffline : false
 }
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK

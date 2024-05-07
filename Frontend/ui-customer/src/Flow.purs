@@ -197,6 +197,11 @@ import Data.HashMap as DHM
 import Helpers.API as HelpersAPI
 import Helpers.Referral (applyReferralCode)
 import Helpers.SpecialZoneAndHotSpots
+import Engineering.Helpers.SQLiteUtils
+import Control.Transformers.Back.Trans as CTBT
+import Helpers.API as API
+import SQLStorage 
+import JBridge as JBridge
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -205,6 +210,7 @@ baseAppFlow gPayload callInitUI = do
   baseAppLogs
   liftFlowBT $ runEffectFn1 resetIdMap ""
   liftFlowBT $ resetAllTimers
+  void $ pure $ runFn3 createTable dbName (show RideT) (getTableSchema RideT)
   let showSplashScreen = fromMaybe false $ gPayload ^. _payload ^. _show_splash
   when callInitUI $ lift $ lift $ initUI -- TODO:: Can we move this to Main
   when showSplashScreen $ toggleSplash true
@@ -293,18 +299,15 @@ currentFlowStatus = do
   liftFlowBT $ markPerformance "VERIFY_PROFILE_CALL_API"
   verifyProfile "LazyCheck"
   liftFlowBT $ markPerformance "FLOW_STATUS_CALL_API"
-  flowStatus <- Remote.flowStatusBT "LazyCheck"
+  flowStatus <- lift $ lift $ API.callAPIWithFallback (FlowStatusReq) dbName transformFromFlowStatusResp transformFromFlowsTable FlowStatusT findFlowStatus deleteFlowStatus
   liftFlowBT $ markPerformance "RIDE_LIST_CALL_API"
-  case flowStatus ^. _currentStatus of
-    WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId (flowStatus ^. _isValueAddNP) currentStatus.otherSelectedEstimates false
-    DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId (flowStatus ^. _isValueAddNP) (Just []) true
-    WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> goToConfirmRide currentStatus.bookingId currentStatus.fareProductType
-    RIDE_ASSIGNED _                         -> checkRideStatus true
-    PENDING_RATING _                        -> do
-                                                firstRideCompletedEvent ""
-                                                checkRideStatus false 
-    _                                       -> checkRideStatus false
+  -- flowStatus <- lift $ lift $ API.callAPIWithFallback (FlowStatusReq) dbName FlowStatusT findFlowStatus
+  case flowStatus of
+    Right response -> handleFlowStatusResponse response
+    Left err -> App.BackT $ pure App.GoBack
   liftFlowBT $ markPerformance "HIDE_LOADER_FLOW"
+
+  
   hideLoaderFlow
   void $ pure $ hideKeyboardOnNavigation true -- TODO:: Why is this added here @ashkriti?  
   homeScreenFlow
@@ -312,13 +315,37 @@ currentFlowStatus = do
     verifyProfile :: String -> FlowBT String Unit
     verifyProfile dummy = do
       liftFlowBT $ markPerformance "VERIFY_PROFILE"
-      response <- Remote.getProfileBT ""
+      _ <- pure $ spy "before verify profile zxc " "verifyProfile"
+      res <- lift $ lift $ API.callAPIWithFallback (GetProfileReq) dbName transformFromProfileToTable transformFromTableToProfile ProfileT findProfile deleteProfile
+      _ <- pure $ spy "before verify profile zxc " res
+
+      -- res <- lift $ lift $ API.callAPIWithFallback (GetProfileReq) dbName ProfileT findProfile
+      case res of 
+        Right response -> handleProfileResponse response
+        Left err -> App.BackT $ pure App.GoBack
+
+    handleFlowStatusResponse :: FlowStatusRes -> FlowBT String Unit
+    handleFlowStatusResponse flowStatus = do  
+      _ <- pure $ spy "inside handleFlowStatusResponse " flowStatus
+      case flowStatus ^. _currentStatus of
+        WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId (flowStatus ^. _isValueAddNP) currentStatus.otherSelectedEstimates false
+        DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId (flowStatus ^. _isValueAddNP) (Just []) true
+        WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> goToConfirmRide currentStatus.bookingId currentStatus.fareProductType
+        RIDE_ASSIGNED _                         -> checkRideStatus true
+        PENDING_RATING _                        -> do
+                                                    firstRideCompletedEvent ""
+                                                    checkRideStatus false 
+        _                                       -> checkRideStatus false
+      
+    handleProfileResponse :: GetProfileRes -> FlowBT String Unit
+    handleProfileResponse response = do
       config <- getAppConfigFlowBT appConfig
       let appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just 
       case appName of
         "Namma Yatri" -> logFirstCabRideEvent (fromMaybe false $ response ^. _hasTakenValidCabRide) "ny_cab_firstride"
         "Mana Yatri" -> logFirstCabRideEvent (fromMaybe false $ response ^. _hasTakenValidCabRide) "my_cab_firstride"
         _ -> pure unit
+      _ <- pure $ spy "inside handleProfileResponse " response
       updateVersion (response ^. _clientVersion) (response ^. _bundleVersion)
       updateFirebaseToken (response ^. _maskedDeviceToken) getUpdateToken
       updateLanguageAndReferralCode $ response ^. _language
@@ -331,33 +358,34 @@ currentFlowStatus = do
           hideLoaderFlow
           accountSetUpScreenFlow
           handleDeepLinks Nothing true
-        else do
-          tag <- maybe (pure "") pure (response ^. _disability)
-          let hasCompletedSafetySetup = fromMaybe false $ response ^. _hasCompletedSafetySetup
-              hasCompletedMockSafetyDrill = fromMaybe false $ response ^. _hasCompletedMockSafetyDrill
-              sosBannerType = case hasCompletedSafetySetup, hasCompletedMockSafetyDrill of
-                false, _ -> Just ST.SETUP_BANNER
-                true, false -> Just ST.MOCK_DRILL_BANNER
-                _, _ -> Nothing
-          modifyScreenState $ HomeScreenStateType
-                  $ \homeScreen →
-                      homeScreen
-                        { data
-                          { disability = Just { tag: tag, id: "", description: "" }
-                          , followers = Nothing
-                          , settingSideBar
-                            { name = fromMaybe "" (response ^. _firstName)
-                            , gender = response ^. _gender
-                            , email = response ^. _email
-                            , hasCompletedSafetySetup = hasCompletedSafetySetup
-                            }
+      else do
+        tag <- maybe (pure "") pure (response ^. _disability)
+        let hasCompletedSafetySetup = fromMaybe false $ response ^. _hasCompletedSafetySetup
+            hasCompletedMockSafetyDrill = fromMaybe false $ response ^. _hasCompletedMockSafetyDrill
+            sosBannerType = case hasCompletedSafetySetup, hasCompletedMockSafetyDrill of
+              false, _ -> Just ST.SETUP_BANNER
+              true, false -> Just ST.MOCK_DRILL_BANNER
+              _, _ -> Nothing
+        modifyScreenState $ HomeScreenStateType
+                $ \homeScreen →
+                    homeScreen
+                      { data
+                        { disability = Just { tag: tag, id: "", description: "" }
+                        , followers = Nothing
+                        , settingSideBar
+                          { name = fromMaybe "" (response ^. _firstName)
+                          , gender = response ^. _gender
+                          , email = response ^. _email
+                          , hasCompletedSafetySetup = hasCompletedSafetySetup
                           }
-                        , props { isBanner = false
+                        }
+                        , props 
+                          { isBanner = false
                           , sosBannerType = sosBannerType
                           , followsRide = fromMaybe false (response ^. _followsRide)
                           , isSafetyCenterDisabled = fromMaybe false (response ^. _isSafetyCenterDisabled)
-                        }
-                        }          
+                          }
+                      }
                         
     getUpdateToken :: String -> FlowBT String Unit --TODO:: Move this to common library
     getUpdateToken token =
@@ -911,6 +939,7 @@ homeScreenFlow = do
           srcLon = state.data.driverInfoCardState.sourceLng
           dstLat = state.data.driverInfoCardState.destinationLat
           dstLon = state.data.driverInfoCardState.destinationLng
+          _ = spy "inside ONGOING_RIDE zxc " state
       updateLocalStage state.props.currentStage
       if spy "ONGOING_RIDEONGOING_RIDE CURRENT" state.props.currentStage == RideCompleted then
         do
@@ -2210,18 +2239,19 @@ permissionScreenFlow = do
   flow <- UI.permissionScreen
   permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
   permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
-  internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
+  -- internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
   case flow of
     REFRESH_INTERNET -> do
-      if internetCondition then
+      -- if internetCondition then
           currentFlowStatus
-        else do
-          modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
-          permissionScreenFlow 
-    TURN_ON_GPS -> if not internetCondition then do  
-                      modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
-                      permissionScreenFlow
-                    else do
+        -- else do
+          -- modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
+          -- permissionScreenFlow 
+    TURN_ON_GPS -> do
+      -- if not internetCondition then do  
+      --                 modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
+      --                 permissionScreenFlow
+      --               else do
                       setValueToLocalStore PERMISSION_POPUP_TIRGGERED "true"
                       currentFlowStatus
     TURN_ON_INTERNET -> case (getValueToLocalStore USER_NAME == "__failed") of

@@ -29,6 +29,7 @@ import Engineering.Helpers.Commons (liftFlow)
 import Data.Array (singleton)
 import Data.Maybe (maybe, Maybe(..))
 import Data.Either (Either(..))
+import SQLStorage
 
 data CustomerDefaultErrorHandler = CustomerDefaultErrorHandler
 instance defaultApiErrorHandler :: ApiErrorHandler CustomerDefaultErrorHandler GlobalState where
@@ -92,6 +93,17 @@ callApi :: forall a b.
   Flow GlobalState (Either ErrorResponse b)
 callApi payload =
   callApiWithOptions payload []
+
+
+callAPIWithFallback payload dbName transformToTable transformFromTable tableName query deleteQ = do
+  regToken <- loadS $ show REGISTERATION_TOKEN
+  let headers' = baseHeaders <> (tokenHeader regToken)
+  API.callAPIWithFallback payload headers' dbName transformToTable transformFromTable (show tableName) query (getTableSchema tableName) deleteQ
+
+-- callAPIWithFallback payload dbName tableName query = do
+--   regToken <- loadS $ show REGISTERATION_TOKEN
+--   let headers' = baseHeaders <> (tokenHeader regToken)
+--   API.callAPIWithFallback payload headers' dbName (show tableName) query (getTableSchema tableName)
 
 callGzipApiWithOptions :: forall a b.
   StandardEncode a =>

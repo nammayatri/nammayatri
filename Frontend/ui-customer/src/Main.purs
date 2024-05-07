@@ -43,8 +43,9 @@ import AssetsProvider (fetchAssets)
 import Timers
 import Effect.Uncurried
 import Engineering.Helpers.BackTrack (liftFlowBT)
+import Control.Monad.Except.Trans (lift)
 import Storage (setValueToLocalStore, KeyStore(..))
-
+import Debug 
 main :: Event -> Boolean -> Effect Unit
 main event callInitUI = do
   void $ markPerformance "MAIN_FLOW"
@@ -86,9 +87,14 @@ onConnectivityEvent triggertype = do
                   "LOCATION_DISABLED" -> do
                     modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
                     Flow.permissionScreenFlow
-                  "INTERNET_ACTION" -> do
-                    modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
-                    Flow.permissionScreenFlow
+                  "INTERNET_ACTION_DISCONNECTED" -> do
+                      _ <- pure $ spy "INTERNET_ACTION_DISCONNECTED zxc " "INTERNET_ACTION_DISCONNECTED"
+                      lift $ lift $ liftFlow $  JBridge.showInAppNotification JBridge.inAppNotificationPayload{title = "No internet connection", message = "Please try again", channelId = "internetAction", showLoader = true, durationInMilliSeconds = 500000}
+                      Flow.baseAppFlow payload' false
+                  "INTERNET_ACTION_CONNECTED" -> do
+                    _ <- pure $ spy "INTERNET_ACTION_CONNECTED zxc " "INTERNET_ACTION_CONNECTED"
+                    _ <- lift $ lift $ liftFlow $  JBridge.showInAppNotification JBridge.inAppNotificationPayload{title = "You are connected now", message = "Connected", channelId = "internetAction", showLoader = false, durationInMilliSeconds = 5000}
+                    Flow.baseAppFlow payload' false
                   "REFRESH" -> Flow.baseAppFlow payload' false
                   _ -> Flow.baseAppFlow payload' false
                 pure unit
