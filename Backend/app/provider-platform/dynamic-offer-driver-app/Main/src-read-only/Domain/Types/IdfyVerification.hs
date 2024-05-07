@@ -4,6 +4,7 @@
 
 module Domain.Types.IdfyVerification where
 
+import Data.Aeson
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
@@ -40,9 +41,9 @@ data IdfyVerificationE e = IdfyVerification
   }
   deriving (Generic)
 
-type IdfyVerification = IdfyVerificationE 'AsEncrypted
+type IdfyVerification = IdfyVerificationE ('AsEncrypted)
 
-type DecryptedIdfyVerification = IdfyVerificationE 'AsUnencrypted
+type DecryptedIdfyVerification = IdfyVerificationE ('AsUnencrypted)
 
 instance EncryptedItem IdfyVerification where
   type Unencrypted IdfyVerification = (DecryptedIdfyVerification, HashSalt)
@@ -110,6 +111,6 @@ data ImageExtractionValidation = Success | Skipped | Failed deriving (Eq, Ord, S
 
 data VerificationStatus = PENDING | VALID | INVALID deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ImageExtractionValidation)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ImageExtractionValidation))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VerificationStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VerificationStatus))

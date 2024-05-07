@@ -4,6 +4,7 @@
 
 module Domain.Types.VehiclePermit where
 
+import Data.Aeson
 import qualified Domain.Types.IdfyVerification
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
@@ -34,9 +35,9 @@ data VehiclePermitE e = VehiclePermit
   }
   deriving (Generic)
 
-type VehiclePermit = VehiclePermitE 'AsEncrypted
+type VehiclePermit = VehiclePermitE ('AsEncrypted)
 
-type DecryptedVehiclePermit = VehiclePermitE 'AsUnencrypted
+type DecryptedVehiclePermit = VehiclePermitE ('AsUnencrypted)
 
 instance EncryptedItem VehiclePermit where
   type Unencrypted VehiclePermit = (DecryptedVehiclePermit, HashSalt)

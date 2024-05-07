@@ -25,6 +25,7 @@ import qualified API.Action.UI.LmsModule as LmsModule
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
+import qualified API.Action.UI.VehicleDetails as VehicleDetails
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.CancellationReason as CancellationReason
@@ -97,6 +98,7 @@ type API =
            :<|> Cac.API
            :<|> EditBooking.API
            :<|> SocialLogin.API
+           :<|> VehicleDetails.API
        )
 
 handler :: FlowServer API
@@ -137,3 +139,4 @@ handler =
     :<|> Cac.handler
     :<|> EditBooking.handler
     :<|> SocialLogin.handler
+    :<|> VehicleDetails.handler

@@ -453,3 +453,18 @@ VehiclePUC:
       kvFunction: findAllWithKV
       where:
         and: [rcId, driverId]
+
+DriverSSN:
+  tableName: driver_ssn
+  fields:
+    id: Id DriverSSN
+    driverId: Id Person
+    ssn: EncryptedHashedField e Text
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+  queries:
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

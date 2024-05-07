@@ -13,16 +13,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data AadhaarVerificationT f = AadhaarVerificationT
-  { aadhaarNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
-    driverDob :: B.C f Kernel.Prelude.Text,
-    driverGender :: B.C f Kernel.Prelude.Text,
-    driverId :: B.C f Kernel.Prelude.Text,
-    driverImage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    driverImagePath :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    driverName :: B.C f Kernel.Prelude.Text,
-    isVerified :: B.C f Kernel.Prelude.Bool,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { aadhaarNumberHash :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash)),
+    driverDob :: (B.C f Kernel.Prelude.Text),
+    driverGender :: (B.C f Kernel.Prelude.Text),
+    driverId :: (B.C f Kernel.Prelude.Text),
+    driverImage :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    driverImagePath :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    driverName :: (B.C f Kernel.Prelude.Text),
+    isVerified :: (B.C f Kernel.Prelude.Bool),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +32,6 @@ instance B.Table AadhaarVerificationT where
 
 type AadhaarVerification = AadhaarVerificationT Identity
 
-$(enableKVPG ''AadhaarVerificationT ['driverId] [['aadhaarNumberHash]])
+$(enableKVPG (''AadhaarVerificationT) [('driverId)] [[('aadhaarNumberHash)]])
 
-$(mkTableInstances ''AadhaarVerificationT "aadhaar_verification")
+$(mkTableInstances (''AadhaarVerificationT) "aadhaar_verification")

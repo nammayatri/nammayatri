@@ -8,6 +8,7 @@ imports:
   Centesimal: Kernel.Types.Common
   PriceAPIEntity: Kernel.Types.Common
   Money: Kernel.Types.Common
+  Driver: Domain.Types.Person
 
 module: DriverOnboardingV2
 types:
@@ -57,6 +58,8 @@ types:
     title: Text
     price: Money
     priceWithCurrency: PriceAPIEntity
+  SSNReq:
+    ssn: Text
 
 apis:
   - GET:
@@ -90,5 +93,12 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: DriverVehicleServiceTiers
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /driver/register/ssn
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: SSNReq
       response:
         type: APISuccess
