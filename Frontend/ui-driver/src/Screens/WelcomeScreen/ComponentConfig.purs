@@ -14,7 +14,7 @@ carouselData state =
   , carouselData:
       map
         ( \item ->
-            { imageConfig: { image: item.image, height: item.imageHeight, width: 200, bgColor: "#FFFAED", cornerRadius: 8.0, isUrl : false }
+            { imageConfig: { image: item.image, height: item.imageHeight, width: 200, bgColor: "#FFFAED", cornerRadius: 8.0 , isUrl : true }
             , backgroundColor: "#FFFAED"
             , youtubeConfig: dummyYoutubeData
             , gravity: item.gravity
@@ -35,9 +35,9 @@ carouselData state =
                 }
             }
         )
-        [ { image: "ny_ic_welcome_screen_1", title: getString DIRECT_PAYMENT_NO_COMMISSIONS, description: getString CUSTOMER_PAYS_DIRECTLY, gravity: 17, imageHeight: 260 }
-        , { image: "ny_ic_welcome_screen_2", title: getString HUNDRED_PERCENT_FARE_GOES_TO_YOU, description: getString FARE_SHOWN_IS_FARE_YOU_GET, gravity: 17, imageHeight: 260 }
-        , { image: "ny_ic_welcome_screen_3", title: getString BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION, description: getString OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT, gravity: 17, imageHeight: 260 }
+        [ { image: "https://assets.moving.tech/beckn/common/driver/images/ny_img_welcome_first.png", title: getString DIRECT_PAYMENT_NO_COMMISSIONS, description: getString CUSTOMER_PAYS_DIRECTLY, gravity: 17, imageHeight: 260 }
+        , { image: "https://assets.moving.tech/beckn/common/driver/images/ny_img_welcome_second.png", title: getString HUNDRED_PERCENT_FARE_GOES_TO_YOU, description: getString FARE_SHOWN_IS_FARE_YOU_GET, gravity: 17, imageHeight: 260 }
+        , { image: "https://assets.moving.tech/beckn/common/driver/images/ny_img_welcome_third.png", title: getString BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION, description: getString OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT, gravity: 17, imageHeight: 260 }
         ]
   }
 
