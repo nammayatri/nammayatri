@@ -9,7 +9,6 @@ imports:
   PriceAPIEntity: Kernel.Types.Common
   Money: Kernel.Types.Common
   Driver: Domain.Types.Person
-  TripCategory: Domain.Types.Common
 
 module: DriverOnboardingV2
 types:
@@ -61,16 +60,6 @@ types:
     priceWithCurrency: PriceAPIEntity
   SSNReq:
     ssn: Text
-  FarePolicyHour:
-    enum: "Peak,NonPeak,Night"
-  RateCardResp:
-    serviceTierType: ServiceTierType
-    perKmRate: PriceAPIEntity
-    totalFare: PriceAPIEntity
-    perMinuteRate: Maybe PriceAPIEntity
-    tripCategory: TripCategory
-    farePolicyHour: FarePolicyHour
-    rateCardItems: [RateCardItem]
 
 apis:
   - GET:
@@ -112,5 +101,11 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: SSNReq
+      response:
+        type: APISuccess  - POST:
+      endpoint: /driver/register/pancard
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DriverPanReq
       response:
         type: APISuccess

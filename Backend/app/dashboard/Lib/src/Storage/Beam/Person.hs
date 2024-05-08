@@ -35,6 +35,7 @@ data PersonT f = PersonT
     mobileCountryCode :: B.C f Text,
     passwordHash :: B.C f (Maybe DbHash),
     dashboardAccessType :: B.C f (Maybe DRole.DashboardAccessType),
+    verified :: B.C f (Maybe Bool),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }

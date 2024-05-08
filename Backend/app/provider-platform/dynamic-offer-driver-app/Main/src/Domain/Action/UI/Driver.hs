@@ -107,7 +107,7 @@ import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Merchant.TransporterConfig
-import Domain.Types.Person (Person)
+import Domain.Types.Person
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.SearchRequest as DSR
@@ -1229,7 +1229,7 @@ validate (personId, _, merchantOpCityId) phoneNumber = do
   runRequestValidation validationCheck phoneNumber
   mobileNumberHash <- getDbHash phoneNumber.alternateNumber
   merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-  mbPerson <- QPerson.findByMobileNumberAndMerchant phoneNumber.mobileCountryCode mobileNumberHash person.merchantId
+  mbPerson <- QPerson.findByMobileNumberAndMerchantAndRole phoneNumber.mobileCountryCode mobileNumberHash person.merchantId DRIVER
   deleteOldPersonCheck <- case mbPerson of
     Nothing -> return False
     Just oldPerson -> do
@@ -1291,7 +1291,7 @@ verifyAuth (personId, _, _) req = do
             }
         mobileCountryCode = fromMaybe "+91" person.mobileCountryCode
     mobileNumberHash <- getDbHash altMobNo
-    mbPerson <- QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumberHash person.merchantId
+    mbPerson <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberHash person.merchantId SP.DRIVER
     void $ QPerson.updateAlternateMobileNumberAndCode driver
     expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
     Redis.setExp (makeAlternateNumberVerifiedKey personId) True expTime

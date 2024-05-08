@@ -20,11 +20,13 @@ where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard.Fleet.Registration as DReg
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as DP
+import qualified Domain.Action.Dashboard.Registration as DashboardReg
 import "lib-dashboard" Domain.Action.Dashboard.Registration as DR
+import qualified "dynamic-offer-driver-app" Domain.Types.FleetOwnerInformation as FOI
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
 import Kernel.Prelude
-import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -37,11 +39,15 @@ import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
   "fleet"
-    :> ( FleetOwnerLoginAPI
+    :> ( DReg.FleetOwnerLoginAPI
            :<|> FleetOwnerVerifyAPI
+           :<|> FleetOwnerRegisterAPI
        )
 
-type FleetOwnerLoginAPI = DReg.FleetOwnerLoginAPI
+type FleetOwnerRegisterAPI =
+  "register"
+    :> ReqBody '[JSON] DP.FleetOwnerRegisterReq
+    :> Post '[JSON] APISuccess
 
 type FleetOwnerVerifyAPI =
   "verify"
@@ -53,6 +59,7 @@ handler :: FlowServer API
 handler =
   fleetOwnerLogin
     :<|> fleetOwnerVerfiy
+    :<|> fleetOwnerRegister
 
 fleetOwnerLogin :: DP.FleetOwnerLoginReq -> FlowHandler APISuccess
 fleetOwnerLogin req = withFlowHandlerAPI' $ do
@@ -71,4 +78,31 @@ fleetOwnerVerfiy req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId req.city req.city
   void $ Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerVerify) req
   token <- DR.generateToken person.id merchant.id req.city
+  unless (person.verified == Just True) $ QP.updatePersonVerifiedStatus person.id True
   pure $ DP.FleetOwnerVerifyRes {authToken = token}
+
+fleetOwnerRegister :: DP.FleetOwnerRegisterReq -> FlowHandler APISuccess
+fleetOwnerRegister req = withFlowHandlerAPI' $ do
+  let merchantShortId = ShortId req.merchantId :: ShortId DM.Merchant
+  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  unless (req.city `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId req.city req.city
+  res <- Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerRegister) req
+  let req' = buildFleetOwnerRegisterReq req
+  void $ registerFleetOwner req' $ Just res.personId
+  pure Success
+
+buildFleetOwnerRegisterReq :: DP.FleetOwnerRegisterReq -> FleetRegisterReq
+buildFleetOwnerRegisterReq DP.FleetOwnerRegisterReq {..} = do
+  FleetRegisterReq
+    { merchantId = ShortId merchantId,
+      fleetType = castFleetType fleetType,
+      city = Just city,
+      ..
+    }
+
+castFleetType :: Maybe FOI.FleetType -> Maybe DashboardReg.FleetType
+castFleetType req = case req of
+  Just FOI.RENTAL_FLEET -> Just DashboardReg.RENTAL_FLEET
+  Just FOI.NORMAL_FLEET -> Just DashboardReg.NORMAL_FLEET
+  _ -> Nothing

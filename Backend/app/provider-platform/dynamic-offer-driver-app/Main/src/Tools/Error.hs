@@ -1094,6 +1094,7 @@ data DriverOnboardingError
   | RCActivationFailedPaymentDue Text
   | DLInvalid
   | VehicleServiceTierNotFound Text
+  | PanAlreadyLinked
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1125,6 +1126,7 @@ instance IsBaseError DriverOnboardingError where
     RCActivationFailedPaymentDue id_ -> Just $ "cannot activate RC for person \"" <> id_ <> "\" Due to paymentDue."
     DLInvalid -> Just "Contact Customer Support, class of vehicles is not supported"
     VehicleServiceTierNotFound serviceTier -> Just $ "Service tier config not found for vehicle service tier \"" <> serviceTier <> "\"."
+    PanAlreadyLinked -> Just "PAN already linked with driver."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1155,6 +1157,7 @@ instance IsHTTPError DriverOnboardingError where
     RCActivationFailedPaymentDue _ -> "RC_ACTIVATION_FAILED_PAYMENT_DUE"
     DLInvalid -> "DL_INVALID"
     VehicleServiceTierNotFound _ -> "VEHICLE_SERVICE_TIER_NOT_FOUND"
+    PanAlreadyLinked -> "PAN_ALREADY_LINKED"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1183,6 +1186,7 @@ instance IsHTTPError DriverOnboardingError where
     RCActivationFailedPaymentDue _ -> E400
     DLInvalid -> E400
     VehicleServiceTierNotFound _ -> E500
+    PanAlreadyLinked -> E400
 
 instance IsAPIError DriverOnboardingError
 
