@@ -21,7 +21,7 @@ import Components.IncrementDecrementModel.Controller (Action(..), Config)
 import Effect (Effect)
 import Font.Style as FontStyle
 import Mobility.Prelude (boolToVisibility)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, background, color, cornerRadius, gravity, height, linearLayout, margin, onClick, orientation, padding, rippleColor, stroke, text, textView, visibility, weight, width, clickable, alpha)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, background, color, cornerRadius, gravity, height, linearLayout, margin, onClick, orientation, padding, rippleColor, stroke, text, textView, visibility, weight, width, clickable, alpha, rippleColor)
 import Styles.Colors as Color
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -61,6 +61,7 @@ view push config =
       , onClick push $ const OnDecrement
       , margin config.buttonTextConfig.margin
       , clickable $ not isMinValue
+      , rippleColor Color.rippleShade
       , alpha $ if isMinValue then 0.5 else 1.0
       ] <> config.buttonTextConfig.fontStyle
     , textView $
@@ -82,6 +83,7 @@ view push config =
       , cornerRadius config.buttonTextConfig.cornerRadius
       , gravity config.buttonTextConfig.gravity
       , margin config.buttonTextConfig.margin
+      , rippleColor Color.rippleShade
       , onClick push $ const OnIncrement
       , clickable $ not isMaxValue
       , alpha $ if isMaxValue then 0.5 else 1.0

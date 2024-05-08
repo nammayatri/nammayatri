@@ -465,7 +465,7 @@ type IndividualRideCardState =
   , vehicleModel :: String
   , rideStartTimeUTC :: String
   , providerName :: String
-  , providerType :: ProviderType
+  , providerType :: Common.ProviderType
   , showRepeatRide :: String
   , rideType :: FareProductType
   , estimatedDistance :: Int
@@ -564,7 +564,7 @@ instance showStage :: Show Stage where show = genericShow
 
 data SearchLocationModelType = SearchLocation | LocateOnMap | NoView
 
-data PopupType = Logout | ConfirmBack | NoPopUp | ActiveQuotePopUp | TipsPopUp
+data PopupType = Logout | ConfirmBack | NoPopUp | ActiveQuotePopUp | TipsPopUp | CancelConfirmingQuotes
 
 derive instance genericPopupType :: Generic PopupType _
 instance eqPopupType :: Eq PopupType where eq = genericEq
@@ -685,6 +685,7 @@ type RentalsInfo =
   , multipleScheduled :: Boolean
   , fareProductType :: FareProductType
   , nearestRideScheduledAtUTC :: String
+  , vehicleVariant :: String
   }
   
 type Followers = {
@@ -1030,24 +1031,23 @@ type Contact = {
 
 type RateCard =
   {
-    baseFare :: Int,
-    driverAdditions :: Array Common.FareList,
-    fareInfoDescription :: Array String,
-    pickUpCharges :: Number,
     additionalFare :: Int,
-    isNightShift :: Boolean,
-    nightChargeTill :: String,
-    nightChargeFrom :: String,
-    extraFare :: Array Common.FareList,
-    nightShiftMultiplier :: Number,
-    nightCharges :: Boolean,
-    currentRateCardType :: Common.RateCardType,
-    onFirstPage :: Boolean,
-    vehicleVariant :: String,
     createdTime :: String,
     tollCharge :: Number,
-    waitingTimeInfo :: WaitingTimeInfo
+    waitingTimeInfo :: WaitingTimeInfo,
+    currentRateCardType :: Common.RateCardType,
+    driverAdditions :: Array Common.FareList,
+    extraFare :: Array Common.FareList,
+    fareInfoDescription :: Array String,
+    isNightShift :: Boolean,
+    nightChargeFrom :: String,
+    nightChargeTill :: String,
+    onFirstPage :: Boolean,
+    pickUpCharges :: Number,
+    vehicleVariant :: String,
+    baseFare :: Int
   }
+
 
 type RateCardDetails = {
   title :: String ,
@@ -1244,7 +1244,7 @@ type DriverInfoCard =
   , serviceTierName :: Maybe String
   , vehicleModel :: String
   , vehicleColor :: String
-  , providerType :: ProviderType
+  , providerType :: Common.ProviderType
   , providerName :: String
   , rentalData :: Common.RentalBookingConfig
   , fareProductType :: FareProductType
@@ -2521,3 +2521,15 @@ data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DR
 derive instance genericFareProductType :: Generic FareProductType _
 instance showFareProductType :: Show FareProductType where show = genericShow
 instance eqFareProductType :: Eq FareProductType where eq = genericEq
+
+data CancelSearchType = NORMAL_RIDE_CANCEL | RENTAL_SEARCH_CANCEL
+
+derive instance genericCancelSearchType :: Generic CancelSearchType _
+instance showCancelSearchType :: Show CancelSearchType where show = genericShow
+instance eqCancelSearchType :: Eq CancelSearchType where eq = genericEq
+
+data VehicleViewType = LEFT_VIEW | RIGHT_VIEW
+
+derive instance genericVehicleViewType :: Generic VehicleViewType _
+instance showVehicleViewType :: Show VehicleViewType where show = genericShow
+instance eqVehicleViewType :: Eq VehicleViewType where eq = genericEq

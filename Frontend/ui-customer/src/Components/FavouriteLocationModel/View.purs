@@ -113,7 +113,7 @@ savedLocationListView push state =
 
 noSavedLocationView :: forall w. (Action -> Effect Unit) -> Array LocationListItemState -> PrestoDOM (Effect Unit) w
 noSavedLocationView push state =
-  PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 400 ] $
+  PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 400 true] $
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT

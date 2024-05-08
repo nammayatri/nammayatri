@@ -25,7 +25,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (os)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), (<<<), (==), const, not, show)
