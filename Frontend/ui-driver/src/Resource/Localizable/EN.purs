@@ -1376,3 +1376,5 @@ getEN stringKey =
         WE_WILL_USE_THIS_INFO -> "We will use this information to match with customer expectations regarding the AC"
         YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(You can always change this later from your profile)"
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "Is your car AC turned on and in working condition?"
+        SET_THE_AC_ON_TO_ENABLE name -> "Set the AC on to enable " <> name
+        ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK -> "All eligible variants are chosen. Please check"

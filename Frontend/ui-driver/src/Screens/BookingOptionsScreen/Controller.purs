@@ -15,6 +15,7 @@ import Helpers.Utils (getVehicleVariantImage, contactSupportNumber)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Effect.Unsafe (unsafePerformEffect)
+import JBridge as JB
 
 instance showAction :: Show Action where
   show _ = ""
@@ -41,7 +42,11 @@ data ScreenOutput
 eval :: Action -> BookingOptionsScreenState -> Eval Action ScreenOutput BookingOptionsScreenState
 eval BackPressed state = exit GoBack
 
-eval (ToggleRidePreference service) state = exit $ ChangeRidePreference state service
+eval (ToggleRidePreference service) state = 
+  if service.isUsageRestricted then do
+    void $ pure $ JB.toast $ getString $ SET_THE_AC_ON_TO_ENABLE service.name
+    continue state
+  else exit $ ChangeRidePreference state service
 
 eval (UpdateACAvailability acServiceToggle) state = exit $ ToggleACAvailability state $ not acServiceToggle
 
