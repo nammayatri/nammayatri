@@ -205,7 +205,7 @@ data ComplainantAction = ComplainantAction
     -- | details of the remarks when the issue status is changed, can be captured when the complainant triggers an action
     complainantActionShortDesc :: Maybe Text,
     -- | timestamp for the capturing the time an issue status was last updated
-    complainantActionUpdatedAt :: Maybe UTCTime,
+    complainantActionUpdatedAt :: Maybe UTCTimeRFC3339,
     -- |
     complainantActionUpdatedBy :: Maybe Organization
   }
@@ -521,7 +521,7 @@ data Issue = Issue
     -- |
     issueComplainantInfo :: Maybe Complainant,
     -- | timestamp for the creation of the issue
-    issueCreatedAt :: UTCTime,
+    issueCreatedAt :: UTCTimeRFC3339,
     -- |
     issueDescription :: Maybe IssueDescription,
     -- |
@@ -547,7 +547,7 @@ data Issue = Issue
     -- |
     issueSubCategory :: Maybe Text,
     -- | timestamp for the capturing the time an issue was last updated
-    issueUpdatedAt :: UTCTime,
+    issueUpdatedAt :: UTCTimeRFC3339,
     -- |
     issueRating :: Maybe Text
   }
@@ -1306,7 +1306,7 @@ data RespondentAction = RespondentAction
     -- | details of the remarks when the issue status is changed, can be captured when the respondent triggers an action
     respondentActionShortDesc :: Maybe Text,
     -- | timestamp for the capturing the time an issue status was last updated
-    respondentActionUpdatedAt :: Maybe UTCTime,
+    respondentActionUpdatedAt :: Maybe UTCTimeRFC3339,
     -- |
     respondentActionUpdatedBy :: Maybe Organization
   }

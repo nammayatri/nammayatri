@@ -243,7 +243,7 @@ igmIssueStatus (_, merchantId) = withFlowHandlerAPI $ do
     merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     merchantOperatingCity <- CQMOC.findById issue.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show issue.merchantOperatingCityId)
     booking <- QB.findById issue.bookingId >>= fromMaybeM (BookingNotFound issue.bookingId.getId)
-    becknIssueStatusReq <- ACL.buildIssueStatusReq merchant merchantOperatingCity booking issue.id.getId
+    becknIssueStatusReq <- ACL.buildIssueStatusReq merchant merchantOperatingCity booking issue.id.getId issue.transactionId
     fork "sending beckn issue_status" . withShortRetry $ do
       void $ CallBPP.issueStatus booking.providerUrl becknIssueStatusReq
   return Success

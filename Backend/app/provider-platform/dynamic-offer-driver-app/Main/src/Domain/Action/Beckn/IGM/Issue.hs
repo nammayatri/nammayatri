@@ -31,6 +31,7 @@ import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
@@ -50,6 +51,7 @@ data DIssue = DIssue
     customerName :: Maybe Text,
     customerEmail :: Maybe Text,
     customerPhone :: Maybe Text,
+    createdAt :: UTCTimeRFC3339,
     bapId :: Text
   }
   deriving (Show, Generic)
@@ -67,6 +69,7 @@ data ValidatedDIssue = ValidatedDIssue
     customerPhone :: Maybe Text,
     bapId :: Text,
     igmConfig :: IGMConfig,
+    createdAt :: UTCTimeRFC3339,
     merchantOperatingCity :: MerchantOperatingCity,
     merchant :: Merchant
   }
@@ -77,8 +80,8 @@ data IssueRes = IssueRes
     groName :: Text,
     groPhone :: Text,
     groEmail :: Text,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime,
+    createdAt :: UTCTimeRFC3339,
+    updatedAt :: UTCTimeRFC3339,
     merchant' :: Merchant,
     merchantOperatingCity :: MerchantOperatingCity,
     issueStatus :: DIGM.Status
@@ -137,8 +140,8 @@ openBecknIssue dIssue@ValidatedDIssue {..} now = do
         groName = igmConfig.groName,
         groPhone = igmConfig.groPhone,
         groEmail = igmConfig.groEmail,
-        createdAt = now,
-        updatedAt = now,
+        createdAt = UTCTimeRFC3339 now,
+        updatedAt = UTCTimeRFC3339 now,
         merchant' = dIssue.merchant,
         merchantOperatingCity = merchantOperatingCity,
         ..
@@ -161,8 +164,8 @@ escalateBecknIssue dIssue@ValidatedDIssue {..} now = do
         groName = igmConfig.groName,
         groPhone = igmConfig.groPhone,
         groEmail = igmConfig.groEmail,
-        createdAt = igmIssue.createdAt,
-        updatedAt = now,
+        createdAt = UTCTimeRFC3339 igmIssue.createdAt,
+        updatedAt = UTCTimeRFC3339 now,
         merchant' = dIssue.merchant,
         merchantOperatingCity = merchantOperatingCity,
         issueStatus = issueStatus
@@ -187,8 +190,8 @@ closeBecknIssue dIssue@ValidatedDIssue {..} now = do
         groName = igmConfig.groName,
         groPhone = igmConfig.groPhone,
         groEmail = igmConfig.groEmail,
-        createdAt = igmIssue.createdAt,
-        updatedAt = now,
+        createdAt = UTCTimeRFC3339 igmIssue.createdAt,
+        updatedAt = UTCTimeRFC3339 now,
         merchant' = dIssue.merchant,
         merchantOperatingCity = merchantOperatingCity,
         issueStatus = issueStatus

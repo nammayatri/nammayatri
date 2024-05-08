@@ -22,10 +22,10 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.IGMIssue.IGMIssue] -> m ())
 createMany = traverse_ create
 
-findAllByRiderIdandStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.IGMIssue.Status -> m [Domain.Types.IGMIssue.IGMIssue])
+findAllByRiderIdandStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.IGMIssue.Status -> m ([Domain.Types.IGMIssue.IGMIssue]))
 findAllByRiderIdandStatus (Kernel.Types.Id.Id riderId) issueStatus = do findAllWithKV [Se.And [Se.Is Beam.riderId $ Se.Eq riderId, Se.Is Beam.issueStatus $ Se.Eq issueStatus]]
 
-findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.IGMIssue.Status -> m [Domain.Types.IGMIssue.IGMIssue])
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.IGMIssue.Status -> m ([Domain.Types.IGMIssue.IGMIssue]))
 findAllByStatus issueStatus = do findAllWithKV [Se.Is Beam.issueStatus $ Se.Eq issueStatus]
 
 findByTransactionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m (Maybe Domain.Types.IGMIssue.IGMIssue))

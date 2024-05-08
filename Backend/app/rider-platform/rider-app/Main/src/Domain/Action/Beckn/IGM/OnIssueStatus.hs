@@ -20,6 +20,7 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 import qualified Storage.Queries.IGMIssue as QIGM
 
@@ -31,7 +32,7 @@ data DOnIssueStatus = DOnIssueStatus
     respondentPhone :: Maybe Text,
     respondentAction :: Maybe Text,
     resolutionActionTriggered :: Maybe Text,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTimeRFC3339
   }
 
 validateRequest :: DOnIssueStatus -> Flow (DIGM.IGMIssue)
@@ -46,7 +47,7 @@ onIssueStatus req issue = do
             DIGM.respondentPhone = req.respondentPhone <|> issue.respondentPhone,
             DIGM.respondentAction = req.respondentAction <|> issue.respondentAction,
             DIGM.issueStatus = mapActionToStatus req.respondentAction & fromMaybe issue.issueStatus,
-            DIGM.updatedAt = req.updatedAt
+            DIGM.updatedAt = convertRFC3339ToUTC req.updatedAt
           }
   QIGM.updateByPrimaryKey updatedIssue
   pure ()
@@ -54,3 +55,5 @@ onIssueStatus req issue = do
 mapActionToStatus :: Maybe Text -> Maybe DIGM.Status
 mapActionToStatus (Just "RESOLVED") = Just DIGM.RESOLVED
 mapActionToStatus _ = Nothing
+
+-- shrey00 : add rating option when accepting/escalating issue
