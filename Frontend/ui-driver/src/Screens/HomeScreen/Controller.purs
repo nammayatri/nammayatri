@@ -417,6 +417,8 @@ data Action = NoAction
             | BgLocationPopupAC PopUpModal.Action
             | IsAcWorkingPopUpAction PopUpModal.Action
             | OnAudioCompleted String
+            | ACExpController PopUpModal.Action
+            | OpenLink String
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -544,6 +546,7 @@ eval BackPressed state = do
   else if state.props.vehicleNSPopup then continue state { props { vehicleNSPopup = false}}
   else if state.props.specialZoneProps.specialZonePopup then continue state { props { specialZoneProps{specialZonePopup = false} }}
   else if state.props.bgLocationPopup then continue state { props { bgLocationPopup = false}}
+  else if state.props.acExplanationPopup then continue state { props { acExplanationPopup = false }}
   else do
     _ <- pure $ minimizeApp ""
     continue state
@@ -1381,6 +1384,20 @@ eval (IsAcWorkingPopUpAction PopUpModal.OnButton2Click) state = exit $ UpdateAir
 
 eval (IsAcWorkingPopUpAction PopUpModal.DismissPopup) state = continue state{props{showAcWorkingPopup = false}}
 
+eval (ACExpController action) state = do
+  let acVideoLink = "https://www.youtube.com/watch?v=MbgxZkqxPLQ"
+  case action of
+    PopUpModal.DismissPopup -> continue state { props { acExplanationPopup = false } }
+    PopUpModal.OnButton2Click -> continue state { props { acExplanationPopup = false } }
+    PopUpModal.OnCoverImageClick -> continueWithCmd state [pure $ OpenLink acVideoLink]
+    PopUpModal.OnButton1Click -> continueWithCmd state [pure $ OpenLink acVideoLink]
+    _ -> continue state
+
+eval (OpenLink link) state = continueWithCmd state [ do 
+  void $ JB.openUrlInApp link
+  pure AfterRender
+  ]
+
 eval _ state = update state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Boolean -> Effect Unit
@@ -1499,7 +1516,7 @@ activeRideDetail state (RidesInfo ride) =
   capacity : ride.vehicleCapacity,
   hasToll :  maybe false (\charge -> charge /= 0) ride.estimatedTollCharges,
   estimatedTollCharge : ride.estimatedTollCharges,
-  acRide : fromMaybe false ride.isVehicleAirConditioned
+  acRide : ride.isVehicleAirConditioned
 }
   where 
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String

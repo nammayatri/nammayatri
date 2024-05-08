@@ -151,7 +151,7 @@ getEN stringKey =
         ALLOW_ACCESS -> "Allow Access"
         THANK_YOU_FOR_WRITING_TO_US -> "Thank you for Writing to us!"
         RIDER -> "Rider"
-        TRIP_ID -> "Trip Id"
+        TRIP_ID -> "Ride Id"
         NEED_IT_TO_SHOW_YOU_INCOMING_RIDE_REQUEST -> "Get incoming ride request while the app is in background"
         NEED_IT_TO_DISABLE_BATTERY_OPTIMIZATION_FOR_THE_APP -> "Recommended, enables the app to run in background for longer"
         NEED_IT_TO_AUTOSTART_YOUR_APP -> "Helps by keeping the app running in background"
@@ -1378,3 +1378,4 @@ getEN stringKey =
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "Is your car AC turned on and in working condition?"
         SET_THE_AC_ON_TO_ENABLE name -> "Set the AC on to enable " <> name
         ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK -> "All eligible variants are chosen. Please check"
+        TOP_AC_DRIVER -> "See how to be a top AC driver on Namma Yatri"

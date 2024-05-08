@@ -79,7 +79,8 @@ initData =
             rideType : "",
             tripStartTime : Nothing,
             tripEndTime : Nothing,
-            acRide : false
+            acRide : Nothing,
+            vehicleServiceTier : ""
         }
       , logField : empty
       }

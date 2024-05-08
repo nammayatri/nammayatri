@@ -1379,3 +1379,4 @@ getBN stringKey =
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "আপনার গাড়ির এসি চালু এবং কাজ করছে?"
         SET_THE_AC_ON_TO_ENABLE name -> name <> " এসি চালু করুন"
         ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK -> "সমস্ত যোগ্য ভেরিয়েন্ট নির্বাচিত হয়েছে। অনুগ্রহ করে চেক করুন"
+        TOP_AC_DRIVER -> "দেখুন কীভাবে নম্মা যাত্রীতে শীর্ষ এসি ড্রাইভার হতে হয়"

@@ -511,7 +511,8 @@ rideHistoryItemTransformer (RidesInfo ride) =
     rideType : ride.vehicleServiceTierName,
     tripStartTime : ride.tripStartTime,
     tripEndTime : ride.tripEndTime,
-    acRide : fromMaybe false ride.isVehicleAirConditioned
+    acRide : ride.isVehicleAirConditioned,
+    vehicleServiceTier : ride.vehicleServiceTier
   }
 
 getDisabilityType :: Maybe String -> Maybe DisabilityType
@@ -537,7 +538,7 @@ earningHistoryItemsListTransformer list =
           , event: ""
           , tagImages: getTagImages (RidesInfo ride)
           , cash: 0.0
-          , vehicleVariant : ride.vehicleVariant
+          , vehicleVariant : ride.vehicleServiceTier
           }
       )
       list

@@ -38,6 +38,7 @@ data Action = OnButton1Click
             | OnSecondaryTextClick
             | YoutubeVideoStatus String
             | TipsViewActionController TipsView.Action
+            | OnCoverImageClick
 
 type Config = {
     primaryText :: TextConfig,

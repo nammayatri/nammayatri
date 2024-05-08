@@ -63,7 +63,8 @@ initData = {
     rideType : "",
     tripStartTime : Nothing,
     tripEndTime : Nothing,
-    acRide : false
+    acRide : Nothing,
+    vehicleServiceTier : ""
   },
   offsetValue: 0,
   loaderButtonVisibility: false,

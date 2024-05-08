@@ -117,6 +117,7 @@ view push state =
                 , padding state.coverImageConfig.padding
                 , imageWithFallback state.coverImageConfig.imageUrl
                 , visibility state.coverImageConfig.visibility
+                , onClick push $ const OnCoverImageClick
                 ]
             ]
         ,   linearLayout

@@ -83,7 +83,7 @@ initData =
           , capacity : Nothing
           , hasToll: false
           , estimatedTollCharge : Nothing
-          , acRide : false
+          , acRide : Nothing
           }
       , cancelRideModal:
           { selectionOptions: []
@@ -260,6 +260,7 @@ initData =
       , odometerUploadAttempts: 0
       , odometerImageUploading: false
       , showAcWorkingPopup: false
+      , acExplanationPopup : false
       }
   }
 
