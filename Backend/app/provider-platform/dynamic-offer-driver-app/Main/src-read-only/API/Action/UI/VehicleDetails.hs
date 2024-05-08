@@ -20,13 +20,13 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "vehicleMakes" :> Get ('[JSON]) API.Types.UI.VehicleDetails.VehicleModelsResp :<|> TokenAuth :> "vehicleModels"
+  ( TokenAuth :> "vehicleMakes" :> Get ('[JSON]) API.Types.UI.VehicleDetails.VehicleMakesResp :<|> TokenAuth :> "vehicleModels"
       :> ReqBody
            ('[JSON])
-           API.Types.UI.VehicleDetails.VehicleVariantsReq
+           API.Types.UI.VehicleDetails.VehicleModelsReq
       :> Get
            ('[JSON])
-           API.Types.UI.VehicleDetails.VehicleVariantsResp
+           API.Types.UI.VehicleDetails.VehicleModelsResp
       :<|> TokenAuth
       :> "vehicleDetails"
       :> ReqBody
@@ -45,7 +45,7 @@ getVehicleMakes ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Environment.FlowHandler API.Types.UI.VehicleDetails.VehicleModelsResp
+    Environment.FlowHandler API.Types.UI.VehicleDetails.VehicleMakesResp
   )
 getVehicleMakes a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleDetails.getVehicleMakes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
@@ -54,8 +54,8 @@ getVehicleModels ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    API.Types.UI.VehicleDetails.VehicleVariantsReq ->
-    Environment.FlowHandler API.Types.UI.VehicleDetails.VehicleVariantsResp
+    API.Types.UI.VehicleDetails.VehicleModelsReq ->
+    Environment.FlowHandler API.Types.UI.VehicleDetails.VehicleModelsResp
   )
 getVehicleModels a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleDetails.getVehicleModels (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 

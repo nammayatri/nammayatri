@@ -5,11 +5,11 @@ imports:
 module: VehicleDetails
 
 types:
-  VehicleModelsResp:
+  VehicleMakesResp:
     makes: "[Text]"
-  VehicleVariantsReq:
+  VehicleModelsReq:
     make: Text
-  VehicleVariantsResp:
+  VehicleModelsResp:
     models: "[Text]"
   VehicleDetailsReq:
     make: Text
@@ -20,14 +20,14 @@ apis:
       endpoint: /vehicleMakes
       auth: TokenAuth PROVIDER_TYPE
       response:
-        type: VehicleModelsResp
+        type: VehicleMakesResp
   - GET:
       endpoint: /vehicleModels
       auth: TokenAuth PROVIDER_TYPE
       request:
-        type: VehicleVariantsReq
+        type: VehicleModelsReq
       response:
-        type: VehicleVariantsResp
+        type: VehicleModelsResp
   - GET:
       endpoint: /vehicleDetails
       auth: TokenAuth PROVIDER_TYPE

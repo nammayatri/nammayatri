@@ -4,14 +4,15 @@ imports:
   Id: Kernel.Types.Id
   merchantId: Domain.Types.Merchant
   merchantOperatingCityId: Domain.Types.Merchant.MerchantOperatingCity
+  Variant: Domain.Types.Vehicle
 
 VehicleDetails:
   tableName: vehicle_details
-
   fields:
     id: Id VehicleDetails
     make: Text
     model: Text
+    variant: Maybe Variant
     acAvailable: Bool
   constraints:
     id: PrimaryKey
