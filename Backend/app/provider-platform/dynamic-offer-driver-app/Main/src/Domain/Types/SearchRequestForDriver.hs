@@ -105,8 +105,16 @@ data SearchRequestForDriver = SearchRequestForDriver
   }
   deriving (Generic, Show)
 
+data IOSSearchRequestForDriverAPIEntity = IOSSearchRequestForDriverAPIEntity
+  { searchRequestId :: Id DSR.SearchRequest,
+    distanceToPickup :: Meters,
+    vehicleServiceTier :: Maybe Text,
+    baseFare :: Money
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
 data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
-  { searchRequestId :: Id DST.SearchTry, -- TODO: Deprecated, to be removed
+  { searchRequestId :: Id DSR.SearchRequest,
     searchTryId :: Id DST.SearchTry,
     bapName :: Maybe Text,
     bapLogo :: Maybe BaseUrl,
@@ -149,7 +157,7 @@ makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchReque
 makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP driverPickUpCharges =
   let isTollApplicableForServiceTier = DTC.isTollApplicable requestedVehicleServiceTier
    in SearchRequestForDriverAPIEntity
-        { searchRequestId = nearbyReq.searchTryId,
+        { searchRequestId = searchRequest.id,
           searchTryId = nearbyReq.searchTryId,
           bapName = bapMetadata <&> (.name),
           bapLogo = bapMetadata <&> (.logoUrl),

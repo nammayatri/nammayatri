@@ -45,6 +45,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Plan as DPlan
+import qualified Domain.Types.SearchRequest as DTSR
 import Environment
 import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps (LatLong)
@@ -90,6 +91,7 @@ type API =
                 )
            :<|> "nearbyRideRequest"
              :> ( TokenAuth
+                    :> QueryParam "searchRequest" (Id DTSR.SearchRequest)
                     :> Get '[JSON] DDriver.GetNearbySearchRequestsRes
                 )
            :<|> "searchRequest"
@@ -260,8 +262,9 @@ updateDriver personId mbBundleVersion mbClientVersion mbConfigVersion mbDevice =
 
 getNearbySearchRequests ::
   (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe (Id DTSR.SearchRequest) ->
   FlowHandler DDriver.GetNearbySearchRequestsRes
-getNearbySearchRequests = withFlowHandlerAPI . DDriver.getNearbySearchRequests
+getNearbySearchRequests (personId, driverId, merchantOpCityId) searchReqId = withFlowHandlerAPI $ DDriver.getNearbySearchRequests (personId, driverId, merchantOpCityId) searchReqId
 
 offerQuote ::
   (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
