@@ -396,10 +396,6 @@ config =
             referral
               { domain = "https://www.manayatri.in",
                 customerAppId = "in.mobility.manayatri"
-              }
-            , iopConfig = {
-                enable : true,
-                autoSelectTime : 8
               },
             dashboardUrl = "https://www.manayatri.in/open?source=in-app",
             appLogoLight = "ny_ic_logo_light_my,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_logo_light_my.png",
