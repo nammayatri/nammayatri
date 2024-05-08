@@ -23,6 +23,7 @@ import qualified IGM.Enums as Spec
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
@@ -53,8 +54,8 @@ data IssueStatusRes = IssueStatusRes
     groEmail :: Text,
     merchant :: DM.Merchant,
     merchantOperatingCity :: MerchantOperatingCity,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    createdAt :: UTCTimeRFC3339,
+    updatedAt :: UTCTimeRFC3339
   }
   deriving (Show, Generic)
 
@@ -76,7 +77,7 @@ handler ValidatedDIssueStatus {..} = do
       groName = igmConfig.groName
       groPhone = igmConfig.groPhone
       groEmail = igmConfig.groEmail
-      createdAt = issue.createdAt
-      updatedAt = now
+      createdAt = UTCTimeRFC3339 issue.createdAt
+      updatedAt = UTCTimeRFC3339 now
       resolutionAction = issue.resolutionAction
   pure IssueStatusRes {..}

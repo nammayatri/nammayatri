@@ -336,7 +336,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             personId = person.id.getId,
             classification = castIdentifierToClassification identifier,
             rideDescription = Just info,
-            becknIssueId = becknIssueId
+            becknIssueId
           }
 
     buildRideInfo :: (EsqDBReplicaFlow m r, BeamFlow m r) => Id Merchant -> Id MerchantOperatingCity -> UTCTime -> ServiceHandle m -> Maybe Ride -> m TIT.RideInfo

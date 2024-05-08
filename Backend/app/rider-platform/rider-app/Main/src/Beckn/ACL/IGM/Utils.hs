@@ -100,10 +100,10 @@ mapIssueType _ _ = Just $ show Spec.GRIEVANCE
 timeToText :: UTCTime -> Text
 timeToText = T.pack . show
 
-buildIGMIssue :: UTCTime -> Text -> Booking -> Person -> Text -> DIGM.IGMIssue
+buildIGMIssue :: UTCTimeRFC3339 -> Text -> Booking -> Person -> Text -> DIGM.IGMIssue
 buildIGMIssue now issueId booking rider transactionId = do
   DIGM.IGMIssue
-    { createdAt = now,
+    { createdAt = convertRFC3339ToUTC now,
       riderId = rider.id,
       id = Id issueId,
       issueStatus = DIGM.OPEN,
@@ -117,7 +117,7 @@ buildIGMIssue now issueId booking rider transactionId = do
       transactionId = transactionId,
       merchantOperatingCityId = booking.merchantOperatingCityId,
       bookingId = booking.id,
-      updatedAt = now
+      updatedAt = convertRFC3339ToUTC now
     }
 
 data BppData = BppData

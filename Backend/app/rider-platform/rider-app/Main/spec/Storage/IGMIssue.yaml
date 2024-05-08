@@ -5,6 +5,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Booking: Domain.Types.Booking
   Text: Data.Text
+  UTCTimeRFC3339: Kernel.Types.TimeRFC339
 
 IGMIssue:
   tableName: igm_issue

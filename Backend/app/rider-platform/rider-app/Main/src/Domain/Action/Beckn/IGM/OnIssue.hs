@@ -19,6 +19,7 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 import qualified Storage.Queries.IGMIssue as QIGM
 
@@ -30,7 +31,9 @@ data DOnIssue = DOnIssue
     respondentEmail :: Maybe Text,
     respondentPhone :: Maybe Text,
     respondentAction :: Maybe Text,
-    updatedAt :: Maybe UTCTime
+    transactionId :: Text,
+    createdAt :: UTCTimeRFC3339,
+    updatedAt :: Maybe UTCTimeRFC3339
   }
 
 validateRequest :: DOnIssue -> Flow (DIGM.IGMIssue)
@@ -41,7 +44,7 @@ handler ::
   DIGM.IGMIssue ->
   Flow ()
 handler onIssueReq issue = do
-  now <- getCurrentTime
+  now <- UTCTimeRFC3339 <$> getCurrentTime
   let issueStatus = mapActionToStatus onIssueReq.respondentAction & fromMaybe issue.issueStatus
   let updatedIssue =
         issue
@@ -49,7 +52,8 @@ handler onIssueReq issue = do
             DIGM.respondentEmail = onIssueReq.respondentEmail,
             DIGM.respondentPhone = onIssueReq.respondentPhone,
             DIGM.respondentAction = onIssueReq.respondentAction,
-            DIGM.updatedAt = onIssueReq.updatedAt & fromMaybe now,
+            DIGM.updatedAt = convertRFC3339ToUTC $ onIssueReq.updatedAt & fromMaybe now,
+            DIGM.createdAt = convertRFC3339ToUTC onIssueReq.createdAt,
             DIGM.issueStatus = issueStatus
           }
   QIGM.updateByPrimaryKey updatedIssue

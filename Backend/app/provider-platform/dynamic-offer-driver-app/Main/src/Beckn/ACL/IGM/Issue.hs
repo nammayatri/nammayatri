@@ -38,6 +38,7 @@ buildIssueReq req = do
       issueId = req.issueReqMessage.issueReqMessageIssue.issueId
       customerContact = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationContact)
       customerName = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationPerson) >>= (.complainantPersonName)
+      createdAt = req.issueReqMessage.issueReqMessageIssue.issueCreatedAt
   pure $
     DIssue.DIssue
       { customerEmail = customerContact >>= (.gROContactEmail),

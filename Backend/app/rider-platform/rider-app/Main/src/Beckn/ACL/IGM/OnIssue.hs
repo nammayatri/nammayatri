@@ -29,7 +29,7 @@ buildOnIssueReq ::
 buildOnIssueReq req = do
   let context = req.onIssueReqContext
   Utils.validateContext Spec.ON_ISSUE context
-  _transactionId <- context.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
+  transactionId <- context.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   _messageId <- context.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   bppSubscriberId <- context.contextBppId & fromMaybeM (InvalidRequest "BppSubscriberId not found")
   bppSubscriberUrl <- context.contextBppUri & fromMaybeM (InvalidRequest "BppSubscriberUrl not found")
@@ -48,5 +48,7 @@ buildOnIssueReq req = do
         respondentEmail = respondentContact >>= (.gROContactEmail),
         respondentPhone = respondentContact >>= (.gROContactPhone),
         respondentAction = respondentAction.respondentActionRespondentAction,
+        transactionId = transactionId,
+        createdAt = issue.issueCreatedAt,
         updatedAt = respondentAction.respondentActionUpdatedAt
       }

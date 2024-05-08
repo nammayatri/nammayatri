@@ -20,6 +20,7 @@ import qualified Domain.Action.Beckn.IGM.IssueStatus as DIssueStatus
 import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec
 import Kernel.Prelude
+import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 
 buildOnIssueStatusReq ::
@@ -33,7 +34,7 @@ buildOnIssueStatusReq ::
   DIssueStatus.IssueStatusRes ->
   m Spec.OnIssueStatusReq
 buildOnIssueStatusReq txnId msgId bapId bapUri res = do
-  context <- Utils.buildContext Spec.ON_ISSUE_STATUS Spec.ON_DEMAND bapId res.merchant txnId msgId res.merchantOperatingCity.city (Just $ Utils.BapData bapId bapUri) (Utils.buildTTL 30 res.updatedAt)
+  context <- Utils.buildContext Spec.ON_ISSUE_STATUS Spec.ON_DEMAND bapId res.merchant txnId msgId res.merchantOperatingCity.city (Just $ Utils.BapData bapId bapUri) (Utils.buildTTL 30 (convertRFC3339ToUTC res.updatedAt))
   let message = tfOnIssueStatusMessage res
   pure $
     Spec.OnIssueStatusReq
@@ -111,7 +112,7 @@ tfOrganzationOrg :: DIssueStatus.IssueStatusRes -> Maybe Spec.OrganizationOrg
 tfOrganzationOrg res =
   Just $
     Spec.OrganizationOrg
-      { organizationOrgName = Just res.merchant.name
+      { organizationOrgName = Just $ res.merchant.name <> "::TRV10"
       }
 
 tfOrganizationPerson :: DIssueStatus.IssueStatusRes -> Maybe Spec.ComplainantPerson
