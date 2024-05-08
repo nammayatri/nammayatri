@@ -293,7 +293,7 @@ toggleView push enabled default service =
       , stroke $ "1," <> backgroundColor
       , gravity CENTER_VERTICAL
       , onClick push $ const $ ToggleRidePreference service
-      , clickable $ not $ default || service.isUsageRestricted 
+      , clickable $ not $ default
       ]
       [ linearLayout
           [ width MATCH_PARENT

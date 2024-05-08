@@ -1609,9 +1609,8 @@ bookingOptionsFlow = do
       canSwitchToRental' = fromMaybe false resp.canSwitchToRental
       defaultRide = fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption $ find (\item -> item.isDefault) ridePreferences'
 
-  modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> 
-    bookingOptions{ 
-      data { airConditioned = resp.airConditioned
+  modifyScreenState $ BookingOptionsScreenType (\bookingOptions ->  bookingOptions
+   { data { airConditioned = resp.airConditioned
            , vehicleType = show defaultRide.serviceTierType
            , vehicleName = defaultRide.name
            , canSwitchToInterCity = canSwitchToInterCity'
@@ -1623,6 +1622,7 @@ bookingOptionsFlow = do
   case action of
     UPDATE_AC_AVAILABILITY state toggleVal -> do
       void $ HelpersAPI.callApiBT $ Remote.mkUpdateAirConditionWorkingStatus toggleVal
+      pure if toggleVal then toast $ getString ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK else unit
       bookingOptionsFlow
     CHANGE_RIDE_PREFERENCE state service -> do
       void $ HelpersAPI.callApiBT $ Remote.mkUpdateDriverVehiclesServiceTier service
