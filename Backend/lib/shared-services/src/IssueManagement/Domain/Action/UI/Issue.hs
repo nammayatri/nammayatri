@@ -47,7 +47,8 @@ data ServiceHandle m = ServiceHandle
     getRideInfo :: Id Merchant -> Id MerchantOperatingCity -> Id Ride -> m RideInfoRes,
     createTicket :: Id Merchant -> Id MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp,
     updateTicket :: Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp,
-    findMerchantConfig :: Id Merchant -> Id MerchantOperatingCity -> Id Person -> m MerchantConfig
+    findMerchantConfig :: Id Merchant -> Id MerchantOperatingCity -> Id Person -> m MerchantConfig,
+    mbReportACIssue :: Maybe (BaseUrl -> Text -> Text -> m APISuccess)
   }
 
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
@@ -175,11 +176,14 @@ issueReportList (personId, merchantId, merchantOpCityId) mbLanguage issueHandle 
       m Common.IssueReportListItem
     mkIssueReport issueReport issueStatus language = do
       (issueCategory, issueCategoryTranslation) <- CQIC.findByIdAndLanguage issueReport.categoryId language identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
+      mbIssueOption <- maybe (return Nothing) (\optionId -> CQIO.findById optionId identifier) issueReport.optionId
       return $
         Common.IssueReportListItem
           { issueReportId = issueReport.id,
             issueReportShortId = issueReport.shortId,
             category = fromMaybe issueCategory.category $ issueCategoryTranslation <&> (.translation),
+            rideId = issueReport.rideId,
+            optionLabel = mbIssueOption >>= (.label),
             status = fromMaybe issueReport.status issueStatus,
             createdAt = issueReport.createdAt
           }
@@ -272,11 +276,13 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
       chats_ = fromMaybe [] chats
       updatedChats = updateChats chats_ shouldCreateTicket messages uploadedMediaFiles now
       mocId = maybe person.merchantOperatingCityId (.merchantOperatingCityId) mbRide
+  isAcRelatedIssue <- checkACRelatedIssue mbOption rideId
   issueReport <- mkIssueReport mocId updatedChats shouldCreateTicket now
   _ <- QIR.create issueReport
+  config <- issueHandle.findMerchantConfig merchantId mocId personId
+  when isAcRelatedIssue $ handleACIssueActions mbRide config issueHandle
   when shouldCreateTicket $ do
-    config <- issueHandle.findMerchantConfig merchantId mocId personId
-    ticket <- buildTicket issueReport category mbOption mbRide person merchantId mocId config mediaFileUrls now issueHandle identifier
+    ticket <- buildTicket issueReport category mbOption mbRide person merchantId mocId config mediaFileUrls now issueHandle
     ticketResponse <- try @_ @SomeException (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
       Right ticketResponse' -> do
@@ -309,8 +315,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             chats = updatedChats
           }
 
-    buildTicket :: (EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Person -> Id Merchant -> Id MerchantOperatingCity -> MerchantConfig -> [Text] -> UTCTime -> ServiceHandle m -> Identifier -> m TIT.CreateTicketReq
-    buildTicket issue category mbOption mbRide person merchId moCityId merchantCfg mediaFileUrls now issueServiceHandle identifier_ = do
+    buildTicket :: (EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Person -> Id Merchant -> Id MerchantOperatingCity -> MerchantConfig -> [Text] -> UTCTime -> ServiceHandle m -> m TIT.CreateTicketReq
+    buildTicket issue category mbOption mbRide person merchId moCityId merchantCfg mediaFileUrls now issueServiceHandle = do
       info <- buildRideInfo merchId moCityId now issueServiceHandle mbRide
       phoneNumber <- mapM decrypt person.mobileNumber
       return $
@@ -325,7 +331,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             name = Just $ fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName,
             phoneNo = phoneNumber,
             personId = person.id.getId,
-            classification = castIdentifierToClassification identifier_,
+            classification = castIdentifierToClassification identifier,
             rideDescription = Just info
           }
 
@@ -380,6 +386,28 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
                    then map (\message -> mkIssueChat IssueMessage message.id.getId now) messages
                    else []
                )
+
+    handleACIssueActions :: BeamFlow m r => Maybe Ride -> MerchantConfig -> ServiceHandle m -> m ()
+    handleACIssueActions mbRide config iHandle =
+      whenJust iHandle.mbReportACIssue $ \reportACIssue ->
+        whenJust (mbRide >>= (.counterPartyRideId)) $ \counterPRideId -> do
+          acIssueApiRes <- try @_ @SomeException $ reportACIssue config.counterPartyUrl config.counterPartyApiKey counterPRideId
+          case acIssueApiRes of
+            Right _ -> pure ()
+            Left err -> logTagInfo "Report AC Issue API failed - " $ show err
+
+    checkACRelatedIssue :: BeamFlow m r => Maybe D.IssueOption -> Maybe (Id Ride) -> m Bool
+    checkACRelatedIssue (Just issueOption) (Just rId) | Just "AC_RELATED_ISSUE" <- issueOption.label = do
+      issueList <- QIR.findAllByPersonAndRideId personId rId
+      mapM_
+        ( \issueRep -> do
+            mbIssueOption <- maybe (return Nothing) (`CQIO.findById` identifier) issueRep.optionId
+            whenJust mbIssueOption $ \iOption ->
+              when (iOption.label == Just "AC_RELATED_ISSUE") $ throwError (ACRelatedIssueReportAlreadyExists rId.getId)
+        )
+        issueList
+      return True
+    checkACRelatedIssue _ _ = return False
 
     castIdentifierToClassification :: Identifier -> TIT.Classification
     castIdentifierToClassification = \case
