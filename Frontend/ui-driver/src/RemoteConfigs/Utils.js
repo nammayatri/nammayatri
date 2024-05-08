@@ -9,7 +9,7 @@ export const getSubsRemoteConfig = function (config) {
   }catch (e){
     console.error("Error in parsing remote config", e);
   }
-  return "";
+  return {};
 }
 
 export const getReelsData = function (reelsData) {
