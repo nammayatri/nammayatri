@@ -27,7 +27,12 @@ instance FromTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
             id = Kernel.Types.Id.Id id,
             merchantId = merchantId,
             recordingUrl = recordingUrl,
+<<<<<<< HEAD
             status = status
+=======
+            status = status,
+            updatedAt = updatedAt
+>>>>>>> 2ac75e3b6b (backend/enh/DSL/move-tables-dsl-driver-offer-person-part: CallStatus)
           }
 
 instance ToTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
@@ -43,5 +48,10 @@ instance ToTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = merchantId,
         Beam.recordingUrl = recordingUrl,
+<<<<<<< HEAD
         Beam.status = status
+=======
+        Beam.status = status,
+        Beam.updatedAt = updatedAt
+>>>>>>> 2ac75e3b6b (backend/enh/DSL/move-tables-dsl-driver-offer-person-part: CallStatus)
       }

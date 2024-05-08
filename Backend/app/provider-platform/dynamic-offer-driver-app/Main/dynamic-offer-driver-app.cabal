@@ -536,9 +536,8 @@ library
       Storage.Queries.Person.GetNearestGoHomeDrivers
       Storage.Queries.Person.Internal
       Storage.Queries.PersonExtra
-      Storage.Queries.Plan
-      Storage.Queries.PurchaseHistoryExtra
       Storage.Queries.PlanExtra
+      Storage.Queries.PurchaseHistoryExtra
       Storage.Queries.Quote
       Storage.Queries.RatingExtra
       Storage.Queries.RegistrationToken
@@ -790,8 +789,8 @@ library
       Storage.Queries.OrphanInstances.FleetRCAssociation
       Storage.Queries.OrphanInstances.Image
       Storage.Queries.OrphanInstances.Person
-      Storage.Queries.OrphanInstances.PurchaseHistory
       Storage.Queries.OrphanInstances.Plan
+      Storage.Queries.OrphanInstances.PurchaseHistory
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.Translations

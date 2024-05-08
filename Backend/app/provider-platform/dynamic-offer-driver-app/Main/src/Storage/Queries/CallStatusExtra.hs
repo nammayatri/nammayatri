@@ -45,6 +45,7 @@ countCallsByEntityId entityID = do
             B.filter_' (\(BeamCT.CallStatusT {..}) -> B.fromMaybe_ (B.val_ "") entityId B.==?. B.val_ (getId entityID)) $
               B.all_ (BeamCommon.callStatus BeamCommon.atlasDB)
   pure $ either (const 0) (maybe 0 snd) resp
+<<<<<<< HEAD
 
 updateCallStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> m ()
 updateCallStatus (Id callId) status conversationDuration recordingUrl =
@@ -73,3 +74,5 @@ updateCallStatusWithRideId (Id callId) rideId dtmfNumberUsed merchantId callServ
       Set BeamCT.callService callService
     ]
     [Is BeamCT.id (Se.Eq callId)]
+=======
+>>>>>>> 2ac75e3b6b (backend/enh/DSL/move-tables-dsl-driver-offer-person-part: CallStatus)
