@@ -264,18 +264,6 @@ handler ValidatedDSearchReq {..} sReq = do
                   maxAllowed = min (min det.maxAdditionalKmsLimit.getKilometers includedKm) (det.totalAdditionalKmsLimit.getKilometers - includedKm)
                in distInKm - includedKm <= maxAllowed
 
-    createMultipleRouteInfo :: Maps.RouteInfo -> RouteAndDeviationInfo
-    createMultipleRouteInfo Maps.RouteInfo {..} =
-      RouteAndDeviationInfo
-        { routeInfo =
-            RouteInfo
-              { points = Just points,
-                ..
-              },
-          deviationInfo =
-            DeviationInfo {deviation = False, safetyDeviation = False}
-        }
-
 addNearestDriverInfo ::
   (HasField "vehicleServiceTier" a DVST.ServiceTierType) =>
   Id DMOC.MerchantOperatingCity ->

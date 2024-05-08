@@ -236,3 +236,9 @@ multipleRouteKey id = "multiple-routes-" <> id
 
 confirmLockKey :: Id DBooking.Booking -> Text
 confirmLockKey (Id id) = "Driver:Confirm:BookingId-" <> id
+
+bookingRequestKeySoftUpdate :: Text -> Text
+bookingRequestKeySoftUpdate bId = "Driver:Booking:Request:SoftUpdate" <> bId
+
+multipleRouteKeySoftUpdate :: Text -> Text
+multipleRouteKeySoftUpdate id = "multiple-routes-SoftUpdate-" <> id
