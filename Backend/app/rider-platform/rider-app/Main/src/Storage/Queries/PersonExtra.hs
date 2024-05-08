@@ -252,3 +252,13 @@ updateCustomerReferralCode personId refferalCode = do
 
 findAllByIds :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Id Person] -> m [Person]
 findAllByIds personIds = findAllWithKV [Se.Is BeamP.id $ Se.In (getId <$> personIds)]
+
+clearDeviceTokenByPersonId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
+clearDeviceTokenByPersonId personId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.deviceToken Nothing,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]

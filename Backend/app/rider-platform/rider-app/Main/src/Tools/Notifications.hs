@@ -73,9 +73,13 @@ notifyPerson ::
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Id Person ->
   Notification.NotificationReq a b ->
   m ()
 notifyPerson = runWithServiceConfig Notification.notifyPerson (.notifyPerson)
+
+clearDeviceToken :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
+clearDeviceToken = Person.clearDeviceTokenByPersonId
 
 notifyPersonWithMutableContent ::
   ( ServiceFlow m r,
@@ -84,25 +88,27 @@ notifyPersonWithMutableContent ::
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Id Person ->
   Notification.NotificationReq a b ->
   m ()
 notifyPersonWithMutableContent = runWithServiceConfig Notification.notifyPersonWithMutableContent (.notifyPerson)
 
 runWithServiceConfig ::
   ServiceFlow m r =>
-  (Notification.NotificationServiceConfig -> req -> m resp) ->
+  (Notification.NotificationServiceConfig -> req -> m () -> m resp) ->
   (MerchantServiceUsageConfig -> Notification.NotificationService) ->
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Id Person ->
   req ->
   m resp
-runWithServiceConfig func getCfg merchantId merchantOperatingCityId req = do
+runWithServiceConfig func getCfg merchantId merchantOperatingCityId personId req = do
   merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantNotificationServiceConfig <-
     QMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.NotificationService $ getCfg merchantConfig)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "notification" (show $ getCfg merchantConfig))
   case merchantNotificationServiceConfig.serviceConfig of
-    DMSC.NotificationServiceConfig msc -> func msc req
+    DMSC.NotificationServiceConfig msc -> func msc req (clearDeviceToken personId)
     _ -> throwError $ InternalError "Unknown ServiceConfig"
 
 notifyOnDriverOfferIncoming ::
@@ -138,7 +144,7 @@ notifyOnDriverOfferIncoming estimateId quotes person bppDetailList = do
           [ "There are new driver offers!",
             "Check the app for details"
           ]
-  notifyPerson person.merchantId merchantOperatingCityId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
 newtype RideAssignedParam = RideAssignedParam
   { driverName :: Text
@@ -179,7 +185,7 @@ notifyOnRideAssigned booking ride = do
           [ driverName,
             "will be your driver for this trip."
           ]
-  notifyPerson person.merchantId merchantOperatingCityId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
 newtype RideStartedParam = RideStartedParam
   { driverName :: Text
@@ -229,7 +235,7 @@ notifyOnRideStarted booking ride = do
             driverName,
             "has started. Enjoy the ride!"
           ]
-  notifyPerson person.merchantId merchantOperatingCityId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
 data RideCompleteParam = RideCompleteParam
   { driverName :: Text,
@@ -276,7 +282,7 @@ notifyOnRideCompleted booking ride = do
           ]
   disableFollowRide personId
   Redis.del $ CQSos.mockSosKey personId
-  notifyPerson person.merchantId merchantOperatingCityId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
   where
 
 disableFollowRide ::
@@ -332,7 +338,7 @@ notifyOnExpiration searchReq = do
               [ "Your ride has expired as you did not confirm any offer.",
                 "Please book again to continue."
               ]
-      notifyPerson p.merchantId merchantOperatingCityId notificationData
+      notifyPerson p.merchantId merchantOperatingCityId p.id notificationData
     _ -> pure ()
 
 notifyOnRegistration ::
@@ -366,7 +372,7 @@ notifyOnRegistration regToken person mbDeviceToken = do
           [ "Welcome to Yatri.",
             "Click here to book your first ride with us."
           ]
-   in notifyPerson person.merchantId merchantOperatingCityId notificationData
+   in notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
 newtype RideCancelParam = RideCancelParam
   { rideTime :: Text
@@ -391,7 +397,7 @@ notifyOnBookingCancelled booking cancellationSource bppDetails = do
   fork "Disabling share ride" $ do
     disableFollowRide person.id
     Redis.del $ CQSos.mockSosKey person.id
-  notifyPerson person.merchantId merchantOperatingCityId (notificationData bppDetails.name person notificationSound)
+  notifyPerson person.merchantId merchantOperatingCityId person.id (notificationData bppDetails.name person notificationSound)
   where
     notificationData orgName person notificationSound =
       Notification.NotificationReq
@@ -458,7 +464,7 @@ notifyOnBookingReallocated booking = do
   tag <- getDisabilityTag person.hasDisability person.id
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.REALLOCATE_PRODUCT merchantOperatingCityId
   notificationSound <- getNotificationSound tag notificationSoundFromConfig
-  notifyPerson person.merchantId merchantOperatingCityId (notificationData person notificationSound)
+  notifyPerson person.merchantId merchantOperatingCityId person.id (notificationData person notificationSound)
   where
     notificationData person notificationSound =
       Notification.NotificationReq
@@ -494,7 +500,7 @@ notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
   tag <- getDisabilityTag person.hasDisability person.id
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.REALLOCATE_PRODUCT merchantOperatingCityId
   notificationSound <- getNotificationSound tag notificationSoundFromConfig
-  notifyPerson person.merchantId merchantOperatingCityId (notificationData person notificationSound)
+  notifyPerson person.merchantId merchantOperatingCityId person.id (notificationData person notificationSound)
   where
     notificationData person notificationSound =
       Notification.NotificationReq
@@ -555,7 +561,7 @@ notifyOnQuoteReceived quote = do
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.QUOTE_RECEIVED merchantOperatingCityId
   let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
   let notificationData = mkNotificationData person notificationSound
-  notifyPerson person.merchantId merchantOperatingCityId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
   where
     mkNotificationData person notificationSound = do
       let title = T.pack "Quote received!"
@@ -606,7 +612,7 @@ notifyDriverOnTheWay personId = do
         unwords
           [ "Driver is on the way"
           ]
-  notifyPerson person.merchantId merchantOperatingCityId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
 data DriverReachedParam = DriverReachedParam
   { vehicleNumber :: Text,
@@ -644,7 +650,7 @@ notifyDriverHasReached personId otp vehicleNumber = do
         unwords
           [ "Use OTP " <> otp <> " to verify the ride with Vehicle No. " <> vehicleNumber
           ]
-  notifyPerson person.merchantId merchantOperatingCityId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
 notifyOnNewMessage ::
   ( ServiceFlow m r,
@@ -678,7 +684,7 @@ notifyOnNewMessage booking message = do
         unwords
           [ message
           ]
-  notifyPersonWithMutableContent person.merchantId merchantOperatingCityId notificationData
+  notifyPersonWithMutableContent person.merchantId merchantOperatingCityId person.id notificationData
 
 notifySafetyAlert ::
   ServiceFlow m r =>
@@ -707,7 +713,7 @@ notifySafetyAlert booking _ = do
       title = "Everything okay?"
       body = "We noticed your ride is on a different route. Are you feeling safe on your trip?"
 
-  notifyPerson person.merchantId person.merchantOperatingCityId notificationData
+  notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData
 
 notifyDriverBirthDay ::
   ServiceFlow m r =>
@@ -738,7 +744,7 @@ notifyDriverBirthDay personId driverName = do
         unwords
           [ "Today is your driver " <> driverName <> "'s birthday, your warm wishes will make their day even more special!"
           ]
-  notifyPerson person.merchantId merchantOperatingCityId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
 notifyRideStartToEmergencyContacts ::
   ( EsqDBFlow m r,
@@ -800,7 +806,7 @@ notifyRideStartToEmergencyContacts booking ride = do
               [ fromMaybe "" name,
                 " wants you to follow their ride"
               ]
-      notifyPerson booking.merchantId booking.merchantOperatingCityId notificationData
+      notifyPerson booking.merchantId booking.merchantOperatingCityId person.id notificationData
     sendSMS emergencyContact name trackLink = do
       smsCfg <- asks (.smsCfg)
       let sender = smsCfg.sender
@@ -852,7 +858,7 @@ notifyOnStopReached booking ride = do
           [ driverName,
             "has reached the stop. You may add another stop!"
           ]
-  notifyPerson person.merchantId merchantOperatingCityId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
 getDisabilityTag :: (ServiceFlow m r) => Maybe Bool -> Id Person -> m (Maybe Text)
 getDisabilityTag hasDisability personId = case hasDisability of
@@ -890,4 +896,4 @@ notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
           [ "Sorry, Ticket Booking " <> ticketBookingId <> " having " <> ticketBookingCategoryName <> " Service is cancelled will be Refunded",
             "Check the app for details"
           ]
-  notifyPerson person.merchantId person.merchantOperatingCityId notificationData
+  notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData
