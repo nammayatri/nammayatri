@@ -9,11 +9,11 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_details ADD COLUMN model text NOT NUL
 ALTER TABLE atlas_driver_offer_bpp.vehicle_details ADD PRIMARY KEY ( id);
 
 
+
+
 ------- SQL updates -------
-ALTER TABLE atlas_driver_offer_bpp.vehicle_details DROP COLUMN capacity;
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_details ALTER COLUMN capacity DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_details ALTER COLUMN ac_available DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_details ADD COLUMN vehicle_variant text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_details DROP COLUMN color;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.vehicle_details ADD COLUMN variant text ;
