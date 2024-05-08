@@ -13,25 +13,26 @@ module Domain.Types.FarePolicy.FarePolicyRentalDetails
   )
 where
 
-import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant
 import Data.Aeson as DA
 import Data.List.NonEmpty as NE
 import Domain.Types.Common
+import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
 import Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffer as Reexport
 import Kernel.Prelude
 import Kernel.Types.Common
 
 data FPRentalDetailsD (s :: UsageSafety) = FPRentalDetails
-  { baseFare :: Money,
-    perHourCharge :: Money,
+  { baseFare :: HighPrecMoney,
+    perHourCharge :: HighPrecMoney,
     distanceBuffers :: NonEmpty (FPRentalDetailsDistanceBuffersD s),
-    perExtraKmRate :: Money,
-    perExtraMinRate :: Money,
+    perExtraKmRate :: HighPrecMoney,
+    perExtraMinRate :: HighPrecMoney,
     includedKmPerHr :: Kilometers,
-    plannedPerKmRate :: Money,
+    plannedPerKmRate :: HighPrecMoney,
+    currency :: Currency,
     maxAdditionalKmsLimit :: Kilometers,
     totalAdditionalKmsLimit :: Kilometers,
-    nightShiftCharge :: Maybe NightShiftCharge
+    nightShiftCharge :: Maybe Domain.NightShiftCharge
   }
   deriving (Generic, Show)
 
@@ -41,6 +42,8 @@ instance FromJSON (FPRentalDetailsD 'Unsafe)
 
 instance ToJSON (FPRentalDetailsD 'Unsafe)
 
+-- FIXME remove
 instance FromJSON (FPRentalDetailsD 'Safe)
 
+-- FIXME remove
 instance ToJSON (FPRentalDetailsD 'Safe)

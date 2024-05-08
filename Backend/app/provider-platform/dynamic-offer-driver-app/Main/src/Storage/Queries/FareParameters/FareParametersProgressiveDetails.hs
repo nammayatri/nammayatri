@@ -36,8 +36,9 @@ instance FromTType' BeamFPPD.FareParametersProgressiveDetails Domain.FullFarePar
       Just
         ( KTI.Id fareParametersId,
           Domain.FParamsProgressiveDetails
-            { deadKmFare = deadKmFare,
-              extraKmFare = extraKmFare
+            { deadKmFare = mkAmountWithDefault deadKmFareAmount deadKmFare,
+              extraKmFare = mkAmountWithDefault extraKmFareAmount <$> extraKmFare,
+              currency = fromMaybe INR currency
             }
         )
 
@@ -45,6 +46,9 @@ instance ToTType' FareParametersProgressiveDetails Domain.FullFareParametersProg
   toTType' (KTI.Id fareParametersId, fParamsProgressiveDetails) =
     FareParametersProgressiveDetailsT
       { fareParametersId = fareParametersId,
-        deadKmFare = Domain.deadKmFare fParamsProgressiveDetails,
-        extraKmFare = Domain.extraKmFare fParamsProgressiveDetails
+        deadKmFare = roundToIntegral $ Domain.deadKmFare fParamsProgressiveDetails,
+        extraKmFare = roundToIntegral <$> Domain.extraKmFare fParamsProgressiveDetails,
+        deadKmFareAmount = Just $ Domain.deadKmFare fParamsProgressiveDetails,
+        extraKmFareAmount = Domain.extraKmFare fParamsProgressiveDetails,
+        currency = Just fParamsProgressiveDetails.currency
       }

@@ -15,12 +15,14 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data DailyStatsT f = DailyStatsT
-  { driverId :: B.C f Data.Text.Text,
+  { currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    driverId :: B.C f Data.Text.Text,
     id :: B.C f Data.Text.Text,
     merchantLocalDate :: B.C f Data.Time.Calendar.Day,
     numRides :: B.C f Kernel.Prelude.Int,
     totalDistance :: B.C f Kernel.Types.Common.Meters,
     totalEarnings :: B.C f Kernel.Types.Common.Money,
+    totalEarningsAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

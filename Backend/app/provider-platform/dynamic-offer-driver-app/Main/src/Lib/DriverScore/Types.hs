@@ -42,7 +42,8 @@ data DriverRideRequest
       }
   | OnNewRideAssigned
       { merchantId :: Id DM.Merchant,
-        driverId :: Id DP.Person
+        driverId :: Id DP.Person,
+        currency :: Currency
       }
   | OnNewSearchRequestForDrivers
       { driverPool :: [DP.DriverPoolWithActualDistResult],
@@ -55,7 +56,8 @@ data DriverRideRequest
   | OnDriverCancellation
       { merchantId :: Id DM.Merchant,
         driverId :: Id DP.Person,
-        rideFare :: Maybe Money
+        rideFare :: Maybe HighPrecMoney,
+        currency :: Currency
       }
   | OnRideCompletion
       { merchantId :: Id DM.Merchant,

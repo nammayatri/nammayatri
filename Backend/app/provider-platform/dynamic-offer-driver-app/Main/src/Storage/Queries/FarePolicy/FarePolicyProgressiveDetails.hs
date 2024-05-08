@@ -15,7 +15,6 @@
 
 module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import Data.List.NonEmpty (nonEmpty)
 import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions
@@ -39,12 +38,13 @@ instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyP
         ( KTI.Id farePolicyId,
           Domain.FPProgressiveDetails
             { baseDistance = baseDistance,
-              baseFare = baseFare,
+              baseFare = mkAmountWithDefault baseFareAmount baseFare,
               perExtraKmRateSections = snd <$> fPPDP,
-              deadKmFare = deadKmFare,
+              deadKmFare = mkAmountWithDefault deadKmFareAmount deadKmFare,
+              currency = fromMaybe INR currency,
               waitingChargeInfo =
                 ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
-                  DPM.WaitingChargeInfo
+                  Domain.WaitingChargeInfo
                     { waitingCharge = waitingCharge',
                       freeWaitingTime = freeWaitingTime'
                     },
@@ -57,9 +57,12 @@ instance ToTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyPro
     BeamFPPD.FarePolicyProgressiveDetailsT
       { farePolicyId = farePolicyId,
         baseDistance = baseDistance,
-        baseFare = baseFare,
+        baseFare = roundToIntegral baseFare,
+        baseFareAmount = Just baseFare,
         freeWatingTime = (.freeWaitingTime) <$> waitingChargeInfo,
-        deadKmFare = deadKmFare,
+        deadKmFare = roundToIntegral deadKmFare,
+        deadKmFareAmount = Just deadKmFare,
+        currency = Just currency,
         waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge
       }

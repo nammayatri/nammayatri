@@ -16,7 +16,6 @@
 
 module Storage.Cac.FarePolicy.FarePolicyProgressiveDetails where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import Data.List.NonEmpty
 import qualified Domain.Types.FarePolicy as DFP
 import Kernel.Beam.Functions
@@ -47,12 +46,13 @@ instance FromCacType (BeamFPPD.FarePolicyProgressiveDetails, [(CacContext, Value
             ( Id farePolicyId,
               DFP.FPProgressiveDetails
                 { baseDistance = baseDistance,
-                  baseFare = baseFare,
+                  baseFare = mkAmountWithDefault baseFareAmount baseFare,
                   perExtraKmRateSections = snd <$> fPPDP,
-                  deadKmFare = deadKmFare,
+                  deadKmFare = mkAmountWithDefault deadKmFareAmount deadKmFare,
+                  currency = fromMaybe INR currency,
                   waitingChargeInfo =
                     ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
-                      DPM.WaitingChargeInfo
+                      DFP.WaitingChargeInfo
                         { waitingCharge = waitingCharge',
                           freeWaitingTime = freeWaitingTime'
                         },

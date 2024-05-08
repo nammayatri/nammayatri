@@ -23,16 +23,17 @@ import Tools.Error
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantOperatingCity -> m ()
 create = Queries.create
 
+getMerchantOpCity :: (CacheFlow m r, EsqDBFlow m r) => Merchant -> Maybe Context.City -> m MerchantOperatingCity
+getMerchantOpCity merchant mbCity = do
+  let city = fromMaybe merchant.city mbCity
+  findByMerchantIdAndCity merchant.id city
+    >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
+
 getMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Maybe (Id MerchantOperatingCity) -> Merchant -> Maybe Context.City -> m (Id MerchantOperatingCity)
 getMerchantOpCityId mbMerchantOpCityId merchant mbCity =
   case mbMerchantOpCityId of
     Just moCityId -> pure moCityId
-    Nothing -> do
-      let city = fromMaybe merchant.city mbCity
-      (.id)
-        <$> ( findByMerchantIdAndCity merchant.id city
-                >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
-            )
+    Nothing -> (.id) <$> getMerchantOpCity merchant mbCity
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantOperatingCity)
 findById merchantOpCityId =

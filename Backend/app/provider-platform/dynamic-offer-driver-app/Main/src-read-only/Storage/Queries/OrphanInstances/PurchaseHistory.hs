@@ -7,6 +7,8 @@ import qualified Domain.Types.PurchaseHistory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -19,6 +21,7 @@ instance FromTType' Beam.PurchaseHistory Domain.Types.PurchaseHistory.PurchaseHi
         Domain.Types.PurchaseHistory.PurchaseHistory
           { cash = cash,
             createdAt = createdAt,
+            currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             driverId = driverId,
             id = Kernel.Types.Id.Id id,
             merchantId = merchantId,
@@ -33,6 +36,7 @@ instance ToTType' Beam.PurchaseHistory Domain.Types.PurchaseHistory.PurchaseHist
     Beam.PurchaseHistoryT
       { Beam.cash = cash,
         Beam.createdAt = createdAt,
+        Beam.currency = Kernel.Prelude.Just currency,
         Beam.driverId = driverId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = merchantId,

@@ -57,6 +57,8 @@ instance FromTType' BeamQSZ.QuoteSpecialZone Quote where
             createdAt = T.localTimeToUTC T.utc createdAt,
             updatedAt = T.localTimeToUTC T.utc updatedAt,
             validTill = T.localTimeToUTC T.utc validTill,
+            estimatedFare = mkAmountWithDefault estimatedFareAmount estimatedFare,
+            currency = fromMaybe INR currency,
             ..
           }
 
@@ -74,7 +76,9 @@ instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
         BeamQSZ.createdAt = T.utcToLocalTime T.utc createdAt,
         BeamQSZ.updatedAt = T.utcToLocalTime T.utc updatedAt,
         BeamQSZ.validTill = T.utcToLocalTime T.utc validTill,
-        BeamQSZ.estimatedFare = estimatedFare,
+        BeamQSZ.estimatedFare = roundToIntegral estimatedFare,
+        BeamQSZ.estimatedFareAmount = Just estimatedFare,
+        BeamQSZ.currency = Just currency,
         BeamQSZ.specialLocationTag = specialLocationTag,
         BeamQSZ.fareParametersId = getId fareParams.id,
         BeamQSZ.isScheduled = Just isScheduled,

@@ -13,14 +13,24 @@ PurchaseHistory:
     merchantOptCityId : Text
     numCoins : Int
     cash : HighPrecMoney
+    currency : Currency
     title : Text
     createdAt : UTCTime
     updatedAt : UTCTime
 
+  beamFields:
+    currency:
+      currency: Maybe Currency
+
+  fromTType:
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+
+  toTType:
+    currency: Kernel.Prelude.Just|I
+
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
-
 
   excludedFields: [merchantOperatingCityId]
 

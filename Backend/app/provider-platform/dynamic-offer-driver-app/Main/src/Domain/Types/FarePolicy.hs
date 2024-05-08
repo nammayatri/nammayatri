@@ -34,8 +34,9 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
-    serviceCharge :: Maybe Money,
+    serviceCharge :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
+    currency :: Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
@@ -54,9 +55,11 @@ instance FromJSON (FarePolicyD 'DTC.Unsafe)
 
 instance ToJSON (FarePolicyD 'DTC.Unsafe)
 
-instance FromJSON FarePolicy
+-- FIXME remove
+instance FromJSON (FarePolicyD 'DTC.Safe)
 
-instance ToJSON FarePolicy
+-- FIXME remove
+instance ToJSON (FarePolicyD 'DTC.Safe)
 
 data FarePolicyDetailsD (s :: DTC.UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s) | RentalDetails (FPRentalDetailsD s)
   deriving (Generic, Show)
@@ -83,8 +86,9 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     vehicleServiceTier :: DVST.ServiceTierType,
     tripCategory :: DTC.TripCategory,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
-    serviceCharge :: Maybe Money,
+    serviceCharge :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
+    currency :: Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,

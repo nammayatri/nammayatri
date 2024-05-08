@@ -5,7 +5,6 @@ imports:
   Plan: Domain.Types.Plan
   PaymentMode: Domain.Types.Plan
   ServiceNames: Domain.Types.Plan
-  Money: Kernel.Types.Common
   PlatformFee: Domain.Types.DriverFee
 
 DriverFee:
@@ -30,18 +29,19 @@ DriverFee:
       fee: HighPrecMoney
       cgst: HighPrecMoney
       sgst: HighPrecMoney
-      derive': "Generic, Eq, Show, FromJSON, ToJSON, ToSchema"
+      currency : Currency
+      derive': "Generic, Eq, Show"
 
 
   fields:
     id : Id DriverFee
     merchantId : Id Merchant
     driverId : Id Driver
-    govtCharges : Money
+    govtCharges : HighPrecMoney
     platformFee : PlatformFee
     numRides : Int
     payBy : UTCTime
-    totalEarnings : Money
+    totalEarnings : HighPrecMoney
     startTime : UTCTime
     endTime : UTCTime
     status : DriverFeeStatus
@@ -69,6 +69,8 @@ DriverFee:
     planMode : Maybe PaymentMode
     serviceName : ServiceNames
     vehicleNumber : Maybe Text
+    currency : Currency
+
   derives: "Generic, Show, Eq"
 
   domainInstance:
@@ -89,12 +91,23 @@ DriverFee:
       sgst : HighPrecMoney
       platformFeeCgst: {}
       platformFeeSgst: {}
+    govtCharges:
+      govtCharges: Money
+      govtChargesAmount: Maybe HighPrecMoney
+    totalEarnings:
+      totalEarnings: Money
+      totalEarningsAmount: Maybe HighPrecMoney
+    currency:
+      currency: Maybe Currency
 
-
+  # we should use transformer instead of constructor Domain.Types.DriverFee.PlatformFee, because constructor depends on alphabetical fields order
   fromTType:
-    platformFee: Domain.Types.DriverFee.PlatformFee platformFee cgst sgst|E
+    platformFee: Storage.Queries.Transformers.DriverFee.mkPlatformFee platformFee cgst sgst (Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency)|E
     merchantOperatingCityId: Storage.Queries.Transformers.DriverFee.getMerchantOperatingCityId merchantOperatingCityId driverId id |EM
     serviceName: fromMaybe Domain.Types.Plan.YATRI_SUBSCRIPTION serviceName|E
+    govtCharges: Kernel.Types.Common.mkAmountWithDefault govtChargesAmount govtCharges|E
+    totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
 
   toTType:
     platformFee: ((.fee) platformFee)|E
@@ -102,6 +115,12 @@ DriverFee:
     sgst: ((.sgst) platformFee)|E
     serviceName: (Just serviceName)|E
     merchantOperatingCityId: (Just (Kernel.Types.Id.getId merchantOperatingCityId))|E
+
+    govtCharges: Kernel.Prelude.roundToIntegral|I
+    totalEarnings: Kernel.Prelude.roundToIntegral|I
+    govtChargesAmount:  Kernel.Prelude.Just|I
+    totalEarningsAmount:  Kernel.Prelude.Just|I
+    currency: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey

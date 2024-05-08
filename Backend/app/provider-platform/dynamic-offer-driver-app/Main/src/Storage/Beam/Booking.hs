@@ -54,6 +54,7 @@ data BookingT f = BookingT
     estimatedDistance :: B.C f (Maybe Meters),
     maxEstimatedDistance :: B.C f (Maybe HighPrecMeters),
     estimatedFare :: B.C f HighPrecMoney,
+    currency :: B.C f (Maybe Currency),
     estimatedDuration :: B.C f (Maybe Seconds),
     fareParametersId :: B.C f Text,
     riderName :: B.C f (Maybe Text),

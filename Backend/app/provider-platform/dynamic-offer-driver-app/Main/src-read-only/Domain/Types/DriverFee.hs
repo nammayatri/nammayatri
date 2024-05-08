@@ -27,11 +27,12 @@ data DriverFee = DriverFee
     collectedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     collectedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
+    currency :: Kernel.Types.Common.Currency,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Driver,
     endTime :: Kernel.Prelude.UTCTime,
     feeType :: Domain.Types.DriverFee.FeeType,
     feeWithoutDiscount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    govtCharges :: Kernel.Types.Common.Money,
+    govtCharges :: Kernel.Types.Common.HighPrecMoney,
     id :: Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
@@ -51,11 +52,11 @@ data DriverFee = DriverFee
     stageUpdatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     startTime :: Kernel.Prelude.UTCTime,
     status :: Domain.Types.DriverFee.DriverFeeStatus,
-    totalEarnings :: Kernel.Types.Common.Money,
+    totalEarnings :: Kernel.Types.Common.HighPrecMoney,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving (Generic, (Show), (Eq))
+  deriving (Generic, Show, Eq)
 
 data AutopayPaymentStage
   = NOTIFICATION_SCHEDULED
@@ -64,7 +65,7 @@ data AutopayPaymentStage
   | EXECUTION_ATTEMPTING
   | EXECUTION_SUCCESS
   | EXECUTION_FAILED
-  deriving (Read, (Show), (Eq), (Generic), (FromJSON), (ToJSON), (ToSchema), (ToParamSchema), (Ord))
+  deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
 data DriverFeeStatus
   = ONGOING
@@ -76,19 +77,19 @@ data DriverFeeStatus
   | INACTIVE
   | CLEARED_BY_YATRI_COINS
   | MANUAL_REVIEW_NEEDED
-  deriving (Read, (Show), (Eq), (Generic), (FromJSON), (ToJSON), (ToSchema), (ToParamSchema), (Ord))
+  deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
-data FeeType = MANDATE_REGISTRATION | RECURRING_INVOICE | RECURRING_EXECUTION_INVOICE deriving (Read, (Show), (Eq), (Generic), (FromJSON), (ToJSON), (ToSchema), (ToParamSchema), (Ord))
+data FeeType = MANDATE_REGISTRATION | RECURRING_INVOICE | RECURRING_EXECUTION_INVOICE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
-data PlatformFee = PlatformFee {cgst :: Kernel.Types.Common.HighPrecMoney, fee :: Kernel.Types.Common.HighPrecMoney, sgst :: Kernel.Types.Common.HighPrecMoney}
-  deriving (Generic, (Eq), (Show), (FromJSON), (ToJSON), (ToSchema))
+data PlatformFee = PlatformFee {cgst :: Kernel.Types.Common.HighPrecMoney, currency :: Kernel.Types.Common.Currency, fee :: Kernel.Types.Common.HighPrecMoney, sgst :: Kernel.Types.Common.HighPrecMoney}
+  deriving (Generic, Eq, Show)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''DriverFeeStatus))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''DriverFeeStatus)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''FeeType))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''FeeType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''DriverFeeStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''DriverFeeStatus)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''FeeType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''FeeType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''AutopayPaymentStage))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''AutopayPaymentStage)

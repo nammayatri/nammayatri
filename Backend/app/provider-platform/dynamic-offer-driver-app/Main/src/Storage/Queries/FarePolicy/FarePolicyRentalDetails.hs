@@ -32,16 +32,17 @@ instance FromTType' BeamFPRD.FarePolicyRentalDetails Domain.FullFarePolicyRental
       Just
         ( KTI.Id farePolicyId,
           Domain.FPRentalDetails
-            { baseFare = baseFare,
-              perHourCharge = perHourCharge,
-              perExtraMinRate = perExtraMinRate,
-              perExtraKmRate = perExtraKmRate,
+            { baseFare = mkAmountWithDefault baseFareAmount baseFare,
+              perHourCharge = mkAmountWithDefault perHourChargeAmount perHourCharge,
+              perExtraMinRate = mkAmountWithDefault perExtraMinRateAmount perExtraMinRate,
+              perExtraKmRate = mkAmountWithDefault perExtraKmRateAmount perExtraKmRate,
               nightShiftCharge = nightShiftCharge,
               includedKmPerHr = includedKmPerHr,
-              plannedPerKmRate = plannedPerKmRate,
+              plannedPerKmRate = mkAmountWithDefault plannedPerKmRateAmount plannedPerKmRate,
               maxAdditionalKmsLimit = maxAdditionalKmsLimit,
               totalAdditionalKmsLimit = totalAdditionalKmsLimit,
-              distanceBuffers = snd <$> fPRDB
+              distanceBuffers = snd <$> fPRDB,
+              currency = fromMaybe INR currency
             }
         )
 
@@ -49,13 +50,19 @@ instance ToTType' BeamFPRD.FarePolicyRentalDetails Domain.FullFarePolicyRentalDe
   toTType' (KTI.Id farePolicyId, Domain.FPRentalDetails {..}) =
     BeamFPRD.FarePolicyRentalDetailsT
       { farePolicyId = farePolicyId,
-        baseFare = baseFare,
-        perHourCharge = perHourCharge,
-        perExtraMinRate = perExtraMinRate,
-        perExtraKmRate = perExtraKmRate,
+        baseFare = roundToIntegral baseFare,
+        perHourCharge = roundToIntegral perHourCharge,
+        perExtraMinRate = roundToIntegral perExtraMinRate,
+        perExtraKmRate = roundToIntegral perExtraKmRate,
+        baseFareAmount = Just baseFare,
+        perHourChargeAmount = Just perHourCharge,
+        perExtraMinRateAmount = Just perExtraMinRate,
+        perExtraKmRateAmount = Just perExtraKmRate,
         nightShiftCharge = nightShiftCharge,
         includedKmPerHr = includedKmPerHr,
         maxAdditionalKmsLimit = maxAdditionalKmsLimit,
         totalAdditionalKmsLimit = totalAdditionalKmsLimit,
-        plannedPerKmRate = plannedPerKmRate
+        plannedPerKmRate = roundToIntegral plannedPerKmRate,
+        plannedPerKmRateAmount = Just plannedPerKmRate,
+        currency = Just currency
       }

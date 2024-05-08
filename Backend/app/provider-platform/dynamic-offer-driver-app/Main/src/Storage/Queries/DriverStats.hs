@@ -29,23 +29,24 @@ import qualified Storage.Beam.DriverStats as BeamDS
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverStats -> m ()
 create = createWithKV
 
-createInitialDriverStats :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m ()
-createInitialDriverStats driverId = do
+createInitialDriverStats :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Currency -> Id Driver -> m ()
+createInitialDriverStats currency driverId = do
   now <- getCurrentTime
   let dStats =
         DriverStats
           { driverId = driverId,
             idleSince = now,
             totalRides = 0,
-            totalEarnings = 0,
-            bonusEarned = 0,
+            totalEarnings = 0.0,
+            bonusEarned = 0.0,
             lateNightTrips = 0,
-            earningsMissed = 0,
+            earningsMissed = 0.0,
             totalDistance = 0,
             ridesCancelled = Just 0,
             totalRidesAssigned = Just 0,
-            coinCovertedToCashLeft = 0,
-            totalCoinsConvertedCash = 0,
+            coinCovertedToCashLeft = 0.0,
+            totalCoinsConvertedCash = 0.0,
+            currency,
             updatedAt = now
           }
   createWithKV dStats
@@ -100,7 +101,7 @@ incrementTotalRidesAssigned (Id driverId') number = do
 setCancelledRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Int -> m ()
 setCancelledRidesCount (Id driverId') cancelledCount = updateOneWithKV [Se.Set BeamDS.ridesCancelled (Just cancelledCount)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
-setDriverStats :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Int -> Int -> Money -> m ()
+setDriverStats :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Int -> Int -> HighPrecMoney -> m ()
 setDriverStats (Id driverId') totalRides cancelledCount missedEarning = do
   now <- getCurrentTime
   res <- findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId')]
@@ -111,14 +112,15 @@ setDriverStats (Id driverId') totalRides cancelledCount missedEarning = do
         [ Se.Set BeamDS.updatedAt now,
           Se.Set BeamDS.totalRidesAssigned (liftA2 (+) (Just totalRides) ds.totalRidesAssigned),
           Se.Set BeamDS.ridesCancelled (Just cancelledCount),
-          Se.Set BeamDS.earningsMissed missedEarning
+          Se.Set BeamDS.earningsMissed $ roundToIntegral missedEarning,
+          Se.Set BeamDS.earningsMissedAmount $ Just missedEarning
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
 getDriversSortedOrder :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Integer -> m [DriverStats]
 getDriversSortedOrder mbLimitVal = findAllWithOptionsDb [] (Se.Desc BeamDS.totalRides) (Just $ maybe 10 fromInteger mbLimitVal) Nothing
 
-setCancelledRidesCountAndIncrementEarningsMissed :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Int -> Money -> m ()
+setCancelledRidesCountAndIncrementEarningsMissed :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Int -> HighPrecMoney -> m ()
 setCancelledRidesCountAndIncrementEarningsMissed (Id driverId') cancelledCount missedEarning = do
   now <- getCurrentTime
   res <- findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId')]
@@ -128,7 +130,8 @@ setCancelledRidesCountAndIncrementEarningsMissed (Id driverId') cancelledCount m
       updateOneWithKV
         [ Se.Set BeamDS.updatedAt now,
           Se.Set BeamDS.ridesCancelled (Just cancelledCount),
-          Se.Set BeamDS.earningsMissed (ds.earningsMissed + missedEarning)
+          Se.Set BeamDS.earningsMissed $ roundToIntegral (ds.earningsMissed + missedEarning),
+          Se.Set BeamDS.earningsMissedAmount $ Just (ds.earningsMissed + missedEarning)
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
@@ -143,12 +146,13 @@ instance FromTType' BeamDS.DriverStats DriverStats where
             totalDistance = Meters $ double2Int totalDistance,
             ridesCancelled = ridesCancelled,
             totalRidesAssigned = totalRidesAssigned,
-            totalEarnings = totalEarnings,
-            bonusEarned = bonusEarned,
+            totalEarnings = mkAmountWithDefault totalEarningsAmount totalEarnings,
+            bonusEarned = mkAmountWithDefault bonusEarnedAmount bonusEarned,
             lateNightTrips = lateNightTrips,
-            earningsMissed = earningsMissed,
+            earningsMissed = mkAmountWithDefault earningsMissedAmount earningsMissed,
             coinCovertedToCashLeft = fromMaybe 0 coinCovertedToCashLeft,
             totalCoinsConvertedCash = fromMaybe 0 totalCoinsConvertedCash,
+            currency = fromMaybe INR currency,
             updatedAt = updatedAt
           }
 
@@ -161,16 +165,20 @@ instance ToTType' BeamDS.DriverStats DriverStats where
         BeamDS.totalDistance = (\(Meters m) -> int2Double m) totalDistance,
         BeamDS.ridesCancelled = ridesCancelled,
         BeamDS.totalRidesAssigned = totalRidesAssigned,
-        BeamDS.totalEarnings = totalEarnings,
-        BeamDS.bonusEarned = bonusEarned,
+        BeamDS.totalEarnings = roundToIntegral totalEarnings,
+        BeamDS.currency = Just currency,
+        BeamDS.bonusEarned = roundToIntegral bonusEarned,
+        BeamDS.totalEarningsAmount = Just totalEarnings,
+        BeamDS.bonusEarnedAmount = Just bonusEarned,
         BeamDS.lateNightTrips = lateNightTrips,
-        BeamDS.earningsMissed = earningsMissed,
+        BeamDS.earningsMissed = roundToIntegral earningsMissed,
+        BeamDS.earningsMissedAmount = Just earningsMissed,
         BeamDS.coinCovertedToCashLeft = Just coinCovertedToCashLeft,
         BeamDS.totalCoinsConvertedCash = Just totalCoinsConvertedCash,
         BeamDS.updatedAt = updatedAt
       }
 
-incrementTotalEarningsAndBonusEarnedAndLateNightTrip :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Money -> Money -> Int -> m ()
+incrementTotalEarningsAndBonusEarnedAndLateNightTrip :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> HighPrecMoney -> HighPrecMoney -> Int -> m ()
 incrementTotalEarningsAndBonusEarnedAndLateNightTrip (Id driverId') increasedEarning increasedBonus tripCount = do
   now <- getCurrentTime
   res <- findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId')]
@@ -179,8 +187,10 @@ incrementTotalEarningsAndBonusEarnedAndLateNightTrip (Id driverId') increasedEar
     Just ds ->
       updateOneWithKV
         [ Se.Set BeamDS.updatedAt now,
-          Se.Set BeamDS.totalEarnings (ds.totalEarnings + increasedEarning),
-          Se.Set BeamDS.bonusEarned (ds.bonusEarned + increasedBonus),
+          Se.Set BeamDS.totalEarnings $ roundToIntegral (ds.totalEarnings + increasedEarning),
+          Se.Set BeamDS.totalEarningsAmount $ Just (ds.totalEarnings + increasedEarning),
+          Se.Set BeamDS.bonusEarned $ roundToIntegral (ds.bonusEarned + increasedBonus),
+          Se.Set BeamDS.bonusEarnedAmount $ Just (ds.bonusEarned + increasedBonus),
           Se.Set BeamDS.lateNightTrips (ds.lateNightTrips + tripCount)
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
@@ -212,7 +222,12 @@ updateCoinFieldsByDriverId driverId amount = do
         [Se.Is BeamDS.driverId (Se.Eq (getId driverId))]
     Nothing -> pure ()
 
-setMissedEarnings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Money -> m ()
+setMissedEarnings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> HighPrecMoney -> m ()
 setMissedEarnings (Id driverId') missedEarnings = do
   now <- getCurrentTime
-  updateOneWithKV [Se.Set BeamDS.updatedAt now, Se.Set BeamDS.earningsMissed missedEarnings] [Se.Is BeamDS.driverId (Se.Eq driverId')]
+  updateOneWithKV
+    [ Se.Set BeamDS.updatedAt now,
+      Se.Set BeamDS.earningsMissedAmount $ Just missedEarnings,
+      Se.Set BeamDS.earningsMissed $ roundToIntegral missedEarnings
+    ]
+    [Se.Is BeamDS.driverId (Se.Eq driverId')]

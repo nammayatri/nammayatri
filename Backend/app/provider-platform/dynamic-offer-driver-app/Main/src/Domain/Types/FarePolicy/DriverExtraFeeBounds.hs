@@ -14,7 +14,6 @@
 
 module Domain.Types.FarePolicy.DriverExtraFeeBounds where
 
-import Data.Aeson as DA
 import qualified Data.List.NonEmpty as NE
 import Data.Ord
 import Kernel.Prelude
@@ -22,15 +21,15 @@ import Kernel.Types.Common
 
 data DriverExtraFeeBounds = DriverExtraFeeBounds
   { startDistance :: Meters,
-    stepFee :: Money,
-    defaultStepFee :: Money,
-    minFee :: Money,
-    maxFee :: Money
+    stepFee :: HighPrecMoney,
+    defaultStepFee :: HighPrecMoney,
+    minFee :: HighPrecMoney,
+    maxFee :: HighPrecMoney
   }
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, Read)
 
 findDriverExtraFeeBoundsByDistance :: Meters -> NonEmpty DriverExtraFeeBounds -> DriverExtraFeeBounds
 findDriverExtraFeeBoundsByDistance dist driverExtraFeeBoundsList = do
   case NE.filter (\driverExtraFeeBounds -> driverExtraFeeBounds.startDistance <= dist) $ NE.sortBy (comparing (.startDistance)) driverExtraFeeBoundsList of
-    [] -> DriverExtraFeeBounds 0 0 0 0 0 -- error $ "DriverExtraFeeBounds for dist = " <> show dist <> " not found. Non-emptiness supposed to be guaranteed by app logic."
+    [] -> DriverExtraFeeBounds 0 0.0 0.0 0.0 0.0 -- error $ "DriverExtraFeeBounds for dist = " <> show dist <> " not found. Non-emptiness supposed to be guaranteed by app logic."
     a -> last a

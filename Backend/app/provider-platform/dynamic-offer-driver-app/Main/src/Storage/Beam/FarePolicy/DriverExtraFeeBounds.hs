@@ -27,8 +27,12 @@ data DriverExtraFeeBoundsT f = DriverExtraFeeBoundsT
     startDistance :: B.C f Meters,
     stepFee :: B.C f Money,
     defaultStepFee :: B.C f Money,
+    stepFeeAmount :: B.C f (Maybe HighPrecMoney),
+    defaultStepFeeAmount :: B.C f (Maybe HighPrecMoney),
     minFee :: B.C f Money,
-    maxFee :: B.C f Money
+    maxFee :: B.C f Money,
+    minFeeAmount :: B.C f (Maybe HighPrecMoney),
+    maxFeeAmount :: B.C f (Maybe HighPrecMoney)
   }
   deriving (Generic, B.Beamable)
 

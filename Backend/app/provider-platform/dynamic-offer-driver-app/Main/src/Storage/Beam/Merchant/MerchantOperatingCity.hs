@@ -17,6 +17,7 @@ import GHC.Generics (Generic)
 import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Common (Currency)
 import Tools.Beam.UtilsTH
 
 data MerchantOperatingCityT f = MerchantOperatingCityT
@@ -29,7 +30,8 @@ data MerchantOperatingCityT f = MerchantOperatingCityT
     lat :: B.C f Double,
     lon :: B.C f Double,
     supportNumber :: B.C f (Maybe Text),
-    language :: B.C f Language
+    language :: B.C f Language,
+    currency :: B.C f (Maybe Currency)
   }
   deriving (Generic, B.Beamable)
 

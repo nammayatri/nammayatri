@@ -20,8 +20,9 @@ Estimate:
       vehicleServiceTier: ServiceTierType|NoRelation
       vehicleServiceTierName: Maybe Text
       tripCategory: TripCategory
-      minFare: Money
-      maxFare: Money
+      minFare: HighPrecMoney
+      maxFare: HighPrecMoney
+      currency: Currency
       estimatedDistance: Maybe Meters
       fareParams: Maybe FareParameters|WithIdCreate
       farePolicy: Maybe FarePolicy|NoRelation
@@ -41,6 +42,14 @@ Estimate:
       farePolicy:
         farePolicyId: Maybe Text
       vehicleServiceTier: "vehicleVariant"
+      minFare:
+        minFare: Money
+        minFareAmount: Maybe HighPrecMoney
+      maxFare:
+        maxFare: Money
+        maxFareAmount: Maybe HighPrecMoney
+      currency:
+        currency: Maybe Currency
 
     sqlType:
       farePolicyId: character varying(36)
@@ -54,13 +63,20 @@ Estimate:
       isScheduled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
       tripCategory: Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer)|I
       farePolicy: maybe (pure Nothing) ((Storage.Cac.FarePolicy.findById Nothing) . Kernel.Types.Id.Id)|IM
-
+      minFare: Kernel.Types.Common.mkAmountWithDefault minFareAmount minFare|E
+      maxFare: Kernel.Types.Common.mkAmountWithDefault maxFareAmount maxFare|E
+      currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
 
     toTType:
       updatedAt: Kernel.Prelude.Just|I
       isScheduled: Kernel.Prelude.Just|I
       tripCategory: Kernel.Prelude.Just|I
       farePolicyId: (Kernel.Types.Id.getId . (.id) <$>)
+      minFare:  Kernel.Prelude.roundToIntegral|I
+      minFareAmount: Kernel.Prelude.Just|I
+      currency: Kernel.Prelude.Just|I
+      maxFare:  Kernel.Prelude.roundToIntegral|I
+      maxFareAmount: Kernel.Prelude.Just|I
 
     queries:
       findById:
