@@ -1378,3 +1378,4 @@ getTE stringKey =
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "మీ కారు AC పని చేస్తుందా?"
         SET_THE_AC_ON_TO_ENABLE name -> name <> "ను సక్రియం చేయండి"
         ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK -> "అన్ని అర్హతలు ఎంచుకున్న వేరియంట్‌లు. దయచేసి తనిఖీ చేయండి"
+        TOP_AC_DRIVER -> "నమ్మ యాత్రిలో టాప్ AC డ్రైవర్ ఎలా ఉండాలో చూడండి"

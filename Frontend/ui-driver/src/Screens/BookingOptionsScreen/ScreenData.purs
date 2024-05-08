@@ -22,6 +22,7 @@ initData =
       { isBtnActive: false
       , downgraded: false
       , canSwitchToRental: false
+      , acExplanationPopup: false
       }
   }
 

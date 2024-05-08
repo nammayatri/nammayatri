@@ -804,7 +804,8 @@ type IndividualRideCardState =
     rideType :: String,
     tripStartTime :: Maybe String,
     tripEndTime :: Maybe String,
-    acRide :: Boolean
+    acRide :: Maybe Boolean,
+    vehicleServiceTier :: String
   }
 
 
@@ -1148,7 +1149,7 @@ type ActiveRide = {
   capacity :: Maybe Int,
   hasToll :: Boolean,
   estimatedTollCharge :: Maybe Int,
-  acRide :: Boolean
+  acRide :: Maybe Boolean
 }
 
 type HomeScreenProps =  {
@@ -1220,7 +1221,8 @@ type HomeScreenProps =  {
   odometerFileId :: Maybe String,
   odometerUploadAttempts :: Int,
   odometerImageUploading :: Boolean,
-  showAcWorkingPopup :: Boolean
+  showAcWorkingPopup :: Boolean,
+  acExplanationPopup :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -1353,7 +1355,8 @@ type TripDetailsScreenData =
     tripStartTime :: Maybe String,
     tripEndTime :: Maybe String,
     vehicleModel :: String,
-    acRide :: Boolean
+    acRide :: Maybe Boolean,
+    vehicleServiceTier :: String
   }
 
 type TripDetailsScreenProps =
@@ -1882,7 +1885,8 @@ type RidePreference = {
 type BookingOptionsScreenProps = {
   isBtnActive :: Boolean,
   downgraded :: Boolean,
-  canSwitchToRental :: Boolean
+  canSwitchToRental :: Boolean,
+  acExplanationPopup :: Boolean
 }
 
 data LeaderBoardType = Daily | Weekly
@@ -2325,7 +2329,7 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver
 
 derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
 instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow

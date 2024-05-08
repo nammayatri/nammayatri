@@ -294,7 +294,8 @@ rideListResponseTransformer list =
         rideType : ride.vehicleServiceTierName,
         tripStartTime : ride.tripStartTime,
         tripEndTime : ride.tripEndTime,
-        acRide : fromMaybe false ride.isVehicleAirConditioned
+        acRide : ride.isVehicleAirConditioned,
+        vehicleServiceTier : ride.vehicleServiceTier
       }) list
 
 
@@ -338,5 +339,6 @@ dummyCard =  {
     rideType : "",
     tripStartTime : Nothing,
     tripEndTime : Nothing,
-    acRide : false
+    acRide : Nothing,
+    vehicleServiceTier : ""
   }

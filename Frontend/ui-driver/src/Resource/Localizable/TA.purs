@@ -1378,3 +1378,4 @@ getTA stringKey =
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "உங்கள் கார் ஏசி இயக்கப்பட்டு வேலை செய்கிறதா?"
         SET_THE_AC_ON_TO_ENABLE name -> name <> " ஐ இயக்கவும்"
         ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK -> "அனைத்து தகுதியுள்ள வேரியன்ட்களைத் தேர்ந்தெடுக்கப்பட்டுள்ளன. தயவு செய்து சரிபார்க்கவும்"
+        TOP_AC_DRIVER -> "நம்ம யாத்ரியில் சிறந்த ஏசி டிரைவராக எப்படி இருக்க வேண்டும் என்பதைப் பார்க்கவும்"

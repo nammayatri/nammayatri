@@ -1377,3 +1377,4 @@ getKN stringKey =
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "ನಿಮ್ಮ ಕಾರ್ AC ಸುವರ್ಣಾವಸ್ಥೆಯಲ್ಲಿದೆಯೇ ಮತ್ತು ಕಾರ್ ಯಾವಾಗಲೂ ಚಾಲುತ್ತಿದೆಯೇ?"
         SET_THE_AC_ON_TO_ENABLE name -> name <> " ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಲು AC ಅನ್ ಮಾಡಿ"
         ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK -> "ಎಲ್ಲಾ ಅರ್ಹ ವ್ಯವಿಧಿಗಳನ್ನು ಆಯ್ಕೆಮಾಡಲಾಗಿದೆ. ದಯವಿಟ್ಟು ಪರಿಶೀಲಿಸಿ"
+        TOP_AC_DRIVER -> "ನಮ್ಮ ಯಾತ್ರಿಯಲ್ಲಿ ಉನ್ನತ AC ಡ್ರೈವರ್ ಆಗುವುದು ಹೇಗೆ ಎಂದು ನೋಡಿ"

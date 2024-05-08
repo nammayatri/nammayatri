@@ -23,6 +23,8 @@ import Data.String as DS
 import Mobility.Prelude as MP
 import Services.API as API
 import Data.Maybe as MB
+import Components.PopUpModal as PopUpModal
+import Screens.BookingOptionsScreen.ComponentConfig (topAcDriverPopUpConfig)
 
 screen :: ST.BookingOptionsScreenState -> Screen Action ST.BookingOptionsScreenState ScreenOutput
 screen initialState =
@@ -75,6 +77,7 @@ view push state =
                 ]
             ]
       ]
+    <> if state.props.acExplanationPopup then [ PopUpModal.view (push <<< TopAcDriverAction) (topAcDriverPopUpConfig state) ] else []
 
 acCheckForDriversView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 acCheckForDriversView push state =
@@ -103,12 +106,25 @@ acCheckForDriversView push state =
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           ]
-          [ textView
+          [ linearLayout
+            [ weight 1.0
+            , height WRAP_CONTENT
+            , gravity CENTER_VERTICAL
+            ][  textView
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
-              , weight 1.0
                 , color Color.black800
                 , text $ getString AC_CHECK_TITILE
+                ]
+              , imageView
+                [ width $ V 20
+                , height $ V 20
+                , margin $ MarginLeft 7
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_youtube"
+                , padding $ Padding 2 2 2 2
+                , rippleColor Color.rippleShade
+                , onClick push $ const $ ShowACVideoPopup
+                ]
             ]
           , linearLayout
               [ width $ V 40

@@ -59,6 +59,7 @@ import Timers as ET
 import Types.App (defaultGlobalState)
 import Mobility.Prelude
 import Common.Types.Config as CTC
+import Resource.Constants as RC
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -821,7 +822,7 @@ rideTierAndCapacity push config =
       , background Color.blue800
       , padding $ Padding 8 2 8 2
       , gravity CENTER_VERTICAL
-      , visibility $ boolToVisibility config.acRide
+      , visibility $ boolToVisibility $ Maybe.fromMaybe false config.acRide
       ][ imageView
           [ height $ V 16
           , width $ V 16
@@ -839,7 +840,7 @@ rideTierAndCapacity push config =
     , textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
-      , text $ serviceTierMapping config.serviceTierAndAC
+      , text $ RC.serviceTierMapping config.serviceTierAndAC config.acRide
       , color Color.black700
       , margin $ MarginLeft 6
       , padding $ PaddingBottom 1
@@ -1178,13 +1179,6 @@ getRideStartRemainingTimeTitle config =
       ST.Rental -> getVarString YOUR_RENTAL_RIDE_STARTS_IN time
       ST.Intercity -> getVarString YOUR_INTERCITY_RIDE_STARTS_IN time
       _ -> ""
-
-serviceTierMapping :: String -> String
-serviceTierMapping tierName = 
-  case tierName of
-    "AC Mini" -> "Mini"
-    name -> name
-  
 
 showRideStartRemainingTime :: Config -> Boolean
 showRideStartRemainingTime config = ((config.rideType == ST.Rental || config.rideType == ST.Intercity) && (getCurrentUTC "") < (Maybe.fromMaybe (getCurrentUTC "") config.rideScheduledTime)) && config.startRideActive

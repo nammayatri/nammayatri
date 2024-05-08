@@ -965,6 +965,7 @@ addVehicleDetailsflow addRcFromProf = do
           case registerDriverRCResp of
             Right (DriverRCResp resp) -> do
               void $ pure $ toast $ getString RC_ADDED_SUCCESSFULLY
+              modifyScreenState $ HomeScreenStateType $ \hss -> hss{ props {acExplanationPopup = true}}
               liftFlowBT $ logEvent logField_ "ny_driver_submit_rc_details"
               setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
               (GlobalState state') <- getState
@@ -1014,6 +1015,7 @@ addVehicleDetailsflow addRcFromProf = do
           case registerDriverRCResp of
             Right (DriverRCResp resp) -> do
               void $ pure $ toast $ getString RC_ADDED_SUCCESSFULLY
+              modifyScreenState $ HomeScreenStateType $ \hss -> hss{ props {acExplanationPopup = true}}
               liftFlowBT $ logEvent logField_ "ny_driver_submit_rc_details"
               setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
               (GlobalState state') <- getState
@@ -2375,7 +2377,8 @@ homeScreenFlow = do
                     rideType = response.vehicleServiceTierName,
                     tripStartTime = response.tripStartTime,
                     tripEndTime = response.tripEndTime,
-                    acRide = fromMaybe false response.isVehicleAirConditioned 
+                    acRide = response.isVehicleAirConditioned,
+                    vehicleServiceTier = response.vehicleServiceTier
                   }})
                 let payerVpa = fromMaybe "" response.payerVpa
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
@@ -3800,7 +3803,8 @@ driverEarningsFlow = do
       tripStartTime = selectedCard.tripStartTime,
       tripEndTime = selectedCard.tripEndTime,
       vehicleModel = selectedCard.vehicleModel,
-      acRide = selectedCard.acRide
+      acRide = selectedCard.acRide,
+      vehicleServiceTier = selectedCard.vehicleServiceTier
       }})
       tripDetailsScreenFlow
     LOAD_MORE_HISTORY state -> do
