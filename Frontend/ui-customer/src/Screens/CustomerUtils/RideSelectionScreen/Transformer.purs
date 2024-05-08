@@ -30,7 +30,7 @@ import Prelude (map, show, ($), (&&), (+), (-), (/=), (<>), (==), (||))
 import PrestoDOM.Types.Core (toPropValue)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getKmMeter, fetchVehicleVariant)
 import Resources.Localizable.EN (getEN)
-import Screens.Types (Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..), City(..))
+import Screens.Types (Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..), City(..), VehicleViewType(..))
 import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
 import Data.Ord (abs)
 import ConfigProvider
@@ -50,7 +50,7 @@ myRideListTransformerProp listRes =  filter (\item -> elem item.status $ map toP
   let
     rideApiEntity = fromMaybe dummyRideAPIEntity (ride.rideList !!0)
     imageInfo = case fetchVehicleVariant (rideApiEntity^._vehicleVariant) of
-                    Just variant -> split (Pattern ",") (getVehicleVariantImage $ show variant)
+                    Just variant -> split (Pattern ",") (getVehicleVariantImage (show variant) RIGHT_VIEW)
                     Nothing -> ["",""]
     imageName = fromMaybe "" $ imageInfo !!0
     imageUrl = fromMaybe "" $ imageInfo !!1

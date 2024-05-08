@@ -96,7 +96,7 @@ config =
   , searchResultType : QUOTES
   , isBookingOption : false
   , pickUpCharges : 0.0
-  , layoutMargin : MarginHorizontal 12 12
+  , layoutMargin : MarginHorizontal 0 0
   , tollCharge : 0.0
   , serviceTierShortDesc : Nothing
   , serviceTierName : Nothing

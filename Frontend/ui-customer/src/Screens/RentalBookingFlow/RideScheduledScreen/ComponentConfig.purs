@@ -20,6 +20,7 @@ import Components.GenericHeader.Controller as GenericHeader
 import Components.PrimaryButton.Controller as PrimaryButton
 import Components.SeparatorView.View as SeparatorView
 import Components.SourceToDestination.Controller as SourceToDestination
+import Components.PopUpModal as PopUpModal
 import Components.SelectListModal as CancelRidePopUpConfig
 import Data.Maybe (Maybe(..), maybe)
 import Font.Style (Style(..))
@@ -31,6 +32,7 @@ import Screens.Types (RideScheduledScreenState)
 import Styles.Colors as Color
 import Data.Array as DA
 import Data.String as DS
+import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (FareProductType(..)) as FPT
 
 primaryButtonConfig :: RideScheduledScreenState -> PrimaryButton.Config
@@ -169,3 +171,44 @@ cancelRidePopUpConfig state =
           }
         , config = state.data.config
         }
+  
+cancelScheduledRideConfig :: RideScheduledScreenState -> PopUpModal.Config
+cancelScheduledRideConfig state = PopUpModal.config
+        { optionButtonOrientation = "VERTICAL"
+        , buttonLayoutMargin = Margin 24 0 24 20
+        , gravity = CENTER
+        , margin = MarginHorizontal 20 20
+        , primaryText
+          { text = getString CANCEL_SCHEDULED_RIDE
+          , margin = Margin 16 16 16 10
+          , textStyle = Heading2
+          }
+        , secondaryText
+          { text = getString CANCEL_SCHEDULED_RIDE_DESC
+          , margin = MarginHorizontal 16 16
+          }
+        , option1
+          { text = getString CONFIRM_CANCELLATION
+          , color = Color.yellow900
+          , background = Color.black900
+          , width = MATCH_PARENT
+          , margin = MarginVertical 20 10
+          , enableRipple = true
+          }
+        , option2
+          { text = getString DISMISS
+          , color = Color.black900
+          , background = Color.white900
+          , strokeColor = Color.transparent
+          , width = MATCH_PARENT
+          , enableRipple = true
+          , margin = MarginBottom 0
+          }
+        , cornerRadius = Corners 15.0 true true true true
+        , coverImageConfig
+          { visibility = GONE
+          }
+        , backgroundClickable = false
+        }
+
+  

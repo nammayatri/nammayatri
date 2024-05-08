@@ -527,7 +527,8 @@ newtype RentalSearchReq = RentalSearchReq {
   stops :: Maybe (Array SearchReqLocation),
   estimatedRentalDistance :: Int,
   estimatedRentalDuration :: Int,
-  startTime :: String
+  startTime :: String,
+  isReallocationEnabled :: Maybe Boolean
 }
 
 derive instance genericContentType :: Generic ContentType _

@@ -17,7 +17,7 @@ module Components.LocationTagBarV2.View where
 
 import Components.LocationTagBarV2.Controller(Action(..), LocationTagBarConfig, TagConfig )
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM (PrestoDOM, Length(..), Padding(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Margin(..), Gravity(..), alignItems, linearLayout, height, width, background, stroke, cornerRadius, padding, imageView, imageWithFallback, textView, text, textSize, color, flexBoxLayout, flexDirection, justifyContent, flexWrap, margin, flexWrap, onClick, weight, gravity, rippleColor)
+import PrestoDOM (PrestoDOM, Length(..), Padding(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Margin(..), Gravity(..), Visibility(..),  alignItems, linearLayout, height, width, background, stroke, cornerRadius, padding, imageView, imageWithFallback, textView, text, textSize, color, flexBoxLayout, flexDirection, justifyContent, flexWrap, margin, flexWrap, onClick, weight, gravity, rippleColor, orientation, visibility)
 import PrestoDOM.Properties (cornerRadii)
 import Engineering.Helpers.Commons (screenWidth)
 import Prelude(Unit, map, unit, ($), (<>), (-), (==), const)
@@ -26,6 +26,9 @@ import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App (LazyCheck(..))
+import Mobility.Prelude (boolToVisibility)
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 view :: forall w. (Action -> Effect Unit) -> LocationTagBarConfig -> PrestoDOM (Effect Unit) w 
 view push state = let 
@@ -56,15 +59,33 @@ tagView item isLast push =
       , onClick push $ const $ TagClicked item.id
       , padding item.padding
       , margin $ MarginRight rightMargin
-      ] <> (if item.enableRipple then [rippleColor item.rippleColor] else []))[  imageView 
+      ] <> (if item.enableRipple then [rippleColor item.rippleColor] else []))[
+        linearLayout[
+          height MATCH_PARENT
+        , width MATCH_PARENT
+        , gravity CENTER
+        , orientation item.orientation
+        ][
+          linearLayout[height WRAP_CONTENT, width WRAP_CONTENT
+        , background item.bannerConfig.background
+        , cornerRadii item.bannerConfig.cornerRadii
+        , visibility $ item.showBanner
+        ][  textView $
+            [ text item.bannerConfig.text
+            , textSize item.bannerConfig.textSize 
+            , color item.bannerConfig.color
+            , padding $ PaddingHorizontal 8 8
+            ] <> (FontStyle.getFontStyle item.bannerConfig.fontStyle LanguageStyle)
+        ]
+        , imageView 
             [ height imageConfig.height
             , width imageConfig.width
             , imageWithFallback imageConfig.imageWithFallback
-            , margin $ MarginRight 5
+            , margin $ imageConfig.margin
             ]
         , textView $
             [ text textConfig.text
             , textSize textConfig.fontSize
             , color textConfig.color 
             ] <> (FontStyle.getFontStyle textConfig.fontStyle LanguageStyle)
-      ]
+      ]]
