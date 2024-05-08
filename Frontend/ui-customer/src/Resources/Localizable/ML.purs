@@ -1237,3 +1237,8 @@ getML stringKey =
         RENTAL_CHARGES -> "വാടക ചാർജുകൾ"
         RENTAL_INFO_POLICY_DESC -> "&#8226; ഓരോ റെന്റൽ ബുക്കിങ്ങിനും ഒരു മണിക്കൂരയ്ക്ക് 10 കിലോമീറ്റർ അടിപ്പടി ലഭിക്കും.<br><br>&#8226; വളരെ കുറഞ്ഞ വിലയിൽ താഴെ വിസ്തരിക്കുകയാണ് എല്ലാ തിരഞ്ഞെടുപ്പുകളിലും അടുത്ത റെന്റൽ കാലാവധി വിസ്തരിച്ച് കിലോമീറ്റർ കൂട്ടാം."
         RENTAL_SCREEN_EXPLAINER includedKm -> includedKm <> " is included per hour of booking.Extra km and minutes will be charged as per fare policy of respective vehicle."
+        INSTANT -> "തൽക്ഷണം"
+        COMING_SOON -> "ഉടൻ വരുന്നു!"
+        CANCEL_SCHEDULED_RIDE -> "ഷെഡ്യൂൾ ചെയ്ത റൈഡ് റദ്ദാക്കുക"
+        CANCEL_SCHEDULED_RIDE_DESC -> "ഈ റൈഡ് റദ്ദാക്കണമെന്ന് തീർച്ചയാണോ?<br><br>(ഒന്നിലധികം റദ്ദാക്കലുകൾ നിങ്ങളെ കൂടുതൽ വാടക റൈഡുകൾ അഭ്യർത്ഥിക്കുന്നതിൽ നിന്ന് തടഞ്ഞേക്കാം)"
+        CONFIRM_CANCELLATION -> "റദ്ദാക്കൽ സ്ഥിരീകരിക്കുക"

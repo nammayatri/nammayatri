@@ -67,6 +67,7 @@ locationTagBarConfig state globalProps =
               { height : V 16
               , width : V 16
               , imageWithFallback : item.image
+              , margin : MarginRight 5
               } ,
             textConfig : 
               { text : item.text
@@ -77,12 +78,22 @@ locationTagBarConfig state globalProps =
             stroke : "1," <> Color.grey900 ,
             cornerRadius : Corners 8.0 true true true true ,
             background : Color.white900 ,
+            orientation : HORIZONTAL ,
             height : WRAP_CONTENT ,
             width : WRAP_CONTENT,
             padding : Padding 8 8 8 8 ,
             id : item.id,
             enableRipple : false,
-            rippleColor : Color.rippleShade
+            rippleColor : Color.rippleShade,
+            bannerConfig : {
+              text : "Favourites",
+              color : Color.white900,
+              fontStyle : FontStyle.Body1,
+              textSize : FontSize.a_14,
+              cornerRadii : Corners 8.0 true true false false,
+              background : Color.blue800
+            },
+            showBanner : GONE
           })
         [ { image : home.image, text : home.text, id : home.id },
           { image : work.image, text : work.text, id : work.id },

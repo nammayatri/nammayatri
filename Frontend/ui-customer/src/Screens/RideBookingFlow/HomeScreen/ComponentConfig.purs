@@ -23,7 +23,7 @@ import Mobility.Prelude
 import Prelude
 import PrestoDOM
 
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
 import Accessor (_fareBreakup, _description, _rideEndTime, _amount)
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
@@ -82,12 +82,12 @@ import JBridge as JB
 import Language.Types (STR(..))
 import LocalStorage.Cache (getValueFromCache)
 import MerchantConfig.Utils as MU
-import PrestoDOM (Accessiblity(..))
+import PrestoDOM (Accessiblity(..), Orientation(..), Visibility(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getKmMeter, emergencyContactInitialChatSuggestionId)
 import Resources.Localizable.EN (getEN)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
-import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..))
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), VehicleViewType(..))
 import Screens.Types (FareProductType(..)) as FPT
 import Screens.Types as ST
 import Services.API as API
@@ -117,6 +117,7 @@ import Resources.Constants (dummyPrice)
 import Data.String.CodeUnits (stripPrefix, stripSuffix)
 import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig)
 import Helpers.TipConfig
+import Debug
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -427,10 +428,11 @@ rentalBannerConfig :: ST.HomeScreenState -> Banner.Config
 rentalBannerConfig state =
   let
     config = Banner.config
+    _ = spy "INside rentaBannerConfig"  $ HU.getVehicleVariantImage (maybe "" (\item -> item.vehicleVariant) state.data.rentalsInfo) LEFT_VIEW
     config' = config
       {
-        backgroundColor = Color.blue600
-      , stroke = "1," <> Color.grey900
+        backgroundColor = Color.moonCreme
+      , stroke = "0," <> Color.grey900
       , imageHeight = V 45
       , imageWidth = V 66
       , imagePadding = PaddingVertical 0 0
@@ -443,11 +445,12 @@ rentalBannerConfig state =
                                                         else YOU_HAVE_UPCOMING_RENTAL_BOOKING
                                 getString $ bookingInfoString $ EHC.convertUTCtoISC timeUTC "D" <> " " <> EHC.convertUTCtoISC timeUTC "MMMM" <> " " <> EHC.convertUTCtoISC timeUTC "YYYY" <> " , " <> EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"
                           ) state.data.rentalsInfo)
-      , titleColor = Color.blue800
+      , titleColor = Color.black900
       , actionTextVisibility = false
       , cornerRadius = 8.0
-      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_rental_booking"
+      , imageUrl = fetchImage FF_COMMON_ASSET $ HU.getVehicleVariantImage (maybe "" (\item -> item.vehicleVariant) state.data.rentalsInfo) LEFT_VIEW--fetchImage FF_COMMON_ASSET "ny_ic_rental_booking"
       , imageMargin = MarginRight 0
+      , padding = Padding 0 0 0 0
       }
   in config'
 
@@ -681,6 +684,30 @@ logOutPopUpModelConfig state =
           },
           cornerRadius = (Corners 15.0 true true false false)
       }
+    ST.CancelConfirmingQuotes -> 
+      let
+        config' = PopUpModal.config
+        popUpConfig' =
+          config'
+            { primaryText { text = (getString CANCEL_SEARCH) <> " ?" }
+            , secondaryText { text = (getString CANCEL_ONGOING_SEARCH) }
+            , option1 {
+                background = state.data.config.popupBackground
+              , strokeColor = state.data.config.primaryBackground
+              , color = state.data.config.primaryBackground
+              , text = (getString NO_DONT)
+              , enableRipple = true
+              }
+            , option2 {
+                color = state.data.config.primaryTextColor
+              , strokeColor = state.data.config.primaryBackground
+              , background = state.data.config.primaryBackground
+              , text = (getString YES_CANCEL_SEARCH)
+              , enableRipple = true
+              }
+            }
+      in
+        popUpConfig'
     _ ->
       let
         isNormalRide = not (DA.any (_ == state.data.fareProductType) [FPT.INTER_CITY, FPT.RENTAL]) 
@@ -1410,7 +1437,6 @@ chooseYourRideConfig state =
     bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city == Bangalore,
     flowWithoutOffers = state.props.flowWithoutOffers,
     intercity = isIntercity,
-    enableSingleEstimate = state.data.config.enableSingleEstimate,
     selectedEstimateHeight = state.props.selectedEstimateHeight,
     zoneType = state.props.zoneType.sourceTag,
     tipViewProps = getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant ,
@@ -1586,7 +1612,7 @@ chooseVehicleConfig state = let
   config = ChooseVehicle.config
   selectedEstimates = state.data.selectedEstimatesObject
   chooseVehicleConfig' = config
-    { vehicleImage = HU.getVehicleVariantImage selectedEstimates.vehicleVariant
+    { vehicleImage = HU.getVehicleVariantImage selectedEstimates.vehicleVariant RIGHT_VIEW
     , isSelected = true
     , vehicleVariant = selectedEstimates.vehicleVariant
     , vehicleType = selectedEstimates.vehicleType
@@ -1685,7 +1711,6 @@ rideCompletedCardConfig state =
         , visibility = boolToVisibility $ (actualTollCharge > 0.0 || (getValueToLocalStore HAS_TOLL_CHARGES == "true")) && serviceTier /= "Auto"
         , image = fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
         , imageVisibility = boolToVisibility $ actualTollCharge > 0.0},
-        serviceTierAndAC = serviceTier,
         showRentalRideDetails = state.data.fareProductType == FPT.RENTAL,
         rentalBookingData {
           baseDuration = state.data.driverInfoCardState.rentalData.baseDuration
@@ -1872,28 +1897,41 @@ locationTagBarConfig state  = let
       map 
         (\item -> 
           { imageConfig : 
-              { height : V 20
-              , width : V 20
+              { height : V 32
+              , width : V 32
               , imageWithFallback : fetchImage FF_ASSET item.image
+              , margin : MarginBottom 6
               } ,
             textConfig : 
               { text : item.text
-              , fontStyle : FontStyle.Body1
+              , fontStyle : FontStyle.SubHeading1
               , fontSize : FontSize.a_14
               , color : Color.black800
               },
-            stroke : "1," <> Color.grey700 ,
+            stroke : "0," <> Color.grey700 ,
             cornerRadius : Corners 19.0 true true true true ,
-            background : Color.transparent ,
-            height : WRAP_CONTENT ,
+            background : item.background ,
+            height :  WRAP_CONTENT ,
             width : WRAP_CONTENT,
-            padding : Padding 8 8 8 8 ,
+            padding : Padding 8 0 8 8 ,
+            orientation : VERTICAL,
             enableRipple : true,
             rippleColor : Color.rippleShade,
+            bannerConfig : {
+              text : getString COMING_SOON,
+              color : Color.white900,
+              fontStyle : FontStyle.Body1,
+              textSize : FontSize.a_12,
+              cornerRadii : Corners 16.0 false false true true,
+              background : Color.blue800
+            },
+            showBanner : item.showBanner,
             id : item.id
           })
-        [ { image : "ny_ic_intercity", text : (getString INTER_CITY_), id : "INTER_CITY" },
-          { image : "ny_ic_rental" , text : (getString RENTALS_), id : "RENTALS" }] --,
+        [ { image : "ny_ic_instant", text : (getString INSTANT), id : "INSTANT", background : Color.lightMintGreen , showBanner : INVISIBLE},
+          { image : "ny_ic_rental" , text : (getString RENTALS_), id : "RENTALS" , background : Color.moonCreme, showBanner : INVISIBLE},
+          { image : "ny_ic_intercity", text : (getString INTER_CITY_), id : "INTER_CITY" , background: Color.blue600' , showBanner : VISIBLE }
+          ] 
           -- { image : "ny_ic_ambulance", text : "Ambulance", id : "AMBULANCE" }]
   in 
     { tagList : locTagList }

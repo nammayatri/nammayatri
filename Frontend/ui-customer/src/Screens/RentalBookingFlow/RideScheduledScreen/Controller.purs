@@ -20,8 +20,8 @@ import Components.GenericHeader.Controller as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.SourceToDestination.Controller as SourceToDestinationActionController
 import Components.SelectListModal.Controller as CancelRidePopUp
+import Components.PopUpModal.Controller as PopUpModalController
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
-import Resources.Constants (cancelReasons)
 import Data.Array ((!!), head)
 import Log (trackAppActionClick, trackAppEndScreen)
 import Prelude
@@ -62,10 +62,10 @@ data Action
   | CancelRide
   | AddFirstStop
   | GenericHeaderAC GenericHeaderController.Action
-  | CancelRidePopUpAction CancelRidePopUp.Action
   | GetBookingList RideBookingListRes
   | CheckFlowStatusAction
   | GoBack
+  | CancelRideActionController PopUpModalController.Action
 
 data ScreenOutput = GoToHomeScreen RideScheduledScreenState
                   | GoToSearchLocationScreen RideScheduledScreenState
@@ -86,29 +86,18 @@ eval (SourceToDestinationAC (SourceToDestinationActionController.DestinationClic
 
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [pure GoBack]
 
-eval CancelRide state = continue state{ props{isCancelRide = true}, data{cancellationReasons = cancelReasons ""}}
+eval CancelRide state = continue state{ props{isCancelRide = true}, data{cancellationReasons = cancelReasons false}}
 
-eval (CancelRidePopUpAction (CancelRidePopUp.Button1 PrimaryButtonController.OnClick)) state = do 
-  void $ pure $ performHapticFeedback unit 
-  continue state{props{isCancelRide = false}}
+eval (CancelRideActionController (PopUpModalController.OnButton1Click)) state = exit $ CancelRentalRide state
 
-eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnClick)) state = do
-  void $ pure $ performHapticFeedback unit
-  let newState = state{props{isCancelRide = false}}
-  case state.props.cancelRideActiveIndex of
-    Just index -> if ( (fromMaybe dummyCancelReason (state.data.cancellationReasons !! index)).reasonCode == "OTHER" || (fromMaybe dummyCancelReason (state.data.cancellationReasons !! index)).reasonCode == "TECHNICAL_GLITCH" ) then exit $ CancelRentalRide newState{props{cancelDescription = if (newState.props.cancelDescription == "") then (fromMaybe dummyCancelReason (state.data.cancellationReasons !!index)).description else newState.props.cancelDescription }}
-                    else exit $ CancelRentalRide newState{props{cancelDescription = (fromMaybe dummyCancelReason (state.data.cancellationReasons !!index)).description , cancelReasonCode = (fromMaybe dummyCancelReason (state.data.cancellationReasons !! index)).reasonCode }}
-    Nothing    -> continue state
-
-eval (CancelRidePopUpAction (CancelRidePopUp.OnGoBack)) state = continue state { props { isCancelRide = false } }
-
-eval (CancelRidePopUpAction (CancelRidePopUp.UpdateIndex index)) state = continue state { props { cancelRideActiveIndex = Just index, cancelReasonCode = (fromMaybe dummyCancelReason (state.data.cancellationReasons !! index)).reasonCode } }
-
-eval (CancelRidePopUpAction (CancelRidePopUp.TextChanged valId newVal)) state = continue state { props { cancelDescription = newVal } }
-
-eval (CancelRidePopUpAction (CancelRidePopUp.ClearOptions)) state = do
-  void $ pure $ hideKeyboardOnNavigation true
-  continue state { props { cancelDescription = "", cancelReasonCode = "", cancelRideActiveIndex = Nothing } }
+eval (CancelRideActionController (PopUpModalController.OnButton2Click)) state = continue state{props{isCancelRide = false}}
+-- eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnClick)) state = do
+--   void $ pure $ performHapticFeedback unit
+--   let newState = state{props{isCancelRide = false}}
+--   case state.props.cancelRideActiveIndex of
+--     Just index -> if ( (fromMaybe dummyCancelReason (state.data.cancellationReasons !! index)).reasonCode == "OTHER" || (fromMaybe dummyCancelReason (state.data.cancellationReasons !! index)).reasonCode == "TECHNICAL_GLITCH" ) then exit $ CancelRentalRide newState{props{cancelDescription = if (newState.props.cancelDescription == "") then (fromMaybe dummyCancelReason (state.data.cancellationReasons !!index)).description else newState.props.cancelDescription }}
+--                     else exit $ CancelRentalRide newState{props{cancelDescription = (fromMaybe dummyCancelReason (state.data.cancellationReasons !!index)).description , cancelReasonCode = (fromMaybe dummyCancelReason (state.data.cancellationReasons !! index)).reasonCode }}
+--     Nothing    -> continue state
 
 eval (GetBookingList resp) state =
   let (RideBookingListRes listResp) = resp

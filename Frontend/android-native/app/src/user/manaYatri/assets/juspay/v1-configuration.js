@@ -225,31 +225,38 @@ window.getMerchantConfig = function () {
       , "variantInfo" : {
         "hatchback" : {
           "name" : "Hatchback",
-          "image" : "ny_ic_hatchback,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_hatchback-2.png"
+          "image" : "ny_ic_hatchback,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_hatchback-2.png",
+          "leftViewImage" : "ny_ic_hatchback_left_view,"
           },
         "taxiPlus" : {
           "name" : "AC Taxi",
-          "image" : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan_ac.png"
+          "image" : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan_ac.png",
+          "leftViewImage" : "ny_ic_sedan_left_view,"
         },
         "sedan" : {
           "name" : "Sedan",
-          "image" : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
+          "image" : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png",
+          "leftViewImage" : "ny_ic_sedan_left_view,"
         },
         "taxi" : {
           "name" : "Non-AC Taxi",
-          "image" : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
+          "image" : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png",
+          "leftViewImage" : "ny_ic_sedan_left_view,"
         },
         "suv" : {
           "name" : "SUV",
-          "image" : "ny_ic_suv,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_suv.png"
+          "image" : "ny_ic_suv,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_suv.png",
+          "leftViewImage" : "ny_ic_suv_left_view,"
         },
         "autoRickshaw" : {
           "name" : "Auto Rickshaw",
-          "image" : "ny_ic_single_estimate_auto,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_single_estimate_auto.png"
+          "image" : "ny_ic_single_estimate_auto,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_single_estimate_auto.png",
+          "leftViewImage" : "ny_ic_auto_left_view,"
         },
         "bookAny" : {
           "name" : "Book Any",
-          "image" : "ny_ic_auto_cab_yellow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_cab_yellow.png"
+          "image" : "ny_ic_auto_cab_yellow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_cab_yellow.png",
+          "leftViewImage" : ","
         },
       }
       , "enableOnlyAuto" : true

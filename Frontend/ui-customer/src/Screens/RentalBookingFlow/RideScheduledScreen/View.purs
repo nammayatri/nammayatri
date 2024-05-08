@@ -7,7 +7,7 @@ import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader.View as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination.View as SourceToDestinationView
-import Components.SelectListModal as CancelRidePopUp
+import Components.PopUpModal as PopUpModal
 import Data.Array (singleton, head)
 import Data.Either (Either(..))
 import Data.Maybe (maybe, fromMaybe, Maybe(..))
@@ -25,7 +25,7 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom, singleLine)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import Screens.RentalBookingFlow.RideScheduledScreen.ComponentConfig (primaryButtonConfig, sourceToDestinationConfig, genericHeaderConfig, cancelRidePopUpConfig)
+import Screens.RentalBookingFlow.RideScheduledScreen.ComponentConfig (primaryButtonConfig, sourceToDestinationConfig, genericHeaderConfig, cancelScheduledRideConfig)
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.Types (RideScheduledScreenState)
@@ -350,4 +350,4 @@ cancelRidePopUpView push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     -- , accessibility DISABLE
-    ][ CancelRidePopUp.view (push <<< CancelRidePopUpAction) (cancelRidePopUpConfig state)]
+    ][ PopUpModal.view (push <<< CancelRideActionController) (cancelScheduledRideConfig state) ]

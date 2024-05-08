@@ -23,7 +23,7 @@ import Engineering.Helpers.LogEvent
 import Locale.Utils
 import Prelude
 
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt, _fareProductType, _stopLocation)
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt, _fareProductType, _stopLocation)
 import Common.Types.App (LazyCheck(..), Paths)
 import Components.ChooseVehicle (Config, config, SearchType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (config) as QLI
@@ -50,7 +50,7 @@ import Presto.Core.Types.Language.Flow (getLogFields)
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData)
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, VehicleViewType(..))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..))
 import Services.Backend as Remote
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
@@ -76,13 +76,13 @@ import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 import Common.Types.App as CT
 import Helpers.RateCardUtils (getFareBreakupList)
 import Data.Tuple as DT
-import Screens.RideBookingFlow.HomeScreen.Config (getTipConfig)
 import Data.Foldable (maximum)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType, dummyRentalBookingConfig)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails, dummyIndividualCard)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, Stage(..))
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, Stage(..))
 import Storage (isLocalStageOn)
 import Screens.Types (FareProductType(..)) as FPT
+import Helpers.TipConfig
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -143,7 +143,7 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
           , vehicleType : quoteEntity.vehicleVariant
           , driverName : quoteDetails.driverName
           , selectedQuote : Nothing
-          , vehicleImage : getVehicleVariantImage quoteEntity.vehicleVariant
+          , vehicleImage : getVehicleVariantImage quoteEntity.vehicleVariant RIGHT_VIEW
           , serviceTierName : quoteEntity.serviceTierName
           , appConfig : getAppConfig appConfig
           , city : city
@@ -378,7 +378,7 @@ transformQuote quote index =
   where
     estimatesConfig = (getAppConfig appConfig).estimateAndQuoteConfig
     createConfig (QuoteAPIEntity quoteEntity) = ChooseVehicle.config {
-      vehicleImage = getVehicleVariantImage quoteEntity.vehicleVariant
+      vehicleImage = getVehicleVariantImage quoteEntity.vehicleVariant RIGHT_VIEW
     , isSelected = (index == 0)
     , vehicleVariant = quoteEntity.vehicleVariant
     , price = (getCurrency appConfig) <> (show quoteEntity.estimatedTotalFare)
@@ -388,7 +388,7 @@ transformQuote quote index =
     , capacity = getVehicleCapacity quoteEntity.vehicleVariant
     , showInfo = estimatesConfig.showInfoIcon
     , searchResultType = ChooseVehicle.QUOTES
-    , pickUpCharges = 0
+    , pickUpCharges = 0.0
     , serviceTierName = quoteEntity.serviceTierName
     , serviceTierShortDesc = quoteEntity.serviceTierShortDesc
     , airConditioned = Nothing
@@ -548,7 +548,7 @@ getEstimates (EstimateAPIEntity estimate) estimates index isFareRange count acti
       selectedServices = if estimate.vehicleVariant == "BOOK_ANY" then intersection allSelectedServices availableServices else []
   in
     ChooseVehicle.config
-      { vehicleImage = getVehicleVariantImage estimate.vehicleVariant
+      { vehicleImage = getVehicleVariantImage estimate.vehicleVariant RIGHT_VIEW
       , vehicleVariant = estimate.vehicleVariant
       , price = case estimate.totalFareRange of
                 Nothing -> currency <> (show estimate.estimatedTotalFare)
