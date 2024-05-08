@@ -24,7 +24,7 @@ import Dashboard.Common as Reexport
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess (APISuccess)
-import Kernel.Types.Common (HighPrecMoney)
+import Kernel.Types.Common (HighPrecMoney, PriceAPIEntity)
 import Kernel.Types.Id
 import Servant hiding (Summary)
 
@@ -127,6 +127,7 @@ instance HideSecrets CustomerCancellationDuesSyncReq where
 
 data CustomerCancellationDuesSyncReq = CustomerCancellationDuesSyncReq
   { cancellationCharges :: Maybe HighPrecMoney,
+    cancellationChargesWithCurrency :: Maybe PriceAPIEntity,
     disputeChancesUsed :: Maybe Int,
     paymentMadeToDriver :: Bool
   }
@@ -143,6 +144,7 @@ type GetCancellationDuesDetailsAPI =
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
   { cancellationDues :: HighPrecMoney,
+    cancellationDuesWithCurrency :: Maybe PriceAPIEntity,
     disputeChancesUsed :: Int,
     canBlockCustomer :: Maybe Bool
   }

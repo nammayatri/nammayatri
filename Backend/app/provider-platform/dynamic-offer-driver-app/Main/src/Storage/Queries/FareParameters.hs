@@ -48,15 +48,24 @@ updateFareParameters :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FareParam
 updateFareParameters FareParameters {..} = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamFP.driverSelectedFare driverSelectedFare,
-      Se.Set BeamFP.customerExtraFee customerExtraFee,
-      Se.Set BeamFP.serviceCharge serviceCharge,
-      Se.Set BeamFP.govtCharges govtCharges,
+    [ Se.Set BeamFP.driverSelectedFare $ roundToIntegral <$> driverSelectedFare,
+      Se.Set BeamFP.driverSelectedFareAmount driverSelectedFare,
+      Se.Set BeamFP.customerExtraFee $ roundToIntegral <$> customerExtraFee,
+      Se.Set BeamFP.customerExtraFeeAmount customerExtraFee,
+      Se.Set BeamFP.serviceCharge $ roundToIntegral <$> serviceCharge,
+      Se.Set BeamFP.serviceChargeAmount serviceCharge,
+      Se.Set BeamFP.govtCharges $ roundToIntegral <$> govtCharges,
+      Se.Set BeamFP.govtChargesAmount govtCharges,
       Se.Set BeamFP.nightShiftRateIfApplies nightShiftRateIfApplies,
-      Se.Set BeamFP.baseFare baseFare,
-      Se.Set BeamFP.waitingCharge waitingCharge,
-      Se.Set BeamFP.rideExtraTimeFare rideExtraTimeFare,
-      Se.Set BeamFP.nightShiftCharge nightShiftCharge,
+      Se.Set BeamFP.baseFare $ roundToIntegral baseFare,
+      Se.Set BeamFP.baseFareAmount $ Just baseFare,
+      Se.Set BeamFP.waitingCharge $ roundToIntegral <$> waitingCharge,
+      Se.Set BeamFP.waitingChargeAmount waitingCharge,
+      Se.Set BeamFP.rideExtraTimeFare $ roundToIntegral <$> rideExtraTimeFare,
+      Se.Set BeamFP.rideExtraTimeFareAmount rideExtraTimeFare,
+      Se.Set BeamFP.nightShiftCharge $ roundToIntegral <$> nightShiftCharge,
+      Se.Set BeamFP.nightShiftChargeAmount nightShiftCharge,
+      Se.Set BeamFP.currency $ Just currency,
       Se.Set BeamFP.updatedAt (Just now)
     ]
     [Se.Is BeamFP.id (Se.Eq id.getId)]
@@ -64,15 +73,15 @@ updateFareParameters FareParameters {..} = do
 findAllLateNightRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m Int
 findAllLateNightRides fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds, Se.Is BeamFP.nightShiftCharge $ Se.Not $ Se.Eq Nothing] <&> length
 
-findDriverSelectedFareEarnings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m Int
+findDriverSelectedFareEarnings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m HighPrecMoney
 findDriverSelectedFareEarnings fareParamIds = do
   dsEarnings <- findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParamIds] <&> (driverSelectedFare <$>)
-  pure $ sum (getMoney <$> catMaybes dsEarnings)
+  pure $ sum (catMaybes dsEarnings)
 
-findCustomerExtraFees :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m Int
+findCustomerExtraFees :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m HighPrecMoney
 findCustomerExtraFees fareParamIds = do
   csFees <- findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParamIds] <&> (customerExtraFee <$>)
-  pure $ sum (getMoney <$> catMaybes csFees)
+  pure $ sum (catMaybes csFees)
 
 instance FromTType' BeamFP.FareParameters FareParameters where
   fromTType' BeamFP.FareParametersT {..} = do
@@ -100,19 +109,20 @@ instance FromTType' BeamFP.FareParameters FareParameters where
           Just
             FareParameters
               { id = Id id,
-                driverSelectedFare = driverSelectedFare,
-                customerExtraFee = customerExtraFee,
-                serviceCharge = serviceCharge,
+                driverSelectedFare = mkAmountWithDefault driverSelectedFareAmount <$> driverSelectedFare,
+                customerExtraFee = mkAmountWithDefault customerExtraFeeAmount <$> customerExtraFee,
+                serviceCharge = mkAmountWithDefault serviceChargeAmount <$> serviceCharge,
                 parkingCharge = parkingCharge,
                 nightShiftRateIfApplies = nightShiftRateIfApplies,
-                govtCharges = govtCharges,
-                baseFare = baseFare,
-                waitingCharge = waitingCharge,
-                rideExtraTimeFare = rideExtraTimeFare,
-                nightShiftCharge = nightShiftCharge,
+                govtCharges = mkAmountWithDefault govtChargesAmount <$> govtCharges,
+                baseFare = mkAmountWithDefault baseFareAmount baseFare,
+                waitingCharge = mkAmountWithDefault waitingChargeAmount <$> waitingCharge,
+                rideExtraTimeFare = mkAmountWithDefault rideExtraTimeFareAmount <$> rideExtraTimeFare,
+                nightShiftCharge = mkAmountWithDefault nightShiftChargeAmount <$> nightShiftCharge,
+                currency = fromMaybe INR currency,
                 fareParametersDetails,
                 customerCancellationDues = customerCancellationDues,
-                congestionCharge = congestionCharge,
+                congestionCharge = mkAmountWithDefault congestionChargeAmount <$> congestionCharge,
                 tollCharges = tollCharges,
                 updatedAt = fromMaybe now updatedAt
               }
@@ -122,19 +132,29 @@ instance ToTType' BeamFP.FareParameters FareParameters where
   toTType' FareParameters {..} = do
     BeamFP.FareParametersT
       { BeamFP.id = getId id,
-        BeamFP.driverSelectedFare = driverSelectedFare,
-        BeamFP.customerExtraFee = customerExtraFee,
-        BeamFP.serviceCharge = serviceCharge,
+        BeamFP.driverSelectedFare = roundToIntegral <$> driverSelectedFare,
+        BeamFP.customerExtraFee = roundToIntegral <$> customerExtraFee,
+        BeamFP.serviceCharge = roundToIntegral <$> serviceCharge,
         BeamFP.parkingCharge = parkingCharge,
-        BeamFP.govtCharges = govtCharges,
+        BeamFP.govtCharges = roundToIntegral <$> govtCharges,
+        BeamFP.driverSelectedFareAmount = driverSelectedFare,
+        BeamFP.customerExtraFeeAmount = customerExtraFee,
+        BeamFP.serviceChargeAmount = serviceCharge,
+        BeamFP.govtChargesAmount = govtCharges,
         BeamFP.nightShiftRateIfApplies = nightShiftRateIfApplies,
-        BeamFP.baseFare = baseFare,
-        BeamFP.waitingCharge = waitingCharge,
-        BeamFP.rideExtraTimeFare = rideExtraTimeFare,
-        BeamFP.nightShiftCharge = nightShiftCharge,
+        BeamFP.baseFare = roundToIntegral baseFare,
+        BeamFP.waitingCharge = roundToIntegral <$> waitingCharge,
+        BeamFP.rideExtraTimeFare = roundToIntegral <$> rideExtraTimeFare,
+        BeamFP.nightShiftCharge = roundToIntegral <$> nightShiftCharge,
+        BeamFP.baseFareAmount = Just baseFare,
+        BeamFP.waitingChargeAmount = waitingCharge,
+        BeamFP.rideExtraTimeFareAmount = rideExtraTimeFare,
+        BeamFP.nightShiftChargeAmount = nightShiftCharge,
         BeamFP.fareParametersType = getFareParametersType $ FareParameters {..},
         BeamFP.customerCancellationDues = customerCancellationDues,
         BeamFP.tollCharges = tollCharges,
-        BeamFP.congestionCharge = congestionCharge,
+        BeamFP.congestionCharge = roundToIntegral <$> congestionCharge,
+        BeamFP.congestionChargeAmount = congestionCharge,
+        BeamFP.currency = Just currency,
         BeamFP.updatedAt = Just updatedAt
       }

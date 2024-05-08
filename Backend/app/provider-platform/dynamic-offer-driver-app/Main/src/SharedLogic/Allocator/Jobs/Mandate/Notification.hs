@@ -134,7 +134,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         { driverId = driverFee_.driverId,
           mandateId = mandateId_,
           driverFeeId = driverFee_.id,
-          amount = roundToHalf $ (fromIntegral driverFee_.govtCharges) + driverFee_.platformFee.fee + driverFee_.platformFee.cgst + driverFee_.platformFee.sgst
+          amount = roundToHalf $ driverFee_.govtCharges + driverFee_.platformFee.fee + driverFee_.platformFee.cgst + driverFee_.platformFee.sgst
         }
 
 data DriverInfoForPDNotification = DriverInfoForPDNotification

@@ -18,20 +18,20 @@ module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
 import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant
 import Data.Aeson as DA
 import Domain.Types.Common
+import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 
--- import Data.Maybe
-
 data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
-    baseFare :: Money,
-    waitingChargeInfo :: Maybe WaitingChargeInfo,
+    baseFare :: HighPrecMoney,
+    waitingChargeInfo :: Maybe Domain.WaitingChargeInfo,
     platformFeeInfo :: Maybe PlatformFeeInfo,
-    nightShiftCharge :: Maybe NightShiftCharge
+    nightShiftCharge :: Maybe Domain.NightShiftCharge,
+    currency :: Currency
   }
-  deriving (Generic, Show, Eq, ToSchema)
+  deriving (Generic, Show, Eq)
 
 type FPSlabsDetailsSlab = FPSlabsDetailsSlabD 'Safe
 
@@ -39,8 +39,10 @@ instance FromJSON (FPSlabsDetailsSlabD 'Unsafe)
 
 instance ToJSON (FPSlabsDetailsSlabD 'Unsafe)
 
+-- FIXME remove
 instance FromJSON (FPSlabsDetailsSlabD 'Safe)
 
+-- FIXME remove
 instance ToJSON (FPSlabsDetailsSlabD 'Safe)
 
 data PlatformFeeCharge = ProgressivePlatformFee HighPrecMoney | ConstantPlatformFee HighPrecMoney
@@ -61,16 +63,11 @@ data PlatformFeeInfo = PlatformFeeInfo
 data FPSlabsDetailsSlabAPIEntity = FPSlabsDetailsSlabAPIEntity
   { startDistance :: Meters,
     baseFare :: Money,
-    waitingChargeInfo :: Maybe WaitingChargeInfo,
+    baseFareWithCurrency :: PriceAPIEntity,
+    waitingChargeInfo :: Maybe WaitingChargeInfoAPIEntity,
     platformFeeInfo :: Maybe PlatformFeeInfo,
-    nightShiftCharge :: Maybe NightShiftCharge
+    nightShiftCharge :: Maybe NightShiftChargeAPIEntity
   }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
-
-makeFPSlabsDetailsSlabAPIEntity :: FPSlabsDetailsSlab -> FPSlabsDetailsSlabAPIEntity
-makeFPSlabsDetailsSlabAPIEntity FPSlabsDetailsSlab {..} =
-  FPSlabsDetailsSlabAPIEntity
-    { ..
-    }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 $(mkBeamInstancesForJSON ''PlatformFeeCharge)

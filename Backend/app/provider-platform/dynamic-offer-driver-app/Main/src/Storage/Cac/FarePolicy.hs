@@ -98,8 +98,9 @@ instance FromCacType (BeamFP.FarePolicy, [(CacContext, Value)], String, Id FareP
           Just
             Domain.FarePolicy
               { id = Id id,
-                serviceCharge = serviceCharge,
+                serviceCharge = mkAmountWithDefault serviceChargeAmount <$> serviceCharge,
                 parkingCharge = parkingCharge,
+                currency = fromMaybe INR currency,
                 nightShiftBounds = DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
                 allowedTripDistanceBounds =
                   ((,) <$> minAllowedTripDistance <*> maxAllowedTripDistance) <&> \(minAllowedTripDistance', maxAllowedTripDistance') ->

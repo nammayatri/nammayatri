@@ -8,6 +8,7 @@ import qualified Domain.Types.PurchaseHistory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -30,6 +31,7 @@ updateByPrimaryKey (Domain.Types.PurchaseHistory.PurchaseHistory {..}) = do
   updateWithKV
     [ Se.Set Beam.cash cash,
       Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.driverId driverId,
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOptCityId merchantOptCityId,

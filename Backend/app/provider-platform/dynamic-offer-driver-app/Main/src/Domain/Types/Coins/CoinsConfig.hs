@@ -28,4 +28,4 @@ data CoinsConfig = CoinsConfig
     expirationAt :: Maybe Int,
     active :: Bool
   }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+  deriving (Generic, Show)

@@ -14,7 +14,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, Currency, EsqDBFlow, HighPrecMoney, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
 import qualified Storage.Queries.Person as QP
@@ -35,3 +35,6 @@ updateMerchantOperatingCityId driverFeeId merchantOperatingCityId = do
   updateOneWithKV
     [Se.Set BeamDF.merchantOperatingCityId (Just merchantOperatingCityId.getId)]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
+
+mkPlatformFee :: HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> Currency -> PlatformFee
+mkPlatformFee fee cgst sgst currency = PlatformFee {..}

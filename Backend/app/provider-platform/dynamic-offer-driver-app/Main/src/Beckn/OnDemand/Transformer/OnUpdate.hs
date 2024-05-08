@@ -184,7 +184,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
             let items' = Utils.tfItemsSoftUpdate booking merchant.shortId.getShortId bookingUpdateReqDetails.estimatedDistance farePolicy Nothing bookingUpdateReqDetails ride.id.getId
                 orderStatus' = Just $ show EventEnum.SOFT_UPDATE
                 quote' = Utils.tfQuotationSU fareParameters bookingUpdateReqDetails.estimatedFare
-                payment' = UtilsOU.mkPaymentParamsSoftUpdate paymentMethodInfo paymentUrl merchant bppConfig bookingUpdateReqDetails.estimatedFare
+                payment' = UtilsOU.mkPaymentParamsSoftUpdate paymentMethodInfo paymentUrl merchant bppConfig bookingUpdateReqDetails.estimatedFare fareParameters.currency
             (items', orderStatus', quote', payment')
           OU.CONFIRM_UPDATE -> do
             let items' = Utils.tfItems booking merchant.shortId.getShortId booking.estimatedDistance farePolicy Nothing

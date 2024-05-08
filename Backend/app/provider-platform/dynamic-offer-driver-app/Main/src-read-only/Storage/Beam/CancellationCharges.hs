@@ -13,10 +13,11 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data CancellationChargesT f = CancellationChargesT
-  { cancellationCharges :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    driverId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    rideId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { cancellationCharges :: B.C f Kernel.Types.Common.HighPrecMoney,
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    driverId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    rideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -26,6 +27,6 @@ instance B.Table CancellationChargesT where
 
 type CancellationCharges = CancellationChargesT Identity
 
-$(enableKVPG (''CancellationChargesT) [('id)] [])
+$(enableKVPG ''CancellationChargesT ['id] [])
 
-$(mkTableInstances (''CancellationChargesT) "cancellation_charges")
+$(mkTableInstances ''CancellationChargesT "cancellation_charges")

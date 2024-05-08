@@ -14,15 +14,16 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data PurchaseHistoryT f = PurchaseHistoryT
-  { cash :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    driverId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOptCityId :: (B.C f Kernel.Prelude.Text),
-    numCoins :: (B.C f Kernel.Prelude.Int),
-    title :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { cash :: B.C f Kernel.Types.Common.HighPrecMoney,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    driverId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOptCityId :: B.C f Kernel.Prelude.Text,
+    numCoins :: B.C f Kernel.Prelude.Int,
+    title :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +33,6 @@ instance B.Table PurchaseHistoryT where
 
 type PurchaseHistory = PurchaseHistoryT Identity
 
-$(enableKVPG (''PurchaseHistoryT) [('id)] [[('driverId)]])
+$(enableKVPG ''PurchaseHistoryT ['id] [['driverId]])
 
-$(Kernel.Beam.Lib.UtilsTH.mkTableInstances (''PurchaseHistoryT) "coin_purchase_history" "atlas_driver_offer_bpp")
+$(Kernel.Beam.Lib.UtilsTH.mkTableInstances ''PurchaseHistoryT "coin_purchase_history" "atlas_driver_offer_bpp")

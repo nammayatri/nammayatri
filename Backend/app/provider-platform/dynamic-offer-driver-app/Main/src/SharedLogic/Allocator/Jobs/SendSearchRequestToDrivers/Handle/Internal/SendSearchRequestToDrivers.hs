@@ -125,6 +125,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
       SDP.DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
     buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber defaultValidTill dpwRes = do
+      let currency = searchTry.currency
       guid <- generateGUID
       now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult
@@ -160,6 +161,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 driverDefaultStepFee = tripQuoteDetail.driverDefaultStepFee,
                 rideRequestPopupDelayDuration = dpwRes.intelligentScores.rideRequestPopupDelayDuration,
                 baseFare = Just tripQuoteDetail.baseFare,
+                currency,
                 isPartOfIntelligentPool = dpwRes.isPartOfIntelligentPool,
                 acceptanceRatio = dpwRes.intelligentScores.acceptanceRatio,
                 cancellationRatio = dpwRes.intelligentScores.cancellationRatio,

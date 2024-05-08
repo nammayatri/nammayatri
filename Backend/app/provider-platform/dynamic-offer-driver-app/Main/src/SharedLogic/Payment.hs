@@ -87,7 +87,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
   now <- getCurrentTime
   let driverEmail = fromMaybe "test@juspay.in" driver.email
       (invoiceId, invoiceShortId) = fromMaybe (genInvoiceId, genShortInvoiceId.getShortId) existingInvoice
-      amount = sum $ (\pendingFees -> roundToHalf (fromIntegral pendingFees.govtCharges + pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst)) <$> driverFees
+      amount = sum $ (\pendingFees -> roundToHalf (pendingFees.govtCharges + pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst)) <$> driverFees
       invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now (mbMandateOrder <&> (.maxAmount)) invoicePaymentMode <$> driverFees
   when (amount <= 0) $ throwError (InternalError "Invalid Amount :- should be greater than 0")
   unless (isJust existingInvoice) $ QIN.createMany invoices

@@ -4,6 +4,7 @@
 
 module Domain.Types.PurchaseHistory where
 
+import Data.Aeson
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -12,6 +13,7 @@ import qualified Tools.Beam.UtilsTH
 data PurchaseHistory = PurchaseHistory
   { cash :: Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
+    currency :: Kernel.Types.Common.Currency,
     driverId :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.PurchaseHistory.PurchaseHistory,
     merchantId :: Kernel.Prelude.Text,

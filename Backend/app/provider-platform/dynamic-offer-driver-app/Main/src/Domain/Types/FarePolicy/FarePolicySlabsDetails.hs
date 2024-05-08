@@ -37,8 +37,10 @@ instance ToJSON (FPSlabsDetailsD 'Unsafe)
 
 instance FromJSON (FPSlabsDetailsD 'Unsafe)
 
+-- FIXME remove
 instance FromJSON (FPSlabsDetailsD 'Safe)
 
+-- FIXME remove
 instance ToJSON (FPSlabsDetailsD 'Safe)
 
 findFPSlabsDetailsSlabByDistance :: Meters -> NonEmpty (FPSlabsDetailsSlabD s) -> FPSlabsDetailsSlabD s
@@ -55,9 +57,3 @@ newtype FPSlabsDetailsAPIEntity = FPSlabsDetailsAPIEntity
   { slabs :: NonEmpty FPSlabsDetailsSlabAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-makeFPSlabsDetailsAPIEntity :: FPSlabsDetails -> FPSlabsDetailsAPIEntity
-makeFPSlabsDetailsAPIEntity FPSlabsDetails {..} =
-  FPSlabsDetailsAPIEntity
-    { slabs = makeFPSlabsDetailsSlabAPIEntity <$> slabs
-    }

@@ -110,6 +110,9 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
             startTime = startTime_,
             isScheduled = fromMaybe False isScheduled,
             validTill = validTill_,
+            tollCharges = tollCharges,
+            driverDefaultExtraFee = mkAmountWithDefault driverDefaultExtraFeeAmount <$> driverDefaultExtraFee,
+            currency = fromMaybe INR currency,
             ..
           }
 
@@ -136,6 +139,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.autoAssignEnabled = autoAssignEnabled,
         BeamSR.specialLocationTag = specialLocationTag,
         BeamSR.customerCancellationDues = customerCancellationDues,
+        BeamSR.currency = Just currency,
         BeamSR.tollCharges = tollCharges,
         BeamSR.tollNames = tollNames,
         BeamSR.isReallocationEnabled = isReallocationEnabled,
@@ -146,6 +150,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
         BeamSR.isBlockedRoute = isBlockedRoute,
         BeamSR.pickupZoneGateId = pickupZoneGateId,
-        BeamSR.driverDefaultExtraFee = driverDefaultExtraFee,
+        BeamSR.driverDefaultExtraFee = roundToIntegral <$> driverDefaultExtraFee,
+        BeamSR.driverDefaultExtraFeeAmount = driverDefaultExtraFee,
         BeamSR.createdAt = createdAt
       }

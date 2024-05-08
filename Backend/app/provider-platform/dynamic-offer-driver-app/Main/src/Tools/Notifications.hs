@@ -399,7 +399,7 @@ notifyDriverClearedFare ::
   Id DMOC.MerchantOperatingCity ->
   Person ->
   Id SearchTry ->
-  Money ->
+  Price ->
   m ()
 notifyDriverClearedFare merchantOpCityId driver sReqId fare = do
   let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
@@ -411,7 +411,7 @@ notifyDriverClearedFare merchantOpCityId driver sReqId fare = do
       FCM.FCMNotificationBody $
         EulerHS.Prelude.unwords
           [ "Clearing fare - ",
-            show fare.getMoney <> "."
+            show fare.amount <> " " <> show fare.currency <> "."
           ]
     notificationData =
       FCM.FCMData

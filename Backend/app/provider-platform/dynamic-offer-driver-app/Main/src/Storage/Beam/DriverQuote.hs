@@ -45,6 +45,8 @@ data DriverQuoteT f = DriverQuoteT
     validTill :: B.C f LocalTime,
     goHomeRequestId :: B.C f (Maybe Text),
     estimatedFare :: B.C f Common.Money,
+    estimatedFareAmount :: B.C f (Maybe Common.HighPrecMoney),
+    currency :: B.C f (Maybe Common.Currency),
     fareParametersId :: B.C f Text,
     providerId :: B.C f Text,
     specialLocationTag :: B.C f (Maybe Text),
