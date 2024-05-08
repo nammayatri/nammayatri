@@ -1376,3 +1376,5 @@ getML stringKey =
         WE_WILL_USE_THIS_INFO -> "AC സംബന്ധിച്ച ഉപഭോക്തൃ പ്രതീക്ഷകളുമായി പൊരുത്തപ്പെടുന്നതിന് ഞങ്ങൾ ഈ വിവരങ്ങൾ ഉപയോഗിക്കും"
         YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(നിങ്ങൾക്ക് എപ്പോഴും പ്രൊഫൈൽ മുതൽ മാറ്റാം)"
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "നിങ്ങളുടെ കാർ എസി പ്രവർത്തിക്കുന്നുണ്ടോ?"
+        SET_THE_AC_ON_TO_ENABLE name -> name <> " പ്രവർത്തിക്കാന്‍ എസി ഓണാക്കുക"
+        ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK -> "എല്ലാ അനുവദനീയ വാരിയന്റുകൾ തിരഞ്ഞെടുത്തു. ദയവായി പരിശോധിക്കുക"
