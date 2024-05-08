@@ -12,8 +12,9 @@ VehicleDetails:
     id: Id VehicleDetails
     make: Text
     model: Text
-    variant: Maybe Variant
-    acAvailable: Bool
+    capacity: Maybe Int
+    acAvailable: Maybe Bool
+    vehicleVariant: Variant
   constraints:
     id: PrimaryKey
   queries:

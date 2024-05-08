@@ -14,11 +14,12 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VehicleDetailsT f = VehicleDetailsT
-  { acAvailable :: (B.C f Kernel.Prelude.Bool),
+  { acAvailable :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    capacity :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     id :: (B.C f Data.Text.Text),
     make :: (B.C f Data.Text.Text),
     model :: (B.C f Data.Text.Text),
-    variant :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant))
+    vehicleVariant :: (B.C f Domain.Types.Vehicle.Variant)
   }
   deriving (Generic, B.Beamable)
 

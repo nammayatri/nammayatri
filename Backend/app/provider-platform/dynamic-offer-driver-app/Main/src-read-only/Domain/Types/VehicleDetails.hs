@@ -12,10 +12,11 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data VehicleDetails = VehicleDetails
-  { acAvailable :: Kernel.Prelude.Bool,
+  { acAvailable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleDetails.VehicleDetails,
     make :: Data.Text.Text,
     model :: Data.Text.Text,
-    variant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant
+    vehicleVariant :: Domain.Types.Vehicle.Variant
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
