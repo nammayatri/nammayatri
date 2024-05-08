@@ -20,20 +20,20 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "vehicleMakes" :> Get ('[JSON]) API.Types.UI.VehicleDetails.VehicleMakesResp :<|> TokenAuth :> "vehicleModels"
+  ( TokenAuth :> "vehicleMakes" :> Get '[JSON] API.Types.UI.VehicleDetails.VehicleMakesResp :<|> TokenAuth :> "vehicleModels"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.VehicleDetails.VehicleModelsReq
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.VehicleDetails.VehicleModelsResp
       :<|> TokenAuth
       :> "vehicleDetails"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.VehicleDetails.VehicleDetailsReq
       :> Get
-           ('[JSON])
+           '[JSON]
            Domain.Types.VehicleDetails.VehicleDetails
   )
 

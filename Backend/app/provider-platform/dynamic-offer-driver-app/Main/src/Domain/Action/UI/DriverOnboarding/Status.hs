@@ -263,7 +263,7 @@ checkIfDocumentValid merchantOperatingCityId docType category status = do
       if verificationConfig.isMandatory
         then case status of
           VALID -> return True
-          MANUAL_VERIFICATION_REQUIRED -> return True
+          MANUAL_VERIFICATION_REQUIRED -> return verificationConfig.isDefaultEnabledOnManualVerification
           _ -> return False
         else return True
     Nothing -> return True
