@@ -125,6 +125,7 @@ eval SupportCall  state = continueWithCmd state [do
   let merchant = getMerchant FunctionCall
   _ <- case merchant of
     NAMMAYATRI -> HU.contactSupportNumber "WHATSAPP" 
+    YATRI -> HU.contactSupportNumber "WHATSAPP"
     YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
     _ -> pure $ showDialer (getSupportNumber "") false
   pure Dummy

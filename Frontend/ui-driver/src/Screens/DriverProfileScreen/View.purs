@@ -416,7 +416,7 @@ manageVehicleItem state vehicle push =
   mkAsset :: ST.VehicleCategory -> CityConfig -> String
   mkAsset category cityConfig =
     if category == ST.AutoCategory then
-      (getAutoImage cityConfig)
+      cityConfig.assets.auto_image
     else if category == ST.CarCategory then
       "ny_ic_sedan"
     else
@@ -729,7 +729,7 @@ tabImageView state push =
   mkAsset :: ST.VehicleCategory -> CityConfig -> String
   mkAsset category cityConfig =
     if category == ST.AutoCategory then
-      (getAutoImage cityConfig)
+      cityConfig.assets.auto_image
     else if category == ST.CarCategory then
       "ny_ic_sedan"
     else
@@ -1531,7 +1531,7 @@ vehicleListItem state push vehicle =
   mkAsset :: ST.VehicleCategory -> CityConfig -> String
   mkAsset category cityConfig =
     if category == ST.AutoCategory then
-      (getAutoImage cityConfig)
+      cityConfig.assets.auto_image
     else if category == ST.CarCategory then
       "ny_ic_sedan"
     else
@@ -1543,6 +1543,7 @@ vehicleListItem state push vehicle =
       "ny_ic_black_yellow_auto_side_view"
     else
       "ny_ic_auto_side_view"
+  
 
 getRcDetails :: ST.DriverProfileScreenState -> Array { key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean, keyInfo :: Boolean, isRightInfo :: Boolean }
 getRcDetails state = do

@@ -385,7 +385,11 @@ window.getMerchantConfig = function () {
              "perMinCharges" : 1.50
            }
          },
-       "rateCardConfig" : defRateCardConfig
+       "rateCardConfig" : defRateCardConfig,
+      "assets" :{
+        "auto_image" : "ny_ic_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_side"
+      }
     }
   ]
   })

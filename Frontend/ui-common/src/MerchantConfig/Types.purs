@@ -117,6 +117,12 @@ type CityConfig = {
 type RateCardConfig = {
   showLearnMore :: Boolean,
   learnMoreVideoLink :: String
+  assets :: Assets
+}
+
+type Assets ={
+  auto_image :: String,
+  onboarding_auto_image :: String
 }
 
 type Referral = {
