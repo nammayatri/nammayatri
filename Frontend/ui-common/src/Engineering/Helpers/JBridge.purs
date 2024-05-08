@@ -807,6 +807,8 @@ defaultMapRouteConfig = {
   vehicleSizeTagIcon : 90,
   isAnimation : false,
   autoZoom : true,
+  dashUnit : 1,
+  gapUnit : 0,
   polylineAnimationConfig : getPolylineAnimationConfig
 }
 

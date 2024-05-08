@@ -43,7 +43,7 @@ import Prelude (Unit, const, map, unit, ($), (&&), (/=), (<<<), (<=), (<>), (==)
 import PrestoDOM (Accessiblity(..), FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, color, cornerRadius, disableClickFeedback, editText, fontStyle, frameLayout, gravity, height, hint, hintColor, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, multiLineEditText, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.Types (PaymentMode(..))
+import Screens.Types (PaymentMode(..), VehicleViewType(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 
@@ -280,7 +280,7 @@ tripDetailsView state =
   , gravity CENTER_VERTICAL
   ][   imageView
         [ imageWithFallback $ case state.data.vehicleVariant of
-                                Just variant -> getVehicleVariantImage (show variant)
+                                Just variant -> getVehicleVariantImage (show variant) RIGHT_VIEW
                                 Nothing      -> fetchImage FF_ASSET "ic_vehicle_side" 
         , width $ V 40
         , visibility if (isJust state.data.vehicleVariant) then VISIBLE else GONE

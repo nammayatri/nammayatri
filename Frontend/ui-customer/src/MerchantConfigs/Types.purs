@@ -259,8 +259,10 @@ type Features = {
   enableAutoReferral :: Boolean,
   enableRepeatTripBackfilling :: Boolean,
   enableCustomerSupportForSafety :: Boolean,
-  enableSpecialPickup :: Boolean
-}
+  enableSpecialPickup :: Boolean,
+  enableAcPopup :: Boolean,
+  enableRentalReallocation :: Boolean
+  }
 
 type RideCompletedCardConfig = {
   topCard :: TopCardConfig
@@ -383,7 +385,8 @@ type VariantConfig = {
 
 type VariantInfo = {
   name :: String,
-  image :: String
+  image :: String,
+  leftViewImage :: String
 }
 
 type HotSpotConfig = {

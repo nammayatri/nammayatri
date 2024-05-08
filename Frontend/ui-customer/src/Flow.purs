@@ -1057,14 +1057,16 @@ homeScreenFlow = do
           else do
             lift $ lift $ triggerRideStatusEvent "DRIVER_ASSIGNMENT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
             homeScreenFlow
-    CANCEL_RIDE_REQUEST state -> do
-      response <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest state.props.cancelDescription state.props.cancelReasonCode) (state.props.bookingId)
+    CANCEL_RIDE_REQUEST state cancelType -> do
+      let cancelReasonCode = if cancelType == NORMAL_RIDE_CANCEL then state.props.cancelReasonCode else "Cancelling Rentals Quotes Search"
+          cancelDescription = if cancelType == NORMAL_RIDE_CANCEL then state.props.cancelDescription else "Rental reallocation"
+      response <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest cancelReasonCode cancelDescription) (state.props.bookingId)
       case response of
         Right _ -> do
           void $ pure $ currentPosition ""
           void $ updateLocalStage HomeScreen
-          liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_rider_cancellation" $ [ {key : "Reason code", value : unsafeToForeign state.props.cancelReasonCode},
-                                                                                                          {key : "Additional info", value : unsafeToForeign state.props.cancelDescription},
+          liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_rider_cancellation" $ [ {key : "Reason code", value : unsafeToForeign cancelReasonCode},
+                                                                                                          {key : "Additional info", value : unsafeToForeign cancelDescription},
                                                                                                           {key : "Pickup", value : unsafeToForeign state.data.driverInfoCardState.source},
                                                                                                           {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
                                                                                                           {key : "Night Ride", value : unsafeToForeign state.data.rateCard.isNightShift},
@@ -4733,7 +4735,7 @@ updateRideScheduledTime _ = do
           let fareProductType = getFareProductType $ resp.bookingDetails ^._fareProductType
           if (any (_ == fareProductType) [ FPT.RENTAL , FPT.INTER_CITY]) then do 
             let rideScheduledTime = fromMaybe "" resp.rideScheduledTime
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rentalsInfo = if rideScheduledTime == "" then Nothing else Just { rideScheduledAtUTC : rideScheduledTime, bookingId : resp.id, multipleScheduled : multipleScheduled, fareProductType : fareProductType, nearestRideScheduledAtUTC : maybe "" (_.rideStartTime) $ head $ Arr.sortWith (_.rideStartTime) $ decodeBookingTimeList FunctionCall}}})
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rentalsInfo = if rideScheduledTime == "" then Nothing else Just { rideScheduledAtUTC : rideScheduledTime, bookingId : resp.id, multipleScheduled : multipleScheduled, fareProductType : fareProductType, nearestRideScheduledAtUTC : maybe "" (_.rideStartTime) $ head $ Arr.sortWith (_.rideStartTime) $ decodeBookingTimeList FunctionCall, vehicleVariant : fromMaybe "" resp.vehicleServiceTierType}}})
             pure unit 
             else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rentalsInfo = Nothing}})
           pure unit

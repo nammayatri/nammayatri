@@ -2105,8 +2105,9 @@ public class MobilityCommonBridge extends HyperBridge {
     
     private void drawRentalsPolyline(final int staticColor, final String style, final int polylineWidth, PolylineOptions polylineOptions, JSONObject mapRouteConfigObject, GoogleMap gMap){
         try{
-            System.out.println("Inside drawRentals POlyline");
-            rentalPolyline = setRouteCustomTheme(polylineOptions, staticColor, style, polylineWidth, gMap);
+            mapRouteConfigObject.put("dashUnit",30);
+            mapRouteConfigObject.put("gapUnit", 20);
+            rentalPolyline = setRouteCustomTheme(polylineOptions, staticColor, style, polylineWidth, mapRouteConfigObject, gMap);
             return ;
         }catch(Exception e){
 
@@ -2841,10 +2842,8 @@ public class MobilityCommonBridge extends HyperBridge {
     public Polyline setRouteCustomTheme(PolylineOptions options, int color, String style, final int width,  JSONObject mapRouteConfigObject, GoogleMap gMap) {
         PatternItem DOT = new Dot();
         PatternItem GAP = new Gap(10);
-        PatternItem DASH = new Dash(20);
         options.width(width);
         List<PatternItem> PATTERN_POLYLINE_DOTTED = Arrays.asList(GAP, DOT);
-        List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(GAP, DASH);
         List<PatternItem> PATTERN_POLYLINE_DASHED_WITH_GAP = Collections.singletonList(new Dash(20));
         if (mapRouteConfigObject != null){
             if (mapRouteConfigObject.has("dashUnit") && mapRouteConfigObject.has("gapUnit")){
@@ -2865,8 +2864,8 @@ public class MobilityCommonBridge extends HyperBridge {
                 break;
         }
         if ( gMap!= null){
-            System.out.println("inside gMap");
-            return gMap.addPolyline(options);}
+            return gMap.addPolyline(options);
+        }
         return googleMap.addPolyline(options);
     }
     // endregion

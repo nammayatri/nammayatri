@@ -16,7 +16,7 @@
 module Screens.HomeScreen.Controller where
 
 import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), OptionButtonList, Payload(..), RateCardType(..), FeedbackAnswer(..), ProviderType(..))
-import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes, _specialLocationTag, _contents, _toLocation, _lat, _lon, _otpCode, _list, _fareProductType, _stopLocation, _toLocation)
+import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes, _specialLocationTag, _contents, _toLocation, _lat, _lon, _otpCode, _list, _fareProductType, _stopLocation, _toLocation)
 import Components.Banner as Banner
 import Components.MessagingView as MessagingView
 import Components.MessagingView.Controller as MessagingView
@@ -96,7 +96,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getQuotesTransformer, transformContactList, getNearByDrivers, dummyEstimateEntity, filterSpecialZoneAndInterCityQuotes, getFareProductType, extractFareProductType)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..), City(..))
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..), City(..), CancelSearchType(..))
 import Services.API (BookingLocationAPIEntity(..), EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..), Route(..), RideAPIEntity(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -680,7 +680,7 @@ data ScreenOutput = LogoutUser
                   | Retry HomeScreenState
                   | GetQuotes HomeScreenState
                   | UpdatedState HomeScreenState Boolean
-                  | CancelRide HomeScreenState
+                  | CancelRide HomeScreenState CancelSearchType
                   | NotificationHandler String HomeScreenState
                   | GetSelectList HomeScreenState
                   | RideConfirmed HomeScreenState
@@ -1608,16 +1608,16 @@ eval BackPressed state = do
                       _ <- pure $ removeAllPolylines ""
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
-                      -- _ <- pure $ updateLocalStage HomeScreen
-                      -- let newState = state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = HomeScreen, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
-                      -- updateAndExit newState $ Go_To_Search_Location_Flow newState true
+
     FindingEstimate -> do
                       void $ pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage SearchLocationModel
                       let newState = state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
                       updateAndExit newState $ GoToHome newState
-                      -- continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
-    ConfirmingQuotes -> continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "" } }
+    ConfirmingQuotes -> do 
+                      -- let isAcCab = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
+                      if state.props.isPopUp == NoPopUp then continue $ state { props{isPopUp = CancelConfirmingQuotes}} else continue state    
+                      -- continue state { props { isCancelRide = true, cancellationReasons = cancelReasons isAcCab, cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "" } }
     QuoteList       -> do
                       void $ pure $ performHapticFeedback unit
                       if state.props.isPopUp == NoPopUp then continue $ state { props{isPopUp = ConfirmBack}} else continue state                      
@@ -1628,9 +1628,6 @@ eval BackPressed state = do
                       void $ pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation }}
-                      -- _ <- pure $ updateLocalStage HomeScreen
-                      -- let newState =  state{props{rideRequestFlow = false, currentStage = HomeScreen, searchId = "", isSource = Just false,isSearchLocation = SearchLocation }}
-                      -- updateAndExit newState $ Go_To_Search_Location_Flow newState true
     ShortDistance -> do
                       void $ pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage SearchLocationModel
@@ -2111,8 +2108,8 @@ eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnC
     let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".CancelRide") "true"
     void $ pure $ performHapticFeedback unit
     case state.props.cancelRideActiveIndex of
-      Just index -> if ( (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "OTHER" || (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "TECHNICAL_GLITCH" ) then exit $ CancelRide state{props{cancelDescription = if (state.props.cancelDescription == "") then (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description else state.props.cancelDescription }}
-                      else exit $ CancelRide state{props{cancelDescription = (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description , cancelReasonCode = (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode }}
+      Just index -> if ( (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "OTHER" || (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "TECHNICAL_GLITCH" ) then exit $ CancelRide state{props{cancelDescription = if (state.props.cancelDescription == "") then (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description else state.props.cancelDescription }} NORMAL_RIDE_CANCEL
+                      else exit $ CancelRide state{props{cancelDescription = (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description , cancelReasonCode = (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode }} NORMAL_RIDE_CANCEL
       Nothing    -> continue state
 
 eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.Button1 PrimaryButtonController.OnClick))) state = continue state { data { ratingViewState { openReportIssue = false } } }
@@ -2401,6 +2398,7 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
     logInfo "retry_finding_quotes" ( "TipConfirmed : Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
     exit $ RetryFindingQuotes true newState
   Logout -> continue state{props{isPopUp = NoPopUp}}
+  CancelConfirmingQuotes -> continue state{props{isPopUp = NoPopUp}}
   _ -> do
     void $ pure $ performHapticFeedback unit
     _ <- pure $ firebaseLogEvent "ny_tip_not_applicable" 
@@ -2442,6 +2440,7 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isP
           continue state{props{isPopUp = NoPopUp}}
         _ -> continue state
     NoPopUp -> continue state
+    CancelConfirmingQuotes -> exit $ CancelRide state RENTAL_SEARCH_CANCEL
     ActiveQuotePopUp -> do
       void $ pure $ performHapticFeedback unit
       exit $ CheckCurrentStatus
@@ -2838,33 +2837,29 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
       estimateId = if config.vehicleVariant == "BOOK_ANY" then fromMaybe "" (head selectedEstimates) else config.id
       otherSelectedEstimates = fromMaybe [] $ tail $ selectedEstimates
   void $ pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
-  if state.data.currentSearchResultType == QUOTES then do
-    continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
-  else do
-    let updatedSpecialZOneQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
-        props = if config.activeIndex == config.index then state.props else state.props{customerTip = HomeScreenData.initData.props.customerTip, tipViewProps = HomeScreenData.initData.props.tipViewProps}
-        updatedQuoteList = map (\item -> item{activeIndex = config.index}) state.data.quoteList
-    let newState = state{data{specialZoneQuoteList = updatedSpecialZOneQuotes, quoteList = updatedQuoteList}, props = props}
-    
-    if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then do
-      void $ pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
-      continue newState
-        { data
-            { specialZoneSelectedQuote = Just config.id
-            , specialZoneSelectedVariant = Just config.vehicleVariant 
-            }
-        }
-    else if state.data.fareProductType == FPT.INTER_CITY then do
-      void $ pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
-      continue newState
-        { data
-            { selectedQuoteId = Just config.id
-            , selectedQuoteVariant = Just config.vehicleVariant
-            , selectedEstimatesObject = config
-            }
-        }
-    else 
-      continue newState{props{estimateId = estimateId }, data {selectedEstimatesObject = config{activeIndex = config.index}, otherSelectedEstimates = otherSelectedEstimates}}
+  let updatedSpecialZOneQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
+      props = if config.activeIndex == config.index then state.props else state.props{customerTip = HomeScreenData.initData.props.customerTip, tipViewProps = HomeScreenData.initData.props.tipViewProps}
+      updatedQuoteList = map (\item -> item{activeIndex = config.index}) state.data.quoteList
+      newState = state{data{specialZoneQuoteList = updatedSpecialZOneQuotes, quoteList = updatedQuoteList}, props = props}
+  
+  if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then do
+    _ <- pure $ spy "ChooseYourRideAction 2" config.activeIndex 
+    continue newState
+      { data
+          { specialZoneSelectedQuote = Just config.id
+          , specialZoneSelectedVariant = Just config.vehicleVariant 
+          }
+      }
+  else if state.data.fareProductType == FPT.INTER_CITY then do
+    continue newState
+      { data
+          { selectedQuoteId = Just config.id
+          , selectedQuoteVariant = Just config.vehicleVariant
+          , selectedEstimatesObject = config
+          }
+      }
+  else 
+    continue newState{props{estimateId = estimateId }, data {selectedEstimatesObject = config{activeIndex = config.index}, otherSelectedEstimates = otherSelectedEstimates}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state = do
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".RateCard") "true"
@@ -2897,7 +2892,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
     exit $ ConfirmRide state{props{currentStage = ConfirmingRide}}
   else if state.data.iopState.showMultiProvider then do 
     void $  pure $ updateLocalStage ProviderSelection 
-    exit $ Cancel state { data { iopState { providerSelectionStage = true}, otherSelectedEstimates = otherSelectedEstimates}, props {estimateId = estimateId}}
+    exit $ RefreshHomeScreen state { data { iopState { providerSelectionStage = true}, otherSelectedEstimates = otherSelectedEstimates}, props {estimateId = estimateId}}
   else do
     
     let customerTip = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.customerTip else state.props.customerTip
@@ -2919,7 +2914,7 @@ eval (QuoteListModelActionController (QuoteListModelController.ProviderModelAC (
   void $ pure $ clearTimerWithId state.data.iopState.timerId
   void $ pure $ spy "ButtonClick state" state
   
-  let updatedState = state{props{searchExpire = (getSearchExpiryTime "LazyCheck")}, data { iopState { providerSelectionStage = false}}}
+  let updatedState = state{props{searchExpire = (getSearchExpiryTime true)}, data { iopState { providerSelectionStage = false}}}
   void $ pure $ spy "ButtonClick updatedState" updatedState
   updateAndExit (updatedState) (GetQuotes updatedState)
 
@@ -3025,6 +3020,7 @@ eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
     "INTER_CITY" -> do
       void $ pure $ updateLocalStage SearchLocationModel 
       continue state { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}}
+    "INSTANT" -> continueWithCmd state [ pure $ WhereToClick]
     _ -> continue state
   
 eval (RentalBannerAction Banner.OnClick) state = maybe (exit GoToScheduledRides) (\rentalsInfo -> if rentalsInfo.multipleScheduled then exit (PastRides state true) else exit GoToScheduledRides) state.data.rentalsInfo

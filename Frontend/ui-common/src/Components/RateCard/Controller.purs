@@ -52,6 +52,7 @@ type Config = {
     driverAdditions :: Array FareList,
     additionalStrings :: Array FareList,
     driverAdditionsImage :: String,
+    fareInfoText :: String,
     primaryButtonConfig :: ButtonConfig
 }
 

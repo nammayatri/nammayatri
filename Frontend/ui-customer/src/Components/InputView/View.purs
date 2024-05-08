@@ -21,7 +21,7 @@ import Components.InputView.Controller
 import Components.SeparatorView.View as SeparatorView
 import Styles.Colors as Color
 import Mobility.Prelude (boolToVisibility)
-import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable, afterRender, textSize)
+import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable, afterRender, textSize, rippleColor)
 import Data.Array (mapWithIndex, length)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons (getNewIDWithTag, isTrue)
@@ -62,6 +62,7 @@ backPressView config push =
         [ height $ config.backIcon.height 
         , width $ config.backIcon.width
         , imageWithFallback config.backIcon.imageName
+        , rippleColor Color.rippleShade
         , onClick push $ const $ BackPressed
         ]
       , textView $
@@ -139,6 +140,7 @@ dateTimePickerButton config push =
         , padding $ config.suffixButton.padding
         , gravity config.suffixButton.gravity
         , onClick push $ const DateTimePickerButtonClicked
+        , rippleColor Color.rippleShade
         ]
         [ imageView
             [ imageWithFallback $ fetchImage FF_ASSET config.suffixButton.prefixImage
@@ -176,6 +178,7 @@ nonEditableTextView push config = let
     , cornerRadius $ config.inputTextConfig.cornerRadius
     , clickable $ config.isClickable 
     , onClick push $ const $ TextFieldFocusChanged config.inputTextConfig.id true true
+    , rippleColor $ Color.rippleShade
     , stroke $ strokeValue 
     ]
     [  imageView

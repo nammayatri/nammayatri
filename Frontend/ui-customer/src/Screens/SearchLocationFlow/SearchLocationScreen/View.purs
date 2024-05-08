@@ -127,7 +127,7 @@ view globalProps push state =
     , background Color.white900
     ][  (if currentStageOn state ChooseYourRide then screenAnimation 
           else PrestoAnim.animationSet
-                [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] ) $ 
+                [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true] ) $ 
         relativeLayout
           [ height MATCH_PARENT
           , width MATCH_PARENT
@@ -488,13 +488,12 @@ locUnserviceableView push state =
     , gravity CENTER 
     , background Color.blackLessTrans
     ][ PrestoAnim.animationSet
-        [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]  $ 
+        [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true]  $ 
         PopUpModal.view (push <<< PopUpModalAC) (locUnserviceablePopUpConfig state) ]
 
 locateOnMapFooterView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
 locateOnMapFooterView push state = let 
   viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage
-  locateOnMapData = getDataBasedActionType state.props.actionType 
   
   in PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true ] $ linearLayout
     [ height WRAP_CONTENT
