@@ -223,7 +223,7 @@ screen initialState (GlobalState globalState) =
                                 pushPlayAudioAndLaunchMap <- runEffectFn1 EHC.getValueFromIdMap "PlayAudioAndLaunchMap"
                                 when pushPlayAudioAndLaunchMap.shouldPush $ do 
                                   void $ pure $ runFn2  EHC.updatePushInIdMap "PlayAudioAndLaunchMap" false
-                                  void $ launchAff $ flowRunner defaultGlobalState $ playAudioAndLaunchMap push TriggerMaps OnAudioCompleted initialState.data.activeRide.acRide initialState.data.activeRide.requestedVehicleVariant
+                                  void $ launchAff $ flowRunner defaultGlobalState $ playAudioAndLaunchMap push TriggerMaps OnAudioCompleted (fromMaybe false initialState.data.activeRide.acRide) initialState.data.activeRide.requestedVehicleVariant
                                 
                                 if (initialState.data.activeRide.tripType == ST.Rental && getValueToLocalStore RENTAL_RIDE_STATUS_POLLING == "False")
                                   then do
@@ -334,8 +334,10 @@ view push state =
         state.data.driverGotoState.goToInfo,
         state.data.driverGotoState.confirmGotoCancel,
         state.props.accountBlockedPopup,
-        state.props.vehicleNSPopup && not state.props.rcDeactivePopup
+        state.props.vehicleNSPopup && not state.props.rcDeactivePopup,
+        state.props.acExplanationPopup && not onRide && (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.CarCategory
       ])
+    onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
     showEnterOdometerReadingModalView = state.data.activeRide.tripType == ST.Rental && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
 
 blockerPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -431,6 +433,7 @@ bookingPreferenceNavView push state =
   , margin $ Margin 16 0 16 16
   , onClick push $ const BookingOptions
   , background Color.white900
+  , rippleColor Color.rippleShade
   , cornerRadius 8.0
   ][
     imageView
@@ -1903,6 +1906,7 @@ popupModals push state =
           ST.AccountBlocked -> accountBlockedPopup state
           ST.VehicleNotSupported -> vehicleNotSupportedPopup state
           ST.BgLocationPopup -> bgLocPopup state
+          ST.TopAcDriver -> topAcDriverPopUpConfig state
       ]
   where 
   
@@ -1912,6 +1916,7 @@ popupModals push state =
       else if state.props.accountBlockedPopup then ST.AccountBlocked
       else if state.props.vehicleNSPopup then ST.VehicleNotSupported
       else if state.props.bgLocationPopup then ST.BgLocationPopup
+      else if state.props.acExplanationPopup then ST.TopAcDriver
       else ST.KnowMore
 
     clickAction popupType = case popupType of
@@ -1921,6 +1926,7 @@ popupModals push state =
           ST.AccountBlocked -> AccountBlockedAC
           ST.VehicleNotSupported -> VehicleNotSupportedAC
           ST.BgLocationPopup -> BgLocationPopupAC
+          ST.TopAcDriver -> ACExpController
 
 enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true

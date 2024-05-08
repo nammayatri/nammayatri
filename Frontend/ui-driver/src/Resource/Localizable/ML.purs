@@ -1378,3 +1378,4 @@ getML stringKey =
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "നിങ്ങളുടെ കാർ എസി പ്രവർത്തിക്കുന്നുണ്ടോ?"
         SET_THE_AC_ON_TO_ENABLE name -> name <> " പ്രവർത്തിക്കാന്‍ എസി ഓണാക്കുക"
         ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK -> "എല്ലാ അനുവദനീയ വാരിയന്റുകൾ തിരഞ്ഞെടുത്തു. ദയവായി പരിശോധിക്കുക"
+        TOP_AC_DRIVER -> "നമ്മ യാത്രിയിലെ മികച്ച എസി ഡ്രൈവർ ആകുന്നത് എങ്ങനെയെന്ന് കാണുക"

@@ -50,7 +50,8 @@ initData = {
       tripStartTime : Nothing,
       tripEndTime : Nothing,
       vehicleModel : "",
-      acRide : false
+      acRide : Nothing,
+      vehicleServiceTier : ""
 
   },
   props: {
