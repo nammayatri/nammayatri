@@ -40,7 +40,8 @@ data Ride = Ride
   { id :: Id Ride,
     shortId :: ShortId Ride,
     merchantOperatingCityId :: Id MerchantOperatingCity,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    counterPartyRideId :: Maybe Text
   }
 
 data MerchantOperatingCity = MerchantOperatingCity
@@ -184,5 +185,7 @@ data MerchantConfig = MerchantConfig
   { mediaFileSizeUpperLimit :: Int,
     mediaFileUrlPattern :: Text,
     kaptureDisposition :: Text,
-    kaptureQueue :: Text
+    kaptureQueue :: Text,
+    counterPartyUrl :: BaseUrl,
+    counterPartyApiKey :: Text
   }

@@ -1,5 +1,6 @@
 module API.UI.Issue where
 
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.Dashboard.Ride as DRide
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
@@ -21,6 +22,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -60,7 +62,8 @@ customerIssueHandle =
       getRideInfo = castRideInfo,
       createTicket = castCreateTicket,
       updateTicket = castUpdateTicket,
-      findMerchantConfig = buildMerchantConfig
+      findMerchantConfig = buildMerchantConfig,
+      mbReportACIssue = Just reportACIssue
     }
 
 castPersonById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Person -> m (Maybe Common.Person)
@@ -87,7 +90,7 @@ castRideById rideId merchantId = do
     Nothing -> (.id) <$> CQM.getDefaultMerchantOperatingCity (fromMaybe (cast merchantId) ((.merchantId) =<< ride))
   return $ fmap (castRide merchantOpCityId) ride
   where
-    castRide moCityId ride = Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast moCityId) ride.createdAt
+    castRide moCityId ride = Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast moCityId) ride.createdAt (Just ride.bppRideId.getId)
 
 castMOCityById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.MerchantOperatingCity -> m (Maybe Common.MerchantOperatingCity)
 castMOCityById moCityId = do
@@ -140,6 +143,11 @@ castCreateTicket merchantId merchantOperatingCityId = TT.createTicket (cast merc
 castUpdateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp
 castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
 
+reportACIssue :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => BaseUrl -> Text -> Text -> m APISuccess
+reportACIssue driverOfferBaseUrl driverOfferApiKey bppRideId = do
+  void $ CallBPPInternal.reportACIssue driverOfferApiKey driverOfferBaseUrl bppRideId
+  return Success
+
 buildMerchantConfig :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Person -> m MerchantConfig
 buildMerchantConfig merchantId merchantOpCityId _personId = do
   merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -149,7 +157,9 @@ buildMerchantConfig merchantId merchantOpCityId _personId = do
       { mediaFileSizeUpperLimit = merchant.mediaFileSizeUpperLimit,
         mediaFileUrlPattern = merchant.mediaFileUrlPattern,
         kaptureDisposition = merchant.kaptureDisposition,
-        kaptureQueue = riderConfig.kaptureQueue
+        kaptureQueue = riderConfig.kaptureQueue,
+        counterPartyUrl = merchant.driverOfferBaseUrl,
+        counterPartyApiKey = merchant.driverOfferApiKey
       }
 
 issueReportCustomerList :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> FlowHandler Common.IssueReportListRes
