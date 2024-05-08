@@ -24,6 +24,7 @@ module Domain.Action.UI.Registration
     logout,
     cleanCachedTokens,
     createDriverWithDetails,
+    makePerson,
   )
 where
 
@@ -159,7 +160,7 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDe
         mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
         mobileNumberHash <- getDbHash mobileNumber
         person <-
-          QP.findByMobileNumberAndMerchant countryCode mobileNumberHash merchant.id
+          QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
             >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
         return (person, SP.MOBILENUMBER)
       SP.EMAIL -> do
@@ -258,8 +259,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
   QD.create driverInfo
   pure ()
 
-makePerson :: EncFlow m r => AuthReq -> TC.TransporterConfig -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
-makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOperatingCityId isDashboard = do
+makePerson :: EncFlow m r => AuthReq -> TC.TransporterConfig -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe SP.Role -> m SP.Person
+makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOperatingCityId isDashboard mbRole = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   let identifierType = fromMaybe SP.MOBILENUMBER req.identifierType
@@ -283,7 +284,7 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         firstName = fromMaybe "Driver" req.name,
         middleName = Nothing,
         lastName = Nothing,
-        role = SP.DRIVER,
+        role = fromMaybe SP.DRIVER mbRole,
         gender = SP.UNKNOWN,
         hometown = Nothing,
         languagesSpoken = Nothing,
@@ -367,7 +368,7 @@ verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard
+  person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard Nothing
   void $ QP.create person
   createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig
   pure person

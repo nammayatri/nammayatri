@@ -52,7 +52,8 @@ data FleetOperationsAPIs = FleetOperationsAPIs
 
 data FleetRegistrationAPIs = FleetRegistrationAPIs
   { fleetOwnerLogin :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
-    fleetOwnerVerify :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess
+    fleetOwnerVerify :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
+    fleetOwnerRegister :: Fleet.FleetOwnerRegisterReq -> Euler.EulerClient Fleet.FleetOwnerRegisterRes
   }
 
 data FleetAPIs = FleetAPIs
@@ -84,7 +85,8 @@ mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
       :<|> setVehicleDriverRcStatusForFleet = fleetOperationsClient
 
     fleetOwnerLogin
-      :<|> fleetOwnerVerify = fleetRegisterationClient
+      :<|> fleetOwnerVerify
+      :<|> fleetOwnerRegister = fleetRegisterationClient
 
 callDynamicOfferDriverAppFleetApi ::
   forall m r b c.

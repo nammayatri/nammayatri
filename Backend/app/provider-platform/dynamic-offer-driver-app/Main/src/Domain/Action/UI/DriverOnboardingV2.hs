@@ -7,9 +7,13 @@ import qualified API.Types.UI.DriverOnboardingV2
 import Data.OpenApi (ToSchema)
 import Domain.Types.Common
 import qualified Domain.Types.DocumentVerificationConfig
+import qualified Domain.Types.DocumentVerificationConfig as DTO
 import Domain.Types.DriverInformation
 import Domain.Types.DriverSSN
+import qualified Domain.Types.DriverPanCard as Domain
 import Domain.Types.FarePolicy
+import qualified Domain.Types.IdfyVerification as Domain
+import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -21,7 +25,6 @@ import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Prelude
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.External.Encryption (encrypt)
 import Kernel.External.Types (Language (..))
 import qualified Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -37,6 +40,9 @@ import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverSSN as QDriverSSN
+import qualified Storage.Queries.DriverPanCard as QDPC
+import qualified Storage.Queries.DriverPanCardExtra as SQDPC
+import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -253,3 +259,58 @@ postDriverRegisterSsn (mbPersonId, _, _) API.Types.UI.DriverOnboardingV2.SSNReq 
           driverId = driverId',
           ssn = ssn'
         }
+
+postDriverRegisterPancard ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.DriverPanReq ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postDriverRegisterPancard (mbPersonId, merchantId, _) req = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbPanInfo <- SQDPC.findByPanNumber req.panNumber
+  getImage req.imageId1 personId ------- Just checking whether the image exists or not
+  case mbPanInfo of
+    Just pan -> unless (pan.driverId == personId) $ throwImageError req.imageId1 PanAlreadyLinked
+    Nothing -> do
+      panCard <- buildPanCard merchantId person req
+      QDPC.create panCard
+  return Success
+  where
+    getImage :: Kernel.Types.Id.Id Image.Image -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow ()
+    getImage imageId personId = do
+      imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
+      unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId.getId)
+      unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId.getId)
+      unless (imageMetadata.imageType == DTO.PanCard) $
+        throwError (ImageInvalidType (show DTO.PanCard) (show imageMetadata.imageType))
+
+buildPanCard ::
+  Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
+  Domain.Types.Person.Person ->
+  API.Types.UI.DriverOnboardingV2.DriverPanReq ->
+  Environment.Flow Domain.DriverPanCard
+buildPanCard merchantId person API.Types.UI.DriverOnboardingV2.DriverPanReq {..} = do
+  now <- getCurrentTime
+  id <- generateGUID
+  encryptedPan <- encrypt panNumber
+  return
+    Domain.DriverPanCard
+      { consent = consent,
+        consentTimestamp = now,
+        documentImageId1 = imageId1,
+        documentImageId2 = imageId2,
+        driverDob = Nothing,
+        driverId = person.id,
+        driverName = Just person.firstName,
+        failedRules = [],
+        id = id,
+        panCardNumber = encryptedPan,
+        verificationStatus = Domain.PENDING,
+        merchantId = Just merchantId,
+        createdAt = now,
+        updatedAt = now
+      }

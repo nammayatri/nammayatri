@@ -472,3 +472,70 @@ DriverSSN:
       kvFunction: findOneWithKV
       where: driverId
   excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
+
+DriverPanCard:
+  tableName: driver_pan_card
+  fields:
+    id: Id DriverPanCard
+    driverId: Id Person
+    documentImageId1: Id Image
+    documentImageId2: Maybe (Id Image)
+    driverDob: Maybe UTCTime
+    driverName: Maybe Text
+    panCardNumber: EncryptedHashedField e Text
+    failedRules: '[Text]'
+    verificationStatus: VerificationStatus
+    consent: Bool
+    consentTimestamp: UTCTime
+  excludedFields: [merchantOperatingCityId]
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    panCardNumberHash: SecondaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+
+
+
+FleetOwnerDocumentVerificationConfig:
+  tableName: fleet_owner_document_verification_config
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    documentType: DocumentType
+    title: Text
+    description: Maybe Text
+    isMandatory: Bool
+    isDisabled: Bool
+    disableWarning: Maybe Text
+    isHidden: Bool
+    dependencyDocumentType: '[DocumentType]'
+    checkExtraction: Bool
+    checkExpiry: Bool
+    maxRetryCount: Int
+    order: Int
+  default:
+    order: "0"
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    documentType: PrimaryKey
+  sqlType:
+    dependencyDocumentType: text[]
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithOptionsKV
+      where: merchantOperatingCityId
+      orderBy:
+        field: order
+        order: asc

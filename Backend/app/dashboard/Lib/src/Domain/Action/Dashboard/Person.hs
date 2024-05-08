@@ -471,5 +471,6 @@ buildPerson req dashboardAccessType = do
         passwordHash = Just passwordHash,
         dashboardAccessType = Just dashboardAccessType,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        verified = Nothing
       }

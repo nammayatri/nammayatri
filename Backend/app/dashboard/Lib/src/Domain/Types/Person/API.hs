@@ -31,7 +31,8 @@ data PersonAPIEntity = PersonAPIEntity
     mobileCountryCode :: Text,
     availableMerchants :: [ShortId DMerchant.Merchant],
     availableCitiesForMerchant :: Maybe [AvailableCitiesForMerchant],
-    registeredAt :: UTCTime
+    registeredAt :: UTCTime,
+    verified :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 

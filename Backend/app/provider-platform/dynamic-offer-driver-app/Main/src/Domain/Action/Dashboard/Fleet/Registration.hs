@@ -17,22 +17,41 @@ module Domain.Action.Dashboard.Fleet.Registration
     fleetOwnerVerify,
     FleetOwnerLoginReq (..),
     FleetOwnerVerifyRes (..),
+    fleetOwnerRegister,
+    FleetOwnerRegisterReq (..),
+    FleetOwnerRegisterRes (..),
   )
 where
 
+import qualified API.Types.UI.DriverOnboardingV2 as DO
 import Data.OpenApi (ToSchema)
+import qualified Domain.Action.UI.DriverOnboarding.Image as Image
+import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
+import qualified Domain.Action.UI.Registration as Registration
+import qualified Domain.Types.DocumentVerificationConfig as DVC
+import Domain.Types.FleetOwnerInformation as FOI
+import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DP
+import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption (getDbHash)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.City as City
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
 
@@ -46,19 +65,90 @@ data FleetOwnerLoginReq = FleetOwnerLoginReq
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
+data FleetOwnerRegisterReq = FleetOwnerRegisterReq
+  { firstName :: Text,
+    lastName :: Text,
+    mobileNumber :: Text,
+    mobileCountryCode :: Text,
+    merchantId :: Text,
+    city :: City.City,
+    fleetType :: Maybe FOI.FleetType,
+    panNumber :: Maybe Text,
+    gstNumber :: Maybe Text,
+    panImageId1 :: Maybe Text,
+    panImageId2 :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
+newtype FleetOwnerRegisterRes = FleetOwnerRegisterRes
+  { personId :: Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
 newtype FleetOwnerVerifyRes = FleetOwnerVerifyRes
   { authToken :: Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
+fleetOwnerRegister :: FleetOwnerRegisterReq -> Flow FleetOwnerRegisterRes
+fleetOwnerRegister req = do
+  let merchantId = ShortId req.merchantId
+  mobileNumberHash <- getDbHash req.mobileNumber
+  deploymentVersion <- asks (.version)
+  merchant <-
+    QMerchant.findByShortId merchantId
+      >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just req.city)
+  let personAuth = buildFleetOwnerAuthReq merchant.id req
+  person <-
+    QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.FLEET_OWNER
+      >>= maybe (createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion) return
+  createFleetOwnerInfo person.id merchant.id req.fleetType req.gstNumber
+  fork "Creating Pan Info for Fleet Owner" $ do
+    createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber
+  return $ FleetOwnerRegisterRes {personId = person.id.getId}
+
+createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Flow DP.Person
+createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing (Just deploymentVersion) merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
+  void $ QP.create person
+  pure person
+
+createPanInfo :: Id DP.Person -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()
+createPanInfo personId merchantId merchantOperatingCityId (Just img1) _ (Just panNo) = do
+  let req' = Image.ImageValidateRequest {imageType = DVC.PanCard, image = img1, rcNumber = Nothing}
+  image <- Image.validateImage True (personId, merchantId, merchantOperatingCityId) req'
+  let panReq = DO.DriverPanReq {panNumber = panNo, imageId1 = image.imageId, imageId2 = Nothing, consent = True}
+  void $ Registration.postDriverRegisterPancard (Just personId, merchantId, merchantOperatingCityId) panReq
+createPanInfo _ _ _ _ _ _ = pure () --------- currently we can have it like this as Pan info is optional
+
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Text -> Flow ()
+createFleetOwnerInfo personId merchantId mbFleetType mbGstNumber = do
+  now <- getCurrentTime
+  id <- generateGUID
+  let fleetType = case mbFleetType of
+        Just ft -> ft
+        Nothing -> FOI.NORMAL_FLEET
+      fleetOwnerInfo =
+        FOI.FleetOwnerInformation
+          { id = id,
+            fleetOwnerPersonId = personId,
+            merchantId = merchantId,
+            fleetType = fleetType,
+            enabled = False,
+            blocked = False,
+            verified = False,
+            gstNumber = mbGstNumber,
+            createdAt = now,
+            updatedAt = now
+          }
+  QFOI.create fleetOwnerInfo
+  pure ()
+
 fleetOwnerLogin ::
-  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    EsqDBFlow m r,
-    EncFlow m r,
-    CacheFlow m r
-  ) =>
   FleetOwnerLoginReq ->
-  m APISuccess
+  Flow APISuccess
 fleetOwnerLogin req = do
   runRequestValidation validateInitiateLoginReq req
   smsCfg <- asks (.smsCfg)
@@ -91,13 +181,26 @@ fleetOwnerLogin req = do
   Redis.setExp key otp expTime
   pure Success
 
+buildFleetOwnerAuthReq ::
+  Id DMerchant.Merchant ->
+  FleetOwnerRegisterReq ->
+  Registration.AuthReq
+buildFleetOwnerAuthReq merchantId' FleetOwnerRegisterReq {..} =
+  Registration.AuthReq
+    { name = Just (firstName <> " " <> lastName),
+      mobileNumber = Just mobileNumber,
+      mobileCountryCode = Just mobileCountryCode,
+      merchantId = merchantId'.getId,
+      merchantOperatingCity = Just city,
+      identifierType = Just DP.MOBILENUMBER,
+      email = Nothing,
+      registrationLat = Nothing,
+      registrationLon = Nothing
+    }
+
 fleetOwnerVerify ::
-  ( EsqDBFlow m r,
-    EncFlow m r,
-    CacheFlow m r
-  ) =>
   FleetOwnerLoginReq ->
-  m APISuccess
+  Flow APISuccess
 fleetOwnerVerify req = do
   case req.otp of
     Just otp -> do
@@ -105,6 +208,13 @@ fleetOwnerVerify req = do
       case mobileNumberOtpKey of
         Just otpHash -> do
           unless (otpHash == otp) $ throwError InvalidAuthData
+          let merchantId = ShortId req.merchantId
+          merchant <-
+            QMerchant.findByShortId merchantId
+              >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
+          mobileNumberHash <- getDbHash req.mobileNumber
+          person <- QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.FLEET_OWNER >>= fromMaybeM (PersonNotFound req.mobileNumber)
+          void $ QFOI.updateFleetOwnerVerifiedStatus True person.id
           pure Success
         Nothing -> throwError InvalidAuthData
     _ -> throwError InvalidAuthData

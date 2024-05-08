@@ -156,7 +156,7 @@ ticketRideList merchantShortId opCity mbRideShortId countryCode mbPhoneNumber _ 
     (Nothing, Just number) -> do
       no <- getDbHash number
       let code = fromMaybe "+91" countryCode
-      person <- runInReplica $ QPerson.findByMobileNumberAndMerchant code no merchant.id >>= fromMaybeM (PersonWithPhoneNotFound number)
+      person <- runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole code no merchant.id DP.DRIVER >>= fromMaybeM (PersonWithPhoneNotFound number)
       ridesAndBooking <- QRide.findAllByDriverId person.id (Just totalRides) (Just 0) Nothing Nothing Nothing
       let lastNRides = map fst ridesAndBooking
       ridesDetail <- mapM (\ride -> rideInfo merchant.id merchantOpCityId (cast ride.id)) lastNRides
@@ -479,7 +479,7 @@ bookingWithVehicleNumberAndPhone merchant merchantOpCityId req = do
     then do
       Redis.setExp apiProcessKey True 60
       phoneNumberHash <- getDbHash req.phoneNumber
-      person <- QPerson.findByMobileNumberAndMerchant req.countryCode phoneNumberHash merchant.id >>= fromMaybeM (DriverNotFound req.phoneNumber)
+      person <- QPerson.findByMobileNumberAndMerchantAndRole req.countryCode phoneNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound req.phoneNumber)
       mblinkedVehicle <- VQuery.findById person.id
       mbRecentRide :: Maybe Text <- Redis.safeGet $ SRide.makeStartRideIdKey person.id
       when (isJust mbRecentRide) $ throwError RecentActiveRide

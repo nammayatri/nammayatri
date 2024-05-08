@@ -479,6 +479,7 @@ library
       Storage.Queries.DriverInformationExtra
       Storage.Queries.DriverLicenseExtra
       Storage.Queries.DriverLocation.Internal
+      Storage.Queries.DriverPanCardExtra
       Storage.Queries.DriverPlan
       Storage.Queries.DriverQuote
       Storage.Queries.DriverQuote.Internal
@@ -612,12 +613,16 @@ library
       Domain.Types.DriverInformation
       Domain.Types.DriverLicense
       Domain.Types.DriverModuleCompletion
+      Domain.Types.DriverPanCard
       Domain.Types.DriverPoolConfig
       Domain.Types.DriverRCAssociation
       Domain.Types.DriverReferral
       Domain.Types.DriverSSN
       Domain.Types.Estimate
       Domain.Types.Exophone
+      Domain.Types.FleetOnwerDocumentVerificationConfig
+      Domain.Types.FleetOwnerDocumentVerificationConfig
+      Domain.Types.FleetOwnerInformation
       Domain.Types.IdfyVerification
       Domain.Types.Image
       Domain.Types.InterCityTravelCities
@@ -671,12 +676,16 @@ library
       Storage.Beam.DriverInformation
       Storage.Beam.DriverLicense
       Storage.Beam.DriverModuleCompletion
+      Storage.Beam.DriverPanCard
       Storage.Beam.DriverPoolConfig
       Storage.Beam.DriverRCAssociation
       Storage.Beam.DriverReferral
       Storage.Beam.DriverSSN
       Storage.Beam.Estimate
       Storage.Beam.Exophone
+      Storage.Beam.FleetOnwerDocumentVerificationConfig
+      Storage.Beam.FleetOwnerDocumentVerificationConfig
+      Storage.Beam.FleetOwnerInformation
       Storage.Beam.IdfyVerification
       Storage.Beam.Image
       Storage.Beam.InterCityTravelCities
@@ -730,12 +739,16 @@ library
       Storage.Queries.DriverInformation
       Storage.Queries.DriverLicense
       Storage.Queries.DriverModuleCompletion
+      Storage.Queries.DriverPanCard
       Storage.Queries.DriverPoolConfig
       Storage.Queries.DriverRCAssociation
       Storage.Queries.DriverReferral
       Storage.Queries.DriverSSN
       Storage.Queries.Estimate
       Storage.Queries.Exophone
+      Storage.Queries.FleetOnwerDocumentVerificationConfig
+      Storage.Queries.FleetOwnerDocumentVerificationConfig
+      Storage.Queries.FleetOwnerInformation
       Storage.Queries.IdfyVerification
       Storage.Queries.Image
       Storage.Queries.InterCityTravelCities
@@ -757,6 +770,7 @@ library
       Storage.Queries.OrphanInstances.DriverFee
       Storage.Queries.OrphanInstances.DriverInformation
       Storage.Queries.OrphanInstances.DriverLicense
+      Storage.Queries.OrphanInstances.DriverPanCard
       Storage.Queries.OrphanInstances.DriverRCAssociation
       Storage.Queries.OrphanInstances.DriverReferral
       Storage.Queries.OrphanInstances.Exophone

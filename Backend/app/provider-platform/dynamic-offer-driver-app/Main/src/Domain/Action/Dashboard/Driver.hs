@@ -312,7 +312,7 @@ getDriverDue merchantShortId _ mbMobileCountryCode phone = do
   let mobileCountryCode = fromMaybe "+91" mbMobileCountryCode
   merchant <- findMerchantByShortId merchantShortId
   mobileNumber <- getDbHash phone
-  driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumber merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
+  driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumber merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
   driverFees <- findPendingFeesByDriverIdAndServiceName (cast driver.id) YATRI_SUBSCRIPTION
   driverFeeByInvoices <- case driverFees of
     [] -> pure []
@@ -830,7 +830,7 @@ updatePhoneNumber merchantShortId opCity reqDriverId req = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   phoneNumberHash <- getDbHash req.newPhoneNumber
-  mbLinkedPerson <- QPerson.findByMobileNumberAndMerchant req.newCountryCode phoneNumberHash merchant.id
+  mbLinkedPerson <- QPerson.findByMobileNumberAndMerchantAndRole req.newCountryCode phoneNumberHash merchant.id DP.DRIVER
   whenJust mbLinkedPerson $ \linkedPerson -> do
     if linkedPerson.id == driver.id
       then throwError $ InvalidRequest "Person already have the same mobile number"
@@ -916,7 +916,7 @@ addVehicleForFleet merchantShortId opCity reqDriverPhoneNo mbMobileCountryCode f
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   phoneNumberHash <- getDbHash reqDriverPhoneNo
   let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
-  driver <- QPerson.findByMobileNumberAndMerchant mobileCountryCode phoneNumberHash merchant.id >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
+  driver <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist driver.id.getId)
@@ -1131,7 +1131,7 @@ getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchantId mbIsActive m
     Just driverPhNo -> do
       mobileNumberHash <- getDbHash driverPhNo
       let countryCode = fromMaybe "+91" mbCountryCode
-      driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchant countryCode mobileNumberHash merchantId >>= fromMaybeM (InvalidRequest "Person not found")
+      driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchantId DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
       fleetDriverAssociation <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId
       pure $ maybeToList fleetDriverAssociation
     Nothing -> do
@@ -1606,7 +1606,7 @@ driverAadhaarInfoByPhone :: ShortId DM.Merchant -> Context.City -> Text -> Flow 
 driverAadhaarInfoByPhone merchantShortId _ phoneNumber = do
   merchant <- findMerchantByShortId merchantShortId
   mobileNumberHash <- getDbHash phoneNumber
-  driver <- QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
+  driver <- QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
   res <- AV.findByDriverId driver.id
   case res of
     Just aadhaarData -> do
@@ -1629,7 +1629,7 @@ updateByPhoneNumber merchantShortId _ phoneNumber req = do
   aadhaarInfo <- AV.findByAadhaarNumberHash (Just aadhaarNumberHash)
   when (isJust aadhaarInfo) $ throwError AadhaarAlreadyLinked
   merchant <- findMerchantByShortId merchantShortId
-  driver <- QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
+  driver <- QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
   res <- AV.findByDriverId driver.id
   case res of
     Just _ -> AV.findByPhoneNumberAndUpdate req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) req.isVerified driver.id
@@ -1928,7 +1928,7 @@ getOperatingCity merchantShortId _ mbMobileCountryCode mbMobileNumber mbRideId =
       return $ Common.GetOperatingCityResp {operatingCity = city.city}
     (_, Just mobileNumber) -> do
       mobileNumberHash <- getDbHash mobileNumber
-      driver <- QPerson.findByMobileNumberAndMerchant (fromMaybe "+91" mbMobileCountryCode) mobileNumberHash merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
+      driver <- QPerson.findByMobileNumberAndMerchantAndRole (fromMaybe "+91" mbMobileCountryCode) mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
       let operatingCityId = driver.merchantOperatingCityId
       city <- CQMOC.findById operatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId)
       return $ Common.GetOperatingCityResp {operatingCity = city.city}

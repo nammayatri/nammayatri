@@ -1,0 +1,2 @@
+ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN associated_on TIMESTAMP WITH TIME ZONE;
+ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN associated_till TIMESTAMP WITH TIME ZONE;

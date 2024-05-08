@@ -84,6 +84,7 @@ updateFleetDriverActiveStatus fleetOwnerId driverId isActive = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamFDVA.isActive isActive,
+      Se.Set BeamFDVA.associatedTill $ Just now,
       Se.Set BeamFDVA.updatedAt now
     ]
     [Se.And [Se.Is BeamFDVA.driverId (Se.Eq driverId.getId), Se.Is BeamFDVA.fleetOwnerId (Se.Eq fleetOwnerId)]]
@@ -109,6 +110,8 @@ instance ToTType' BeamFDVA.FleetDriverAssociation FleetDriverAssociation where
         BeamFDVA.driverId = getId driverId,
         BeamFDVA.fleetOwnerId = fleetOwnerId,
         BeamFDVA.isActive = isActive,
+        BeamFDVA.associatedOn = associatedOn,
+        BeamFDVA.associatedTill = associatedTill,
         BeamFDVA.createdAt = createdAt,
         BeamFDVA.updatedAt = updatedAt
       }
