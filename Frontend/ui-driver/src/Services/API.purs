@@ -4657,3 +4657,35 @@ instance standardEncodeGetMakeListResp :: StandardEncode GetMakeListResp where s
 instance showGetMakeListResp :: Show GetMakeListResp where show = genericShow
 instance decodeGetMakeListResp :: Decode GetMakeListResp where decode = defaultDecode
 instance encodeGetMakeListResp  :: Encode GetMakeListResp where encode = defaultEncode
+
+newtype SocialLoginReq = SocialLoginReq 
+  { email  :: Maybe String,
+    merchantId :: String,
+    merchantOperatingCity :: Maybe String,
+    name :: Maybe String,
+    oauthProvider :: Maybe OAuthProvider,
+    registrationLat :: Maybe Number,
+    registrationLon :: Maybe Number,
+    tokenId  :: Maybe String
+  }
+
+newtype SocialLoginRes = SocialLoginRes
+  { token :: String
+  }
+
+instance makeSocialLoginReq :: RestEndpoint SocialLoginReq SocialLoginRes where
+ makeRequest reqBody headers = defaultMakeRequest POST (EP.socialLogin "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericSocialLoginReq :: Generic SocialLoginReq _
+instance standardEncodeSocialLoginReq :: StandardEncode SocialLoginReq where standardEncode (SocialLoginReq req) = standardEncode req
+instance showSocialLoginReq :: Show SocialLoginReq where show = genericShow
+instance decodeSocialLoginReq :: Decode SocialLoginReq where decode = defaultDecode
+instance encodeSocialLoginReq :: Encode SocialLoginReq where encode = defaultEncode
+
+derive instance genericSocialLoginRes :: Generic SocialLoginRes _
+instance standardEncodeSocialLoginRes :: StandardEncode SocialLoginRes where standardEncode (SocialLoginRes res) = standardEncode res
+instance showSocialLoginRes :: Show SocialLoginRes where show = genericShow
+instance decodeSocialLoginRes :: Decode SocialLoginRes where decode = defaultDecode
+instance encodeSocialLoginRes :: Encode SocialLoginRes where encode = defaultEncode

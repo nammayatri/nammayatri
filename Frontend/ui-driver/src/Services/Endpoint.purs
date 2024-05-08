@@ -336,3 +336,6 @@ updateAirConditioned _ = (getBaseUrl "") <> "/driver/updateAirCondition"
 
 getMakeList :: String -> String
 getMakeList _ = (getBaseUrl "") <> "/vehicleMakes"
+
+socialLogin :: String -> String
+socialLogin _ = (getBaseUrl "") <> "/social/login"

@@ -1502,3 +1502,36 @@ mkUpdateDriverVehiclesServiceTier ridePreferences =
             tiers : tierArray,
             airConditioned : Nothing
         }
+
+makeSocialLogin :: EnterMobileNumberScreenState -> LatLon -> SocialLoginReq
+makeSocialLogin state (LatLon lat lng _) = 
+    let operatingCity = getValueToLocalStore DRIVER_LOCATION
+        latitude = mkLatLon lat
+        longitude = mkLatLon lng
+        config = getAppConfig appConfig
+        cityConfig = config.flowConfig.chooseCity
+    in
+    SocialLoginReq {
+        email : state.data.email,
+        merchantId : if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" ),
+        merchantOperatingCity : mkOperatingCity operatingCity config,
+        name: state.data.name,
+        oauthProvider : state.data.oauthProvider,
+        registrationLat : latitude,
+        registrationLon : longitude,
+        tokenId : state.data.token
+    }
+    where 
+        mkOperatingCity :: String -> AppConfig -> Maybe String
+        mkOperatingCity operatingCity config
+            | operatingCity `DA.elem` ["__failed", "--", "(null)"] = if config.flowConfig.chooseCity.useDefault then Just config.flowConfig.chooseCity.defCity else Nothing
+            | operatingCity == "Puducherry"          = Just "Pondicherry"
+            | operatingCity == "Tamil Nadu"          = Just "TamilNaduCities"
+            | otherwise                              = Just operatingCity
+
+        mkLatLon :: String -> Maybe Number
+        mkLatLon latlon = 
+            if latlon == "0.0" 
+                then Nothing
+                else Number.fromString latlon
+
