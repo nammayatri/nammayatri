@@ -44,7 +44,9 @@ lockSearchTry ::
   Id SearchTry ->
   m Bool
 lockSearchTry searchTryId = do
-  (<= 1) <$> Hedis.incr (mkCancelledKey' searchTryId)
+  k <- (<= 1) <$> Hedis.incr (mkCancelledKey' searchTryId)
+  Hedis.expire (mkCancelledKey' searchTryId) 60
+  return k
 
 whenSearchTryCancellable ::
   CacheFlow m r =>
