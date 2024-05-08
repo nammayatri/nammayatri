@@ -66,6 +66,8 @@ data IssueReportListItem = IssueReportListItem
     issueReportShortId :: Maybe (ShortId IssueReport),
     status :: IssueStatus,
     category :: Text,
+    optionLabel :: Maybe Text,
+    rideId :: Maybe (Id Ride),
     createdAt :: UTCTime
   }
   deriving stock (Eq, Show, Generic)

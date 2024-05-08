@@ -19,8 +19,9 @@ module IssueManagement.Tools.Error where
 import EulerHS.Prelude
 import Kernel.Types.Error.BaseError.HTTPError
 
-newtype IssueReportError
+data IssueReportError
   = IssueReportDoNotExist Text
+  | ACRelatedIssueReportAlreadyExists Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''IssueReportError
@@ -28,10 +29,13 @@ instanceExceptionWithParent 'HTTPException ''IssueReportError
 instance IsBaseError IssueReportError where
   toMessage = \case
     IssueReportDoNotExist issueReportId -> Just $ "IssueReport with issueReportId \"" <> show issueReportId <> "\" do not exist."
+    ACRelatedIssueReportAlreadyExists rideId -> Just $ "An AC related issue report already exists for the provided rideId -  \"" <> show rideId
 
 instance IsHTTPError IssueReportError where
   toErrorCode (IssueReportDoNotExist _) = "ISSUE_REPORT_DO_NOT_EXIST"
+  toErrorCode (ACRelatedIssueReportAlreadyExists _) = "AC_RELATED_ISSUE_REPORT_ALREADY_EXISTS"
   toHttpCode (IssueReportDoNotExist _) = E400
+  toHttpCode (ACRelatedIssueReportAlreadyExists _) = E400
 
 instance IsAPIError IssueReportError
 

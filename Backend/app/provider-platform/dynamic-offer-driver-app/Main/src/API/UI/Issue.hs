@@ -22,6 +22,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.External.LocationTrackingService.Types
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
@@ -61,7 +62,8 @@ driverIssueHandle =
       getRideInfo = castRideInfo,
       createTicket = castCreateTicket,
       updateTicket = castUpdateTicket,
-      findMerchantConfig = buildMerchantConfig
+      findMerchantConfig = buildMerchantConfig,
+      mbReportACIssue = Nothing
     }
 
 castPersonById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Person -> m (Maybe Common.Person)
@@ -86,7 +88,7 @@ castRideById rideId _ = do
   return $ fmap castRide ride
   where
     castRide ride =
-      Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast ride.merchantOperatingCityId) ride.createdAt
+      Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast ride.merchantOperatingCityId) ride.createdAt Nothing
 
 castMOCityById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.MerchantOperatingCity -> m (Maybe Common.MerchantOperatingCity)
 castMOCityById moCityId = do
@@ -157,15 +159,18 @@ castCreateTicket merchantId merchantOpCityId = TT.createTicket (cast merchantId)
 castUpdateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp
 castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
 
-buildMerchantConfig :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Person -> m Common.MerchantConfig
+buildMerchantConfig :: (CacheFlow m r, Esq.EsqDBFlow m r, HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal]) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Person -> m Common.MerchantConfig
 buildMerchantConfig _merchantId merchantOpCityId personId = do
   transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  appBackendBapInternal <- asks (.appBackendBapInternal)
   return
     Common.MerchantConfig
       { mediaFileSizeUpperLimit = transporterConfig.mediaFileSizeUpperLimit,
         mediaFileUrlPattern = transporterConfig.mediaFileUrlPattern,
         kaptureDisposition = transporterConfig.kaptureDisposition,
-        kaptureQueue = transporterConfig.kaptureQueue
+        kaptureQueue = transporterConfig.kaptureQueue,
+        counterPartyUrl = appBackendBapInternal.url,
+        counterPartyApiKey = appBackendBapInternal.apiKey
       }
 
 issueReportDriverList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> FlowHandler Common.IssueReportListRes
