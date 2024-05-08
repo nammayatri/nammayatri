@@ -71,6 +71,7 @@ newtype TriggerOTPReq = TriggerOTPReq {
   registrationLat :: Maybe Number,
   registrationLon :: Maybe Number,
   email  :: Maybe String,
+  identifierType :: Maybe String,
   name :: Maybe String,
   tokenId  :: Maybe String,
   oauthProvider :: Maybe OAuthProvider

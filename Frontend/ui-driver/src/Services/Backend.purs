@@ -208,6 +208,7 @@ makeTriggerOTPReq state (LatLon lat lng _) = TriggerOTPReq
       registrationLat : latitude,
       registrationLon : longitude,
       email : state.data.email,
+      identifierType : if state.data.email == Nothing then Nothing else Just "EMAIL",
       name: state.data.name,
       tokenId : state.data.token,
       oauthProvider : state.data.oauthProvider
