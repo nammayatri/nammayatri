@@ -458,3 +458,13 @@ updatePersonDetails person = do
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq $ getId person.id)]
+
+clearDeviceTokenByPersonId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
+clearDeviceTokenByPersonId personId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.deviceToken Nothing,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
