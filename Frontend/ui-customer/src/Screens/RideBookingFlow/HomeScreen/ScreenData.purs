@@ -122,7 +122,6 @@ initData = {
       , isBookingOption : false
       , pickUpCharges : 0.0
       , layoutMargin : Margin 0 0 0 0
-      , isSingleEstimate : false
       , tollCharge : 0.0
       , serviceTierName : Nothing
       , serviceTierShortDesc : Nothing
@@ -141,6 +140,11 @@ initData = {
       , providerType : CT.ONUS
       , singleVehicle : false
       , priceShimmer : true
+      , services : []
+      , availableServices : []
+      , selectedServices : []
+      , currentEstimateHeight : 184
+      , selectedEstimateHeight : 0
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -191,6 +195,7 @@ initData = {
         providerPrefInfo : false,
         hasTopProviderEstimate : true
     }
+    , otherSelectedEstimates : []
     },
     props: {
       rideRequestFlow : false
@@ -362,6 +367,7 @@ initData = {
                                }
     , showAcWorkingPopup : false
     , repeateRideTimerStoped : false
+    , currentEstimateHeight : 184
   }
 }
 

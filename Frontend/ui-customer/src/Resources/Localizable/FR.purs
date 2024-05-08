@@ -1114,6 +1114,7 @@ getFR stringKey =
         INVALID_CODE -> "Code invalide !"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "Entrez un code de parrainage à 6 chiffres ci-dessous"
         APPLY -> "Appliquer"
+        BOOK_ANY -> "Réservez n'importe quel"
         TOLL_CHARGES_INCLUDED -> "Frais de péage inclus"
         ONE_CLICK_BOOKINGS -> "Réservations en un clic"
         HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "Votre chauffeur a-t-il réglé la climatisation selon vos préférences?"

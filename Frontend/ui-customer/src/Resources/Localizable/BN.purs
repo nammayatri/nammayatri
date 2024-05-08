@@ -1113,6 +1113,7 @@ getBN stringKey =
         INVALID_CODE -> "অবৈধ কোড!"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "নীচে 6 ডিজিটের রেফারাল কোড লিখুন"
         APPLY -> "প্রয়োগ করুন"
+        BOOK_ANY -> "বুক যে কোনো"
         TOLL_CHARGES_INCLUDED -> "টোল চার্জ অন্তর্ভুক্ত"
         ONE_CLICK_BOOKINGS -> "এক ক্লিক বুকিং"
         HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "আপনার ড্রাইভার কি আপনার পছন্দ অনুযায়ী এসি সেট করেছেন?"

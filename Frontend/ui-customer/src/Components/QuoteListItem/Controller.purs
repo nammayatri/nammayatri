@@ -38,6 +38,8 @@ config = {
   , price : "0"
   , vehicleType : "auto"
   , driverName : "Drive_Name"
+  , vehicleImage : ""
+  , serviceTierName : Nothing
   , selectedQuote : Nothing
   , appConfig : getAppConfig appConfig
   , city : AnyCity

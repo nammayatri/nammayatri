@@ -1151,3 +1151,4 @@ data STR
   | TIP_CAN_BE_ADDED String
   | RUSH_HOURS_DESC String
   | AC_TURNED_OFF
+  | BOOK_ANY

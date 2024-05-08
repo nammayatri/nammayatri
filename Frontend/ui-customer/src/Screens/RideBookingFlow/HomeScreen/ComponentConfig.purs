@@ -1005,7 +1005,7 @@ messagingViewConfig state = let
   }
   in messagingViewConfig'
 
-getDefaultPeekHeight :: ST.HomeScreenState -> Int  --TODO Update these before final push
+getDefaultPeekHeight :: ST.HomeScreenState -> Int
 getDefaultPeekHeight state = do
   let isQuotes = state.data.currentSearchResultType == ST.QUOTES
       height = case state.props.currentStage == ST.RideAccepted of 
@@ -1328,7 +1328,6 @@ chooseYourRideConfig state =
     showPreferences = state.data.showPreferences,
     bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city == Bangalore,
     flowWithoutOffers = state.props.flowWithoutOffers,
-    enableSingleEstimate = state.data.config.enableSingleEstimate,
     selectedEstimateHeight = state.props.selectedEstimateHeight,
     zoneType = state.props.zoneType.sourceTag,
     tipViewProps = getTipViewProps state,
@@ -1336,6 +1335,7 @@ chooseYourRideConfig state =
     customerTipArray = tipConfig.customerTipArray,
     customerTipArrayWithValues = tipConfig.customerTipArrayWithValues,
     enableTips = state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities) && (DA.length tipConfig.customerTipArray) > 0 && not state.data.iopState.showMultiProvider,
+    currentEstimateHeight = state.props.currentEstimateHeight,
     showMultiProvider = state.data.iopState.showMultiProvider
   }
 
@@ -1538,7 +1538,6 @@ chooseVehicleConfig :: ST.HomeScreenState -> ChooseVehicle.Config
 chooseVehicleConfig state = let
   config = ChooseVehicle.config
   selectedEstimates = state.data.selectedEstimatesObject
-  isSingleEstimate = selectedEstimates.vehicleVariant == "AUTO_RICKSHAW" && ((DA.length state.data.specialZoneQuoteList) == 1) && state.data.config.enableSingleEstimate
   chooseVehicleConfig' = config
     { vehicleImage = HU.getVehicleVariantImage selectedEstimates.vehicleVariant
     , isSelected = true
@@ -1558,7 +1557,6 @@ chooseVehicleConfig state = let
     , isBookingOption = false
     , pickUpCharges = selectedEstimates.pickUpCharges 
     , layoutMargin = Margin 0 0 0 0
-    , isSingleEstimate = isSingleEstimate
     , tollCharge = selectedEstimates.tollCharge
     , serviceTierName = selectedEstimates.serviceTierName
     , serviceTierShortDesc = selectedEstimates.serviceTierShortDesc

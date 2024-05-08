@@ -22,7 +22,7 @@ import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _e
 import Components.ChooseVehicle (Config, config, SearchType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (config) as QLI
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
-import Data.Array (mapWithIndex, filter, head, find)
+import Data.Array (mapWithIndex, filter, head, find, foldl)
 import Data.Array as DA
 import Data.Int (toNumber, round, fromString)
 import Data.Lens ((^.), view)
@@ -31,7 +31,7 @@ import Data.Eq
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim, null)
 import Data.Function.Uncurried (runFn1)
-import Helpers.Utils (parseFloat, withinTimeRange,isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig)
+import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -41,10 +41,10 @@ import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySett
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..))
 import Services.Backend as Remote
-import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
-import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
+import Types.App (FlowBT, GlobalState(..), ScreenType(..))
+import Storage (setValueToLocalStore, getValueToLocalStore, KeyStore(..))
 import JBridge (fromMetersToKm, getLatLonFromAddress, Location, differenceBetweenTwoUTCInMinutes)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityFromString)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityFromString, intersection)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..), Paths, FareList)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -126,6 +126,8 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
           , vehicleType : "auto"
           , driverName : quoteDetails.driverName
           , selectedQuote : Nothing
+          , vehicleImage : getVehicleVariantImage quoteEntity.vehicleVariant
+          , serviceTierName : quoteEntity.serviceTierName
           , appConfig : getAppConfig appConfig
           , city : city
         }
@@ -357,36 +359,54 @@ getEstimateList :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Maybe In
 getEstimateList quotes estimateAndQuoteConfig count activeIndex = 
   let mbCount = fromMaybe 0 count
       isFareRange = isFareRangePresent quotes
+      filteredEstimates = getFilteredEstimate quotes estimateAndQuoteConfig
+      estimatesConfig = mapWithIndex (\index item -> getEstimates item filteredEstimates index isFareRange mbCount activeIndex) filteredEstimates
   in
-  mapWithIndex (\index item -> getEstimates item index isFareRange mbCount activeIndex) (getFilteredEstimate quotes estimateAndQuoteConfig)
+    estimatesConfig
 
 isFareRangePresent :: Array EstimateAPIEntity -> Boolean
-isFareRangePresent estimates = DA.length (DA.filter (\(EstimateAPIEntity estimate) ->
-         case estimate.totalFareRange of
-                Nothing -> false
-                Just (FareRange fareRange) -> not (fareRange.minFare == fareRange.maxFare )) estimates) > 0
+isFareRangePresent estimates =
+  DA.length
+    ( DA.filter
+        ( \(EstimateAPIEntity estimate) -> case estimate.totalFareRange of
+            Nothing -> false
+            Just (FareRange fareRange) -> not (fareRange.minFare == fareRange.maxFare)
+        )
+        estimates
+    )
+    > 0
 
 getFilteredEstimate :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Array EstimateAPIEntity
 getFilteredEstimate estimates estimateAndQuoteConfig =
-  let filteredEstimate = case (getMerchant FunctionCall) of
-                            YATRISATHI -> DA.concat (map (\variant -> filterEstimateByVariants variant estimates) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))
-                            _          -> estimates
-      sortWithFare = DA.sortWith (\(EstimateAPIEntity estimate) -> getFareFromEstimate (EstimateAPIEntity estimate)) filteredEstimate
-  in sortEstimateWithVariantOrder sortWithFare estimateAndQuoteConfig.variantOrder
-  where
-    sortEstimateWithVariantOrder :: Array EstimateAPIEntity -> Array String -> Array EstimateAPIEntity
-    sortEstimateWithVariantOrder estimates orderList =
-      let orderListLength = DA.length orderList
-          mappedEstimates = map (\(EstimateAPIEntity estimate) -> 
-                              let orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex estimate.vehicleVariant orderList)
-                                  isNY = if estimate.isValueAddNP == Just true then 0 else 1
-                              in {item : (EstimateAPIEntity estimate), order : orderNumber * 10 + isNY}
-                            ) estimates
-          sortedEstimates = DA.sortWith (\mappedEstimate -> mappedEstimate.order) mappedEstimates
-      in map (\sortedEstimate -> sortedEstimate.item) sortedEstimates
+  let
+    filteredEstimate = case (getMerchant FunctionCall) of
+      YATRISATHI -> DA.concat (map (\variant -> filterEstimateByVariants variant estimates) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))
+      _ -> estimates
 
-    filterEstimateByVariants :: Array String -> Array EstimateAPIEntity -> Array EstimateAPIEntity
-    filterEstimateByVariants variant estimates = DA.take 1 (sortEstimateWithVariantOrder (DA.filter (\(EstimateAPIEntity item) -> DA.any (_ == item.vehicleVariant) variant) estimates) variant)
+    sortWithFare = DA.sortWith (\(EstimateAPIEntity estimate) -> getFareFromEstimate (EstimateAPIEntity estimate)) filteredEstimate
+  in
+    sortEstimateWithVariantOrder sortWithFare estimateAndQuoteConfig.variantOrder
+  where
+  sortEstimateWithVariantOrder :: Array EstimateAPIEntity -> Array String -> Array EstimateAPIEntity
+  sortEstimateWithVariantOrder estimates orderList =
+    let orderListLength = DA.length orderList
+        updatedEstimates = if DA.length estimates > 1 then estimatesWithBookAny estimates else estimates
+        mappedEstimates =
+          map
+            ( \(EstimateAPIEntity estimate) ->
+                let
+                  orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex estimate.vehicleVariant orderList)
+                  isNY = if estimate.isValueAddNP == Just true then 0 else 1
+                in
+                  { item: (EstimateAPIEntity estimate), order: orderNumber * 10 + isNY }
+            )
+            updatedEstimates
+        sortedEstimates = DA.sortWith (\mappedEstimate -> mappedEstimate.order) mappedEstimates
+    in
+        map (\sortedEstimate -> sortedEstimate.item) sortedEstimates
+
+  filterEstimateByVariants :: Array String -> Array EstimateAPIEntity -> Array EstimateAPIEntity
+  filterEstimateByVariants variant estimates = DA.take 1 (sortEstimateWithVariantOrder (DA.filter (\(EstimateAPIEntity item) -> DA.any (_ == item.vehicleVariant) variant) estimates) variant)
 
 
 getFareFromEstimate :: EstimateAPIEntity -> Int
@@ -399,36 +419,61 @@ getFareFromEstimate (EstimateAPIEntity estimate) = do
 
 getFilteredQuotes :: Array OfferRes -> EstimateAndQuoteConfig -> Array OfferRes
 getFilteredQuotes quotes estimateAndQuoteConfig =
-  let filteredArray = (case (getMerchant FunctionCall) of
-                          YATRISATHI -> DA.concat (map (\variant -> filterQuoteByVariants variant quotes) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))
-                          _ -> quotes)
-  in sortQuoteWithVariantOrder filteredArray estimateAndQuoteConfig.variantOrder
+  let
+    filteredArray =
+      ( case (getMerchant FunctionCall) of
+          YATRISATHI -> DA.concat (map (\variant -> filterQuoteByVariants variant quotes) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))
+          _ -> quotes
+      )
+  in
+    sortQuoteWithVariantOrder filteredArray estimateAndQuoteConfig.variantOrder
   where
-    sortQuoteWithVariantOrder :: Array OfferRes -> Array String -> Array OfferRes
-    sortQuoteWithVariantOrder quotes orderList =
-      let orderListLength = DA.length orderList
-          mappedQuotes = map (\quote -> case quote of
-                                          Quotes body ->
-                                            let (QuoteAPIEntity quoteEntity) = body.onDemandCab
-                                                orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex quoteEntity.vehicleVariant orderList)
-                                            in {item : Just quote, order : orderNumber}
-                                          _ -> {item : Nothing, order : orderListLength}
-                                ) quotes
-          filterMappedQuotes = filter (\quote -> isJust quote.item) mappedQuotes
-          sortedQuotes = DA.sortWith (\mappedQuote -> mappedQuote.order) filterMappedQuotes
-      in DA.catMaybes $ map (\sortedEstimate -> sortedEstimate.item) sortedQuotes
-    
-    filterQuoteByVariants :: Array String -> Array OfferRes -> Array OfferRes
-    filterQuoteByVariants variant quotes = DA.take 1 (sortQuoteWithVariantOrder (DA.filter(\item -> case item of
-                                                                                                      Quotes body -> do
-                                                                                                        let (QuoteAPIEntity quoteEntity) = body.onDemandCab
-                                                                                                        DA.any (_ == quoteEntity.vehicleVariant) variant
-                                                                                                      _ -> false
-                                                                                          ) quotes) variant)
+  sortQuoteWithVariantOrder :: Array OfferRes -> Array String -> Array OfferRes
+  sortQuoteWithVariantOrder quotes orderList =
+    let
+      orderListLength = DA.length orderList
 
-getEstimates :: EstimateAPIEntity -> Int -> Boolean -> Int -> Int -> ChooseVehicle.Config
-getEstimates (EstimateAPIEntity estimate) index isFareRange count activeIndex  =
+      mappedQuotes =
+        map
+          ( \quote -> case quote of
+              Quotes body ->
+                let
+                  (QuoteAPIEntity quoteEntity) = body.onDemandCab
+
+                  orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex quoteEntity.vehicleVariant orderList)
+                in
+                  { item: Just quote, order: orderNumber }
+              _ -> { item: Nothing, order: orderListLength }
+          )
+          quotes
+
+      filterMappedQuotes = filter (\quote -> isJust quote.item) mappedQuotes
+
+      sortedQuotes = DA.sortWith (\mappedQuote -> mappedQuote.order) filterMappedQuotes
+    in
+      DA.catMaybes $ map (\sortedEstimate -> sortedEstimate.item) sortedQuotes
+
+  filterQuoteByVariants :: Array String -> Array OfferRes -> Array OfferRes
+  filterQuoteByVariants variant quotes =
+    DA.take 1
+      ( sortQuoteWithVariantOrder
+          ( DA.filter
+              ( \item -> case item of
+                  Quotes body -> do
+                    let
+                      (QuoteAPIEntity quoteEntity) = body.onDemandCab
+                    DA.any (_ == quoteEntity.vehicleVariant) variant
+                  _ -> false
+              )
+              quotes
+          )
+          variant
+      )
+
+getEstimates :: EstimateAPIEntity -> Array EstimateAPIEntity -> Int -> Boolean -> Int -> Int -> ChooseVehicle.Config
+getEstimates (EstimateAPIEntity estimate) estimates index isFareRange count activeIndex =
   let currency = getCurrency appConfig
+      allSelectedServices = getSelectedServices FunctionCall
       estimateAndQuoteConfig = (getAppConfig appConfig).estimateAndQuoteConfig
       config = getCityConfig (getAppConfig appConfig).cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
       tipConfig = getTipConfig estimate.vehicleVariant
@@ -439,8 +484,21 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange count activeIndex  =
                         Just (FareRange fareRange) -> Just (f fareRange)
                         _ -> Nothing
       calculateFareRangeDifference fareRange = fareRange ^. _maxFare - fareRange ^. _minFare
-  in ChooseVehicle.config {
-        vehicleImage = getVehicleVariantImage estimate.vehicleVariant
+      availableServices =
+        if estimate.vehicleVariant == "BOOK_ANY" then
+          foldl
+            ( \acc (EstimateAPIEntity item) -> case item.serviceTierName of
+                Just service -> acc <> [ service ]
+                Nothing -> acc
+            )
+            []
+            estimates
+        else
+          []
+      selectedServices = if estimate.vehicleVariant == "BOOK_ANY" then intersection allSelectedServices availableServices else []
+  in
+    ChooseVehicle.config
+      { vehicleImage = getVehicleVariantImage estimate.vehicleVariant
       , vehicleVariant = estimate.vehicleVariant
       , price = case estimate.totalFareRange of
                 Nothing -> currency <> (show estimate.estimatedTotalFare)
@@ -468,6 +526,8 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange count activeIndex  =
       , nightChargeFrom = breakupConfig.nightChargeStart
       , nightChargeTill = breakupConfig.nightChargeEnd
       , driverAdditions = breakupConfig.driverAdditions
+      , availableServices = availableServices
+      , selectedServices = selectedServices
       }
 
 mapServiceTierName :: String -> Maybe Boolean -> Maybe String -> Maybe String
@@ -602,6 +662,39 @@ dummyEstimateEntity =
     , providerId : Nothing
     , isValueAddNP : Nothing
     }
+
+estimatesWithBookAny :: Array EstimateAPIEntity -> Array EstimateAPIEntity
+estimatesWithBookAny estimates =
+  let
+    config = getAppConfig appConfig
+    selectedServices = getSelectedServices FunctionCall
+    bookAny =
+      EstimateAPIEntity
+        { agencyNumber: ""
+        , createdAt: "2024-04-18T09:46:37.579497Z"
+        , discount: Nothing
+        , estimatedTotalFare: 0
+        , agencyName: "NAMMA_YATRI"
+        , vehicleVariant: "BOOK_ANY"
+        , estimatedFare: 0
+        , tripTerms: []
+        , id: "book_any"
+        , providerName : Nothing
+        , providerId : Nothing
+        , agencyCompletedRidesCount: Nothing
+        , estimateFareBreakup: Just []
+        , totalFareRange: Nothing
+        , nightShiftRate: Nothing
+        , specialLocationTag: Nothing
+        , driversLatLong: []
+        , serviceTierShortDesc: Just "Get Instantly"
+        , serviceTierName: Just "Book Any"
+        , airConditioned: Nothing
+        , isValueAddNP: Just true
+        }
+    filteredEstimates = filter (\(EstimateAPIEntity item) -> ((DA.elem (fromMaybe "" item.serviceTierName) selectedServices) && (fromMaybe false item.isValueAddNP))) estimates
+  in
+    if (not $ DA.null filteredEstimates) && config.enableBookAny then [ bookAny ] <> estimates else estimates
 
 getTripFromRideHistory :: MyRidesScreenState -> Trip
 getTripFromRideHistory state = {

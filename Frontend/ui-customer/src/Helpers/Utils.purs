@@ -26,7 +26,7 @@ import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Pay
 import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume, runFree)
-import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find)
+import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find, elem)
 import Data.Array.NonEmpty (fromArray)
 import Data.Boolean (otherwise)
 import Data.Date (Date)
@@ -636,7 +636,16 @@ getVehicleVariantImage variant =
                           Kochi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
                           Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
                           Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
+                          Delhi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
                           _ -> variantConfig.autoRickshaw.image
+      "BOOK_ANY"      -> case getMerchant FunctionCall of 
+                           YATRISATHI -> variantConfig.bookAny.image
+                           _ -> case city of 
+                                  Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
+                                  Chennai -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
+                                  Kochi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                  Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                  _ -> variantConfig.bookAny.image
       _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
 getVariantRideType :: String -> String
@@ -843,3 +852,37 @@ getImageBasedOnCity image =
   if city == AnyCity 
     then fetchImage FF_ASSET image
     else fetchImage FF_ASSET $ image <> "_" <> DS.toLower cityStr
+
+intersection :: forall a. Eq a => Array a -> Array a -> Array a
+intersection arr1 arr2 =
+  filter (\x -> elem x arr2) arr1
+
+getAllServices :: LazyCheck -> Array String 
+getAllServices dummy = 
+  let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  in case city of 
+    Bangalore -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
+    Tumakuru -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
+    Hyderabad -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+    Delhi -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+    Chennai -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+    Mysore -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
+    Kolkata -> ["Non-AC", "Hatchback", "Sedan", "SUV"]
+    Kochi -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+    Pondicherry -> ["Eco", "Auto"]
+    _ ->  ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+
+getSelectedServices :: LazyCheck -> Array String
+getSelectedServices dummy = 
+  let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  in case city of 
+    Bangalore -> ["Non-AC Mini", "AC Mini", "Sedan"]
+    Tumakuru -> ["Non-AC Mini", "AC Mini", "Sedan"]
+    Hyderabad -> ["Eco", "Hatchback", "Sedan"]
+    Delhi -> ["Eco", "Hatchback", "Sedan"]
+    Chennai -> ["Eco", "Hatchback", "Sedan"]
+    Mysore -> ["Non-AC Mini", "AC Mini", "Sedan"]
+    Kolkata -> ["Non-AC", "Hatchback", "Sedan"]
+    Kochi -> ["Eco", "Hatchback", "Sedan"]
+    Pondicherry -> ["Eco", "Auto"]
+    _ ->  ["Eco", "Hatchback", "Sedan"] 
