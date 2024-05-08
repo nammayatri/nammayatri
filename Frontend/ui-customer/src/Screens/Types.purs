@@ -624,6 +624,7 @@ type HomeScreenStateData =
   , hotSpotInfo :: Array HotSpotData
   , iopState :: InteroperabilityState
   , currentCityConfig :: MRC.CityConfig
+  , otherSelectedEstimates :: Array String
   }
 
 type InteroperabilityState = {
@@ -663,6 +664,8 @@ type QuoteListItemState =
   , selectedQuote :: Maybe String
   , appConfig :: AppConfig
   , city :: City
+  , vehicleImage :: String
+  , serviceTierName :: Maybe String
   }
 
 
@@ -824,6 +827,7 @@ type HomeScreenStateProps =
   , referralComponentProps :: ReferralComponentState
   , showAcWorkingPopup :: Boolean
   , repeateRideTimerStoped :: Boolean
+  , currentEstimateHeight :: Int
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

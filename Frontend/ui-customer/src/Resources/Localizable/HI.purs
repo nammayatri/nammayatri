@@ -1111,6 +1111,7 @@ getHI stringKey =
         INVALID_CODE -> "अमान्य कोड!"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "नीचे 6 अंकों का रेफ़ेरल कोड दर्ज करें"
         APPLY -> "लागू करें"
+        BOOK_ANY -> "बुक कोई भी"
         TOLL_CHARGES_INCLUDED -> "टोल शुल्क समाहित"
         ONE_CLICK_BOOKINGS -> "एक क्लिक बुकिंग"
         HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "क्या आपके ड्राइवर ने एसी को आपकी पसंद के अनुसार सेट किया है?"

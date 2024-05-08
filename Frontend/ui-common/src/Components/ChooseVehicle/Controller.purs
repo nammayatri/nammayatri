@@ -12,11 +12,12 @@ import Common.Types.App (RateCardType(..), FareList)
 import Common.Types.App as CT
 
 data Action
-  = NoAction
+  = NoAction Config
   | OnSelect Config
   | OnImageClick
   | ShowRateCard Config
   | OnEditClick
+  | ServicesOnClick Config String
 
 type Config
   = { vehicleImage :: String
@@ -37,7 +38,6 @@ type Config
     , searchResultType :: SearchType
     , isBookingOption :: Boolean
     , pickUpCharges :: Number 
-    , isSingleEstimate :: Boolean
     , tollCharge :: Number
     , serviceTierShortDesc :: Maybe String
     , serviceTierName :: Maybe String
@@ -57,6 +57,11 @@ type Config
     , providerType :: CT.ProviderType
     , singleVehicle :: Boolean
     , priceShimmer :: Boolean
+    , availableServices :: Array String
+    , services :: Array String
+    , selectedServices :: Array String
+    , currentEstimateHeight :: Int
+    , selectedEstimateHeight :: Int
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -89,7 +94,6 @@ config =
   , isBookingOption : false
   , pickUpCharges : 0.0
   , layoutMargin : MarginHorizontal 12 12
-  , isSingleEstimate : false
   , tollCharge : 0.0
   , serviceTierShortDesc : Nothing
   , serviceTierName : Nothing
@@ -108,4 +112,9 @@ config =
   , providerType : CT.ONUS
   , singleVehicle : false
   , priceShimmer : true
+  , availableServices : []
+  , services : [] 
+  , selectedServices : []
+  , currentEstimateHeight : 184 
+  , selectedEstimateHeight : 0
   }
