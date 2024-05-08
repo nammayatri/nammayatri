@@ -21,14 +21,14 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: VehicleMakesResp
-  - GET:
+  - POST:
       endpoint: /vehicleModels
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: VehicleModelsReq
       response:
         type: VehicleModelsResp
-  - GET:
+  - POST:
       endpoint: /vehicleDetails
       auth: TokenAuth PROVIDER_TYPE
       request:
