@@ -115,6 +115,7 @@ registerRC merchantShortId opCity driverId_ Common.RegisterRCReq {..} = do
     ( DriverRCReq
         { imageId = cast imageId,
           vehicleCategory = Nothing,
+          vehicleDetails = Nothing,
           ..
         }
     )

@@ -628,6 +628,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         title = "Empty title",
         vehicleCategory = DVeh.AUTO_CATEGORY,
         order = 0,
+        isDefaultEnabledOnManualVerification = fromMaybe True isDefaultEnabledOnManualVerification,
         updatedAt = now,
         createdAt = now,
         ..

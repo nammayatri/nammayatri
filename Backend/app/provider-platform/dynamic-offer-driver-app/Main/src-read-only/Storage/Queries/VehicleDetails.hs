@@ -37,4 +37,11 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleDetails.VehicleDetails -> m ())
 updateByPrimaryKey (Domain.Types.VehicleDetails.VehicleDetails {..}) = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.acAvailable acAvailable, Se.Set Beam.make make, Se.Set Beam.model model, Se.Set Beam.variant variant] [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+  updateWithKV
+    [ Se.Set Beam.acAvailable acAvailable,
+      Se.Set Beam.capacity capacity,
+      Se.Set Beam.make make,
+      Se.Set Beam.model model,
+      Se.Set Beam.vehicleVariant vehicleVariant
+    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

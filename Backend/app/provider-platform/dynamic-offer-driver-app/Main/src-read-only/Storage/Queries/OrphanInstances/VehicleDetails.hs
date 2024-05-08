@@ -18,18 +18,20 @@ instance FromTType' Beam.VehicleDetails Domain.Types.VehicleDetails.VehicleDetai
       Just
         Domain.Types.VehicleDetails.VehicleDetails
           { acAvailable = acAvailable,
+            capacity = capacity,
             id = Kernel.Types.Id.Id id,
             make = make,
             model = model,
-            variant = variant
+            vehicleVariant = vehicleVariant
           }
 
 instance ToTType' Beam.VehicleDetails Domain.Types.VehicleDetails.VehicleDetails where
   toTType' (Domain.Types.VehicleDetails.VehicleDetails {..}) = do
     Beam.VehicleDetailsT
       { Beam.acAvailable = acAvailable,
+        Beam.capacity = capacity,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.make = make,
         Beam.model = model,
-        Beam.variant = variant
+        Beam.vehicleVariant = vehicleVariant
       }

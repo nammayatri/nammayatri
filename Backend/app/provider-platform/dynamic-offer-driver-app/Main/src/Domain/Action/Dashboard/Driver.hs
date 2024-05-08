@@ -1223,7 +1223,8 @@ runVerifyRCFlow personId merchant merchantOpCityId req = do
             dateOfRegistration = Nothing,
             vehicleCategory = Nothing,
             airConditioned = req.airConditioned,
-            multipleRC = Nothing
+            multipleRC = Nothing,
+            vehicleDetails = Nothing
           }
   void $ DomainRC.verifyRC True (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq
 
