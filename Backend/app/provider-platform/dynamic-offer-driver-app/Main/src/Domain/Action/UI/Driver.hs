@@ -837,14 +837,19 @@ getNearbySearchRequests ::
     CacheFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe (Id DSR.SearchRequest) ->
   m GetNearbySearchRequestsRes
-getNearbySearchRequests (driverId, _, merchantOpCityId) = do
+getNearbySearchRequests (driverId, _, merchantOpCityId) searchReqId = do
   nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig transporterConfig
   cancellationRatio <- DP.getLatestCancellationRatio cancellationScoreRelatedConfig merchantOpCityId (cast driverId)
   searchRequestForDriverAPIEntity <- mapM (buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig) nearbyReqs
-  return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
+  case searchReqId of
+    Just srid -> do
+      let filteredSearchRequestForDriverAPIEntity = filter (\srfd -> srfd.searchRequestId == srid) searchRequestForDriverAPIEntity
+      return $ GetNearbySearchRequestsRes filteredSearchRequestForDriverAPIEntity
+    Nothing -> return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
   where
     buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq = do
       let searchTryId = nearbyReq.searchTryId

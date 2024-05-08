@@ -170,7 +170,7 @@ getNearbySearchRequestForDriver driver estimateId =
         mbSReq <- liftIO $ runARDUFlow "" $ QST.findById p.searchTryId
         pure $ fmap (.messageId) mbSReq == Just estimateId.getId
     )
-    ((.searchRequestsForDriver) <$> callBPP (API.ui.driver.getNearbySearchRequests driver.token))
+    ((.searchRequestsForDriver) <$> callBPP (API.ui.driver.getNearbySearchRequests driver.token Nothing))
 
 respondQuote :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM ()
 respondQuote driver fare bppSearchRequestId response =

@@ -30,7 +30,7 @@ import Types.API.Fcm as API
 
 type MockFcmAPI =
   Get '[JSON] Text
-    :<|> API.FCMSendMessageAPI Value
+    :<|> API.FCMSendMessageAPI Value Value
     :<|> API.ReadFcmAPI
 
 mockFcmAPI :: Proxy MockFcmAPI
