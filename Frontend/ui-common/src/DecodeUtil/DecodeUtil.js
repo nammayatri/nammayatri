@@ -38,8 +38,10 @@ export const stringifyJSON = function (obj) {
 }
 
 export const toastWithLog = function (str) {
-  if (window.__OS == "IOS")
-    window.JBridge.toast(str); //remove once toast is fixed in iOS.
+  if (window.__OS == "IOS") {
+    // window.JBridge.toast(str); //remove once toast is fixed in iOS.
+  }
+  
   else if (window.JBridge.toaster)
     window.JBridge.toaster(str);
   else
