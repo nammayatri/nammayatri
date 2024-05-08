@@ -189,7 +189,7 @@ window.onMerchantEvent = function (_event, payload) {
   if (_event == "initiate") {
     console.log("APP_PERF INDEX_BUNDLE_INITIATE_START : ", new Date().getTime());
     if (clientId == "yatriprovider") {
-      window.merchantID = "YATRI"
+      window.merchantID = "NAMMAYATRI"
     } else if(clientId == "jatrisaathiprovider" || clientId == "jatrisaathidriver" || clientId == "yatrisathiprovider"){
       window.merchantID = "YATRISATHI"
     }else if (clientId.includes("provider")){

@@ -107,7 +107,13 @@ type CityConfig = {
   showEarningSection :: Boolean,
   referral :: Referral,
   waitingCharges :: Number,
-  waitingChargesConfig :: WaitingChargesConfig
+  waitingChargesConfig :: WaitingChargesConfig,
+  assets :: Assets
+}
+
+type Assets ={
+  auto_image :: String,
+  onboarding_auto_image :: String
 }
 
 type Referral = {

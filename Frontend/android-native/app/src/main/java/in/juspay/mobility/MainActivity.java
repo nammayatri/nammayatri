@@ -137,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
     private Future<JSONObject> driverInfoFutureTask;
     private Future<JSONObject> preInitFutureTask;
     long onCreateTimeStamp = 0;
+    private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
 
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
         @Override
@@ -426,13 +427,16 @@ public class MainActivity extends AppCompatActivity {
                     city = sharedPref.getString("CUSTOMER_LOCATION", "__failed");
                 }
             }
+            String merchantId = context.getResources().getString(R.string.merchant_id);
+            JSONObject clevertapConfig = new JSONObject(remoteConfigs.getString("enable_city_based_splash_scn"));
+            boolean enableCityBasedSplash = clevertapConfig.getBoolean(merchantId);
             View splash = findViewById(R.id.splash);
             LottieAnimationView splashLottie = splash.findViewById(R.id.splash_lottie);
             if (splashLottie != null) {
-                if (!city.equals("__failed")) {
+                if ((!city.equals("__failed")) && enableCityBasedSplash ) {
                     skipDefaultSplash = setSplashAnimAndStart(splashLottie, city.toLowerCase());
                 }
-                if (!skipDefaultSplash) {
+                if ((!skipDefaultSplash) && enableCityBasedSplash) {
                     if ((splashLottie.getTag() != null) && splashLottie.getTag().equals("autoStart")) {
                         splashLottie.setVisibility(View.VISIBLE);
                         splashLottie.setRepeatCount(ValueAnimator.INFINITE);

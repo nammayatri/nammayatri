@@ -440,6 +440,7 @@ public class RideRequestUtils {
             try {
                 if (!remoteConfigs.hasKey("enable_clevertap_events")) return;
                 String merchantId = context.getResources().getString(R.string.merchant_id);
+                System.out.println("testing: " + merchantId);
                 JSONObject clevertapConfig = new JSONObject(remoteConfigs.getString("enable_clevertap_events"));
                 SharedPreferences sharedPref = context.getApplicationContext().getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                 if (clevertapConfig.has(merchantId)) {

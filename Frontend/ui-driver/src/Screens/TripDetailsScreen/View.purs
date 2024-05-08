@@ -496,9 +496,7 @@ issueReportedView state push =
 getVehicleImage :: ST.TripDetailsScreenState -> String
 getVehicleImage state = 
   case getMerchant FunctionCall of
-    YATRI     -> case state.data.vehicleType of
-                    "AUTO_RICKSHAW" -> fetchImage FF_ASSET "ny_ic_auto1"
-                    _               -> fetchImage FF_ASSET "ic_vehicle_front"
+    YATRI     -> getVehicleVariantImage state.data.vehicleServiceTier
     YATRISATHI -> getVehicleVariantImage state.data.vehicleServiceTier
     NAMMAYATRI -> getVehicleVariantImage state.data.vehicleServiceTier
     _           -> mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)

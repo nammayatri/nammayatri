@@ -39,7 +39,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..),getCityConfig)
 import JBridge (lottieAnimationConfig, startLottieProcess)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -206,7 +206,7 @@ view push state =
                 , width MATCH_PARENT
                 , margin $ Margin 16 0 16 16
                 , clickable false
-                , visibility $ boolToVisibility $ state.data.cityConfig.showDriverReferral || state.data.config.enableDriverReferral
+                , visibility $ boolToVisibility $ (state.data.cityConfig.showDriverReferral || state.data.config.enableDriverReferral) && (state.props.manageVehicle == false)
                 ][enterReferralCode push state]
             , linearLayout
                 [ height WRAP_CONTENT
@@ -619,49 +619,50 @@ chooseVehicleView push state =
 
 variantListView :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 variantListView push state = 
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  , padding $ Padding 16 0 16 16
-  , gravity CENTER
-  ]( mapWithIndex
-      ( \index item -> 
-          let stroke' = case state.props.selectedVehicleIndex of
-                          Just i -> if i == index 
-                                      then "2," <> Color.blue800 
-                                      else "1," <> Color.grey900
-                          Nothing -> "1," <> Color.grey900
-          in
-          linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , cornerRadius 8.0
-          , stroke stroke'
-          , gravity CENTER_VERTICAL
-          , margin $ MarginTop 16
-          , onClick push $ const $ ChooseVehicleCategory index
-          ][  imageView
-              [ width $ V 116
-              , height $ V 80
-              , imageWithFallback $ fetchImage FF_ASSET 
-                  case item of
-                    ST.AutoCategory -> "ny_ic_auto_side"
-                    ST.CarCategory -> "ny_ic_sedan_side"
-                    ST.UnKnown -> "ny_ic_silhouette"
-              ]
-            , textView $
-              [ width WRAP_CONTENT
+  let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    in linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , padding $ Padding 16 0 16 16
+      , gravity CENTER
+      ]( mapWithIndex
+          ( \index item -> 
+              let stroke' = case state.props.selectedVehicleIndex of
+                              Just i -> if i == index 
+                                          then "2," <> Color.blue800 
+                                          else "1," <> Color.grey900
+                              Nothing -> "1," <> Color.grey900
+              in
+              linearLayout
+              [ width MATCH_PARENT
               , height WRAP_CONTENT
-              , text case item of
-                        ST.AutoCategory -> getString AUTO_RICKSHAW
-                        ST.CarCategory -> getString CAR
-                        ST.UnKnown -> "Unknown"
-              , color Color.black800
-              , margin $ MarginLeft 20
-              ] <> FontStyle.subHeading1 TypoGraphy
-          ]
-      ) (state.data.variantList))
+              , cornerRadius 8.0
+              , stroke stroke'
+              , gravity CENTER_VERTICAL
+              , margin $ MarginTop 16
+              , onClick push $ const $ ChooseVehicleCategory index
+              ][  imageView
+                  [ width $ V 116
+                  , height $ V 80
+                  , imageWithFallback $ fetchImage FF_ASSET 
+                      case item of
+                        ST.AutoCategory -> cityConfig.assets.onboarding_auto_image
+                        ST.CarCategory -> "ny_ic_sedan_side"
+                        ST.UnKnown -> "ny_ic_silhouette"
+                  ]
+                , textView $
+                  [ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , text case item of
+                            ST.AutoCategory -> getString AUTO_RICKSHAW
+                            ST.CarCategory -> getString CAR
+                            ST.UnKnown -> "Unknown"
+                  , color Color.black800
+                  , margin $ MarginLeft 20
+                  ] <> FontStyle.subHeading1 TypoGraphy
+              ]
+          ) (state.data.variantList))
 
 getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus
 getStatus step state = 

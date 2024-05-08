@@ -374,7 +374,11 @@ window.getMerchantConfig = function () {
              "freeSeconds" : 180,
              "perMinCharges" : 1.50
            }
-         }
+         },
+      "assets" :{
+        "auto_image" : "ny_ic_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_side"
+      }
     }
   ]
   })

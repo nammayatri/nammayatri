@@ -154,7 +154,11 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              assets :{
+                auto_image : "ny_ic_auto_side_view",
+                onboarding_auto_image : "ny_ic_auto_side"
+              }
             },
             {
               cityName : "Hyderabad",
@@ -184,7 +188,11 @@ config =
                 , driverAppId : "in.mobility.manayatripartner"
               },
               waitingCharges : 2.00,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              assets :{
+                auto_image :  "ny_ic_black_yellow_auto_side_view",
+                onboarding_auto_image : "ny_ic_auto_right_side_yellow" 
+              }
             },
             {
               cityName : "Mysore",
@@ -214,7 +222,11 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              assets :{
+                auto_image : "ny_ic_auto_side_view",
+                onboarding_auto_image : "ny_ic_auto_side"
+              }
             },
             {
               cityName : "Delhi",
@@ -244,7 +256,11 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 0.75,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              assets :{
+                auto_image : "ny_ic_auto_side_view",
+                onboarding_auto_image : "ny_ic_auto_side"
+              }
             },
             {
               cityName : "Chennai",
@@ -274,7 +290,11 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.00,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              assets :{
+                auto_image :  "ny_ic_black_yellow_auto_side_view",
+                onboarding_auto_image : "ny_ic_auto_right_side_yellow"
+              }
             },
             {
               cityName : "Coimbatore",
@@ -304,7 +324,11 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              assets :{
+                auto_image :  "ny_ic_black_yellow_auto_side_view",
+                onboarding_auto_image : "ny_ic_auto_right_side_yellow"
+              }
             },
             {
               cityName : "Puducherry",
@@ -334,7 +358,11 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              assets :{
+                auto_image :  "ny_ic_black_yellow_auto_side_view",
+                onboarding_auto_image : "ny_ic_auto_right_side_yellow"
+              }
             },
             {
               cityName : "Gurugram",
@@ -364,7 +392,11 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              assets :{
+                auto_image : "ny_ic_auto_side_view",
+                onboarding_auto_image : "ny_ic_auto_side"
+              }
             },
             {             
               cityName : "Noida",
@@ -394,7 +426,11 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              assets :{
+                auto_image : "ny_ic_auto_side_view",
+                onboarding_auto_image : "ny_ic_auto_side"
+              }
             },
             {
               cityName : "TamilNaduCities",
@@ -424,7 +460,11 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              assets :{
+                auto_image :  "ny_ic_black_yellow_auto_side_view",
+                onboarding_auto_image : "ny_ic_auto_right_side_yellow"
+              }
             },
             {
               cityName : "Kolkata",
@@ -458,8 +498,50 @@ config =
                 , driverAppId : "in.juspay.jatrisaathidriver"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              assets :{
+                auto_image :  "ny_ic_black_yellow_auto_side_view",
+                onboarding_auto_image : "ny_ic_auto_side"
+              }
+            }, 
+            {
+              cityName : "Kochi",
+              mapImage : "ny_ic_kochi_map",
+              cityCode : "std:0484",
+              showSubscriptions : true,
+              cityLat : 9.931233,
+              cityLong : 76.267303,
+              supportNumber : "",
+              languageKey : "ML_IN",
+              showDriverReferral : true,
+              showCustomerReferral : true,
+              uploadRCandDL : true,
+              enableYatriCoins : true,
+              vehicleNSImg : "ny_ic_auto_image",
+              registration : {
+                  supportWAN : "918618963188",
+                  callSupport : true,
+                  whatsappSupport : true
+              },
+              variantSubscriptionConfig : {
+                enableVariantBasedSubscription : true,
+                variantList : [],
+                enableCabsSubscriptionView : true,
+                staticViewPlans : getStaticViewPlans
+              },
+              showEarningSection : true,
+              referral : {
+                domain : "https://nammayatri.in"
+              , customerAppId : "in.juspay.nammayatri"
+              , driverAppId : "in.juspay.nammayatripartner"
+            },
+            waitingCharges : 1.50,
+            waitingChargesConfig : defWaitingChargesConfig,
+            assets :{
+              auto_image : "ic_auto_rickshaw",
+              onboarding_auto_image : "ny_ic_auto_right_side_black"
             }
+          }
             --, For future use
             -- {
             --   cityName : "Madurai",

@@ -120,5 +120,9 @@ dummyCityConfig = {
                         freeSeconds : 3,
                         perMinCharges : 1.50
                       }
+                    },
+                    assets :{
+                      auto_image :  "ny_ic_black_yellow_auto_side_view",
+                      onboarding_auto_image : ""
                     }
                   }

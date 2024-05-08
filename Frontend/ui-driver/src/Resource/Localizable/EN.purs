@@ -608,7 +608,7 @@ getEN stringKey =
         AADHAAR_LINKING_REQUIRED -> "Aadhaar linking required"
         CUSTOMER_ADDED_A_STOP -> "Customer added a stop!"
         AADHAAR_LINKING_REQUIRED_DESCRIPTION _ -> "To start driving for our app, please \n link your Aadhaar ID"
-        BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC -> "By clicking Continue, you agree to our &nbsp; <a href=\"\">T&Cs</a>s"
+        BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC -> "By clicking Continue, you agree to our &nbsp; <a href=\"\">T&Cs</a>"
         TERMS_AND_CONDITIONS_SHORT -> "T&C"
         TC_TAIL -> ""
         OTP_SENT_TO_AADHAAR_NUMBER -> "OTP sent to mobile number linked with your aadhar"

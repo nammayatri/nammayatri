@@ -220,6 +220,8 @@
       "ny_ic_auto_image_old" : true,
       "ny_ic_auto_map" : true,
       "ny_ic_auto_onboard" : true,
+      "ny_ic_auto_right_side_black" : true,
+      "ny_ic_auto_right_side_yellow" : true,
       "ny_ic_auto_side" : true,
       "ny_ic_auto_side_view" : true,
       "ny_ic_auto_warning" : true,

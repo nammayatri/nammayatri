@@ -562,7 +562,7 @@ getVehicleVariantImage variant =
                         "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
                         "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
                         _           -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
-        NAMMAYATRI -> case variant of
+        _ -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
                         "SEDAN_TIER" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
                         "SUV"       -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
@@ -582,18 +582,6 @@ getVehicleVariantImage variant =
                             "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
                             _           -> fetchImage FF_ASSET "ic_vehicle_front"
                         _ -> fetchImage FF_ASSET "ic_vehicle_front"
-        _          -> case variant of
-                        "SEDAN"     -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"
-                        "SEDAN_TIER" -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"
-                        "SUV"       -> "ny_ic_suv_car_side," <> url <> "ny_ic_suv_car_side.png"
-                        "SUV_TIER"  -> "ny_ic_suv_car_side," <> url <> "ny_ic_suv_car_side.png"
-                        "HATCHBACK" -> "ny_ic_hatchback_car_side," <> url <> "ny_ic_hatchback_car_side.png"
-                        "HATCHBACK_TIER" -> "ny_ic_hatchback_car_side," <> url <> "ny_ic_hatchback_car_side.png"
-                        "TAXI"      -> "ic_sedan_non_ac," <> url <> "ic_sedan_non_ac.png"
-                        "TAXI_PLUS" -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
-                        "RENTALS"   -> "ic_rentals," <> url <> "ic_rentals.png"
-                        "INTERCITY" -> "ic_intercity," <> url <> "ic_intercity.png"
-                        _           -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
 
 getVariantRideType :: String -> String
 getVariantRideType variant =
@@ -685,6 +673,10 @@ getCityConfig cityConfig cityName = do
                               freeSeconds : 3,
                               perMinCharges : 1.50
                             }
+                          },
+                          assets :{
+                            auto_image :  "ny_ic_black_yellow_auto_side_view",
+                            onboarding_auto_image : "ny_ic_auto_right_side_yellow"
                           }
                         }
   fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
