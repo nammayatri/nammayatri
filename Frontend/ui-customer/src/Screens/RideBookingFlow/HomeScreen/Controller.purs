@@ -1128,7 +1128,10 @@ eval (NotifyDriverStatusCountDown seconds status timerID) state = do
   else continue state
 
 eval (RepeatRideCountDown seconds status timerID) state = do
-  if status == "EXPIRED" then do
+  if state.props.currentStage == FindingQuotes then do
+    void $ pure $ clearTimerWithId timerID
+    continue state{props{repeatRideTimer = "", repeatRideTimerId = "", repeateRideTimerStoped = true}}
+  else if status == "EXPIRED" then do
     void $ pure $ clearTimerWithId timerID
     void $ pure $ performHapticFeedback unit
     void $ pure $ updateLocalStage FindingQuotes
