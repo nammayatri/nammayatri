@@ -1111,6 +1111,7 @@ getEN stringKey =
         INVALID_CODE -> "Invalid Code!"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "Enter 6 digit referral code below"
         APPLY -> "Apply"
+        BOOK_ANY -> "Book Any"
         TOLL_CHARGES_INCLUDED -> "Toll Charges Included"
         ONE_CLICK_BOOKINGS ->  "One-Click Bookings"
         HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "Has your driver set the AC as per your preference?"

@@ -296,7 +296,7 @@ window.getMerchantConfig = function () {
       }
     , "estimateAndQuoteConfig" : 
       { "variantTypes" : [ ["SUV"], ["SEDAN", "HATCHBACK", "TAXI_PLUS"], ["TAXI"] ]
-      , "variantOrder" : ["SEDAN", "HATCHBACK", "TAXI_PLUS", "TAXI", "SUV"]
+      , "variantOrder" : ["SEDAN", "BOOK_ANY", "HATCHBACK", "TAXI_PLUS", "TAXI", "SUV"]
       , "enableOnlyAuto" : false
       , "showNearByDrivers": true
       , "enableBookingPreference" : false
@@ -325,8 +325,12 @@ window.getMerchantConfig = function () {
           },
           "autoRickshaw" : {
             "name" : "Auto Rickshaw",
-            "image" : "ny_ic_single_estimate_auto,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_single_estimate_auto.png"
-          }
+            "image" : "ny_ic_single_estimate_auto,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_single_estimate_auto.png"
+          },
+          "bookAny" : {
+            "name" : "Book Any",
+            "image" : "ny_ic_cab_multiple,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_cab_multiple.png"
+          },
         }
       }
     , "dashboard" : {

@@ -1112,6 +1112,7 @@ getKN stringKey =
         INVALID_CODE -> "ಅಮಾನ್ಯ ಕೋಡ್!"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "ಕೆಳಗಿನ 6 ಅಂಕಿಗಳ ರೆಫರಲ್ ಕೋಡ್ ನಮೂದಿಸಿ"
         APPLY -> "ಅನ್ವಯಿಸು"
+        BOOK_ANY -> "ಬುಕ್ ಯಾವುದಾದರೂ"
         TOLL_CHARGES_INCLUDED -> "ಟೋಲ್ ಶುಲ್ಕಗಳು ಸೇರಿವೆ"
         ONE_CLICK_BOOKINGS -> "ಒಂದು ಕ್ಲಿಕ್ ಬುಕ್ಕಿಂಗ್‌ಗಳು"
         HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "ನಿಮ್ಮ ಚಾಲಕ ನಿಮ್ಮ ಆದ್ಯತೆಯನ್ನು ಪ್ರಕಾರಕ್ಕೆ ಹೊಂದಿಸಿದ್ದಾರೆಯಾ?"

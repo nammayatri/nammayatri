@@ -196,6 +196,10 @@ config =
         autoRickshaw : {
           name : "Auto Rickshaw",
           image : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_quote_list.png"
+        },
+        bookAny : {
+          name : "Book Any",
+          image : "ny_ic_auto_cab,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_cab.png"
         }
 
       }
@@ -415,7 +419,6 @@ config =
           }
       ]
   , bannerCarousel : defaultBannerCarousel
-  , enableSingleEstimate : false
   , driverLocationPolling : {
     retryExpFactor : 3
   },
@@ -433,6 +436,7 @@ config =
   , safety : {
       pastRideInterval : 15
   }
+  , enableBookAny : true
 }
 
 defaultCityConfig :: CityConfig

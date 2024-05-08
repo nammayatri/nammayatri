@@ -306,8 +306,11 @@ window.getMerchantConfig = function () {
         "autoRickshaw" : {
           "name" : "Auto Rickshaw",
           "image" : "ny_ic_single_estimate_auto_black,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_single_estimate_auto_black.png"
-        }
-
+        },
+        "bookAny" : {
+          "name" : "Book Any",
+          "image" : "ny_ic_auto_cab_black,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_auto_cab_black.png"
+        },
       }
     }
     , "feature" : {
