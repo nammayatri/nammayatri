@@ -13,9 +13,9 @@
 -}
 module Components.ChatView.View where
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), scrollBarY, alignParentBottom, background, color, textFromHtml, cornerRadius, fontStyle, gravity, height, id, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, editText, onChange, hint, scrollView, onAnimationEnd, pattern, ellipsize, clickable, singleLine, maxLines, hintColor, imageWithFallback, adjustViewWithKeyboard, accessibilityHint, accessibility, disableKeyboardAvoidance, relativeLayout)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), scrollBarY, alignParentBottom, background, color, textFromHtml, cornerRadius, fontStyle, gravity, height, id, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, editText, onChange, hint, scrollView, onAnimationEnd, pattern, ellipsize, clickable, singleLine, maxLines, hintColor, imageWithFallback, adjustViewWithKeyboard, accessibilityHint, accessibility, disableKeyboardAvoidance, relativeLayout, rippleColor)
 import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth, os, safeMarginBottom)
-import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
+import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay, fadeIn)
 import PrestoDOM.Animation as PrestoAnim
 import Prelude
 import PrestoDOM.Properties (alpha, cornerRadii, lineHeight, minWidth)
@@ -40,18 +40,24 @@ import Effect.Uncurried (runEffectFn1, runEffectFn7)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
-  linearLayout
+  relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  , orientation VERTICAL
-  , clickable true
-  , background Color.white900
-  , accessibility DISABLE
-  ]
-  [ chatHeaderView config push
-  , chatBodyView config push
-  , chatFooterView config push
-  ]
+  ][ linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , clickable true
+      , background Color.white900
+      , accessibility DISABLE
+      ]
+      [ chatHeaderView config push
+      , chatBodyView config push
+      , chatFooterView config push
+      ]
+    , if config.fullScreenImage then fullScreenImage config push else linearLayout[][]
+  ] 
+  
 
 chatHeaderView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 chatHeaderView config push =
@@ -408,9 +414,9 @@ chatComponentView state push config nextConfig isLastItem userType index =
                  , width $ V 180
                  , id $ getNewIDWithTag config.message
                  , onAnimationEnd (\action -> do
-                                runEffectFn1 displayBase64Image displayBase64ImageConfig {source = config.message, id = (getNewIDWithTag config.message), scaleType =  "FIT_CENTER", inSampleSize = 2} 
+                                runEffectFn1 displayBase64Image displayBase64ImageConfig {source = config.message, id = (getNewIDWithTag config.message), scaleType =  "FIT_XY", inSampleSize = 2} 
                  ) (const NoAction)
-                 , onClick push (const $ OnImageClick config.message)
+                 , onClick push $ const $ FullScreenImage config.message
                  , height $ V 180
                  , gravity CENTER
                  ][ progressBar
@@ -551,3 +557,85 @@ hasDateFooter msgConfig nxtMsgConfig =
                              not (STR.null nxtMsg.timeStamp) &&
                              (convertUTCtoISC msgConfig.timeStamp "DD:MM:YYYY") /= (convertUTCtoISC nxtMsg.timeStamp "DD:MM:YYYY") &&
                              msgConfig.sentBy == nxtMsg.sentBy
+
+-- fullScreenImageView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+-- fullScreenImageView config push = 
+  -- linearLayout
+  -- [ height WRAP_CONTENT
+  -- , width MATCH_PARENT
+  -- , gravity LEFT
+  -- , accessibility ENABLE
+  -- , onClick push $ const OnClickClose
+  -- , rippleColor Color.rippleShade
+  -- , cornerRadius 20.0
+
+  
+  -- ][imageView
+  --   [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left_with_bg"
+  --   , height $ V 36
+  --   , width  $ V 36
+  --   , gravity LEFT
+  --   ]
+  -- -- ]
+  --   linearLayout
+  --         [ height WRAP_CONTENT
+  --         , width MATCH_PARENT
+  --         , gravity LEFT
+  --         , accessibility ENABLE
+  --         , onClick push $ const OnClickClose
+  --         , cornerRadius 20.0
+  --         ][ imageView
+  --           [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left_with_bg"   --ny_ic_chevron_left_with_bg
+  --           , height $ V 30
+  --           , width $ V 30
+  --           , accessibility DISABLE
+  --           , rippleColor Color.rippleShade
+  --           , cornerRadius 24.0
+  --           , margin $ Margin 5 10 0 0
+  --           ]
+  --         ]
+
+fullScreenImageView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+fullScreenImageView config push = 
+    linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity LEFT
+          , accessibility ENABLE
+          , onClick push $ const OnClickClose
+          , cornerRadius 20.0
+          ][ imageView
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left_with_bg"   --ny_ic_chevron_left_with_bg
+            , height $ V 30
+            , width $ V 30
+            , accessibility DISABLE
+            , rippleColor Color.rippleShade
+            , cornerRadius 24.0
+            , margin $ Margin 5 10 0 0
+            ]
+            ]
+
+fullScreenImage :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+fullScreenImage config push = do
+  -- let message = head config.messages
+  -- let imageId = getNewIDWithTag (getImageId index)
+  let messagesLen = config
+  relativeLayout[
+    width MATCH_PARENT
+    , orientation VERTICAL
+    , height MATCH_PARENT
+    , gravity LEFT
+    , background Color.blackLessTrans
+      ][ 
+          PrestoAnim.animationSet [fadeIn config.fullScreenImage] $
+            linearLayout
+            [ width $ V (screenWidth unit)
+            , height $ V (screenHeight unit)
+            , gravity CENTER
+            , background Color.blackLessTrans
+            , padding $ PaddingBottom 25
+            , id $ getNewIDWithTag ("fullScreenChatImage")
+            , onAnimationEnd (\_ -> renderBase64Image config.activeImageURL (getNewIDWithTag ("fullScreenChatImage")) true "FIT_XY")(const NoAction)
+            ][]
+        , fullScreenImageView config push 
+      ] 

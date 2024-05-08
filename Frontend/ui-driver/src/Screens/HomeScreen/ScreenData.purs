@@ -189,6 +189,7 @@ initData =
       , prevLatLon: Nothing
       , noOfLocations: 0
       , isVehicleSupported: true
+      , activeImageURL : ""
       }
   , props:
       { isFreeRide: false
@@ -261,6 +262,7 @@ initData =
       , odometerImageUploading: false
       , showAcWorkingPopup: Nothing
       , acExplanationPopup : false
+      , fullScreenImage : false
       }
   }
 

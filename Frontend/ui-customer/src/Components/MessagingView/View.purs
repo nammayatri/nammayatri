@@ -14,13 +14,14 @@
 module Components.MessagingView.View where
 
 import Common.Types.App
-import Animation (translateInXBackwardAnim, translateInXForwardAnim, translateYAnimFromTop)
+import Animation (translateInXBackwardAnim, translateInXForwardAnim, translateYAnimFromTop, fadeIn)
 import Animation.Config (translateFullYAnimWithDurationConfig)
 import Components.MessagingView.Controller (Action(..), Config(..), ChatComponent)
-import Data.Array (mapWithIndex, (!!), length, null)
+import Components.ChatView as ChatView
+import Data.Array (mapWithIndex, (!!), length, null, head)
 import Data.Function.Uncurried (runFn1)
 import Data.Int as Int
-import Data.Maybe (fromMaybe, Maybe(..))
+import Data.Maybe (fromMaybe, Maybe(..), maybe)
 import Data.Number (pow)
 import Data.Number as Num
 import Data.String as STR
@@ -30,11 +31,11 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, chatSuggestion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import JBridge (scrollToEnd, getLayoutBounds, getKeyInSharedPrefKeys)
+import JBridge (scrollToEnd, getLayoutBounds, getKeyInSharedPrefKeys, renderBase64Image)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, show, ($), (&&), (-), (/), (<>), (==), (>), (*), (/=), (||), not, negate, (+), (<=), discard, void, (>=), (<), when)
-import PrestoDOM (Accessiblity(..), BottomSheetState(..), Gravity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), LetterSpacing(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, bottomShift, clickable, color, cornerRadius, editText, ellipsize, fontStyle, gravity, halfExpandedRatio, height, hint, hintColor, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, maxLines, onAnimationEnd, onChange, onClick, onStateChanged, orientation, padding, pattern, peakHeight, relativeLayout, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, topShift, visibility, weight, width, nestedScrollView, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, disableKeyboardAvoidance, letterSpacing, rippleColor)
+import Prelude (Unit, bind, const, pure, unit, show, ($), (&&), (-), (/), (<>), (==), (>), (*), (/=), (||), not, negate, (+), (<=), discard, void, (>=), (<), when, (<<<))
+import PrestoDOM (Accessiblity(..), BottomSheetState(..), Gravity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), LetterSpacing(..), layoutGravity, accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, bottomShift, clickable, color, cornerRadius, editText, ellipsize, fontStyle, gravity, halfExpandedRatio, height, hint, hintColor, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, maxLines, onAnimationEnd, onChange, onClick, onStateChanged, orientation, padding, pattern, peakHeight, relativeLayout, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, topShift, visibility, weight, width, nestedScrollView, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, disableKeyboardAvoidance, letterSpacing, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Events (afterRender)
@@ -48,6 +49,9 @@ import Locale.Utils
 import Storage (KeyStore(..))
 import LocalStorage.Cache (getValueFromCache)
 import Engineering.Helpers.Utils(getFlexBoxCompatibleVersion)
+import PrestoDOM.Elements.Keyed as Keyed
+import Data.Tuple (Tuple(..))
+import Debug
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -88,7 +92,64 @@ view push config =
       , alignParentBottom "true,-1"
       , adjustViewWithKeyboard "true"
       ][ chatFooterView config push ]
-   ]
+   ] <> if config.fullScreenImage then [ChatView.fullScreenImage ChatView.config (push <<< ChatViewActionController)] else []
+
+    -- fullScreenImageView
+        -- else []
+--    linearLayout[
+--  -- button
+--  -- 
+--    ] [fullScreenImage config push] else []
+
+
+-- fullScreenImageView -- ll
+  -- dismissButtonView -- ll
+
+  -- fullScreenImage --
+
+-- original one :  <> if config.fullScreenImage then [fullScreenImage config push] else [] use this when not working
+
+-- fullScreenImageView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+-- fullScreenImageView config push = 
+  -- linearLayout
+  -- [ height WRAP_CONTENT
+  -- , width MATCH_PARENT
+  -- , gravity LEFT
+  -- , accessibility ENABLE
+  -- , onClick push $ const OnClickClose
+  -- , rippleColor Color.rippleShade
+  -- , cornerRadius 20.0
+
+  
+  -- ][imageView
+  --   [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left_with_bg"
+  --   , height $ V 36
+  --   , width  $ V 36
+  --   , gravity LEFT
+  --   ]
+  -- ]
+
+--Currently using : 
+
+-- fullScreenImageView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+-- fullScreenImageView config push = 
+--     linearLayout
+--           [ height WRAP_CONTENT
+--           , width MATCH_PARENT
+--           , gravity LEFT
+--           , accessibility ENABLE
+--           , onClick push $ const OnClickClose
+--           , cornerRadius 20.0
+--           ][ imageView
+--             [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left_with_bg"   --ny_ic_chevron_left_with_bg
+--             , height $ V 30
+--             , width $ V 30
+--             , accessibility DISABLE
+--             , rippleColor Color.rippleShade
+--             , cornerRadius 24.0
+--             , margin $ Margin 5 10 0 0
+--             ]
+--           ]
 
 chatHeaderView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 chatHeaderView config push =
@@ -265,11 +326,13 @@ chatBodyView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect
 chatBodyView config push =
   if (null config.messages) && not config.feature.showAutoGeneratedText then
     emptyChatView config push
-  else
+  else 
     chatView config push
 
 chatView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 chatView config push =
+  let messagesLen = length (spy "testing: " config.messages)
+  in
   linearLayout
   [ weight 1.0
   , width MATCH_PARENT
@@ -291,13 +354,13 @@ chatView config push =
           , width MATCH_PARENT
           , padding $ PaddingHorizontal 16 16
           , visibility $ boolToVisibility $ config.feature.showAutoGeneratedText
-          ][ chatComponent config push {message : config.autoGeneratedText, sentBy : "Driver", timeStamp : config.rideConfirmedAt , type : "" , delay : 0} false "DRIVER" 1 ]
+          ][ chatComponent config push {message : config.autoGeneratedText, sentBy : "Driver", timeStamp : config.rideConfirmedAt , type : "" , delay : 0} false "DRIVER" messagesLen ]
         , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation VERTICAL
           , padding (PaddingHorizontal 16 16)
-          ](mapWithIndex (\index item -> chatComponent config push item (index == (length config.messages - 1)) (config.userConfig.receiver) index) (config.messages))
+          ](mapWithIndex (\index item -> chatComponent config push item (index == (messagesLen - 1)) (config.userConfig.receiver) index) (config.messages))
       ]
     ]
   ]
@@ -341,7 +404,19 @@ chatFooterView config push =
          , onChange push $ TextChanged
          , pattern "[^\n]*,255"
          ] <> FontStyle.body1 LanguageStyle
-       , linearLayout
+       , linearLayout      --camera image
+         [ height $ V 36
+         , width $ V 36
+         , gravity CENTER
+         , onClick push $ const $ CaptureImage
+         ][ imageView
+            [ imageWithFallback $ ",https://assets.juspay.in/nammayatri/images/driver/ny_ic_camera_white.png"
+            , accessibility DISABLE
+            , height $ V 20 
+            , width $ V 20 
+            ] 
+         ] 
+       , linearLayout     -- send button
          [ height $ V 36
          , width $ V 36
          , gravity CENTER
@@ -427,53 +502,68 @@ chatComponent state push config isLastItem receiver index =
   let message = getMessageFromKey state.suggestionKey config.message state.languageKey
       chatConfig = getChatConfig state config.sentBy isLastItem index
       enableFlexBox = not $ (os == "IOS" || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (getFlexBoxCompatibleVersion "")))
+      imageId = getNewIDWithTag (getImageId index)
   in
-  PrestoAnim.animationSet
-    [ if config.sentBy == (getCurrentUser (state.userConfig.receiver /= "Driver")) then
-         translateInXForwardAnim $ isLastItem
+  PrestoAnim.animationSet[
+     if config.sentBy == (getCurrentUser (state.userConfig.receiver /= "Driver")) then
+         translateInXForwardAnim $ true
       else
-          translateInXBackwardAnim $ isLastItem
+          translateInXBackwardAnim $ true
     ]
   $ linearLayout
-  [height WRAP_CONTENT
-  , width MATCH_PARENT
-  , accessibility ENABLE
-  , accessibilityHint $ (if config.sentBy == getCurrentUser (state.userConfig.receiver /= "Driver") then "You Sent : " else receiver <> " Sent : ") <> getMessageFromKey state.suggestionKey config.message "EN_US"
-  , margin chatConfig.margin
-  , gravity chatConfig.gravity
-  , orientation VERTICAL
-  , visibility $ boolToVisibility $ not $ STR.null message
-  , onAnimationEnd (\_ -> when isLastItem $ void $ scrollToEnd (getNewIDWithTag "ChatScrollView") true) (const NoAction)
-  ][ ((if enableFlexBox then flexBoxLayout else linearLayout) $ 
-     [ height MATCH_PARENT
-     , width $ if (os == "IOS" && (STR.length message) > (if state.languageKey == "HI_IN" then 50 else 30) ) then MATCH_PARENT else WRAP_CONTENT
-     , accessibility DISABLE_DESCENDANT
-     , background chatConfig.background
-     , cornerRadii chatConfig.cornerRadii
-     ] <> if enableFlexBox 
-            then [justifyContent JUSTIFY_END, flexDirection ROW, flexWrap WRAP, alignItems ALIGN_BASELINE, orientation VERTICAL, padding (Padding 10 6 10 6)] 
-            else [margin (MarginBottom 4), padding (Padding 12 12 12 12)])
-     [textView $
-      [ text $ message
-      , singleLine false
-      , margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0
-      , color chatConfig.textColor
-      ] <> FontStyle.body20 TypoGraphy
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , accessibility ENABLE
+    , accessibilityHint $ (if config.sentBy == getCurrentUser (state.userConfig.receiver /= "Driver") then "You Sent : " else receiver <> " Sent : ") <> getMessageFromKey state.suggestionKey config.message "EN_US"
+    , margin chatConfig.margin
+    , gravity chatConfig.gravity
+    , orientation VERTICAL
+    , visibility $ boolToVisibility $ not $ STR.null message
+
+    ][ (if enableFlexBox then flexBoxLayout else linearLayout) (
+        [ height MATCH_PARENT
+        , width $ if (os == "IOS" && (STR.length message) > (if state.languageKey == "HI_IN" then 50 else 30) ) then MATCH_PARENT else WRAP_CONTENT
+        , accessibility DISABLE_DESCENDANT
+        , background chatConfig.background
+        , cornerRadii chatConfig.cornerRadii
+        ] <> if enableFlexBox 
+                then [justifyContent JUSTIFY_END, flexDirection ROW, flexWrap WRAP, alignItems ALIGN_BASELINE, orientation VERTICAL, padding (Padding 10 6 10 6)] 
+                else [margin (MarginBottom 4), padding (Padding 12 12 12 12)])
+        [ 
+        PrestoAnim.animationSet [ if config.sentBy == (getCurrentUser (state.userConfig.receiver /= "Driver")) then translateInXForwardAnim $ true else translateInXBackwardAnim $ true] $
+          if config.type == "Image" then 
+            linearLayout
+              [ height $ V 300
+              , width $ V 300
+              , id imageId
+              , onAnimationEnd (\_ -> renderBase64Image (config.message) (imageId) true "FIT_XY")(const NoAction)
+              , padding $ Padding 6 6 6 0
+              , onClick push $ const $ FullScreenImage config.message
+              ][]
+          else 
+            textView $
+              [ text $ message
+              , singleLine false
+              , margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0
+              , color chatConfig.textColor
+              ] <> FontStyle.body20 TypoGraphy
+          , textView $ 
+              [ text $ convertUTCtoISC config.timeStamp "hh:mm A"
+              , height $ MATCH_PARENT
+              , visibility $ boolToVisibility enableFlexBox
+              , color chatConfig.timeStampColor
+              , margin $ MarginLeft 6
+              ] <> FontStyle.body21 TypoGraphy
+      ]
     , textView $ 
-      [ text $ convertUTCtoISC config.timeStamp "hh:mm A"
-      , height $ MATCH_PARENT
-      , visibility $ boolToVisibility enableFlexBox
-      , color chatConfig.timeStampColor
-      , margin $ MarginLeft 6
-      ] <> FontStyle.body21 TypoGraphy
+        [ text $ convertUTCtoISC config.timeStamp "hh:mm A"
+        , height $ MATCH_PARENT
+        , visibility $ boolToVisibility $ not enableFlexBox
+        , color Color.black800
+        ] <> FontStyle.body21 TypoGraphy
     ]
-    , textView $ 
-      [ text $ convertUTCtoISC config.timeStamp "hh:mm A"
-      , height $ MATCH_PARENT
-      , visibility $ boolToVisibility $ not enableFlexBox
-      , color Color.black800
-    ] <> FontStyle.body21 TypoGraphy
-  ]
+  where 
+    getImageId index = spy "getImageId" $ "inChatImage_" <> show index
 
 getChatConfig :: Config -> String -> Boolean -> Int -> {margin :: Margin, gravity :: Gravity, background :: String, cornerRadii :: Corners, textColor :: String, timeStampColor :: String}
 getChatConfig state sentBy isLastItem index =
@@ -505,3 +595,28 @@ splitString str = (STR.replaceAll (STR.Pattern "") (STR.Replacement " ") str)
 
 getCurrentUser :: Boolean -> String
 getCurrentUser isChatWithEM = if isChatWithEM then getValueFromCache (show CUSTOMER_ID) (getKeyInSharedPrefKeys) else "Customer"
+
+-- fullScreenImage :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+-- fullScreenImage config push = do
+--   -- let message = head config.messages
+--   -- let imageId = getNewIDWithTag (getImageId index)
+--   let messagesLen = spy "fullscreenimage " config
+--   relativeLayout[
+--     width MATCH_PARENT
+--     , orientation VERTICAL
+--     , height MATCH_PARENT
+--     , gravity LEFT
+--     , background Color.blackLessTrans
+--       ][ 
+--           PrestoAnim.animationSet [fadeIn config.fullScreenImage] $
+--             linearLayout
+--             [ width $ V (screenWidth unit)
+--             , height $ V (screenHeight unit)
+--             , gravity CENTER
+--             , background Color.blackLessTrans
+--             , padding $ PaddingBottom 25
+--             , id $ getNewIDWithTag ("fullScreenChatImage")
+--             , onAnimationEnd (\_ ->renderBase64Image  (spy "config.activeImageURL" config.activeImageURL) (getNewIDWithTag ("fullScreenChatImage")) true "FIT_XY")(const NoAction)
+--             ][]
+--         , fullScreenImageView config push 
+--       ] 

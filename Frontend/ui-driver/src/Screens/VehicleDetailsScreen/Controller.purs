@@ -87,7 +87,7 @@ eval RemoveImageClick state = continue $ state { data { base64Image = "", imageN
 eval (PreviewImage) state = continueWithCmd state [do
   _ <- liftEffect $ previewImage state.data.base64Image
   pure NoAction]
-
+-- on click
 eval (UploadImage) state = continueWithCmd state [do
   _ <- liftEffect $ uploadFile false
   pure NoAction]

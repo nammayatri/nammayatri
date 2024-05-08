@@ -111,6 +111,64 @@ public class Utils {
             default: return Gravity.CENTER;}
     }
 
+        public static String encodeToBase64(Context context, @Nullable Uri fileUri) {
+        try {
+            System.out.println("Line 113");
+            if(fileUri == null) return "";
+            InputStream imageStream = context.getContentResolver().openInputStream(fileUri);
+            Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            System.out.println("Line 127");
+            byte[] b;
+            String encImage = "";
+            System.out.println("Line 130");
+
+            selectedImage.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+            b = baos.toByteArray();
+            encImage = Base64.encodeToString(b, Base64.NO_WRAP);
+
+             System.out.println("Line 136");
+
+            if (((encImage.length() / 4) * 3) / 1000 > 400) {
+                int reduceQuality = 10;
+                selectedImage.compress(Bitmap.CompressFormat.JPEG, 100 - reduceQuality, baos);
+                b = baos.toByteArray();
+                encImage = Base64.encodeToString(b, Base64.NO_WRAP);
+                while (((encImage.length() / 4) * 3) / 1000 > 400) {
+                    if (reduceQuality >= 90) {
+                        break;
+                    }
+                    reduceQuality += 10;
+                    baos.reset();
+                    selectedImage.compress(Bitmap.CompressFormat.JPEG, 100 - reduceQuality, baos);
+                    b = baos.toByteArray();
+                    encImage = Base64.encodeToString(b, Base64.NO_WRAP);
+                }
+            }
+            System.out.println("Line 154");
+            return encImage;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
+        }
+    } 
+
+    public static Uri getCapturedImage(@Nullable Intent data, Activity activity, Context context) {
+        try {
+            Uri imageUri;
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            if (data == null || data.getData() == null) { //Camera
+                File image = new File(context.getFilesDir(), "IMG_" + sharedPref.getString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), "null") + ".jpg");
+                imageUri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", image);
+            } else { // storage
+                imageUri = data.getData();
+            }
+            return imageUri;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
     public static JSONObject createNotificationPayload(String title, String message, String onTapAction, String action1Text, String action2Text, String action1Image, String action2Image, String channelId, int durationInMilliSeconds) throws JSONException {
         JSONObject notificationPayload = new JSONObject();
         notificationPayload

@@ -624,6 +624,7 @@ type HomeScreenStateData =
   , followers :: Maybe (Array Followers)
   , vehicleVariant :: String
   , hotSpotInfo :: Array HotSpotData
+  , activeImageURL :: String
   , iopState :: InteroperabilityState
   , currentCityConfig :: MRC.CityConfig
   , otherSelectedEstimates :: Array String
@@ -826,6 +827,7 @@ type HomeScreenStateProps =
   , repeatRideVariant :: String
   , hasToll :: Boolean
   , repeatRideServiceTierName :: Maybe String
+  , fullScreenImage :: Boolean
   , isSearchCancelled :: Boolean
   , referralComponentProps :: ReferralComponentState
   , showAcWorkingPopup :: Boolean

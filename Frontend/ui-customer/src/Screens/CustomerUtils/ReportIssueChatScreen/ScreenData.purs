@@ -102,6 +102,7 @@ chatConfig' = ChatView.config {
                      , transparentGrey = Color.transparentGrey
                      , showTextEdit = false
                      , spanParent = true
+                     , activeImageURL = ""
               }
 
 recordAudioState' = {

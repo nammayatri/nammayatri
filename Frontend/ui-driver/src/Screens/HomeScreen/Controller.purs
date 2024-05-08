@@ -1014,6 +1014,8 @@ eval (ChatViewActionController (ChatView.Navigate)) state = do
     pure $ RideActionModalAction (RideActionModal.OnNavigate)
   ]
 
+eval (ChatViewActionController  (ChatView.FullScreenImage imageId)) state = continue state {data { activeImageURL = imageId}, props{fullScreenImage = true} } 
+
 ------------------------------- ChatService - End --------------------------
 
 eval (RideActionModalAction (RideActionModal.LocationTracking)) state = do

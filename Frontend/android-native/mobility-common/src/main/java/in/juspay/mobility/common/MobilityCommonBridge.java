@@ -3910,7 +3910,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         imageView.setLayoutParams(layoutParams);
                         imageView.setImageBitmap(decodedByte);
                         imageView.setScaleType(getScaleTypes(imgScaleType));
-                        imageView.setAdjustViewBounds(true);
+//                        imageView.setAdjustViewBounds(true);
                         imageView.setClipToOutline(true);
                         layout.removeAllViews();
                         layout.addView(imageView);
@@ -4118,7 +4118,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
                         chooseFromFile.setType("image/*");
                         Intent chooser = Intent.createChooser(takePicture, context.getString(R.string.upload_image));
-                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
+                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});                    
                         bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
                     }
                 } else {

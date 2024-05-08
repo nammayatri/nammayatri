@@ -27,6 +27,8 @@ data Action = SendMessage
             | NoAction
             | OnImageClick String
             | MessageAnimationEnd
+            | OnClickClose
+            | FullScreenImage String
 
 type Config = 
   { userConfig :: UserConfig
@@ -55,6 +57,8 @@ type Config =
   , enableSuggestions :: Boolean
   , chatBodyPadding :: Padding
   , chatMargin :: Margin 
+  , fullScreenImage :: Boolean
+  , activeImageURL :: String
   }
 
 type UserConfig =
@@ -104,6 +108,8 @@ config =
     , enableSuggestions : true
     , chatBodyPadding : Padding 0 0 0 0
     , chatMargin : Margin 0 0 0 0
+    , fullScreenImage : false
+    , activeImageURL : ""
   }
 
 makeChatComponent' :: String -> String -> String -> String -> Int -> ChatComponentConfig

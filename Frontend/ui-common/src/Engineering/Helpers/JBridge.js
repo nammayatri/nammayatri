@@ -671,16 +671,17 @@ export const storeCallBackMessageUpdated = function (cb) {
             const messageLoaded = setTimeout(()=>{
               cb(messagesLoadedCallBack)();
             },1000)
-            const callback = callbackMapper.map(function (message, sentBy, timeStamp, messagesSize) {
+            const callback = callbackMapper.map(function (message, sentBy, timeStamp, messagesSize, type) {
               clearTimeout(messageLoaded);
               if (messagesSize == undefined) {
                 messagesSize = "-1"
               }
+              console.log(message);
               const messageObj = {
                 "message": message,
                 "sentBy": sentBy,
                 "timeStamp": timeStamp,
-                type: "Text",
+                type: type ? type : "Text",
                 delay: 0
               }
               window.chatMessages = window.chatMessages || [];
@@ -778,11 +779,11 @@ export const stopChatListenerService = function () {
   }
 }
 
-export const sendMessage = function (message) {
+export const sendMessage = function (message,type) {
   if (JBridge.sendMessage) {
     if (timer) clearTimeout(timer);
     const fn = function () {
-      return JBridge.sendMessage(message);
+      return JBridge.sendMessage(message,"Text");
     }
     timer = setTimeout(fn, 200);
   }
@@ -1763,6 +1764,14 @@ export const uploadFile = function (unit) {
   };
 };
 
+export const clickImage = function () {
+  return function() {
+    if(window.JBridge.clickImage){
+      return window.JBridge.clickImage();
+    }
+  };
+};
+
 export const previewImage = function (base64Image) {
   return function () {
     return JBridge.previewImage(base64Image);
@@ -1775,6 +1784,8 @@ export const renderBase64Image = function (image) {
   return function (id) {
     return function (fitCenter) {
       return function (imgScaleType) {
+        console.log("renderBase64Image"+id)
+
         try {
           if (JBridge.renderBase64Image) {
             return JBridge.renderBase64Image(image, id, fitCenter, imgScaleType);

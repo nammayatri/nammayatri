@@ -81,6 +81,8 @@ chatConfig' = ChatView.config {
                      , enableSuggestionClick = false
                      , showTextEdit = false
                      , spanParent = true
+                     , fullScreenImage = false
+                     , activeImageURL = ""
               }
 
 recordAudioState' = {

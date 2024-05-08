@@ -43,7 +43,7 @@ public class MessageOverlayService extends Service implements View.OnClickListen
     private static final ArrayList<SendMessageCallBack> sendMessageCallBacks = new ArrayList<>();
 
     public interface SendMessageCallBack {
-        void sendMessage(String message);
+        void sendMessage(String message, String type);
     }
 
     public static void registerSendMessageCallBack(SendMessageCallBack callBack) {
@@ -196,7 +196,7 @@ public class MessageOverlayService extends Service implements View.OnClickListen
     private void sendMessage(SendMessageCallBack cb, String message){
         Thread thread = new Thread(() -> {
             try {
-                cb.sendMessage(message);
+                cb.sendMessage(message, "Text");
             } catch (Exception e) {
                 Log.e(LOG_TAG, "Error in sending a message" + e);
             }

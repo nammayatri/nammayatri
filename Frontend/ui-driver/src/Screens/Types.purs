@@ -988,7 +988,9 @@ type HomeScreenData =  {
   noOfLocations :: Int,
   isVehicleSupported :: Boolean,
   linkedVehicleCategory :: String,
-  cityConfig :: CityConfig
+  cityConfig :: CityConfig,
+  activeImageURL :: String
+
 }
 
 type BannerCarousalData = {
@@ -1222,7 +1224,8 @@ type HomeScreenProps =  {
   odometerUploadAttempts :: Int,
   odometerImageUploading :: Boolean,
   showAcWorkingPopup :: Maybe Boolean,
-  acExplanationPopup :: Boolean
+  acExplanationPopup :: Boolean,
+  fullScreenImage :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER

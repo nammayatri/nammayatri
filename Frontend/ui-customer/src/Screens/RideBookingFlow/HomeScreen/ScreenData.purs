@@ -102,6 +102,7 @@ initData = {
     , specialZoneQuoteList : []
     , specialZoneSelectedQuote : Nothing
     , specialZoneSelectedVariant : Nothing
+    , activeImageURL : ""
     , selectedEstimatesObject : {
       vehicleImage: ""
       , isSelected: false
@@ -359,6 +360,7 @@ initData = {
     , repeatRideVariant : ""
     , hasToll : false
     , repeatRideServiceTierName : Nothing
+    , fullScreenImage: false
     , isSearchCancelled : false
     , referralComponentProps : { stage : NO_REFERRAL_STAGE
                                , referralCode : Nothing

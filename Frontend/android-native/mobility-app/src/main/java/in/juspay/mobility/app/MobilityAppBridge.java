@@ -9,6 +9,7 @@
 
 package in.juspay.mobility.app;
 
+import static android.Manifest.permission.CAMERA;
 import static android.app.Activity.RESULT_OK;
 import static androidx.core.app.ActivityCompat.startIntentSenderForResult;
 
@@ -28,6 +29,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.RemoteException;
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.text.Html;
 import android.util.Log;
@@ -41,7 +43,9 @@ import android.widget.ScrollView;
 
 import androidx.annotation.NonNull;
 import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.android.installreferrer.api.InstallReferrerClient;
@@ -76,7 +80,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -101,6 +108,9 @@ public class MobilityAppBridge extends HyperBridge {
     private static final String UTILS = "UTILS";
     private static final String OVERRIDE = "OVERRIDE";
     private static final int CALL_REQUEST_CODE = 90;
+    private static final int CAPTURE_IMAGE_REQ_CODE = 155;
+    private static final int IMAGE_PERMISSION_REQ_CODE = 4988;
+
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
 
     private static final String REFERRER = "REFERRER";
@@ -175,8 +185,8 @@ public class MobilityAppBridge extends HyperBridge {
             }
 
             @Override
-            public void chatCallBack(String message, String sentBy, String dateFormatted, String len) {
-                callChatMessageCallBack(message, sentBy, dateFormatted, len);
+            public void chatCallBack(String message, String sentBy, String dateFormatted, String len, String type) {
+                callChatMessageCallBack(message, sentBy, dateFormatted, len, type);
             }
 
             @Override
@@ -226,9 +236,9 @@ public class MobilityAppBridge extends HyperBridge {
         ChatService.chatUserId = uuid;
     }
 
-    public void callChatMessageCallBack(String message, String sentBy, String dateFormatted, String len) {
+    public void callChatMessageCallBack(String message, String sentBy, String dateFormatted, String len, String type) {
         if (storeChatMessageCallBack != null) {
-            String javascript = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");", storeChatMessageCallBack, message, sentBy, dateFormatted, len);
+            String javascript = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\", \"%s\");", storeChatMessageCallBack, message, sentBy, dateFormatted, len, type);
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
     }
@@ -473,9 +483,9 @@ public class MobilityAppBridge extends HyperBridge {
 
     //region Chat Utiils
     @JavascriptInterface
-    public static void sendMessage(final String message) {
+    public static void sendMessage(final String message, final String type) {
         for (SendMessageCallBack sendMessageCallBack : sendMessageCallBacks) {
-            sendMessageCallBack.sendMessage(message);
+            sendMessageCallBack.sendMessage(message, type);
         }
     }
 
@@ -524,7 +534,7 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     public interface SendMessageCallBack {
-        void sendMessage(String message);
+        void sendMessage(String message, String type);
     }
 
     public static void registerSendMessageCallBack(SendMessageCallBack callBack) {
@@ -1140,6 +1150,57 @@ public class MobilityAppBridge extends HyperBridge {
         cameraUtils = new CameraUtils();
         cameraUtils.setupCamera(bridgeComponents.getActivity(), bridgeComponents.getContext(), previewViewId, isBackCamera);
     }
+//      public void clickImage() {
+//         System.out.println("Image click");
+//         ExecutorManager.runOnMainThread(() -> {
+//             Context context = bridgeComponents.getContext();
+//             if (ActivityCompat.checkSelfPermission(context.getApplicationContext(), CAMERA) == PackageManager.PERMISSION_GRANTED) {
+//                 if (bridgeComponents.getActivity() != null) {
+//                     // Camera access permission granted
+//                     Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+//                     String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+//                     KeyValueStore.write(context, bridgeComponents.getSdkName(), context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
+//                     Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
+//                     takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
+//                     bridgeComponents.getActivity().startActivityForResult(takePicture, CAPTURE_IMAGE_REQ_CODE, null);
+//                 }
+//             }  
+//             // else {
+//             //     if (bridgeComponents.getActivity() != null) {
+//             //         // Request permission to access camera
+//             //         ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{CAMERA}, IMAGE_PERMISSION_REQ_CODE);
+//             //     }
+//             // }
+//         });
+// }
+    @JavascriptInterface
+    public void clickImage() {
+   
+        ExecutorManager.runOnMainThread(() -> {
+            System.out.println("coming inside clickImage");
+            Context context = bridgeComponents.getContext();
+            if (ActivityCompat.checkSelfPermission(context.getApplicationContext(), CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                if (bridgeComponents.getActivity() != null) {
+                    // Camera access permission granted
+                    Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+                    KeyValueStore.write(context, bridgeComponents.getSdkName(), context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
+                    Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
+                    takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
+                    System.out.println("coming inside clickImage1");
+                    bridgeComponents.getActivity().startActivityForResult(takePicture, CAPTURE_IMAGE_REQ_CODE, null);
+                }
+            } 
+            else {
+                if (bridgeComponents.getActivity() != null) {
+                    // Request permission to access camera
+                    ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{CAMERA}, IMAGE_PERMISSION_REQ_CODE);
+                }
+            }
+        });
+    
+}
+
 
     @JavascriptInterface
     public void recordVideo(final String callback) {
@@ -1157,6 +1218,7 @@ public class MobilityAppBridge extends HyperBridge {
 
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+        System.out.println("coming inside onActivityResult");
         switch (requestCode) {
             case CREDENTIAL_PICKER_REQUEST:
                 if (resultCode == RESULT_OK) {
@@ -1165,6 +1227,17 @@ public class MobilityAppBridge extends HyperBridge {
                     String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                             storeDetectPhoneNumbersCallBack, selectedNumber); //mobile_number
                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+                break;
+            case CAPTURE_IMAGE_REQ_CODE : 
+                if (resultCode == RESULT_OK){
+                    if (bridgeComponents.getActivity() != null) {
+                        Uri image = Utils.getCapturedImage(data, bridgeComponents.getActivity(), bridgeComponents.getContext());
+                        String encodedImage = Utils.encodeToBase64(bridgeComponents.getContext(), image);
+                        sendMessage(encodedImage, "Image");
+                        Log.i("ENCODED", encodedImage);
+                    }
+                    
                 }
                 break;
         }

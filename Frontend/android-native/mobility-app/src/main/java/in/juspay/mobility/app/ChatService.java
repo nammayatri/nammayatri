@@ -265,11 +265,12 @@ public class ChatService extends Service {
 
     }
 
-    public void sendMessages(final String message) {
+    public void sendMessages(final String message, final String type) {
         HashMap<String, Object> _newMessage = new HashMap<>();
         _newMessage.put("message", message);
         _newMessage.put("sentBy", chatUserId);
         _newMessage.put("timestamp", System.currentTimeMillis());
+        _newMessage.put("type",type);
         if (sharedPrefs != null) chatChannelID = sharedPrefs.getString("CHAT_CHANNEL_ID", null);
         if (chatChannelID != null) {
             try {
@@ -326,7 +327,7 @@ public class ChatService extends Service {
             if (appState.equals("onPause") || appState.equals("onResume")) {
                 try {
                     for (int i = 0; i < callBack.size(); i++) {
-                        callBack.get(i).chatCallBack(_message, _sentBy, _dateFormatted, len);
+                        callBack.get(i).chatCallBack(_message, _sentBy, _dateFormatted, len, newMessage.type);
                     }
                 } catch (Exception err) {
                     Log.e(LOG_TAG, "Error sending the message to jbridge : " + err);
@@ -423,22 +424,25 @@ public class ChatService extends Service {
     }
 
     static class Message {
-        public Message(String message, String sentBy, String timestamp) {
+        public Message(String message, String sentBy, String timestamp, String type) {
             this.message = message;
             this.sentBy = sentBy;
             this.timestamp = timestamp;
+            this.type = type;
         }
 
         String message;
         String sentBy;
         String timestamp;
+        String type;
     }
 
     private Message createMessageObj(Map<String, Object> map) {
         String timestamp = getChatDate((Long) map.get("timestamp"));
         String message = (String) map.get("message");
         String sentBy = (String) map.get("sentBy");
-        return new Message(message, sentBy, timestamp);
+        String type = map.containsKey("type") ? (String) map.get("type") : "Text";
+        return new Message(message, sentBy, timestamp, type);
     }
 
     private void sendFCM(String message) {

@@ -19,6 +19,7 @@ import MerchantConfig.Types
 import MerchantConfig.DefaultConfig as DC
 import PrestoDOM (BottomSheetState(..))
 import Common.Resources.Constants (chatSuggestion)
+import Components.ChatView.Controller as ChatController
 
 data Action = SendMessage
             | SendSuggestion String
@@ -26,6 +27,10 @@ data Action = SendMessage
             | TextChanged String
             | Call
             | NoAction
+            | CaptureImage 
+            | FullScreenImage String
+            | OnClickClose
+            | ChatViewActionController ChatController.Action
 
 type Config = 
   { userConfig :: UserConfig
@@ -44,6 +49,8 @@ type Config =
   , otp :: String
   , feature :: Feature
   , suggestionKey :: String
+  , activeImageURL :: String
+  , fullScreenImage :: Boolean
   }
 
 type Feature = 
@@ -94,6 +101,8 @@ config =
   , peekHeight : 0
   , otp : ""
   , suggestionKey : chatSuggestion
+  , activeImageURL : ""
+  , fullScreenImage : false
   }
 
 

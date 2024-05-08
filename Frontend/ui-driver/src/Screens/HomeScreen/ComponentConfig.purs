@@ -650,6 +650,8 @@ chatViewConfig state = let
     , canSendSuggestion = state.props.canSendSuggestion
     , enableCall = (not (state.data.activeRide.disabilityTag == Just ST.HEAR_IMPAIRMENT))
     , enableSuggestions = state.data.config.feature.enableSuggestions
+    , activeImageURL = state.data.activeImageURL
+    , fullScreenImage = state.props.fullScreenImage
   }
   in chatViewConfig'
 
