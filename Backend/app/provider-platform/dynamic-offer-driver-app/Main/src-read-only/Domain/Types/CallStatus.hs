@@ -22,11 +22,7 @@ data CallStatus = CallStatus
     id :: Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus,
     merchantId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     recordingUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-<<<<<<< HEAD
-    status :: Kernel.External.Call.Interface.Types.CallStatus
-=======
     status :: Kernel.External.Call.Interface.Types.CallStatus,
     updatedAt :: Kernel.Prelude.UTCTime
->>>>>>> 2ac75e3b6b (backend/enh/DSL/move-tables-dsl-driver-offer-person-part: CallStatus)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

@@ -715,7 +715,7 @@ deleteDriver admin driverId = do
   Auth.clearDriverSession driverId
   QDriverInformation.deleteById (cast driverId)
   QDriverStats.deleteById (cast driverId)
-  QR.deleteByPersonId driverId
+  QR.deleteByPersonId driverId.getId
   QVehicle.deleteById driverId
   QDHL.deleteByDriverId driverId
   QPerson.deleteById driverId

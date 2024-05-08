@@ -402,7 +402,7 @@ verify tokenId req = do
   let deviceToken = Just req.deviceToken
   cleanCachedTokens person.id
   QR.deleteByPersonIdExceptNew person.id tokenId
-  _ <- QR.setVerified tokenId
+  _ <- QR.setVerified True tokenId
   _ <- QP.updateDeviceToken deviceToken person.id
   when isNewPerson $
     QP.setIsNewFalse False person.id
@@ -477,7 +477,7 @@ resend tokenId = do
 
 cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
-  regTokens <- QR.findAllByPersonId personId
+  regTokens <- QR.findAllByPersonId personId.getId
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
     void $ Redis.del key
@@ -495,6 +495,6 @@ logout (personId, _, _) = do
     QP.findById personId
       >>= fromMaybeM (PersonNotFound personId.getId)
   _ <- QP.updateDeviceToken Nothing uperson.id
-  QR.deleteByPersonId personId
+  QR.deleteByPersonId personId.getId
   when (uperson.role == SP.DRIVER) $ void (QD.updateActivity False (Just DriverInfo.OFFLINE) (cast uperson.id))
   pure Success

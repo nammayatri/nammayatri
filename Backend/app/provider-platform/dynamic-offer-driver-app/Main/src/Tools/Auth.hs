@@ -161,6 +161,6 @@ verifyDashboard incomingToken = do
 
 clearDriverSession :: (HasEsqEnv m r, Redis.HedisFlow m r, MonadFlow m, Utils.CacheFlow m r, Utils.EsqDBFlow m r) => Id Person.Person -> m ()
 clearDriverSession personId = do
-  regTokens <- QR.findAllByPersonId personId
+  regTokens <- QR.findAllByPersonId personId.getId
   for_ regTokens $ \regToken -> do
     void $ Redis.del $ authTokenCacheKey regToken.token

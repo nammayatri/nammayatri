@@ -272,7 +272,6 @@ library
       Domain.Types.OnCancel
       Domain.Types.OnUpdate
       Domain.Types.Quote
-      Domain.Types.RegistrationToken
       Domain.Types.RegistryMapFallback
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
@@ -400,7 +399,6 @@ library
       Storage.Beam.Notification
       Storage.Beam.Payment
       Storage.Beam.Quote
-      Storage.Beam.RegistrationToken
       Storage.Beam.RegistryMapFallback
       Storage.Beam.RideDetails
       Storage.Beam.RiderDetails
@@ -540,7 +538,7 @@ library
       Storage.Queries.PurchaseHistoryExtra
       Storage.Queries.Quote
       Storage.Queries.RatingExtra
-      Storage.Queries.RegistrationToken
+      Storage.Queries.RegistrationTokenExtra
       Storage.Queries.RegistryMapFallback
       Storage.Queries.RideDetails
       Storage.Queries.RideExtra
@@ -556,6 +554,7 @@ library
       Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.QuestionInformation
       Storage.Queries.Transformers.ReelsData
+      Storage.Queries.Transformers.RegistrationToken
       Storage.Queries.Transformers.Ride
       Storage.Queries.TranslationsExtra
       Storage.Queries.Vehicle.Internal
@@ -649,6 +648,7 @@ library
       Domain.Types.QuestionModuleMapping
       Domain.Types.Rating
       Domain.Types.ReelsData
+      Domain.Types.RegistrationToken
       Domain.Types.Ride
       Domain.Types.SubscriptionConfig
       Domain.Types.Toll
@@ -714,6 +714,7 @@ library
       Storage.Beam.QuestionModuleMapping
       Storage.Beam.Rating
       Storage.Beam.ReelsData
+      Storage.Beam.RegistrationToken
       Storage.Beam.Ride
       Storage.Beam.SubscriptionConfig
       Storage.Beam.Toll
@@ -792,6 +793,7 @@ library
       Storage.Queries.OrphanInstances.Plan
       Storage.Queries.OrphanInstances.PurchaseHistory
       Storage.Queries.OrphanInstances.Rating
+      Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.Vehicle
@@ -807,6 +809,7 @@ library
       Storage.Queries.QuestionModuleMapping
       Storage.Queries.Rating
       Storage.Queries.ReelsData
+      Storage.Queries.RegistrationToken
       Storage.Queries.Ride
       Storage.Queries.SubscriptionConfig
       Storage.Queries.Toll

@@ -14,19 +14,6 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data CallStatusT f = CallStatusT
-<<<<<<< HEAD
-  { callError :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    callId :: B.C f Kernel.Prelude.Text,
-    callService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService),
-    conversationDuration :: B.C f Kernel.Prelude.Int,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    dtmfNumberUsed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    entityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    id :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    recordingUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    status :: B.C f Kernel.External.Call.Interface.Types.CallStatus
-=======
   { callError :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     callId :: (B.C f Kernel.Prelude.Text),
     callService :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService)),
@@ -39,7 +26,6 @@ data CallStatusT f = CallStatusT
     recordingUrl :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     status :: (B.C f Kernel.External.Call.Interface.Types.CallStatus),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
->>>>>>> 2ac75e3b6b (backend/enh/DSL/move-tables-dsl-driver-offer-person-part: CallStatus)
   }
   deriving (Generic, B.Beamable)
 
@@ -49,12 +35,6 @@ instance B.Table CallStatusT where
 
 type CallStatus = CallStatusT Identity
 
-<<<<<<< HEAD
-$(enableKVPG ''CallStatusT ['id] [['callId]])
-
-$(mkTableInstances ''CallStatusT "call_status")
-=======
 $(enableKVPG (''CallStatusT) [('id)] [[('callId)]])
 
 $(mkTableInstances (''CallStatusT) "call_status")
->>>>>>> 2ac75e3b6b (backend/enh/DSL/move-tables-dsl-driver-offer-person-part: CallStatus)

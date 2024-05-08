@@ -1,11 +1,6 @@
 imports:
-<<<<<<< HEAD
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
-=======
-  merchant: Domain.Types.Merchant
-  merchantOperatingCity: Domain.Types.MerchantOperatingCity
->>>>>>> 2ac75e3b6b (backend/enh/DSL/move-tables-dsl-driver-offer-person-part: CallStatus)
   CallService: Kernel.External.Call.Types
 
 CallStatus:
@@ -22,11 +17,7 @@ CallStatus:
     merchantId : Maybe Text
     callService : Maybe CallService
     callError : Maybe Text
-<<<<<<< HEAD
     createdAt: UTCTime
-=======
-    createdAt : UTCTime
->>>>>>> 2ac75e3b6b (backend/enh/DSL/move-tables-dsl-driver-offer-person-part: CallStatus)
 
   constraints:
     id: PrimaryKey
@@ -37,22 +28,6 @@ CallStatus:
       kvFunction: findOneWithKV
       where: id
 
-<<<<<<< HEAD
-  extraOperations:
-    - EXTRA_QUERY_FILE
-
-  excludedDefaultQueries:
-    - create
-
-  sqlType:
-    callId: character varying(255)
-    recordingUrl: character varying(255)
-    status: character varying(255)
-    conversationDuration: bigint
-    dtmfNumberUsed: character varying(255)
-    entityId: character (36)
-    merchantId: character (36)
-=======
     updateCallStatus:
       kvFunction: updateWithKV
       params: [conversationDuration, recordingUrl, status]
@@ -79,17 +54,11 @@ CallStatus:
     dtmfNumberUsed: character varying (255)
     entityId: character varying (36)
     merchantId: character varying (36)
->>>>>>> 2ac75e3b6b (backend/enh/DSL/move-tables-dsl-driver-offer-person-part: CallStatus)
 
   default:
     entityId: "'UNKNOWN'"
 
-<<<<<<< HEAD
-  excludedFields: [merchantOperatingCityId, updatedAt]
-
-=======
   excludedFields: [merchantOperatingCityId, createdAt]
 
   excludedDefaultQueries:
     - create
->>>>>>> 2ac75e3b6b (backend/enh/DSL/move-tables-dsl-driver-offer-person-part: CallStatus)

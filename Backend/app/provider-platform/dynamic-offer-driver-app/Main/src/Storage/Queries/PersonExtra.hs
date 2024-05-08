@@ -416,59 +416,6 @@ updatePersonVersions person mbBundleVersion mbClientVersion mbConfigVersion mbDe
         ]
         [Se.Is BeamP.id (Se.Eq $ getId person.id)]
 
-updateDeviceToken :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe FCMRecipientToken -> m ()
-updateDeviceToken (Id personId) mbDeviceToken = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.deviceToken mbDeviceToken,
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq personId)]
-
-updateWhatsappNotificationEnrollStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe Whatsapp.OptApiMethods -> m ()
-updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.whatsappNotificationEnrollStatus enrollStatus,
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq personId)]
-
-updatePersonDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Person -> m ()
-updatePersonDetails person = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.firstName $ person.firstName,
-      Se.Set BeamP.lastName $ person.lastName,
-      Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
-      Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
-      Se.Set BeamP.mobileNumberHash $ person.mobileNumber <&> (.hash),
-      Se.Set BeamP.unencryptedMobileNumber $ person.unencryptedMobileNumber,
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq $ getId person.id)]
-
-setIsNewFalse :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
-setIsNewFalse (Id personId) = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.isNew False,
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq personId)]
-
-deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
-deleteById (Id personId) = deleteWithKV [Se.Is BeamP.id (Se.Eq personId)]
-
-updateAverageRating :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Centesimal -> m ()
-updateAverageRating (Id personId) newAverageRating = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.rating (Just newAverageRating),
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq personId)]
-
 updateAlternateMobileNumberAndCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person -> m ()
 updateAlternateMobileNumberAndCode person = do
   now <- getCurrentTime
