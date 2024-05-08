@@ -7,12 +7,19 @@ module Storage.Beam.VehicleDetails where
 
 import qualified Data.Text
 import qualified Database.Beam as B
+import qualified Domain.Types.Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
-data VehicleDetailsT f = VehicleDetailsT {acAvailable :: (B.C f Kernel.Prelude.Bool), id :: (B.C f Data.Text.Text), make :: (B.C f Data.Text.Text), model :: (B.C f Data.Text.Text)}
+data VehicleDetailsT f = VehicleDetailsT
+  { acAvailable :: (B.C f Kernel.Prelude.Bool),
+    id :: (B.C f Data.Text.Text),
+    make :: (B.C f Data.Text.Text),
+    model :: (B.C f Data.Text.Text),
+    variant :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant))
+  }
   deriving (Generic, B.Beamable)
 
 instance B.Table VehicleDetailsT where

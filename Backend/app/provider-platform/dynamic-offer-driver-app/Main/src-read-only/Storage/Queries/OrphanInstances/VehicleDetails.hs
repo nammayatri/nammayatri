@@ -13,7 +13,23 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Storage.Beam.VehicleDetails as Beam
 
 instance FromTType' Beam.VehicleDetails Domain.Types.VehicleDetails.VehicleDetails where
-  fromTType' (Beam.VehicleDetailsT {..}) = do pure $ Just Domain.Types.VehicleDetails.VehicleDetails {acAvailable = acAvailable, id = Kernel.Types.Id.Id id, make = make, model = model}
+  fromTType' (Beam.VehicleDetailsT {..}) = do
+    pure $
+      Just
+        Domain.Types.VehicleDetails.VehicleDetails
+          { acAvailable = acAvailable,
+            id = Kernel.Types.Id.Id id,
+            make = make,
+            model = model,
+            variant = variant
+          }
 
 instance ToTType' Beam.VehicleDetails Domain.Types.VehicleDetails.VehicleDetails where
-  toTType' (Domain.Types.VehicleDetails.VehicleDetails {..}) = do Beam.VehicleDetailsT {Beam.acAvailable = acAvailable, Beam.id = Kernel.Types.Id.getId id, Beam.make = make, Beam.model = model}
+  toTType' (Domain.Types.VehicleDetails.VehicleDetails {..}) = do
+    Beam.VehicleDetailsT
+      { Beam.acAvailable = acAvailable,
+        Beam.id = Kernel.Types.Id.getId id,
+        Beam.make = make,
+        Beam.model = model,
+        Beam.variant = variant
+      }

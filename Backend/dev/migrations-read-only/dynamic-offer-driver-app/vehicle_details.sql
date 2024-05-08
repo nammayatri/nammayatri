@@ -12,3 +12,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_details ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 ALTER TABLE atlas_driver_offer_bpp.vehicle_details DROP COLUMN capacity;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_details DROP COLUMN color;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_details ADD COLUMN variant text ;
