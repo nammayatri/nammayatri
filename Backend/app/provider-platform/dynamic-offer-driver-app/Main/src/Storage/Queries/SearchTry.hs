@@ -125,6 +125,9 @@ instance FromTType' BeamST.SearchTry SearchTry where
             isScheduled = fromMaybe False isScheduled,
             vehicleServiceTier = vehicleVariant,
             vehicleServiceTierName = fromMaybe (show vehicleVariant) vehicleServiceTierName,
+            baseFare = mkAmountWithDefault baseFareAmount baseFare,
+            customerExtraFee = mkAmountWithDefault customerExtraFeeAmount <$> customerExtraFee,
+            currency = fromMaybe INR currency,
             ..
           }
 
@@ -142,8 +145,11 @@ instance ToTType' BeamST.SearchTry SearchTry where
         validTill = validTill,
         vehicleVariant = vehicleServiceTier,
         vehicleServiceTierName = Just vehicleServiceTierName,
-        baseFare = baseFare,
-        customerExtraFee = customerExtraFee,
+        baseFare = roundToIntegral baseFare,
+        baseFareAmount = Just baseFare,
+        currency = Just currency,
+        customerExtraFee = roundToIntegral <$> customerExtraFee,
+        customerExtraFeeAmount = customerExtraFee,
         status = status,
         searchRepeatCounter = searchRepeatCounter,
         searchRepeatType = searchRepeatType,

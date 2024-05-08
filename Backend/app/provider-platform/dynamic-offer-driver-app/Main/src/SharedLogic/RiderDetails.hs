@@ -22,8 +22,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.RiderDetails as QRD
 
-getRiderDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Text -> Text -> UTCTime -> Bool -> m (DRD.RiderDetails, Bool)
-getRiderDetails merchantId customerMobileCountryCode customerPhoneNumber now nightSafetyCheck =
+getRiderDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Currency -> Id DM.Merchant -> Text -> Text -> UTCTime -> Bool -> m (DRD.RiderDetails, Bool)
+getRiderDetails currency merchantId customerMobileCountryCode customerPhoneNumber now nightSafetyCheck =
   QRD.findByMobileNumberAndMerchant customerPhoneNumber merchantId >>= \case
     Nothing -> fmap (,True) . encrypt =<< buildRiderDetails
     Just a -> return (a, False)
@@ -45,7 +45,8 @@ getRiderDetails merchantId customerMobileCountryCode customerPhoneNumber now nig
             hasTakenValidRide = False,
             hasTakenValidRideAt = Nothing,
             otpCode = Just otp,
-            cancellationDues = 0,
+            cancellationDues = 0.0,
+            currency,
             disputeChancesUsed = 0,
             nightSafetyChecks = nightSafetyCheck
           }

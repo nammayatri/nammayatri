@@ -8,6 +8,8 @@ import qualified Domain.Types.CancellationCharges
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -30,6 +32,7 @@ updateByPrimaryKey (Domain.Types.CancellationCharges.CancellationCharges {..}) =
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.cancellationCharges cancellationCharges,
+      Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.rideId (Kernel.Types.Id.getId <$> rideId)
     ]
@@ -41,6 +44,7 @@ instance FromTType' Beam.CancellationCharges Domain.Types.CancellationCharges.Ca
       Just
         Domain.Types.CancellationCharges.CancellationCharges
           { cancellationCharges = cancellationCharges,
+            currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             driverId = Kernel.Types.Id.Id driverId,
             id = Kernel.Types.Id.Id id,
             rideId = Kernel.Types.Id.Id <$> rideId
@@ -50,6 +54,7 @@ instance ToTType' Beam.CancellationCharges Domain.Types.CancellationCharges.Canc
   toTType' (Domain.Types.CancellationCharges.CancellationCharges {..}) = do
     Beam.CancellationChargesT
       { Beam.cancellationCharges = cancellationCharges,
+        Beam.currency = Kernel.Prelude.Just currency,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.rideId = Kernel.Types.Id.getId <$> rideId

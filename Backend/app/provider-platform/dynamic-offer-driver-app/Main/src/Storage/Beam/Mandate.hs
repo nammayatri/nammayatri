@@ -7,7 +7,7 @@ module Storage.Beam.Mandate where
 import qualified Database.Beam as B
 import qualified Domain.Types.Mandate as Domain
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMoney)
+import Kernel.Types.Common (Currency, HighPrecMoney)
 import Tools.Beam.UtilsTH
 
 data MandateT f = MandateT
@@ -17,6 +17,7 @@ data MandateT f = MandateT
     startDate :: B.C f UTCTime,
     endDate :: B.C f UTCTime,
     maxAmount :: B.C f HighPrecMoney,
+    currency :: B.C f (Maybe Currency),
     payerApp :: B.C f (Maybe Text),
     payerAppName :: B.C f (Maybe Text),
     mandatePaymentFlow :: B.C f (Maybe Text),

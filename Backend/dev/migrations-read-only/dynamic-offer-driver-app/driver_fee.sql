@@ -38,3 +38,10 @@ ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN total_earnings integer 
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN vehicle_number text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN total_earnings_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN govt_charges_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN currency character varying(255) ;

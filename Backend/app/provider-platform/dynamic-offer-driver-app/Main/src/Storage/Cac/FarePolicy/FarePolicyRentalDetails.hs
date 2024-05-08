@@ -38,15 +38,16 @@ instance FromCacType (BeamFPRD.FarePolicyRentalDetails, [(CacContext, Value)], S
           Just
             ( KTI.Id farePolicyId,
               Domain.FPRentalDetails
-                { baseFare = baseFare,
-                  perHourCharge = perHourCharge,
-                  perExtraMinRate = perExtraMinRate,
-                  perExtraKmRate = perExtraKmRate,
+                { baseFare = mkAmountWithDefault baseFareAmount baseFare,
+                  perHourCharge = mkAmountWithDefault perHourChargeAmount perHourCharge,
+                  perExtraMinRate = mkAmountWithDefault perExtraMinRateAmount perExtraMinRate,
+                  perExtraKmRate = mkAmountWithDefault perExtraKmRateAmount perExtraKmRate,
                   nightShiftCharge = nightShiftCharge,
                   includedKmPerHr = includedKmPerHr,
-                  plannedPerKmRate = plannedPerKmRate,
+                  plannedPerKmRate = mkAmountWithDefault plannedPerKmRateAmount plannedPerKmRate,
                   maxAdditionalKmsLimit = maxAdditionalKmsLimit,
                   totalAdditionalKmsLimit = totalAdditionalKmsLimit,
-                  distanceBuffers = snd <$> fPRDB
+                  distanceBuffers = snd <$> fPRDB,
+                  currency = fromMaybe INR currency
                 }
             )

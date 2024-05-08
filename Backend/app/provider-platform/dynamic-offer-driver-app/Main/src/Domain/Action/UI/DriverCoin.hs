@@ -33,6 +33,7 @@ import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverCoins.Types as DCT
 import SharedLogic.DriverFee (delCoinAdjustedInSubscriptionByDriverIdKey, getCoinAdjustedInSubscriptionByDriverIdKey)
+import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.Queries.Coins.CoinHistory as CHistory
 import Storage.Queries.DailyStatsExtra as DS
@@ -69,16 +70,20 @@ data CoinUsageHistoryItem = CoinUsageHistoryItem
   { numCoins :: Int,
     createdAt :: UTCTime,
     title :: Text,
-    cash :: HighPrecMoney
+    cash :: HighPrecMoney,
+    cashWithCurrency :: PriceAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data CoinsUsageRes = CoinsUsageRes
   { coinBalance :: Int,
     totalCoinConvertedToCash :: HighPrecMoney,
+    totalCoinConvertedToCashWithCurrency :: PriceAPIEntity,
     coinConvertedToCashUsedForLatestDues :: Maybe Int,
     coinConvertedTocashLeft :: HighPrecMoney,
+    coinConvertedToCashLeftWithCurrency :: PriceAPIEntity,
     coinConversionRate :: HighPrecMoney,
+    coinConversionRateWithCurrency :: PriceAPIEntity,
     coinUsageHistory :: [CoinUsageHistoryItem]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -167,13 +172,17 @@ getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset =
     Nothing -> pure Nothing
   let coinConvertedTocashLeft = mbDriverStat <&> (.coinCovertedToCashLeft)
       totalCoinConvertedToCash = mbDriverStat <&> (.totalCoinsConvertedCash)
+  let currency = fromMaybe transporterConfig.currency (mbDriverStat <&> (.currency))
   pure
     CoinsUsageRes
       { coinBalance = coinBalance_,
         totalCoinConvertedToCash = fromMaybe 0.0 totalCoinConvertedToCash,
+        totalCoinConvertedToCashWithCurrency = PriceAPIEntity (fromMaybe 0.0 totalCoinConvertedToCash) currency,
         coinConversionRate = transporterConfig.coinConversionRate,
+        coinConversionRateWithCurrency = PriceAPIEntity transporterConfig.coinConversionRate currency,
         coinUsageHistory = coinUsageHistory,
         coinConvertedTocashLeft = fromMaybe 0.0 coinConvertedTocashLeft,
+        coinConvertedToCashLeftWithCurrency = PriceAPIEntity (fromMaybe 0.0 coinConvertedTocashLeft) currency,
         coinConvertedToCashUsedForLatestDues = coinConvertedToCashUsage
       }
   where
@@ -183,6 +192,7 @@ getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset =
         { numCoins = historyItem.numCoins,
           createdAt = historyItem.createdAt,
           cash = historyItem.cash,
+          cashWithCurrency = PriceAPIEntity historyItem.cash historyItem.currency,
           title = historyItem.title
         }
 
@@ -204,6 +214,7 @@ accumulateCoins targetAmount = takeCoinsRequired (targetAmount, []) False
 useCoinsHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> ConvertCoinToCashReq -> Flow APISuccess
 useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
   _ <- DPlan.findByDriverId driverId >>= fromMaybeM (InternalError $ "No plan against the driver id" <> driverId.getId <> "Please choose a plan")
@@ -229,6 +240,7 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
                 merchantOptCityId = merchantOpCityId.getId,
                 numCoins = coins,
                 cash = calculatedAmount,
+                currency,
                 createdAt = now,
                 updatedAt = now,
                 title = "converted from coins"

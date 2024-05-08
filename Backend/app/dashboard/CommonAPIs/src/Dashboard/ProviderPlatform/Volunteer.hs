@@ -51,6 +51,7 @@ data BookingInfoResponse = BookingInfoResponse
     toLocation :: Maybe Location,
     estimatedDistance :: Maybe Meters,
     estimatedFare :: Money,
+    estimatedFareWithCurrency :: PriceAPIEntity,
     estimatedDuration :: Maybe Seconds,
     riderName :: Maybe Text,
     vehicleVariant :: Variant

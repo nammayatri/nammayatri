@@ -9,14 +9,31 @@ imports:
 
 DailyStats:
   tableName: daily_stats
-
+  derives: "Generic,Show"
   fields:
     id : Text
     driverId : Id Person
-    totalEarnings : Money
+    totalEarnings : HighPrecMoney
+    currency: Currency
     numRides : Int
     totalDistance : Meters
     merchantLocalDate : Day
+
+  beamFields:
+    totalEarnings:
+      totalEarnings: Money
+      totalEarningsAmount: Maybe HighPrecMoney
+    currency:
+      currency: Maybe Currency
+
+  fromTType:
+    totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+
+  toTType:
+    totalEarnings: Kernel.Prelude.roundToIntegral|I
+    totalEarningsAmount:  Kernel.Prelude.Just|I
+    currency: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey

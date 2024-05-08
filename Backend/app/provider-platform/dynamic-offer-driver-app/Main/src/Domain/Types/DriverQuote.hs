@@ -58,7 +58,8 @@ data DriverQuote = DriverQuote
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,
     validTill :: UTCTime,
-    estimatedFare :: Money,
+    estimatedFare :: HighPrecMoney,
+    currency :: Currency,
     fareParams :: Params.FareParameters,
     providerId :: Id DMerchant.Merchant,
     specialLocationTag :: Maybe Text,
@@ -72,4 +73,4 @@ data DriverQuote = DriverQuote
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show)

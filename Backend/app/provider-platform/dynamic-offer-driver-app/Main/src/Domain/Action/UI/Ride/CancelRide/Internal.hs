@@ -78,7 +78,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
     triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
     triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
     when (bookingCReason.source == SBCR.ByDriver) $
-      DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id, rideFare = Just booking.estimatedFare}
+      DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id, rideFare = Just booking.estimatedFare, currency = booking.currency}
     Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
 
   fork "cancelRide - Notify BAP" $ do

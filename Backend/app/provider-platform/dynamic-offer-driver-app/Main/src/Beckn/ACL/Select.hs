@@ -86,11 +86,10 @@ getBookAnyEstimates tagGroups = do
   tagValue <- Utils.getTagV2 Tag.ESTIMATIONS Tag.OTHER_SELECT_ESTIMATES tagGroups
   readMaybe $ T.unpack tagValue
 
-getCustomerExtraFeeV2 :: Maybe [Spec.TagGroup] -> Maybe Money
+getCustomerExtraFeeV2 :: Maybe [Spec.TagGroup] -> Maybe HighPrecMoney
 getCustomerExtraFeeV2 tagGroups = do
   tagValue <- Utils.getTagV2 Tag.CUSTOMER_TIP_INFO Tag.CUSTOMER_TIP tagGroups
-  customerExtraFee <- readMaybe $ T.unpack tagValue
-  Just $ Money customerExtraFee
+  highPrecMoneyFromText tagValue
 
 getAutoAssignEnabledV2 :: Maybe [Spec.TagGroup] -> Bool
 getAutoAssignEnabledV2 tagGroups =

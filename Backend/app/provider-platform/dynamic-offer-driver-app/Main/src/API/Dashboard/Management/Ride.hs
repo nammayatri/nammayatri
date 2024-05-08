@@ -27,7 +27,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
-import Kernel.Utils.Common (Money, logTagInfo, withFlowHandlerAPI)
+import Kernel.Utils.Common (Currency, HighPrecMoney, logTagInfo, withFlowHandlerAPI)
 import Kernel.Utils.Validation (runRequestValidation)
 import Servant hiding (Unauthorized, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -66,12 +66,13 @@ rideList ::
   Maybe (ShortId Common.Ride) ->
   Maybe Text ->
   Maybe Text ->
-  Maybe Money ->
+  Maybe HighPrecMoney ->
+  Maybe Currency ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   FlowHandler Common.RideListRes
-rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff mbfrom mbto =
-  withFlowHandlerAPI . DRide.rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff mbfrom mbto
+rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff mbCurrency mbfrom mbto =
+  withFlowHandlerAPI . DRide.rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff mbCurrency mbfrom mbto
 
 multipleRideEnd :: ShortId DM.Merchant -> Context.City -> Common.MultipleRideEndReq -> FlowHandler Common.MultipleRideEndResp
 multipleRideEnd merchantShortId opCity req = withFlowHandlerAPI $ do
