@@ -27,26 +27,26 @@ getVehicleMakes ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Environment.Flow API.Types.UI.VehicleDetails.VehicleModelsResp
+    Environment.Flow API.Types.UI.VehicleDetails.VehicleMakesResp
   )
 getVehicleMakes (_, _, _) = do
   vehicleDetails <- QCVehicleDetails.findAllVehicleDetails
   let makes = map Domain.Types.VehicleDetails.make vehicleDetails
   let makesWithoutDuplicates = nub makes
-  pure $ API.Types.UI.VehicleDetails.VehicleModelsResp makesWithoutDuplicates
+  pure $ API.Types.UI.VehicleDetails.VehicleMakesResp makesWithoutDuplicates
 
 getVehicleModels ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    API.Types.UI.VehicleDetails.VehicleVariantsReq ->
-    Environment.Flow API.Types.UI.VehicleDetails.VehicleVariantsResp
+    API.Types.UI.VehicleDetails.VehicleModelsReq ->
+    Environment.Flow API.Types.UI.VehicleDetails.VehicleModelsResp
   )
-getVehicleModels (_, _, _) (API.Types.UI.VehicleDetails.VehicleVariantsReq make) = do
+getVehicleModels (_, _, _) (API.Types.UI.VehicleDetails.VehicleModelsReq make) = do
   vehicleDetails <- QCVehicleDetails.findByMake make
   let models = map Domain.Types.VehicleDetails.model vehicleDetails
-  pure $ API.Types.UI.VehicleDetails.VehicleVariantsResp models
+  pure $ API.Types.UI.VehicleDetails.VehicleModelsResp models
 
 getVehicleDetails ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
