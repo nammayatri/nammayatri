@@ -308,3 +308,5 @@ _hasTakenValidCabRide = lens (unwrap >>> _.hasTakenValidCabRide) (\oldRec newVal
 
 _isValueAddNP :: forall a b c. Newtype a { isValueAddNP :: b | c } => Lens' a b
 _isValueAddNP = lens (unwrap >>> _.isValueAddNP) (\oldRec newVal -> wrap ((unwrap oldRec) { isValueAddNP = newVal }))
+_widgetData :: forall a b c. Newtype a { widgetData :: b | c } => Lens' a b
+_widgetData = lens (unwrap >>> _.widgetData) (\oldRec newVal -> wrap ((unwrap oldRec) { widgetData = newVal })) 

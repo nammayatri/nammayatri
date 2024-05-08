@@ -1,0 +1,17 @@
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="500dp"
+    android:minHeight="90dp"
+    android:targetCellWidth="70"
+    android:targetCellHeight="50"
+    android:maxResizeWidth="400px"
+    android:maxResizeHeight="200px"
+    android:minResizeWidth="328px"
+    android:minResizeHeight="180px"
+    android:updatePeriodMillis="86400000"
+    android:previewLayout="@layout/home_appwidget_layout"
+    android:initialLayout="@layout/home_appwidget_layout"
+    android:configure="in.juspay.mobility.MainActivity"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable|configuration_optional">
+</appwidget-provider>

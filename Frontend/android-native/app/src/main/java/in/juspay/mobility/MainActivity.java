@@ -604,6 +604,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (JSONException e) {
             e.printStackTrace();
         }
+
         mFirebaseAnalytics.logEvent("ny_hyper_initiate",null);
         Log.i("APP_PERF", "INIT_HYPER_SERVICE : " + System.currentTimeMillis());
         hyperServices.initiate(json, new HyperPaymentsCallbackAdapter() {
@@ -649,9 +650,10 @@ public class MainActivity extends AppCompatActivity {
                             innerPayload.put("deepLinkJSON", deepLinkJSON);
                             innerPayload.put("driverInfoResponse", driverInfoResponse);
 
-                            if (getIntent() != null)
+                            if (getIntent() != null) {
                                 setNotificationData(innerPayload, getIntent());
-
+                                setWidgetData(innerPayload, getIntent());
+                            }
                             json.put(PaymentConstants.PAYLOAD, innerPayload);
                             mFirebaseAnalytics.logEvent("ny_hyper_process", null);
                             Log.i("APP_PERF", "INIT_HYPER_SERVICE_INITIATE_RESULT : " + System.currentTimeMillis());
@@ -786,6 +788,7 @@ public class MainActivity extends AppCompatActivity {
                         .put("merchantId", getResources().getString(R.string.merchant_id))
                         .put("requestId", UUID.randomUUID())
                         .put(PaymentConstants.PAYLOAD, innerPayloadDL);
+
                 mFirebaseAnalytics.logEvent("ny_hyper_process",null);
                 hyperServices.process(processPayloadDL);
             }
@@ -812,8 +815,10 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
+
     @Override
     protected void onNewIntent(Intent intent) {
+
         Vector<String> res = handleDeepLinkIfAvailable(intent);
         Vector<String> notificationDeepLinkVector = notificationTypeHasDL(intent);
         String viewParam = null, deepLinkJson =null;
@@ -825,13 +830,16 @@ public class MainActivity extends AppCompatActivity {
             deepLinkJson = notificationDeepLinkVector.get(1);
         }
         processDeeplink(viewParam, deepLinkJson);
-        if (intent != null && intent.hasExtra("NOTIFICATION_DATA")) {
+    
+        if (intent != null && (intent.hasExtra("NOTIFICATION_DATA") || intent.hasExtra("urlData"))) {
             try {
                 JSONObject proccessPayload = new JSONObject().put("service", getService())
                         .put("requestId", UUID.randomUUID());
                 JSONObject innerPayload = new JSONObject().put("onNewIntent", true);
                 proccessPayload.put(PaymentConstants.PAYLOAD, innerPayload);
                 setNotificationData(innerPayload, intent);
+                System.out.println("INSIDE_NewIntent");
+                setWidgetData(innerPayload, intent);
                 mFirebaseAnalytics.logEvent("ny_hyper_process",null);
                 hyperServices.process(proccessPayload);
             } catch (Exception e) {
@@ -840,6 +848,7 @@ public class MainActivity extends AppCompatActivity {
         }
         super.onNewIntent(intent);
     }
+
 
     public void setNotificationData (JSONObject innerPayload, Intent intent) {
         try {
@@ -870,6 +879,17 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+
+    public void setWidgetData (JSONObject innerPayload, Intent intent) {
+        try {
+            System.out.println("intent" + intent.getExtras());
+            System.out.println("hii"  + (intent.getExtras().getString("urlData")));
+            innerPayload.put("widgetData", intent.hasExtra("urlData") ? intent.getExtras().getString("urlData") : null );
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
     @Override
     protected void onResume() {

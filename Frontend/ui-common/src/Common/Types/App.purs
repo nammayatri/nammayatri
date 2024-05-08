@@ -114,7 +114,7 @@ newtype GlobalPayload = GlobalPayload
 derive instance newGlobalPayload :: Newtype GlobalPayload _
 derive instance genericGlobalPayload :: Generic GlobalPayload _
 instance decodeGlobalPayload :: Decode GlobalPayload where decode = defaultDecode
-instance encodeGlobalPayload :: Encode GlobalPayload where encode = defaultEncode
+instance encodeGlobalPayload :: Encode GlobalPayload where encode = defaultEncode 
 
 newtype Payload = Payload
   { service :: Maybe String
@@ -129,6 +129,7 @@ newtype Payload = Payload
   , view_param :: Maybe String
   , deeplinkOptions :: Maybe DeeplinkOptions
   , deepLinkJSON :: Maybe QueryParam
+  , widgetData :: Maybe String   
   }
 
 newtype QueryParam = QueryParam {
