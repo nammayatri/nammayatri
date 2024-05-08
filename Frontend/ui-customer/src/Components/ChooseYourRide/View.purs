@@ -499,7 +499,7 @@ chooseYourRideView push config isSingleEstimate =
                 ] <> FontStyle.h1 TypoGraphy)
                 , estimatedTimeAndDistanceView push config
                 , textView $
-                  [ text $ getString TOLL_CHARGES_WILL_BE_EXTRA
+                  [ textFromHtml $ getString TOLL_CHARGES_WILL_BE_EXTRA
                   , color Color.black650
                   , gravity CENTER_HORIZONTAL
                   , height WRAP_CONTENT
@@ -565,7 +565,7 @@ estimatedTimeAndDistanceView push config =
 
 quoteListView :: forall w. (Action -> Effect Unit) -> Config -> Boolean -> PrestoDOM (Effect Unit) w
 quoteListView push config isSingleEstimate =
-  let variantBasedList = filterVariantAndEstimate $ spy "QUOTE_LIST" config.quoteList
+  let variantBasedList = filterVariantAndEstimate config.quoteList
       topProviderList = filter (\element -> element.providerType == ONUS) config.quoteList
       viewHeight = getQuoteListViewHeight config isSingleEstimate $ length if config.showMultiProvider then variantBasedList else topProviderList
   in 
@@ -589,13 +589,13 @@ quoteListView push config isSingleEstimate =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
-                ] $ map( \item -> ChooseVehicle.view (push <<< ChooseVehicleAC)  item {singleVehicle = (length variantBasedList == 1)}) (spy "variantBasedList" (  variantBasedList))
+                ] $ map( \item -> ChooseVehicle.view (push <<< ChooseVehicleAC)  item {singleVehicle = (length variantBasedList == 1)})  variantBasedList
               else 
                 Tuple "TopProvider" $ linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
-                ] $ map (\item -> ChooseVehicle.view (push <<< ChooseVehicleAC) item{showInfo = true, singleVehicle = (length topProviderList == 1)}) (spy "topProviderList" topProviderList)
+                ] $ map (\item -> ChooseVehicle.view (push <<< ChooseVehicleAC) item{showInfo = true, singleVehicle = (length topProviderList == 1)})  topProviderList
           ]
       ]
     -- , linearLayout -- TODO:: Temporary removing gradient for estimates
