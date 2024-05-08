@@ -216,6 +216,7 @@ view push state =
       <> if any (_ == true) [state.props.logoutModalView, state.props.confirmChangeVehicle, state.data.vehicleTypeMismatch] then [ popupModal push state ] else []
       <> if state.props.contactSupportModal /= ST.HIDE then [contactSupportModal push state] else []
       <> if state.props.menuOptions then [menuOptionModal push state] else []
+      <> if state.props.isApplicationInVerification then [applicationInVerification push state] else []
       where 
         callSupportVisibility = (state.data.drivingLicenseStatus == ST.FAILED && state.data.enteredDL /= "__failed") || (state.data.vehicleDetailsStatus == ST.FAILED && state.data.enteredRC /= "__failed")
         documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
@@ -423,6 +424,9 @@ listItem push item state =
           ST.FITNESS_CERTIFICATE -> "ny_ic_fitness"
           ST.VEHICLE_INSURANCE -> "ny_ic_insurance"
           ST.VEHICLE_PUC -> "ny_ic_puc"
+          ST.SocialSecurityNumber -> "ny_ic_social_security"
+          ST.ProfileDetails -> "ny_ic_profile_details"
+          ST.VehicleInspectionForm -> "ny_ic_inspection"
           _ -> ""
 
       componentStroke :: ST.RegistrationScreenState -> ST.StepProgress -> String
@@ -674,3 +678,38 @@ getStatus step state =
 
 dependentDocAvailable :: ST.StepProgress -> ST.RegistrationScreenState -> Boolean
 dependentDocAvailable item state = all (\docType -> (getStatus docType state) == ST.COMPLETED) item.dependencyDocumentType
+
+
+applicationInVerification :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
+applicationInVerification push state = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.white900
+  , gravity CENTER
+  , orientation VERTICAL
+  ][ linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      , margin $ MarginBottom 40
+      ][
+          imageView
+          [ height $ V 250
+          , width $ V 280
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_application_verifiaction_in_progress"
+          ]
+      ]
+    , textView $
+      [ text "Application verification in progress."
+      , color Color.black800
+      , width MATCH_PARENT
+      , gravity CENTER
+      ] <> FontStyle.h2 TypoGraphy
+    , textView $
+      [ text "Thank you for completing the registration. We will update you once the verification is done."
+      , color Color.black800
+      , width MATCH_PARENT
+      , gravity CENTER
+      ] <> FontStyle.body1 TypoGraphy
+  ]

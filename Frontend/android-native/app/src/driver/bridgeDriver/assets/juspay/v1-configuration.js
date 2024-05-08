@@ -12,7 +12,12 @@ window.getMerchantConfig = function () {
     "USER_APP_LINK": "https://nammayatri.in/link/rider/mvnw",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9",
     "SPECIAL_ZONE_OTP_VIEW": "false",
-    "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "WHAT_IS_NAMMA_YATRI_BONUS", "EARNED_ON_APP", "TRAVELLED_ON_APP", "GUARANTEED_FIXED_PRICE", "GET_READY_FOR_YS_SUBSCRIPTION"],
+    "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "WHAT_IS_NAMMA_YATRI_BONUS", "EARNED_ON_APP", "TRAVELLED_ON_APP", "GUARANTEED_FIXED_PRICE", "GET_READY_FOR_YS_SUBSCRIPTION", "DIRECT_PAYMENT_NO_COMMISSIONS" ,
+                   "CUSTOMER_PAYS_DIRECTLY" ,
+                   "HUNDRED_PERCENT_FARE_GOES_TO_YOU" ,
+                   "FARE_SHOWN_IS_FARE_YOU_GET" ,
+                   "BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION" ,
+                   "OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT"],
     "fontType": "Assets",
     "currency": "₹",
     "isGradient" : "false",
@@ -36,10 +41,16 @@ window.getMerchantConfig = function () {
       "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "You are about to place a call to the Bridge Support Team. Do you want to proceed?",
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
       "WHAT_IS_NAMMA_YATRI_BONUS" : "What is Bridge Bonus?",
-      "EARNED_ON_APP" : "Earned on NY",
+      "EARNED_ON_APP" : "Earned on Bridge",
       "TRAVELLED_ON_APP" : "Travelled On Bridge",
       "GUARANTEED_FIXED_PRICE" : "Guaranteed fixed price until \nApr 1, 2025",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\nBridge Plans!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\nBridge Plans!",
+      "DIRECT_PAYMENT_NO_COMMISSIONS" : "Zero Commissions, Forever!",
+      "CUSTOMER_PAYS_DIRECTLY" : "Your car, your customers, your \n earnings—all yours!",
+      "HUNDRED_PERCENT_FARE_GOES_TO_YOU" : "Happy Drivers, Happy\nJourneys!",
+      "FARE_SHOWN_IS_FARE_YOU_GET" : "Fair wages for you and fair prices for\n your customers. 100% transparent!",
+      "BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION" : "Connecting Minneapolis!",
+      "OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT" : "App by the Drivers, for the People.\n People before profits, always!"
     },
     "hindiStrings": {
       "NEED_IT_TO_ENABLE_LOCATION": "नम्मा यात्री पार्टनर ड्राइवर के लोकेशन की निगरानी के लिए अपना स्थान साझा करने के लिए लोकेशन डेटा एकत्र करता है, तब भी जब ऐप बंद हो या उपयोग में न हो।",
@@ -214,6 +225,7 @@ window.getMerchantConfig = function () {
         }
   , "enterMobileNumberScreen" : {
         "headerBackground": "#11032F"
+      , "emailAuth" : true
       }
   , "defaultCountryCodeConfig" : {
       "countryName" : "India"
@@ -224,9 +236,12 @@ window.getMerchantConfig = function () {
       "chooseCity" : {
         "runFlow" : false,
         "directAuth" : true,
-        "defCity" : "Bangalore",
+        "defCity" : "Minneapolis",
         "useDefault" : true
       }
+  }
+  , "vehicleRegisterationScreen" : {
+      "collectVehicleDetails" : true
   }
   , "homeScreen": {
           "statusPills": {

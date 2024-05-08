@@ -364,3 +364,9 @@ transparentWhite = "#30FFFFFF"
 
 greyDark :: Color
 greyDark = "#D8D8D8"
+
+blue500 :: Color
+blue500 = "#4285F4"
+
+bridgeGreen :: Color
+bridgeGreen = "#F0F5F2"

@@ -16,7 +16,7 @@
 
 module Screens.DocumentCaptureScreen.View where
 
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, weight, width,  textView, text, color, textSize, fontStyle, visibility, cornerRadius, stroke, imageView, imageWithFallback, frameLayout, scrollView)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, weight, width,  textView, text, color, textSize, fontStyle, visibility, cornerRadius, stroke, imageView, imageWithFallback, frameLayout, scrollView, adjustViewWithKeyboard, alignParentBottom, disableKeyboardAvoidance, id, scrollBarY, relativeLayout)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Effect (Effect)
@@ -24,8 +24,10 @@ import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryEditText as PrimaryEditText
+import Components.MobileNumberEditor as MobileNumberEditor
 import Engineering.Helpers.Commons as EHC
-import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=))
+import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=), (-))
 import Screens.DocumentCaptureScreen.Controller (Action(..), eval, ScreenOutput(..))
 import Screens.DocumentCaptureScreen.ComponentConfig
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
@@ -35,7 +37,7 @@ import Language.Types (STR(..))
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import JBridge as JB
 import PaymentPage (consumeBP)
-import Effect.Uncurried (runEffectFn1)
+import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
 import Components.ValidateDocumentModal as ValidateDocumentModal
@@ -57,6 +59,7 @@ screen initialState =
   , name : "DocumentCaptureScreen"
   , globalEvents : [(\push -> do
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
+    _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
     _ <- runEffectFn1 consumeBP unit
     pure $ pure unit
   )]
@@ -71,7 +74,7 @@ screen initialState =
 view :: forall w. (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> PrestoDOM (Effect Unit) w 
 view push state = 
   Anim.screenAnimation $
-  frameLayout
+  relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
   ] $ [ linearLayout
@@ -82,23 +85,46 @@ view push state =
       , onBackPressed push $ const BackPressed 
       , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
       ][ AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
-        , linearLayout
-          [ width MATCH_PARENT
-          , weight 1.0
-          , orientation VERTICAL
-          ][  scrollView
-              [ height MATCH_PARENT
+        , scrollView
+          [ height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - (if state.props.isProfileView then 150 else 200) - EHC.safeMarginBottom else WRAP_CONTENT
+          , width MATCH_PARENT
+          , disableKeyboardAvoidance true
+          , scrollBarY false
+          , id $ EHC.getNewIDWithTag "DocumentCaptureScrollView"
+          ][ linearLayout
+              [ height WRAP_CONTENT
               , width MATCH_PARENT
-              ][ linearLayout
-                  [ height MATCH_PARENT
-                  , width MATCH_PARENT
-                  , orientation VERTICAL
-                  , margin $ Margin 20 20 15 0
-                  ][ howToUpload push state ]
+              , orientation VERTICAL
+              , margin $ Margin 20 20 15 0
+              ]
+              [ if state.props.isSSNView then
+                  ssnView push state
+                else if state.props.isProfileView then
+                  linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , orientation VERTICAL
+                    , adjustViewWithKeyboard "true"
+                    ]
+                    [ PrimaryEditText.view (push <<< FirstNameEditText) $ firstNamePrimaryEditTextConfig state
+                    , PrimaryEditText.view (push <<< LastNameEditText) $ lastNamePrimaryEditTextConfig state
+                    , PrimaryEditText.view (push <<< MobileEditText) $ mobileNumberPrimaryEditTextConfig state
+                    ]
+                else
+                  howToUpload push state
                 ]
-          ]
-        , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
+            ]
       ]
+      ,linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , alignParentBottom "true,-1"
+      , gravity BOTTOM
+      ][ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.white900
+        ] [PrimaryButton.view (push <<< PrimaryButtonAC) (if state.props.isProfileView then profileViewPrimaryButtonConfig state else primaryButtonConfig state)]]
     , if state.props.contactSupportModal /= ST.HIDE then BottomDrawerList.view (push <<< BottomDrawerListAC) (bottomDrawerListConfig state) else linearLayout[][]
     ] <> if state.props.validateDocModal then [ValidateDocumentModal.view (push <<< ValidateDocumentModalAction) (validateDocModalState state)] else []
       <> if DA.any (_ == true) [state.props.logoutModalView, state.props.confirmChangeVehicle] then [ popupModal push state ] else []
@@ -175,6 +201,56 @@ howToUpload push state =
     ]
   ]
 
+ssnView :: (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> forall w. PrestoDOM (Effect Unit) w
+ssnView push state = 
+  linearLayout[
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  ][ PrimaryEditText.view (push <<< SSNPEAC) $ ssnPrimaryEditTextConfig state
+  , ssnDetails push state
+  ]
+
+
+ssnDetails :: (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> forall w. PrestoDOM (Effect Unit) w
+ssnDetails push state =
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    ]
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , margin $ MarginVertical 0 10
+        , padding $ PaddingVertical 16 16
+        ]
+        ( map
+            ( \item ->
+                linearLayout
+                  [ width MATCH_PARENT
+                  , height WRAP_CONTENT
+                  , gravity CENTER_VERTICAL
+                  , margin $ MarginBottom 12
+                  ]
+                  [ imageView
+                      [ height $ V 16
+                      , width $ V 16
+                      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_tick_purple"
+                      ]
+                  , textView
+                      $ [ text $ item
+                        , color Color.black800
+                        ]
+                      <> FontStyle.body3 TypoGraphy
+                  ]
+            )
+            [ "SSN is needed to do your background check", "Your personal information is protected and secure", "No credit check needed. Your credit won’t be affected" ]
+        )
+    ]
+
+
 rightWrongView :: Boolean -> ST.DocumentCaptureScreenState -> forall w . PrestoDOM (Effect Unit) w
 rightWrongView isRight state = 
   linearLayout
@@ -204,6 +280,7 @@ sampleImage isRight state =
     ST.VEHICLE_PERMIT -> if isRight then "ny_ic_permit_clear" else "ny_ic_permit_blur"
     ST.FITNESS_CERTIFICATE -> if isRight then "ny_ic_fitness_clear" else "ny_ic_fitness_blur"
     ST.VEHICLE_INSURANCE -> if isRight then "ny_ic_insurance_clear" else "ny_ic_insurance_blur"
+    ST.UploadProfile -> if isRight then "ny_ic_upload_profile_clear" else "ny_ic_upload_profile_blur"
     ST.VEHICLE_PUC -> if isRight then "ny_ic_puc_clear" else "ny_ic_puc_blur"
     _ -> if isRight then "ny_ic_upload_right" else "ny_ic_image_wrong"
 

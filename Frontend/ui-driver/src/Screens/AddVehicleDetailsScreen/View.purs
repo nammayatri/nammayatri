@@ -18,12 +18,13 @@ module Screens.AddVehicleDetailsScreen.Views where
 import Common.Types.App
 import Data.Maybe
 import Screens.AddVehicleDetailsScreen.ComponentConfig
-
+import Common.Animation.Config
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.GenericMessageModal.View as GenericMessageModal
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryEditText as PrimaryEditText
 import Components.ReferralMobileNumber.View as ReferralMobileNumber
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Components.TutorialModal.View as TutorialModal
@@ -32,7 +33,7 @@ import Control.Monad.Trans.Class (lift)
 import Data.String as DS
 import Debug (spy)
 import Effect (Effect)
-import Effect.Aff (Milliseconds(..), launchAff)
+import Effect.Aff (Milliseconds(..), launchAff, launchAff_, error, killFiber)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.Commons (flowRunner)
@@ -44,9 +45,9 @@ import PaymentPage (consumeBP)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||))
+import Prelude (Unit, bind, const, discard, not, pure, when, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||), (-), (+), (<=), (>))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, scrollBarY, singleLine, onAnimationEnd)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Properties as PP
@@ -54,7 +55,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
-import Screens.Types (AddVehicleDetailsScreenState, StageStatus(..), ValidationStatus(..))
+import Screens.Types (StageStatus(..), ValidationStatus(..))
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
 import Data.String.Common as DSC
@@ -63,14 +64,20 @@ import ConfigProvider
 import Mobility.Prelude
 import Components.OptionsMenu as OptionsMenu
 import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
+import Screens.AddVehicleDetailsScreen.ScreenData
 import Data.Array as DA
 import Components.BottomDrawerList as BottomDrawerList
 import Screens.Types as ST
 import Components.RequestInfoCard as RequestInfoCard
+import Effect.Uncurried (runEffectFn2)
+import Helpers.API (callApi)
+import Services.API (GetMakeListReq(..), GetMakeListResp(..))
+import Data.Either (Either(..))
+
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
-  { initialState
+  { initialState : getDropDownList initialState
   , view
   , name : "AddVehicleDetailsScreen"
   , globalEvents : [(\push -> do
@@ -81,6 +88,11 @@ screen initialState =
       pure unit
     else pure unit
     pure $ pure unit
+  ), 
+  ( \push -> if initialState.data.config.vehicleRegisterationScreen.collectVehicleDetails then do
+                fiber <- launchAff $ flowRunner defaultGlobalState $ getMakeList push
+                pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
+                else pure $ pure unit
   )]
   , eval:
     ( \state action -> do
@@ -89,6 +101,15 @@ screen initialState =
         eval state action
     ) 
   }
+
+
+getMakeList :: (Action -> Effect Unit) -> Flow GlobalState Unit
+getMakeList push = do
+  resp <- callApi GetMakeListReq
+  case resp of
+    Right (GetMakeListResp resp) -> void $ EHC.liftFlow $ push $ UpdateDropDownList MAKE (resp.makes)
+    Left _ -> pure unit
+  
 
 view
   :: forall w
@@ -116,29 +137,7 @@ view push state =
           [ width MATCH_PARENT
           , weight 1.0
           , orientation VERTICAL
-          ][  scrollView
-              [ height MATCH_PARENT
-              , width MATCH_PARENT
-              ][ linearLayout
-                  [ height MATCH_PARENT
-                  , width MATCH_PARENT
-                  , orientation VERTICAL
-                  ][  textView $
-                      [ width MATCH_PARENT
-                      , height WRAP_CONTENT
-                      , text $ getString RC_VERIFICATION_FAILED
-                      , color Color.black800
-                      , background Color.redOpacity10
-                      , padding $ Padding 16 12 16 12
-                      , margin $ Margin 16 16 16 16
-                      , cornerRadius 8.0
-                      , visibility if state.data.dateOfRegistration == Nothing then GONE else VISIBLE            
-                      ] <> FontStyle.body3 TypoGraphy
-                    , vehicleRegistrationNumber state push
-                    , howToUpload push state 
-                    , dateOfRCRegistrationView push state
-                    ]
-                ]
+          ][ if state.data.config.vehicleRegisterationScreen.collectVehicleDetails then collectVehicleDetails push state else defaultVehicleDetailsScreen state push
           ]
         , linearLayout
           [ height WRAP_CONTENT
@@ -157,29 +156,13 @@ view push state =
            ]
            , PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state)
            , if state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL then skipButton push state else dummyLinearLayout]
-    ]   
-    , if state.props.openRCManual then 
-        linearLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_vehicle_registration_card"}] else linearLayout [][]
-    , if state.props.openRegistrationDateManual then 
-        linearLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_date_of_registration"}] else linearLayout [][]
-    , if state.props.limitExceedModal then 
-        linearLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_RC_IMAGE), openGenericMessageModal : state.props.limitExceedModal, buttonText : (getString NEXT) }] else linearLayout [][]
-    , if state.props.contactSupportModal /= ST.HIDE then BottomDrawerList.view (push <<< BottomDrawerListAC) (bottomDrawerListConfig state) else linearLayout[][]
-    , if state.props.openReferralMobileNumber then
-        linearLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT] 
-        [ReferralMobileNumber.view (push <<< ReferralMobileNumberAction) (referalNumberConfig state)] else linearLayout [][]
-    ] <> if DA.any (_ == true) [state.props.logoutModalView, state.props.confirmChangeVehicle] then [ popupModal push state ] else []
+    ]  
+    ] <> if state.props.openRCManual then [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_vehicle_registration_card"}] else []
+      <> if state.props.openRegistrationDateManual then [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_date_of_registration"}] else []
+      <> if state.props.limitExceedModal then  [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_RC_IMAGE), openGenericMessageModal : state.props.limitExceedModal, buttonText : (getString NEXT) }] else []
+      <> if state.props.contactSupportModal /= ST.HIDE then [BottomDrawerList.view (push <<< BottomDrawerListAC) (bottomDrawerListConfig state)] else []
+      <> if state.props.openReferralMobileNumber then [ReferralMobileNumber.view (push <<< ReferralMobileNumberAction) (referalNumberConfig state)] else []
+      <> if DA.any (_ == true) [state.props.logoutModalView, state.props.confirmChangeVehicle] then [ popupModal push state ] else []
       <> if state.props.imageCaptureLayoutView then [imageCaptureLayout push state] else []
       <> if state.props.validateProfilePicturePopUp then [validateProfilePicturePopUp push state] else []
       <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else [] 
@@ -198,6 +181,32 @@ menuOptionModal push state =
 
 headerView :: forall w. AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerView state push = AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
+
+defaultVehicleDetailsScreen :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w 
+defaultVehicleDetailsScreen state push = 
+  scrollView
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][ linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      ][  textView $
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , text $ getString RC_VERIFICATION_FAILED
+          , color Color.black800
+          , background Color.redOpacity10
+          , padding $ Padding 16 12 16 12
+          , margin $ Margin 16 16 16 16
+          , cornerRadius 8.0
+          , visibility if state.data.dateOfRegistration == Nothing then GONE else VISIBLE            
+          ] <> FontStyle.body3 TypoGraphy
+        , vehicleRegistrationNumber state push
+        , howToUpload push state 
+        , dateOfRCRegistrationView push state true
+        ]
+    ]
   
 applyReferralView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w 
 applyReferralView state push = 
@@ -419,7 +428,7 @@ vehicleRegistrationNumber state push =
         , checkACView state push
         ]
       ]
-      where validateRegistrationNumber regNum = regNum `DA.elem` state.data.rcNumberPrefixList
+      where validateRegistrationNumber regNum = if DA.null state.data.rcNumberPrefixList  then true else regNum `DA.elem` state.data.rcNumberPrefixList
 
 
 checkACView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
@@ -653,8 +662,8 @@ referralView state push =
   ]
   
 
-dateOfRCRegistrationView :: (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> forall w . PrestoDOM (Effect Unit) w
-dateOfRCRegistrationView push state = 
+dateOfRCRegistrationView :: (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+dateOfRCRegistrationView push state enableTutorial = 
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -700,6 +709,7 @@ dateOfRCRegistrationView push state =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
+      , visibility $ boolToVisibility enableTutorial
       , onClick push (const $ TutorialModal "REGISTERATION_DATE")
       ][ textView $
         [ text (getString WHERE_IS_MY_REGISTRATION_DATE)
@@ -988,3 +998,232 @@ dummyLinearLayout =
     [ width WRAP_CONTENT
     , height $ V 0
     ][]
+
+collectVehicleDetails push state = 
+  scrollView
+  [ width MATCH_PARENT
+  , height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - 250 - EHC.safeMarginBottom else WRAP_CONTENT
+  , scrollBarY false
+  , id $ EHC.getNewIDWithTag $ "DropDownListMenu"
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      ]$[ vehicleRegistrationNumber state push
+      , howToUpload push state 
+      ,   linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation VERTICAL
+          , padding (PaddingHorizontal 20 20)
+          , margin $ MarginTop 20
+          , visibility $ boolToVisibility $ not state.props.openHowToUploadManual
+          ][ textView $
+            [ text $ getString DATE_OF_REGISTRATION
+            , color Color.greyTextColor
+            ] <> FontStyle.body3 TypoGraphy
+          , linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation HORIZONTAL
+            , margin $ MarginVertical 10 10
+            , padding $ Padding 20 16 16 16
+            , cornerRadius 4.0
+            , stroke $ "1," <> Color.borderGreyColor
+            ][ linearLayout
+                [ width MATCH_PARENT
+                  , height MATCH_PARENT
+                  , orientation HORIZONTAL
+                  , onClick (\action -> do
+                                _ <- push action
+                                JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker2 
+                                ) $ const DatePickerAction
+                  , clickable state.props.isDateClickable
+                ][ textView $
+                  [ text if state.data.registrationDate == Nothing then (getString SELECT_DATE_OF_REGISTRATION) else state.data.registrationDateActual
+                  , color if state.data.registrationDate == Nothing then Color.darkGrey else Color.greyTextColor
+                  , weight 1.0
+                  , padding $ PaddingRight 15
+                  ] <> FontStyle.subHeading1 TypoGraphy
+                , imageView
+                  [ width $ V 20
+                  , height $ V 20
+                  , imageWithFallback $ fetchImage FF_ASSET "ny_ic_calendar"
+                  ]
+                ]
+              ]
+            ]
+        ] <> DA.mapWithIndex (\idx item -> dropDownFields push state idx  item) (if state.props.openHowToUploadManual then [] else state.data.dropDownList)
+      ] 
+
+dropDownFields :: forall w. (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> Int -> DropDownList -> PrestoDOM (Effect Unit) w
+dropDownFields push state idx item =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ Margin 16 32 16 0
+    , background Color.white900
+    , orientation VERTICAL
+    ] $
+    [ textView $
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , text $ item.title
+      , color Color.black800
+      , gravity LEFT
+      , singleLine true
+      , margin $ MarginBottom 12
+      ] <> FontStyle.body3 LanguageStyle
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , padding $ Padding 20 15 20 15
+        , cornerRadius 8.0
+        , onClick push $ const $ ShowOptions item
+        , stroke $ "1,"<> Color.borderColorLight
+        , gravity CENTER_VERTICAL
+        ]$
+        [ textView $
+          [ text $ item.selected
+          , height WRAP_CONTENT
+          , width WRAP_CONTENT
+          ] <> FontStyle.subHeading1 LanguageStyle
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , gravity RIGHT
+            ]
+            [ imageView
+              [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ if item.isExpanded then "ny_ic_chevron_up" else "ny_ic_chevron_down"
+              , height $ V 24
+              , width $ V 15
+              ]
+            ]
+        ]
+      , relativeLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        ]$
+        [] <> if item.isExpanded then [dropDownList item push (idx + 3)] else []
+           <> if item.showEditText then [PrimaryEditText.view (push <<< (ModelEditText item.type)) $ modelEditTextConfig state] else []
+    ]
+
+
+
+
+dropDownList :: forall w. DropDownList -> (Action -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
+dropDownList dropDownItem push idx =
+  let len = DA.length dropDownItem.options
+  in
+  PrestoAnim.animationSet
+  (if EHC.os == "IOS" then
+        [Anim.fadeIn true]
+        else
+          [Anim.listExpandingAnimation $  listExpandingAnimationConfig true] )
+            $
+  linearLayout
+    ([ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ MarginVertical 8 8
+    , background Color.grey700
+    , orientation VERTICAL
+    , stroke $ "1,"<> Color.grey900
+    , visibility VISIBLE
+    , cornerRadius 8.0
+    ] <> if (len <= 6  || dropDownItem.type == SEATBELTS) then [onAnimationEnd (\_ -> void $ runEffectFn2 JB.focusChild (EHC.getNewIDWithTag "DropDownListMenu") idx) (pure unit)] else [])
+    (DA.mapWithIndex(\index item ->
+       linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , onClick push $ const $ OptionSelcted dropDownItem.type item
+        , orientation VERTICAL
+        ]
+        [ textView $
+          [ text item
+          , color Color.black900
+          , margin $ Margin 16 15 16 15
+          ] <> FontStyle.paragraphText LanguageStyle
+        , linearLayout
+          [ height $ V 1
+          , width MATCH_PARENT
+          , background Color.grey900
+          , margin $ MarginHorizontal 16 16
+          ][]
+        ]
+       )(dropDownItem.options)
+    )
+
+genderOptionsArray :: AddVehicleDetailsScreenState -> Array {text :: String, value :: ST.Gender}
+genderOptionsArray state =
+  [ {text : (getString FEMALE), value : ST.FEMALE}
+  , {text : (getString MALE), value : ST.MALE}
+  , {text : (getString OTHER) , value : ST.OTHER}
+  , {text : (getString PREFER_NOT_TO_SAY) , value : ST.PREFER_NOT_TO_SAY}
+  ]
+
+
+getDropDownList :: AddVehicleDetailsScreenState -> AddVehicleDetailsScreenState
+getDropDownList state =
+  if state.data.dropDownList == [] then do
+    let
+      list =
+        [ { isExpanded: false
+          , "type": MAKE
+          , options: []
+          , selected: "Select"
+          , title: "Make"
+          , showEditText :false
+          }
+        , { isExpanded: false
+          , "type": MODEL
+          , options: []
+          , selected: "Select"
+          , title: "Model"
+          , showEditText :false
+          }
+        , { isExpanded: false
+          , "type": COLOR
+          , options: getColors
+          , selected: "Select"
+          , title: "Color"
+          , showEditText :false
+          }
+        , { isExpanded: false
+          , "type": DOORS
+          , options: ["2", "4"]
+          , selected: "Select"
+          , title : "Doors"
+          , showEditText :false
+          }
+        , { isExpanded: false
+          , "type": SEATBELTS
+          , options: [ "1" , "2", "3", "4", "5", "6"]
+          , selected: "Select"
+          , title : "Seatbelts"
+          , showEditText :false
+          }
+        ]
+    state { data { dropDownList = list} }
+  else
+    state
+
+
+getColors =
+  [ "Black"
+  , "White"
+  , "Silver"
+  , "Grayd"
+  , "Blue"
+  , "Red"
+  , "Green"
+  , "Yellow"
+  , "Orange"
+  , "Brown"
+  , "Beige"
+  , "Dark Blue"
+  , "Light Blue"
+  , "Dark Red"
+  , "Dark Green"
+  , "Dark Brown"
+  , "Maroon"
+  ]

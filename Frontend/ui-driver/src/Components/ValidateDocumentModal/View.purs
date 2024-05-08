@@ -74,7 +74,7 @@ view push state =
               ][  progressBar
                   [ width WRAP_CONTENT
                   , height WRAP_CONTENT
-                  , stroke Color.grey900
+                  , stroke $ (if EHC.os == "IOS" then "0," else "") <> Color.grey900
                   , visibility if state.verificationStatus == InProgress then VISIBLE else GONE
                   ]
                 , textView
@@ -177,31 +177,32 @@ profilePictureLayout state push =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     ][ linearLayout
-        [ width WRAP_CONTENT
+        [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
         , layoutGravity "center"
         ][ frameLayout
-            [ width WRAP_CONTENT
+            [ width MATCH_PARENT
             , height MATCH_PARENT
             , margin (MarginTop 70)
             , layoutGravity "center"
+            , gravity CENTER
             ][ linearLayout
                 [ width $ V 350
-                , afterRender push (const AfterRender)
+                , afterRender push $ const AfterRender
                 , height $ V 250
-                , margin (MarginTop 2)
+                , margin $ MarginTop 2
                 , layoutGravity "center"
                 , gravity CENTER_HORIZONTAL
-                , id (EHC.getNewIDWithTag "ValidateProfileImage")
+                , id $ EHC.getNewIDWithTag "ValidateProfileImage"
                 ][]
-                ,imageView
+                ,linearLayout
                 [ width $ V 354
                 , height $ V 255
                 , layoutGravity "center"
                 , cornerRadius 4.0
                 , stroke $ if state.verificationStatus /= Failure then ("4,"<> Color.darkGreen) else ("4,"<> Color.red)
-                ]
+                ][]
             ]
         ]
     ]
@@ -212,11 +213,10 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
       { text = getString if state.verificationStatus == None then CONFIRM_AND_UPLOAD else RETAKE_PHOTO
-      , color = Color.yellow900
       }
       , margin = Margin 18 0 25 10
       , cornerRadius = 8.0
-      , background = Color.black900
       , height = V 60
+      , id = "ValidateDocumentModalStatePB"
       }
   in primaryButtonConfig'

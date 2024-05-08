@@ -17,11 +17,13 @@ module Screens.DocumentCaptureScreen.ComponentConfig where
 
 import Components.GenericHeader as GenericHeader 
 import Components.PrimaryButton as PrimaryButton 
-import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), Gravity(..))
+import Components.PrimaryEditText as PrimaryEditText
+import Components.MobileNumberEditor as MobileNumberEditor
+import PrestoDOM
 import Screens.Types as ST 
 import Styles.Colors as Color
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Prelude ((<>), not)
+import Prelude
 import Common.Types.App(LazyCheck(..))
 import Font.Style as FontStyle
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
@@ -36,16 +38,37 @@ import Components.OptionsMenu as OptionsMenuConfig
 import Storage (KeyStore(..), getValueToLocalStore)
 import Components.BottomDrawerList as BottomDrawerList
 import ConfigProvider
+import Data.Maybe
+import Engineering.Helpers.Commons as EHC
 
 
 primaryButtonConfig :: ST.DocumentCaptureScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
+    len = if state.props.isSSNView then DS.length state.data.ssn else 0
+    isValid = len == 9
     primaryButtonConfig' = config 
       {   textConfig
-        { text = getString UPLOAD_PHOTO } 
-        , margin = Margin 16 16 16 16
+        { text = if state.props.isSSNView then "Submit" else getString UPLOAD_PHOTO } 
+        , margin = Margin 16 16 16 (EHC.safeMarginBottomWithDefault 16)
         , id = "DocCaptureButton"
+        , isClickable = if state.props.isSSNView then if isValid  then true else false else true
+        , alpha =  if state.props.isSSNView then if isValid then 1.0 else 0.4 else 1.0
+      }
+  in primaryButtonConfig'
+
+
+profileViewPrimaryButtonConfig :: ST.DocumentCaptureScreenState -> PrimaryButton.Config
+profileViewPrimaryButtonConfig state = let 
+    config = PrimaryButton.config
+    isValid = state.props.isValidFirstName && state.props.isValidMobileNumber && isJust state.data.firstName && isJust state.data.mobileNumber
+    primaryButtonConfig' = config 
+      {   textConfig
+        { text = "Submit" } 
+        , margin = Margin 16 16 16 (EHC.safeMarginBottomWithDefault 16)
+        , id = "DocCaptureSubmitButton"
+        , isClickable = isValid
+        , alpha = if isValid then 1.0 else 0.4
       }
   in primaryButtonConfig'
 
@@ -82,7 +105,7 @@ appOnboardingNavBarConfig state =
   AppOnboardingNavBar.config
   { genericHeaderConfig = genericHeaderConfig state,
     headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{ 
-      text = getVarString UPLOAD_DOC [Constant.transformDocText state.data.docType]
+      text = if state.props.isSSNView then "Background Verification" else if state.props.isProfileView then "Profile Details" else getVarString UPLOAD_DOC [Constant.transformDocText state.data.docType]
       },
     rightButton = AppOnboardingNavBar.config.rightButton{
       text = getString HELP_FAQ
@@ -140,3 +163,142 @@ bottomDrawerListConfig state = BottomDrawerList.config {
     {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : true, identifier : "call"}
   ]
 }
+
+ssnPrimaryEditTextConfig :: ST.DocumentCaptureScreenState -> PrimaryEditText.Config
+ssnPrimaryEditTextConfig state = 
+  PrimaryEditText.config
+      { editText
+        { color = Color.black800
+        , textStyle = FontStyle.Body1
+        , margin = (Margin 16 16 16 16)
+        , placeholder = "000-00-000"
+        , pattern = Just "[0-9]*,9"
+        }
+      , background = Color.white900
+      , topLabel
+        { text = "Social Security Number (SSN)"
+        , color = Color.black800
+        , textStyle = FontStyle.Body3
+        }  
+      , margin = MarginTop 0
+      , type = "number"
+      }
+
+firstNamePrimaryEditTextConfig :: ST.DocumentCaptureScreenState -> PrimaryEditText.Config
+firstNamePrimaryEditTextConfig state = 
+  PrimaryEditText.config { editText
+        { color = Color.black800
+        , placeholder = "Enter your First Name"
+        , singleLine = true
+        , pattern = Just "[a-zA-Z. ]*,30"
+        , margin = MarginHorizontal 10 10
+        , textStyle = FontStyle.Body7
+        , focused = true
+        , gravity = LEFT
+        }
+      , background = Color.white900
+      , margin = MarginVertical 16 16
+      , topLabel
+        { text = "First Name"
+        , color = Color.black800
+        , alpha = 0.8
+        } 
+      , id = (EHC.getNewIDWithTag "FirstNameEditText")
+      , height = V 54
+      , errorLabel {
+            text = "Name should be more than 2 characters",
+            visibility = VISIBLE,
+            alpha = 0.8
+      },
+      focusedStroke = "1," <> Color.borderColorLight,
+      width = MATCH_PARENT,
+      showErrorLabel = not state.props.isValidFirstName, 
+      stroke = if not state.props.isValidFirstName then ("1," <> Color.warningRed) else ("1," <> Color.borderColorLight)
+      }
+lastNamePrimaryEditTextConfig :: ST.DocumentCaptureScreenState -> PrimaryEditText.Config
+lastNamePrimaryEditTextConfig state = 
+  PrimaryEditText.config { editText
+        { color = Color.black800
+        , placeholder = "Enter your Last Name"
+        , singleLine = true
+        , pattern = Just "[a-zA-Z. ]*,30"
+        , margin = MarginHorizontal 10 10
+        , textStyle = FontStyle.Body7
+        , gravity = LEFT
+        }
+      , background = Color.white900
+      , margin = MarginVertical 16 16
+      , topLabel
+        { text = "Last Name"
+        , color = Color.black800
+        , alpha = 0.8
+        } 
+      , id = (EHC.getNewIDWithTag "LastNameEditText")
+      , height = V 54
+      , errorLabel {
+            visibility = GONE
+      },
+      focusedStroke = "1," <> Color.borderColorLight,
+      width = MATCH_PARENT 
+      }
+
+mobileNumberPrimaryEditTextConfig :: ST.DocumentCaptureScreenState -> PrimaryEditText.Config
+mobileNumberPrimaryEditTextConfig state = 
+  PrimaryEditText.config
+      { editText
+        { color = Color.black800
+        , placeholder = "Enter your Mobile Number"
+        , singleLine = true
+        , margin = MarginHorizontal 10 10
+        , pattern = Just "[0-9]*,10"
+        , textStyle = FontStyle.Body7
+        , gravity = LEFT
+        }
+      , background = Color.white900
+      , showErrorLabel = not state.props.isValidMobileNumber
+      , topLabel
+        { text = "Mobile Number"
+        , color = Color.black800
+        , alpha = 0.8
+        }  
+      , type = "number"
+      , margin = MarginVertical 16 16
+      , errorLabel{
+          text = "Enter a Valid Mobile Number"
+        , color = Color.textDanger
+        }
+      }
+
+mobileNumberConfig :: ST.DocumentCaptureScreenState -> MobileNumberEditor.Config
+mobileNumberConfig state = let
+  paddingOffest = EHC.os == "IOS"
+  config = MobileNumberEditor.config 
+  mobileNumberEditor' = config 
+    { editText
+      { color = Color.black800
+      , singleLine = true 
+      , pattern = Just "[0-9]*,10"
+      , margin = MarginHorizontal 10 0
+      , text = ""
+      , placeholder = getString TEN_DIGIT_MOBILE_NUMBER
+      , padding = Padding 0 16 16 16
+      }
+    , showCountryCodeField = false
+    , topLabel
+      { text = "Mobile Number"
+      , color = Color.black800
+      , accessibility = DISABLE
+      , textStyle = FontStyle.SubHeading1
+      }
+    , type = "number"
+    , id = (EHC.getNewIDWithTag "EnterMobileNumberEditText")
+    , errorLabel
+        { text = (getString INVALID_MOBILE_NUMBER)
+        , margin = MarginBottom 1
+        }
+    , showErrorLabel = not state.props.isValidMobileNumber
+    , countryCodeOptionConfig {
+        padding = Padding 16 ((if EHC.os == "IOS" then 16 else 12)) 8 (if EHC.os == "IOS" then 16 else 12)
+    }
+    }
+  in mobileNumberEditor'

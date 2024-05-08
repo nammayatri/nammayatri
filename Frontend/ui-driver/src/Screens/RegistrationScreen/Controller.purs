@@ -96,6 +96,8 @@ data ScreenOutput = GoBack
                   | GoToHomeScreen RegistrationScreenState
                   | RefreshPage
                   | ReferralCode RegistrationScreenState
+                  | SSN RegistrationScreenState
+                  | ProfileDetailsExit RegistrationScreenState
                   | DocCapture RegistrationScreenState RegisterationStep
                   | SelectLang RegistrationScreenState
 
@@ -156,6 +158,9 @@ eval (RegistrationAction step ) state = do
           FITNESS_CERTIFICATE  -> exit $ DocCapture state item
           VEHICLE_INSURANCE -> exit $ DocCapture state item
           VEHICLE_PUC -> exit $ DocCapture state item
+          ProfileDetails -> exit $ ProfileDetailsExit state
+          SocialSecurityNumber -> exit $ SSN state
+          VehicleInspectionForm -> exit $ DocCapture state item
           _ -> continue state
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})

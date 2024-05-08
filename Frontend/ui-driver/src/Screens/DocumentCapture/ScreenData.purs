@@ -28,6 +28,11 @@ initData =
       , docId : ""
       , linkedRc : Nothing
       , cityConfig : dummyCityConfig
+      , ssn : ""
+      , firstName : Nothing
+      , lastName : Nothing
+      , mobileNumber : Nothing
+      , email: Nothing
       }
   , props:
       { validateDocModal : false,
@@ -35,6 +40,11 @@ initData =
         validating : false,
         menuOptions : false,
         confirmChangeVehicle : false,
-        contactSupportModal : ST.HIDE
+        contactSupportModal : ST.HIDE, 
+        isSSNView : false,
+        isProfileView: false,
+        isValidEmail : true,
+        isValidFirstName : true,
+        isValidMobileNumber: true
       }
   }

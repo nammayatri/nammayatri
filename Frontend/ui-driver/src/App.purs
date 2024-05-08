@@ -88,7 +88,7 @@ newtype GlobalState = GlobalState {
   , uploadDrivingLicenseScreen :: UploadDrivingLicenseState
   , registrationScreen :: RegistrationScreenState
   , uploadAdhaarScreen :: UploadAdhaarScreenState
-  , addVehicleDetailsScreen :: AddVehicleDetailsScreenState
+  , addVehicleDetailsScreen :: AddVehicleDetailsScreenData.AddVehicleDetailsScreenState
   , tripDetailsScreen :: TripDetailsScreenState
   , rideHistoryScreen :: RideHistoryScreenState
   , rideSelectionScreen :: RideSelectionScreenState
@@ -204,7 +204,7 @@ data ScreenType =
   | UploadDrivingLicenseScreenStateType (UploadDrivingLicenseState -> UploadDrivingLicenseState)
   | RegisterScreenStateType (RegistrationScreenState -> RegistrationScreenState)
   | UploadAdhaarScreenStateType (UploadAdhaarScreenState -> UploadAdhaarScreenState)
-  | AddVehicleDetailsScreenStateType (AddVehicleDetailsScreenState -> AddVehicleDetailsScreenState)
+  | AddVehicleDetailsScreenStateType (AddVehicleDetailsScreenData.AddVehicleDetailsScreenState -> AddVehicleDetailsScreenData.AddVehicleDetailsScreenState)
   | DriverDetailsScreenStateType (DriverDetailsScreenState -> DriverDetailsScreenState)
   | VehicleDetailsScreenStateType (VehicleDetailsScreenState -> VehicleDetailsScreenState)
   | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)
@@ -350,6 +350,8 @@ data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
                                 | REFERRAL_CODE_SUBMIT RegistrationScreenState
                                 | DOCUMENT_CAPTURE_FLOW RegistrationScreenState RegisterationStep
                                 | SELECT_LANG_FROM_REGISTRATION
+                                | SSN_FROM_REGISTRATION RegistrationScreenState
+                                | PROFILE_DETAILS_FROM_REGISTRATION RegistrationScreenState
 
 data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = VALIDATE_DL_DETAILS UploadDrivingLicenseState 
                                           | VALIDATE_DATA_API UploadDrivingLicenseState 
@@ -363,14 +365,14 @@ data UPLOAD_ADHAAR_CARD_SCREENOUTPUT = GO_TO_ADD_BANK_DETAILS
 
 data BANK_DETAILS_SCREENOUTPUT = GO_TO_ADD_VEHICLE_DETAILS
 
-data ADD_VEHICLE_DETAILS_SCREENOUTPUT = VALIDATE_DETAILS AddVehicleDetailsScreenState 
-                                        | VALIDATE_RC_DATA_API_CALL AddVehicleDetailsScreenState 
-                                        | REFER_API_CALL AddVehicleDetailsScreenState 
+data ADD_VEHICLE_DETAILS_SCREENOUTPUT = VALIDATE_DETAILS AddVehicleDetailsScreenData.AddVehicleDetailsScreenState 
+                                        | VALIDATE_RC_DATA_API_CALL AddVehicleDetailsScreenData.AddVehicleDetailsScreenState 
+                                        | REFER_API_CALL AddVehicleDetailsScreenData.AddVehicleDetailsScreenState 
                                         | APPLICATION_STATUS_SCREEN 
                                         | LOGOUT_USER 
                                         | ONBOARDING_FLOW 
                                         | DRIVER_PROFILE_SCREEN 
-                                        | RC_ACTIVATION AddVehicleDetailsScreenState
+                                        | RC_ACTIVATION AddVehicleDetailsScreenData.AddVehicleDetailsScreenState
                                         | CHANGE_VEHICLE_FROM_RC_SCREEN
                                         | CHANGE_LANG_FROM_RC_SCREEN
 
@@ -431,7 +433,9 @@ data APPLICATION_STATUS_SCREENOUTPUT = GO_TO_HOME_FROM_APPLICATION_STATUS
                                       | RESEND_OTP_TO_ALTERNATE_NUMBER ApplicationStatusScreenState
 data EDIT_BANK_DETAILS_SCREEN_OUTPUT = EDIT_BANK_DETAILS
 data EDIT_AADHAAR_DETAILS_SCREEN_OUTPUT = EDIT_AADHAAR_DETAILS
-data ENTER_MOBILE_NUMBER_SCREEN_OUTPUT = GO_TO_ENTER_OTP EnterMobileNumberScreenState
+data ENTER_MOBILE_NUMBER_SCREEN_OUTPUT
+  = GO_TO_ENTER_OTP EnterMobileNumberScreenState
+  | GO_TO_DRIVER_INFO EnterMobileNumberScreenState
 data ENTER_OTP_SCREEN_OUTPUT = RETRY EnterOTPScreenState | DRIVER_INFO_API_CALL EnterOTPScreenState
 data NO_INTERNET_SCREEN_OUTPUT = REFRESH_INTERNET | TURN_ON_GPS | CHECK_INTERNET
 data POPUP_SCREEN_OUTPUT = POPUP_REQUEST_RIDE String Number
@@ -524,3 +528,5 @@ data DOCUMENT_CAPTURE_SCREEN_OUTPUT = UPLOAD_DOC_API DocumentCaptureScreenState 
                                       | LOGOUT_FROM_DOC_CAPTURE 
                                       | CHANGE_LANG_FROM_DOCUMENT_CAPTURE
                                       | CHANGE_VEHICLE_FROM_DOCUMENT_CAPTURE
+                                      | UPDATE_SSN DocumentCaptureScreenState
+                                      | UPDATE_SOCIAL_PROFILE DocumentCaptureScreenState

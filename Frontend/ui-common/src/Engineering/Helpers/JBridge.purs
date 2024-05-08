@@ -290,6 +290,7 @@ foreign import clearAudioPlayer :: String -> Unit
 foreign import pauseAudioPlayer :: String -> Unit
 foreign import startAudioPlayer :: forall action. Fn3 String (action -> Effect Unit) (String -> action) Unit
 foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
+foreign import focusChild :: EffectFn2 String Int Unit
 foreign import jBridgeMethodExists :: String -> Boolean
 
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit

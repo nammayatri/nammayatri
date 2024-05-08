@@ -54,3 +54,9 @@ registration = do
     SelectLang updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ SELECT_LANG_FROM_REGISTRATION)
+    SSN updatedState -> do
+      modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ SSN_FROM_REGISTRATION updatedState)
+    ProfileDetailsExit updatedState -> do
+      modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ PROFILE_DETAILS_FROM_REGISTRATION updatedState)

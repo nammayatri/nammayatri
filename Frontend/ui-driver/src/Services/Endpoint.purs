@@ -333,3 +333,21 @@ uploadOdometerImage rideId = (getBaseUrl "") <> "/driver/ride/"<>rideId<>"/uploa
 
 updateAirConditioned :: String -> String
 updateAirConditioned _ = (getBaseUrl "") <> "/driver/updateAirCondition"
+
+getMakeList :: String -> String
+getMakeList _ = (getBaseUrl "") <> "/vehicleMakes"
+
+getModelList :: String -> String
+getModelList _ = (getBaseUrl "") <> "/vehicleModels"
+
+getVehicleDetails :: String -> String
+getVehicleDetails _ = (getBaseUrl "") <> "/vehicleDetails"
+
+getSSN :: String -> String
+getSSN _ = (getBaseUrl "") <> "/driver/register/ssn"
+
+socialLogin :: String -> String
+socialLogin _ = (getBaseUrl "") <> "/social/login"
+
+updateSocialProfile :: String -> String
+updateSocialProfile _ = (getBaseUrl "") <> "/social/update/profile"

@@ -74,7 +74,8 @@ initData = {
         driverEnabled : false,
         menuOptions : false,
         manageVehicle : false,
-        manageVehicleCategory : Nothing
+        manageVehicleCategory : Nothing,
+        isApplicationInVerification: false
       }
   }
 

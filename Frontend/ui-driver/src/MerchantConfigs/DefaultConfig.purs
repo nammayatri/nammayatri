@@ -634,9 +634,13 @@ config =
   }
   , enterMobileNumberScreen : {
     headerBackground: "#2C2F3A"
+  , emailAuth : false
   }
   , defaultCountryCodeConfig : countryCode
   , secondaryBackground : "#2C2F3A"
+  , vehicleRegisterationScreen : {
+      collectVehicleDetails : false
+  }
   }
 
 registrationConfig :: CTC.RegistrationConfig

@@ -47,7 +47,7 @@ import Components.ChatView.Controller as ChatView
 import Foreign.Object (Object)
 import Foreign (Foreign)
 import Screens (ScreenName)
-import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..), TripCategory(..), QuestionConfirmRes(..))
+import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..), TripCategory(..), QuestionConfirmRes(..), OAuthProvider)
 import Styles.Types (FontSize)
 import Common.Types.Config
 import RemoteConfig.Types as RC
@@ -131,70 +131,6 @@ type ChooseLanguageScreenData =  {
 type ChooseLanguageScreenProps =  {
   selectedLanguage :: String,
   btnActive :: Boolean
- }
-
--- ############################################################# AddVehicleDetailsScreen ################################################################################
-
-type AddVehicleDetailsScreenState = {
-  data :: AddVehicleDetailsScreenData,
-  props :: AddVehicleDetailsScreenProps
-}
-
-type AddVehicleDetailsScreenData =  {
-  vehicle_type :: String,
-  vehicle_model_name :: String,
-  vehicle_color :: String,
-  vehicle_registration_number :: String,
-  reEnterVehicleRegistrationNumber :: String,
-  rc_base64 :: String,
-  vehicle_rc_number :: String,
-  referral_mobile_number :: String,
-  rcImageID :: String,
-  errorMessage :: String,
-  dateOfRegistration :: Maybe String,
-  dateOfRegistrationView :: String,
-  logField :: Object Foreign,
-  driverMobileNumber :: String,
-  cityConfig :: CityConfig,
-  vehicleCategory :: Maybe VehicleCategory,
-  config :: AppConfig,
-  rcNumberPrefixList :: Array String
- }
-
-type AddVehicleDetailsScreenProps =  {
-  rcAvailable :: Boolean,
-  vehicleTypes :: Array VehicalTypes,
-  openSelectVehicleTypeModal :: Boolean,
-  openRegistrationModal :: Boolean,
-  rc_name :: String,
-  input_data :: String,
-  enable_upload :: Boolean,
-  openRCManual :: Boolean,
-  openReferralMobileNumber :: Boolean,
-  isValid :: Boolean,
-  btnActive :: Boolean,
-  referralViewstatus :: Boolean,
-  isEdit :: Boolean,
-  isValidState :: Boolean,
-  limitExceedModal :: Boolean,
-  errorVisibility :: Boolean,
-  openRegistrationDateManual :: Boolean,
-  addRcFromProfile :: Boolean,
-  isDateClickable :: Boolean,
-  openHowToUploadManual :: Boolean,
-  logoutModalView :: Boolean,
-  validateProfilePicturePopUp :: Boolean,
-  imageCaptureLayoutView :: Boolean,
-  fileCameraOption :: Boolean,
-  fileCameraPopupModal :: Boolean,
-  validating :: Boolean,
-  successfulValidation :: Boolean,
-  multipleRCstatus :: StageStatus,
-  menuOptions :: Boolean,
-  confirmChangeVehicle :: Boolean,
-  contactSupportModal :: AnimType,
-  buttonIndex :: Maybe Int,
-  acModal :: Boolean
  }
 
 data ValidationStatus  =  Success | Failure | InProgress | None
@@ -329,7 +265,8 @@ type RegistrationScreenProps = {
   driverEnabled :: Boolean,
   menuOptions :: Boolean,
   manageVehicle :: Boolean,
-  manageVehicleCategory :: Maybe VehicleCategory
+  manageVehicleCategory :: Maybe VehicleCategory,
+  isApplicationInVerification :: Boolean
 }
 
 data AnimType = HIDE | SHOW | ANIMATING
@@ -349,6 +286,10 @@ data RegisterationStep =
   | VEHICLE_INSURANCE
   | VEHICLE_PUC
   | NO_OPTION
+  | SocialSecurityNumber
+  | ProfileDetails
+  | VehicleInspectionForm
+  | UploadProfile
 
 derive instance genericRegisterationStep :: Generic RegisterationStep _
 instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
@@ -580,7 +521,11 @@ type EnterMobileNumberScreenState = {
 type EnterMobileNumberScreenStateData = {
     mobileNumber :: String,
     logField :: Object Foreign,
-    config :: AppConfig
+    config :: AppConfig,
+    token :: Maybe String,
+    name :: Maybe String,
+    email :: Maybe String,
+    oauthProvider :: Maybe OAuthProvider
 }
 
 type EnterMobileNumberScreenStateProps = {
@@ -2696,7 +2641,12 @@ type DocumentCaptureScreenData = {
   vehicleCategory :: Maybe VehicleCategory,
   docId :: String,
   linkedRc :: Maybe String,
-  cityConfig :: CityConfig
+  cityConfig :: CityConfig,
+  ssn :: String,
+  firstName :: Maybe String,
+  lastName :: Maybe String,
+  mobileNumber :: Maybe String,
+  email :: Maybe String
 } 
 
 type DocumentCaptureScreenProps = {
@@ -2705,7 +2655,12 @@ type DocumentCaptureScreenProps = {
   validating :: Boolean,
   menuOptions :: Boolean,
   confirmChangeVehicle :: Boolean,
-  contactSupportModal :: AnimType
+  contactSupportModal :: AnimType,
+  isSSNView :: Boolean,
+  isProfileView :: Boolean,
+  isValidEmail :: Boolean,
+  isValidFirstName :: Boolean,
+  isValidMobileNumber :: Boolean
 } 
 
 

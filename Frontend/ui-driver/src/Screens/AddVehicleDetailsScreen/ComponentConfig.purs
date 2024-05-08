@@ -24,6 +24,7 @@ import PrestoDOM
 import Common.Types.App as Common
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryEditText as PrimaryEditText
 import Components.ReferralMobileNumber as ReferralMobileNumber
 import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
@@ -34,6 +35,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resource.Constants as Constant
 import Screens.Types (StageStatus(..))
 import Screens.Types as ST
+import Screens.AddVehicleDetailsScreen.ScreenData as ST
 import Styles.Colors as Color
 import Helpers.Utils as HU
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -44,6 +46,7 @@ import Components.OptionsMenu as OptionsMenuConfig
 import Components.BottomDrawerList as BottomDrawerList
 import Data.Array as DA
 import Components.RequestInfoCard as RequestInfoCard
+import Engineering.Helpers.Commons as EHC
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -51,11 +54,11 @@ primaryButtonConfig state = let
     feature = (getAppConfig appConfig).feature
     imageUploadCondition = state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL
     rcMatch = caseInsensitiveCompare state.data.vehicle_registration_number state.data.reEnterVehicleRegistrationNumber
-    activate = (( rcMatch || (not state.data.cityConfig.uploadRCandDL)) && 
+    activate =  (( rcMatch || (not state.data.cityConfig.uploadRCandDL)) && 
                 -- (state.data.dateOfRegistration /= Just "") && 
                 state.data.vehicle_registration_number /= "" &&
                 (state.data.vehicleCategory /= Just ST.CarCategory || isJust state.props.buttonIndex) &&
-                ((DS.length state.data.vehicle_registration_number >= 2) && ((DS.take 2 state.data.vehicle_registration_number) `DA.elem` state.data.rcNumberPrefixList)))
+                ((DS.length state.data.vehicle_registration_number >= 2) && (DA.null state.data.rcNumberPrefixList || ((DS.take 2 state.data.vehicle_registration_number) `DA.elem` state.data.rcNumberPrefixList))) && ((not state.data.config.vehicleRegisterationScreen.collectVehicleDetails) || (DA.length state.data.dropDownList == selectedCount state.data.dropDownList)))
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfRegistration then getString CONFIRM 
                            else if state.props.openHowToUploadManual then getString UPLOAD_PHOTO
@@ -70,6 +73,9 @@ primaryButtonConfig state = let
       }
   in primaryButtonConfig'
 
+
+selectedCount :: Array ST.DropDownList -> Int
+selectedCount list = DA.foldr (\item acc -> if item.selected /= "Select" then acc + 1 else acc) 0 list
 
 referalNumberConfig :: ST.AddVehicleDetailsScreenState -> ReferralMobileNumber.Config
 referalNumberConfig state = let 
@@ -239,3 +245,29 @@ acModalConfig state =
       , padding = PaddingVertical 16 20
       }
     }
+
+
+modelEditTextConfig :: ST.AddVehicleDetailsScreenState -> PrimaryEditText.Config
+modelEditTextConfig state = 
+  PrimaryEditText.config { editText
+        { color = Color.black800
+        , placeholder = "Others"
+        , singleLine = true
+        , pattern = Just "[A-Za-z0-9.,' ]*,20"
+        , margin = MarginHorizontal 10 10
+        , textStyle = FontStyle.Body7
+        , focused = true
+        , gravity = LEFT
+        }
+      , background = Color.white900
+      , margin = MarginVertical 16 16
+      , topLabel
+        { visibility = GONE
+        , alpha = 0.8
+        } 
+      , id = (EHC.getNewIDWithTag "modelEditText")
+      , height = V 54,
+      focusedStroke = "1," <> Color.borderColorLight,
+      width = MATCH_PARENT,
+      stroke = "1," <> Color.borderColorLight
+      }

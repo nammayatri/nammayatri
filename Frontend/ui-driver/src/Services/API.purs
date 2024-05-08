@@ -64,13 +64,23 @@ instance decodeAPIResponse :: (Decode a, Decode b) => Decode (APIResponse a b) w
 -- Trigger OTP API request, response types
 
 newtype TriggerOTPReq = TriggerOTPReq {
-  mobileNumber :: String,
+  mobileNumber :: Maybe String,
   mobileCountryCode :: String,
   merchantId :: String,
   merchantOperatingCity :: Maybe String,
   registrationLat :: Maybe Number,
-  registrationLon :: Maybe Number
+  registrationLon :: Maybe Number,
+  email  :: Maybe String,
+  identifierType :: Maybe String
 }
+
+data OAuthProvider = Google | IOS
+
+derive instance genericOAuthProvider :: Generic OAuthProvider _
+instance standardEncodeOAuthProvider :: StandardEncode OAuthProvider where standardEncode =  defaultEnumEncode
+instance showOAuthProvider :: Show OAuthProvider where show = genericShow
+instance decodeOAuthProvider :: Decode OAuthProvider where decode = defaultEnumDecode
+instance encodeOAuthProvider :: Encode OAuthProvider where encode = defaultEnumEncode
 
 newtype TriggerOTPResp = TriggerOTPResp {
   authId :: String,
@@ -119,7 +129,7 @@ newtype User = User
     , middleName :: Maybe String
     , id :: String
     , lastName :: Maybe String
-    , maskedMobileNumber :: String
+    , maskedMobileNumber :: Maybe String
     , role :: String
     }
 
@@ -987,7 +997,17 @@ newtype DriverRCReq = DriverRCReq {
   imageId :: String,
   dateOfRegistration :: Maybe String,
   vehicleCategory :: Maybe String,
-  airConditioned :: Maybe Boolean
+  airConditioned :: Maybe Boolean,
+  vehicleDetails :: Maybe DriverVehicleDetails
+}
+
+data DriverVehicleDetails = DriverVehicleDetails {
+  colour :: Maybe String,
+  vehicleColour :: Maybe String,
+  vehicleDoors :: Maybe Int,
+  vehicleManufacturer :: Maybe String,
+  vehicleModel :: Maybe String,
+  vehicleSeatBelts :: Maybe Int
 }
 
 newtype DriverRCResp = DriverRCResp ApiSuccessResult
@@ -1010,6 +1030,12 @@ instance standardEncodeDriverRCResp :: StandardEncode DriverRCResp where standar
 instance showDriverRCResp :: Show DriverRCResp where show = genericShow
 instance decodeDriverRCResp:: Decode DriverRCResp where decode = defaultDecode
 instance encodeDriverRCResp  :: Encode DriverRCResp where encode = defaultEncode
+
+derive instance genericDriverVehicleDetails :: Generic DriverVehicleDetails _
+instance standardEncodeDriverVehicleDetails :: StandardEncode DriverVehicleDetails where standardEncode (DriverVehicleDetails body) = standardEncode body
+instance showDriverVehicleDetails :: Show DriverVehicleDetails where show = genericShow
+instance decodeDriverVehicleDetails:: Decode DriverVehicleDetails where decode = defaultDecode
+instance encodeDriverVehicleDetails  :: Encode DriverVehicleDetails where encode = defaultEncode
 
 
 -- registerDriverDL API request, response types
@@ -4622,3 +4648,176 @@ instance standardEncodeUpdateAirConditionUpdateResponse :: StandardEncode Update
 instance showUpdateAirConditionUpdateResponse :: Show UpdateAirConditionUpdateResponse where show = genericShow
 instance decodeUpdateAirConditionUpdateResponse :: Decode UpdateAirConditionUpdateResponse where decode = defaultDecode
 instance encodeUpdateAirConditionUpdateResponse  :: Encode UpdateAirConditionUpdateResponse where encode = defaultEncode
+
+
+data GetMakeListReq = GetMakeListReq
+
+data GetMakeListResp = GetMakeListResp {
+  makes :: Array String
+}
+
+
+instance makeGetMakeList :: RestEndpoint GetMakeListReq GetMakeListResp where
+  makeRequest reqBody headers = defaultMakeRequest GET (EP.getMakeList "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest = standardEncode
+
+derive instance genericGetMakeListReq :: Generic GetMakeListReq _
+instance standardEncodeGetMakeList :: StandardEncode GetMakeListReq where standardEncode res = standardEncode {}
+instance showGetMakeList :: Show GetMakeListReq where show = genericShow
+instance decodeGetMakeList :: Decode GetMakeListReq where decode = defaultDecode
+instance encodeGetMakeList  :: Encode GetMakeListReq where encode = defaultEncode
+
+derive instance genericGetMakeListResp :: Generic GetMakeListResp _
+instance standardEncodeGetMakeListResp :: StandardEncode GetMakeListResp where standardEncode (GetMakeListResp res) = standardEncode res
+instance showGetMakeListResp :: Show GetMakeListResp where show = genericShow
+instance decodeGetMakeListResp :: Decode GetMakeListResp where decode = defaultDecode
+instance encodeGetMakeListResp  :: Encode GetMakeListResp where encode = defaultEncode
+
+
+data GetModelListReq = GetModelListReq {
+  make :: String
+}
+
+data GetModelListResp = GetModelListResp {
+  models :: Array String
+}
+
+
+instance makeGetModelListReq :: RestEndpoint GetModelListReq GetModelListResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.getModelList "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest = standardEncode
+
+derive instance genericGetModelListReq :: Generic GetModelListReq _
+instance standardEncodeGetModelListReq :: StandardEncode GetModelListReq where standardEncode (GetModelListReq req) = standardEncode req
+instance showGetModelListReq :: Show GetModelListReq where show = genericShow
+instance decodeGetModelListReq :: Decode GetModelListReq  where decode = defaultDecode
+instance encodeGetModelListReq  :: Encode GetModelListReq where encode = defaultEncode
+
+derive instance genericGetModelListResp :: Generic GetModelListResp _
+instance standardEncodeGetModelListResp :: StandardEncode GetModelListResp where standardEncode (GetModelListResp res) = standardEncode res
+instance showGetModelListResp :: Show GetModelListResp where show = genericShow
+instance decodeGetModelListResp :: Decode GetModelListResp where decode = defaultDecode
+instance encodeGetModelListResp  :: Encode GetModelListResp where encode = defaultEncode
+
+
+data GetVehicleDetailsReq = GetVehicleDetailsReq {
+  make :: String,
+  model :: String
+}
+
+data VehicleDetailsResp = VehicleDetailsResp {
+  model :: String
+, acAvailable :: Boolean
+, id :: String
+, make :: String
+}
+
+
+instance makeGetVehicleDetailsReq :: RestEndpoint GetVehicleDetailsReq VehicleDetailsResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.getVehicleDetails "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest = standardEncode
+
+derive instance genericGetVehicleDetailsReq :: Generic GetVehicleDetailsReq _
+instance standardEncodeGetVehicleDetailsReq :: StandardEncode GetVehicleDetailsReq where standardEncode (GetVehicleDetailsReq req) = standardEncode req
+instance showGetVehicleDetailsReq :: Show GetVehicleDetailsReq where show = genericShow
+instance decodeGetVehicleDetailsReq :: Decode GetVehicleDetailsReq  where decode = defaultDecode
+instance encodeGetVehicleDetailsReq  :: Encode GetVehicleDetailsReq where encode = defaultEncode
+
+derive instance genericVehicleDetailsResp :: Generic VehicleDetailsResp _
+instance standardEncodeVehicleDetailsResp :: StandardEncode VehicleDetailsResp where standardEncode (VehicleDetailsResp res) = standardEncode res
+instance showVehicleDetailsResp :: Show VehicleDetailsResp where show = genericShow
+instance decodeVehicleDetailsResp :: Decode VehicleDetailsResp where decode = defaultDecode
+instance encodeVehicleDetailsResp  :: Encode VehicleDetailsResp where encode = defaultEncode
+
+
+data UpdateSSNReq = UpdateSSNReq {
+  ssn :: String
+}
+
+data UpdateSSNResp = UpdateSSNResp {
+  result :: String
+}
+
+
+instance makeUpdateSSNReq :: RestEndpoint UpdateSSNReq UpdateSSNResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.getSSN "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest = standardEncode
+
+derive instance genericUpdateSSNReq :: Generic UpdateSSNReq _
+instance standardEncodeUpdateSSNReq :: StandardEncode UpdateSSNReq where standardEncode (UpdateSSNReq req) = standardEncode req
+instance showUpdateSSNReq :: Show UpdateSSNReq where show = genericShow
+instance decodeUpdateSSNReq :: Decode UpdateSSNReq  where decode = defaultDecode
+instance encodeUpdateSSNReq  :: Encode UpdateSSNReq where encode = defaultEncode
+
+derive instance genericUpdateSSNResp :: Generic UpdateSSNResp _
+instance standardEncodeUpdateSSNResp :: StandardEncode UpdateSSNResp where standardEncode (UpdateSSNResp res) = standardEncode res
+instance showUpdateSSNResp :: Show UpdateSSNResp where show = genericShow
+instance decodeUpdateSSNResp :: Decode UpdateSSNResp where decode = defaultDecode
+instance encodeUpdateSSNResp  :: Encode UpdateSSNResp where encode = defaultEncode
+
+data SocialLoginReq = SocialLoginReq 
+  { email  :: Maybe String,
+    merchantId :: String,
+    merchantOperatingCity :: Maybe String,
+    name :: Maybe String,
+    oauthProvider :: Maybe OAuthProvider,
+    registrationLat :: Maybe Number,
+    registrationLon :: Maybe Number,
+    tokenId  :: Maybe String
+  }
+
+data SocialLoginRes = SocialLoginRes
+  { token :: String
+  }
+
+instance makeSocialLoginReq :: RestEndpoint SocialLoginReq SocialLoginRes where
+ makeRequest reqBody headers = defaultMakeRequest POST (EP.socialLogin "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericSocialLoginReq :: Generic SocialLoginReq _
+instance standardEncodeSocialLoginReq :: StandardEncode SocialLoginReq where standardEncode (SocialLoginReq req) = standardEncode req
+instance showSocialLoginReq :: Show SocialLoginReq where show = genericShow
+instance decodeSocialLoginReq :: Decode SocialLoginReq where decode = defaultDecode
+instance encodeSocialLoginReq :: Encode SocialLoginReq where encode = defaultEncode
+
+derive instance genericSocialLoginRes :: Generic SocialLoginRes _
+instance standardEncodeSocialLoginRes :: StandardEncode SocialLoginRes where standardEncode (SocialLoginRes res) = standardEncode res
+instance showSocialLoginRes :: Show SocialLoginRes where show = genericShow
+instance decodeSocialLoginRes :: Decode SocialLoginRes where decode = defaultDecode
+instance encodeSocialLoginRes :: Encode SocialLoginRes where encode = defaultEncode
+
+
+data SocialProfileUpdate
+  = SocialProfileUpdate
+    { email :: String
+    , firstName :: Maybe String
+    , lastName :: Maybe String
+    , mobileCountryCode :: Maybe String
+    , mobileNumber :: Maybe String
+    }
+
+data SocialProfileUpdateRes
+  = SocialProfileUpdateRes
+
+
+instance makeSocialProfileUpdate :: RestEndpoint SocialProfileUpdate SocialProfileUpdateRes where
+ makeRequest reqBody headers = defaultMakeRequest POST (EP.updateSocialProfile "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericSocialProfileUpdate :: Generic SocialProfileUpdate _
+instance standardEncodeSocialProfileUpdate :: StandardEncode SocialProfileUpdate where standardEncode (SocialProfileUpdate req) = standardEncode req
+instance showSocialProfileUpdate :: Show SocialProfileUpdate where show = genericShow
+instance decodeSocialProfileUpdate :: Decode SocialProfileUpdate where decode = defaultDecode
+instance encodeSocialProfileUpdate :: Encode SocialProfileUpdate where encode = defaultEncode
+
+derive instance genericSocialProfileUpdateRes :: Generic SocialProfileUpdateRes _
+instance standardEncodeSocialProfileUpdateRes :: StandardEncode SocialProfileUpdateRes where standardEncode _ = standardEncode {}
+instance showSocialProfileUpdateRes :: Show SocialProfileUpdateRes where show = genericShow
+instance decodeSocialProfileUpdateRes :: Decode SocialProfileUpdateRes where decode = defaultDecode
+instance encodeSocialProfileUpdateRes :: Encode SocialProfileUpdateRes where encode = defaultEncode

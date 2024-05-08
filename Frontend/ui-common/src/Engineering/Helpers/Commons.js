@@ -565,3 +565,9 @@ export const getMidnightUTC = function () {
   const utcTime = new Date(midnight);
   return utcTime.toISOString();
 }
+
+export const oAuthSignIn = function (provider, callback) {
+  if (JBridge.oAuthSignIn) {
+    JBridge.oAuthSignIn(provider, callback);
+  }
+};

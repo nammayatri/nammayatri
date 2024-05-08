@@ -40,6 +40,12 @@ documentCaptureScreen = do
     SelectLang updatedState -> do
       modifyScreenState $ DocumentCaptureScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CHANGE_LANG_FROM_DOCUMENT_CAPTURE)
+    UpdateSSN updatedState -> do
+      modifyScreenState $ DocumentCaptureScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ UPDATE_SSN updatedState)
+    UpdateProfile updatedState -> do
+      modifyScreenState $ DocumentCaptureScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ UPDATE_SOCIAL_PROFILE updatedState)
     ChangeVehicle updatedState -> do
       modifyScreenState $ DocumentCaptureScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CHANGE_VEHICLE_FROM_DOCUMENT_CAPTURE)

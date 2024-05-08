@@ -114,3 +114,10 @@ findStringWithPrefix prefix arr = DA.filter (\item -> startsWith prefix item) ar
 
 startsWith :: String -> String -> Boolean
 startsWith prefix str = DS.take (DS.length prefix) (DS.toLower str) == (DS.toLower prefix)
+
+
+strToMaybe :: String -> Maybe String
+strToMaybe str = 
+  case str of
+    "" -> Nothing
+    _ -> Just str

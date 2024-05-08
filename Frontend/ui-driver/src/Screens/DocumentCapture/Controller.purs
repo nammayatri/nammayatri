@@ -17,7 +17,9 @@ module Screens.DocumentCaptureScreen.Controller where
 
 import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==), void, (<>))
+import Components.PrimaryEditText as PrimaryEditText
+import Components.MobileNumberEditor as MobileNumberEditor
+import Prelude
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -39,6 +41,10 @@ import Screens.Types as ST
 import Helpers.Utils as HU
 import Effect.Unsafe (unsafePerformEffect)
 import Storage (KeyStore(..), getValueToLocalStore)
+import Mobility.Prelude
+import Common.Types.App (MobileNumberValidatorResp(..)) as MVR
+import ConfigProvider
+import Engineering.Helpers.Utils (mobileNumberValidator, mobileNumberMaxLength)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -59,18 +65,42 @@ data Action = PrimaryButtonAC PrimaryButtonController.Action
             | ChangeVehicleAC PopUpModal.Action
             | BottomDrawerListAC BottomDrawerList.Action
             | WhatsAppClick
+            | SSNPEAC PrimaryEditText.Action
+            | FirstNameEditText PrimaryEditText.Action
+            | LastNameEditText PrimaryEditText.Action
+            | MobileEditText PrimaryEditText.Action
+            | KeyboardCallback String
+            | MobileNumberEditText MobileNumberEditor.Action
 
 data ScreenOutput = GoBack 
                   | UploadAPI DocumentCaptureScreenState
                   | LogoutAccount
                   | SelectLang DocumentCaptureScreenState
                   | ChangeVehicle DocumentCaptureScreenState
+                  | UpdateSSN DocumentCaptureScreenState
+                  | UpdateProfile DocumentCaptureScreenState
 
 eval :: Action -> DocumentCaptureScreenState -> Eval Action ScreenOutput DocumentCaptureScreenState
 
-eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = continueWithCmd state [do
-  _ <- liftEffect $ JB.uploadFile false
-  pure NoAction]
+eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = 
+  if state.props.isSSNView 
+    then exit $ UpdateSSN state
+    else if state.props.isProfileView
+      then
+        case state.data.firstName, state.data.mobileNumber of
+          Nothing, _ -> continue state{props{isValidFirstName = false}}
+          _, Nothing -> continue state{props{isValidEmail = false}}
+          Just name, Just mobileNumber -> do 
+            let config = getAppConfig appConfig
+                validatorResp = mobileNumberValidator config.defaultCountryCodeConfig.countryCode config.defaultCountryCodeConfig.countryShortCode mobileNumber
+                isValidFirstName = (DS.length name) > 2 
+                isValid = isValidFirstName && isValidMobileNumber validatorResp
+            let newState = state{props{isValidMobileNumber = isValidMobileNumber validatorResp, isValidFirstName = isValidFirstName}}
+            if isValid then exit $ UpdateProfile newState else continue newState
+      else
+        continueWithCmd state [do
+          _ <- liftEffect $ JB.uploadFile false
+          pure NoAction]
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props { menuOptions = true }}
 
@@ -146,4 +176,49 @@ eval WhatsAppClick state = continueWithCmd state [do
   pure NoAction
   ]
 
+eval (SSNPEAC (PrimaryEditText.TextChanged id val)) state = do
+  if (DS.length val) == 9 then 
+      void $ pure $ JB.hideKeyboardOnNavigation true 
+      else pure unit
+  continue state {data{ssn = DS.trim val}}
+eval (FirstNameEditText (PrimaryEditText.TextChanged id val)) state = do
+  continue state{data{firstName = strToMaybe (DS.trim val)}, props{isValidFirstName = true}}
+
+eval (LastNameEditText (PrimaryEditText.TextChanged id val)) state = do
+  continue state{data{lastName = strToMaybe (DS.trim val)}}
+
+eval (MobileEditText (PrimaryEditText.TextChanged id newVal)) state = do
+  let config = getAppConfig appConfig
+  _ <- if DS.length newVal ==  mobileNumberMaxLength config.defaultCountryCodeConfig.countryShortCode then do
+            pure $ JB.hideKeyboardOnNavigation true
+            else pure unit
+  let validatorResp = mobileNumberValidator config.defaultCountryCodeConfig.countryCode config.defaultCountryCodeConfig.countryShortCode newVal
+  continue  state { props = state.props { isValidMobileNumber = isValidMobileNumber validatorResp }
+                                        , data = state.data { mobileNumber = if validatorResp == MVR.MaxLengthExceeded then state.data.mobileNumber else strToMaybe newVal}}
+
+eval (KeyboardCallback event) state = case event of
+  "onKeyboardOpen" ->
+    if state.props.isProfileView then do
+      continueWithCmd state
+        [ do 
+          void $ JB.scrollToEnd (EHC.getNewIDWithTag "DocumentCaptureScrollView") true
+          pure NoAction
+        ]
+    else
+      update state
+  _ -> update state
+
+eval (MobileNumberEditText (MobileNumberEditor.TextChanged valId newVal)) state = do
+  let config = getAppConfig appConfig
+  _ <- if DS.length newVal ==  mobileNumberMaxLength config.defaultCountryCodeConfig.countryShortCode then do
+            pure $ JB.hideKeyboardOnNavigation true
+            else pure unit
+  let validatorResp = mobileNumberValidator config.defaultCountryCodeConfig.countryCode config.defaultCountryCodeConfig.countryShortCode newVal
+  continue  state { props = state.props { isValidMobileNumber = not (isValidMobileNumber validatorResp) }
+                                        , data = state.data { mobileNumber = if validatorResp == MVR.MaxLengthExceeded then state.data.mobileNumber else strToMaybe newVal}}
+
 eval _ state = update state
+
+
+isValidMobileNumber :: MVR.MobileNumberValidatorResp -> Boolean 
+isValidMobileNumber resp = (resp == MVR.ValidPrefix || resp == MVR.Valid)

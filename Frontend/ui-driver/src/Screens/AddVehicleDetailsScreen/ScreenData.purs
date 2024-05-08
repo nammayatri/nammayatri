@@ -17,11 +17,16 @@ module Screens.AddVehicleDetailsScreen.ScreenData where
 
 import Data.Maybe
 import Screens.Types
-
-import Foreign.Object (empty)
+import Foreign (Foreign)
+import Foreign.Object (Object, empty)
 import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
 import ConfigProvider
 import Screens.Types as ST
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
+import Common.Types.Config (CityConfig)
+import MerchantConfig.Types (AppConfig)
+import Prelude (class Eq)
 
 initData :: AddVehicleDetailsScreenState
 initData = {
@@ -43,7 +48,11 @@ initData = {
       cityConfig : dummyCityConfig,
       vehicleCategory : Nothing,
       rcNumberPrefixList : [],
-      config : getAppConfig appConfig
+      config : getAppConfig appConfig,
+      dropDownList : [],
+      registrationDate: Nothing,
+      registrationDateActual: "",
+      selectedVehicleDetails : Nothing
     },
     props: {
       rcAvailable : false,
@@ -80,4 +89,103 @@ initData = {
       buttonIndex : Nothing,
       acModal : false
     }
+}
+
+type AddVehicleDetailsScreenState = {
+  data :: AddVehicleDetailsScreenData,
+  props :: AddVehicleDetailsScreenProps
+}
+
+type AddVehicleDetailsScreenData =  {
+  vehicle_type :: String,
+  vehicle_model_name :: String,
+  vehicle_color :: String,
+  vehicle_registration_number :: String,
+  reEnterVehicleRegistrationNumber :: String,
+  rc_base64 :: String,
+  vehicle_rc_number :: String,
+  referral_mobile_number :: String,
+  rcImageID :: String,
+  errorMessage :: String,
+  dateOfRegistration :: Maybe String,
+  dateOfRegistrationView :: String,
+  logField :: Object Foreign,
+  driverMobileNumber :: String,
+  cityConfig :: CityConfig,
+  vehicleCategory :: Maybe VehicleCategory,
+  config :: AppConfig,
+  rcNumberPrefixList :: Array String,
+  dropDownList :: Array DropDownList,
+  registrationDate :: Maybe String,
+  registrationDateActual :: String,
+  selectedVehicleDetails :: Maybe VehicleDetailsEntity
+ }
+
+type AddVehicleDetailsScreenProps =  {
+  rcAvailable :: Boolean,
+  vehicleTypes :: Array VehicalTypes,
+  openSelectVehicleTypeModal :: Boolean,
+  openRegistrationModal :: Boolean,
+  rc_name :: String,
+  input_data :: String,
+  enable_upload :: Boolean,
+  openRCManual :: Boolean,
+  openReferralMobileNumber :: Boolean,
+  isValid :: Boolean,
+  btnActive :: Boolean,
+  referralViewstatus :: Boolean,
+  isEdit :: Boolean,
+  isValidState :: Boolean,
+  limitExceedModal :: Boolean,
+  errorVisibility :: Boolean,
+  openRegistrationDateManual :: Boolean,
+  addRcFromProfile :: Boolean,
+  isDateClickable :: Boolean,
+  openHowToUploadManual :: Boolean,
+  logoutModalView :: Boolean,
+  validateProfilePicturePopUp :: Boolean,
+  imageCaptureLayoutView :: Boolean,
+  fileCameraOption :: Boolean,
+  fileCameraPopupModal :: Boolean,
+  validating :: Boolean,
+  successfulValidation :: Boolean,
+  multipleRCstatus :: StageStatus,
+  menuOptions :: Boolean,
+  confirmChangeVehicle :: Boolean,
+  contactSupportModal :: AnimType,
+  buttonIndex :: Maybe Int,
+  acModal :: Boolean
+ }
+
+type DropDownList = {
+  isExpanded :: Boolean
+, "type" :: VehicleDetails
+, options :: Array String
+, selected :: String
+, title :: String
+, showEditText :: Boolean 
+}
+
+type DropDownListItem = {
+  displayName :: String
+, name :: String
+}
+
+data VehicleDetails
+  = YEAR
+  | MAKE
+  | MODEL
+  | COLOR
+  | DOORS
+  | SEATBELTS
+
+derive instance genericVehicleDetails :: Generic VehicleDetails _
+instance eqVehicleDetails :: Eq VehicleDetails where eq = genericEq
+
+
+type VehicleDetailsEntity = {
+  model :: String
+, acAvailable :: Boolean
+, id :: String
+, make :: String
 }

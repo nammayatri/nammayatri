@@ -23,6 +23,7 @@ import Components.OnboardingHeader.Controller as OnboardingHeaderController
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
+import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimarySelectItem.Controller as PrimarySelectItem
 import Components.ReferralMobileNumber.Controller as ReferralMobileNumberController
 import Components.RegistrationModal.Controller as RegistrationModalController
@@ -31,22 +32,22 @@ import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Components.TutorialModal.Controller as TutorialModalController
 import Components.ValidateDocumentModal.Controller as ValidateDocumentModal
-import Data.Array (elem)
+import Data.Array
 import Data.String (length, split, Pattern(..), toUpper)
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons
 import Helpers.Utils (contactSupportNumber)
 import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderCameraProfilePicture, showDialer, uploadFile, renderBase64ImageFile)
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+), void)
+import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+), void, map)
 import PrestoDOM (Eval, update, Props, continue, continueWithCmd, exit, updateAndExit, toast)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..), StageStatus(..))
+import Screens.Types (VehicalTypes(..), StageStatus(..))
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Effect.Unsafe (unsafePerformEffect)
 import ConfigProvider
@@ -57,6 +58,15 @@ import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
 import Components.RequestInfoCard as RequestInfoCard
+import Services.API 
+import Screens.AddVehicleDetailsScreen.ScreenData (AddVehicleDetailsScreenState, DropDownList, VehicleDetails(..), VehicleDetailsEntity(..))
+import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
+import Effect.Aff (Milliseconds(..), launchAff, launchAff_, error, killFiber)
+import Engineering.Helpers.Commons (flowRunner)
+import Types.App (GlobalState(..), defaultGlobalState)
+import PrestoDOM.Core (getPushFn)
+import Helpers.API (callApi)
+import Data.Either
 
 instance showAction :: Show Action where
   show _ = ""
@@ -195,6 +205,7 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | GenericMessageModalAction GenericMessageModalController.Action
   | ReferralMobileNumber
   | DatePicker String Int Int Int
+  | DatePicker2 String Int Int Int
   | PreviewImageAction
   | DatePickerAction
   | PopUpModalLogoutAction PopUpModal.Action
@@ -214,6 +225,11 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | SelectButton Int
   | OpenAcModal
   | RequestInfoCardAction RequestInfoCard.Action
+  | ShowOptions DropDownList
+  | UpdateDropDownList VehicleDetails (Array String)
+  | UpdateVehicleDetailsEntity VehicleDetailsEntity
+  | OptionSelcted VehicleDetails String
+  | ModelEditText VehicleDetails PrimaryEditText.Action
 
 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
@@ -365,6 +381,12 @@ eval (DatePicker resp year month date) state = do
                                   , props {isDateClickable = true}} -- rcImageID made null to handle fallback
     _ -> continue state {props {isDateClickable = true}}
 
+eval (DatePicker2 resp year month date) state = do
+  case resp of 
+    "SELECTED" -> continue state {data = state.data { registrationDate = Just $ (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.233691+00" , registrationDateActual = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year)}
+                                  , props {isDateClickable = true}} -- rcImageID made null to handle fallback
+    _ -> continue state {props {isDateClickable = true}}
+
 eval DatePickerAction state = continue state {props {isDateClickable = false}}
 
 eval PreviewImageAction state = continue state
@@ -460,6 +482,10 @@ eval WhatsAppClick state = continueWithCmd state [do
   pure NoAction
   ]
 
+eval (ModelEditText vehicleType (PrimaryEditText.TextChanged id val)) state = do
+  let newList = map (\item -> if item.type == vehicleType then item{selected = val} else item) state.data.dropDownList
+  continue state{data{dropDownList = newList}}
+
 eval (SelectButton index) state = continue state { props { buttonIndex = Just index}}
 
 eval OpenAcModal state = continue state { props { acModal = true}}
@@ -467,6 +493,39 @@ eval OpenAcModal state = continue state { props { acModal = true}}
 eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { acModal = false}}
 
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { acModal = false}}
+
+eval (ShowOptions selectedItem) state = do
+  let newList = map (\item -> if selectedItem.type == item.type then item{isExpanded = not item.isExpanded} else item{isExpanded = false} ) state.data.dropDownList
+  continue state{data{dropDownList = newList}}
+
+eval (UpdateDropDownList vehicleType list) state = do
+  let newList = map (\item -> if item.type == vehicleType then item{options = list} else item) state.data.dropDownList
+  continue state{data{dropDownList = newList}}
+
+eval (OptionSelcted vehicleType selectedVal) state = do
+  let newList = map (\item -> if item.type == vehicleType then item{selected = selectedVal, showEditText = selectedVal == "Others", isExpanded = false} else item) state.data.dropDownList
+      newState = state{data{dropDownList = newList}}
+  case vehicleType of
+    MAKE -> continueWithCmd newState [do
+        push <- getPushFn Nothing "AddVehicleDetailsScreen"
+        _ <- launchAff $ flowRunner defaultGlobalState $ getModelList push selectedVal
+        pure NoAction
+      ]
+    -- MODEL -> do 
+    --   let mbMake = getMake newList
+    --   case mbMake of
+    --     Nothing -> continue newState
+    --     Just make -> 
+    --       if selectedVal == "Others" then continue newState
+    --       else
+    --       continueWithCmd newState [do
+    --         push <- getPushFn Nothing "AddVehicleDetailsScreen"
+    --         _ <- launchAff $ flowRunner defaultGlobalState $ getVehicleDetails push make selectedVal
+    --         pure NoAction
+    --       ]
+    _  -> continue newState
+
+eval (UpdateVehicleDetailsEntity entity) state = continue state{data{selectedVehicleDetails = Just entity}}
 
 eval _ state = update state
 
@@ -478,3 +537,22 @@ overrides _ push state = []
 
 dateFormat :: Int -> String
 dateFormat date = if date < 10 then "0" <> (show date) else (show date)
+
+
+getModelList :: (Action -> Effect Unit) -> String -> Flow GlobalState Unit
+getModelList push make = do
+  resp <- callApi $ GetModelListReq {make}
+  case resp of
+    Right (GetModelListResp resp) -> void $ liftFlow $ push $ UpdateDropDownList MODEL (resp.models <> ["Others"])
+    Left _ -> pure unit
+  
+getVehicleDetails :: (Action -> Effect Unit) -> String -> String -> Flow GlobalState Unit
+getVehicleDetails push make model = do
+  resp <- callApi $ GetVehicleDetailsReq {make, model}
+  case resp of
+    Right (VehicleDetailsResp resp) -> void $ liftFlow $ push $ UpdateVehicleDetailsEntity resp
+    Left _ -> pure unit
+  
+getMake :: Array DropDownList -> Maybe String
+getMake list = let make = head $ filter (\item -> item.type == MAKE) list
+                in maybe Nothing (\item -> Just item.selected) make
