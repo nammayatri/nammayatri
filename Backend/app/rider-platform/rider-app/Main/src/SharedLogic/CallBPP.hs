@@ -27,7 +27,7 @@ import Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Core.Taxi.API.Update as API
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DB
-import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Ride as DRide
 import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
@@ -60,12 +60,12 @@ searchV2 ::
   ) =>
   BaseUrl ->
   API.SearchReqV2 ->
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   m API.SearchRes
-searchV2 gatewayUrl req merchantId = do
+searchV2 gatewayUrl req mOCId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.searchReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature' merchantId bapId "search" API.searchAPIV2 gatewayUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' mOCId bapId "search" API.searchAPIV2 gatewayUrl internalEndPointHashMap req
 
 searchMetro ::
   ( MonadFlow m,
@@ -90,12 +90,12 @@ selectV2 ::
   ) =>
   BaseUrl ->
   API.SelectReqV2 ->
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   m API.SelectRes
-selectV2 providerUrl req merchantId = do
+selectV2 providerUrl req mOCId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.selectReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature' merchantId bapId "select" API.selectAPIV2 providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' mOCId bapId "select" API.selectAPIV2 providerUrl internalEndPointHashMap req
 
 initV2 ::
   ( MonadFlow m,
@@ -108,12 +108,12 @@ initV2 ::
   ) =>
   BaseUrl ->
   API.InitReqV2 ->
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   m API.InitRes
-initV2 providerUrl req merchantId = do
+initV2 providerUrl req mOCId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.initReqContext.contextBapId
-  callBecknAPIWithSignature' merchantId bapId "init" API.initAPIV2 providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' mOCId bapId "init" API.initAPIV2 providerUrl internalEndPointHashMap req
 
 confirmV2 ::
   ( MonadFlow m,
@@ -126,12 +126,12 @@ confirmV2 ::
   ) =>
   BaseUrl ->
   ConfirmReqV2 ->
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   m ConfirmRes
-confirmV2 providerUrl req merchantId = do
+confirmV2 providerUrl req mOCId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.confirmReqContext.contextBapId
-  callBecknAPIWithSignature' merchantId bapId "confirm" API.confirmAPIV2 providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' mOCId bapId "confirm" API.confirmAPIV2 providerUrl internalEndPointHashMap req
 
 cancelV2 ::
   ( MonadFlow m,
@@ -142,14 +142,14 @@ cancelV2 ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     EsqDBFlow m r
   ) =>
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   BaseUrl ->
   CancelReqV2 ->
   m CancelRes
-cancelV2 merchantId providerUrl req = do
+cancelV2 mOCId providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.cancelReqContext.contextBapId
-  callBecknAPIWithSignature' merchantId bapId "cancel" API.cancelAPIV2 providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' mOCId bapId "cancel" API.cancelAPIV2 providerUrl internalEndPointHashMap req
 
 update ::
   ( MonadFlow m,
@@ -204,7 +204,7 @@ callTrack booking ride = do
             ..
           }
   trackBecknReq <- TrackACL.buildTrackReqV2 trackBuildReq
-  void $ callBecknAPIWithSignature' booking.merchantId merchant.bapId "track" API.trackAPIV2 booking.providerUrl internalEndPointHashMap trackBecknReq
+  void $ callBecknAPIWithSignature' booking.merchantOperatingCityId merchant.bapId "track" API.trackAPIV2 booking.providerUrl internalEndPointHashMap trackBecknReq
 
 data GetLocationRes = GetLocationRes
   { currPoint :: MapSearch.LatLong,
@@ -236,12 +236,12 @@ feedbackV2 ::
   ) =>
   BaseUrl ->
   RatingReqV2 ->
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   m RatingRes
-feedbackV2 providerUrl req merchantId = do
+feedbackV2 providerUrl req mOCId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.ratingReqContext.contextBapId
-  callBecknAPIWithSignature' merchantId bapId "feedback" API.ratingAPIV2 providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' mOCId bapId "feedback" API.ratingAPIV2 providerUrl internalEndPointHashMap req
 
 callStatusV2 ::
   ( MonadFlow m,
@@ -254,12 +254,12 @@ callStatusV2 ::
   ) =>
   BaseUrl ->
   StatusReqV2 ->
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   m StatusRes
-callStatusV2 providerUrl req merchantId = do
+callStatusV2 providerUrl req mOCId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.statusReqContext.contextBapId
-  callBecknAPIWithSignature' merchantId bapId "status" API.statusAPIV2 providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' mOCId bapId "status" API.statusAPIV2 providerUrl internalEndPointHashMap req
 
 callBecknAPIWithSignature ::
   ( MonadFlow m,
@@ -287,7 +287,7 @@ callBecknAPIWithSignature' ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     EsqDBFlow m r
   ) =>
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Text ->
   Text ->
   Proxy api ->
@@ -295,9 +295,9 @@ callBecknAPIWithSignature' ::
   HM.HashMap BaseUrl BaseUrl ->
   req ->
   m res
-callBecknAPIWithSignature' merchantId a b c d e req' = do
+callBecknAPIWithSignature' mOCId a b c d e req' = do
   fork ("sending " <> show b <> ", pushing ondc logs") do
-    void $ pushLogs b (toJSON req') merchantId.getId
+    void $ pushLogs b (toJSON req') mOCId.getId
   callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'
 
 callBecknAPIWithSignatureMetro ::

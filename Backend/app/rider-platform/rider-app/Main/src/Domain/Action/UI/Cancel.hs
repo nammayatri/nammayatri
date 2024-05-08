@@ -81,6 +81,7 @@ data CancelRes = CancelRes
     cancellationSource :: SBCR.CancellationSource,
     transactionId :: Text,
     merchant :: DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     cancelStatus :: Text,
     city :: Context.City,
     vehicleVariant :: DVeh.VehicleVariant
@@ -95,6 +96,7 @@ data CancelSearch = CancelSearch
     sendToBpp :: Bool,
     merchant :: DM.Merchant,
     city :: Context.City,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     vehicleVariant :: DVeh.VehicleVariant
   }
 
@@ -121,6 +123,7 @@ softCancel bookingId _ = do
         cancellationSource = SBCR.ByUser,
         transactionId = booking.transactionId,
         merchant = merchant,
+        merchantOperatingCityId = booking.merchantOperatingCityId,
         cancelStatus = show Enums.SOFT_CANCEL,
         vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType, -- TODO: fix it
         ..
@@ -171,6 +174,7 @@ cancel bookingId _ req = do
         cancellationSource = SBCR.ByUser,
         transactionId = booking.transactionId,
         merchant = merchant,
+        merchantOperatingCityId = booking.merchantOperatingCityId,
         cancelStatus = show Enums.CONFIRM_CANCEL,
         vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType, -- TODO: fix it
         ..
@@ -219,11 +223,13 @@ mkDomainCancelSearch personId estimateId = do
       merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
       isValueAddNP <- CQVAN.isValueAddNP estimate.providerId
       let searchRequestId = estimate.requestId
-      city <- case estimate.merchantOperatingCityId of
-        Nothing -> pure merchant.defaultCity
+      mOpCity <- case estimate.merchantOperatingCityId of
+        Nothing ->
+          CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity
+            >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId:" <> merchant.id.getId <> "city:" <> show merchant.defaultCity)
         Just mOCId ->
           CQMOC.findById mOCId
-            >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound mOCId.getId)
+            >>= fromMaybeM (MerchantOperatingCityNotFound mOCId.getId)
       pure
         CancelSearch
           { estimateId = estId,
@@ -233,6 +239,8 @@ mkDomainCancelSearch personId estimateId = do
             estimateStatus = estStatus,
             sendToBpp = isEstimateNotNew && isValueAddNP,
             merchant = merchant,
+            city = mOpCity.city,
+            merchantOperatingCityId = mOpCity.id,
             vehicleVariant = DVST.castServiceTierToVariant estimate.vehicleServiceTierType, -- TODO: fix it
             ..
           }

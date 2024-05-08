@@ -17,7 +17,7 @@ module SharedLogic.CallFRFSBPP where
 import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified Data.HashMap.Strict as HM
-import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
 import Kernel.Prelude
@@ -43,12 +43,12 @@ search ::
   ) =>
   BaseUrl ->
   Spec.SearchReq ->
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   m Spec.AckResponse
-search gatewayUrl req merchantId = do
+search gatewayUrl req mOCId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.searchReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature' merchantId bapId "search" Spec.searchAPI gatewayUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' mOCId bapId "search" Spec.searchAPI gatewayUrl internalEndPointHashMap req
 
 init ::
   ( MonadFlow m,
@@ -61,12 +61,12 @@ init ::
   ) =>
   BaseUrl ->
   Spec.InitReq ->
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   m Spec.AckResponse
-init providerUrl req merchantId = do
+init providerUrl req mOCId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.initReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature' merchantId bapId "init" Spec.initAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' mOCId bapId "init" Spec.initAPI providerUrl internalEndPointHashMap req
 
 confirm ::
   ( MonadFlow m,
@@ -79,12 +79,12 @@ confirm ::
   ) =>
   BaseUrl ->
   Spec.ConfirmReq ->
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   m Spec.AckResponse
-confirm providerUrl req merchantId = do
+confirm providerUrl req mOCId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.confirmReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature' merchantId bapId "confirm" Spec.confirmAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' mOCId bapId "confirm" Spec.confirmAPI providerUrl internalEndPointHashMap req
 
 status ::
   ( MonadFlow m,
@@ -97,12 +97,12 @@ status ::
   ) =>
   BaseUrl ->
   Spec.StatusReq ->
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   m Spec.AckResponse
-status providerUrl req merchantId = do
+status providerUrl req mOCId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.statusReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature' merchantId bapId "status" Spec.statusAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' mOCId bapId "status" Spec.statusAPI providerUrl internalEndPointHashMap req
 
 cancel ::
   ( MonadFlow m,
@@ -115,12 +115,12 @@ cancel ::
   ) =>
   BaseUrl ->
   Spec.CancelReq ->
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   m Spec.AckResponse
-cancel providerUrl req merchantId = do
+cancel providerUrl req mOCId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.cancelReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature' merchantId bapId "cancel" Spec.cancelAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature' mOCId bapId "cancel" Spec.cancelAPI providerUrl internalEndPointHashMap req
 
 callBecknAPIWithSignature' ::
   ( MonadFlow m,
@@ -133,7 +133,7 @@ callBecknAPIWithSignature' ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     EsqDBFlow m r
   ) =>
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Text ->
   Text ->
   Proxy api ->
@@ -141,7 +141,7 @@ callBecknAPIWithSignature' ::
   HM.HashMap BaseUrl BaseUrl ->
   req ->
   m res
-callBecknAPIWithSignature' merchantId a b c d e req' = do
+callBecknAPIWithSignature' mOCId a b c d e req' = do
   fork ("sending " <> show b <> ", pushing ondc logs") $ do
-    void $ pushLogs b (toJSON req') merchantId.getId
+    void $ pushLogs b (toJSON req') mOCId.getId
   callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'

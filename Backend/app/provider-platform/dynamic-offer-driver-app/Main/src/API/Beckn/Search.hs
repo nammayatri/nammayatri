@@ -37,7 +37,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as VNP
+import Tools.Error
 import TransactionLogs.PushLogs
 
 type API =
@@ -71,7 +73,8 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
     Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
       validatedSReq <- DSearch.validateRequest transporterId dSearchReq
       fork "search received pushing ondc logs" do
-        void $ pushLogs "search" (toJSON reqV2) validatedSReq.merchant.id.getId
+        merchantOperatingCity <- CQMOC.findByMerchantIdAndCity validatedSReq.merchant.id city >>= fromMaybeM (MerchantOperatingCityDoesNotExist $ "merchantId:-" <> validatedSReq.merchant.id.getId <> ",city:-" <> show city)
+        void $ pushLogs "search" (toJSON reqV2) merchantOperatingCity.id.getId
       let bppId = validatedSReq.merchant.subscriberId.getShortId
       bppUri <- Utils.mkBppUri transporterId.getId
       fork "search request processing" $
@@ -89,7 +92,7 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
             let context' = onSearchReq.onSearchReqContext
             logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
             void $
-              Callback.withCallback dSearchRes.provider "on_search" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
+              Callback.withCallback dSearchRes.provider validatedSReq.merchantOpCityId "on_search" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
                 pure onSearchReq
   pure Ack
 

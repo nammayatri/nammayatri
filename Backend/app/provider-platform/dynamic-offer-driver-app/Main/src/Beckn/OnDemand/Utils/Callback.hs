@@ -17,6 +17,7 @@ module Beckn.OnDemand.Utils.Callback where
 
 import Data.HashMap.Strict as HMS
 import Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import EulerHS.Prelude hiding ((.~))
 import qualified EulerHS.Types as ET
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
@@ -38,6 +39,7 @@ withCallback ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
   ) =>
   DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   WithBecknCallback api callback_success m
 withCallback = withCallback' withShortRetry
 
@@ -46,11 +48,12 @@ withCallback' ::
   (m () -> m ()) ->
   (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, CacheFlow m r) =>
   DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   WithBecknCallback api callback_success m
-withCallback' doWithCallback transporter action api cbUrl internalEndPointHashMap fromError f = do
+withCallback' doWithCallback transporter mOCId action api cbUrl internalEndPointHashMap fromError f = do
   let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
-  withBecknCallback doWithCallback (Just $ ET.ManagerSelector authKey) transporter.id.getId action api cbUrl internalEndPointHashMap fromError f
+  withBecknCallback doWithCallback (Just $ ET.ManagerSelector authKey) mOCId.getId action api cbUrl internalEndPointHashMap fromError f
 
 type Action = Text
 
@@ -77,7 +80,7 @@ withBecknCallback ::
   Maybe ET.ManagerSelector ->
   Text ->
   WithBecknCallback api callback_result m
-withBecknCallback doWithCallback auth transporterId action api cbUrl internalEndPointHashMap fromError cbHandler = do
+withBecknCallback doWithCallback auth mOCId action api cbUrl internalEndPointHashMap fromError cbHandler = do
   forkBecknCallback
     fromError
     doWithResult
@@ -87,7 +90,7 @@ withBecknCallback doWithCallback auth transporterId action api cbUrl internalEnd
   where
     doWithResult result = do
       fork ("sending " <> show action <> ", pushing ondc logs") do
-        void $ pushLogs action (toJSON result) transporterId
+        void $ pushLogs action (toJSON result) mOCId
       doWithCallback . void . callBecknAPI auth Nothing action api cbUrl internalEndPointHashMap $ result
 
 forkBecknCallback ::

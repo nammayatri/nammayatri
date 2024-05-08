@@ -22,6 +22,7 @@ where
 import qualified Domain.Action.Internal.Rating as DRating
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -57,6 +58,7 @@ data FeedbackRes = FeedbackRes
     providerUrl :: BaseUrl,
     transactionId :: Text,
     merchant :: DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     wasOfferedAssistance :: Maybe Bool,
     city :: Context.City,
     issueId :: Maybe Text,
@@ -94,6 +96,7 @@ feedback request = do
         providerId = booking.providerId,
         providerUrl = booking.providerUrl,
         transactionId = booking.transactionId,
+        merchantOperatingCityId = booking.merchantOperatingCityId,
         issueId = issueId',
         vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType,
         vehicleServiceTierType = booking.vehicleServiceTierType,

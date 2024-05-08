@@ -77,7 +77,7 @@ confirm (personId, _) quoteId mbPaymentMethodId =
     confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
     let ttlInInt = initTtl + confirmTtl + confirmBufferTtl
     handle (errHandler dConfirmRes.booking) $
-      void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq dConfirmRes.merchant.id
+      void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq dConfirmRes.booking.merchantOperatingCityId
 
     return $
       ConfirmRes
