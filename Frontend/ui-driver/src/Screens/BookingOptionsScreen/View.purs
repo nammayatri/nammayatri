@@ -12,7 +12,7 @@ import Language.Strings (getString)
 import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, ($), (<<<), (<>), (==), (<>), (&&), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, imageUrl)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, imageUrl, rippleColor, scrollView, scrollBarY, fillViewport)
 import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -42,25 +42,38 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , onBackPressed push $ const BackPressed
-    , afterRender push $ const AfterRender
-    , background Color.white900
-    , padding $ PaddingBottom 24
-    ]
-    $ [ headerLayout push state
-      , defaultVehicleView push state
-      , acCheckForDriversView push state
-      , downgradeVehicleView push state
-      , linearLayout
+  Anim.screenAnimation
+    $ frameLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        ]
+    $ [ linearLayout
           [ height MATCH_PARENT
-          , width $ V 1
-          , weight 1.0
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , onBackPressed push $ const BackPressed
+          , afterRender push $ const AfterRender
+          , background Color.white900
+          , padding $ PaddingBottom 24
           ]
-          []
+          $ [ headerLayout push state
+            , scrollView
+                [ width MATCH_PARENT
+                , weight 1.0
+                , scrollBarY false
+                , fillViewport true
+                ]
+                [ linearLayout
+                    [ height MATCH_PARENT
+                    , width MATCH_PARENT
+                    , orientation VERTICAL
+                    ]
+                    [ defaultVehicleView push state
+                    , acCheckForDriversView push state
+                    , downgradeVehicleView push state
+                    ]
+                ]
+            ]
       ]
 
 acCheckForDriversView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
@@ -91,12 +104,12 @@ acCheckForDriversView push state =
           , height WRAP_CONTENT
           ]
           [ textView
-              [ width WRAP_CONTENT
-              , height WRAP_CONTENT
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
               , weight 1.0
-              , color Color.black800
-              , text $ getString AC_CHECK_TITILE
-              ]
+                , color Color.black800
+                , text $ getString AC_CHECK_TITILE
+            ]
           , linearLayout
               [ width $ V 40
               , height $ V 22
