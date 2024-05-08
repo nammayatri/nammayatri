@@ -236,7 +236,11 @@ window.getMerchantConfig = function () {
           , "customerAppId" : "in.juspay.nammayatri"
           , "driverAppId" : "in.juspay.nammayatripartner"
         },
-        "waitingCharges" : 1.50
+        "waitingCharges" : 1.50,
+        "assets" :{
+          "auto_image" : "ic_auto_rickshaw",
+          "onboarding_auto_image" : "ny_ic_auto_side"
+        }
       },
       {
         "cityName" : "Hyderabad",
@@ -272,7 +276,11 @@ window.getMerchantConfig = function () {
           , "customerAppId" : "in.mobility.manayatri"
           , "driverAppId" : "in.mobility.manayatripartner"
         },
-        "waitingCharges" : 2.00
+        "waitingCharges" : 2.00,
+        "assets" :{
+          "auto_image" :  "ny_ic_black_yellow_auto_side_view",
+          "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
+        }
       },
       {
         "cityName" : "Mysore",
@@ -308,7 +316,11 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "assets" :{
+        "auto_image" : "ic_auto_rickshaw",
+        "onboarding_auto_image" : "ny_ic_auto_side"
+      }
       },
       {
         "cityName" : "Delhi",
@@ -344,7 +356,11 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 0.75
+      "waitingCharges" : 0.75,
+      "assets" :{
+        "auto_image" : "ic_auto_rickshaw",
+        "onboarding_auto_image" : "ny_ic_auto_side"
+      }
       },
       {
         "cityName" : "Chennai",
@@ -380,7 +396,11 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.00
+      "waitingCharges" : 1.00,
+      "assets" :{
+        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
+      }
       },
       {
         "cityName" : "Coimbatore",
@@ -416,7 +436,11 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "assets" :{
+        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
+      }
       },
       {
         "cityName" : "Puducherry",
@@ -452,7 +476,11 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "assets" :{
+        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
+      }
       },
       {
         "cityName" : "Tumakuru",
@@ -487,7 +515,11 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "assets" :{
+        "auto_image" : "ic_auto_rickshaw",
+        "onboarding_auto_image" : "ny_ic_auto_side"
+      }
       },
       {
         "cityName" : "Gurugram",
@@ -523,7 +555,11 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "assets" :{
+        "auto_image" : "ic_auto_rickshaw",
+        "onboarding_auto_image" : "ny_ic_auto_side"
+      }
       },
       {
         "cityName" : "Noida",
@@ -558,7 +594,11 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "assets" :{
+        "auto_image" : "ic_auto_rickshaw",
+        "onboarding_auto_image" : "ny_ic_auto_side"
+      }
       },
       {
         "cityName" : "TamilNaduCities",
@@ -594,7 +634,11 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "assets" :{
+        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
+      }
       },
       {
         "cityName" : "Minneapolis",
@@ -629,7 +673,49 @@ window.getMerchantConfig = function () {
         , "customerAppId" : "in.juspay.nammayatri"
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
-      "waitingCharges" : 1.50
+      "waitingCharges" : 1.50,
+      "assets" :{
+        "auto_image" : "ic_auto_rickshaw",
+        "onboarding_auto_image" : "ny_ic_auto_side"
+      }
+      },
+      {
+        "cityName" : "Kochi",
+        "mapImage" : "ny_ic_kochi_map",
+        "cityCode" : "std:0484",
+        "showSubscriptions" : true,
+        "cityLat" : 9.931233,
+        "cityLong" : 76.267303,
+        "supportNumber" : "",
+        "languageKey" : "ML_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : true,
+        "vehicleNSImg" : "ny_ic_auto_image",
+        "registration" : {
+            "supportWAN" : "918618963188",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : true,
+          "variantList" : ["AutoCategory"],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://www.getyatri.com"
+        , "customerAppId" : "net.openkochi.yatri"
+        , "driverAppId" : "net.openkochi.yatripartner"
+      },
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "assets" :{
+        "auto_image" : "ny_ic_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_right_side_black"
+      }
       }
   ]
   , "dashboard" : {

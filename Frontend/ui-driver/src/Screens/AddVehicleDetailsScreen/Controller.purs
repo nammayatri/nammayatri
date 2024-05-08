@@ -328,6 +328,7 @@ eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continu
   let merchant = getMerchant FunctionCall
   _ <- case merchant of
     NAMMAYATRI -> pure $ unsafePerformEffect $ contactSupportNumber "WHATSAPP"  -- unsafePerformEffect -> Temporary fix , need to update later
+    YATRI -> pure $ unsafePerformEffect $ contactSupportNumber "WHATSAPP"
     YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
     _ -> pure $ showDialer (getSupportNumber "") false
   pure NoAction
@@ -415,6 +416,7 @@ eval CancelButtonMultiRCPopup state = case state.props.multipleRCstatus of
                                           let merchant = getMerchant FunctionCall
                                           _ <- case merchant of
                                             NAMMAYATRI -> contactSupportNumber "WHATSAPP" --getWhatsAppSupportNo $ show merchant
+                                            YATRI -> contactSupportNumber "WHATSAPP"
                                             YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
                                             _ -> pure $ showDialer (getSupportNumber "") false
                                           pure NoAction

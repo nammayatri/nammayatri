@@ -126,6 +126,9 @@ dummyCityConfig = {
                     },
                     rateCardConfig : {
                       showLearnMore : false,
-                      learnMoreVideoLink : ""
+                      learnMoreVideoLink : "",
+                    assets :{
+                      auto_image :  "ny_ic_black_yellow_auto_side_view",
+                      onboarding_auto_image : ""
                     }
                   }

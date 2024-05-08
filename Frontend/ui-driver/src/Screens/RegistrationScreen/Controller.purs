@@ -252,7 +252,8 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = ex
 eval ContactSupport state = continueWithCmd state [do
   let merchant = getMerchant FunctionCall
   _ <- case merchant of
-    NAMMAYATRI -> contactSupportNumber "WHATSAPP" 
+    NAMMAYATRI -> contactSupportNumber "WHATSAPP"
+    YATRI -> contactSupportNumber "WHATSAPP"
     YATRISATHI -> JB.openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
     _ -> pure $ JB.showDialer (getSupportNumber "") false
   pure NoAction
