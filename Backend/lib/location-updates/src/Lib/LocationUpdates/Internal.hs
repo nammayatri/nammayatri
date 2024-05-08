@@ -287,6 +287,7 @@ addPointsImplementation driverId waypoints = do
   let key = makeWaypointsRedisKey driverId
       numPoints = length waypoints
   rPush key waypoints
+  Hedis.expire key 21600 -- 6 hours
   logInfo $ mconcat ["added ", show numPoints, " points for driverId = ", driverId.getId]
 
 clearLocationUpdatesImplementation :: (HedisFlow m env) => Id person -> m ()
