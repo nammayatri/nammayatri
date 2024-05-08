@@ -29,6 +29,7 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.TransporterConfig as DTC
 import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.SearchTry as ST
 import Environment
 import EulerHS.Prelude
@@ -181,7 +182,7 @@ cancelSearch ::
   ST.SearchTry ->
   m ()
 cancelSearch _merchantId searchTry = do
-  driverSearchReqs <- QSRD.findAllActiveBySRId searchTry.requestId
+  driverSearchReqs <- QSRD.findAllActiveBySRId searchTry.requestId Domain.Active
   QST.cancelActiveTriesByRequestId searchTry.requestId
   QSRD.setInactiveAndPulledByIds $ (.id) <$> driverSearchReqs
   QDQ.setInactiveBySRId searchTry.requestId

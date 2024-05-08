@@ -209,6 +209,7 @@ library
       Domain.Action.UI.RideSummary
       Domain.Action.UI.Route
       Domain.Action.UI.SafetyWebhook
+      Domain.Action.UI.SearchRequestForDriver
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.SpecialLocation
       Domain.Action.UI.Tokenization
@@ -278,7 +279,6 @@ library
       Domain.Types.RideRoute
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
-      Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
       Domain.Types.ServiceTierType
       Domain.Types.UtilsTH
@@ -404,7 +404,6 @@ library
       Storage.Beam.RiderDetails
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequest.SearchReqLocation
-      Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
       Storage.Beam.SystemConfigs
       Storage.Cac.DriverIntelligentPoolConfig
@@ -545,7 +544,7 @@ library
       Storage.Queries.RiderDetails
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequest.SearchReqLocation
-      Storage.Queries.SearchRequestForDriver
+      Storage.Queries.SearchRequestForDriverExtra
       Storage.Queries.SearchTry
       Storage.Queries.Status
       Storage.Queries.Transformers.CancellationReason
@@ -556,6 +555,7 @@ library
       Storage.Queries.Transformers.ReelsData
       Storage.Queries.Transformers.RegistrationToken
       Storage.Queries.Transformers.Ride
+      Storage.Queries.Transformers.SearchRequestForDriver
       Storage.Queries.TranslationsExtra
       Storage.Queries.Vehicle.Internal
       Storage.Queries.VehicleDetailsExtra
@@ -650,6 +650,7 @@ library
       Domain.Types.ReelsData
       Domain.Types.RegistrationToken
       Domain.Types.Ride
+      Domain.Types.SearchRequestForDriver
       Domain.Types.SubscriptionConfig
       Domain.Types.Toll
       Domain.Types.Translations
@@ -716,6 +717,7 @@ library
       Storage.Beam.ReelsData
       Storage.Beam.RegistrationToken
       Storage.Beam.Ride
+      Storage.Beam.SearchRequestForDriver
       Storage.Beam.SubscriptionConfig
       Storage.Beam.Toll
       Storage.Beam.Translations
@@ -795,6 +797,7 @@ library
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.OrphanInstances.SearchRequestForDriver
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.Vehicle
       Storage.Queries.OrphanInstances.VehicleDetails
@@ -811,6 +814,7 @@ library
       Storage.Queries.ReelsData
       Storage.Queries.RegistrationToken
       Storage.Queries.Ride
+      Storage.Queries.SearchRequestForDriver
       Storage.Queries.SubscriptionConfig
       Storage.Queries.Toll
       Storage.Queries.Translations

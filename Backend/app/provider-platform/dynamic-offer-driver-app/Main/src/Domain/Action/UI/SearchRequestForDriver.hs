@@ -11,100 +11,23 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingVia #-}
 
-module Domain.Types.SearchRequestForDriver where
+module Domain.Action.UI.SearchRequestForDriver where
 
 import qualified Domain.Types.BapMetadata as DSM
 import Domain.Types.Common as DTC
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequest)
-import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DLoc
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSSL
+import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.Vehicle as Variant
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Version
-import Kernel.Utils.GenericPretty
-import SharedLogic.DriverPool.Types
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
-
-data DriverSearchRequestStatus = Active | Inactive
-  deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
-  deriving (PrettyShow) via Showable DriverSearchRequestStatus
-
-$(mkBeamInstancesForEnum ''DriverSearchRequestStatus)
-
-data SearchRequestForDriverResponse
-  = Accept
-  | Reject
-  | Pulled
-  deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
-  deriving (PrettyShow) via Showable SearchRequestForDriverResponse
-
-$(mkBeamInstancesForEnum ''SearchRequestForDriverResponse)
-
-data SearchRequestForDriver = SearchRequestForDriver
-  { id :: Id SearchRequestForDriver,
-    requestId :: Id DSR.SearchRequest,
-    searchTryId :: Id DST.SearchTry,
-    estimateId :: Maybe Text,
-    merchantId :: Maybe (Id DM.Merchant),
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    baseFare :: Maybe HighPrecMoney,
-    startTime :: UTCTime,
-    searchRequestValidTill :: UTCTime,
-    driverId :: Id Person,
-    actualDistanceToPickup :: Meters,
-    straightLineDistanceToPickup :: Meters,
-    durationToPickup :: Seconds,
-    vehicleVariant :: Variant.Variant,
-    vehicleServiceTier :: DVST.ServiceTierType,
-    vehicleServiceTierName :: Maybe Text,
-    airConditioned :: Maybe Bool,
-    status :: DriverSearchRequestStatus,
-    batchNumber :: Int,
-    lat :: Maybe Double,
-    lon :: Maybe Double,
-    createdAt :: UTCTime,
-    response :: Maybe SearchRequestForDriverResponse,
-    driverMinExtraFee :: Maybe HighPrecMoney,
-    driverMaxExtraFee :: Maybe HighPrecMoney,
-    driverStepFee :: Maybe HighPrecMoney,
-    driverDefaultStepFee :: Maybe HighPrecMoney,
-    rideRequestPopupDelayDuration :: Seconds,
-    isPartOfIntelligentPool :: Bool,
-    pickupZone :: Bool,
-    cancellationRatio :: Maybe Double,
-    acceptanceRatio :: Maybe Double,
-    driverAvailableTime :: Maybe Double,
-    parallelSearchRequestCount :: Maybe Int,
-    driverSpeed :: Maybe Double,
-    keepHiddenForSeconds :: Seconds,
-    mode :: Maybe DI.DriverMode,
-    goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
-    rideFrequencyScore :: Maybe Double,
-    customerCancellationDues :: HighPrecMoney,
-    clientSdkVersion :: Maybe Version,
-    clientBundleVersion :: Maybe Version,
-    clientConfigVersion :: Maybe Version,
-    clientDevice :: Maybe Device,
-    backendConfigVersion :: Maybe Version,
-    backendAppVersion :: Maybe Text,
-    currency :: Currency
-  }
-  deriving (Generic, Show)
 
 data IOSSearchRequestForDriverAPIEntity = IOSSearchRequestForDriverAPIEntity
   { searchRequestId :: Id DST.SearchTry, -- TODO: Deprecated, to be removed

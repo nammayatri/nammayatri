@@ -1,0 +1,188 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  SearchRequest: Domain.Types.SearchRequest
+  SearchTry: Domain.Types.SearchTry
+  Money: Kernel.Types.Common
+  Variant: Domain.Types.Vehicle
+  ServiceTierType: Domain.Types.ServiceTierType
+  DriverGoHomeRequest: Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
+  Version: Kernel.Types.Version
+  Device: Kernel.Types.Version
+  Person: Domain.Types.Person
+  DriverMode: Domain.Types.DriverInformation
+  DeviceType: Kernel.Types.Version
+  LocalTime: Data.Time
+
+
+
+SearchRequestForDriver:
+  tableName: search_request_for_driver
+  beamInstance: MakeTableInstancesWithTModifier [("requestId", "search_request_id")]
+
+  types:
+    DriverSearchRequestStatus:
+     enum: "Active, Inactive"
+    SearchRequestForDriverResponse:
+      enum: "Accept, Reject, Pulled"
+
+
+  fields:
+    id : Id SearchRequestForDriver
+    requestId : Id SearchRequest
+    searchTryId : Id SearchTry
+    estimateId : Maybe Text
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId : Id MerchantOperatingCity
+    baseFare : Maybe Money
+    startTime : UTCTime
+    searchRequestValidTill : UTCTime
+    driverId : Id Person
+    actualDistanceToPickup : Meters
+    straightLineDistanceToPickup : Meters
+    durationToPickup : Seconds
+    vehicleVariant : Variant
+    vehicleServiceTier : ServiceTierType|NoRelation
+    vehicleServiceTierName : Maybe Text
+    airConditioned : Maybe Bool
+    status : DriverSearchRequestStatus
+    batchNumber : Int
+    lat : Maybe Double
+    lon : Maybe Double
+    createdAt : UTCTime
+    response : Maybe SearchRequestForDriverResponse
+    driverMinExtraFee : Maybe Money
+    driverMaxExtraFee : Maybe Money
+    driverStepFee: Maybe HighPrecMoney
+    driverDefaultStepFee: Maybe HighPrecMoney 
+    rideRequestPopupDelayDuration : Seconds
+    isPartOfIntelligentPool : Bool
+    pickupZone : Bool
+    cancellationRatio : Maybe Double
+    acceptanceRatio : Maybe Double
+    driverAvailableTime : Maybe Double
+    parallelSearchRequestCount : Maybe Int
+    driverSpeed : Maybe Double
+    keepHiddenForSeconds : Seconds
+    mode : Maybe DriverMode
+    goHomeRequestId : Maybe (Id DriverGoHomeRequest)
+    rideFrequencyScore : Maybe Double
+    customerCancellationDues : HighPrecMoney
+    clientSdkVersion : Maybe Version
+    clientBundleVersion : Maybe Version
+    clientConfigVersion : Maybe Version
+    clientDevice : Maybe Device
+    backendConfigVersion : Maybe Version
+    backendAppVersion : Maybe Text
+    currency: Currency
+
+  beamType:
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
+    clientOsVersion: Maybe Text
+    merchantOperatingCityId: Maybe Text
+    createdAt: LocalTime
+    searchRequestValidTill: LocalTime
+    vehicleServiceTier: Maybe ServiceTierType
+
+
+  beamFields:
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
+
+    baseFare:
+      baseFare: Maybe Money
+      baseFareAmount: Maybe HighPrecMoney  
+
+    driverMinExtraFee:
+      driverMinExtraFee: Maybe Money
+      driverMinExtraFeeAmount: Maybe HighPrecMoney
+
+    driverMaxExtraFee:
+      driverMaxExtraFee: Maybe Money
+      driverMaxExtraFeeAmount: Maybe HighPrecMoney
+
+    driverStepFee:
+      driverStepFee: Maybe Money
+      driverDefaultStepFee: Maybe HighPrecMoney
+
+    driverDefaultStepFee:
+      driverDefaultStepFee: Maybe Money
+      driverDefaultStepFeeAmount: Maybe HighPrecMoney  
+      
+
+  fromTType:
+    merchantOperatingCityId: Storage.Queries.Transformers.SearchRequestForDriver.getMerchantOpCId merchantOperatingCityId merchantId requestId|EM
+    clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
+    clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
+    clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
+    backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
+    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
+    vehicleServiceTier: fromMaybe (SharedLogic.DriverPool.Types.castVariantToServiceTier vehicleVariant) vehicleServiceTier|E
+    createdAt: Data.Time.localTimeToUTC Data.Time.utc searchRequestValidTill|E
+    searchRequestValidTill: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
+    baseFare: Kernel.Types.Common.mkAmountWithDefault baseFareAmount <$> baseFare|E
+    driverMinExtraFee: Kernel.Types.Common.mkAmountWithDefault driverMinExtraFeeAmount <$> driverMinExtraFee|E
+    driverMaxExtraFee: Kernel.Types.Common.mkAmountWithDefault driverMaxExtraFeeAmount <$> driverMaxExtraFee|E
+    customerCancellationDues: getCustomerCancellationDues
+    driverStepFee: Kernel.Types.Common.mkAmountWithDefault driverStepFeeAmount <$> driverStepFee|E
+    driverDefaultStepFee: Kernel.Types.Common.mkAmountWithDefault driverDefaultStepFeeAmount <$> driverDefaultStepFee|E
+    currency: fromMaybe INR currency|E
+
+
+  toTType:
+    merchantOperatingCityId: Just $ Kernel.Types.Id.getId merchantOperatingCityId|E
+    clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
+    clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
+    clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
+    backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
+    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
+    clientOsType:  (clientDevice <&> (.deviceType))|E
+    vehicleServiceTier: Kernel.Prelude.Just|I
+    createdAt: Data.Time.utcToLocalTime Data.Time.utc searchRequestValidTill|E
+    searchRequestValidTill: Data.Time.utcToLocalTime Data.Time.utc searchRequestValidTill|E
+    baseFare: Kernel.Prelude.roundToIntegral <$> baseFare|E
+    baseFareAmount: baseFare|E
+    driverMinExtraFee: Kernel.Prelude.roundToIntegral <$> driverMinExtraFee|E
+    driverMaxExtraFee: Kernel.Prelude.roundToIntegral <$> driverMaxExtraFee|E
+    driverMinExtraFeeAmount: driverMinExtraFee|E
+    driverMaxExtraFeeAmount: driverMaxExtraFee|E
+    driverStepFee: Kernel.Prelude.roundToIntegral <$> driverStepFee|E
+    driverDefaultStepFee: Kernel.Prelude.roundToIntegral <$> driverDefaultStepFee|E
+    driverStepFeeAmount: driverStepFee|E
+    driverDefaultStepFeeAmount: driverDefaultStepFee|E
+    currency: Just currency|E
+
+  constriants:
+    id: PrimaryKey
+    searchTryId: SecondaryKey
+    requestId: SecondaryKey
+
+  queries:
+    findAllActiveBySTId:
+      kvFunction: findAllWithKV
+      where:
+        and: [searchTryId,status]
+
+    findAllActiveBySRId:
+      kvFunction: findAllWithKV
+      where:
+       and: [requestId, status]
+
+    updateDriverResponse:
+      kvFunction: updateOneWithKV
+      params: [response, status]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [updatedAt]
+
+  excludedDefaultQueries:
+    - create
+    - createMany  
+
