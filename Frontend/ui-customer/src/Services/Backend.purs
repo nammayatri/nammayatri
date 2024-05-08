@@ -1375,6 +1375,7 @@ mkRentalSearchReq slat slong dlat dlong srcAdd desAdd startTime estimatedRentalD
                                                                "lon" : slong
                                                    },"address" : (LocationAddress srcAdd)
                                                   },
+                                                  "isReallocationEnabled" : Just appConfig.feature.enableRentalReallocation,
                                                   "startTime" : startTime,
                                                   "estimatedRentalDistance" : estimatedRentalDistance,
                                                   "estimatedRentalDuration" : estimatedRentalDuration

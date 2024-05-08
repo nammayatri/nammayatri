@@ -1250,3 +1250,8 @@ getTE stringKey =
     RENTAL_CHARGES -> "అద్దె ఛార్జీలు"
     RENTAL_INFO_POLICY_DESC -> "&#8226; అద్దె బుకింగ్‌కి ప్రతి గంటకు 10 కిలోమీటర్ల బేస్ లభిస్తుంది.<br><br>&#8226; మీరు ఎంచుకున్న వాటికి తక్కువ ధరకు మరిన్ని కిలోమీటర్లు జోడించడాన్ని ఎంచుకోవచ్చు దూరాన్ని పెంచడం ద్వారా అద్దె వ్యవధి."
     RENTAL_SCREEN_EXPLAINER includedKm -> includedKm <> " is included per hour of booking.Extra km and minutes will be charged as per fare policy of respective vehicle."
+    INSTANT -> "తక్షణ"
+    COMING_SOON -> "త్వరలో!"
+    CANCEL_SCHEDULED_RIDE -> "షెడ్యూల్డ్ రైడ్‌ని రద్దు చేయి"
+    CANCEL_SCHEDULED_RIDE_DESC -> "మీరు ఖచ్చితంగా ఈ రైడ్‌ని రద్దు చేయాలనుకుంటున్నారా?<br><br> (బహుళ రద్దుల వలన మీరు మరిన్ని అద్దె రైడ్‌లను అంగీకరించకుండా నిరోధించబడవచ్చు)"
+    CONFIRM_CANCELLATION -> "రద్దును నిర్ధారించండి"

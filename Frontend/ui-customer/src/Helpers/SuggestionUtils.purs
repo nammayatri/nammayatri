@@ -22,7 +22,7 @@ import Prelude
 import Data.Array(singleton,catMaybes, any, sortWith, reverse, take, filter, (:), length, (!!), fromFoldable, toUnfoldable, snoc, cons, concat, null, head)
 import Data.Ord (comparing)
 import Screens.Types (LocationListItemState(..),SourceGeoHash, DestinationGeoHash,SuggestionsMap(..), Suggestions(..), Trip(..), LocationItemType(..), HomeScreenState(..), Address, LocationType(..))
-import Helpers.Utils(getDistanceBwCordinates, getDifferenceBetweenDates, parseSourceHashArray, toStringJSON, fetchImage, FetchImageFrom(..), differenceOfLocationLists, checkPrediction, updateLocListWithDistance)
+import Helpers.Utils(getDistanceBwCordinates, parseSourceHashArray, toStringJSON, fetchImage, FetchImageFrom(..), differenceOfLocationLists, checkPrediction, updateLocListWithDistance)
 import Data.Int(toNumber)
 import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..), getValueToLocalNativeStore)
 import MerchantConfig.Types (SuggestedDestinationAndTripsConfig)

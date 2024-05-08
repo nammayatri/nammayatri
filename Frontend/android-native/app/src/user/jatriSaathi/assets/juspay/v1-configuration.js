@@ -305,31 +305,38 @@ window.getMerchantConfig = function () {
       , "variantInfo" : {
           "hatchback" : {
             "name" : "AC Cab",
-            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_sedan_ac_side.png"
+            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_sedan_ac_side.png",
+            "leftImageView" : "ny_ic_sedan_left_view,"
           },
           "taxiPlus" : {
             "name" : "AC Cab",
-            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_sedan_ac_side.png"
+            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_sedan_ac_side.png",
+            "leftImageView" : "ny_ic_sedan_left_view,"
           },
           "sedan" : {
             "name" : "AC Cab",
-            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_sedan_ac_side.png"
+            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_sedan_ac_side.png",
+            "leftImageView" : "ny_ic_sedan_left_view,"
           },
           "taxi" : {
             "name" : "Non AC Taxi",
-            "image" : "ny_ic_taxi_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_taxi_side.png"
+            "image" : "ny_ic_taxi_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_taxi_side.png",
+            "leftImageView" : "ny_ic_hatchback_left_view,"
           },
           "suv" : {
             "name" : "SUV",
-            "image" : "ny_ic_suv_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_suv_ac_side.png"
+            "image" : "ny_ic_suv_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_suv_ac_side.png",
+            "leftImageView" : "ny_ic_suv_left_view,"
           },
           "autoRickshaw" : {
             "name" : "Auto Rickshaw",
-            "image" : "ny_ic_single_estimate_auto,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_single_estimate_auto.png"
+            "image" : "ny_ic_single_estimate_auto,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_single_estimate_auto.png",
+            "leftImageView" : "ny_ic_auto_left_view,"
           },
           "bookAny" : {
             "name" : "Book Any",
-            "image" : "ny_ic_cab_multiple,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_cab_multiple.png"
+            "image" : "ny_ic_cab_multiple,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_cab_multiple.png",
+            "leftImageView" : ","
           },
         }
       }

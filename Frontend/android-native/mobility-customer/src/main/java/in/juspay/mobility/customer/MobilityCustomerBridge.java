@@ -197,7 +197,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         Marker currMarker = (Marker) markers.get(src);
                         currMarker.setTitle("Vehicle Icon On Map");
                         Marker destMarker = (Marker) markers.get(dest);
-                        JSONObject specialLocationObject = new JSONObject(specialLocation);
                         String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
                         MarkerConfig markerConfig = new MarkerConfig();
                         markerConfig.locationName(eta);

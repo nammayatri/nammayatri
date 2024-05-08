@@ -175,31 +175,38 @@ config =
       , variantInfo : {
         hatchback : {
           name : "Hatchback",
-          image : "ny_ic_hatchback,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_hatchback-2.png"
+          image : "ny_ic_hatchback,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_hatchback-2.png",
+          leftViewImage : "ny_ic_hatchback_left_view,"
           },
         taxiPlus : {
           name : "AC Taxi",
-          image : "ny_ic_sedan_ac,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_sedan_ac.png"
+          image : "ny_ic_sedan_ac,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_sedan_ac.png",
+          leftViewImage : "ny_ic_sedan_left_view,"
         },
         sedan : {
           name : "Sedan",
-          image : "ny_ic_sedan,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_sedan.png"
+          image : "ny_ic_sedan,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_sedan.png",
+          leftViewImage : "ny_ic_sedan_left_view,"
         },
         taxi : {
           name : "Non-AC Taxi",
-          image : "ny_ic_sedan,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_sedan.png"
+          image : "ny_ic_sedan,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_sedan.png",
+          leftViewImage : "ny_ic_sedan_left_view,"
         },
         suv : {
           name : "SUV",
-          image : "ny_ic_suv,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv.png"
+          image : "ny_ic_suv,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv.png",
+          leftViewImage : "ny_ic_suv_left_view,"
         },
         autoRickshaw : {
           name : "Auto Rickshaw",
-          image : "ny_ic_auto_quote_list,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_auto_quote_list.png"
+          image : "ny_ic_auto_quote_list,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_auto_quote_list.png",
+          leftViewImage : "ny_ic_auto_left_view,"
         },
         bookAny : {
           name : "Book Any",
-          image : "ny_ic_auto_cab_green,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_auto_cab_green.png"
+          image : "ny_ic_auto_cab_green,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_auto_cab_green.png",
+          leftViewImage : ","
         }
       }
       , enableOnlyAuto : false
@@ -233,7 +240,9 @@ config =
     shareWithEmergencyContacts: true,
     enableAutoReferral : true,
     enableCustomerSupportForSafety : false,
-    enableSpecialPickup : JB.jBridgeMethodExists "locateOnMapV2"
+    enableSpecialPickup : EHC.jBridgeMethodExists "locateOnMapV2",
+    enableAcPopup : false,
+    enableRentalReallocation : true
   }
 
   , rideCompletedCardConfig : {

@@ -72,7 +72,7 @@ type DriverInfoCardProps =
     merchantCity :: City,
     showBanner :: Boolean,
     isChatWithEMEnabled :: Boolean,
-    isRateCardAvailable :: Boolean
+    isRateCardAvailable :: Boolean,
     rideDurationTimer :: String,
     rideDurationTimerId :: String,
     endOTPShown :: Boolean,

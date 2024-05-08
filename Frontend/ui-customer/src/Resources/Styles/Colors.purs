@@ -421,3 +421,6 @@ lightGreyBlue2 = "#6C7393"
 
 lightGrey1 :: Color
 lightGrey1 = "#F3F3F3"
+
+moonCreme :: Color
+moonCreme = "#FFF5DA"

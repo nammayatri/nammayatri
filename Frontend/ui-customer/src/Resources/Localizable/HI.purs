@@ -1235,3 +1235,8 @@ getHI stringKey =
         RENTAL_CHARGES -> "किराये की लागत"
         RENTAL_INFO_POLICY_DESC -> "&#8226; हर रेंटल बुकिंग की हर घंटे आपको 10 किलोमीटर की बेस मिलती है। <br><br>&#8226; आप दूरी बढ़ाने के माध्यम से एक ही निर्वाचित रेंटल अवधि के लिए निम्नलिखित मूल्य पर अधिक किलोमीटर जोड़ सकते हैं।"
         RENTAL_SCREEN_EXPLAINER includedKm -> includedKm <> " is included per hour of booking.Extra km and minutes will be charged as per fare policy of respective vehicle."
+        INSTANT -> "तुरंत"
+        COMING_SOON -> "जल्द आ रहा है!"
+        CANCEL_SCHEDULED_RIDE -> "निर्धारित सवारी रद्द करें"
+        CANCEL_SCHEDULED_RIDE_DESC -> "क्या आप वाकई इस सवारी को रद्द करना चाहते हैं?<br><br>(एक से अधिक बार रद्दीकरण के कारण आपको अधिक किराये की सवारी का अनुरोध करने से रोका जा सकता है)"
+        CONFIRM_CANCELLATION -> "रद्दीकरण की पुष्टि करें"

@@ -93,9 +93,9 @@ homeScreen = do
     RideConfirmed updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ ONGOING_RIDE updatedState)
-    CancelRide updatedState -> do
+    CancelRide updatedState cancelSearchType-> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ CANCEL_RIDE_REQUEST updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CANCEL_RIDE_REQUEST updatedState cancelSearchType)
     UpdatedState screenState saveToCurrLocs -> do
        modifyScreenState $ HomeScreenStateType (\homeScreenState → screenState)
        App.BackT $ App.BackPoint <$> (pure $ RELOAD saveToCurrLocs)

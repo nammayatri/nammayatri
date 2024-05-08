@@ -1253,3 +1253,8 @@ getTA stringKey =
     RENTAL_CHARGES -> "வாடகை கட்டணங்கள்"
     RENTAL_INFO_POLICY_DESC -> "&#8226; வாடகை முன்பதிவின் ஒவ்வொரு மணிநேரத்திற்கும் 10 கிலோமீட்டர்கள் கிடைக்கும்.<br><br>&#8226; நீங்கள் தேர்ந்தெடுத்த அதே விலையில் அதிக கிலோமீட்டர்களை குறைந்த விலையில் சேர்க்கலாம். தூரத்தை அதிகரிப்பதன் மூலம் வாடகை காலம்."
     RENTAL_SCREEN_EXPLAINER includedKm -> includedKm <> " is included per hour of booking.Extra km and minutes will be charged as per fare policy of respective vehicle."
+    INSTANT -> "உடனடி"
+    COMING_SOON -> "விரைவில்!"
+    CANCEL_SCHEDULED_RIDE -> "திட்டமிட்ட பயணத்தை ரத்துசெய்"
+    CANCEL_SCHEDULED_RIDE_DESC -> "நிச்சயமாக இந்த சவாரியை ரத்து செய்ய விரும்புகிறீர்களா?<br><br> (பலமுறை ரத்துசெய்தால், அதிக வாடகை சவாரிகளை ஏற்க முடியாமல் நீங்கள் தடுக்கப்படலாம்)"
+    CONFIRM_CANCELLATION -> "ரத்து செய்வதை உறுதிப்படுத்தவும்"

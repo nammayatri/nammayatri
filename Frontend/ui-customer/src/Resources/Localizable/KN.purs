@@ -1236,3 +1236,8 @@ getKN stringKey =
         RENTAL_CHARGES -> "ಬಾಡಿಗೆ ಶುಲ್ಕ"
         RENTAL_INFO_POLICY_DESC -> "&#8226; ನಿಕಟವಿದ್ಯಮಾನ ಬುಕಿಂಗ್ ಪ್ರತಿ ಗಂಟೆಗೆ 10 ಕಿಲೋಮೀಟರ್ ಯಾವುದೇ ಅಂಕಗಳನ್ನು ನೀಡುತ್ತದೆ.<br><br>&#8226; ನೀವು ದೂರವನ್ನು ಹೆಚ್ಚಿಸಿ ಸಮಾನವಾದ ಬೆಲೆಯಲ್ಲಿ ಹೆಚ್ಚಿನ ಕಿಲೋಮೀಟರ್‌ಗಳನ್ನು ಆರಿಸಬಹುದು."
         RENTAL_SCREEN_EXPLAINER includedKm -> includedKm <> " is included per hour of booking.Extra km and minutes will be charged as per fare policy of respective vehicle."
+        INSTANT -> "ತ್ವರಿತ"
+        COMING_SOON -> "ಶೀಘ್ರದಲ್ಲೇ ಬರಲಿದೆ!"
+        CANCEL_SCHEDULED_RIDE -> "ನಿಗದಿತ ರೈಡ್ ರದ್ದುಮಾಡಿ"
+        CANCEL_SCHEDULED_RIDE_DESC -> "ಈ ರೈಡ್ ಅನ್ನು ರದ್ದುಗೊಳಿಸಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ?<br><br>(ಹಲವು ರದ್ದತಿಗಳು ಹೆಚ್ಚಿನ ಬಾಡಿಗೆ ಸವಾರಿಗಳನ್ನು ವಿನಂತಿಸದಂತೆ ನಿಮ್ಮನ್ನು ನಿರ್ಬಂಧಿಸಲು ಕಾರಣವಾಗಬಹುದು)"
+        CONFIRM_CANCELLATION -> "ರದ್ದತಿಯನ್ನು ದೃಢೀಕರಿಸಿ"

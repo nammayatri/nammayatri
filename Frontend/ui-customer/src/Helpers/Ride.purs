@@ -83,6 +83,7 @@ checkRideStatus rideAssigned = do
                       , multipleScheduled : multipleScheduled
                       , fareProductType : fareProductType
                       , nearestRideScheduledAtUTC : ""
+                      , vehicleVariant : fromMaybe "" resp.vehicleServiceTierType
                       }))},
                   props
                     { currentStage = rideStatus
@@ -106,6 +107,7 @@ checkRideStatus rideAssigned = do
                       , multipleScheduled : multipleScheduled
                       , fareProductType : fareProductType
                       , nearestRideScheduledAtUTC : ""
+                      , vehicleVariant : fromMaybe "" resp.vehicleServiceTierType
                       }))}})
           updateLocalStage HomeScreen
         else do

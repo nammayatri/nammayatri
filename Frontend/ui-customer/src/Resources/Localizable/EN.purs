@@ -1237,3 +1237,8 @@ getEN stringKey =
         RENTAL_CHARGES -> "Rental Charges"
         RENTAL_INFO_POLICY_DESC -> "&#8226; Each hour of rental booking gets you a base of 10 kilometers.<br><br>&#8226; You can choose to add more kilometers at a lower price for the same selected rental duration by increasing the distance."
         RENTAL_SCREEN_EXPLAINER includedKm -> includedKm <> " is included per hour of booking.Extra km and minutes will be charged as per fare policy of respective vehicle."
+        INSTANT -> "Instant"
+        COMING_SOON -> "Coming Soon"
+        CANCEL_SCHEDULED_RIDE -> "Cancel Scheduled Ride"
+        CANCEL_SCHEDULED_RIDE_DESC -> "Are you sure you want to cancel this ride?<br><br>(Multiple cancellations may lead to you being blocked from requesting more rental rides)"
+        CONFIRM_CANCELLATION -> "Confirm Cancellation" 

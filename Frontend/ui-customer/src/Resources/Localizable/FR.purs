@@ -1237,3 +1237,8 @@ getFR stringKey =
         RENTAL_CHARGES -> "Frais de location"
         RENTAL_INFO_POLICY_DESC -> "<b>●</b> Chaque heure de réservation de location vous donne une base de 10 kilomètres.<br><br><b>●</b> Vous pouvez choisir d'ajouter plus de kilomètres à un prix inférieur pour la même durée de location sélectionnée en augmentant la distance."
         RENTAL_SCREEN_EXPLAINER includedKm -> includedKm <> " is included per hour of booking.Extra km and minutes will be charged as per fare policy of respective vehicle."
+        INSTANT -> "Instantanée"
+        COMING_SOON -> "À venir!"
+        CANCEL_SCHEDULED_RIDE -> "Annuler le trajet programmé"
+        CANCEL_SCHEDULED_RIDE_DESC -> "Êtes-vous sûr de vouloir annuler ce trajet ?<br><br>(Plusieurs annulations peuvent vous empêcher de demander d'autres trajets de location)"
+        CONFIRM_CANCELLATION -> "Confirmer l'annulation"

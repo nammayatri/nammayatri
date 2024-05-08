@@ -77,7 +77,7 @@ import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime)
+import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime, VehicleViewType(..))
 import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Types.App (GlobalState(..))
@@ -632,35 +632,62 @@ fetchDefaultPickupPoint locations lati longi =
     [foundLocation] -> foundLocation.place
     _ -> ""
 
-getVehicleVariantImage :: String -> String
-getVehicleVariantImage variant =
+getVehicleVariantImage :: String -> VehicleViewType -> String
+getVehicleVariantImage variant viewType =
   let variantConfig = (getAppConfig appConfig).estimateAndQuoteConfig.variantInfo
       city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in 
-    case variant of
-      "TAXI"          ->  variantConfig.taxi.image 
-      "TAXI_PLUS"     -> variantConfig.taxiPlus.image
-      "SEDAN"         -> variantConfig.sedan.image
-      "SUV"           -> variantConfig.suv.image
-      "HATCHBACK"     -> variantConfig.hatchback.image
-      "ECO"           -> variantConfig.hatchback.image
-      "COMFY"         -> variantConfig.sedan.image
-      "PREMIUM"       -> variantConfig.sedan.image
-      "AUTO_RICKSHAW" -> case city of 
-                          Kochi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
-                          Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
-                          Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
-                          Delhi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
-                          _ -> variantConfig.autoRickshaw.image
-      "BOOK_ANY"      -> case getMerchant FunctionCall of 
-                           YATRISATHI -> variantConfig.bookAny.image
-                           _ -> case city of 
-                                  Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
-                                  Chennai -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
-                                  Kochi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
-                                  Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
-                                  _ -> variantConfig.bookAny.image
-      _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
+    if viewType == LEFT_VIEW
+      then do 
+        case variant of
+          "TAXI"          -> variantConfig.taxi.leftViewImage 
+          "TAXI_PLUS"     -> variantConfig.taxiPlus.leftViewImage
+          "SEDAN"         -> variantConfig.sedan.leftViewImage
+          "SUV"           -> variantConfig.suv.leftViewImage
+          "HATCHBACK"     -> variantConfig.hatchback.leftViewImage
+          "ECO"           -> variantConfig.hatchback.leftViewImage
+          "COMFY"         -> variantConfig.sedan.leftViewImage
+          "PREMIUM"       -> variantConfig.sedan.leftViewImage
+          "AUTO_RICKSHAW" -> case city of 
+                              Kochi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
+                              Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
+                              Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
+                              Delhi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
+                              _ -> variantConfig.autoRickshaw.leftViewImage
+          "BOOK_ANY"      -> case getMerchant FunctionCall of 
+                              YATRISATHI -> variantConfig.bookAny.leftViewImage
+                              _ -> case city of 
+                                      Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
+                                      Chennai -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
+                                      Kochi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                      Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                      _ -> variantConfig.bookAny.leftViewImage
+          _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
+      else do
+        case variant of
+          "TAXI"          -> variantConfig.taxi.image 
+          "TAXI_PLUS"     -> variantConfig.taxiPlus.image
+          "SEDAN"         -> variantConfig.sedan.image
+          "SUV"           -> variantConfig.suv.image
+          "HATCHBACK"     -> variantConfig.hatchback.image
+          "ECO"           -> variantConfig.hatchback.image
+          "COMFY"         -> variantConfig.sedan.image
+          "PREMIUM"       -> variantConfig.sedan.image
+          "AUTO_RICKSHAW" -> case city of 
+                              Kochi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
+                              Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
+                              Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
+                              Delhi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
+                              _ -> variantConfig.autoRickshaw.image
+          "BOOK_ANY"      -> case getMerchant FunctionCall of 
+                              YATRISATHI -> variantConfig.bookAny.image
+                              _ -> case city of 
+                                      Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
+                                      Chennai -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
+                                      Kochi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                      Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                      _ -> variantConfig.bookAny.image
+          _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
 getVariantRideType :: String -> String
 getVariantRideType variant =
