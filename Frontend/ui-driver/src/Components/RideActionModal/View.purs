@@ -850,6 +850,7 @@ rideTierAndCapacity push config =
       , background Color.black700
       , cornerRadius 4.0
       , margin $ MarginHorizontal 6 6
+      , visibility $ boolToVisibility $ Maybe.isJust config.capacity
       ][]
     , imageView
       [ height $ V 16
