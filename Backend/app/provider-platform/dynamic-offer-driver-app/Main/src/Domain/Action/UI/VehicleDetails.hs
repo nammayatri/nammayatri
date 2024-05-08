@@ -35,7 +35,7 @@ getVehicleMakes (_, _, _) = do
   let makesWithoutDuplicates = nub makes
   pure $ API.Types.UI.VehicleDetails.VehicleMakesResp makesWithoutDuplicates
 
-getVehicleModels ::
+postVehicleModels ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
@@ -43,12 +43,12 @@ getVehicleModels ::
     API.Types.UI.VehicleDetails.VehicleModelsReq ->
     Environment.Flow API.Types.UI.VehicleDetails.VehicleModelsResp
   )
-getVehicleModels (_, _, _) (API.Types.UI.VehicleDetails.VehicleModelsReq make) = do
+postVehicleModels (_, _, _) (API.Types.UI.VehicleDetails.VehicleModelsReq make) = do
   vehicleDetails <- QCVehicleDetails.findByMake make
   let models = map Domain.Types.VehicleDetails.model vehicleDetails
   pure $ API.Types.UI.VehicleDetails.VehicleModelsResp models
 
-getVehicleDetails ::
+postVehicleDetails ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
@@ -56,4 +56,4 @@ getVehicleDetails ::
     API.Types.UI.VehicleDetails.VehicleDetailsReq ->
     Environment.Flow Domain.Types.VehicleDetails.VehicleDetails
   )
-getVehicleDetails (_, _, _) (API.Types.UI.VehicleDetails.VehicleDetailsReq make model) = QCVehicleDetails.findByMakeAndModel make model >>= fromMaybeM (InvalidRequest "vehicle detail not found")
+postVehicleDetails (_, _, _) (API.Types.UI.VehicleDetails.VehicleDetailsReq make model) = QCVehicleDetails.findByMakeAndModel make model >>= fromMaybeM (InvalidRequest "vehicle detail not found")
