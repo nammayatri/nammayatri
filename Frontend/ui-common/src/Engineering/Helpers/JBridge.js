@@ -2298,6 +2298,12 @@ export const horizontalScrollToPos = function (id, childId, idx, scrollFocus) {
   }
 }
 
+export const focusChild = function(id,idx) {
+  if (window.JBridge.focusChild) {
+    window.JBridge.focusChild(id, idx)
+  }
+}
+
 // focus values --
 // left - 17
 // right - 66

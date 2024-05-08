@@ -42,11 +42,11 @@ import Helpers.Utils (contactSupportNumber)
 import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderCameraProfilePicture, showDialer, uploadFile, renderBase64ImageFile)
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+), void)
+import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+), void, map)
 import PrestoDOM (Eval, update, Props, continue, continueWithCmd, exit, updateAndExit, toast)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..), StageStatus(..))
+import Screens.Types (VehicalTypes(..), StageStatus(..))
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Effect.Unsafe (unsafePerformEffect)
 import ConfigProvider
@@ -57,6 +57,7 @@ import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
 import Components.RequestInfoCard as RequestInfoCard
+import Screens.AddVehicleDetailsScreen.ScreenData (AddVehicleDetailsScreenState, DropDownList)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -214,6 +215,7 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | SelectButton Int
   | OpenAcModal
   | RequestInfoCardAction RequestInfoCard.Action
+  | ShowOptions DropDownList
 
 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
@@ -467,6 +469,10 @@ eval OpenAcModal state = continue state { props { acModal = true}}
 eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { acModal = false}}
 
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { acModal = false}}
+
+eval (ShowOptions selectedItem) state = do
+  let newList = map (\item -> if selectedItem.type == item.type then item{isExpanded = not item.isExpanded} else item{isExpanded = false} ) state.data.dropDownList
+  continue state{data{dropDownList = newList}}
 
 eval _ state = update state
 

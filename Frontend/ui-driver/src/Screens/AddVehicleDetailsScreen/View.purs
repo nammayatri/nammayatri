@@ -18,7 +18,7 @@ module Screens.AddVehicleDetailsScreen.Views where
 import Common.Types.App
 import Data.Maybe
 import Screens.AddVehicleDetailsScreen.ComponentConfig
-
+import Common.Animation.Config
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.GenericMessageModal.View as GenericMessageModal
@@ -32,7 +32,7 @@ import Control.Monad.Trans.Class (lift)
 import Data.String as DS
 import Debug (spy)
 import Effect (Effect)
-import Effect.Aff (Milliseconds(..), launchAff)
+import Effect.Aff (Milliseconds(..), launchAff, launchAff_, error, killFiber)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.Commons (flowRunner)
@@ -44,9 +44,9 @@ import PaymentPage (consumeBP)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||))
+import Prelude (Unit, bind, const, discard, not, pure, when, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||), (-), (+), (<=), (>))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, scrollBarY, singleLine, onAnimationEnd)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Properties as PP
@@ -54,7 +54,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
-import Screens.Types (AddVehicleDetailsScreenState, StageStatus(..), ValidationStatus(..))
+import Screens.Types (StageStatus(..), ValidationStatus(..))
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
 import Data.String.Common as DSC
@@ -63,14 +63,20 @@ import ConfigProvider
 import Mobility.Prelude
 import Components.OptionsMenu as OptionsMenu
 import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
+import Screens.AddVehicleDetailsScreen.ScreenData
 import Data.Array as DA
 import Components.BottomDrawerList as BottomDrawerList
 import Screens.Types as ST
 import Components.RequestInfoCard as RequestInfoCard
+import Effect.Uncurried (runEffectFn2)
+import Helpers.API (callApi)
+import Services.API (GetMakeListReq(..), GetMakeListResp(..))
+import Data.Either (Either(..))
+
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
-  { initialState
+  { initialState : getDropDownList initialState
   , view
   , name : "AddVehicleDetailsScreen"
   , globalEvents : [(\push -> do
@@ -81,6 +87,11 @@ screen initialState =
       pure unit
     else pure unit
     pure $ pure unit
+  ), 
+  ( \push -> if initialState.data.config.vehicleRegisterationScreen.collectVehicleDetails then do
+                fiber <- launchAff $ flowRunner defaultGlobalState $ getMakeList push
+                pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
+                else pure $ pure unit
   )]
   , eval:
     ( \state action -> do
@@ -89,6 +100,13 @@ screen initialState =
         eval state action
     ) 
   }
+
+getMakeList push = do
+  resp <- callApi GetMakeListReq
+  case resp of
+    Right (GetMakeListResp resp) -> pure unit
+    Left _ -> pure unit
+  
 
 view
   :: forall w
@@ -116,29 +134,7 @@ view push state =
           [ width MATCH_PARENT
           , weight 1.0
           , orientation VERTICAL
-          ][  scrollView
-              [ height MATCH_PARENT
-              , width MATCH_PARENT
-              ][ linearLayout
-                  [ height MATCH_PARENT
-                  , width MATCH_PARENT
-                  , orientation VERTICAL
-                  ][  textView $
-                      [ width MATCH_PARENT
-                      , height WRAP_CONTENT
-                      , text $ getString RC_VERIFICATION_FAILED
-                      , color Color.black800
-                      , background Color.redOpacity10
-                      , padding $ Padding 16 12 16 12
-                      , margin $ Margin 16 16 16 16
-                      , cornerRadius 8.0
-                      , visibility if state.data.dateOfRegistration == Nothing then GONE else VISIBLE            
-                      ] <> FontStyle.body3 TypoGraphy
-                    , vehicleRegistrationNumber state push
-                    , howToUpload push state 
-                    , dateOfRCRegistrationView push state
-                    ]
-                ]
+          ][ if state.data.config.vehicleRegisterationScreen.collectVehicleDetails then collectVehicleDetails push state else defaultVehicleDetailsScreen state push
           ]
         , linearLayout
           [ height WRAP_CONTENT
@@ -157,29 +153,13 @@ view push state =
            ]
            , PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state)
            , if state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL then skipButton push state else dummyLinearLayout]
-    ]   
-    , if state.props.openRCManual then 
-        linearLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_vehicle_registration_card"}] else linearLayout [][]
-    , if state.props.openRegistrationDateManual then 
-        linearLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_date_of_registration"}] else linearLayout [][]
-    , if state.props.limitExceedModal then 
-        linearLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_RC_IMAGE), openGenericMessageModal : state.props.limitExceedModal, buttonText : (getString NEXT) }] else linearLayout [][]
-    , if state.props.contactSupportModal /= ST.HIDE then BottomDrawerList.view (push <<< BottomDrawerListAC) (bottomDrawerListConfig state) else linearLayout[][]
-    , if state.props.openReferralMobileNumber then
-        linearLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT] 
-        [ReferralMobileNumber.view (push <<< ReferralMobileNumberAction) (referalNumberConfig state)] else linearLayout [][]
-    ] <> if DA.any (_ == true) [state.props.logoutModalView, state.props.confirmChangeVehicle] then [ popupModal push state ] else []
+    ]  
+    ] <> if state.props.openRCManual then [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_vehicle_registration_card"}] else []
+      <> if state.props.openRegistrationDateManual then [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_date_of_registration"}] else []
+      <> if state.props.limitExceedModal then  [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_RC_IMAGE), openGenericMessageModal : state.props.limitExceedModal, buttonText : (getString NEXT) }] else []
+      <> if state.props.contactSupportModal /= ST.HIDE then [BottomDrawerList.view (push <<< BottomDrawerListAC) (bottomDrawerListConfig state)] else []
+      <> if state.props.openReferralMobileNumber then [ReferralMobileNumber.view (push <<< ReferralMobileNumberAction) (referalNumberConfig state)] else []
+      <> if DA.any (_ == true) [state.props.logoutModalView, state.props.confirmChangeVehicle] then [ popupModal push state ] else []
       <> if state.props.imageCaptureLayoutView then [imageCaptureLayout push state] else []
       <> if state.props.validateProfilePicturePopUp then [validateProfilePicturePopUp push state] else []
       <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else [] 
@@ -198,6 +178,32 @@ menuOptionModal push state =
 
 headerView :: forall w. AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerView state push = AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
+
+defaultVehicleDetailsScreen :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w 
+defaultVehicleDetailsScreen state push = 
+  scrollView
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][ linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      ][  textView $
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , text $ getString RC_VERIFICATION_FAILED
+          , color Color.black800
+          , background Color.redOpacity10
+          , padding $ Padding 16 12 16 12
+          , margin $ Margin 16 16 16 16
+          , cornerRadius 8.0
+          , visibility if state.data.dateOfRegistration == Nothing then GONE else VISIBLE            
+          ] <> FontStyle.body3 TypoGraphy
+        , vehicleRegistrationNumber state push
+        , howToUpload push state 
+        , dateOfRCRegistrationView push state
+        ]
+    ]
   
 applyReferralView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w 
 applyReferralView state push = 
@@ -988,3 +994,203 @@ dummyLinearLayout =
     [ width WRAP_CONTENT
     , height $ V 0
     ][]
+
+collectVehicleDetails push state = 
+  scrollView
+  [ width MATCH_PARENT
+  , height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - 250 - EHC.safeMarginBottom else WRAP_CONTENT
+  , scrollBarY false
+  , id $ EHC.getNewIDWithTag $ "DropDownListMenu"
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      ]$[ vehicleRegistrationNumber state push
+      ] <> DA.mapWithIndex (\idx item -> dropDownFields push state idx  item) state.data.dropDownList
+  ]
+
+dropDownFields :: forall w. (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> Int -> DropDownList -> PrestoDOM (Effect Unit) w
+dropDownFields push state idx item =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ Margin 16 32 16 0
+    , background Color.white900
+    , orientation VERTICAL
+    ] $
+    [ textView $
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , text $ item.title
+      , color Color.black800
+      , gravity LEFT
+      , singleLine true
+      , margin $ MarginBottom 12
+      ] <> FontStyle.body3 LanguageStyle
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , padding $ Padding 20 15 20 15
+        , cornerRadius 8.0
+        , onClick push $ const $ ShowOptions item
+        , stroke $ "1,"<> Color.borderColorLight
+        , gravity CENTER_VERTICAL
+        ]
+        [ textView $
+          [ text $ "Title"
+          , height WRAP_CONTENT
+          , width WRAP_CONTENT
+          -- , color if state.data.editedGender == Nothing then Color.black600 else Color.black800
+          ] <> FontStyle.subHeading1 LanguageStyle
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , gravity RIGHT
+            ]
+            [ imageView
+              [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ if true then "ny_ic_chevron_up" else "ny_ic_chevron_down"
+              , height $ V 24
+              , width $ V 15
+              ]
+            ]
+        ]
+      , relativeLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        ]$
+        [] <> if item.isExpanded then [genderOptionsView item push (idx + 1)] else []
+    ]
+
+
+
+
+genderOptionsView :: forall w. DropDownList -> (Action -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
+genderOptionsView dropDownItem push idx =
+  let len = DA.length dropDownItem.options
+  in
+  PrestoAnim.animationSet
+  (if EHC.os == "IOS" then
+        [Anim.fadeIn true]
+        else
+          [Anim.listExpandingAnimation $  listExpandingAnimationConfig true] )
+            $
+  linearLayout
+    ([ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ MarginVertical 8 8
+    , background Color.grey700
+    , orientation VERTICAL
+    , stroke $ "1,"<> Color.grey900
+    , visibility VISIBLE
+    , cornerRadius 8.0
+    ] <> if len <= 4 then [onAnimationEnd (\_ -> void $ runEffectFn2 JB.focusChild (EHC.getNewIDWithTag "DropDownListMenu") idx) (pure unit)] else [])
+    (DA.mapWithIndex(\index item ->
+       PrestoAnim.animationSet[Anim.scaleYAnimWithDelay 0]
+       $ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        -- , onClick push $ const $ GenderSelected item.value
+        , orientation VERTICAL
+        , onAnimationEnd (\_ -> if len > 4 && index == 4 then void $ runEffectFn2 JB.focusChild (EHC.getNewIDWithTag "DropDownListMenu") idx
+                                else pure unit) (pure unit)
+        ]
+        [ textView $
+          [ text item.displayName
+          , color Color.black900
+          , margin $ Margin 16 15 16 15
+          ] <> FontStyle.paragraphText LanguageStyle
+        , linearLayout
+          [ height $ V 1
+          , width MATCH_PARENT
+          , background Color.grey900
+          , visibility if index == 3 then GONE else VISIBLE
+          , margin $ MarginHorizontal 16 16
+          ][]
+        ]
+       )(dropDownItem.options)
+    )
+
+genderOptionsArray :: AddVehicleDetailsScreenState -> Array {text :: String, value :: ST.Gender}
+genderOptionsArray state =
+  [ {text : (getString FEMALE), value : ST.FEMALE}
+  , {text : (getString MALE), value : ST.MALE}
+  , {text : (getString OTHER) , value : ST.OTHER}
+  , {text : (getString PREFER_NOT_TO_SAY) , value : ST.PREFER_NOT_TO_SAY}
+  ]
+
+
+getDropDownList :: AddVehicleDetailsScreenState -> AddVehicleDetailsScreenState
+getDropDownList state =
+  if state.data.dropDownList == [] then do
+    let
+      list =
+        [ { isExpanded: false
+          , "type": MAKE
+          , options: []
+          , selected:
+              { displayName: "Select"
+              , name: "SELECT"
+              }
+          , title: "Make"
+          }
+        , { isExpanded: false
+          , "type": MODEL
+          , options: []
+          , selected:
+              { displayName: "Select"
+              , name: "SELECT"
+              }
+          , title: "Model"
+          }
+        , { isExpanded: false
+          , "type": COLOR
+          , options: getColors
+          , selected:
+              { displayName: "Select"
+              , name: "SELECT"
+              }
+          , title: "Color"
+          }
+        , { isExpanded: false
+          , "type": DOORS
+          , options: [{name: "2", displayName: "2"}, {name: "4", displayName: "4"}]
+          , selected:
+              { displayName: "Select"
+              , name: "SELECT"
+              }
+          , title : "Doors"
+          }
+        , { isExpanded: false
+          , "type": SEATBELTS
+          , options: [{name: "1", displayName: "1"}, {name: "2", displayName: "2"},{name: "3", displayName: "3"}, {name: "4", displayName: "4"},{name: "5", displayName: "5"}, {name: "6", displayName: "6"}]
+          , selected:
+              { displayName: "Select"
+              , name: "SELECT"
+              }
+          , title : "Seatbelts"
+          }
+        ]
+    state { data { dropDownList = list} }
+  else
+    state
+
+
+getColors =
+  [ { displayName : "Black", name: "BLACK"}
+  , { displayName : "White", name: "WHITE"}
+  , { displayName : "Silver", name: "SILVER"}
+  , { displayName : "Grayd", name: "GRAYD"}
+  , { displayName : "Blue", name: "BLUE"}
+  , { displayName : "Red", name: "RED"}
+  , { displayName : "Green", name: "GREEN"}
+  , { displayName : "Yellow", name: "YELLOW"}
+  , { displayName : "Orange", name: "ORANGE"}
+  , { displayName : "Brown", name: "BROWN"}
+  , { displayName : "Beige", name: "BEIGE"}
+  , { displayName : "Dark Blue", name:  "DARK BLUE"}
+  , { displayName : "Light Blue", name:  "LIGHT BLUE"}
+  , { displayName : "Dark Red", name:  "DARK RED"}
+  , { displayName : "Dark Green", name:  "DARK GREEN"}
+  , { displayName : "Dark Brown", name:  "DARK BROWN"}
+  , { displayName : "Maroon", name: "MAROON"}
+  ]

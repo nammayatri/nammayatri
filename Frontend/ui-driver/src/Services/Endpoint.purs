@@ -333,3 +333,6 @@ uploadOdometerImage rideId = (getBaseUrl "") <> "/driver/ride/"<>rideId<>"/uploa
 
 updateAirConditioned :: String -> String
 updateAirConditioned _ = (getBaseUrl "") <> "/driver/updateAirCondition"
+
+getMakeList :: String -> String
+getMakeList _ = (getBaseUrl "") <> "/vehicleMakes"

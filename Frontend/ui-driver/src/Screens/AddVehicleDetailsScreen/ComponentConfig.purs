@@ -34,6 +34,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resource.Constants as Constant
 import Screens.Types (StageStatus(..))
 import Screens.Types as ST
+import Screens.AddVehicleDetailsScreen.ScreenData as ST
 import Styles.Colors as Color
 import Helpers.Utils as HU
 import Storage (KeyStore(..), getValueToLocalStore)

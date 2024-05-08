@@ -64,13 +64,25 @@ instance decodeAPIResponse :: (Decode a, Decode b) => Decode (APIResponse a b) w
 -- Trigger OTP API request, response types
 
 newtype TriggerOTPReq = TriggerOTPReq {
-  mobileNumber :: String,
+  mobileNumber :: Maybe String,
   mobileCountryCode :: String,
   merchantId :: String,
   merchantOperatingCity :: Maybe String,
   registrationLat :: Maybe Number,
-  registrationLon :: Maybe Number
+  registrationLon :: Maybe Number,
+  email  :: Maybe String,
+  name :: Maybe String,
+  tokenId  :: Maybe String,
+  oauthProvider :: Maybe OAuthProvider
 }
+
+data OAuthProvider = Google | Apple
+
+derive instance genericOAuthProvider :: Generic OAuthProvider _
+instance standardEncodeOAuthProvider :: StandardEncode OAuthProvider where standardEncode _ = standardEncode {}
+instance showOAuthProvider :: Show OAuthProvider where show = genericShow
+instance decodeOAuthProvider :: Decode OAuthProvider where decode = defaultEnumDecode
+instance encodeOAuthProvider :: Encode OAuthProvider where encode = defaultEnumEncode
 
 newtype TriggerOTPResp = TriggerOTPResp {
   authId :: String,
@@ -4619,3 +4631,28 @@ instance standardEncodeUpdateAirConditionUpdateResponse :: StandardEncode Update
 instance showUpdateAirConditionUpdateResponse :: Show UpdateAirConditionUpdateResponse where show = genericShow
 instance decodeUpdateAirConditionUpdateResponse :: Decode UpdateAirConditionUpdateResponse where decode = defaultDecode
 instance encodeUpdateAirConditionUpdateResponse  :: Encode UpdateAirConditionUpdateResponse where encode = defaultEncode
+
+
+data GetMakeListReq = GetMakeListReq
+
+data GetMakeListResp = GetMakeListResp {
+  makes :: Array String
+}
+
+
+instance makeGetMakeList :: RestEndpoint GetMakeListReq GetMakeListResp where
+  makeRequest reqBody headers = defaultMakeRequest GET (EP.getMakeList "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest = standardEncode
+
+derive instance genericGetMakeListReq :: Generic GetMakeListReq _
+instance standardEncodeGetMakeList :: StandardEncode GetMakeListReq where standardEncode res = standardEncode {}
+instance showGetMakeList :: Show GetMakeListReq where show = genericShow
+instance decodeGetMakeList :: Decode GetMakeListReq where decode = defaultDecode
+instance encodeGetMakeList  :: Encode GetMakeListReq where encode = defaultEncode
+
+derive instance genericGetMakeListResp :: Generic GetMakeListResp _
+instance standardEncodeGetMakeListResp :: StandardEncode GetMakeListResp where standardEncode (GetMakeListResp res) = standardEncode res
+instance showGetMakeListResp :: Show GetMakeListResp where show = genericShow
+instance decodeGetMakeListResp :: Decode GetMakeListResp where decode = defaultDecode
+instance encodeGetMakeListResp  :: Encode GetMakeListResp where encode = defaultEncode

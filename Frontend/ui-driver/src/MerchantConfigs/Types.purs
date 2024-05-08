@@ -44,7 +44,8 @@ type AppConfigDriver a =
     chooseCity :: ChooseCityScreenConfig,
     safetyRide :: SafetyRideConfig,
     welcomeScreen :: WelcomeScreen,
-    enterMobileNumberScreen :: EnterMobileNumberScreen
+    enterMobileNumberScreen :: EnterMobileNumberScreen,
+    vehicleRegisterationScreen :: VehicleRegisterationScreen
     | a
   } 
 
@@ -267,11 +268,16 @@ type WelcomeScreen = {
 }
 
 type EnterMobileNumberScreen = {
-  headerBackground :: String
+  headerBackground :: String,
+  emailAuth :: Boolean
 }
 
 type PillButtonState = {
   background :: String,
   imageUrl :: String,
   textColor :: String
+}
+
+type VehicleRegisterationScreen = {
+  collectVehicleDetails :: Boolean
 }

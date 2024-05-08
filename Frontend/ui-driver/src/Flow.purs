@@ -167,7 +167,9 @@ baseAppFlow baseFlow event driverInfoResponse = do
     setValueToLocalStore CURRENCY (getCurrency Constants.appConfig)
     if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then setValueToLocalStore SHOW_SUBSCRIPTIONS "false" else pure unit  
     liftFlowBT $ markPerformance "BASE_APP_FLOW_END"
-    initialFlow    
+    -- initialFlow
+    liftFlowBT $ hideSplash
+    addVehicleDetailsflow false    
     where
     updateOperatingCity :: FlowBT String Unit
     updateOperatingCity = do
@@ -362,7 +364,7 @@ loginFlow = do
     GO_TO_ENTER_OTP updateState -> do
       liftFlowBT $ logEvent logField_ "ny_driver_otp_trigger"
       latLong <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false true
-      TriggerOTPResp triggerOtpResp <- Remote.triggerOTPBT (makeTriggerOTPReq updateState.data.mobileNumber latLong)
+      TriggerOTPResp triggerOtpResp <- Remote.triggerOTPBT (makeTriggerOTPReq updateState latLong)
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data { tokenId = triggerOtpResp.authId}})
       enterOTPFlow
 

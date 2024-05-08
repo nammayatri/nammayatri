@@ -361,3 +361,9 @@ tealBlue = "#3D475C"
 
 transparentWhite :: Color
 transparentWhite = "#30FFFFFF"
+
+blue500 :: Color
+blue500 = "#4285F4"
+
+bridgeGreen :: Color
+bridgeGreen = "#F0F5F2"

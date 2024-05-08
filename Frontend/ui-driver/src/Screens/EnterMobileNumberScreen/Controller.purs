@@ -14,18 +14,18 @@
 -}
 
 module Screens.EnterMobileNumberScreen.Controller where
-import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), discard, bind, ($), (>))
-import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
+import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), discard, bind, show, void, ($), (>))
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import Screens.Types (EnterMobileNumberScreenState)
-import Components.PrimaryEditText.Controllers as PrimaryEditText
+import Components.PrimaryEditText.Controller as PrimaryEditText
 import Components.MobileNumberEditor as MobileNumberEditor
 import Components.PrimaryButton.Controller as PrimaryButton
 import PrestoDOM.Types.Core (class Loggable)
-import Data.String (length)
+import Data.String (length, trim)
 import Data.String.CodeUnits (charAt)
 import Data.Maybe (Maybe(..))
-import JBridge (requestKeyboardShow,hideKeyboardOnNavigation)
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import JBridge (requestKeyboardShow,hideKeyboardOnNavigation, toast, scrollToEnd, validateEmail)
+import Engineering.Helpers.Commons (getNewIDWithTag, oAuthSignIn, callbackMapper)
 import Effect.Class (liftEffect)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
@@ -33,7 +33,15 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 import ConfigProvider
 import Common.Types.App (MobileNumberValidatorResp(..)) as MVR
+import Data.Function.Uncurried
+import Effect.Uncurried (runEffectFn2, mkEffectFn4)
 import Engineering.Helpers.Utils (mobileNumberValidator, mobileNumberMaxLength)
+import PrestoDOM.Core (getPushFn)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Services.API (OAuthProvider(..))
+import Mobility.Prelude (strToMaybe)
+import Debug
 
 instance showAction :: Show Action where
   show _ = ""
@@ -65,17 +73,29 @@ data ScreenOutput = GoBack | GoToNextScreen EnterMobileNumberScreenState
 data Action = BackPressed 
             | PrimaryEditTextAction MobileNumberEditor.Action
             | PrimaryButtonActionController PrimaryButton.Action
+            | PrimaryButtonEmailAC PrimaryButton.Action
             | NoAction
             | CheckBoxClicked
             | CheckClickability
             | AfterRender
             | NonDisclosureAgreementAction
+            | OAuthPB OAuthProvider PrimaryButton.Action
+            | EmailPBAC PrimaryEditText.Action
+            | OAuthResponse String String String String
+            | KeyboardCallback String
 
 eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput EnterMobileNumberScreenState
 eval AfterRender state = continue state
 eval BackPressed state = do
         pure $ hideKeyboardOnNavigation true
         exit GoBack
+eval (OAuthPB provider (PrimaryButton.OnClick)) state = do
+  continueWithCmd state{data{oauthProvider = Just provider}} [do
+    push <- getPushFn Nothing "EnterMobileNumberScreen"
+    let callback = callbackMapper $ mkEffectFn4 \status token name email -> push $ OAuthResponse status token name email
+    _ <- runEffectFn2 oAuthSignIn (show provider) callback
+    pure NoAction
+  ]
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = exit (GoToNextScreen state)
 eval (PrimaryEditTextAction (MobileNumberEditor.TextChanged valId newVal)) state = do
   let config = getAppConfig appConfig
@@ -90,6 +110,42 @@ eval (PrimaryEditTextAction (MobileNumberEditor.TextChanged valId newVal)) state
   continue  state { props = state.props { btnActive = if (length newVal == 10 && (isValidMobileNumber validatorResp)) then true else false
                                         , isValid = not (isValidMobileNumber validatorResp) }
                                         , data = state.data { mobileNumber = if validatorResp == MVR.MaxLengthExceeded then state.data.mobileNumber else newVal}}
+
+eval (OAuthResponse status token name email) state = 
+  if status == "SUCCESS" 
+    then exit $ GoToNextScreen $ state{ data{ token = Just token, name = Just name, email = Just email}}
+    else do
+    void $ pure $ toast $ getString SOMETHING_WENT_WRONG
+    continue state
+
+eval (KeyboardCallback event) state = case event of
+  "onKeyboardOpen" ->
+    if state.data.config.enterMobileNumberScreen.emailAuth then do
+      continueWithCmd state
+        [ do 
+          void $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
+          pure NoAction
+        ]
+    else
+      update state
+  _ -> update state
+
+eval (EmailPBAC (PrimaryEditText.TextChanged id val)) state = do
+  continue state{data{email = strToMaybe (trim val)}, props{isValid = true}}
+
+
+
+eval (PrimaryButtonEmailAC PrimaryButton.OnClick) state = do 
+  case state.data.email of
+    Nothing -> continue state{props{isValid = false}}
+    Just val -> do
+      let trimmed = trim val
+          validEmail = validateEmail $ trimmed
+          newState = state{props{isValid = validEmail}}
+      if validEmail 
+        then updateAndExit newState $ GoToNextScreen newState
+        else continue newState
+
 eval _ state = continue state
 
 isValidMobileNumber :: MVR.MobileNumberValidatorResp -> Boolean 

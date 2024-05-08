@@ -45,7 +45,7 @@ import Log (printLog)
 import Prelude (bind, discard, pure, unit, identity, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>), (||), not, (/=), (<$>))
 import Presto.Core.Types.API (ErrorResponse(..), Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
-import Screens.Types (DriverStatus)
+import Screens.Types (DriverStatus, EnterMobileNumberScreenState)
 import Services.Config as SC
 import Services.EndPoints as EP
 import Engineering.Helpers.Events as Events
@@ -192,8 +192,8 @@ triggerOTPBT payload = do
         BackT $ pure GoBack
 
 
-makeTriggerOTPReq :: String → LatLon -> TriggerOTPReq
-makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
+makeTriggerOTPReq :: EnterMobileNumberScreenState → LatLon -> TriggerOTPReq
+makeTriggerOTPReq state (LatLon lat lng _) = TriggerOTPReq
     let operatingCity = getValueToLocalStore DRIVER_LOCATION
         latitude = mkLatLon lat
         longitude = mkLatLon lng
@@ -201,12 +201,16 @@ makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
         cityConfig = config.flowConfig.chooseCity
     in
     {
-      "mobileNumber"      : mobileNumber,
-      "mobileCountryCode" : config.defaultCountryCodeConfig.countryCode,
-      "merchantId" : if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" ),
-      "merchantOperatingCity" : mkOperatingCity operatingCity config,
-      "registrationLat" : latitude,
-      "registrationLon" : longitude
+      mobileNumber      : if config.enterMobileNumberScreen.emailAuth then Nothing else Just state.data.mobileNumber,
+      mobileCountryCode : config.defaultCountryCodeConfig.countryCode,
+      merchantId : if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" ),
+      merchantOperatingCity : mkOperatingCity operatingCity config,
+      registrationLat : latitude,
+      registrationLon : longitude,
+      email : state.data.email,
+      name: state.data.name,
+      tokenId : state.data.token,
+      oauthProvider : state.data.oauthProvider
     }
     where 
         mkOperatingCity :: String -> AppConfig -> Maybe String

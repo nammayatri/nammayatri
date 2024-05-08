@@ -553,3 +553,9 @@ export const markPerformance = function (str) {
 export const toStringJSON = function (attr) {
   return JSON.stringify(attr);
 };
+
+export const oAuthSignIn = function (provider, callback) {
+  if (JBridge.oAuthSignIn) {
+    JBridge.oAuthSignIn(provider, callback);
+  }
+};

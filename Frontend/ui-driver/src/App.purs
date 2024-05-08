@@ -88,7 +88,7 @@ newtype GlobalState = GlobalState {
   , uploadDrivingLicenseScreen :: UploadDrivingLicenseState
   , registrationScreen :: RegistrationScreenState
   , uploadAdhaarScreen :: UploadAdhaarScreenState
-  , addVehicleDetailsScreen :: AddVehicleDetailsScreenState
+  , addVehicleDetailsScreen :: AddVehicleDetailsScreenData.AddVehicleDetailsScreenState
   , tripDetailsScreen :: TripDetailsScreenState
   , rideHistoryScreen :: RideHistoryScreenState
   , rideSelectionScreen :: RideSelectionScreenState
@@ -204,7 +204,7 @@ data ScreenType =
   | UploadDrivingLicenseScreenStateType (UploadDrivingLicenseState -> UploadDrivingLicenseState)
   | RegisterScreenStateType (RegistrationScreenState -> RegistrationScreenState)
   | UploadAdhaarScreenStateType (UploadAdhaarScreenState -> UploadAdhaarScreenState)
-  | AddVehicleDetailsScreenStateType (AddVehicleDetailsScreenState -> AddVehicleDetailsScreenState)
+  | AddVehicleDetailsScreenStateType (AddVehicleDetailsScreenData.AddVehicleDetailsScreenState -> AddVehicleDetailsScreenData.AddVehicleDetailsScreenState)
   | DriverDetailsScreenStateType (DriverDetailsScreenState -> DriverDetailsScreenState)
   | VehicleDetailsScreenStateType (VehicleDetailsScreenState -> VehicleDetailsScreenState)
   | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)
@@ -363,14 +363,14 @@ data UPLOAD_ADHAAR_CARD_SCREENOUTPUT = GO_TO_ADD_BANK_DETAILS
 
 data BANK_DETAILS_SCREENOUTPUT = GO_TO_ADD_VEHICLE_DETAILS
 
-data ADD_VEHICLE_DETAILS_SCREENOUTPUT = VALIDATE_DETAILS AddVehicleDetailsScreenState 
-                                        | VALIDATE_RC_DATA_API_CALL AddVehicleDetailsScreenState 
-                                        | REFER_API_CALL AddVehicleDetailsScreenState 
+data ADD_VEHICLE_DETAILS_SCREENOUTPUT = VALIDATE_DETAILS AddVehicleDetailsScreenData.AddVehicleDetailsScreenState 
+                                        | VALIDATE_RC_DATA_API_CALL AddVehicleDetailsScreenData.AddVehicleDetailsScreenState 
+                                        | REFER_API_CALL AddVehicleDetailsScreenData.AddVehicleDetailsScreenState 
                                         | APPLICATION_STATUS_SCREEN 
                                         | LOGOUT_USER 
                                         | ONBOARDING_FLOW 
                                         | DRIVER_PROFILE_SCREEN 
-                                        | RC_ACTIVATION AddVehicleDetailsScreenState
+                                        | RC_ACTIVATION AddVehicleDetailsScreenData.AddVehicleDetailsScreenState
                                         | CHANGE_VEHICLE_FROM_RC_SCREEN
                                         | CHANGE_LANG_FROM_RC_SCREEN
 

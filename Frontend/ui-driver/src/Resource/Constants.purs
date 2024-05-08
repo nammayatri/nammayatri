@@ -120,6 +120,7 @@ transformDocText stage =
     ST.FITNESS_CERTIFICATE -> getString FITNESS_CERTIFICATE_STR
     ST.VEHICLE_INSURANCE -> getString VEHICLE_INSURANCE_STR
     ST.VEHICLE_PUC -> getString VEHICLE_PUC_STR
+    ST.SocialSecurityNumber -> getString SOCIAL_SECURITY_NUMBER_STR
     ST.NO_OPTION -> ""
 
 transformToRegisterationStep :: String -> ST.RegisterationStep
@@ -136,6 +137,7 @@ transformToRegisterationStep doctype =
         "VehicleFitnessCertificate" -> ST.FITNESS_CERTIFICATE
         "VehicleInsurance" -> ST.VEHICLE_INSURANCE
         "VehiclePUC" -> ST.VEHICLE_PUC
+        "SocialSecurityNumber" -> ST.SocialSecurityNumber
         _ -> ST.NO_OPTION
 
 transformToDoctype :: ST.RegisterationStep -> String
@@ -152,6 +154,7 @@ transformToDoctype step =
     ST.AADHAAR_CARD -> "AadhaarCard"
     ST.PAN_CARD -> "PanCard"
     ST.GRANT_PERMISSION -> "Permissions"
+    ST.SocialSecurityNumber -> "SocialSecurityNumber"
     ST.NO_OPTION -> ""
 
 transformVehicleType :: Maybe String -> Maybe ST.VehicleCategory
