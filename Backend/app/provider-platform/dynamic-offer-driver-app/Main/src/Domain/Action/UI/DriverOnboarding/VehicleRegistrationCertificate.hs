@@ -80,8 +80,7 @@ import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
 
 data DriverVehicleDetails = DriverVehicleDetails
-  { colour :: Text,
-    vehicleManufacturer :: Text,
+  { vehicleManufacturer :: Text,
     vehicleModel :: Text,
     vehicleColour :: Text,
     vehicleDoors :: Maybe Int,
