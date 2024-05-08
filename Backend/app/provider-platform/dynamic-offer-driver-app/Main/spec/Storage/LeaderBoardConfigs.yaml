@@ -23,7 +23,7 @@ LeaderBoardConfigs:
 
   types:
     LeaderBoardType:
-      enum: "WEEKLY,DAILY"
+      enum: "WEEKLY,DAILY,MONTHLY"
 
   constraints:
     id: PrimaryKey

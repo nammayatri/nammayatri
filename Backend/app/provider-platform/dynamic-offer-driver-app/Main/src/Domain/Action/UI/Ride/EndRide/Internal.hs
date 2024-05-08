@@ -16,13 +16,9 @@ module Domain.Action.UI.Ride.EndRide.Internal
   ( endRideTransaction,
     putDiffMetric,
     getRouteAndDistanceBetweenPoints,
-    makeDailyDriverLeaderBoardKey,
     safeMod,
-    makeWeeklyDriverLeaderBoardKey,
     getCurrentDate,
     getRidesAndDistancefromZscore,
-    makeCachedDailyDriverLeaderBoardKey,
-    makeCachedWeeklyDriverLeaderBoardKey,
     getRouteInfoWithShortestDuration,
     mkDriverFeeCalcJobFlagKey,
     getDriverFeeCalcJobFlagKey,
@@ -34,6 +30,9 @@ module Domain.Action.UI.Ride.EndRide.Internal
     setDriverFeeBillNumberKey,
     getDriverFeeCalcJobCache,
     setDriverFeeCalcJobCache,
+    getStartDateMonth,
+    getEndDateMonth,
+    makeDriverLeaderBoardKey,
   )
 where
 
@@ -57,9 +56,9 @@ import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
-import EulerHS.Prelude hiding (elem, foldr, id, length, null)
+import EulerHS.Prelude hiding (elem, foldr, id, length, mapM_, null)
 import GHC.Float (double2Int)
-import GHC.Num.Integer (integerFromInt)
+import GHC.Num.Integer (integerFromInt, integerToInt)
 import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude hiding (whenJust)
@@ -211,81 +210,116 @@ sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId = do
 
 updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Ride.Ride -> m ()
 updateLeaderboardZScore merchantId merchantOpCityId ride = do
-  fork "Updating ZScore for driver" . Hedis.withNonCriticalRedis $ do
-    dailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantOpCityId >>= fromMaybeM (InternalError "Leaderboard configs not present")
-    weeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY merchantOpCityId >>= fromMaybeM (InternalError "Leaderboard configs not present")
-    nowUtc <- getCurrentTime
-    let rideDate = getCurrentDate nowUtc
-    driverZscore <- Hedis.zScore (makeDailyDriverLeaderBoardKey dailyLeaderBoardConfig.useOperatingCityBasedLeaderBoard merchantId merchantOpCityId rideDate) $ ride.driverId.getId
-    updateDriverDailyZscore ride rideDate driverZscore ride.chargeableDistance merchantId merchantOpCityId dailyLeaderBoardConfig
-    let (_, currDayIndex) = sundayStartWeek rideDate
-    let weekStartDate = addDays (fromIntegral (- currDayIndex)) rideDate
-    let weekEndDate = addDays (fromIntegral (6 - currDayIndex)) rideDate
-    driverWeeklyZscore <- Hedis.zScore (makeWeeklyDriverLeaderBoardKey weeklyLeaderBoardConfig.useOperatingCityBasedLeaderBoard merchantId merchantOpCityId weekStartDate weekEndDate) $ ride.driverId.getId
-    updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverWeeklyZscore ride.chargeableDistance merchantId merchantOpCityId weeklyLeaderBoardConfig
+  fork "Updating ZScore for driver" . Hedis.withNonCriticalRedis $ mapM_ updateLeaderboardZScore' [LConfig.DAILY, LConfig.WEEKLY, LConfig.MONTHLY]
+  where
+    updateLeaderboardZScore' :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => LConfig.LeaderBoardType -> m ()
+    updateLeaderboardZScore' leaderBoardType = do
+      currentTime <- getCurrentTime
+      leaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType leaderBoardType merchantOpCityId >>= fromMaybeM (InternalError "Leaderboard configs not present")
+      when leaderBoardConfig.isEnabled $ do
+        let rideDate = getCurrentDate currentTime
+            (fromDate, toDate) = calculateFromDateToDate leaderBoardType rideDate
+            leaderBoardKey = makeDriverLeaderBoardKey leaderBoardType False leaderBoardConfig.useOperatingCityBasedLeaderBoard merchantId merchantOpCityId fromDate toDate
+        driverZscore <- Hedis.zScore leaderBoardKey $ ride.driverId.getId
+        updateDriverZscore ride rideDate fromDate toDate driverZscore ride.chargeableDistance merchantId merchantOpCityId leaderBoardConfig
 
-updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> Id DMOC.MerchantOperatingCity -> LConfig.LeaderBoardConfigs -> m ()
-updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId merchantOpCityId dailyLeaderBoardConfig = do
-  when dailyLeaderBoardConfig.isEnabled $ do
-    let useCityBasedLeaderboard = dailyLeaderBoardConfig.useOperatingCityBasedLeaderBoard
-    (LocalTime _ localTime) <- utcToLocalTime timeZoneIST <$> getCurrentTime
-    let lbExpiry = dailyLeaderBoardConfig.leaderBoardExpiry - secondsFromTimeOfDay localTime
-    let currZscore =
-          case driverZscore of
-            Nothing -> dailyLeaderBoardConfig.zScoreBase + getMeters (fromMaybe 0 chargeableDistance)
-            Just zscore -> do
-              let (prevTotalRides, prevTotalDistance) = getRidesAndDistancefromZscore zscore dailyLeaderBoardConfig.zScoreBase
-              let currTotalRides = prevTotalRides + 1
-              let currTotalDist = prevTotalDistance + fromMaybe 0 chargeableDistance
-              currTotalRides * dailyLeaderBoardConfig.zScoreBase + getMeters currTotalDist
-    Hedis.zAddExp (makeDailyDriverLeaderBoardKey useCityBasedLeaderboard merchantId merchantOpCityId rideDate) ride.driverId.getId (fromIntegral currZscore) lbExpiry.getSeconds
-    let limit = integerFromInt dailyLeaderBoardConfig.leaderBoardLengthLimit
-    driversListWithScores' <- Hedis.zrevrangeWithscores (makeDailyDriverLeaderBoardKey useCityBasedLeaderboard merchantId merchantOpCityId rideDate) 0 (limit -1)
-    Hedis.setExp (makeCachedDailyDriverLeaderBoardKey useCityBasedLeaderboard merchantId merchantOpCityId rideDate) driversListWithScores' (dailyLeaderBoardConfig.leaderBoardExpiry.getSeconds * dailyLeaderBoardConfig.numberOfSets)
+    calculateFromDateToDate :: LConfig.LeaderBoardType -> Day -> (Day, Day)
+    calculateFromDateToDate leaderBoardType rideDate =
+      case leaderBoardType of
+        LConfig.DAILY -> (rideDate, rideDate)
+        LConfig.WEEKLY ->
+          let (_, currDayIndex) = sundayStartWeek rideDate
+              weekStartDate = addDays (fromIntegral (- currDayIndex)) rideDate
+              weekEndDate = addDays (fromIntegral (6 - currDayIndex)) rideDate
+           in (weekStartDate, weekEndDate)
+        LConfig.MONTHLY ->
+          let monthStartDate = getStartDateMonth rideDate
+              monthEndDate = getEndDateMonth rideDate 1
+           in (monthStartDate, monthEndDate)
 
-updateDriverWeeklyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Day -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> Id DMOC.MerchantOperatingCity -> LConfig.LeaderBoardConfigs -> m ()
-updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverZscore rideChargeableDistance merchantId merchantOpCityId weeklyLeaderBoardConfig = do
-  when weeklyLeaderBoardConfig.isEnabled $ do
-    let useCityBasedLeaderboard = weeklyLeaderBoardConfig.useOperatingCityBasedLeaderBoard
-    (LocalTime _ localTime) <- utcToLocalTime timeZoneIST <$> getCurrentTime
-    let (_, currDayIndex) = sundayStartWeek rideDate
-    let lbExpiry = weeklyLeaderBoardConfig.leaderBoardExpiry - Seconds ((currDayIndex + 1) * 86400) + (Seconds 86400 - secondsFromTimeOfDay localTime) -- Calculated as (total_Seconds_in_week - Week_Day_Index * 86400 + Seconds_Remaining_In_This_Week
-    let currZscore =
-          case driverZscore of
-            Nothing -> weeklyLeaderBoardConfig.zScoreBase + getMeters (fromMaybe 0 rideChargeableDistance)
-            Just zscore -> do
-              let (prevTotalRides, prevTotalDistance) = getRidesAndDistancefromZscore zscore weeklyLeaderBoardConfig.zScoreBase
-              let currTotalRides = prevTotalRides + 1
-              let currTotalDist = prevTotalDistance + fromMaybe 0 rideChargeableDistance
-              currTotalRides * weeklyLeaderBoardConfig.zScoreBase + getMeters currTotalDist
-    Hedis.zAddExp (makeWeeklyDriverLeaderBoardKey useCityBasedLeaderboard merchantId merchantOpCityId weekStartDate weekEndDate) ride.driverId.getId (fromIntegral currZscore) (lbExpiry.getSeconds)
-    let limit = integerFromInt weeklyLeaderBoardConfig.leaderBoardLengthLimit
-    driversListWithScores' <- Hedis.zrevrangeWithscores (makeWeeklyDriverLeaderBoardKey useCityBasedLeaderboard merchantId merchantOpCityId weekStartDate weekEndDate) 0 (limit -1)
-    Hedis.setExp (makeCachedWeeklyDriverLeaderBoardKey useCityBasedLeaderboard merchantId merchantOpCityId weekStartDate weekEndDate) driversListWithScores' (weeklyLeaderBoardConfig.leaderBoardExpiry.getSeconds * weeklyLeaderBoardConfig.numberOfSets)
+updateDriverZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Day -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> Id DMOC.MerchantOperatingCity -> LConfig.LeaderBoardConfigs -> m ()
+updateDriverZscore ride rideDate fromDate toDate driverZscore rideChargeableDistance merchantId merchantOpCityId leaderBoardConfig = do
+  (LocalTime _ localTime) <- utcToLocalTime timeZoneIST <$> getCurrentTime
+  let useCityBasedLeaderboard = leaderBoardConfig.useOperatingCityBasedLeaderBoard
+      leaderBoardExpiry = calculateLeaderBoardExpiry - secondsFromTimeOfDay localTime
+      driverLeaderBoardKey = makeDriverLeaderBoardKey leaderBoardConfig.leaderBoardType False useCityBasedLeaderboard merchantId merchantOpCityId fromDate toDate
+      cachedDriverLeaderBoardKey = makeDriverLeaderBoardKey leaderBoardConfig.leaderBoardType True useCityBasedLeaderboard merchantId merchantOpCityId fromDate toDate
+  Hedis.zAddExp driverLeaderBoardKey ride.driverId.getId calculateCurrentZscore leaderBoardExpiry.getSeconds
+  let limit = integerFromInt leaderBoardConfig.leaderBoardLengthLimit
+  driversListWithScores' <- Hedis.zrevrangeWithscores driverLeaderBoardKey 0 (limit - 1)
+  Hedis.setExp cachedDriverLeaderBoardKey driversListWithScores' calculateTotalExpiry.getSeconds
+  where
+    calculateLeaderBoardExpiry :: Seconds
+    calculateLeaderBoardExpiry = do
+      case leaderBoardConfig.leaderBoardType of
+        LConfig.DAILY -> dailyExpiry
+        LConfig.WEEKLY -> weeklyExpiry
+        LConfig.MONTHLY -> monthlyExpiry
+      where
+        dailyExpiry = leaderBoardConfig.leaderBoardExpiry
+        weeklyExpiry = do
+          let (_, currDayIndex) = sundayStartWeek rideDate
+          leaderBoardConfig.leaderBoardExpiry - Seconds ((currDayIndex + 1) * 86400) + Seconds 86400
+        monthlyExpiry = Seconds $ integerToInt $ diffDays toDate rideDate * 86400 + 86400
 
-makeCachedDailyDriverLeaderBoardKey :: Maybe Bool -> Id Merchant -> Id DMOC.MerchantOperatingCity -> Day -> Text
-makeCachedDailyDriverLeaderBoardKey useOperatingCityBasedLeaderBoard merchantId merchantOpCityId rideDate =
-  case useOperatingCityBasedLeaderBoard of
-    Just True -> "DDLBCK:" <> merchantOpCityId.getId <> ":" <> show rideDate
-    _ -> "DDLBCK:" <> merchantId.getId <> ":" <> show rideDate
+    calculateCurrentZscore :: Integer
+    calculateCurrentZscore =
+      fromIntegral $ case driverZscore of
+        Nothing -> leaderBoardConfig.zScoreBase + getMeters (fromMaybe 0 rideChargeableDistance)
+        Just zscore -> do
+          let (prevTotalRides, prevTotalDistance) = getRidesAndDistancefromZscore zscore leaderBoardConfig.zScoreBase
+          let currTotalRides = prevTotalRides + 1
+          let currTotalDist = prevTotalDistance + fromMaybe 0 rideChargeableDistance
+          currTotalRides * leaderBoardConfig.zScoreBase + getMeters currTotalDist
 
-makeDailyDriverLeaderBoardKey :: Maybe Bool -> Id Merchant -> Id DMOC.MerchantOperatingCity -> Day -> Text
-makeDailyDriverLeaderBoardKey useOperatingCityBasedLeaderBoard merchantId merchantOpCityId rideDate =
-  case useOperatingCityBasedLeaderBoard of
-    Just True -> "DDLBK:" <> merchantOpCityId.getId <> ":" <> show rideDate
-    _ -> "DDLBK:" <> merchantId.getId <> ":" <> show rideDate
+    calculateTotalExpiry :: Seconds
+    calculateTotalExpiry =
+      case leaderBoardConfig.leaderBoardType of
+        LConfig.MONTHLY -> Seconds $ integerToInt $ diffDays (getEndDateMonth rideDate leaderBoardConfig.numberOfSets) fromDate * 86400
+        _ -> Seconds $ leaderBoardConfig.leaderBoardExpiry.getSeconds * leaderBoardConfig.numberOfSets
 
-makeCachedWeeklyDriverLeaderBoardKey :: Maybe Bool -> Id Merchant -> Id DMOC.MerchantOperatingCity -> Day -> Day -> Text
-makeCachedWeeklyDriverLeaderBoardKey useOperatingCityBasedLeaderBoard merchantId merchantOpCityId weekStartDate weekEndDate =
-  case useOperatingCityBasedLeaderBoard of
-    Just True -> "DWLBCK:" <> merchantOpCityId.getId <> ":" <> show weekStartDate <> ":" <> show weekEndDate
-    _ -> "DWLBCK:" <> merchantId.getId <> ":" <> show weekStartDate <> ":" <> show weekEndDate
+makeDriverLeaderBoardKey :: LConfig.LeaderBoardType -> Bool -> Maybe Bool -> Id Merchant -> Id DMOC.MerchantOperatingCity -> Day -> Day -> Text
+makeDriverLeaderBoardKey leaderBoardType isCached useOperatingCityBasedLeaderBoard merchantId merchantOpCityId fromDate toDate =
+  case leaderBoardType of
+    LConfig.DAILY -> if isCached then makeCachedDailyDriverLeaderBoardKey else makeDailyDriverLeaderBoardKey
+    LConfig.WEEKLY -> if isCached then makeCachedWeeklyDriverLeaderBoardKey else makeWeeklyDriverLeaderBoardKey
+    LConfig.MONTHLY -> if isCached then makeCachedMonthlyDriverLeaderBoardKey else makeMonthlyDriverLeaderBoardKey
+  where
+    makeCachedDailyDriverLeaderBoardKey :: Text
+    makeCachedDailyDriverLeaderBoardKey =
+      case useOperatingCityBasedLeaderBoard of
+        Just True -> "DDLBCK:" <> merchantOpCityId.getId <> ":" <> show fromDate
+        _ -> "DDLBCK:" <> merchantId.getId <> ":" <> show fromDate
 
-makeWeeklyDriverLeaderBoardKey :: Maybe Bool -> Id Merchant -> Id DMOC.MerchantOperatingCity -> Day -> Day -> Text
-makeWeeklyDriverLeaderBoardKey useOperatingCityBasedLeaderBoard merchantId merchantOpCityId weekStartDate weekEndDate =
-  case useOperatingCityBasedLeaderBoard of
-    Just True -> "DWLBK:" <> merchantOpCityId.getId <> ":" <> show weekStartDate <> ":" <> show weekEndDate
-    _ -> "DWLBK:" <> merchantId.getId <> ":" <> show weekStartDate <> ":" <> show weekEndDate
+    makeDailyDriverLeaderBoardKey :: Text
+    makeDailyDriverLeaderBoardKey =
+      case useOperatingCityBasedLeaderBoard of
+        Just True -> "DDLBK:" <> merchantOpCityId.getId <> ":" <> show fromDate
+        _ -> "DDLBK:" <> merchantId.getId <> ":" <> show fromDate
+
+    makeCachedWeeklyDriverLeaderBoardKey :: Text
+    makeCachedWeeklyDriverLeaderBoardKey =
+      case useOperatingCityBasedLeaderBoard of
+        Just True -> "DWLBCK:" <> merchantOpCityId.getId <> ":" <> show fromDate <> ":" <> show toDate
+        _ -> "DWLBCK:" <> merchantId.getId <> ":" <> show fromDate <> ":" <> show toDate
+
+    makeWeeklyDriverLeaderBoardKey :: Text
+    makeWeeklyDriverLeaderBoardKey =
+      case useOperatingCityBasedLeaderBoard of
+        Just True -> "DWLBK:" <> merchantOpCityId.getId <> ":" <> show fromDate <> ":" <> show toDate
+        _ -> "DWLBK:" <> merchantId.getId <> ":" <> show fromDate <> ":" <> show toDate
+
+    makeMonthlyDriverLeaderBoardKey :: Text
+    makeMonthlyDriverLeaderBoardKey =
+      case useOperatingCityBasedLeaderBoard of
+        Just True -> "DMLBK:" <> merchantOpCityId.getId <> ":" <> show fromDate <> ":" <> show toDate
+        _ -> "DMLBK:" <> merchantId.getId <> ":" <> show fromDate <> ":" <> show toDate
+
+    makeCachedMonthlyDriverLeaderBoardKey :: Text
+    makeCachedMonthlyDriverLeaderBoardKey =
+      case useOperatingCityBasedLeaderBoard of
+        Just True -> "DMLBCK:" <> merchantOpCityId.getId <> ":" <> show fromDate <> ":" <> show toDate
+        _ -> "DMLBCK:" <> merchantId.getId <> ":" <> show fromDate <> ":" <> show toDate
 
 getRidesAndDistancefromZscore :: Double -> Int -> (Int, Meters)
 getRidesAndDistancefromZscore dzscore dailyZscoreBase =
@@ -296,6 +330,14 @@ getCurrentDate :: UTCTime -> Day
 getCurrentDate time =
   let currentDate = localDay $ utcToLocalTime timeZoneIST time
    in currentDate
+
+getStartDateMonth :: Day -> Day
+getStartDateMonth day = fromGregorian y m 1
+  where
+    (y, m, _) = toGregorian day
+
+getEndDateMonth :: Day -> Int -> Day
+getEndDateMonth day addMonths = pred $ addGregorianMonthsClip (integerFromInt addMonths) $ getStartDateMonth day
 
 putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> HighPrecMoney -> Meters -> m ()
 putDiffMetric merchantId money mtrs = do

@@ -25,15 +25,24 @@ type API =
            :> MandatoryQueryParam "fromDate" Day
            :> MandatoryQueryParam "toDate" Day
            :> Get '[JSON] DLeaderBoard.LeaderBoardRes
+           :<|> TokenAuth
+           :> "monthly"
+           :> MandatoryQueryParam "fromDate" Day
+           :> MandatoryQueryParam "toDate" Day
+           :> Get '[JSON] DLeaderBoard.LeaderBoardRes
        )
 
 handler :: FlowServer API
 handler =
   getDailyDriverLeaderBoard
     :<|> getWeeklyDriverLeaderBoard
+    :<|> getMonthlyDriverLeaderBoard
 
 getDailyDriverLeaderBoard :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Maybe Bool -> FlowHandler DLeaderBoard.LeaderBoardRes
 getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) date fillData = withFlowHandlerAPI $ DLeaderBoard.getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) date fillData
 
 getWeeklyDriverLeaderBoard :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> FlowHandler DLeaderBoard.LeaderBoardRes
 getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toDate = withFlowHandlerAPI $ DLeaderBoard.getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toDate
+
+getMonthlyDriverLeaderBoard :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> FlowHandler DLeaderBoard.LeaderBoardRes
+getMonthlyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toDate = withFlowHandlerAPI $ DLeaderBoard.getMonthlyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toDate
