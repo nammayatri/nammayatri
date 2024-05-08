@@ -4077,42 +4077,52 @@ preferenceView push state =
       bookingPrefVisibility = (not state.data.currentCityConfig.iopConfig.enable) && state.data.config.estimateAndQuoteConfig.enableBookingPreference
       isProviderPrefView = state.data.currentCityConfig.iopConfig.enable
       followerBar = (showFollowerBar (fromMaybe [] state.data.followers) state) && (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver])
-  in  linearLayout
-      [ width MATCH_PARENT
-      , height MATCH_PARENT
-      , clickable dimLayout
-      , background if dimLayout then Color.blackLessTrans else Color.transparent
-      , onClick push $ const BackPressed
-      , padding $ Padding 0 20 18 0
-      , margin $ MarginTop if followerBar then 0 else safeMarginTop
-      , orientation VERTICAL
-      , gravity RIGHT
-      ] $ [ linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , gravity RIGHT
-            ][  linearLayout[weight 1.0][]
-              , linearLayout
-                [ height $ V 48
-                , width $ V 48
-                , stroke $ "1," <> Color.grey900
-                , background Color.white900
-                , gravity CENTER
-                , cornerRadius 24.0
-                , clickable true
-                , visibility $ boolToVisibility if isProviderPrefView then providerPrefVisibility else bookingPrefVisibility
-                , onClick push $ const ShowPref
-                , rippleColor Color.rippleShade
-                ]
-                [ imageView
-                    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pref"
-                    , height $ V 25
-                    , width $ V 25
-                    ]
-                ]
-            ]
-      ] <> if state.data.iopState.providerPrefVisible then [if isProviderPrefView then providerPreferenceOptions push state else bookingPrefOptions push state] else []
-        <> if state.data.iopState.providerPrefInfo then [requestInfoCardView push state isProviderPrefView] else []
+  in
+    relativeLayout [
+      width MATCH_PARENT
+    , height MATCH_PARENT
+    ] [
+      linearLayout[
+          width MATCH_PARENT
+        , height MATCH_PARENT
+        , clickable dimLayout
+        , background if dimLayout then Color.blackLessTrans else Color.transparent
+        , onClick push $ const $ if dimLayout then BackPressed else NoRender
+      ][]
+    , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , padding $ Padding 0 20 18 0
+        , margin $ MarginTop if followerBar then 0 else safeMarginTop
+        , orientation VERTICAL
+        , gravity RIGHT
+        ] $ [ linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , gravity RIGHT
+              ][  linearLayout[weight 1.0][]
+                , linearLayout
+                  [ height $ V 48
+                  , width $ V 48
+                  , stroke $ "1," <> Color.grey900
+                  , background Color.white900
+                  , gravity CENTER
+                  , cornerRadius 24.0
+                  , clickable true
+                  , visibility $ boolToVisibility if isProviderPrefView then providerPrefVisibility else bookingPrefVisibility
+                  , onClick push $ const ShowPref
+                  , rippleColor Color.rippleShade
+                  ]
+                  [ imageView
+                      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pref"
+                      , height $ V 25
+                      , width $ V 25
+                      ]
+                  ]
+              ]
+        ] <> if state.data.iopState.providerPrefVisible then [if isProviderPrefView then providerPreferenceOptions push state else bookingPrefOptions push state] else []
+          <> if state.data.iopState.providerPrefInfo then [requestInfoCardView push state isProviderPrefView] else []
+    ]
 
 requestInfoCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 requestInfoCardView push state providerPrefInfo =

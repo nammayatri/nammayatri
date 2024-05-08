@@ -908,6 +908,7 @@ data Action = NoAction
             | ProviderAutoSelected Int String String
             | ShowProviderInfo Boolean
             | AcWorkingPopupAction PopUpModal.Action
+            | NoRender
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -2941,6 +2942,8 @@ eval (AcWorkingPopupAction (PopUpModal.OnButton2Click)) state = do
 
 eval (AcWorkingPopupAction PopUpModal.DismissPopup) state = continue state{props{showAcWorkingPopup = false}}
 
+eval NoRender state = update state
+
 eval _ state = update state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
@@ -3261,14 +3264,12 @@ specialZoneFlow estimatedQuotes state = do
 estimatesListFlow :: Array EstimateAPIEntity -> HomeScreenState -> Int -> Eval Action ScreenOutput HomeScreenState
 estimatesListFlow estimates state count = do
   let 
-    repeatRideFailCheck = isJust state.props.repeatRideServiceTierName && not checkRecentRideVariantInEstimates estimates state.props.repeatRideServiceTierName -- check if the repeat ride variant is available in the estimates
+    repeatRideFailCheck =  not $ checkRecentRideVariantInEstimates estimates state.props.repeatRideServiceTierName -- check if the repeat ride variant is available in the estimates
     newState = if state.props.isRepeatRide && repeatRideFailCheck then state { props {isRepeatRide = false}} else state -- if repeat ride is enabled and the variant is not available in the estimates then disable repeat ride
     alreadyGotEstimates = not $ null $ state.data.specialZoneQuoteList 
     showMultiProvider' = if alreadyGotEstimates then state.data.iopState.showMultiProvider else not $ any (\(EstimateAPIEntity element) -> element.isValueAddNP == Just true) estimates -- if we already got the estimate show current screen only else if we have NY show ny provider else show multi provider
 
-
-    quoteList = spy "getEstimateList" $ getEstimateList estimates newState.data.config.estimateAndQuoteConfig (Just count) newState.data.selectedEstimatesObject.activeIndex
-
+    quoteList = getEstimateList estimates newState.data.config.estimateAndQuoteConfig (Just count) newState.data.selectedEstimatesObject.activeIndex
 
     defaultQuote = fromMaybe ChooseVehicleController.config $ 
       if newState.props.isRepeatRide then do 
@@ -3291,12 +3292,10 @@ estimatesListFlow estimates state count = do
 
     hasToll = any (\item -> maybe false (\fareBreakupList -> isEstimateFareBreakupHastitle fareBreakupList "TOLL_CHARGES") (item ^. _estimateFareBreakup)) estimates
 
-
     topProviderEstimates = filter (\element -> element.providerType == ONUS) quoteList -- filter the ny provider estimates
     topProviderCheck = if state.data.currentCityConfig.iopConfig.enable then true else not $ null topProviderEstimates -- if iop is not enabled then show ny provider else show multi provider
     hasQuotes = not $ null quoteList
     
-  
   if hasQuotes && topProviderCheck then do -- if choosing multiple provider is not enabled then only show ny
     let 
       _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
@@ -3307,8 +3306,6 @@ estimatesListFlow estimates state count = do
 
     void $ pure $ updateLocalStage SettingPrice
     logStatus "drivers_available" nearByDriversLength
-    
-
 
     void $ pure $ setValueToLocalStore HAS_TOLL_CHARGES $ show hasToll
     exit $ SelectEstimate newState 
