@@ -286,7 +286,7 @@ fareBreakupView push state = let
                               , height WRAP_CONTENT
                               , singleLine true
                               , ellipsize true
-                              , text $ getVehicleName selectedQuote.quoteDetails.vehicleVariant
+                              , text $ fromMaybe "" selectedQuote.quoteDetails.serviceTierName
                               , color Color.black800
                               ]
                             <> FontStyle.body7 TypoGraphy
@@ -318,7 +318,10 @@ fareBreakupView push state = let
       ]
     where 
     
-    capacityView push config = 
+    capacityView push config = let 
+      selectedQuote = maybe dummyRentalQuote identity (state.data.selectedQuote) 
+      vehicleDesc = fromMaybe "" selectedQuote.quoteDetails.serviceTierShortDesc
+      in 
       linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -328,14 +331,15 @@ fareBreakupView push state = let
         , textView
                 $ [ width WRAP_CONTENT
                   , height WRAP_CONTENT
-                  , text $ (getVariantDescription config.vehicleVariant).text
-                  , visibility $ boolToVisibility $ DS.length (getVariantDescription config.vehicleVariant).text >= 20
+                  , text $ vehicleDesc
+                  , visibility $ boolToVisibility $ DS.length vehicleDesc >= 20
                   , color Color.black700
                   ]
                 <> FontStyle.tags TypoGraphy]
 
-    vehicleInfoView imageName description vehicleVariant showAdditionalDesc = let 
-      vehicleDesc = getVariantDescription vehicleVariant
+    vehicleInfoView imageName description vehicleVariant showAdditionalDesc = let
+      selectedQuote = maybe dummyRentalQuote identity (state.data.selectedQuote) 
+      vehicleDesc = fromMaybe "" selectedQuote.quoteDetails.serviceTierShortDesc
       in
       linearLayout
         [ width WRAP_CONTENT
@@ -357,7 +361,7 @@ fareBreakupView push state = let
               height $ WRAP_CONTENT
             , gravity CENTER
             , width MATCH_PARENT 
-            , visibility $ boolToVisibility $ showAdditionalDesc && DS.length vehicleDesc.text < 20 
+            , visibility $ boolToVisibility $ showAdditionalDesc && DS.length vehicleDesc < 20 
             ][  textView
                 [ height $ V 3 
                 , width $ V 3 
@@ -365,16 +369,10 @@ fareBreakupView push state = let
                 , margin $ MarginHorizontal 2 2
                 , background Color.black700
                 ]
-              , imageView
-                [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_snow"
-                , width $ V 12
-                , visibility $ boolToVisibility vehicleDesc.airConditioned
-                , height $ V 12
-                ]
               , textView
                 $ [ width WRAP_CONTENT
                   , height WRAP_CONTENT
-                  , text $ vehicleDesc.text
+                  , text $ vehicleDesc
                   , color Color.black700
                   ]
                 <> FontStyle.tags TypoGraphy]     
@@ -504,7 +502,7 @@ locUnserviceableView push state =
     , gravity CENTER 
     , background Color.blackLessTrans
     ][ PrestoAnim.animationSet
-        [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]  $ 
+        [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true]  $ 
         PopUpModal.view (push <<< PopUpModalAC) (locUnserviceablePopUpConfig state) ]
 
 fetchSelectedQuote rentalsQuoteList = head $ filter (\item -> item.activeIndex == item.index) rentalsQuoteList

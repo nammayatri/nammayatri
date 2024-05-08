@@ -1235,3 +1235,8 @@ getBN stringKey =
         RENTAL_CHARGES -> "ভাড়া চার্জ"
         RENTAL_INFO_POLICY_DESC -> "&#8226; রেন্টাল বুকিং প্রতি ঘন্টা আপনাকে 10 কিলোমিটারের বেস দেয়।  <br><br>&#8226; আপনি দূরত্ব বাড়ানোর মাধ্যমে একই নির্বাচিত রেন্টাল সময়কালের জন্য নিম্নলিখিত মূল্যে আরও কিলোমিটার যোগ করতে পারেন।"
         RENTAL_SCREEN_EXPLAINER includedKm -> includedKm <> " is included per hour of booking.Extra km and minutes will be charged as per fare policy of respective vehicle."
+        INSTANT -> "তাৎক্ষণিক"
+        COMING_SOON -> "শীঘ্রই আসছে!"
+        CANCEL_SCHEDULED_RIDE -> "নির্ধারিত রাইড বাতিল করুন"
+        CANCEL_SCHEDULED_RIDE_DESC -> "আপনি কি এই রাইডটি বাতিল করার বিষয়ে নিশ্চিত?<br><br>(একাধিক বাতিলের ফলে আপনাকে আরও ভাড়ার রাইডের অনুরোধ করা থেকে ব্লক করা হতে পারে)"
+        CONFIRM_CANCELLATION -> "বাতিলকরণ নিশ্চিত করুন"

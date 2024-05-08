@@ -1,10 +1,7 @@
 module Components.ChooseVehicle.View where
 
 import Common.Types.App
-import ConfigProvider
-import Debug
 
-import Common.Styles.Colors as Color
 import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
 import Effect (Effect)
 import Font.Style as FontStyle
@@ -12,12 +9,11 @@ import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, 
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout, onAnimationEnd, shimmerFrameLayout, alpha)
 import Common.Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
-import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Language.Types (STR(..))
-import Language.Strings (getString)
+import Debug
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Mobility.Prelude (boolToVisibility)
+import ConfigProvider
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
 import Animation.Config (translateFullYAnimWithDurationConfig, translateYAnimConfig, Direction(..), AnimConfig, animConfig)
@@ -29,7 +25,6 @@ import PrestoDOM.Elements.Keyed as Keyed
 import Data.Tuple (Tuple(..))
 import Data.Array (length, mapWithIndex, findIndex, elem)
 import Engineering.Helpers.Commons(os)
-import Data.String as DS
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -37,7 +32,7 @@ view push config =
     isActiveIndex = config.index == config.activeIndex
     stroke' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then "2," <> Color.blue800 else "1," <> Color.white900
     background' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then Color.blue600 else Color.white900
-    padding' = PaddingVertical 16 16
+    padding' = Padding 16 16 16 16
     isBookAny = config.vehicleVariant == "BOOK_ANY" && config.activeIndex == config.index
     selectedEstimateHeight = if config.selectedEstimateHeight == 0 then 80 else config.selectedEstimateHeight
     currentEstimateHeight = if config.currentEstimateHeight == 0 then 184 else config.currentEstimateHeight
@@ -45,19 +40,32 @@ view push config =
     frameLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      ][ linearLayout
+      , onClick push $ const $ OnSelect config
+      , clickable config.isEnabled
+      ][  
+       PrestoAnim.animationSet
+            [ Anim.fadeInWithDuration 100 isActiveIndex
+            , Anim.fadeOutWithDuration 100 $ not isActiveIndex
+            ]
+            $ 
+            linearLayout
+                [ width MATCH_PARENT
+                , height $ if os == "IOS" then (if isBookAny then V currentEstimateHeight else V selectedEstimateHeight) else MATCH_PARENT
+                , background background'
+                , cornerRadius 6.0
+                , stroke stroke'
+                , gravity RIGHT
+                , afterRender push $ const $ NoAction config
+                ][]
+      , linearLayout
           [ width MATCH_PARENT
-          , height $ WRAP_CONTENT
+          , height WRAP_CONTENT
           , cornerRadius 6.0
           , id $ EHC.getNewIDWithTag config.id
-          , clickable config.isEnabled
-          , background background'
-          , padding padding'
           , margin $ config.layoutMargin
-          , stroke stroke'
-          , gravity RIGHT
-          , onClick push $ const $ OnSelect config
-          , afterRender push (const NoAction)
+          , padding padding'
+          , orientation VERTICAL
+          , afterRender push $ const $ NoAction config
           ]
           [ linearLayout
               [ height WRAP_CONTENT
@@ -265,9 +273,9 @@ vehicleDetailsView push config =
                         "AUTO_RICKSHAW" -> "Auto Rickshaw"
                         "TAXI" -> "Non-AC Taxi"
                         "TAXI_PLUS" -> "AC Taxi"
-                        "SEDAN" -> "Comfy" 
+                        "SEDAN" -> "Sedan"
                         "SUV" -> "SUV"
-                        "HATCHBACK" -> "Eco" 
+                        "HATCHBACK" -> "Hatchback"
                         _ -> "Non-AC Taxi"
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -345,7 +353,7 @@ capacityView push config =
     ][ vehicleInfoView "ic_user_filled" config.capacity]
 
 vehicleInfoView :: forall w. String -> String -> PrestoDOM (Effect Unit) w
-vehicleInfoView imageName description = 
+vehicleInfoView imageName description = do
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT

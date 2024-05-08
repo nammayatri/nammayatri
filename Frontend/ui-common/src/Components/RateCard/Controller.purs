@@ -54,6 +54,7 @@ type Config = {
     fareInfoText :: String,
     waitingTimeInfo :: WaitingTimeInfo,
     driverAdditionsImage :: String,
+    fareInfoText :: String,
     primaryButtonConfig :: ButtonConfig
 }
 

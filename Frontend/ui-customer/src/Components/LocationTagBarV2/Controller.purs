@@ -16,7 +16,7 @@
 module Components.LocationTagBarV2.Controller where
 
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM (Length(..), Padding(..))
+import PrestoDOM (Length(..), Padding(..), Orientation(..), Margin(..), Visibility(..))
 import Styles.Types (FontStyle(..), FontSize(..))
 import Halogen.VDom.DOM.Prop (Prop)
 import Common.Types.App (LazyCheck(..))
@@ -41,13 +41,25 @@ type TagConfig = {
   padding :: Padding,
   id :: String,
   enableRipple  :: Boolean,
-  rippleColor :: String
+  rippleColor :: String,
+  orientation :: Orientation,
+  bannerConfig :: BannerConfig,
+  showBanner :: Visibility
   }
+type BannerConfig = {
+  text :: String,
+  color :: String,
+  fontStyle :: Style,
+  background :: String,
+  cornerRadii :: Corners,
+  textSize :: FontSize
+}
 
 type ImageConfig = {
   width :: Length,
   height :: Length,
-  imageWithFallback :: String
+  imageWithFallback :: String,
+  margin :: Margin
 }
 
 type TextConfig = {

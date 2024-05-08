@@ -29,7 +29,6 @@ import Styles.Colors as Color
 import ConfigProvider
 import PrestoDOM.Properties (sheetState)
 import Data.Int (toNumber,ceil, fromString)
-import Data.String (null) as DS
 import MerchantConfig.Types(AppConfig(..))
 import Mobility.Prelude
 import Screens.Types (ZoneType(..), TipViewStage(..))
@@ -68,7 +67,7 @@ view push config =
           , width MATCH_PARENT
           , accessibility DISABLE
           , enableShift false
-          , peakHeight $ getPeekHeight config 
+          , peakHeight $ if null config.quoteList then 300 else getPeekHeight config 
           , sheetState COLLAPSED
           , orientation VERTICAL
           ][linearLayout
@@ -105,7 +104,7 @@ addTipView push state =
   , clickable true
   , afterRender push $ const $ NoAction
   , onClick push $ const $ if state.tipViewProps.stage == DEFAULT then AddTip else NoAction 
-  , visibility $ boolToVisibility (state.enableTips && not state.intercity)
+  , visibility $ boolToVisibility state.enableTips
   ] $ (case state.tipViewProps.stage of 
           DEFAULT -> [defaultTipView push state]
           TIP_AMOUNT_SELECTED -> [selectTipView push state]
@@ -424,7 +423,7 @@ chooseYourRideView push config =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , background Color.white900
+      , background tagConfig.backgroundColor
       , cornerRadii $ Corners 24.0 true true false false
       ][linearLayout
         [ width MATCH_PARENT
@@ -488,9 +487,7 @@ chooseYourRideView push config =
                 ] 
               , textView (
                 [ text 
-                    if config.intercity
-                    then (getString INTERCITY_OPTIONS)
-                    else if length config.quoteList > 1 
+                    if length config.quoteList > 1 
                     then (getString CHOOSE_YOUR_RIDE)
                     else (getString CONFIRM_YOUR_RIDE)
                 , color Color.black800
@@ -562,23 +559,6 @@ estimatedTimeAndDistanceView push config =
         , color Color.black650
         ]
         <> FontStyle.paragraphText TypoGraphy
-    , linearLayout
-        [ height $ V 4
-        , width $ V 4
-        , cornerRadius 2.5
-        , background Color.black600
-        , visibility $ boolToVisibility $ not $ DS.null config.rideTime
-        , margin (Margin 6 2 6 0)
-        ]
-        []
-    , textView $
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text config.rideTime
-        , visibility $ boolToVisibility $ not $ DS.null config.rideTime
-        , color Color.black650
-        ]
-        <> FontStyle.paragraphText TypoGraphy
     ]
 
 quoteListView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -595,9 +575,11 @@ quoteListView push config =
     , margin $ MarginBottom if EHC.os == "IOS" then 44 else 0
     ]
     [scrollView
-      [ height $ if null (config.quoteList) then V 200 else viewHeight
+      [ nestedScrollView $ length config.quoteList > 3
       , width MATCH_PARENT
-      ][  if null (config.quoteList) then 
+      , height $ V if null config.quoteList then 200 else viewHeight
+      ]
+      [  if null (config.quoteList) then 
             shimmerFrameLayout 
             [ width MATCH_PARENT
             , height $ V 200
@@ -612,34 +594,40 @@ quoteListView push config =
                       shimmerItemView (index == 0)) [1,2,3] )]
             else 
               Keyed.linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , padding $ PaddingVertical 16 10
-                , margin $ MarginHorizontal 16 16
-                , orientation VERTICAL
-                ] $ mapWithIndex
-                    ( \index item -> do
-                        let estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\quote -> elem (fromMaybe "" quote.serviceTierName) item.selectedServices) variantBasedList else []
-                            services = if item.vehicleVariant == "BOOK_ANY" then HU.getAllServices FunctionCall else []
-                            bookAnyConfig = getBookAnyProps item estimates
-                            price = getMinMaxPrice bookAnyConfig item estimates
-                            capacity = getMinMaxCapacity bookAnyConfig item estimates
-                        ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length variantBasedList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
-                    ) variantBasedList
-              else 
-                Tuple "TopProvider" $ linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , orientation VERTICAL
-                ] $ mapWithIndex
-                    ( \index item -> do
-                        let estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\quote -> elem (fromMaybe "" quote.serviceTierName) item.selectedServices) topProviderList else []
-                            services = if item.vehicleVariant == "BOOK_ANY" then HU.getAllServices FunctionCall else []
-                            bookAnyConfig = getBookAnyProps item estimates
-                            price = getMinMaxPrice bookAnyConfig item estimates
-                            capacity = getMinMaxCapacity bookAnyConfig item estimates
-                        ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
-                    ) topProviderList)
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , padding $ PaddingVertical 16 10
+              , margin $ MarginHorizontal 16 16
+              , orientation VERTICAL
+              ][  
+                (if config.showMultiProvider  then 
+                    Tuple "MultiProvider" $ linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , orientation VERTICAL
+                    ] $ mapWithIndex
+                        ( \index item -> do
+                            let estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\quote -> elem (fromMaybe "" quote.serviceTierName) item.selectedServices) variantBasedList else []
+                                services = if item.vehicleVariant == "BOOK_ANY" then HU.getAllServices FunctionCall else []
+                                bookAnyConfig = getBookAnyProps item estimates
+                                price = getMinMaxPrice bookAnyConfig item estimates
+                                capacity = getMinMaxCapacity bookAnyConfig item estimates
+                            ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length variantBasedList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
+                        ) variantBasedList
+                  else 
+                    Tuple "TopProvider" $ linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , orientation VERTICAL
+                    ] $ mapWithIndex
+                        ( \index item -> do
+                            let estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\quote -> elem (fromMaybe "" quote.serviceTierName) item.selectedServices) topProviderList else []
+                                services = if item.vehicleVariant == "BOOK_ANY" then HU.getAllServices FunctionCall else []
+                                bookAnyConfig = getBookAnyProps item estimates
+                                price = getMinMaxPrice bookAnyConfig item estimates
+                                capacity = getMinMaxCapacity bookAnyConfig item estimates
+                            ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
+                        ) topProviderList)
            , if EHC.os /= "IOS" then bottomLayoutViewKeyed push config "BottomLayoutView" else Tuple "EmptyLL" $ linearLayout[][]-- TODO:: Temporary fix, should make scrollable list better
           ]
       ]
@@ -767,7 +755,7 @@ primaryButtonRequestRideConfig config id' = PrimaryButton.config
     selectedItem = case config.quoteList !! config.activeIndex of
               Just selectedItem -> selectedItem
               Nothing -> ChooseVehicle.config
-    disableButton = (selectedItem.selectedServices == []) && selectedItem.vehicleVariant == "BOOK_ANY" || null config.quoteList
+    disableButton = (selectedItem.selectedServices == []) && selectedItem.vehicleVariant == "BOOK_ANY"
     name = fromMaybe "" selectedItem.serviceTierName
     title = if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK name 
 
