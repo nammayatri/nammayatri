@@ -27,7 +27,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&), (/), (*), (/=), (+), (<<<), unit, map, (-))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml,imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight,fontStyle, scrollView, maxLines, singleLine, stroke, horizontalScrollView)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml,imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight,fontStyle, scrollView, maxLines, singleLine, stroke, horizontalScrollView, relativeLayout)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
@@ -292,10 +292,10 @@ driverAdditionView push config =
      , horizontalScrollView 
        [ width MATCH_PARENT
        , height WRAP_CONTENT
-       , margin $ MarginVertical 12 12
        ][ linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
+          , margin $ MarginTop 12
           , cornerRadius 8.0
           ](DA.mapWithIndex (\index item -> 
             linearLayout
@@ -303,27 +303,55 @@ driverAdditionView push config =
             , height WRAP_CONTENT
             , stroke $ "1," <> Color.grey900
             , orientation VERTICAL
+            , gravity CENTER
             ] <> showCornerRadii index)
-            [  textView $
+            [  relativeLayout 
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
-                , color Color.black700
-                , text item.key
-                , padding $ Padding 6 12 6 12
                 , background Color.blue600
-                ] <> FontStyle.body3 LanguageStyle
+                ] 
+                [ textView $
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , color Color.black700
+                    , padding $ Padding 6 12 6 12
+                    , text item.val
+                    , visibility INVISIBLE
+                    ] <> FontStyle.body3 LanguageStyle
+                  , textView $
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , color Color.black700
+                    , text item.key
+                    , padding $ Padding 6 12 6 12
+                    , gravity CENTER
+                    ] <> FontStyle.body3 LanguageStyle]
               , linearLayout 
                 [ height $ V 1
                 , width MATCH_PARENT
                 , background Color.grey900
                 ][]
-              , textView $
+              , relativeLayout 
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
-                , color Color.black700
-                , padding $ Padding 6 12 6 12
-                , text item.val
-                ] <> FontStyle.body3 LanguageStyle
+                ][ textView $
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , color Color.black700
+                    , text item.key
+                    , padding $ Padding 6 12 6 12
+                    , background Color.blue600
+                    , visibility INVISIBLE
+                    , gravity CENTER
+                    ] <> FontStyle.body3 LanguageStyle
+                  , textView $
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , color Color.black700
+                    , padding $ Padding 6 12 6 12
+                    , text item.val
+                    ] <> FontStyle.body3 LanguageStyle
+                ]
               ]) config.driverAdditions)       
         ]
          
