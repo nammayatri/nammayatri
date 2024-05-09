@@ -4,6 +4,7 @@
 
 module Domain.Types.QuestionModuleMapping where
 
+import Data.Aeson
 import qualified Domain.Types.LmsModule
 import Kernel.Prelude
 import qualified Kernel.Types.Id

@@ -28,7 +28,6 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.HotSpotConfig.HotSpotConfig -> m ())
 updateByPrimaryKey (Domain.Types.HotSpotConfig.HotSpotConfig {..}) = do
-  _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.blockRadius blockRadius,
       Se.Set Beam.hotSpotExpiry hotSpotExpiry,

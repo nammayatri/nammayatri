@@ -33,3 +33,7 @@ type MerchantPaymentMethod = MerchantPaymentMethodD 'Safe
 instance FromJSON (MerchantPaymentMethodD 'Unsafe)
 
 instance ToJSON (MerchantPaymentMethodD 'Unsafe)
+
+instance FromJSON (MerchantPaymentMethodD 'Safe)
+
+instance ToJSON (MerchantPaymentMethodD 'Safe)

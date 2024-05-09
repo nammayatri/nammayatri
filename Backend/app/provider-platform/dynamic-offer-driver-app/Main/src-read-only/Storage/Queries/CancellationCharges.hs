@@ -29,7 +29,6 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CancellationCharges.CancellationCharges -> m ())
 updateByPrimaryKey (Domain.Types.CancellationCharges.CancellationCharges {..}) = do
-  _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.cancellationCharges cancellationCharges,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),

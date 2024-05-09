@@ -4,6 +4,7 @@
 
 module Domain.Types.BapMetadata where
 
+import Data.Aeson
 import qualified Data.Text
 import Kernel.Prelude
 import qualified Kernel.Types.Id

@@ -4,6 +4,7 @@
 
 module Domain.Types.Translations where
 
+import Data.Aeson
 import qualified Data.Text
 import qualified Kernel.External.Types
 import Kernel.Prelude

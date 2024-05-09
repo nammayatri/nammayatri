@@ -28,12 +28,17 @@ addReferralCode ::
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 addReferralCode referralCode referredByDriverId (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.referralCode referralCode, Se.Set Beam.referredByDriverId (Kernel.Types.Id.getId <$> referredByDriverId)] [Se.Is Beam.driverId $ Se.Eq driverId]
+  updateOneWithKV
+    [ Se.Set Beam.referralCode referralCode,
+      Se.Set Beam.referredByDriverId (Kernel.Types.Id.getId <$> referredByDriverId),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq driverId]
 
 incrementReferralCountByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 incrementReferralCountByPersonId totalReferred (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.totalReferred totalReferred] [Se.Is Beam.driverId $ Se.Eq driverId]
+  updateOneWithKV [Se.Set Beam.totalReferred totalReferred, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
 
 removeAcUsageRestriction ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -43,7 +48,8 @@ removeAcUsageRestriction airConditionScore acUsageRestrictionType acRestrictionL
   updateOneWithKV
     [ Se.Set Beam.airConditionScore airConditionScore,
       Se.Set Beam.acUsageRestrictionType (Kernel.Prelude.Just acUsageRestrictionType),
-      Se.Set Beam.acRestrictionLiftCount acRestrictionLiftCount
+      Se.Set Beam.acRestrictionLiftCount acRestrictionLiftCount,
+      Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.driverId $ Se.Eq driverId]
 

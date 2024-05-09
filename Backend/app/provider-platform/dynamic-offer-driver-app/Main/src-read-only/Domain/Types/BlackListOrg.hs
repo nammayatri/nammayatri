@@ -15,8 +15,12 @@ import qualified Tools.Beam.UtilsTH
 data BlackListOrgD (s :: UsageSafety) = BlackListOrg {domain :: Kernel.Types.Beckn.Domain.Domain, id :: Kernel.Types.Id.Id Domain.Types.BlackListOrg.BlackListOrg, subscriberId :: Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber}
   deriving (Generic)
 
-type BlackListOrg = BlackListOrgD ('Safe)
+type BlackListOrg = BlackListOrgD 'Safe
 
 instance FromJSON (BlackListOrgD 'Unsafe)
 
 instance ToJSON (BlackListOrgD 'Unsafe)
+
+instance FromJSON (BlackListOrgD 'Safe)
+
+instance ToJSON (BlackListOrgD 'Safe)

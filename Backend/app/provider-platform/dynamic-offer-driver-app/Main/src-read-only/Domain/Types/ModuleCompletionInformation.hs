@@ -4,6 +4,7 @@
 
 module Domain.Types.ModuleCompletionInformation where
 
+import Data.Aeson
 import qualified Domain.Types.DriverModuleCompletion
 import Kernel.Prelude
 import qualified Kernel.Types.Id

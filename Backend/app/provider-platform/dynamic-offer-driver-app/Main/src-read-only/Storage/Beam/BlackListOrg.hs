@@ -12,7 +12,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Domain
 import Tools.Beam.UtilsTH
 
-data BlackListOrgT f = BlackListOrgT {domain :: (B.C f Kernel.Types.Beckn.Domain.Domain), id :: (B.C f Kernel.Prelude.Text), subscriberId :: (B.C f Kernel.Prelude.Text)} deriving (Generic, B.Beamable)
+data BlackListOrgT f = BlackListOrgT {domain :: B.C f Kernel.Types.Beckn.Domain.Domain, id :: B.C f Kernel.Prelude.Text, subscriberId :: B.C f Kernel.Prelude.Text} deriving (Generic, B.Beamable)
 
 instance B.Table BlackListOrgT where
   data PrimaryKey BlackListOrgT f = BlackListOrgId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
@@ -20,6 +20,6 @@ instance B.Table BlackListOrgT where
 
 type BlackListOrg = BlackListOrgT Identity
 
-$(enableKVPG (''BlackListOrgT) [('id)] [[('subscriberId)]])
+$(enableKVPG ''BlackListOrgT ['id] [['subscriberId]])
 
-$(mkTableInstancesWithTModifier (''BlackListOrgT) "black_list_org" [("subscriberId", "subscriber_id")])
+$(mkTableInstancesWithTModifier ''BlackListOrgT "black_list_org" [("subscriberId", "subscriber_id")])

@@ -4,6 +4,7 @@
 
 module Domain.Types.LmsModule where
 
+import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Vehicle
