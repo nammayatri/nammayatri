@@ -17,7 +17,6 @@ data FleetOwnerInformation = FleetOwnerInformation
     fleetOwnerPersonId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     fleetType :: Domain.Types.FleetOwnerInformation.FleetType,
     gstNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    id :: Kernel.Types.Id.Id Domain.Types.FleetOwnerInformation.FleetOwnerInformation,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     verified :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -27,4 +26,4 @@ data FleetOwnerInformation = FleetOwnerInformation
 
 data FleetType = RENTAL_FLEET | NORMAL_FLEET deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FleetType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FleetType)

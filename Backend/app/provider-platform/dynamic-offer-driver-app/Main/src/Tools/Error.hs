@@ -169,6 +169,8 @@ data DriverError
   | DriverNotFound Text
   | DriverReferralCodeNotGenerated
   | DriverAlreadyLinkedWithVehicle Text
+  | FleetOwnerAccountBlocked
+  | AccountBlocked
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
@@ -183,6 +185,8 @@ instance IsBaseError DriverError where
   toMessage (DriverNotFound phoneNo) = Just $ "No Driver is found Registered  with this phone number = " <> phoneNo
   toMessage DriverReferralCodeNotGenerated = Just "Not able to generate driver referral code"
   toMessage (DriverAlreadyLinkedWithVehicle vehicleNo) = Just $ "Driver is already linked with vehicle " <> vehicleNo
+  toMessage FleetOwnerAccountBlocked = Just "Fleet Owner account has been blocked."
+  toMessage AccountBlocked = Just "Account has been blocked."
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
@@ -195,6 +199,8 @@ instance IsHTTPError DriverError where
     DriverNotFound _ -> "DRIVER_NOT_FOUND"
     DriverReferralCodeNotGenerated -> "DRIVER_REFERRAL_CODE_NOT_GENERATED"
     DriverAlreadyLinkedWithVehicle _ -> "DRIVER_ALREADY_LINKED"
+    FleetOwnerAccountBlocked -> "FLEET_OWNER_ACCOUNT_BLOCKED"
+    AccountBlocked -> "ACCOUNT_BLOCKED"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
@@ -205,6 +211,8 @@ instance IsHTTPError DriverError where
     DriverNotFound _ -> E403
     DriverReferralCodeNotGenerated -> E400
     DriverAlreadyLinkedWithVehicle _ -> E403
+    FleetOwnerAccountBlocked -> E403
+    AccountBlocked -> E403
 
 instance IsAPIError DriverError
 
@@ -1095,6 +1103,8 @@ data DriverOnboardingError
   | DLInvalid
   | VehicleServiceTierNotFound Text
   | PanAlreadyLinked
+  | RCNotLinkedWithFleet
+  | RCAssociationNotFound
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1127,6 +1137,8 @@ instance IsBaseError DriverOnboardingError where
     DLInvalid -> Just "Contact Customer Support, class of vehicles is not supported"
     VehicleServiceTierNotFound serviceTier -> Just $ "Service tier config not found for vehicle service tier \"" <> serviceTier <> "\"."
     PanAlreadyLinked -> Just "PAN already linked with driver."
+    RCNotLinkedWithFleet -> Just "Vehicle Registration Certificate is not linked with Fleet."
+    RCAssociationNotFound -> Just "RC association not found."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1158,6 +1170,8 @@ instance IsHTTPError DriverOnboardingError where
     DLInvalid -> "DL_INVALID"
     VehicleServiceTierNotFound _ -> "VEHICLE_SERVICE_TIER_NOT_FOUND"
     PanAlreadyLinked -> "PAN_ALREADY_LINKED"
+    RCNotLinkedWithFleet -> "RC_NOT_LINKED_WITH_FLEET"
+    RCAssociationNotFound -> "RC_ASSOCIATION_NOT_FOUND"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1187,6 +1201,8 @@ instance IsHTTPError DriverOnboardingError where
     DLInvalid -> E400
     VehicleServiceTierNotFound _ -> E500
     PanAlreadyLinked -> E400
+    RCNotLinkedWithFleet -> E400
+    RCAssociationNotFound -> E400
 
 instance IsAPIError DriverOnboardingError
 

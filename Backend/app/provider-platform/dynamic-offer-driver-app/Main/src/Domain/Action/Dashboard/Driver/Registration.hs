@@ -194,7 +194,7 @@ verify authId mbFleet fleetOwnerId req = do
           whatsappNotificationEnroll = Nothing
         }
   when mbFleet $ do
-    assoc <- FDV.makeFleetVehicleDriverAssociation res.person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFDV.create assoc
   pure Success
 

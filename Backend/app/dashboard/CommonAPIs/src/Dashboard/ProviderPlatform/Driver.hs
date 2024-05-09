@@ -21,6 +21,7 @@ module Dashboard.ProviderPlatform.Driver
 where
 
 import Dashboard.Common as Reexport
+import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
 import Data.Aeson
 import Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -734,7 +735,9 @@ data AddVehicleReq = AddVehicleReq
     model :: Text,
     make :: Text,
     airConditioned :: Maybe Bool,
-    driverName :: Text
+    driverName :: Text,
+    imageId :: Maybe (Id Image),
+    vehicleCategory :: Maybe Category
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -760,6 +763,17 @@ type AddVehicleForFleetAPI =
     :> "fleet"
     :> "addVehicle"
     :> ReqBody '[JSON] AddVehicleReq
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+
+-- add vehicle for fleet withoutDriver ------------------------------------------
+
+type RegisterRCForFleetWithoutDriverAPI =
+  "fleet"
+    :> "addRC"
+    :> "withoutDriver"
+    :> ReqBody '[JSON] Registration.RegisterRCReq
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------

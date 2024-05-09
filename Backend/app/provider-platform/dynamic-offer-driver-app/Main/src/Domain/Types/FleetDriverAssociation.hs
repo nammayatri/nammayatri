@@ -31,8 +31,8 @@ data FleetDriverAssociation = FleetDriverAssociation
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema, Read, Ord)
 
-makeFleetVehicleDriverAssociation :: (MonadFlow m) => Id Person -> Text -> Maybe UTCTime -> m FleetDriverAssociation
-makeFleetVehicleDriverAssociation driverId fleetOwnerId end = do
+makeFleetDriverAssociation :: (MonadFlow m) => Id Person -> Text -> Maybe UTCTime -> m FleetDriverAssociation
+makeFleetDriverAssociation driverId fleetOwnerId end = do
   id <- generateGUID
   now <- getCurrentTime
   return $

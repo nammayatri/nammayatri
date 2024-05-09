@@ -34,10 +34,8 @@ updateFleetOwnerVerifiedStatus verified (Kernel.Types.Id.Id fleetOwnerPersonId) 
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.verified verified, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq fleetOwnerPersonId]
 
-findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FleetOwnerInformation.FleetOwnerInformation -> m (Maybe Domain.Types.FleetOwnerInformation.FleetOwnerInformation))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.FleetOwnerInformation.FleetOwnerInformation))
+findByPrimaryKey (Kernel.Types.Id.Id fleetOwnerPersonId) = do findOneWithKV [Se.And [Se.Is Beam.fleetOwnerPersonId $ Se.Eq fleetOwnerPersonId]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetOwnerInformation.FleetOwnerInformation -> m ())
 updateByPrimaryKey (Domain.Types.FleetOwnerInformation.FleetOwnerInformation {..}) = do
@@ -45,7 +43,6 @@ updateByPrimaryKey (Domain.Types.FleetOwnerInformation.FleetOwnerInformation {..
   updateWithKV
     [ Se.Set Beam.blocked blocked,
       Se.Set Beam.enabled enabled,
-      Se.Set Beam.fleetOwnerPersonId (Kernel.Types.Id.getId fleetOwnerPersonId),
       Se.Set Beam.fleetType fleetType,
       Se.Set Beam.gstNumber gstNumber,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -53,7 +50,7 @@ updateByPrimaryKey (Domain.Types.FleetOwnerInformation.FleetOwnerInformation {..
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+    [Se.And [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]]
 
 instance FromTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformation.FleetOwnerInformation where
   fromTType' (Beam.FleetOwnerInformationT {..}) = do
@@ -65,7 +62,6 @@ instance FromTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformatio
             fleetOwnerPersonId = Kernel.Types.Id.Id fleetOwnerPersonId,
             fleetType = fleetType,
             gstNumber = gstNumber,
-            id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             verified = verified,
             createdAt = createdAt,
@@ -80,7 +76,6 @@ instance ToTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformation.
         Beam.fleetOwnerPersonId = Kernel.Types.Id.getId fleetOwnerPersonId,
         Beam.fleetType = fleetType,
         Beam.gstNumber = gstNumber,
-        Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.verified = verified,
         Beam.createdAt = createdAt,

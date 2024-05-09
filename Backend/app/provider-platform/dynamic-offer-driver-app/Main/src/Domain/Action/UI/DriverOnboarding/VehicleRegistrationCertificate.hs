@@ -68,6 +68,8 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as DIQuery
 import Storage.Queries.DriverRCAssociation (buildRcHM)
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
+import qualified Storage.Queries.FleetOwnerInformation as FOI
+import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
@@ -141,15 +143,20 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
   let checkPrefixOfRCNumber = null documentVerificationConfig.rcNumberPrefixList || prefixMatchedResult req.vehicleRegistrationCertNumber documentVerificationConfig.rcNumberPrefixList
   unless checkPrefixOfRCNumber $ throwError (InvalidRequest "RC number prefix is not valid")
   runRequestValidation validateDriverRCReq req
-  driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  when driverInfo.blocked $ throwError DriverAccountBlocked
+  blocked <- case person.role of
+    Person.FLEET_OWNER -> do
+      res <- FOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound personId.getId)
+      return res.blocked
+    _ -> do
+      res <- DIQuery.findById person.id >>= fromMaybeM (PersonNotFound personId.getId)
+      return res.blocked
+  when blocked $ throwError AccountBlocked
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-
-  allLinkedRCs <- DAQuery.findAllLinkedByDriverId personId
-  unless (length allLinkedRCs < (transporterConfig.rcLimit + (if isDashboard then 1 else 0))) $ throwError (RCLimitReached transporterConfig.rcLimit)
-
+  when (person.role == Person.DRIVER) $ do
+    allLinkedRCs <- DAQuery.findAllLinkedByDriverId personId
+    unless (length allLinkedRCs < (transporterConfig.rcLimit + (if isDashboard then 1 else 0))) $ throwError (RCLimitReached transporterConfig.rcLimit)
   let mbAirConditioned = maybe req.airConditioned (\category -> if category == Vehicle.CAR then req.airConditioned else Just False) req.vehicleCategory
   when
     ( isNothing req.vehicleDetails && isNothing req.dateOfRegistration && documentVerificationConfig.checkExtraction
@@ -282,23 +289,36 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       Nothing -> buildRC person.merchantId person.merchantOperatingCityId rcInput
   case mVehicleRC of
     Just vehicleRC -> do
+      -- upsert vehicleRC
       RCQuery.upsert vehicleRC
-      -- linking to driver
       rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (RCNotFound (fromMaybe "" rcVerificationResponse.registrationNumber))
-      mbAssoc <- DAQuery.findLinkedByRCIdAndDriverId person.id rc.id now
-      when (isNothing mbAssoc) $ do
-        driverRCAssoc <- makeRCAssociation person.merchantId person.merchantOperatingCityId person.id rc.id (convertTextToUTC (Just "2099-12-12"))
-        DAQuery.create driverRCAssoc
-      -- update vehicle details too if exists
-      mbVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
-      whenJust mbVehicle $ \vehicle -> do
-        when (rc.verificationStatus == Domain.VALID && isJust rc.vehicleVariant) $ do
-          driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
-          driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
-          vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
-          let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now
-          VQuery.upsert updatedVehicle
-      whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey num
+      case person.role of
+        Person.FLEET_OWNER -> do
+          mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId person.id rc.id now
+          when (isNothing mbFleetAssoc) $ do
+            fleetRCAssoc <- makeFleetRCAssociation person.merchantId person.merchantOperatingCityId person.id rc.id (convertTextToUTC (Just "2099-12-12"))
+            FRCAssoc.create fleetRCAssoc
+        _ -> do
+          -- linking to driver
+          whenJust mbFleetOwnerId $ \fleetOwnerId -> do
+            mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId (Id fleetOwnerId) rc.id now
+            when (isNothing mbFleetAssoc) $ do
+              fleetRCAssoc <- makeFleetRCAssociation person.merchantId person.merchantOperatingCityId (Id fleetOwnerId :: Id Person.Person) rc.id (convertTextToUTC (Just "2099-12-12"))
+              FRCAssoc.create fleetRCAssoc
+          mbAssoc <- DAQuery.findLinkedByRCIdAndDriverId person.id rc.id now
+          when (isNothing mbAssoc) $ do
+            driverRCAssoc <- makeRCAssociation person.merchantId person.merchantOperatingCityId person.id rc.id (convertTextToUTC (Just "2099-12-12"))
+            DAQuery.create driverRCAssoc
+          -- update vehicle details too if exists
+          mbVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
+          whenJust mbVehicle $ \vehicle -> do
+            when (rc.verificationStatus == Domain.VALID && isJust rc.vehicleVariant) $ do
+              driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
+              driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
+              vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
+              let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now
+              VQuery.upsert updatedVehicle
+          whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey num
     Nothing -> pure ()
   where
     createRCInput :: Maybe Vehicle.Category -> Maybe Text -> Id Image.Image -> CreateRCInput

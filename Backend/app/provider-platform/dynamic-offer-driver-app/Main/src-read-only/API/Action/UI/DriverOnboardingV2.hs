@@ -75,10 +75,10 @@ type API =
       :> "register"
       :> "pancard"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.DriverPanReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 

@@ -32,9 +32,9 @@ data DriverPanCardE e = DriverPanCard
   }
   deriving (Generic)
 
-type DriverPanCard = DriverPanCardE ('AsEncrypted)
+type DriverPanCard = DriverPanCardE 'AsEncrypted
 
-type DecryptedDriverPanCard = DriverPanCardE ('AsUnencrypted)
+type DecryptedDriverPanCard = DriverPanCardE 'AsUnencrypted
 
 instance EncryptedItem DriverPanCard where
   type Unencrypted DriverPanCard = (DecryptedDriverPanCard, HashSalt)

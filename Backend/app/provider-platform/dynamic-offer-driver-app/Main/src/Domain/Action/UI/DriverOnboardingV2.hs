@@ -10,11 +10,10 @@ import Domain.Types.Common
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import Domain.Types.DriverInformation
-import Domain.Types.DriverSSN
 import qualified Domain.Types.DriverPanCard as Domain
+import Domain.Types.DriverSSN
 import Domain.Types.FarePolicy
 import qualified Domain.Types.IdfyVerification as DIV
-import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
@@ -45,9 +44,9 @@ import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverSSN as QDriverSSN
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverPanCardExtra as SQDPC
+import qualified Storage.Queries.DriverSSN as QDriverSSN
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.Translations as MTQuery
@@ -388,7 +387,7 @@ buildPanCard merchantId person API.Types.UI.DriverOnboardingV2.DriverPanReq {..}
         failedRules = [],
         id = id,
         panCardNumber = encryptedPan,
-        verificationStatus = Domain.PENDING,
+        verificationStatus = DIV.PENDING,
         merchantId = Just merchantId,
         createdAt = now,
         updatedAt = now

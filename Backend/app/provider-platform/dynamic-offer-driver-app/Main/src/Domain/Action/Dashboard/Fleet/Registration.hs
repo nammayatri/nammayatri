@@ -102,22 +102,22 @@ fleetOwnerRegister req = do
   let personAuth = buildFleetOwnerAuthReq merchant.id req
   person <-
     QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.FLEET_OWNER
-      >>= maybe (createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion) return
-  createFleetOwnerInfo person.id merchant.id req.fleetType req.gstNumber
+      >>= maybe (createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType req.gstNumber) return
   fork "Creating Pan Info for Fleet Owner" $ do
     createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber
   return $ FleetOwnerRegisterRes {personId = person.id.getId}
 
-createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Flow DP.Person
-createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion = do
+createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Text -> Flow DP.Person
+createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbgstNumber = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing (Just deploymentVersion) merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
   void $ QP.create person
+  createFleetOwnerInfo person.id merchantId mbfleetType mbgstNumber
   pure person
 
 createPanInfo :: Id DP.Person -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()
 createPanInfo personId merchantId merchantOperatingCityId (Just img1) _ (Just panNo) = do
-  let req' = Image.ImageValidateRequest {imageType = DVC.PanCard, image = img1, rcNumber = Nothing}
+  let req' = Image.ImageValidateRequest {imageType = DVC.PanCard, image = img1, rcNumber = Nothing, vehicleCategory = Nothing}
   image <- Image.validateImage True (personId, merchantId, merchantOperatingCityId) req'
   let panReq = DO.DriverPanReq {panNumber = panNo, imageId1 = image.imageId, imageId2 = Nothing, consent = True}
   void $ Registration.postDriverRegisterPancard (Just personId, merchantId, merchantOperatingCityId) panReq
@@ -126,14 +126,10 @@ createPanInfo _ _ _ _ _ _ = pure () --------- currently we can have it like this
 createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Text -> Flow ()
 createFleetOwnerInfo personId merchantId mbFleetType mbGstNumber = do
   now <- getCurrentTime
-  id <- generateGUID
-  let fleetType = case mbFleetType of
-        Just ft -> ft
-        Nothing -> FOI.NORMAL_FLEET
+  let fleetType = fromMaybe NORMAL_FLEET mbFleetType
       fleetOwnerInfo =
         FOI.FleetOwnerInformation
-          { id = id,
-            fleetOwnerPersonId = personId,
+          { fleetOwnerPersonId = personId,
             merchantId = merchantId,
             fleetType = fleetType,
             enabled = False,
@@ -144,7 +140,6 @@ createFleetOwnerInfo personId merchantId mbFleetType mbGstNumber = do
             updatedAt = now
           }
   QFOI.create fleetOwnerInfo
-  pure ()
 
 fleetOwnerLogin ::
   FleetOwnerLoginReq ->

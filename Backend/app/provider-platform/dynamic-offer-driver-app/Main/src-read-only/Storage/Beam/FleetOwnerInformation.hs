@@ -13,25 +13,24 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FleetOwnerInformationT f = FleetOwnerInformationT
-  { blocked :: (B.C f Kernel.Prelude.Bool),
-    enabled :: (B.C f Kernel.Prelude.Bool),
-    fleetOwnerPersonId :: (B.C f Kernel.Prelude.Text),
-    fleetType :: (B.C f Domain.Types.FleetOwnerInformation.FleetType),
-    gstNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    verified :: (B.C f Kernel.Prelude.Bool),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { blocked :: B.C f Kernel.Prelude.Bool,
+    enabled :: B.C f Kernel.Prelude.Bool,
+    fleetOwnerPersonId :: B.C f Kernel.Prelude.Text,
+    fleetType :: B.C f Domain.Types.FleetOwnerInformation.FleetType,
+    gstNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    verified :: B.C f Kernel.Prelude.Bool,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table FleetOwnerInformationT where
   data PrimaryKey FleetOwnerInformationT f = FleetOwnerInformationId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = FleetOwnerInformationId . id
+  primaryKey = FleetOwnerInformationId . fleetOwnerPersonId
 
 type FleetOwnerInformation = FleetOwnerInformationT Identity
 
-$(enableKVPG (''FleetOwnerInformationT) [('id)] [])
+$(enableKVPG ''FleetOwnerInformationT ['fleetOwnerPersonId] [])
 
-$(mkTableInstances (''FleetOwnerInformationT) "fleet_owner_information")
+$(mkTableInstances ''FleetOwnerInformationT "fleet_owner_information")

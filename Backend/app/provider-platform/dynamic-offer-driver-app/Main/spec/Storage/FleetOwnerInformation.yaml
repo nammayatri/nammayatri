@@ -6,7 +6,6 @@ imports:
 FleetOwnerInformation:
   tableName: fleet_owner_information
   fields:
-    id: Id FleetOwnerInformation
     merchantId: Id Merchant
     fleetOwnerPersonId : Id Person
     enabled: Bool
@@ -20,7 +19,7 @@ FleetOwnerInformation:
       enum: "RENTAL_FLEET,NORMAL_FLEET"
 
   constraints:
-    driverId: PrimaryKey
+    fleetOwnerPersonId : PrimaryKey
 
   queries:
     updateFleetOwnerVerifiedStatus:

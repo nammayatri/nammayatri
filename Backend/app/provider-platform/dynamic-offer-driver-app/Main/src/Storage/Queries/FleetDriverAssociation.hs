@@ -93,6 +93,13 @@ deleteByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> 
 deleteByDriverId driverId = do
   deleteWithKV [Se.Is BeamFDVA.driverId $ Se.Eq driverId.getId]
 
+endFleetDriverAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Person -> m ()
+endFleetDriverAssociation fleetOwnerId (Id driverId) = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamFDVA.associatedTill $ Just now, Se.Set BeamFDVA.isActive False]
+    [Se.And [Se.Is BeamFDVA.fleetOwnerId (Se.Eq fleetOwnerId), Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now), Se.Is BeamFDVA.driverId (Se.Eq driverId)]]
+
 instance FromTType' BeamFDVA.FleetDriverAssociation FleetDriverAssociation where
   fromTType' BeamFDVA.FleetDriverAssociationT {..} = do
     pure $

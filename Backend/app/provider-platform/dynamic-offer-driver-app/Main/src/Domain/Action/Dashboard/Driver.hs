@@ -74,17 +74,20 @@ module Domain.Action.Dashboard.Driver
     updateVehicleVariant,
     bulkReviewRCVariant,
     updateDriverTag,
+    registerRCForFleetWithoutDriver,
   )
 where
 
 import Control.Applicative ((<|>))
 import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
 import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
+import qualified Domain.Action.Dashboard.Merchant as DashboardMerchant
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.Driver as Driver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
@@ -162,7 +165,9 @@ import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
+import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
 import qualified Storage.Queries.FleetDriverAssociation as FDV
+import Storage.Queries.FleetRCAssociationExtra as FRAE
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Message.Message as MQuery
 import qualified Storage.Queries.Message.MessageTranslation as MTQuery
@@ -905,7 +910,7 @@ addVehicle merchantShortId opCity reqDriverId req = do
         driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId personId newRC.id (convertTextToUTC (Just "2099-12-12"))
         QRCAssociation.create driverRCAssoc
 
-      fork "Parallely verifying RC for add Vehicle: " $ runVerifyRCFlow personId merchant merchantOpCityId req -- run RC verification details
+      fork "Parallely verifying RC for add Vehicle: " $ runVerifyRCFlow personId merchant merchantOpCityId opCity req False -- run RC verification details
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
       driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
       let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now
@@ -926,19 +931,60 @@ addVehicleForFleet merchantShortId opCity reqDriverPhoneNo mbMobileCountryCode f
   phoneNumberHash <- getDbHash reqDriverPhoneNo
   let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
   driver <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
-  -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist driver.id.getId)
-  vehicle <- RCQuery.findLastVehicleRCWrapper req.registrationNo
-  whenJust vehicle $ \veh -> when (isJust veh.fleetOwnerId && veh.fleetOwnerId /= Just fleetOwnerId) $ throwError VehicleBelongsToAnotherFleet
+  rc <- RCQuery.findLastVehicleRCWrapper req.registrationNo
+  whenJust rc $ \rcert -> do
+    when (isJust rcert.fleetOwnerId && rcert.fleetOwnerId /= Just fleetOwnerId) $ throwError VehicleBelongsToAnotherFleet
+    activeAssociationsOfRC <- DRCAE.findAllActiveAssociationByRCId rcert.id
+    let rcAssociatedDriverIds = map (.driverId) activeAssociationsOfRC
+    forM_ rcAssociatedDriverIds $ \driverId -> do
+      isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId
+      when (isNothing isFleetDriver) $ throwError (InvalidRequest "Vehicle is associated with a driver who is not part of this fleet, First Unlink the vehicle from that driver and then try again")
   isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId
   case isFleetDriver of
     Nothing -> throwError (InvalidRequest "Driver is not part of this fleet, add this driver to the fleet before adding a vehicle with them")
     Just fleetDriver -> do
       unless fleetDriver.isActive $ throwError (InvalidRequest "Driver is not active with this fleet, add this driver to the fleet before adding a vehicle with them")
   Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
-  void $ runVerifyRCFlow driver.id merchant merchantOpCityId req
+  void $ runVerifyRCFlow driver.id merchant merchantOpCityId opCity req True
   logTagInfo "dashboard -> addVehicle : " (show driver.id)
+  pure Success
+
+---------------------------------------------------------------------
+
+registerRCForFleetWithoutDriver :: ShortId DM.Merchant -> Context.City -> Text -> Common.RegisterRCReq -> Flow APISuccess
+registerRCForFleetWithoutDriver merchantShortId opCity fleetOwnerId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = Id fleetOwnerId :: Id DP.Person
+  driver <-
+    QPerson.findById personId
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  let merchantId = driver.merchantId
+  unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist driver.id.getId)
+  rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationCertNumber
+  whenJust rc $ \rcert -> do
+    when (isJust rcert.fleetOwnerId && rcert.fleetOwnerId /= Just fleetOwnerId) $ throwError VehicleBelongsToAnotherFleet
+    activeAssociationsOfRC <- DRCAE.findAllActiveAssociationByRCId rcert.id
+    let rcAssociatedDriverIds = map (.driverId) activeAssociationsOfRC
+    forM_ rcAssociatedDriverIds $ \driverId -> do
+      isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId
+      when (isNothing isFleetDriver) $ throwError (InvalidRequest "Vehicle is associated with a driver who is not part of this fleet, First Unlink the vehicle from that driver and then try again")
+  Redis.set (DomainRC.makeFleetOwnerKey req.vehicleRegistrationCertNumber) fleetOwnerId
+  let rcReq =
+        DomainRC.DriverRCReq
+          { vehicleRegistrationCertNumber = req.vehicleRegistrationCertNumber,
+            imageId = cast req.imageId,
+            operatingCity = req.operatingCity,
+            dateOfRegistration = req.dateOfRegistration,
+            airConditioned = req.airConditioned,
+            multipleRC = req.multipleRC,
+            vehicleDetails = Nothing,
+            vehicleCategory = Nothing
+          }
+  void $ DomainRC.verifyRC False (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq
+  logTagInfo "dashboard -> Register RC For Fleet : " (show driver.id)
   pure Success
 
 createRCInputFromVehicle :: Common.AddVehicleReq -> CreateRCInput
@@ -1235,20 +1281,24 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
       _ <- DTPlan.planSubscribe serviceName planId (True, Just WHATSAPP) (cast driverId, mId, mOpCityId) driverInfo' serviceSpecificData
       pure ()
 
-runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Common.AddVehicleReq -> Flow ()
-runVerifyRCFlow personId merchant merchantOpCityId req = do
+runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> Common.AddVehicleReq -> Bool -> Flow ()
+runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet = do
+  let vehicleCategory = case req.vehicleCategory of
+        Just category -> Just $ DashboardMerchant.castCategory category
+        Nothing -> Nothing
+  let imageId = maybe "" cast req.imageId
   let rcReq =
         DomainRC.DriverRCReq
           { vehicleRegistrationCertNumber = req.registrationNo,
-            imageId = "",
-            operatingCity = "Bangalore", -- TODO: this needs to be fixed properly
+            imageId = imageId,
+            operatingCity = show operatingCity, -- Fixed
             dateOfRegistration = Nothing,
-            vehicleCategory = Nothing,
             airConditioned = req.airConditioned,
             multipleRC = Nothing,
-            vehicleDetails = Nothing
+            vehicleDetails = Nothing,
+            vehicleCategory = vehicleCategory
           }
-  void $ DomainRC.verifyRC True (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq
+  void $ DomainRC.verifyRC (not isFleet) (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq
 
 castVehicleVariant :: Common.Variant -> DVeh.Variant
 castVehicleVariant = \case
@@ -1663,6 +1713,7 @@ fleetRemoveVehicle _merchantShortId opCity fleetOwnerId_ vehicleNo = do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId assoc.driverId fleetOwnerId_
     when (isJust isFleetDriver) $ QRCAssociation.endAssociationForRC assoc.driverId vehicleRC.id
   RCQuery.upsert (updatedVehicleRegistrationCertificate vehicleRC)
+  FRAE.endAssociationForRC (Id fleetOwnerId_ :: Id DP.Person) vehicleRC.id
   case vehicle <&> (.driverId) of
     Just driverId -> do
       void $ toggleDriverSubscriptionByService (driverId, merchant.id, merchantOpCityId) YATRI_RENTAL Nothing False vehicleNo
@@ -1675,11 +1726,10 @@ fleetRemoveDriver :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Dr
 fleetRemoveDriver _merchantShortId _ fleetOwnerId driverId = do
   let personId = cast @Common.Driver @DP.Person driverId
   associationList <- QRCAssociation.findAllLinkedByDriverId personId
-  fleetOwnerRcList <- RCQuery.findAllByFleetOwnerId Nothing Nothing (Just fleetOwnerId)
-  let rcAssociatedList :: [Id VehicleRegistrationCertificate] = map (.id) fleetOwnerRcList
-  let rcAssociatedWithFleet = any (\rcAssoc -> rcAssoc.rcId `elem` rcAssociatedList) associationList
-  when rcAssociatedWithFleet $ throwError (InvalidRequest "Driver is linked to fleet Vehicle , first unlink then try")
-  FDV.updateFleetDriverActiveStatus fleetOwnerId personId False
+  forM_ associationList $ \assoc -> do
+    rc <- RCQuery.findByRCIdAndFleetOwnerId assoc.rcId $ Just fleetOwnerId
+    when (isJust rc) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle , first unlink then try")
+  FDV.endFleetDriverAssociation fleetOwnerId personId
   pure Success
 
 fleetTotalEarning :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common.FleetTotalEarningResponse -- TODO: This is thing should be in interval level this will become very slow when the data will grow

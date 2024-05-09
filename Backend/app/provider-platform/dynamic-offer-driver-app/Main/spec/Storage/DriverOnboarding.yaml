@@ -462,6 +462,25 @@ VehiclePUC:
       where:
         and: [rcId, driverId]
 
+FleetRCAssociation:
+  tableName: fleet_rc_association
+  fields:
+    id: Id FleetRCAssociation
+    fleetOwnerId: Id Person
+    rcId: Id VehicleRegistrationCertificate
+    associatedOn: UTCTime
+    associatedTill: Maybe UTCTime
+  constraints:
+    id: PrimaryKey
+    rcId: SecondaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+
 DriverSSN:
   tableName: driver_ssn
   fields:
@@ -509,9 +528,6 @@ DriverPanCard:
       where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
-
-
-
 
 FleetOwnerDocumentVerificationConfig:
   tableName: fleet_owner_document_verification_config
