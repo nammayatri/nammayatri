@@ -116,20 +116,16 @@ getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toD
   when (diffDays toDate fromDate /= 6 || reqDayIndex /= 0) $ throwError $ InvalidRequest "Invalid Input"
   getDriverListFromLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toDate weekDiff weeklyLeaderBoardConfig
 
-getMonthlyDriverLeaderBoard :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) => (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> m LeaderBoardRes
-getMonthlyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toDate = do
+getMonthlyDriverLeaderBoard :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) => (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Int -> m LeaderBoardRes
+getMonthlyDriverLeaderBoard (personId, merchantId, merchantOpCityId) month = do
   now <- getCurrentTime
   let currentDay = RideEndInt.getCurrentDate now
-      monthDiff = getMonth currentDay - getMonth toDate
-      inputMonthDiff = getMonth toDate - getMonth fromDate
+      fromDate = fromGregorian (getYearFromDay currentDay) month 1
+      monthDiff = RideEndInt.getMonth currentDay - month
   monthlyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.MONTHLY merchantOpCityId >>= fromMaybeM (InternalError "Leaderboard configs not present")
   unless monthlyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
-  when (monthDiff < 0 || monthDiff > monthlyLeaderBoardConfig.numberOfSets) $ throwError $ InvalidRequest "Month outside Range"
-  when (inputMonthDiff /= 0 || fromDate /= RideEndInt.getStartDateMonth fromDate || toDate /= RideEndInt.getEndDateMonth toDate 1) $ throwError $ InvalidRequest "Invalid Input"
-  getDriverListFromLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toDate monthDiff monthlyLeaderBoardConfig
-  where
-    getMonth :: Day -> Int
-    getMonth = (\(_, m, _) -> m) . toGregorian
+  when ((monthDiff < 0 && 12 + monthDiff > monthlyLeaderBoardConfig.numberOfSets - 1) || monthDiff > monthlyLeaderBoardConfig.numberOfSets - 1) $ throwError $ InvalidRequest "Month outside Range"
+  getDriverListFromLeaderBoard (personId, merchantId, merchantOpCityId) fromDate fromDate monthDiff monthlyLeaderBoardConfig
 
 getDriverListFromLeaderBoard :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) => (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> Int -> LConfig.LeaderBoardConfigs -> m LeaderBoardRes
 getDriverListFromLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toDate dateDiff leaderBoardConfig = do
@@ -138,7 +134,7 @@ getDriverListFromLeaderBoard (personId, merchantId, merchantOpCityId) fromDate t
       useCityBasedLeaderboard = leaderBoardConfig.useOperatingCityBasedLeaderBoard
       driverLeaderBoardKey = RideEndInt.makeDriverLeaderBoardKey leaderBoardType False useCityBasedLeaderboard merchantId merchantOpCityId fromDate toDate
       cachedDriverLeaderBoardKey = RideEndInt.makeDriverLeaderBoardKey leaderBoardType True useCityBasedLeaderboard merchantId merchantOpCityId fromDate toDate
-  driversWithScoresMap :: [(Text, Double)] <- concat <$> Redis.withNonCriticalRedis (Redis.get $ cachedDriverLeaderBoardKey)
+  driversWithScoresMap :: [(Text, Double)] <- concat <$> Redis.withNonCriticalRedis (Redis.get cachedDriverLeaderBoardKey)
   let driverIds = map (Id . fst) driversWithScoresMap
   driverDetailsMap <- HM.fromList . map (\driver -> (driver.id.getId, (fromMaybe "Driver" $ getPersonFullName driver, driver.gender))) <$> B.runInReplica (QPerson.getDriversByIdIn driverIds)
   (drivers', isCurrentDriverInTop) <-
