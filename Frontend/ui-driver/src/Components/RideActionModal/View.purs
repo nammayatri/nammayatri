@@ -812,7 +812,7 @@ rideTierAndCapacity push config =
   , height WRAP_CONTENT
   , background Color.blue600 
   , gravity CENTER
-  , padding $ Padding 8 8 8 8
+  , padding $ Padding paddingLeft 4 4 4
   , margin $ MarginBottom 12
   , cornerRadius 18.0
   ][ linearLayout
@@ -842,7 +842,7 @@ rideTierAndCapacity push config =
       , width WRAP_CONTENT
       , text $ RC.serviceTierMapping config.serviceTierAndAC config.acRide
       , color Color.black700
-      , margin $ MarginLeft 6
+      , margin $ MarginHorizontal 6 6
       , padding $ PaddingBottom 1
       ] <> FontStyle.body1 TypoGraphy
     , linearLayout
@@ -850,7 +850,7 @@ rideTierAndCapacity push config =
       , height $ V 5
       , background Color.black700
       , cornerRadius 4.0
-      , margin $ MarginHorizontal 6 6
+      , margin $ MarginRight 6
       , visibility $ boolToVisibility $ Maybe.isJust config.capacity
       ][]
     , imageView
@@ -865,12 +865,13 @@ rideTierAndCapacity push config =
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , color Color.black700
-      , margin $ MarginRight 6
+      , margin $ MarginRight 10
       ] <> FontStyle.body1 TypoGraphy
         <> case config.capacity of
             Maybe.Just cap -> [text $ show cap]
             Maybe.Nothing -> [visibility GONE]
   ] 
+  where paddingLeft = if config.acRide == Maybe.Just true then 4 else 10
 
 normalRideInfoView :: (Action -> Effect Unit) -> Config -> forall w. Array (PrestoDOM (Effect Unit) w)
 normalRideInfoView push config =

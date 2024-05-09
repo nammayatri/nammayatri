@@ -115,15 +115,16 @@ acCheckForDriversView push state =
                 , height WRAP_CONTENT
                 , color Color.black800
                 , text $ getString AC_CHECK_TITILE
+                , margin $ MarginRight 7
+                , onClick push $ const $ ShowACVideoPopup
                 ]
               , imageView
-                [ width $ V 20
-                , height $ V 20
-                , margin $ MarginLeft 7
+                [ width $ V 25
+                , height $ V 25
                 , imageWithFallback $ fetchImage FF_ASSET "ny_ic_youtube"
-                , padding $ Padding 2 2 2 2
                 , rippleColor Color.rippleShade
                 , onClick push $ const $ ShowACVideoPopup
+                , padding $ PaddingRight 5
                 ]
             ]
           , linearLayout
