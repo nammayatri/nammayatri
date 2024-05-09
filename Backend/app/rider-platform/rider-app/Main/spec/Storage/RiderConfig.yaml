@@ -48,16 +48,9 @@ RiderConfig:
     autoUnblockSafetyCenterAfterDays: "14"
     kaptureQueue: "''"
 
-  beamType:
-    emailOtpConfig: Maybe Text
-
-  toTType:
-    emailOtpConfig: (Just $ Kernel.Utils.Text.encodeToText emailOtpConfig)|E
-
-  fromTType:
-    emailOtpConfig: (Kernel.Utils.Text.decodeFromText =<< emailOtpConfig)|E
-
   queries:
     findByMerchantOperatingCityId:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId
+  sqlType:
+    emailOtpConfig: "json"

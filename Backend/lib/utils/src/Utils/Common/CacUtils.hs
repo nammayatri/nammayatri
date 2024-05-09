@@ -24,6 +24,7 @@ import Data.Aeson
 import qualified Data.Bifunctor as DBF
 import Data.Text as Text
 import qualified EulerHS.Language as L
+import qualified EulerHS.Types as T
 import qualified GHC.List as GL
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
@@ -137,7 +138,8 @@ getConfigFromCacOrDB ::
     FromJSON a,
     FromJSON b,
     ToJSON b,
-    HasSchemaName BeamSC.SystemConfigsT
+    HasSchemaName BeamSC.SystemConfigsT,
+    Show a
   ) =>
   Maybe a ->
   [(CacContext, Value)] ->
@@ -157,9 +159,15 @@ getConfigFromCacOrDB cachedConfig context stickyKey fromCacTyp cpf = do
                 incrementSystemConfigsFailedCounter $ getCacMetricErrorFromDB cpf
                 pure Nothing
             when (isJust config) do
-              logDebug $ "Config found in CAC for " <> getTableName cpf <> " with context " <> show context
+              logDebug $ "Config found in CAC for " <> getTableName cpf <> " with context " <> show context <> " is: " <> show config
             pure config
           else pure Nothing
     )
     (pure . Just)
     cachedConfig
+
+setConfigInMemoryCommon :: (CacheFlow m r, T.OptionEntity k v, MonadFlow m) => k -> Bool -> Maybe v -> m (Maybe v)
+setConfigInMemoryCommon key isExp val = do
+  when (isJust val && isExp) do
+    L.setOption key (fromJust val)
+  pure val

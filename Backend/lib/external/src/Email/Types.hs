@@ -14,6 +14,13 @@
 
 module Email.Types where
 
+import Data.Aeson as A
+import Data.ByteString (ByteString)
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
+import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import Kernel.Prelude
 
 data EmailOTPConfig = EmailOTPConfig
@@ -22,3 +29,23 @@ data EmailOTPConfig = EmailOTPConfig
     bodyTemplate :: Text
   }
   deriving (Read, Generic, Show, FromJSON, ToJSON, ToSchema, Ord, Eq)
+
+fromFieldEmailConfig ::
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion EmailOTPConfig
+fromFieldEmailConfig f mbValue = do
+  value <- fromField f mbValue
+  case A.fromJSON value of
+    A.Success a -> pure a
+    _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed"
+
+instance FromField EmailOTPConfig where
+  fromField = fromFieldEmailConfig
+
+instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be EmailOTPConfig where
+  sqlValueSyntax = sqlValueSyntax . A.toJSON
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be EmailOTPConfig
+
+instance FromBackendRow Postgres EmailOTPConfig

@@ -139,6 +139,9 @@ dependencies:
   - amazonka
   - amazonka-core
   - amazonka-ses
+  - beam-core
+  - beam-postgres
+  - postgresql-simple
 
 ghc-options:
   - -fwrite-ide-info
