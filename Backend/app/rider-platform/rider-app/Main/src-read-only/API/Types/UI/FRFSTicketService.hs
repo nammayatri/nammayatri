@@ -36,6 +36,18 @@ data FRFSCanCancelStatus = FRFSCanCancelStatus
 data FRFSCancelStatus = FRFSCancelStatus {cancellationCharges :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney, refundAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data FRFSConfigAPIRes = FRFSConfigAPIRes
+  { bookingEndTime :: Kernel.Prelude.UTCTime,
+    bookingStartTime :: Kernel.Prelude.UTCTime,
+    customDates :: [Data.Text.Text],
+    customEndTime :: Data.Text.Text,
+    discount :: Kernel.Prelude.Int,
+    metroStationTtl :: Kernel.Prelude.Int,
+    oneWayTicketLimit :: Kernel.Prelude.Int,
+    roundTripTicketLimit :: Kernel.Prelude.Int
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     price :: Kernel.Types.Common.HighPrecMoney,

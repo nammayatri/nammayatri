@@ -17,6 +17,7 @@ import qualified Domain.Action.Beckn.FRFS.Common as Common
 import qualified Domain.Action.Beckn.FRFS.OnConfirm as DACFOC
 import Domain.Types.BecknConfig
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import Domain.Types.FRFSConfig
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
@@ -53,6 +54,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTrans
 import Servant hiding (throwError)
 import qualified SharedLogic.CallFRFSBPP as CallBPP
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -487,3 +489,9 @@ getAbsoluteValue mbRefundAmount = case mbRefundAmount of
   Just rfValue -> do
     let HighPrecMoney value = rfValue
     Just (HighPrecMoney $ abs value)
+
+getFrfsConfig :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Context.City -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
+getFrfsConfig (_, mId) opCity = do
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity mId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> " ,city: " <> show opCity)
+  Domain.Types.FRFSConfig.FRFSConfig {..} <- B.runInReplica $ CQFRFSConfig.findByMerchantOperatingCityId merchantOpCity.id >>= fromMaybeM (InvalidRequest "FRFS Config not found")
+  return FRFSTicketService.FRFSConfigAPIRes {..}
