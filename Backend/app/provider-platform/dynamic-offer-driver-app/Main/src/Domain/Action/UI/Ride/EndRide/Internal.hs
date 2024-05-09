@@ -33,6 +33,7 @@ module Domain.Action.UI.Ride.EndRide.Internal
     getStartDateMonth,
     getEndDateMonth,
     makeDriverLeaderBoardKey,
+    getMonth,
   )
 where
 
@@ -311,15 +312,17 @@ makeDriverLeaderBoardKey leaderBoardType isCached useOperatingCityBasedLeaderBoa
 
     makeMonthlyDriverLeaderBoardKey :: Text
     makeMonthlyDriverLeaderBoardKey =
-      case useOperatingCityBasedLeaderBoard of
-        Just True -> "DMLBK:" <> merchantOpCityId.getId <> ":" <> show fromDate <> ":" <> show toDate
-        _ -> "DMLBK:" <> merchantId.getId <> ":" <> show fromDate <> ":" <> show toDate
+      let month = getMonth fromDate
+       in case useOperatingCityBasedLeaderBoard of
+            Just True -> "DMLBK:" <> merchantOpCityId.getId <> ":" <> show month
+            _ -> "DMLBK:" <> merchantId.getId <> ":" <> show month
 
     makeCachedMonthlyDriverLeaderBoardKey :: Text
     makeCachedMonthlyDriverLeaderBoardKey =
-      case useOperatingCityBasedLeaderBoard of
-        Just True -> "DMLBCK:" <> merchantOpCityId.getId <> ":" <> show fromDate <> ":" <> show toDate
-        _ -> "DMLBCK:" <> merchantId.getId <> ":" <> show fromDate <> ":" <> show toDate
+      let month = getMonth fromDate
+       in case useOperatingCityBasedLeaderBoard of
+            Just True -> "DMLBCK:" <> merchantOpCityId.getId <> ":" <> show month
+            _ -> "DMLBCK:" <> merchantId.getId <> ":" <> show month
 
 getRidesAndDistancefromZscore :: Double -> Int -> (Int, Meters)
 getRidesAndDistancefromZscore dzscore dailyZscoreBase =
@@ -335,6 +338,9 @@ getStartDateMonth :: Day -> Day
 getStartDateMonth day = fromGregorian y m 1
   where
     (y, m, _) = toGregorian day
+
+getMonth :: Day -> Int
+getMonth = (\(_, m, _) -> m) . toGregorian
 
 getEndDateMonth :: Day -> Int -> Day
 getEndDateMonth day addMonths = pred $ addGregorianMonthsClip (integerFromInt addMonths) $ getStartDateMonth day
