@@ -782,55 +782,6 @@ drawMapRoute srcLat srcLng destLat destLng sourceMarkerConfig destMarkerConfig r
                     
                 Nothing -> pure route
 
-type Markers = {
-    srcMarker :: String,
-    destMarker :: String
-}
-
-data TrackingType = RIDE_TRACKING | DRIVER_TRACKING
-
-
-getRouteMarkers :: String -> City -> TrackingType -> FPT.FareProductType -> Markers
-getRouteMarkers variant city trackingType fareProductType = 
-  { srcMarker : mkSrcMarker ,
-    destMarker : mkDestMarker 
-  }
-  where 
-    mkSrcMarker :: String 
-    mkSrcMarker = getCitySpecificMarker city
-    
-    getCitySpecificMarker :: City -> String
-    getCitySpecificMarker city = 
-        case variant of
-            "AUTO_RICKSHAW" -> getAutoImage city
-            "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
-            "SUV"           -> "ny_ic_suv_nav_on_map"
-            "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
-            _               -> "ny_ic_vehicle_nav_on_map"
-    
-    mkDestMarker :: String
-    mkDestMarker = 
-        case trackingType of 
-            RIDE_TRACKING -> if fareProductType == FPT.RENTAL then "ny_ic_blue_marker" else "ny_ic_dest_marker"
-            DRIVER_TRACKING -> "ny_ic_src_marker"
-
-    getAutoImage :: City -> String
-    getAutoImage city = case city of
-        Hyderabad -> "ny_ic_black_yellow_auto"
-        Kochi -> "ny_ic_koc_auto_on_map"
-        Chennai -> "ny_ic_black_yellow_auto"
-        _         -> "ic_auto_nav_on_map"
-      
-
-
-
-normalRoute ::String -> Markers
-normalRoute _ = {
-    srcMarker : "ny_ic_src_marker",
-    destMarker : "ny_ic_dest_marker"
-}
-
-
 makeSendIssueReq :: Maybe String ->  Maybe String -> String -> String -> Maybe Boolean -> SendIssueReq
 makeSendIssueReq email bookingId reason description nightSafety = SendIssueReq {
     "contactEmail" : email ,

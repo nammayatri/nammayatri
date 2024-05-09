@@ -31,7 +31,7 @@ import Effect (Effect)
 import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Uncurried (runEffectFn1, runEffectFn9)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, getValueFromIdMap, liftFlow, os, updatePushInIdMap, safeMarginTopWithDefault, screenWidth, safeMarginBottomWithDefault, safeMarginTop)
-import Helpers.Utils (FetchImageFrom(..), fetchImage, storeCallBackCustomer, makeNumber, getDefaultPixelSize)
+import Helpers.Utils (TrackingType(..), FetchImageFrom(..), fetchImage, storeCallBackCustomer, makeNumber, getDefaultPixelSize, getRouteMarkers, normalRoute)
 import JBridge (animateCamera, drawRoute, enableMyLocation, getExtendedPath, isCoordOnPath, removeAllPolylines, removeMarker, showMap, updateRoute, updateRouteConfig, startChatListenerService, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, clearChatMessages, getKeyInSharedPrefKeys, scrollOnResume, setMapPadding, getLayoutBounds, defaultMarkerConfig)
 import Mobility.Prelude (boolToVisibility)
 import Prelude
@@ -43,7 +43,7 @@ import Screens.FollowRideScreen.Controller (Action(..), ScreenOutput, eval, isMo
 import Screens.FollowRideScreen.ScreenData (mockDriverInfo, mockDriverLocation, mockRoute)
 import Screens.FollowRideScreen.Config (SOSOverlayConfig, genericHeaderConfig, getCurrentFollower, getDriverDetails, getFollowerName, getSosOverlayConfig, getTripDetails, primaryButtonConfig, getChatSuggestions)
 import Services.API (GetDriverLocationResp(..), GetRouteResp(..), LatLong(..), RideBookingRes(..), Route(..), Snapped(..))
-import Services.Backend (TrackingType(..), drawMapRoute, getDriverLocation, getRoute, getRouteMarkers, makeGetRouteReq, normalRoute, rideBooking, walkCoordinate, walkCoordinates)
+import Services.Backend (drawMapRoute, getDriverLocation, getRoute, makeGetRouteReq, rideBooking, walkCoordinate, walkCoordinates)
 import Types.App (GlobalState(..), defaultGlobalState)
 import Common.Types.App as Common
 import Components.GenericHeader as GenericHeader
@@ -845,8 +845,8 @@ driverLocationTracking push action duration id routeState = do
               newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
 
               point = { lat: srcLat, lng: srcLon }
-              srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
-              destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = ride.destination }
+              srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker }
+              destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = ride.destination }
             addSosMarkers state.data.sosStatus point
             liftFlow $ drawRoute [newPoints] "LineString" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag (getNewIDWithTag "FollowRideMap") -- check this
             liftFlow $ animateCamera srcLat srcLon 16.0 "ZOOM"
@@ -986,8 +986,8 @@ updateMockData push state id = defaultMockInviteFlow id state
   drawDriverRoute :: DriverInfoCard -> Paths -> Maybe Route -> Boolean -> Flow GlobalState Unit
   drawDriverRoute ride srcPoint route showRipples = do
     let markers = normalRoute ""
-        srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = getString SOS_LOCATION }
-        destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = getString DROP }
+        srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker, primaryText = getString SOS_LOCATION }
+        destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = getString DROP }
     void $ runExceptT $ runBackT $ drawMapRoute srcPoint.lat srcPoint.lng ride.destinationLat ride.destinationLng srcMarkerConfig destMarkerConfig "NORMAL" route "trip" $ (HSConfig.specialLocationConfig "" "" false getPolylineAnimationConfig) { autoZoom = false }
     when showRipples $ do
       liftFlow $ addAndUpdateSOSRipples srcPoint

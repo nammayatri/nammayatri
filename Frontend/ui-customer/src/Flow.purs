@@ -32,7 +32,7 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Control.Transformers.Back.Trans as App
-import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex, elem, nubByEq)
+import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex, elem, nubByEq, foldl, (:))
 import Data.Array as Arr
 import Data.Either (Either(..), either)
 import Data.Function.Uncurried (runFn3, runFn2, runFn1)
@@ -61,9 +61,9 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, timeValidity, removeMarker)
+import JBridge (getCurrentLatLong, showMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, timeValidity, removeMarker)
 import JBridge as JB
-import Helpers.Utils (compareDate, convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList, bufferTimePerKm, invalidBookingTime, getAndRemoveLatestNotificationType)
+import Helpers.Utils (compareDate, convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList, bufferTimePerKm, invalidBookingTime, getAndRemoveLatestNotificationType, normalRoute)
 import Language.Strings (getString)
 import Helpers.SpecialZoneAndHotSpots (zoneLabelIcon, transformGeoJsonFeature, getSpecialTag, getZoneType, transformHotSpotInfo, mapSpecialZoneGates)
 import Language.Types (STR(..)) as STR
@@ -71,7 +71,7 @@ import Log (logInfo, logStatus)
 import MerchantConfig.Types (AppConfig(..), MetroConfig(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils as MU
-import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, identity, otherwise, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*), max)
+import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, identity, otherwise, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*), max, min)
 import Mobility.Prelude (capitalize)
 import ModifyScreenState (modifyScreenState, updateRepeatRideDetails, FlowState(..))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
@@ -135,7 +135,6 @@ import PrestoDOM (initUI)
 import Common.Resources.Constants (zoomLevel)
 import PaymentPage
 import Screens.TicketBookingFlow.TicketBooking.Transformer
-import Screens.Types as ST
 import Domain.Payments as PP
 import PrestoDOM.Core (terminateUI)
 import Helpers.Storage.Flow.BaseApp
@@ -1079,9 +1078,9 @@ homeScreenFlow = do
 
         destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
 
-        srcMarker = (Remote.normalRoute "").srcMarker
+        srcMarker = (normalRoute "").srcMarker
 
-        destMarker = (Remote.normalRoute "").destMarker
+        destMarker = (normalRoute "").destMarker
       case state.props.routeEndPoints of
         Just points -> do
           let
@@ -1091,9 +1090,9 @@ homeScreenFlow = do
               else
                 state.data.source
 
-            sourceMarkerConfig = JB.defaultMarkerConfig { pointerIcon = srcMarker, primaryText = sourceAddress, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = sourceSpecialTagIcon, position { lat = points.source.lat, lng = points.source.lng } }
+            sourceMarkerConfig = JB.defaultMarkerConfig { markerId = srcMarker, pointerIcon = srcMarker, primaryText = sourceAddress, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = sourceSpecialTagIcon, position { lat = points.source.lat, lng = points.source.lng } }
 
-            destMarkerConfig = JB.defaultMarkerConfig { pointerIcon = destMarker, primaryText = points.destination.place, labelImage = destSpecialTagIcon, position { lat = points.destination.lat, lng = points.destination.lng } }
+            destMarkerConfig = JB.defaultMarkerConfig { markerId = destMarker, pointerIcon = destMarker, primaryText = points.destination.place, labelImage = destSpecialTagIcon, position { lat = points.destination.lat, lng = points.destination.lng } }
           lift $ lift $ liftFlow $ updateMarker sourceMarkerConfig
           lift $ lift $ liftFlow $ updateMarker destMarkerConfig
         Nothing -> pure unit
@@ -1211,11 +1210,11 @@ homeScreenFlow = do
 
           destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
 
-          markers = Remote.normalRoute ""
+          markers = normalRoute ""
 
-          srcMarkerConfig = defaultMarkerConfig { pointerIcon = markers.srcMarker }
+          srcMarkerConfig = defaultMarkerConfig { markerId = markers.srcMarker, pointerIcon = markers.srcMarker }
 
-          destMarkerConfig = defaultMarkerConfig { pointerIcon = markers.destMarker }
+          destMarkerConfig = defaultMarkerConfig { markerId = markers.destMarker, pointerIcon = markers.destMarker }
         void $ Remote.drawMapRoute srcLat srcLon dstLat dstLon srcMarkerConfig destMarkerConfig "DRIVER_LOCATION_UPDATE" Nothing "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon true getPolylineAnimationConfig)
         homeScreenFlow
       else if state.props.currentStage == HomeScreen then do
@@ -1436,8 +1435,10 @@ homeScreenFlow = do
       when (isLocalStageOn FindingQuotes)
         $ do
             cancelEstimate state.homeScreen.props.estimateId
+      let markerName = getCurrentLocationMarker $ getValueToLocalStore VERSION_NAME
+          markerConfig = defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName } 
       void $ pure $ removeAllPolylines ""
-      void $ lift $ lift $ liftFlow $ addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 0.5 0.9
+      void $ lift $ lift $ liftFlow $ showMarker markerConfig 9.9 9.9 160 0.5 0.9 (getNewIDWithTag "CustomerHomeScreen")
       void $ pure $ currentPosition ""
       void $ updateLocalStage HomeScreen
       updateUserInfoToState state.homeScreen
@@ -1447,8 +1448,10 @@ homeScreenFlow = do
       when (isLocalStageOn FindingQuotes)
         $ do
             cancelEstimate state.homeScreen.props.estimateId
+      let markerName = getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)
+          markerConfig = defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
       void $ pure $ removeAllPolylines ""
-      void $ lift $ lift $ liftFlow $ addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 0.5 0.9
+      void $ lift $ lift $ liftFlow $ showMarker markerConfig 9.9 9.9 160 0.5 0.9 (getNewIDWithTag "CustomerHomeScreen")
       void $ pure $ currentPosition ""
       void $ updateLocalStage HomeScreen
       updateUserInfoToState state.homeScreen
@@ -2063,7 +2066,7 @@ findEstimates updatedState = do
 
     currentDate = getCurrentDate ""
 
-    markers = Remote.normalRoute ""
+    markers = normalRoute ""
 
     sourceAddress =
       if state.props.isSpecialZone && not (DS.null state.props.defaultPickUpPoint) then
@@ -2071,9 +2074,9 @@ findEstimates updatedState = do
       else
         state.data.source
 
-    srcMarkerConfig = defaultMarkerConfig { pointerIcon = markers.srcMarker, primaryText = sourceAddress, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = zoneLabelIcon state.props.zoneType.sourceTag }
+    srcMarkerConfig = defaultMarkerConfig { markerId = markers.srcMarker, pointerIcon = markers.srcMarker, primaryText = sourceAddress, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = zoneLabelIcon state.props.zoneType.sourceTag }
 
-    destMarkerConfig = defaultMarkerConfig { pointerIcon = markers.destMarker, primaryText = state.data.destination, labelImage = zoneLabelIcon state.props.zoneType.destinationTag }
+    destMarkerConfig = defaultMarkerConfig { markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = state.data.destination, labelImage = zoneLabelIcon state.props.zoneType.destinationTag }
   void $ pure
     $ setCleverTapUserProp
         [ { key: "Latest Search From", value: unsafeToForeign ("lat: " <> (show updatedState.props.sourceLat) <> " long: " <> (show updatedState.props.sourceLong)) }
@@ -2352,11 +2355,11 @@ rideSearchFlow flowType = do
 
               destSpecialTagIcon = zoneLabelIcon finalState.props.zoneType.destinationTag
 
-              markers = Remote.normalRoute ""
+              markers = normalRoute ""
 
-              srcMarkerConfig = defaultMarkerConfig { pointerIcon = markers.srcMarker, primaryText = finalState.data.source }
+              srcMarkerConfig = defaultMarkerConfig { markerId = markers.srcMarker, pointerIcon = markers.srcMarker, primaryText = finalState.data.source }
 
-              destMarkerConfig = defaultMarkerConfig { pointerIcon = markers.destMarker, primaryText = finalState.data.destination }
+              destMarkerConfig = defaultMarkerConfig { markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = finalState.data.destination }
             routeResponse <- Remote.drawMapRoute finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong srcMarkerConfig destMarkerConfig "NORMAL" rideSearchRes.routeInfo "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig)
             case rideSearchRes.routeInfo of
               Just (Route response) -> do
@@ -5126,7 +5129,6 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
       pure unit
   else
     pure unit
-
 firstRideCompletedEvent :: String -> FlowBT String Unit
 firstRideCompletedEvent str = do
   logField_ <- lift $ lift $ getLogFields
