@@ -19,6 +19,7 @@ import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import Domain.Types.UtilsTH
 import qualified Domain.Types.Vehicle as Vehicle
+import qualified Email.Types
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -159,7 +160,7 @@ data TransporterConfigT f = TransporterConfigT
     dlNumberVerification :: B.C f (Maybe Bool),
     pastDaysRideCounter :: B.C f Int,
     placeNameCacheExpiryDays :: B.C f (Maybe Int),
-    emailOtpConfig :: B.C f (Maybe Text)
+    emailOtpConfig :: B.C f (Maybe Email.Types.EmailOTPConfig)
   }
   deriving (Generic, B.Beamable)
 

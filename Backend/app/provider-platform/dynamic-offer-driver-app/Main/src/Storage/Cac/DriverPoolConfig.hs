@@ -72,11 +72,13 @@ getDriverPoolConfigFromCAC merchantOpCityId st tc dist area stickyKey = do
         ]
           <> [(VehicleVariant, show (fromJust st)) | isJust st]
   inMemConfig <- getConfigFromInMemory merchantOpCityId st tc dist
-  CCU.getConfigFromCacOrDB inMemConfig dpcCond stickyKey (KBF.fromCacType @SBMDPC.DriverPoolConfig) CCU.DriverPoolConfig
-    |<|>| ( do
-              logDebug $ "DriverPoolConfig not found in memory, fetching from DB for context: " <> show dpcCond
-              DPC.getDriverPoolConfigFromDB merchantOpCityId st tc area (Just dist)
-          )
+  config <-
+    CCU.getConfigFromCacOrDB inMemConfig dpcCond stickyKey (KBF.fromCacType @SBMDPC.DriverPoolConfig) CCU.DriverPoolConfig
+      |<|>| ( do
+                logDebug $ "DriverPoolConfig not found in memory, fetching from DB for context: " <> show dpcCond
+                DPC.getDriverPoolConfigFromDB merchantOpCityId st tc area (Just dist)
+            )
+  setConfigInMemory merchantOpCityId st tc dist config
 
 doubleToInt :: Double -> Int
 doubleToInt = floor
@@ -111,6 +113,19 @@ getConfigFromInMemory id mbvst tripCategory dist = do
   let roundeDist = doubleToInt (fromIntegral (dist.getMeters) / 1000)
   isExpired <- DTC.updateConfig DTC.LastUpdatedDriverPoolConfig
   getConfigFromMemoryCommon (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundeDist) isExpired CM.isExperimentsRunning
+
+setConfigInMemory ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id MerchantOperatingCity ->
+  Maybe DVST.ServiceTierType ->
+  String ->
+  Meters ->
+  Maybe DriverPoolConfig ->
+  m (Maybe DriverPoolConfig)
+setConfigInMemory id mbvst tripCategory dist config = do
+  let roundeDist = doubleToInt (fromIntegral (dist.getMeters) / 1000)
+  isExp <- DTC.inMemConfigUpdateTime DTC.LastUpdatedDriverPoolConfig
+  CCU.setConfigInMemoryCommon (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundeDist) isExp config
 
 getDriverPoolConfig ::
   (CacheFlow m r, EsqDBFlow m r) =>

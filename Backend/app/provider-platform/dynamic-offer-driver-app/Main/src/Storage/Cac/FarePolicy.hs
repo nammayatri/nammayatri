@@ -45,17 +45,24 @@ getConfigFromInMemory id = do
   isExp <- DTC.updateConfig DTC.LastUpdatedFarePolicy
   getConfigFromMemoryCommon (DTC.FarePolicy id.getId) isExp CM.isExperimentsRunning
 
+setConfigInMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Maybe FarePolicy -> m (Maybe FarePolicy)
+setConfigInMemory id config = do
+  isExp <- DTC.inMemConfigUpdateTime DTC.LastUpdatedFarePolicy
+  CCU.setConfigInMemoryCommon (DTC.FarePolicy id.getId) isExp config
+
 findById :: (CacheFlow m r, EsqDBFlow m r) => Maybe CacKey -> Id FarePolicy -> m (Maybe FarePolicy)
 findById stickeyKey id = do
   let context = [(FarePolicyId, DA.toJSON id.getId)]
   inMemConfig <- getConfigFromInMemory id
   tenant <- asks (.cacConfig.tenant)
   toss <- getToss (getKeyValue <$> stickeyKey)
-  getConfigFromCacOrDB inMemConfig context stickeyKey (fromCacTypeCustom (context, tenant, id, toss)) CCU.FarePolicy
-    |<|>| ( do
-              logDebug $ "FarePolicy not found in memory, fetching from DB for context: " <> show context
-              SCQF.findFarePolicyFromDB id
-          )
+  config <-
+    getConfigFromCacOrDB inMemConfig context stickeyKey (fromCacTypeCustom (context, tenant, id, toss)) CCU.FarePolicy
+      |<|>| ( do
+                logDebug $ "FarePolicy not found in memory, fetching from DB for context: " <> show context
+                SCQF.findFarePolicyFromDB id
+            )
+  setConfigInMemory id config
 
 -- Call it after any update
 clearCache :: HedisFlow m r => FarePolicy -> m ()
