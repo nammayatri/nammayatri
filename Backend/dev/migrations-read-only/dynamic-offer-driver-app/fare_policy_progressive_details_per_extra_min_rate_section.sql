@@ -1,0 +1,8 @@
+CREATE TABLE atlas_driver_offer_bpp.fare_policy_progressive_details_per_extra_min_rate_section ();
+
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details_per_extra_min_rate_section ADD COLUMN fare_policy_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details_per_extra_min_rate_section ADD COLUMN per_extra_min_rate double precision NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details_per_extra_min_rate_section ADD COLUMN start_min integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details_per_extra_min_rate_section ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details_per_extra_min_rate_section ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details_per_extra_min_rate_section ADD PRIMARY KEY ( fare_policy_id);

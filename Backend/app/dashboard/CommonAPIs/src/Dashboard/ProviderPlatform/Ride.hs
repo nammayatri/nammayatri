@@ -557,7 +557,8 @@ data FParamsProgressiveDetails = FParamsProgressiveDetails
   { deadKmFare :: Money,
     extraKmFare :: Maybe Money,
     deadKmFareWithCurrency :: PriceAPIEntity,
-    extraKmFareWithCurrency :: Maybe PriceAPIEntity
+    extraKmFareWithCurrency :: Maybe PriceAPIEntity,
+    durationTotalFare :: Maybe Money
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

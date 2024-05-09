@@ -24,6 +24,7 @@ import Data.Aeson.Types
 import Data.List.NonEmpty
 import Domain.Types.Common
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as Reexport
+import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraMinRateSection as Reexport
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude as KP
 import Kernel.Types.Common
@@ -32,6 +33,7 @@ data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
   { baseFare :: HighPrecMoney,
     baseDistance :: Meters,
     perExtraKmRateSections :: NonEmpty (FPProgressiveDetailsPerExtraKmRateSectionD s),
+    perExtraMinRateSections :: [FPProgressiveDetailsPerExtraMinRateSection],
     deadKmFare :: HighPrecMoney,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
     nightShiftCharge :: Maybe NightShiftCharge,
@@ -82,6 +84,7 @@ data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
     baseFareWithCurrency :: PriceAPIEntity,
     baseDistance :: Meters,
     perExtraKmRateSections :: NonEmpty FPProgressiveDetailsPerExtraKmRateSectionAPIEntity,
+    perExtraMinRateSections :: [FPProgressiveDetailsPerExtraMinRateSection],
     deadKmFare :: Money,
     deadKmFareWithCurrency :: PriceAPIEntity,
     waitingChargeInfo :: Maybe Common.WaitingChargeInfoAPIEntity,

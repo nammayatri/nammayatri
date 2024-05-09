@@ -25,6 +25,7 @@ import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QueriesFPPDP
+import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraMinRateSection as QueriesFPMin
 
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m (Maybe Domain.FullFarePolicyProgressiveDetails)
 findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPPD.farePolicyId $ Se.Eq farePolicyId']
@@ -32,6 +33,7 @@ findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPPD.farePolicyId $ 
 instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyProgressiveDetails where
   fromTType' BeamFPPD.FarePolicyProgressiveDetailsT {..} = do
     fullFPPDP <- QueriesFPPDP.findAll' (KTI.Id farePolicyId)
+    fullMinFP <- QueriesFPMin.findAll (KTI.Id farePolicyId)
     fPPDP <- fromMaybeM (InternalError "FromLocation not found") (nonEmpty fullFPPDP)
     pure $
       Just
@@ -42,6 +44,7 @@ instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyP
               perExtraKmRateSections = snd <$> fPPDP,
               deadKmFare = mkAmountWithDefault deadKmFareAmount deadKmFare,
               currency = fromMaybe INR currency,
+              perExtraMinRateSections = fullMinFP,
               waitingChargeInfo =
                 ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
                   Domain.WaitingChargeInfo

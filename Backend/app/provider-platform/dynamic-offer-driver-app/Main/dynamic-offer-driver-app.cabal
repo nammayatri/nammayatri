@@ -232,6 +232,7 @@ library
       Domain.Types.FarePolicy.DriverExtraFeeBounds
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraMinRateSection
       Domain.Types.FarePolicy.FarePolicyRentalDetails
       Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffer
       Domain.Types.FarePolicy.FarePolicySlabsDetails
@@ -494,6 +495,7 @@ library
       Storage.Queries.FarePolicy.DriverExtraFeeBounds
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraMinRateSection
       Storage.Queries.FarePolicy.FarePolicyRentalDetails
       Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
@@ -618,6 +620,7 @@ library
       Domain.Types.DriverSSN
       Domain.Types.Estimate
       Domain.Types.Exophone
+      Domain.Types.FullFarePolicyProgressiveDetailsPerExtraMinRateSection
       Domain.Types.IdfyVerification
       Domain.Types.Image
       Domain.Types.InterCityTravelCities
@@ -677,6 +680,7 @@ library
       Storage.Beam.DriverSSN
       Storage.Beam.Estimate
       Storage.Beam.Exophone
+      Storage.Beam.FullFarePolicyProgressiveDetailsPerExtraMinRateSection
       Storage.Beam.IdfyVerification
       Storage.Beam.Image
       Storage.Beam.InterCityTravelCities
@@ -736,6 +740,7 @@ library
       Storage.Queries.DriverSSN
       Storage.Queries.Estimate
       Storage.Queries.Exophone
+      Storage.Queries.FullFarePolicyProgressiveDetailsPerExtraMinRateSection
       Storage.Queries.IdfyVerification
       Storage.Queries.Image
       Storage.Queries.InterCityTravelCities

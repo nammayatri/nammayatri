@@ -1,0 +1,28 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  FarePolicy: Domain.Types.FarePolicy
+  HighPrecMoney: Kernel.Types.Common
+
+FullFarePolicyProgressiveDetailsPerExtraMinRateSection:
+  tableName: fare_policy_progressive_details_per_extra_min_rate_section
+  derives: "Generic,Show,Eq,ToJSON,FromJSON"
+  fields:
+    farePolicyId: Id FarePolicy
+    startMin: Int
+    perExtraMinRate: HighPrecMoney
+
+  constraints:
+    farePolicyId: PrimaryKey
+
+  excludedFields:
+    - merchantOperatingCityId
+    - merchantId
+
+  queries:
+    findAllByFarePolicyId:
+      kvFunction: findAllWithOptionsKV
+      where: farePolicyId
+      orderBy:
+        field: startMin
+        order: asc
