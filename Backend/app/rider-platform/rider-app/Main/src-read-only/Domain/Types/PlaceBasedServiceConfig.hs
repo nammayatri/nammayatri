@@ -29,3 +29,7 @@ type PlaceBasedServiceConfig = PlaceBasedServiceConfigD 'Safe
 instance FromJSON (PlaceBasedServiceConfigD 'Unsafe)
 
 instance ToJSON (PlaceBasedServiceConfigD 'Unsafe)
+
+instance FromJSON (PlaceBasedServiceConfigD 'Safe)
+
+instance ToJSON (PlaceBasedServiceConfigD 'Safe)

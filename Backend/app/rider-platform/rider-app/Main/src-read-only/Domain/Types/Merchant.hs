@@ -61,3 +61,7 @@ type Merchant = MerchantD 'Safe
 instance FromJSON (MerchantD 'Unsafe)
 
 instance ToJSON (MerchantD 'Unsafe)
+
+instance FromJSON (MerchantD 'Safe)
+
+instance ToJSON (MerchantD 'Safe)

@@ -26,7 +26,6 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CallStatus.CallStatus -> m ())
 updateByPrimaryKey (Domain.Types.CallStatus.CallStatus {..}) = do
-  _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.callError callError,
       Se.Set Beam.callId callId,

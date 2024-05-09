@@ -25,7 +25,7 @@ type API =
            '[JSON]
            API.Types.UI.VehicleDetails.VehicleModelsReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.VehicleDetails.VehicleModelsResp
       :<|> TokenAuth
       :> "vehicleDetails"
@@ -33,7 +33,7 @@ type API =
            '[JSON]
            API.Types.UI.VehicleDetails.VehicleDetailsReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Domain.Types.VehicleDetails.VehicleDetails
   )
 

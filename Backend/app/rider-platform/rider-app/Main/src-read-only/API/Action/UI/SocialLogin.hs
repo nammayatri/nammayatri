@@ -19,18 +19,18 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( "social" :> "login" :> ReqBody ('[JSON]) API.Types.UI.SocialLogin.SocialLoginReq
+  ( "social" :> "login" :> ReqBody '[JSON] API.Types.UI.SocialLogin.SocialLoginReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SocialLogin.SocialLoginRes
       :<|> TokenAuth
       :> "ui"
       :> "social"
       :> "update"
       :> "profile"
-      :> ReqBody ('[JSON]) API.Types.UI.SocialLogin.SocialUpdateProfileReq
+      :> ReqBody '[JSON] API.Types.UI.SocialLogin.SocialUpdateProfileReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 

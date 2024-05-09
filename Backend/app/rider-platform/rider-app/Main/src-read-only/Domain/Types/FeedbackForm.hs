@@ -45,6 +45,6 @@ newtype FeedbackFormList = FeedbackFormList {_data :: [Domain.Types.FeedbackForm
 data FeedbackFormReq = FeedbackFormReq {feedback :: [Domain.Types.FeedbackForm.FeedbackAnswer], rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AnswerType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AnswerType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''Category))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Category)

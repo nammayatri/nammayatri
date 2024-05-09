@@ -35,8 +35,8 @@ instance ToTType' Beam.BookingCancellationReason Domain.Types.BookingCancellatio
     Beam.BookingCancellationReasonT
       { Beam.additionalInfo = additionalInfo,
         Beam.bookingId = Kernel.Types.Id.getId bookingId,
-        Beam.driverCancellationLocationLat = (driverCancellationLocation <&> (.lat)),
-        Beam.driverCancellationLocationLon = (driverCancellationLocation <&> (.lon)),
+        Beam.driverCancellationLocationLat = driverCancellationLocation <&> (.lat),
+        Beam.driverCancellationLocationLon = driverCancellationLocation <&> (.lon),
         Beam.driverDistToPickup = driverDistToPickup,
         Beam.driverId = Kernel.Types.Id.getId <$> driverId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

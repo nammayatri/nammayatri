@@ -13,11 +13,11 @@ import qualified Kernel.Types.Beckn.Domain
 import Tools.Beam.UtilsTH
 
 data WhiteListOrgT f = WhiteListOrgT
-  { domain :: (B.C f Kernel.Types.Beckn.Domain.Domain),
-    id :: (B.C f Kernel.Prelude.Text),
-    subscriberId :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { domain :: B.C f Kernel.Types.Beckn.Domain.Domain,
+    id :: B.C f Kernel.Prelude.Text,
+    subscriberId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -27,6 +27,6 @@ instance B.Table WhiteListOrgT where
 
 type WhiteListOrg = WhiteListOrgT Identity
 
-$(enableKVPG (''WhiteListOrgT) [('id)] [[('subscriberId)]])
+$(enableKVPG ''WhiteListOrgT ['id] [['subscriberId]])
 
-$(mkTableInstancesWithTModifier (''WhiteListOrgT) "white_list_org" [("subscriberId", "subscriber_id")])
+$(mkTableInstancesWithTModifier ''WhiteListOrgT "white_list_org" [("subscriberId", "subscriber_id")])

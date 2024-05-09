@@ -28,3 +28,7 @@ type WhiteListOrg = WhiteListOrgD 'Safe
 instance FromJSON (WhiteListOrgD 'Unsafe)
 
 instance ToJSON (WhiteListOrgD 'Unsafe)
+
+instance FromJSON (WhiteListOrgD 'Safe)
+
+instance ToJSON (WhiteListOrgD 'Safe)

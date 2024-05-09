@@ -14,7 +14,7 @@ RegistrationToken:
       enum: "CUSTOMER, USER"
 
     LoginType:
-      enum: "OTP,PASSWORD,DIRECT"
+      enum: "OTP,PASSWORD,DIRECT,OAUTH"
 
   fields:
     id : Id RegistrationToken

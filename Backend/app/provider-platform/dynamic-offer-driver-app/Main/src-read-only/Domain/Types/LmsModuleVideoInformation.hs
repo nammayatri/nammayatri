@@ -4,6 +4,7 @@
 
 module Domain.Types.LmsModuleVideoInformation where
 
+import Data.Aeson
 import qualified Domain.Types.LmsModule
 import Kernel.Prelude
 import qualified Kernel.Types.Id

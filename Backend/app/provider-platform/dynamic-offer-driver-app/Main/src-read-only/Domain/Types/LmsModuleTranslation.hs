@@ -4,6 +4,7 @@
 
 module Domain.Types.LmsModuleTranslation where
 
+import Data.Aeson
 import qualified Domain.Types.LmsModule
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity

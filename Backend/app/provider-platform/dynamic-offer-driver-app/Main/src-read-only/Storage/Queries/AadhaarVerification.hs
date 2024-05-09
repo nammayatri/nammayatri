@@ -42,7 +42,8 @@ findByPhoneNumberAndUpdate driverName driverGender driverDob aadhaarNumberHash i
       Se.Set Beam.driverGender driverGender,
       Se.Set Beam.driverDob driverDob,
       Se.Set Beam.aadhaarNumberHash aadhaarNumberHash,
-      Se.Set Beam.isVerified isVerified
+      Se.Set Beam.isVerified isVerified,
+      Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.driverId $ Se.Eq driverId]
 
