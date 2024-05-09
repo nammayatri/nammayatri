@@ -1,8 +1,6 @@
 imports:
   Merchant: Domain.Types.Merchant
-  ReelsData: Domain.Types.ReelsData
   ShortId: Kernel.Types.Id
-  Language: Kernel.External.Types
 
 module: SocialLogin
 
@@ -35,7 +33,7 @@ apis:
       response:
         type: API.Types.UI.SocialLogin.SocialLoginRes
   - POST:
-      endpoint: /ui/social/update/profile
+      endpoint: /social/update/profile
       auth: TokenAuth
       request:
         type: API.Types.UI.SocialLogin.SocialUpdateProfileReq
