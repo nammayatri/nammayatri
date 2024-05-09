@@ -428,7 +428,7 @@ vehicleRegistrationNumber state push =
         , checkACView state push
         ]
       ]
-      where validateRegistrationNumber regNum = if DA.null state.data.rcNumberPrefixList  then true else regNum `DA.elem` state.data.rcNumberPrefixList
+      where validateRegistrationNumber regNum = validateRCPrefix regNum state.data.rcNumberPrefixList
 
 
 checkACView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
@@ -1207,7 +1207,7 @@ getDropDownList state =
   else
     state
 
-
+getColors :: Array String
 getColors =
   [ "Black"
   , "White"

@@ -633,7 +633,7 @@ onBoardingFlow = do
   config <- getAppConfigFlowBT Constants.appConfig
   GlobalState allState <- getState
   DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq { }
-  getDriverInfoResp <- getDriverInfoDataFromCache (GlobalState allState) false
+  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState allState) false
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       registrationState = allState.registrationScreen
       driverEnabled = fromMaybe false driverRegistrationResp.enabled
@@ -661,7 +661,10 @@ onBoardingFlow = do
       variantList = (if checkAvailability _.autos then [ST.AutoCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else [])
       mismatchLogic vehicleDocument = (uiCurrentCategory == (RC.transformVehicleType $ Just vehicleDocument.userSelectedVehicleCategory)) && isJust vehicleDocument.verifiedVehicleCategory && (Just vehicleDocument.userSelectedVehicleCategory /= vehicleDocument.verifiedVehicleCategory)
       vehicleTypeMismatch = not registrationState.props.manageVehicle && any (\(API.VehicleDocumentItem item) -> mismatchLogic item) driverRegistrationResp.vehicleDocuments
-      documentStatusList = mkStatusList (DriverRegistrationStatusResp driverRegistrationResp) getDriverInfoResp
+      documentStatusList =  mkStatusList (DriverRegistrationStatusResp driverRegistrationResp) (GetDriverInfoResp getDriverInfoResp)
+      filterCabs = DA.filter  (\item1 -> DA.any (\item2 -> item1.docType == item2.stage) registerationStepsCabs) documentStatusList
+      -- filterAuto = DA.filter  (\item1 -> DA.any (\item2 -> item1.docType == item2.stage) registerationStepsAutos) documentStatusList
+      -- finalDocumentStatusList = DA.union filterCabs filterAuto -- Need to check this logic
       verifiedRC = find (\docStatus -> docStatus.status == ST.COMPLETED && docStatus.docType == ST.VEHICLE_DETAILS_OPTION && docStatus.verifiedVehicleCategory == uiCurrentCategory) documentStatusList
       onboardingRC = case verifiedRC of
                   Just rcItem -> rcItem.regNo
@@ -671,7 +674,7 @@ onBoardingFlow = do
       rcNo = if manageVehicle then enteredRC else onboardingRC
       filteredVehicleDocs = if manageVehicle then filter (\docStatus -> docStatus.regNo == rcNo) documentStatusList else documentStatusList
       manageVehicle = registrationState.props.manageVehicle
-      isAllCompleted = (length documentStatusList) == (DA.foldr (\item acc -> if item.status == ST.COMPLETED then acc + 1 else acc) 0 documentStatusList)
+      isAllCompleted = (length filterCabs) == (DA.foldr (\item acc -> if item.status == ST.COMPLETED then acc + 1 else acc) 0 filterCabs)
           
   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> 
                   registerationScreen { data { 
@@ -689,7 +692,7 @@ onBoardingFlow = do
                       permissionsStatus = if permissions then ST.COMPLETED else ST.NOT_STARTED,
                       cityConfig = cityConfig,
                       vehicleCategory = uiCurrentCategory
-                  }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = driverEnabled, isApplicationInVerification = isAllCompleted}})
+                  }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = driverEnabled, isApplicationInVerification = isAllCompleted, isProfileDetailsCompleted = getDriverInfoResp.firstName /= "Driver"}})
   liftFlowBT hideSplash
   flow <- UI.registration
   case flow of

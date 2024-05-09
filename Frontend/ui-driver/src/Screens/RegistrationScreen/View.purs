@@ -672,7 +672,7 @@ getStatus step state =
                           then find (\docStatus -> docStatus.docType == step && filterCondition docStatus) documentStatusArr
                           else find (\docStatus -> docStatus.docType == step) documentStatusArr
           case findStatus of
-            Nothing -> ST.NOT_STARTED
+            Nothing -> if step == ST.ProfileDetails && state.props.isProfileDetailsCompleted then ST.COMPLETED else ST.NOT_STARTED
             Just docStatus -> docStatus.status
   where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) ||  (isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
 

@@ -228,9 +228,9 @@ window.getMerchantConfig = function () {
       , "emailAuth" : true
       }
   , "defaultCountryCodeConfig" : {
-      "countryName" : "India"
-    , "countryCode"  : "+91"
-    , "countryShortCode" : "IN"
+      "countryName" : "UnitedStates"
+    , "countryCode"  : "+1"
+    , "countryShortCode" : "US"
     }
   , "flowConfig" : {
       "chooseCity" : {

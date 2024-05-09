@@ -75,7 +75,8 @@ initData = {
         menuOptions : false,
         manageVehicle : false,
         manageVehicleCategory : Nothing,
-        isApplicationInVerification: false
+        isApplicationInVerification: false,
+        isProfileDetailsCompleted: false
       }
   }
 

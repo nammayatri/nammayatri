@@ -58,7 +58,7 @@ primaryButtonConfig state = let
                 -- (state.data.dateOfRegistration /= Just "") && 
                 state.data.vehicle_registration_number /= "" &&
                 (state.data.vehicleCategory /= Just ST.CarCategory || isJust state.props.buttonIndex) &&
-                ((DS.length state.data.vehicle_registration_number >= 2) && (DA.null state.data.rcNumberPrefixList || ((DS.take 2 state.data.vehicle_registration_number) `DA.elem` state.data.rcNumberPrefixList))) && ((not state.data.config.vehicleRegisterationScreen.collectVehicleDetails) || (DA.length state.data.dropDownList == selectedCount state.data.dropDownList)))
+                ((DS.length state.data.vehicle_registration_number >= 2) && validateRCPrefix state.data.vehicle_registration_number state.data.rcNumberPrefixList) && ((not state.data.config.vehicleRegisterationScreen.collectVehicleDetails) || (DA.length state.data.dropDownList == selectedCount state.data.dropDownList)))
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfRegistration then getString CONFIRM 
                            else if state.props.openHowToUploadManual then getString UPLOAD_PHOTO
@@ -73,6 +73,10 @@ primaryButtonConfig state = let
       }
   in primaryButtonConfig'
 
+validateRCPrefix :: String -> Array String -> Boolean
+validateRCPrefix number list = do
+  let len = DS.length $ fromMaybe "" $ DA.head $ list
+  if len == 0 then true else ((DS.take len number) `DA.elem` list)
 
 selectedCount :: Array ST.DropDownList -> Int
 selectedCount list = DA.foldr (\item acc -> if item.selected /= "Select" then acc + 1 else acc) 0 list

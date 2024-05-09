@@ -692,14 +692,10 @@ makeDriverRCReq state = DriverRCReq
       "dateOfRegistration" : state.data.dateOfRegistration,
       "vehicleCategory" : mkCategory state.data.vehicleCategory,
       "airConditioned" : maybe Nothing (\ac -> Just (ac == 0)) (state.props.buttonIndex),
-      vehicleDetails : mkVehicleDetails state.data.selectedVehicleDetails
+      vehicleDetails : if state.data.config.vehicleRegisterationScreen.collectVehicleDetails then mkVehicleDetails else Nothing
     }
     where 
-      mkVehicleDetails vehicleDetailsEntity = 
-        case vehicleDetailsEntity of
-          Nothing -> Nothing
-          Just vehicle -> Just $ DriverVehicleDetails
-            {
+      mkVehicleDetails = Just $ DriverVehicleDetails {
         colour : getColor,
         vehicleColour : getColor,
         vehicleDoors : getDoor,

@@ -266,7 +266,8 @@ type RegistrationScreenProps = {
   menuOptions :: Boolean,
   manageVehicle :: Boolean,
   manageVehicleCategory :: Maybe VehicleCategory,
-  isApplicationInVerification :: Boolean
+  isApplicationInVerification :: Boolean,
+  isProfileDetailsCompleted :: Boolean
 }
 
 data AnimType = HIDE | SHOW | ANIMATING
