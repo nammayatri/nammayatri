@@ -289,6 +289,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.specialLocationTags = specialLocationTags,
         BeamTC.kaptureDisposition = kaptureDisposition,
         BeamTC.fakeOtpMobileNumbers = fakeOtpMobileNumbers,
+        BeamTC.fakeOtpEmails = fakeOtpEmails,
         BeamTC.dummyFromLocation = Just $ toJSON dummyFromLocation,
         BeamTC.dummyToLocation = Just $ toJSON dummyToLocation,
         BeamTC.variantsToEnableForSubscription = variantsToEnableForSubscription,

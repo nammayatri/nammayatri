@@ -53,3 +53,8 @@ ALTER TABLE atlas_app.merchant ADD COLUMN arrived_pickup_threshold_value double 
 
 ALTER TABLE atlas_app.merchant ADD COLUMN distance_unit character varying(255) ;
 ALTER TABLE atlas_app.merchant DROP COLUMN distanc_unit;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant ADD COLUMN fake_otp_emails text[] NOT NULL;
