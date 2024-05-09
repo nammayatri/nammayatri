@@ -32,7 +32,7 @@ VehicleDetails:
   excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
 
   default:
-    acAvailable: "True"
+    acAvailable: "true"
 
   extraOperations:
     - EXTRA_QUERY_FILE

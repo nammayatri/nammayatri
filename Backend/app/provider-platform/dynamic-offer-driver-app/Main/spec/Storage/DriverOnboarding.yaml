@@ -358,7 +358,7 @@ DocumentVerificationConfig:
     order: Int
   default:
     order: "0"
-    isDefaultEnabled: "true"
+    isDefaultEnabledOnManualVerification: "true"
   constraints:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey

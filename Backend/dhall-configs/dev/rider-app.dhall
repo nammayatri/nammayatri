@@ -297,4 +297,5 @@ in  { esqDBCfg
     , kafkaClickhouseCfg
     , riderClickhouseCfg
     , ondcTokenMap = sec.ondcTokenMap
+    , iosValidateEnpoint = ""
     }
