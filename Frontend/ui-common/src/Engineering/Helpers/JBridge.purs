@@ -94,8 +94,10 @@ foreign import setFCMTokenWithTimeOut :: EffectFn2 Int (String -> Effect Unit) U
 foreign import openUrlInApp  :: String -> Effect Unit
 foreign import renderCameraProfilePicture :: String -> Effect Unit
 foreign import openUrlInMailApp  :: String -> Effect Unit
-foreign import addMarkerImpl :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
+foreign import showMarkerImpl :: EffectFn1 ShowMarkerConfig Boolean
+foreign import fadeInFadeOutMarker :: Fn3 String String String Unit
 foreign import removeMarker :: String -> Unit
+foreign import removeAllMarkers :: String -> Unit
 -- foreign import parseAddress      :: String -> Address
 foreign import disableActionEditText :: String -> Unit
 foreign import uploadFile :: Boolean -> Effect Unit
@@ -322,8 +324,8 @@ drawRoute :: Array Locations -> String -> Boolean -> MarkerConfig -> MarkerConfi
 drawRoute locationArr style isActual startMarkerConfig endMarkerConfig routeWidth routeType mapRouteConfig pureScriptID = do
   let normalLocations = maybe ({points : []}) identity (head locationArr)
       rentalLocations = maybe ({points : []}) identity (locationArr !! 1)
-      normalRouteConfig = mkRouteConfig normalLocations startMarkerConfig.pointerIcon endMarkerConfig.pointerIcon routeType startMarkerConfig.primaryText endMarkerConfig.primaryText style isActual mapRouteConfig
-      rentalRouteConfig = mkRouteConfig rentalLocations "" "ny_ic_blue_marker" routeType "" "" "" true mapRouteConfig
+      normalRouteConfig = mkRouteConfig normalLocations startMarkerConfig.pointerIcon startMarkerConfig.markerId endMarkerConfig.pointerIcon endMarkerConfig.markerId routeType startMarkerConfig.primaryText endMarkerConfig.primaryText style isActual mapRouteConfig
+      rentalRouteConfig = mkRouteConfig rentalLocations "" "" "ny_ic_blue_marker" "ny_ic_blue_marker" routeType "" "" "" true mapRouteConfig
       drawRouteConfig = mkDrawRouteConfig normalRouteConfig rentalRouteConfig pureScriptID
   drawRouteV2 drawRouteConfig
 
@@ -436,8 +438,8 @@ showLoader str = liftFlow (showLoaderImpl str)
 -- showQrCode :: String -> String -> Effect Unit
 -- showQrCode id str = showQrCodeImpl id str
 
-addMarker :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
-addMarker title lat lng markerSize anchorV anchorV1 = (addMarkerImpl title lat lng markerSize anchorV anchorV1)
+showMarker :: MarkerConfig -> Number -> Number -> Int -> Number -> Number -> String -> Effect Boolean
+showMarker markerConfig lat lng markerSize anchorV anchorV1 purescriptId = runEffectFn1 showMarkerImpl defaultShowMarkerConfig {markerConfig = markerConfig, lat = lat, lng = lng, markerSize = markerSize, anchorV = anchorV, anchorV1 = anchorV1, isSpecialZone = false, purescriptId = purescriptId}
 
 showMap :: forall action. String -> Boolean -> String -> Number -> Number -> Number -> (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Boolean
 showMap = showMapImpl --liftFlow (showMapImpl id mapType)
@@ -450,9 +452,6 @@ showMap = showMapImpl --liftFlow (showMapImpl id mapType)
 --             _ <- liftFlow (loaderTextImpl (title)  (subTitle))
 --             liftFlow (toggleLoaderImpl flag)
 --         Nothing -> liftFlow (toggleLoaderImpl flag)
-
-showMarker :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
-showMarker title lat lng markerSize anchorV anchorV1 = addMarker title lat lng markerSize anchorV anchorV1
 
 removeAllPolylines :: String -> Unit 
 removeAllPolylines str = removeAllPolylinesImpl markersToRemove
@@ -532,6 +531,29 @@ locateOnMapConfig = {
   , thresholdDistToSpot : 3
 }
 
+type ShowMarkerConfig = {
+  markerConfig :: MarkerConfig,
+  lat :: Number,
+  lng :: Number,
+  markerSize :: Int,
+  anchorV :: Number,
+  anchorV1 :: Number,
+  isSpecialZone :: Boolean,
+  purescriptId :: String
+}
+
+defaultShowMarkerConfig :: ShowMarkerConfig
+defaultShowMarkerConfig = {
+  markerConfig : defaultMarkerConfig,
+  lat : 9.9,
+  lng : 9.9,
+  markerSize : 160,
+  anchorV : 0.0,
+  anchorV1 : 0.0,
+  isSpecialZone : false,
+  purescriptId : ""
+}
+
 type LocateOnMapPadding = {
     left :: Number
   , top :: Number
@@ -561,6 +583,9 @@ type MarkerConfig = {
   , markerCallbackForTags :: Array String
   , theme :: String
   , position :: Paths
+  , rotation :: Number
+  , markerId :: String
+  , animationConfig :: AnimationConfig
 }
 
 defaultMarkerConfig :: MarkerConfig
@@ -575,6 +600,20 @@ defaultMarkerConfig = {
   , markerCallbackForTags : []
   , theme : "DARK"
   , position : { lat : 0.0, lng : 0.0 }
+  , rotation : 0.0
+  , markerId : ""
+  , animationConfig : defaultAnimationConfig
+}
+
+type AnimationConfig = {
+  animationType :: String,
+  animationDuration :: String
+}
+
+defaultAnimationConfig :: AnimationConfig 
+defaultAnimationConfig = {
+    animationType : "NONE"
+  , animationDuration : "0"
 }
 
 type MapRouteConfig = {
@@ -757,8 +796,8 @@ type RouteConfig = {
   endMarkerConfig :: MarkerConfig
 }
 
-mkRouteConfig :: Locations -> String -> String -> String -> String -> String -> String -> Boolean -> MapRouteConfig -> RouteConfig
-mkRouteConfig normalRoute startMarker endMarker routeType startMarkerLabel endMarkerLabel style isActual mapRouteConfig = 
+mkRouteConfig :: Locations -> String -> String -> String -> String -> String -> String -> String -> String -> Boolean -> MapRouteConfig -> RouteConfig
+mkRouteConfig normalRoute startMarker startMarkerId endMarker endMarkerId routeType startMarkerLabel endMarkerLabel style isActual mapRouteConfig = 
   routeConfig{
     locations = normalRoute,
     startMarker = startMarker,
@@ -769,8 +808,8 @@ mkRouteConfig normalRoute startMarker endMarker routeType startMarkerLabel endMa
     style = style,
     isActual = isActual,
     mapRouteConfig = mapRouteConfig,
-    startMarkerConfig = defaultMarkerConfig{pointerIcon = startMarker, primaryText = startMarkerLabel},
-    endMarkerConfig = defaultMarkerConfig{pointerIcon = endMarker, primaryText = endMarkerLabel}
+    startMarkerConfig = defaultMarkerConfig{markerId = startMarkerId, pointerIcon = startMarker, primaryText = startMarkerLabel},
+    endMarkerConfig = defaultMarkerConfig{markerId = endMarkerId, pointerIcon = endMarker, primaryText = endMarkerLabel}
   }
 
 mkDrawRouteConfig :: RouteConfig -> RouteConfig -> String -> DrawRouteConfig
