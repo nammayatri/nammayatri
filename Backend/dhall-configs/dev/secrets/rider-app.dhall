@@ -2,19 +2,29 @@ let ondclogsUrl = "https://logs.ondc.in"
 
 let ondcTokenMap
     : List
-        { mapKey : { merchantId : Text, domain : Text }
+        { mapKey : { merchantOperatingCityId : Text, domain : Text }
         , mapValue : { token : Text, ondcUrl : Text }
         }
-    = [ { mapKey = { merchantId = "NAMMA_YATRI", domain = "MOBILITY" }
+    = [ { mapKey =
+          { merchantOperatingCityId = "NAMMA_YATRI_BANGALORE"
+          , domain = "MOBILITY"
+          }
         , mapValue = { token = "abcd123", ondcUrl = ondclogsUrl }
         }
-      , { mapKey = { merchantId = "YATRI", domain = "MOBILITY" }
+      , { mapKey =
+          { merchantOperatingCityId = "YATRI_KOCHI", domain = "MOBILITY" }
         , mapValue = { token = "abcd123", ondcUrl = ondclogsUrl }
         }
-      , { mapKey = { merchantId = "YATRI_SATHI", domain = "MOBILITY" }
+      , { mapKey =
+          { merchantOperatingCityId = "YATRI_SATHI_KOLKATA"
+          , domain = "MOBILITY"
+          }
         , mapValue = { token = "abcd123", ondcUrl = ondclogsUrl }
         }
-      , { mapKey = { merchantId = "NAMMA_YATRI", domain = "PUBLIC_TRANSPORT" }
+      , { mapKey =
+          { merchantOperatingCityId = "NAMMA_YATRI_CHENNAI"
+          , domain = "PUBLIC_TRANSPORT"
+          }
         , mapValue = { token = "abcd123", ondcUrl = ondclogsUrl }
         }
       ]

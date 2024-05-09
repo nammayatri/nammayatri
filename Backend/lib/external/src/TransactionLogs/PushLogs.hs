@@ -35,9 +35,9 @@ pushLogs ::
   A.Value ->
   Text ->
   m ()
-pushLogs requestType requestData merchantId = do
+pushLogs requestType requestData merchantOperatingCityId = do
   ondcTokenHashMap <- asks (.ondcTokenHashMap)
-  let mLogsTokenConfig = HM.lookup (KeyConfig merchantId "MOBILITY") ondcTokenHashMap
+  let mLogsTokenConfig = HM.lookup (KeyConfig merchantOperatingCityId "MOBILITY") ondcTokenHashMap
   let kafkaLog = TransactionLog requestType requestData
   pushBecknLogToKafka kafkaLog
   let transactionLog = TransactionLogReq requestType (maskSensitiveData requestData)

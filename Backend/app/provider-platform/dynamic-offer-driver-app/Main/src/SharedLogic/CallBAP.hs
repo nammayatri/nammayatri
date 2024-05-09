@@ -68,6 +68,7 @@ import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.OnUpdate as DOU
 import qualified Domain.Types.Person as DP
@@ -122,12 +123,13 @@ callOnSelectV2 ::
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   DSR.SearchRequest ->
   DSRFD.SearchRequestForDriver ->
   DST.SearchTry ->
   Spec.OnSelectReqMessage ->
   m ()
-callOnSelectV2 transporter searchRequest srfd searchTry content = do
+callOnSelectV2 transporter mOCId searchRequest srfd searchTry content = do
   let bapId = searchRequest.bapId
       bapUri = searchRequest.bapUri
       bppSubscriberId = getShortId $ transporter.subscriberId
@@ -140,7 +142,7 @@ callOnSelectV2 transporter searchRequest srfd searchTry content = do
   ttl <- bppConfig.onSelectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttl)
   logDebug $ "on_selectV2 request bpp: " <> show content
-  void $ withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (Spec.OnSelectReq context Nothing (Just content))
+  void $ withShortRetry $ callBecknAPIWithSignature' mOCId bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (Spec.OnSelectReq context Nothing (Just content))
   where
     getMsgIdByTxnId :: CacheFlow m r => Text -> m Text
     getMsgIdByTxnId txnId = do
@@ -164,13 +166,14 @@ callOnUpdateV2 ::
   Spec.OnUpdateReq ->
   RetryCfg ->
   Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   m ()
-callOnUpdateV2 req retryConfig merchantId = do
+callOnUpdateV2 req retryConfig _ mOCId = do
   bapUri' <- req.onUpdateReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Ride Assigned request context.")
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onUpdateReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap req
+  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' mOCId bppSubscriberId (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap req
 
 callOnStatusV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -185,13 +188,14 @@ callOnStatusV2 ::
   Spec.OnStatusReq ->
   RetryCfg ->
   Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   m ()
-callOnStatusV2 req retryConfig merchantId = do
+callOnStatusV2 req retryConfig _ mOCId = do
   bapUri' <- req.onStatusReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Ride Assigned request context.")
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onStatusReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
+  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' mOCId bppSubscriberId (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
 
 callOnCancelV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -206,13 +210,14 @@ callOnCancelV2 ::
   Spec.OnCancelReq ->
   RetryCfg ->
   Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   m ()
-callOnCancelV2 req retryConfig merchantId = do
+callOnCancelV2 req retryConfig _ mOCId = do
   bapUri' <- req.onCancelReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Ride Assigned request context.")
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onCancelReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
+  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' mOCId bppSubscriberId (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
 
 callOnConfirmV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -226,11 +231,12 @@ callOnConfirmV2 ::
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Spec.Context ->
   Spec.ConfirmReqMessage ->
   DBC.BecknConfig ->
   m ()
-callOnConfirmV2 transporter context content bppConfig = do
+callOnConfirmV2 transporter mOCId context content bppConfig = do
   let bppSubscriberId = getShortId $ transporter.subscriberId
   bapUri <- Utils.getContextBapUri context
   bapId <- Utils.getContextBapId context
@@ -242,7 +248,7 @@ callOnConfirmV2 transporter context content bppConfig = do
   txnId <- Utils.getTransactionId context
   ttl <- bppConfig.onConfirmTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context_ <- ContextV2.buildContextV2 Context.ON_CONFIRM Context.MOBILITY msgId (Just txnId) bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
-  void $ withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap (Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content})
+  void $ withShortRetry $ callBecknAPIWithSignature' mOCId bppSubscriberId (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap (Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content})
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]
@@ -308,7 +314,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
   rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
   let generatedMsg = A.encode rideAssignedMsgV2
   logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
-  void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig merchant.id
+  void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig merchant.id booking.merchantOperatingCityId
   where
     refillKey = "REFILLED_" <> ride.driverId.getId
     updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
@@ -385,7 +391,7 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
       rideStartedBuildReq = ACL.RideStartedReq ACL.DRideStartedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
   rideStartedMsgV2 <- ACL.buildOnStatusReqV2 merchant booking rideStartedBuildReq Nothing
-  void $ callOnStatusV2 rideStartedMsgV2 retryConfig merchant.id
+  void $ callOnStatusV2 rideStartedMsgV2 retryConfig merchant.id booking.merchantOperatingCityId
 
 sendRideCompletedUpdateToBAP ::
   ( CacheFlow m r,
@@ -417,7 +423,7 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
       rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
   rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideCompletedBuildReq
-  void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id
+  void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id booking.merchantOperatingCityId
 
 sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -440,7 +446,7 @@ sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
   let bookingCancelledBuildReqV2 = ACL.BookingCancelledBuildReqV2 ACL.DBookingCancelledReqV2 {..}
   retryConfig <- asks (.longDurationRetryCfg)
   bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry (show Enums.CANCELLED) bookingCancelledBuildReqV2 Nothing
-  void $ callOnCancelV2 bookingCancelledMsgV2 retryConfig transporter.id
+  void $ callOnCancelV2 bookingCancelledMsgV2 retryConfig transporter.id booking.merchantOperatingCityId
 
 sendDriverOffer ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -466,7 +472,7 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show transporter.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier))
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback driverQuote.id.getId
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
-  callOnSelectV2 transporter searchReq srfd searchTry =<< (buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy)
+  callOnSelectV2 transporter searchReq.merchantOperatingCityId searchReq srfd searchTry =<< (buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy)
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>
@@ -529,7 +535,7 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
       driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
   driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverArrivedBuildReq
-  void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
+  void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id booking.merchantOperatingCityId
 
 sendStopArrivalUpdateToBAP ::
   ( CacheFlow m r,
@@ -561,7 +567,7 @@ sendStopArrivalUpdateToBAP booking ride driver vehicle = do
         stopArrivedBuildReq = ACL.StopArrivedBuildReq ACL.DStopArrivedBuildReq {..}
     stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing stopArrivedBuildReq
     retryConfig <- asks (.shortDurationRetryCfg)
-    void $ callOnUpdateV2 stopArrivedMsgV2 retryConfig merchant.id
+    void $ callOnUpdateV2 stopArrivedMsgV2 retryConfig merchant.id booking.merchantOperatingCityId
 
 sendNewMessageToBAP ::
   ( CacheFlow m r,
@@ -596,7 +602,7 @@ sendNewMessageToBAP booking ride message = do
         newMessageBuildReq = ACL.NewMessageBuildReq ACL.DNewMessageReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     newMessageMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing newMessageBuildReq
-    void $ callOnUpdateV2 newMessageMsgV2 retryConfig merchant.id
+    void $ callOnUpdateV2 newMessageMsgV2 retryConfig merchant.id booking.merchantOperatingCityId
 
 sendUpdateEditDestToBAP ::
   ( CacheFlow m r,
@@ -634,7 +640,7 @@ sendUpdateEditDestToBAP booking ride bookingUpdateReqDetails newDestination curr
         sUpdateEditDestToBAPReq = ACL.EditDestinationUpdate ACL.DEditDestinationUpdateReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     sUpdateEditDestToBAP <- ACL.buildOnUpdateMessageV2 merchant booking (Just bookingUpdateReqDetails.bapBookingUpdateRequestId) sUpdateEditDestToBAPReq
-    void $ callOnUpdateV2 sUpdateEditDestToBAP retryConfig merchant.id
+    void $ callOnUpdateV2 sUpdateEditDestToBAP retryConfig merchant.id booking.merchantOperatingCityId
 
 sendSafetyAlertToBAP ::
   ( CacheFlow m r,
@@ -670,7 +676,7 @@ sendSafetyAlertToBAP booking ride reason driver vehicle = do
 
     retryConfig <- asks (.shortDurationRetryCfg)
     safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing safetyAlertBuildReq
-    void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig merchant.id
+    void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig merchant.id booking.merchantOperatingCityId
 
 sendEstimateRepetitionUpdateToBAP ::
   ( CacheFlow m r,
@@ -706,7 +712,7 @@ sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource dri
         estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq ACL.DEstimateRepetitionReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing estimateRepetitionBuildReq
-    void $ callOnUpdateV2 estimateRepMsgV2 retryConfig merchant.id
+    void $ callOnUpdateV2 estimateRepMsgV2 retryConfig merchant.id booking.merchantOperatingCityId
 
 sendQuoteRepetitionUpdateToBAP ::
   ( CacheFlow m r,
@@ -742,7 +748,7 @@ sendQuoteRepetitionUpdateToBAP booking ride newBookingId cancellationSource driv
         quoteRepetitionBuildReq = ACL.QuoteRepetitionBuildReq ACL.DQuoteRepetitionReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     quoteRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing quoteRepetitionBuildReq
-    void $ callOnUpdateV2 quoteRepMsgV2 retryConfig merchant.id
+    void $ callOnUpdateV2 quoteRepMsgV2 retryConfig merchant.id booking.merchantOperatingCityId
 
 callBecknAPIWithSignature' ::
   ( MonadFlow m,
@@ -755,7 +761,7 @@ callBecknAPIWithSignature' ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     EsqDBFlow m r
   ) =>
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Text ->
   Text ->
   Proxy api ->
@@ -763,7 +769,7 @@ callBecknAPIWithSignature' ::
   HMS.HashMap BaseUrl BaseUrl ->
   req ->
   m res
-callBecknAPIWithSignature' merchantId a b c d e req' = do
+callBecknAPIWithSignature' mOCId a b c d e req' = do
   fork ("sending " <> show b <> ", pushing ondc logs") do
-    void $ pushLogs b (toJSON req') merchantId.getId
+    void $ pushLogs b (toJSON req') mOCId.getId
   Beckn.callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'

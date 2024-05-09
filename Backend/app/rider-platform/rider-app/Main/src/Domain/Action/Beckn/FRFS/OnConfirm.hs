@@ -160,10 +160,10 @@ buildRecon recon ticket = do
       }
 
 callBPPCancel :: DFRFSTicketBooking.FRFSTicketBooking -> BecknConfig -> Spec.CancellationType -> Id Merchant -> Environment.Flow ()
-callBPPCancel booking bapConfig cancellationType merchantId = do
+callBPPCancel booking bapConfig cancellationType _ = do
   fork "FRFS Cancel Req" $ do
     providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
     merchantOperatingCity <- getMerchantOperatingCityFromBooking booking
     bknCancelReq <- ACL.buildCancelReq booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} cancellationType merchantOperatingCity.city
     logDebug $ "FRFS CancelReq " <> encodeToText bknCancelReq
-    void $ CallBPP.cancel providerUrl bknCancelReq merchantId
+    void $ CallBPP.cancel providerUrl bknCancelReq merchantOperatingCity.id

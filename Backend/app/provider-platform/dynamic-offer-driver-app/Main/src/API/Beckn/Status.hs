@@ -55,12 +55,13 @@ status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
     let context = reqV2.statusReqContext
     callbackUrl <- Utils.getContextBapUri context
     dStatusRes <- DStatus.handler transporterId dStatusReq
+    let merchantOpCityId = dStatusRes.booking.merchantOperatingCityId
     fork "status received pushing ondc logs" do
-      void $ pushLogs "status" (toJSON reqV2) dStatusRes.booking.providerId.getId
+      void $ pushLogs "status" (toJSON reqV2) merchantOpCityId.getId
     internalEndPointHashMap <- asks (.internalEndPointHashMap)
     msgId <- Utils.getMessageId context
     onStatusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info (Just msgId)
-    Callback.withCallback dStatusRes.transporter "on_status" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStatusReq.onStatusReqContext) $
+    Callback.withCallback dStatusRes.transporter merchantOpCityId "on_status" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStatusReq.onStatusReqContext) $
       pure onStatusReq
 
 errHandler :: Spec.Context -> BecknAPIError -> Spec.OnStatusReq

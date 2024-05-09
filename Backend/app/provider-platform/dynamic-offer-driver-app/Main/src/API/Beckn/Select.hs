@@ -56,7 +56,7 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
         Redis.whenWithLockRedis (selectProcessingLockKey dSelectReq.messageId) 60 $
           DSelect.handler merchant dSelectReq searchRequest estimates
       fork "select received pushing ondc logs" do
-        void $ pushLogs "select" (toJSON reqV2) merchant.id.getId
+        void $ pushLogs "select" (toJSON reqV2) searchRequest.merchantOperatingCityId.getId
     pure Ack
 
 selectLockKey :: Text -> Text

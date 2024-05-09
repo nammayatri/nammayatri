@@ -29,7 +29,7 @@ data TokenConfig = TokenConfig
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, FromDhall)
 
 data KeyConfig = KeyConfig
-  { merchantId :: Text,
+  { merchantOperatingCityId :: Text,
     domain :: Text
   }
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, FromDhall, Hashable)

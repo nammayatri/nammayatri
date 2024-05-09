@@ -55,5 +55,5 @@ callBookingCancel :: ShortId DM.Merchant -> Id SRB.Booking -> Id DP.Person -> DC
 callBookingCancel merchantId bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   m <- findMerchantByShortId merchantId
   dCancelRes <- DCancel.cancel bookingId (personId, m.id) req
-  void $ withShortRetry $ CallBPP.cancelV2 m.id dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes
+  void $ withShortRetry $ CallBPP.cancelV2 dCancelRes.merchantOperatingCityId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes
   return Success

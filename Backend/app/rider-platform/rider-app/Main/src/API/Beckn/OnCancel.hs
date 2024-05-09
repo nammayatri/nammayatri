@@ -60,7 +60,7 @@ onCancel _ req = withFlowHandlerBecknAPI do
               Redis.whenWithLockRedis (onCancelProcessingLockKey messageId) 60 $ do
                 DOnCancel.onCancel validatedOnCancelReq
                 fork "on cancel received pushing ondc logs" do
-                  void $ pushLogs "on_cancel" (toJSON req) validatedOnCancelReq.booking.merchantId.getId
+                  void $ pushLogs "on_cancel" (toJSON req) validatedOnCancelReq.booking.merchantOperatingCityId.getId
       _ -> throwError . InvalidBecknSchema $ "on_cancel order.status expected:-CANCELLED, received:-" <> cancelStatus'
   pure Ack
 

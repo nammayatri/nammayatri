@@ -55,10 +55,10 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
           fork "on_init request processing" $ do
             (onInitRes, booking) <- DOnInit.onInit onInitReq
             fork "on init received pushing ondc logs" do
-              void $ pushLogs "on_init" (toJSON reqV2) onInitRes.merchant.id.getId
+              void $ pushLogs "on_init" (toJSON reqV2) booking.merchantOperatingCityId.getId
             handle (errHandler booking) . void . withShortRetry $ do
               confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
-              CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq onInitRes.merchant.id
+              CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq booking.merchantOperatingCityId
       else do
         let cancellationReason = "on_init API failure"
             cancelReq = buildCancelReq cancellationReason OnInit
@@ -79,7 +79,7 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
 
     errHandlerAction booking cancelReq = do
       dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-      void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+      void . withShortRetry $ CallBPP.cancelV2 booking.merchantOperatingCityId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
 
     buildCancelReq cancellationReason reasonStage =
       DCancel.CancelReq

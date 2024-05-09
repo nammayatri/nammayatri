@@ -85,7 +85,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
       merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
       booking <- QRB.findById cancelReq.bookingId >>= fromMaybeM (BookingDoesNotExist cancelReq.bookingId.getId)
       fork "cancel received pushing ondc logs" do
-        void $ pushLogs "cancel" (toJSON reqV2) merchant.id.getId
+        void $ pushLogs "cancel" (toJSON reqV2) booking.merchantOperatingCityId.getId
       let onCancelBuildReq =
             OC.DBookingCancelledReqV2
               { booking = booking,
@@ -105,12 +105,12 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
               DCancel.cancel cancelReq merchant booking mbActiveSearchTry
               buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
               void $
-                Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
+                Callback.withCallback merchant _booking.merchantOperatingCityId "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
                   pure buildOnCancelMessageV2
         Just Enums.SOFT_CANCEL -> do
           buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
           void $
-            Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
+            Callback.withCallback merchant booking.merchantOperatingCityId "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
               pure buildOnCancelMessageV2
         _ -> throwError $ InvalidRequest "Invalid cancel status"
     Right cancelSearchReq -> do
