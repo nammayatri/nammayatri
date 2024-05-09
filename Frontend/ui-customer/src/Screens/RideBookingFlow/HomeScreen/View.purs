@@ -1628,7 +1628,7 @@ estimateHeaderView push state =
       , gravity CENTER_HORIZONTAL
       , width MATCH_PARENT
       , margin $ MarginTop 4
-      , visibility $  boolToVisibility state.props.hasToll
+      , visibility $  boolToVisibility $ state.props.hasToll && state.data.selectedEstimatesObject.serviceTierName /= Just "Auto"
       ] <> FontStyle.paragraphText TypoGraphy
     , linearLayout
         [ height $ V 1
