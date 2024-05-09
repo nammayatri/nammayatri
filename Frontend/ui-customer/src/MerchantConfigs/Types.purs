@@ -74,6 +74,7 @@ type AppConfigCustomer a =
   , tipDisplayDuration :: Int
   , tipsEnabled :: Boolean
   , tipEnabledCities :: Array String
+  , maxVehicleIconsToShowOnMap :: Int
   , referral :: ReferalConfig
   , safety :: Safety
   , enableBookAny :: Boolean

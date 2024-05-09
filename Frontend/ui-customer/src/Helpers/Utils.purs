@@ -77,7 +77,7 @@ import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime, VehicleViewType(..))
+import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime, VehicleViewType(..), FareProductType(..))
 import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Types.App (GlobalState(..))
@@ -998,3 +998,48 @@ rideEndingInBetweenNextRide diffInMins _ estimatedDuration =
 
 bufferTimePerKm :: Int -> Int
 bufferTimePerKm estimatedDistance = 3 * estimatedDistance
+
+
+type Markers = {
+    srcMarker :: String,
+    destMarker :: String
+}
+
+data TrackingType = RIDE_TRACKING | DRIVER_TRACKING
+
+getRouteMarkers :: String -> City -> TrackingType -> FareProductType -> Markers
+getRouteMarkers variant city trackingType fareProductType = 
+  { srcMarker : mkSrcMarker city variant,
+    destMarker : mkDestMarker trackingType fareProductType
+  }
+
+mkSrcMarker :: City -> String -> String
+mkSrcMarker = getCitySpecificMarker
+
+getCitySpecificMarker :: City -> String -> String
+getCitySpecificMarker city variant = 
+    case variant of
+        "AUTO_RICKSHAW" -> getAutoImage city
+        "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
+        "SUV"           -> "ny_ic_suv_nav_on_map"
+        "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
+        _               -> "ny_ic_vehicle_nav_on_map"
+
+mkDestMarker :: TrackingType -> FareProductType -> String
+mkDestMarker trackingType fareProductType = 
+    case trackingType of 
+        RIDE_TRACKING -> if fareProductType == RENTAL then "ny_ic_blue_marker" else "ny_ic_dest_marker"
+        DRIVER_TRACKING -> "ny_ic_src_marker"
+
+getAutoImage :: City -> String
+getAutoImage city = case city of
+    Hyderabad -> "ny_ic_black_yellow_auto"
+    Kochi -> "ny_ic_koc_auto_on_map"
+    Chennai -> "ny_ic_black_yellow_auto"
+    _         -> "ic_auto_nav_on_map"
+
+normalRoute ::String -> Markers
+normalRoute _ = {
+    srcMarker : "ny_ic_src_marker",
+    destMarker : "ny_ic_dest_marker"
+}

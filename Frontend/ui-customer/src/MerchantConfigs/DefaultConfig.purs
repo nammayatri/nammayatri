@@ -496,6 +496,7 @@ config =
   , tipDisplayDuration : 30
   , tipsEnabled : true
   , tipEnabledCities : ["Bangalore", "Hyderabad"]
+  , maxVehicleIconsToShowOnMap : 10
   , referral : {
           domain : "https://nammayatri.in/"
         , customerAppId : "in.juspay.nammayatri"

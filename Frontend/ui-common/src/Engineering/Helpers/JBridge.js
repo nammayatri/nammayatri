@@ -588,24 +588,19 @@ export const openUrlInMailApp = function (str) {
   };
 };
 
-export const addMarkerImpl = function (title) {
-  return function (lat) {
-    return function (lng) {
-      return function (markerSize) {
-        return function (anchorV) {
-          return function (anchorV1) {
-            return function () {
-              console.log("I AM HERE ------------------");
-              window.JBridge.upsertMarker(title, lat, lng, markerSize, anchorV, anchorV1);
-              return true;
-            };
-          }
-        }
-      }
-    };
-  };
-};
+export const showMarkerImpl = function (showMarkerConfig) {
+  if (window.JBridge.showMarker) {
+    window.JBridge.showMarker(JSON.stringify(showMarkerConfig));
+  } else {
+    window.JBridge.upsertMarker(showMarkerConfig.markerConfig.pointerIcon, showMarkerConfig.lat, showMarkerConfig.lng, showMarkerConfig.markerSize, showMarkerConfig.anchorV, showMarkerConfig.anchorV1);
+  }
+}
 
+export const fadeInFadeOutMarker = function (animationType, markerId, animationDuration) {
+  if (window.JBridge.fadeInFadeOutMarker) {
+    window.JBridge.fadeInFadeOutMarker(animationType, markerId, animationDuration);
+  }
+}
 
 export const removeMarker = function (title) {
   try {
@@ -614,6 +609,12 @@ export const removeMarker = function (title) {
   } catch (e) {
     console.log(e);
     console.log("error in removeMarker----------------------------------", e);
+  }
+};
+
+export const removeAllMarkers = function (id) {
+  if(window.JBridge.removeAllMarkers) {
+    window.JBridge.removeAllMarkers(); 
   }
 };
 
@@ -653,8 +654,6 @@ export const updateMarker = function (markerConfig) {
     }
   }
 }
-
-
 
 export const updateRoute = (configObj) => {
   if (window.JBridge.updateRoute) {

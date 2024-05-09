@@ -50,7 +50,7 @@ import Effect.Aff (launchAff)
 import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isTrue, flowRunner, liftFlow)
-import Helpers.Utils (updateLocListWithDistance, setText, getSavedLocationByTag, getCurrentLocationMarker)
+import Helpers.Utils (updateLocListWithDistance, setText, getSavedLocationByTag, getCurrentLocationMarker, normalRoute)
 import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker, Location, setMapPadding, getExtendedPath, drawRoute, defaultMarkerConfig, getLayoutBounds)
 import Log (trackAppActionClick)
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
@@ -62,7 +62,7 @@ import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, 
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig)
 import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo, initData) as SearchLocationScreenData
 import Services.API (QuoteAPIEntity(..), GetQuotesRes(..), OfferRes(..), RentalQuoteAPIDetails(..), QuoteAPIContents(..), Snapped(..), LatLong(..), Route(..))
-import Services.Backend (walkCoordinates, walkCoordinate, normalRoute)
+import Services.Backend (walkCoordinates, walkCoordinate)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
 import Language.Strings (getString)
@@ -566,8 +566,8 @@ drawRouteOnMap state =
         address = MB.maybe "" (\item -> item.address) state.data.srcLoc
         destAddress = MB.maybe "" (\item -> item.address) state.data.destLoc
         markers = normalRoute ""
-        sourceMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = address, position {lat = startLat, lng = startLon}}
-        destMarkerConfig = defaultMarkerConfig{ pointerIcon = if destAddress == "" then "" else markers.destMarker, primaryText = destAddress, position {lat = endLat, lng = endLon} }
+        sourceMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker, primaryText = address, position {lat = startLat, lng = startLon}}
+        destMarkerConfig = defaultMarkerConfig{ markerId = if STR.null destAddress then "" else markers.destMarker, pointerIcon = if destAddress == "" then "" else markers.destMarker, primaryText = destAddress, position {lat = endLat, lng = endLon} }
         _ = spy "INside sourceMarkerConfig" sourceMarkerConfig 
         _ = spy "inside destMarkerConfig" destMarkerConfig
     void $ launchAff $ flowRunner defaultGlobalState $ do 
