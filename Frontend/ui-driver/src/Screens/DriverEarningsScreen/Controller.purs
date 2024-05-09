@@ -227,7 +227,7 @@ eval (CoinTransactionResponseAction (CoinTransactionRes resp)) state = do
         , coinsEarnedPreviousDay = resp.coinsEarnedPreviousDay
         , coinsEarnedToday = resp.todayCoinSummary
         , coinHistoryItems = events
-        , coinsToUse = (state.data.coinBalance / state.data.config.coinsConfig.stepFunctionForCoinConversion) * state.data.config.coinsConfig.stepFunctionForCoinConversion
+        , coinsToUse = (resp.coinBalance / state.data.config.coinsConfig.stepFunctionForCoinConversion) * state.data.config.coinsConfig.stepFunctionForCoinConversion
         }
       , props { showShimmer = false, showCoinsEarnedAnim = coinDifference}
       }
