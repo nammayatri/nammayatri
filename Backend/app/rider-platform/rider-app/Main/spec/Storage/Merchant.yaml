@@ -183,6 +183,7 @@ Merchant:
     country: "'India'"
     cipherText: "'TXlTZWNyZXRLZXkxMjM0NQo='"
     geoHashPrecisionValue: "9"
+    fakeOtpEmails: "'{}'"
     city: "'Kochi'"
 
 

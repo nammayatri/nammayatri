@@ -274,7 +274,7 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
       SP.EMAIL -> do
         case req.email of
           Just email -> do
-            let useFakeOtp = if email `elem` transporterConfig.fakeOtpMobileNumbers then Just "7891" else Nothing
+            let useFakeOtp = if email `elem` transporterConfig.fakeOtpEmails then Just "7891" else Nothing
             pure (Just email, Nothing, useFakeOtp)
           Nothing -> throwError $ InvalidRequest "Email is required"
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
