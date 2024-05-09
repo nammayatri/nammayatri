@@ -72,16 +72,16 @@ postSocialLogin req = do
   case result of
     Right info -> do
       oldPerson <- PQ.findByEmail (Just info.email)
+      moc <- CQMOC.findByMerchantIdAndCity req.merchantId req.merchantOperatingCity >>= fromMaybeM (MerchantOperatingCityNotFound $ show req.merchantOperatingCity)
       person <-
         case oldPerson of
           Just person' -> pure person'
           Nothing -> do
             deploymentVersion <- asks (.version)
-            moc <- CQMOC.findById req.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound req.merchantOperatingCityId.getId)
             let createPersonInput = buildCreatePersonInput moc.city req.name info.email
-            DR.createDriverWithDetails createPersonInput Nothing Nothing Nothing Nothing (Just deploymentVersion.getDeploymentVersion) req.merchantId req.merchantOperatingCityId False
+            DR.createDriverWithDetails createPersonInput Nothing Nothing Nothing Nothing (Just deploymentVersion.getDeploymentVersion) req.merchantId moc.id False
       QR.deleteByPersonId person.id
-      token <- makeSession person.id.getId req.merchantId.getId req.merchantOperatingCityId.getId
+      token <- makeSession person.id.getId req.merchantId.getId moc.id.getId
       _ <- QR.create token
       pure $ SL.SocialLoginRes token.token
     Left _ -> throwError . FailedToVerifyIdToken $ show req.oauthProvider <> ", idToken: " <> req.tokenId <> " error: "
@@ -130,7 +130,7 @@ makeSession entityId merchantId merchantOpCityId = do
         alternateNumberAttempts = 3 -- TODO: change later
       }
 
-postUiSocialUpdateProfile ::
+postSocialUpdateProfile ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
@@ -138,7 +138,7 @@ postUiSocialUpdateProfile ::
     API.Types.UI.SocialLogin.SocialUpdateProfileReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postUiSocialUpdateProfile (mbPersonId, _, _) req = do
+postSocialUpdateProfile (mbPersonId, _, _) req = do
   case mbPersonId of
     Nothing -> throwError $ InternalError "Not Implemented for dashboard"
     Just personId -> do

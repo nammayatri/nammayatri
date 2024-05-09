@@ -131,14 +131,14 @@ makeSession entityId merchantId = do
         info = Nothing
       }
 
-postUiSocialUpdateProfile ::
+postSocialUpdateProfile ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     SL.SocialUpdateProfileReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postUiSocialUpdateProfile (mbPersonId, _) req = do
+postSocialUpdateProfile (mbPersonId, _) req = do
   case mbPersonId of
     Nothing -> throwError $ InternalError "Not Implemented for dashboard"
     Just personId -> do
