@@ -38,15 +38,22 @@ getConfigFromMemory id = do
   isExp <- DTC.updateConfig DTC.LastUpdatedTransporterConfig
   getConfigFromMemoryCommon (DTC.TransporterConfig id.getId) isExp CM.isExperimentsRunning
 
+setConfigInMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe TransporterConfig -> m (Maybe TransporterConfig)
+setConfigInMemory id config = do
+  isExp <- DTC.inMemConfigUpdateTime DTC.LastUpdatedTransporterConfig
+  CCU.setConfigInMemoryCommon (DTC.TransporterConfig id.getId) isExp config
+
 findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe CCU.CacKey -> m (Maybe TransporterConfig)
 findByMerchantOpCityId id mbstickId = do
   inMemConfig <- getConfigFromMemory id
   let context = [(CCU.MerchantOperatingCityId, toJSON id.getId)]
-  CCU.getConfigFromCacOrDB inMemConfig context mbstickId (KBF.fromCacType @SBMT.TransporterConfig) CCU.TransporterConfig
-    |<|>| ( do
-              logDebug $ "TransporterConfig not found in memory, fetching from DB for context: " <> show context
-              CMTC.getTransporterConfigFromDB id
-          )
+  config <-
+    CCU.getConfigFromCacOrDB inMemConfig context mbstickId (KBF.fromCacType @SBMT.TransporterConfig) CCU.TransporterConfig
+      |<|>| ( do
+                logDebug $ "TransporterConfig not found in memory, fetching from DB for context: " <> show context
+                CMTC.getTransporterConfigFromDB id
+            )
+  setConfigInMemory id config
 
 --------------------------------------------------------- Things can't be handled by cac --------------------------------------------------
 

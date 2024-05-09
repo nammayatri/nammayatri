@@ -45,16 +45,22 @@ getConfigsFromMemory id = do
   isExpired <- DTC.updateConfig DTC.LastUpdatedGoHomeConfig
   getConfigFromMemoryCommon (DTC.GoHomeConfig id.getId) isExpired CM.isExperimentsRunning
 
+setConfigInMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe GoHomeConfig -> m (Maybe GoHomeConfig)
+setConfigInMemory id config = do
+  isExp <- DTC.inMemConfigUpdateTime DTC.LastUpdatedGoHomeConfig
+  CCU.setConfigInMemoryCommon (DTC.GoHomeConfig id.getId) isExp config
+
 findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe CCU.CacKey -> m GoHomeConfig
 findByMerchantOpCityId id stickyId = do
   let context = [(CCU.MerchantOperatingCityId, DA.toJSON id.getId)]
   inMemConfig <- getConfigsFromMemory id
-  config <-
+  config' <-
     CCU.getConfigFromCacOrDB inMemConfig context stickyId (fromCacType @BeamGHC.GoHomeConfig) CCU.GoHomeConfig
       |<|>| ( do
                 logDebug $ "GoHomeConfig not found in memory, fetching from DB for context: " <> show context
                 GHC.getGoHomeConfigFromDB id
             )
+  config <- setConfigInMemory id config'
   when (isNothing config) do
     throwError $ InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> id.getId
   pure $ fromJust config

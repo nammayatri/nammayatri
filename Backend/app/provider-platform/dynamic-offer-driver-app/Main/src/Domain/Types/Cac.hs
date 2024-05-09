@@ -82,8 +82,20 @@ updateConfig val = do
     ( \lastUpdated' -> do
         currentTime <- liftIO getCurrentTime
         let isGreater = nominalDiffTimeToSeconds (diffUTCTime currentTime lastUpdated') / 1e12 >= updateInt
+        pure isGreater
+    )
+    =<< L.getOption val
+
+inMemConfigUpdateTime :: (MonadFlow m, (OptionEntity a UTCTime)) => a -> m Bool
+inMemConfigUpdateTime val = do
+  updateInt <- liftIO (Se.lookupEnv "CAC_UPDATE_INTERVAL") <&> maybe 10 read
+  maybe
+    (pure True)
+    ( \lastUpdated' -> do
+        currentTime <- liftIO getCurrentTime
+        let isGreater = nominalDiffTimeToSeconds (diffUTCTime currentTime lastUpdated') / 1e12 >= updateInt
         when isGreater do
-          L.setOption val =<< liftIO getCurrentTime
+          L.setOption val currentTime
         pure isGreater
     )
     =<< L.getOption val

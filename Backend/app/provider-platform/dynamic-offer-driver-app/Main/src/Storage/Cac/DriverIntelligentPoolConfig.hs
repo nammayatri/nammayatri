@@ -43,15 +43,22 @@ getConfigFromInMemory id = do
   isExp <- DTC.updateConfig DTC.LastUpdatedDriverPoolConfig
   getConfigFromMemoryCommon (DTC.DriverIntelligentPoolConfig id.getId) isExp CM.isExperimentsRunning
 
+setConfigInMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe DriverIntelligentPoolConfig -> m (Maybe DriverIntelligentPoolConfig)
+setConfigInMemory id config = do
+  isExp <- DTC.inMemConfigUpdateTime DTC.LastUpdatedDriverIntelligentPoolConfig
+  CCU.setConfigInMemoryCommon (DTC.DriverIntelligentPoolConfig id.getId) isExp config
+
 findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe CacKey -> m (Maybe DriverIntelligentPoolConfig)
 findByMerchantOpCityId id stickeyKey = do
   let context = [(CCU.MerchantOperatingCityId, DA.toJSON id.getId)]
   inMemConfig <- getConfigFromInMemory id
-  CCU.getConfigFromCacOrDB inMemConfig context stickeyKey (KBF.fromCacType @SBMDIPC.DriverIntelligentPoolConfig) CCU.DriverIntelligentPoolConfig
-    |<|>| ( do
-              logDebug $ "DriverIntelligentPoolConfig not found in memory, fetching from DB for context: " <> show context
-              CMDP.getDriverIntelligentPoolConfigFromDB id
-          )
+  config <-
+    CCU.getConfigFromCacOrDB inMemConfig context stickeyKey (KBF.fromCacType @SBMDIPC.DriverIntelligentPoolConfig) CCU.DriverIntelligentPoolConfig
+      |<|>| ( do
+                logDebug $ "DriverIntelligentPoolConfig not found in memory, fetching from DB for context: " <> show context
+                CMDP.getDriverIntelligentPoolConfigFromDB id
+            )
+  setConfigInMemory id config
 
 ---------------------------------------------------------cached queries for dashboard---------------------------------------------------------
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverIntelligentPoolConfig -> m ()
