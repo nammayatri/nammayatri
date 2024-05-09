@@ -22,7 +22,7 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "edit" :> Capture "bookingUpdateRequestId" (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest) :> "result"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.EditLocation.EditLocationResultAPIResp
       :<|> TokenAuth
       :> "edit"
@@ -32,7 +32,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest)
       :> "confirm"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 

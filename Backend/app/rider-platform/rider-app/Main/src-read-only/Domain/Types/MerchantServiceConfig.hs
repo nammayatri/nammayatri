@@ -29,3 +29,7 @@ type MerchantServiceConfig = MerchantServiceConfigD 'Safe
 instance FromJSON (MerchantServiceConfigD 'Unsafe)
 
 instance ToJSON (MerchantServiceConfigD 'Unsafe)
+
+instance FromJSON (MerchantServiceConfigD 'Safe)
+
+instance ToJSON (MerchantServiceConfigD 'Safe)

@@ -14,28 +14,28 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data BookingUpdateRequestT f = BookingUpdateRequestT
-  { bapBookingUpdateRequestId :: (B.C f Kernel.Prelude.Text),
-    bookingId :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    currentPointLat :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    currentPointLon :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    estimatedDistance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters)),
-    estimatedFare :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    fareParamsId :: (B.C f Kernel.Prelude.Text),
-    farePolicyId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    maxEstimatedDistance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    oldEstimatedDistance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters)),
-    oldEstimatedFare :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    oldFareParamsId :: (B.C f Kernel.Prelude.Text),
-    oldMaxEstimatedDistance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters)),
-    status :: (B.C f Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus),
-    totalDistance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters)),
-    travelledDistance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    validTill :: (B.C f Kernel.Prelude.UTCTime)
+  { bapBookingUpdateRequestId :: B.C f Kernel.Prelude.Text,
+    bookingId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    currentPointLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    currentPointLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
+    estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
+    fareParamsId :: B.C f Kernel.Prelude.Text,
+    farePolicyId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    maxEstimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    oldEstimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
+    oldEstimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
+    oldFareParamsId :: B.C f Kernel.Prelude.Text,
+    oldMaxEstimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
+    status :: B.C f Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus,
+    totalDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
+    travelledDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    validTill :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -45,6 +45,6 @@ instance B.Table BookingUpdateRequestT where
 
 type BookingUpdateRequest = BookingUpdateRequestT Identity
 
-$(enableKVPG (''BookingUpdateRequestT) [('id)] [])
+$(enableKVPG ''BookingUpdateRequestT ['id] [])
 
-$(mkTableInstancesWithTModifier (''BookingUpdateRequestT) "booking_update_request" [])
+$(mkTableInstancesWithTModifier ''BookingUpdateRequestT "booking_update_request" [])

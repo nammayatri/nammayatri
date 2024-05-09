@@ -14,16 +14,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data BusinessEventT f = BusinessEventT
-  { bookingId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    distance :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    driverId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    duration :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    eventType :: (B.C f Domain.Types.BusinessEvent.EventType),
-    id :: (B.C f Kernel.Prelude.Text),
-    rideId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    timeStamp :: (B.C f Kernel.Prelude.UTCTime),
-    vehicleVariant :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant)),
-    whenPoolWasComputed :: (B.C f (Kernel.Prelude.Maybe Domain.Types.BusinessEvent.WhenPoolWasComputed))
+  { bookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    distance :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    driverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    duration :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    eventType :: B.C f Domain.Types.BusinessEvent.EventType,
+    id :: B.C f Kernel.Prelude.Text,
+    rideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    timeStamp :: B.C f Kernel.Prelude.UTCTime,
+    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant),
+    whenPoolWasComputed :: B.C f (Kernel.Prelude.Maybe Domain.Types.BusinessEvent.WhenPoolWasComputed)
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +33,6 @@ instance B.Table BusinessEventT where
 
 type BusinessEvent = BusinessEventT Identity
 
-$(enableKVPG (''BusinessEventT) [('id)] [])
+$(enableKVPG ''BusinessEventT ['id] [])
 
-$(mkTableInstances (''BusinessEventT) "business_event")
+$(mkTableInstances ''BusinessEventT "business_event")

@@ -26,3 +26,7 @@ type BlackListOrg = BlackListOrgD 'Safe
 instance FromJSON (BlackListOrgD 'Unsafe)
 
 instance ToJSON (BlackListOrgD 'Unsafe)
+
+instance FromJSON (BlackListOrgD 'Safe)
+
+instance ToJSON (BlackListOrgD 'Safe)

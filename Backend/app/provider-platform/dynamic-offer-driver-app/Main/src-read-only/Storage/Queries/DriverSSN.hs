@@ -29,11 +29,10 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverSSN.DriverSSN -> m ())
 updateByPrimaryKey (Domain.Types.DriverSSN.DriverSSN {..}) = do
-  _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
-      Se.Set Beam.ssnEncrypted (((ssn & unEncrypted . encrypted))),
-      Se.Set Beam.ssnHash ((ssn & hash))
+      Se.Set Beam.ssnEncrypted (ssn & unEncrypted . encrypted),
+      Se.Set Beam.ssnHash (ssn & hash)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -52,6 +51,6 @@ instance ToTType' Beam.DriverSSN Domain.Types.DriverSSN.DriverSSN where
     Beam.DriverSSNT
       { Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.ssnEncrypted = ((ssn & unEncrypted . encrypted)),
-        Beam.ssnHash = (ssn & hash)
+        Beam.ssnEncrypted = ssn & unEncrypted . encrypted,
+        Beam.ssnHash = ssn & hash
       }

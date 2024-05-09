@@ -46,4 +46,8 @@ instance FromJSON (MerchantMessageD 'Unsafe)
 
 instance ToJSON (MerchantMessageD 'Unsafe)
 
+instance FromJSON (MerchantMessageD 'Safe)
+
+instance ToJSON (MerchantMessageD 'Safe)
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageKey)

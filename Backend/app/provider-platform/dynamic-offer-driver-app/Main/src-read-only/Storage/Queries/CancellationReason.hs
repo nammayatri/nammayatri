@@ -21,7 +21,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.CancellationReason.CancellationReason] -> m ())
 createMany = traverse_ create
 
-findAll :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Bool -> m ([Domain.Types.CancellationReason.CancellationReason]))
+findAll :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Bool -> m [Domain.Types.CancellationReason.CancellationReason])
 findAll limit offset enabled = do findAllWithOptionsDb [Se.Is Beam.enabled $ Se.Eq enabled] (Se.Desc Beam.priority) limit offset
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CancellationReason.CancellationReasonCode -> m (Maybe Domain.Types.CancellationReason.CancellationReason))

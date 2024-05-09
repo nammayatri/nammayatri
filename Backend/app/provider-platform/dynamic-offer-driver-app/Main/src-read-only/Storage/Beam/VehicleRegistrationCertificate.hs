@@ -15,37 +15,37 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
-  { airConditioned :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    certificateNumberEncrypted :: (B.C f Kernel.Prelude.Text),
-    certificateNumberHash :: (B.C f Kernel.External.Encryption.DbHash),
-    documentImageId :: (B.C f Kernel.Prelude.Text),
-    failedRules :: (B.C f [Kernel.Prelude.Text]),
-    fitnessExpiry :: (B.C f Kernel.Prelude.UTCTime),
-    fleetOwnerId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    insuranceValidity :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    luggageCapacity :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    manufacturerModel :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    permitExpiry :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    pucExpiry :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    reviewRequired :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    reviewedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    userPassedVehicleCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Category)),
-    vehicleCapacity :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    vehicleClass :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    vehicleColor :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    vehicleDoors :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    vehicleEnergyType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    vehicleManufacturer :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    vehicleModel :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    vehicleRating :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    vehicleSeatBelts :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    vehicleVariant :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant)),
-    verificationStatus :: (B.C f Domain.Types.IdfyVerification.VerificationStatus),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { airConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    certificateNumberEncrypted :: B.C f Kernel.Prelude.Text,
+    certificateNumberHash :: B.C f Kernel.External.Encryption.DbHash,
+    documentImageId :: B.C f Kernel.Prelude.Text,
+    failedRules :: B.C f [Kernel.Prelude.Text],
+    fitnessExpiry :: B.C f Kernel.Prelude.UTCTime,
+    fleetOwnerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    insuranceValidity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    luggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    manufacturerModel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    permitExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    pucExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    reviewRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    reviewedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    userPassedVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Category),
+    vehicleCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    vehicleClass :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleColor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleDoors :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    vehicleEnergyType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleManufacturer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleModel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    vehicleSeatBelts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant),
+    verificationStatus :: B.C f Domain.Types.IdfyVerification.VerificationStatus,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -55,6 +55,6 @@ instance B.Table VehicleRegistrationCertificateT where
 
 type VehicleRegistrationCertificate = VehicleRegistrationCertificateT Identity
 
-$(enableKVPG (''VehicleRegistrationCertificateT) [('id)] [[('certificateNumberHash)]])
+$(enableKVPG ''VehicleRegistrationCertificateT ['id] [['certificateNumberHash]])
 
-$(mkTableInstances (''VehicleRegistrationCertificateT) "vehicle_registration_certificate")
+$(mkTableInstances ''VehicleRegistrationCertificateT "vehicle_registration_certificate")

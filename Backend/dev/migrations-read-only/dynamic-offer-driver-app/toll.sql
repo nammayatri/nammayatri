@@ -21,3 +21,8 @@ ALTER TABLE atlas_driver_offer_bpp.toll ADD COLUMN is_auto_rickshaw_allowed bool
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN is_auto_rickshaw_allowed SET DEFAULT false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN currency TYPE character varying(255);

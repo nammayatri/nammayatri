@@ -4,6 +4,7 @@
 
 module Domain.Types.SubscriptionConfig where
 
+import Data.Aeson
 import qualified Data.Time
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantMessage
