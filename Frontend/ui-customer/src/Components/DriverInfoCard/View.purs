@@ -44,7 +44,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, chatSuggestion)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode, getDefaultPixelSize,specialZoneTagConfig, getCurrencySymbol)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode, getDefaultPixelSize, getCurrencySymbol)
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig)
 import Helpers.Utils (parseFloat)
 import JBridge (fromMetersToKm, getLayoutBounds)

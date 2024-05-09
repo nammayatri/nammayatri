@@ -1,7 +1,7 @@
 module Helpers.RateCardUtils where
 
 import Prelude
-import Services.API (EstimateAPIEntity(..), EstimateFares(..))
+import Services.API (EstimateAPIEntity(..), EstimateFares(..), PriceAPIEntity(..), Currency(..))
 import Common.Types.App
 import Data.Maybe (fromMaybe, isJust, Maybe(..), maybe)
 import Data.Array as DA
@@ -35,7 +35,7 @@ type BreakupList = {
   isNightShift :: Boolean
 }
 
-fetchSpecificFare :: Array EstimateFares -> String -> Price
+fetchSpecificFare :: Array EstimateFares -> String -> PriceAPIEntity
 fetchSpecificFare fareBreakup fareType =
   let
     fare = DA.find (\item -> item ^. _title == fareType) fareBreakup
@@ -43,12 +43,12 @@ fetchSpecificFare fareBreakup fareType =
     maybe dummyPriceEntity getPriceEntity fare
   where
     getPriceEntity item = item ^. _priceWithCurrency
-    dummyPriceEntity = { amount: 0.0, currency: INR }
+    dummyPriceEntity = PriceAPIEntity { amount: 0.0, currency: INR }
 
-priceToBeDisplayed :: Price -> PriceAPIEntity
-priceToBeDisplayed price = case price.currency of
+priceToBeDisplayed :: PriceAPIEntity -> String
+priceToBeDisplayed  (PriceAPIEntity price) = case price.currency of
   INR -> "₹" <> value
-  _ -> price.currency <> show value
+  _ -> show price.currency <> show value
   where
     value = EHU.getFixedTwoDecimals price.amount
 
