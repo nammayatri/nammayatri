@@ -5,7 +5,7 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Foreign.Generic (decode, encode, class Decode, class Encode)
-import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (Margin(..))
 import Data.Maybe (Maybe(..))
 import Common.Types.App (RateCardType(..), FareList)
@@ -66,13 +66,25 @@ type Config
     , specialLocationTag :: Maybe String
     }
 
-data SearchType = QUOTES | ESTIMATES
+data SearchType = QUOTES FareProductType | ESTIMATES
 
 derive instance genericSearchType :: Generic SearchType _
 instance eqSearchType :: Eq SearchType where eq = genericEq
 instance showSearchType :: Show SearchType where show = genericShow
-instance encodeSearchType :: Encode SearchType where encode = defaultEnumEncode
-instance decodeSearchType :: Decode SearchType where decode = defaultEnumDecode
+instance encodeSearchType :: Encode SearchType where encode = defaultEncode
+instance decodeSearchType :: Decode SearchType where decode = defaultDecode
+
+data FareProductType =  ONE_WAY
+                      | INTER_CITY
+                      | RENTAL
+                      | DRIVER_OFFER
+                      | OneWaySpecialZoneAPIDetails
+
+derive instance genericFareProductType :: Generic FareProductType _
+instance showFareProductType :: Show FareProductType where show = genericShow
+instance eqFareProductType :: Eq FareProductType where eq = genericEq
+instance decodeFareProductType :: Decode FareProductType where decode = defaultEnumDecode
+instance encodeFareProductType :: Encode FareProductType where encode = defaultEnumEncode
 
 
 config :: Config
@@ -92,7 +104,7 @@ config =
   , minPrice : Nothing
   , basePrice : 0 
   , showInfo : false
-  , searchResultType : QUOTES
+  , searchResultType : QUOTES ONE_WAY
   , isBookingOption : false
   , pickUpCharges : 0.0
   , layoutMargin : MarginHorizontal 12 12

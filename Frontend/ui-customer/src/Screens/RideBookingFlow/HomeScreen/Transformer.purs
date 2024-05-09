@@ -19,7 +19,7 @@ import Prelude
 
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
 
-import Components.ChooseVehicle (Config, config, SearchType(..)) as ChooseVehicle
+import Components.ChooseVehicle (Config, config, SearchType(..), FareProductType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (config) as QLI
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Array (mapWithIndex, filter, head, find, foldl)
@@ -346,7 +346,7 @@ getSpecialZoneQuote quote index =
       , id = trim quoteEntity.id
       , capacity = getVehicleCapacity quoteEntity.vehicleVariant
       , showInfo = estimatesConfig.showInfoIcon
-      , searchResultType = ChooseVehicle.QUOTES
+      , searchResultType = ChooseVehicle.QUOTES ChooseVehicle.OneWaySpecialZoneAPIDetails
       , pickUpCharges = 0.0
       , serviceTierName = quoteEntity.serviceTierName
       , serviceTierShortDesc = quoteEntity.serviceTierShortDesc
@@ -358,31 +358,20 @@ getSpecialZoneQuote quote index =
     Public body -> ChooseVehicle.config
 
 getEstimateList :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Int -> Array ChooseVehicle.Config
-getEstimateList quotes estimateAndQuoteConfig activeIndex = 
-  let filteredEstimates = getFilteredEstimate quotes estimateAndQuoteConfig
-      estimatesConfig = mapWithIndex (\index item -> getEstimates item filteredEstimates index activeIndex) filteredEstimates
+getEstimateList estimates estimateAndQuoteConfig activeIndex = 
+  let estimatesWithOrWithoutBookAny = (createEstimateForBookAny estimates) <> estimates
+      filteredWithVariantAndFare = filterWithFareAndVariant estimatesWithOrWithoutBookAny estimateAndQuoteConfig
+      estimatesConfig = mapWithIndex (\index item -> getEstimates item filteredWithVariantAndFare index activeIndex) filteredWithVariantAndFare
   in
     estimatesConfig
 
-isFareRangePresent :: Array EstimateAPIEntity -> Boolean
-isFareRangePresent estimates =
-  DA.length
-    ( DA.filter
-        ( \(EstimateAPIEntity estimate) -> case estimate.totalFareRange of
-            Nothing -> false
-            Just (FareRange fareRange) -> not (fareRange.minFare == fareRange.maxFare)
-        )
-        estimates
-    )
-    > 0
-
-getFilteredEstimate :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Array EstimateAPIEntity
-getFilteredEstimate estimates estimateAndQuoteConfig =
+filterWithFareAndVariant :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Array EstimateAPIEntity
+filterWithFareAndVariant estimates estimateAndQuoteConfig =
   let
-    filteredEstimate = case (getMerchant FunctionCall) of
-      YATRISATHI -> DA.concat (map (\variant -> filterEstimateByVariants variant estimates) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))
-      _ -> estimates
-
+    filteredEstimate = 
+      case (getMerchant FunctionCall) of
+        YATRISATHI -> DA.concat (map (\variant -> filterEstimateByVariants variant estimates) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))
+        _ -> estimates
     sortWithFare = DA.sortWith (\(EstimateAPIEntity estimate) -> getFareFromEstimate (EstimateAPIEntity estimate)) filteredEstimate
   in
     sortEstimateWithVariantOrder sortWithFare estimateAndQuoteConfig.variantOrder
@@ -390,7 +379,6 @@ getFilteredEstimate estimates estimateAndQuoteConfig =
   sortEstimateWithVariantOrder :: Array EstimateAPIEntity -> Array String -> Array EstimateAPIEntity
   sortEstimateWithVariantOrder estimates orderList =
     let orderListLength = DA.length orderList
-        updatedEstimates = if DA.length estimates > 1 then estimatesWithBookAny estimates else estimates
         mappedEstimates =
           map
             ( \(EstimateAPIEntity estimate) ->
@@ -400,7 +388,7 @@ getFilteredEstimate estimates estimateAndQuoteConfig =
                 in
                   { item: (EstimateAPIEntity estimate), order: orderNumber * 10 + isNY }
             )
-            updatedEstimates
+            estimates
         sortedEstimates = DA.sortWith (\mappedEstimate -> mappedEstimate.order) mappedEstimates
     in
         map (\sortedEstimate -> sortedEstimate.item) sortedEstimates
@@ -532,6 +520,13 @@ getEstimates (EstimateAPIEntity estimate) estimates index activeIndex =
       , specialLocationTag = estimate.specialLocationTag
       }
 
+getEstimateIdFromSelectedServices :: Array ChooseVehicle.Config -> ChooseVehicle.Config -> Array String
+getEstimateIdFromSelectedServices esimates config =
+  foldl (\acc item -> if DA.elem (fromMaybe "" item.serviceTierName) config.selectedServices 
+                        then acc <> [item.id] 
+                        else acc
+        ) [] esimates
+
 mapServiceTierName :: String -> Maybe Boolean -> Maybe String -> Maybe String
 mapServiceTierName vehicleVariant isValueAddNP serviceTierName = 
   case isValueAddNP of
@@ -659,39 +654,39 @@ dummyEstimateEntity =
     , validTill : ""
     }
 
-estimatesWithBookAny :: Array EstimateAPIEntity -> Array EstimateAPIEntity
-estimatesWithBookAny estimates =
-  let
-    config = getAppConfig appConfig
-    selectedServices = getSelectedServices FunctionCall
-    bookAny =
-      EstimateAPIEntity
-        { agencyNumber: ""
-        , createdAt: "2024-04-18T09:46:37.579497Z"
-        , discount: Nothing
-        , estimatedTotalFare: 0
-        , agencyName: "NAMMA_YATRI"
-        , vehicleVariant: "BOOK_ANY"
-        , estimatedFare: 0
-        , tripTerms: []
-        , id: "book_any"
-        , providerName : Nothing
-        , providerId : Nothing
-        , agencyCompletedRidesCount: Nothing
-        , estimateFareBreakup: Just []
-        , totalFareRange: Nothing
-        , nightShiftRate: Nothing
-        , specialLocationTag: Nothing
-        , driversLatLong: []
-        , serviceTierShortDesc: Just "Get Instantly"
-        , serviceTierName: Just "Book Any"
-        , airConditioned: Nothing
-        , isValueAddNP: Just true
-        , validTill : ""
-        }
-    filteredEstimates = filter (\(EstimateAPIEntity item) -> ((DA.elem (fromMaybe "" item.serviceTierName) selectedServices) && (fromMaybe false item.isValueAddNP))) estimates
-  in
-    if (not $ DA.null filteredEstimates) && config.enableBookAny then [ bookAny ] <> estimates else estimates
+createEstimateForBookAny :: Array EstimateAPIEntity -> Array EstimateAPIEntity
+createEstimateForBookAny estimates =
+  let config = getAppConfig appConfig
+      selectedServices = getSelectedServices FunctionCall
+      filteredEstimates = filter (\(EstimateAPIEntity item) -> ((DA.elem (fromMaybe "" item.serviceTierName) selectedServices) && (fromMaybe false item.isValueAddNP))) estimates
+  in  if DA.length estimates > 1 && config.enableBookAny && not ( DA.null filteredEstimates) then
+        let bookAnyEstimate =
+              EstimateAPIEntity
+                { agencyNumber: ""
+                , createdAt: "2024-04-18T09:46:37.579497Z"
+                , discount: Nothing
+                , estimatedTotalFare: 0
+                , agencyName: "NAMMA_YATRI"
+                , vehicleVariant: "BOOK_ANY"
+                , estimatedFare: 0
+                , tripTerms: []
+                , id: ""
+                , providerName : Nothing
+                , providerId : Nothing
+                , agencyCompletedRidesCount: Nothing
+                , estimateFareBreakup: Just []
+                , totalFareRange: Nothing
+                , nightShiftRate: Nothing
+                , specialLocationTag: Nothing
+                , driversLatLong: []
+                , serviceTierShortDesc: Just "Get Instantly"
+                , serviceTierName: Just "Book Any"
+                , airConditioned: Nothing
+                , isValueAddNP: Just true
+                , validTill : ""
+                }
+        in DA.singleton bookAnyEstimate
+      else []
 
 getTripFromRideHistory :: MyRidesScreenState -> Trip
 getTripFromRideHistory state = {

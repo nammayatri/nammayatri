@@ -91,12 +91,12 @@ import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.Handlers as UI
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.HelpAndSupportScreen.Transformer (reportIssueMessageTransformer)
-import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, isTipEnabled, findingQuotesSearchExpired, tipEnabledState, getEstimateId)
+import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, isTipEnabled, findingQuotesSearchExpired, tipEnabledState)
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getTripFromRideHistory, getFormattedContacts)
+import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getTripFromRideHistory, getFormattedContacts, getEstimateIdFromSelectedServices)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
@@ -172,7 +172,7 @@ import Screens.NammaSafetyFlow.Components.SafetyUtils
 import RemoteConfig as RC
 import Engineering.Helpers.RippleCircles (clearMap)
 import Data.Array (groupBy, fromFoldable, singleton)
-import Data.Foldable (maximumBy)
+import Data.Foldable (maximumBy, foldl)
 import Data.Ord (comparing)
 import Types.App
 import Screens.TicketBookingFlow.TicketStatus.ScreenData as TicketStatusScreenData
@@ -874,7 +874,7 @@ homeScreenFlow = do
             case selectedEstimateOrQuote.searchResultType of
               CCV.ESTIMATES -> do
                 let valid = timeValidity (getCurrentUTC "") selectedEstimateOrQuote.validTill
-                if valid then
+                if valid then do
                   void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates) selectedEstimateOrQuote.id 
                   void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
                   setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
@@ -886,7 +886,7 @@ homeScreenFlow = do
                 else do
                   void $ pure $ toast (getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN)
                   findEstimates state
-              CCV.QUOTES -> do
+              CCV.QUOTES CCV.OneWaySpecialZoneAPIDetails -> do
                 void $ pure $ enableMyLocation false
                 updateLocalStage ConfirmingRide
                 response  <- lift $ lift $ Remote.rideConfirm selectedEstimateOrQuote.id
@@ -908,6 +908,7 @@ homeScreenFlow = do
                                                                                               , selectedQuote = Nothing
                                                                                               , expiredQuotes = snoc state.props.expiredQuotes selectedEstimateOrQuote.id }
                                                                                       , data { quoteListModelState = [] } })
+              _ -> pure unit
           homeScreenFlow
     SELECT_ESTIMATE state -> do
         logStatus "setting_price" ""
