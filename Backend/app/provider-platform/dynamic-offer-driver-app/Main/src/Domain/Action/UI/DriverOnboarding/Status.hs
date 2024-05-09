@@ -277,10 +277,8 @@ getProcessedDriverDocuments docType driverId =
     DVC.AadhaarCard -> do
       mbAadhaarCard <- SAV.findByDriverId driverId
       return $ boolToStatus <$> (mbAadhaarCard <&> (.isVerified))
-    DVC.PanCard -> return Nothing
     DVC.Permissions -> return $ Just VALID
     DVC.SocialSecurityNumber -> return $ Just MANUAL_VERIFICATION_REQUIRED
-    DVC.ProfilePhoto -> return Nothing
     _ -> return Nothing
   where
     boolToStatus :: Bool -> ResponseStatus
@@ -322,6 +320,7 @@ getInProgressDriverDocuments docType driverId onboardingTryLimit =
     DVC.PanCard -> checkIfImageUploaded DVC.PanCard driverId
     DVC.Permissions -> return (VALID, Nothing)
     DVC.ProfilePhoto -> checkIfImageUploaded DVC.ProfilePhoto driverId
+    DVC.UploadProfile -> checkIfImageUploaded DVC.UploadProfile driverId
     _ -> return (NO_DOC_AVAILABLE, Nothing)
 
 getInProgressVehicleDocuments :: DVC.DocumentType -> Id SP.Person -> Int -> Flow (ResponseStatus, Maybe Text)
@@ -333,6 +332,7 @@ getInProgressVehicleDocuments docType driverId onboardingTryLimit =
     DVC.VehicleFitnessCertificate -> checkIfImageUploaded DVC.VehicleFitnessCertificate driverId
     DVC.VehicleInsurance -> checkIfImageUploaded DVC.VehicleInsurance driverId
     DVC.VehiclePUC -> checkIfImageUploaded DVC.VehiclePUC driverId
+    DVC.VehicleInspectionForm -> checkIfImageUploaded DVC.VehicleInspectionForm driverId
     _ -> return (NO_DOC_AVAILABLE, Nothing)
 
 checkIfImageUploaded :: DVC.DocumentType -> Id SP.Person -> Flow (ResponseStatus, Maybe Text)

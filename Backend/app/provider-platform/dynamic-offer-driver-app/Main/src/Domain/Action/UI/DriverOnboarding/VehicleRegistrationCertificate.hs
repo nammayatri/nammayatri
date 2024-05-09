@@ -176,7 +176,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
     case req.vehicleDetails of
       Just DriverVehicleDetails {..} -> do
         vehicleDetails <- CQVD.findByMakeAndModel vehicleManufacturer vehicleModel
-        void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour) req.vehicleCategory mbAirConditioned req.imageId ((vehicleDetails <&> (.vehicleVariant)) <|> Just Vehicle.HATCHBACK) vehicleDoors vehicleSeatBelts
+        void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel) req.vehicleCategory mbAirConditioned req.imageId ((vehicleDetails <&> (.vehicleVariant)) <|> Just Vehicle.HATCHBACK) vehicleDoors vehicleSeatBelts
       Nothing -> verifyRCFlow person merchantOpCityId documentVerificationConfig.checkExtraction req.vehicleRegistrationCertNumber req.imageId req.dateOfRegistration req.multipleRC req.vehicleCategory mbAirConditioned
   return Success
   where
@@ -189,7 +189,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
         throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
-    buildRCVerificationResponse vehicleDetails vehicleColour =
+    buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel =
       Verification.RCVerificationResponse
         { registrationDate = show <$> req.dateOfRegistration,
           registrationNumber = Just req.vehicleRegistrationCertNumber,
@@ -198,11 +198,11 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
           vehicleClass = Nothing,
           vehicleCategory = Nothing,
           seatingCapacity = (Just . String . show) <$> (.capacity) =<< vehicleDetails,
-          manufacturer = vehicleDetails <&> (.make),
+          manufacturer = Just vehicleManufacturer,
           permitValidityFrom = Nothing,
           permitValidityUpto = Nothing,
           pucValidityUpto = Nothing,
-          manufacturerModel = vehicleDetails <&> (.model),
+          manufacturerModel = Just vehicleModel,
           mYManufacturing = Nothing,
           colour = Just vehicleColour,
           color = Just vehicleColour,
