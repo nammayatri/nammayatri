@@ -3886,3 +3886,10 @@ getSrcDestConfig state =
       source : state.data.activeRide.source,
       destination : fromMaybe "" state.data.activeRide.destination
   }
+
+rideConfirmationScreenFlow :: FlowBT String Unit
+rideConfirmationScreenFlow = do 
+  (GlobalState globalState) <- getState
+  action <- lift $ lift $ runScreen $ UI.rideConfirmationScreen globalState.rideConfirmationScreen globalState.globalProps
+  case action of 
+    _ -> homeScreenFlow

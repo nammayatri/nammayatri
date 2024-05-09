@@ -2710,3 +2710,16 @@ type UpdateRouteSrcDestConfig = {
   source :: String,
   destination :: String
 }
+
+type RideConfirmationScreen = {
+  data :: RideConfirmationScreenData,
+  props :: RideConfirmationScreenProps 
+}
+
+type RideConfirmationScreenData = {
+  config :: AppConfig
+}
+
+type RideConfirmationScreenProps = {
+
+}
