@@ -40,10 +40,12 @@ fetchSpecificFare fareBreakup fareType =
   let
     fare = DA.find (\item -> item ^. _title == fareType) fareBreakup
   in
-    maybe dummyPriceEntity getPriceEntity fare
-  where
-    getPriceEntity item = item ^. _priceWithCurrency
-    dummyPriceEntity = PriceAPIEntity { amount: 0.0, currency: INR }
+    PriceAPIEntity { amount: 0.0, currency: INR }
+
+    -- maybe dummyPriceEntity getPriceEntity fare
+  -- where
+  --   getPriceEntity item = item ^. _priceWithCurrency
+  --   dummyPriceEntity = PriceAPIEntity { amount: 0.0, currency: INR }
 
 priceToBeDisplayed :: PriceAPIEntity -> String
 priceToBeDisplayed  (PriceAPIEntity price) = case price.currency of
@@ -67,9 +69,9 @@ getFareBreakupList (EstimateAPIEntity estimate) maxTip =
     [ { key: getString $ MIN_FARE_UPTO $ show (DI.round baseDistance.amount / 1000) <> "km", val: baseFare } ]
     <> (map constructExtraFareBreakup extraFareBreakup)
     <> (if congestionCharges.amount > 0.0 then [ { key: getString RUSH_HOUR_CHARGES, val: (EHU.getFixedTwoDecimals congestionCharges.amount) <> "%"}]  else [])
-    <> (if tollCharge.amount > 0.0 then [ { key: getString TOLL_CHARGES_ESTIMATED, val: priceToBeDisplayed tollCharge } ] else [])
+    <> (if tollCharge.amount > 0.0 then [ { key: getString TOLL_CHARGES_ESTIMATED, val: priceToBeDisplayed (PriceAPIEntity tollCharge) } ] else [])
     <> [ { key: getString PICKUP_CHARGE, val: pickupCharges } ]
-    <> [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.getFixedTwoDecimals freeWaitingTime.amount, val: priceToBeDisplayed waitingCharge <> "/min" } ]
+    <> [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.getFixedTwoDecimals freeWaitingTime.amount, val: priceToBeDisplayed (PriceAPIEntity waitingCharge) <> "/min" } ]
 
   fareInfoDescription = 
     [ getString TOTAL_FARE_MAY_CHANGE_DUE_TO_CHANGE_IN_ROUTE
@@ -83,7 +85,7 @@ getFareBreakupList (EstimateAPIEntity estimate) maxTip =
 
   -- Base fare calculation
   baseDistance = fetchSpecificFare fareBreakup "BASE_DISTANCE"
-  baseFare = priceToBeDisplayed $ fetchSpecificFare fareBreakup "BASE_DISTANCE_FARE"
+  baseFare = priceToBeDisplayed $ (PriceAPIEntity $ fetchSpecificFare fareBreakup "BASE_DISTANCE_FARE")
 
   -- Step fare calculation
   extraFareBreakup =
@@ -108,10 +110,10 @@ getFareBreakupList (EstimateAPIEntity estimate) maxTip =
   nightShiftStartSeconds = fetchSpecificFare fareBreakup "NIGHT_SHIFT_START_TIME_IN_SECONDS"
   nightShiftStart = EHC.parseSecondsOfDayToUTC $ DI.round nightShiftStartSeconds.amount
 
-  nightShiftEndSeconds = fetchSpecificFare fareBreakup "NIGHT_SHIFT_END_TIME_IN_SECONDS"
+  (PriceAPIEntity nightShiftEndSeconds) = fetchSpecificFare fareBreakup "NIGHT_SHIFT_END_TIME_IN_SECONDS"
   nightShiftEnd = EHC.parseSecondsOfDayToUTC $ (DI.round nightShiftEndSeconds.amount + 86400)
 
-  nightShiftRate = fetchSpecificFare fareBreakup "NIGHT_SHIFT_CHARGE_PERCENTAGE"
+  (PriceAPIEntity nightShiftRate) = fetchSpecificFare fareBreakup "NIGHT_SHIFT_CHARGE_PERCENTAGE"
 
   isNightShift = JB.withinTimeRange nightShiftStart nightShiftEnd (EHC.getCurrentUTC "")
 
@@ -155,7 +157,7 @@ getFareBreakupList (EstimateAPIEntity estimate) maxTip =
         Just limit -> fromMaybe 0 $ DI.fromString limit
         Nothing -> 0
     in
-      { lLimit: lowerlimit, uLimit: upperlimit, price: priceToBeDisplayed price <> " / km" }
+      { lLimit: lowerlimit, uLimit: upperlimit, price: priceToBeDisplayed (PriceAPIEntity price) <> " / km" }
 
   constructExtraFareBreakup :: StepFare -> FareList
   constructExtraFareBreakup item =

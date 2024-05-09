@@ -538,3 +538,27 @@ type Price = {
     amount :: Number
   , currency :: String
 }
+
+
+newtype PriceAPIEntity = PriceAPIEntity {
+  currency :: Currency,
+  amount :: Number
+}
+
+derive instance genericPriceAPIEntity :: Generic PriceAPIEntity _
+derive instance newtypePriceAPIEntity :: Newtype PriceAPIEntity _
+instance standardEncodePriceAPIEntity :: StandardEncode PriceAPIEntity where standardEncode (PriceAPIEntity body) = standardEncode body
+instance showPriceAPIEntity :: Show PriceAPIEntity where show = genericShow
+instance decodePriceAPIEntity :: Decode PriceAPIEntity where decode = defaultDecode
+instance encodePriceAPIEntity  :: Encode PriceAPIEntity where encode = defaultEncode
+
+data Currency = INR | USD | EUR
+
+derive instance genericCurrency :: Generic Currency _
+instance showCurrency :: Show Currency where show = genericShow
+instance decodeCurrency :: Decode Currency where decode = defaultEnumDecode
+instance encodeCurrency :: Encode Currency where encode = defaultEnumEncode
+instance eqCurrency :: Eq Currency where eq = genericEq
+instance standardEncodeCurrency :: StandardEncode Currency
+  where
+    standardEncode _ = standardEncode {}

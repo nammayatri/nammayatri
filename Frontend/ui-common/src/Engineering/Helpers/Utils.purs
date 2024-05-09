@@ -15,7 +15,7 @@
 module Engineering.Helpers.Utils where
 
 import Prelude
-import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..), LazyCheck(..))
+import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..), LazyCheck(..), Currency(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..), hush)
@@ -412,3 +412,27 @@ getFixedTwoDecimals :: Number -> String
 getFixedTwoDecimals amount = case (DI.fromNumber amount) of
                                 Just value -> show value
                                 Nothing ->  toStringWith (fixed 2) amount
+
+
+getCurrencySymbol :: Currency -> String
+getCurrencySymbol currency 
+    | currency == INR = "$"
+    | currency == USD = "$"
+    | currency == EUR = "€"
+    | otherwise = show currency
+
+showDisplayPrice :: Currency -> Number -> String
+showDisplayPrice currency price
+    | currency == INR = show $ DI.round price
+    | currency == USD = show price
+    | currency == EUR = show price
+    | otherwise = show price
+
+
+priceToBeDisplayed2 :: Currency -> Number -> String
+priceToBeDisplayed2  currency price = case currency of
+  INR -> "₹" <> value
+  USD -> "$" <> value
+  EUR -> "€" <> value
+  where
+    value = showDisplayPrice currency price
