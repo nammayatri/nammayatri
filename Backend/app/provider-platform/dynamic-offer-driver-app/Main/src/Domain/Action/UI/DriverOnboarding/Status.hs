@@ -279,6 +279,7 @@ getProcessedDriverDocuments docType driverId =
       return $ boolToStatus <$> (mbAadhaarCard <&> (.isVerified))
     DVC.PanCard -> return Nothing
     DVC.Permissions -> return $ Just VALID
+    DVC.SocialSecurityNumber -> return $ Just MANUAL_VERIFICATION_REQUIRED
     DVC.ProfilePhoto -> return Nothing
     _ -> return Nothing
   where
