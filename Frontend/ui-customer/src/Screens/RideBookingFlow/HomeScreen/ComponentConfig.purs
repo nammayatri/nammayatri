@@ -1647,9 +1647,9 @@ rideCompletedCardConfig state =
         needHelpText = getString NEED_HELP,
         serviceTierAndAC = serviceTier
       , toll {
-          actualAmount = actualTollCharge.amount
-        , text =if actualTollCharge.amount > 0.0 then getString TOLL_CHARGES_INCLUDED  else getString TOLL_ROAD_CHANGED -- Handle after design finalized 
-        , visibility = boolToVisibility $ actualTollCharge.amount > 0.0 || (getValueToLocalStore HAS_TOLL_CHARGES == "true") 
+          actualAmount = actualTollCharge
+        , text =if actualTollCharge > 0.0 then getString TOLL_CHARGES_INCLUDED  else getString TOLL_ROAD_CHANGED -- Handle after design finalized 
+        , visibility = boolToVisibility $ (actualTollCharge > 0.0 || (getValueToLocalStore HAS_TOLL_CHARGES == "true")) && serviceTier /= "Auto"
         , image = fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
         , imageVisibility = boolToVisibility $ actualTollCharge.amount > 0.0
         }

@@ -919,7 +919,7 @@ paymentMethodView push state title shouldShowIcon uid =
           [ text $ "(" <> (getString TOLL_CHARGES_INCLUDED) <> ")"
           , color Color.black900
           , margin $ MarginTop 4
-          , visibility $ boolToVisibility $ (STO.getValueToLocalStore STO.HAS_TOLL_CHARGES) == "true" -- @TODO: Change once backend was DONE
+          , visibility $ boolToVisibility $ (STO.getValueToLocalStore STO.HAS_TOLL_CHARGES) == "true" && state.data.vehicleVariant /= "AUTO_RICKSHAW" -- @TODO: Change once backend was DONE
           ] <> FontStyle.body3 TypoGraphy
       ]
       , linearLayout
