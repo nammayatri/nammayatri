@@ -60,7 +60,8 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
       routeInfo :: RouteInfo <- Redis.get (bookingRequestKeySoftUpdate booking.id.getId) >>= fromMaybeM (InternalError $ "BookingRequestRoute not found for bookingId: " <> booking.id.getId)
       multipleRoutes <- Redis.get $ multipleRouteKeySoftUpdate booking.id.getId
       Redis.setExp (searchRequestKey booking.transactionId) routeInfo 3600
-      Redis.setExp (multipleRouteKey booking.transactionId) multipleRoutes 3600
+      whenJust multipleRoutes $ \allRoutes -> do
+        Redis.setExp (multipleRouteKey booking.transactionId) allRoutes 3600
       let estimatedDistance = highPrecMetersToMeters <$> bookingUpdateReq.estimatedDistance
       QB.updateMultipleById bookingUpdateReq.estimatedFare bookingUpdateReq.maxEstimatedDistance estimatedDistance bookingUpdateReq.fareParamsId.getId bookingUpdateReq.bookingId
       CallBAP.sendUpdateEditDestToBAP booking ride bookingUpdateReq Nothing Nothing OU.CONFIRM_UPDATE
