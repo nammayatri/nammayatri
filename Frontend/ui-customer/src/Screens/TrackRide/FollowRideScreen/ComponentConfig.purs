@@ -92,7 +92,7 @@ getDriverDetails state =
   let
     ride = fromMaybe dummyDriverInfo state.data.driverInfoCardState
   in
-    { searchType: ESTIMATES
+    { searchType: Common.ESTIMATES
     , rating: ride.rating
     , driverName: ride.driverName
     , vehicleDetails: ride.vehicleDetails

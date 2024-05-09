@@ -24,7 +24,9 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Data.Maybe (Maybe)
 import PrestoDOM
-import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..))
+import Screens.Types (Stage, ZoneType(..), SheetState(..), City(..), BannerCarousalData(..), NavigationMode(..))
+import Components.BannerCarousel as BannerCarousel
+import Common.Types.App as CTP
 import MerchantConfig.Types
 
 data Action = NoAction
@@ -50,7 +52,7 @@ type DriverInfoCardState =
 type DriverInfoCardProps =
   {
     currentStage :: Stage,
-    currentSearchResultType :: SearchResultType,
+    currentSearchResultType :: CTP.SearchResultType,
     trackingEnabled :: Boolean,
     unReadMessages :: Boolean,
     showCallPopUp :: Boolean,

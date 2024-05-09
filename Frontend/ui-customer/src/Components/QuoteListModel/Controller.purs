@@ -25,8 +25,6 @@ data Action = GoBack
             | NoAction
             | PrimaryButtonActionController PrimaryButtonController.Action
             | QuoteListItemActionController QuoteListItemController.Action
-            | HomeButtonActionController PrimaryButtonController.Action
-            | TryAgainButtonActionController PrimaryButtonController.Action
             | CancelAutoAssigning
             | TipBtnClick Int Int
             | TipViewPrimaryButtonClick PrimaryButtonController.Action
