@@ -458,6 +458,42 @@ VehiclePUC:
       where:
         and: [rcId, driverId]
 
+FleetRCAssociation:
+  tableName: fleet_rc_association
+  fields:
+    id: Id DriverRCAssociation
+    driverId: Id Person
+    rcId: Id VehicleRegistrationCertificate
+    associatedOn: UTCTime
+    associatedTill: Maybe UTCTime
+    rcVerificationStatus: VerificationStatus
+    isRcActive: Bool
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    rcId: SecondaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
+    findActiveAssociationByRC:
+      kvFunction: findOneWithKV
+      where:
+        and: [rcId, isRcActive]
+    findActiveAssociationByDriver:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, isRcActive]
+    deactivateRCForDriver:
+      kvFunction: updateWithKV
+      params: [isRcActive]
+      where:
+        and: [driverId, rcId]
+
+
 DriverSSN:
   tableName: driver_ssn
   fields:

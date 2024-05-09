@@ -503,6 +503,7 @@ library
       Storage.Queries.Feedback.FeedbackBadge
       Storage.Queries.Feedback.FeedbackForm
       Storage.Queries.FleetDriverAssociation
+      Storage.Queries.FleetRCAssociationExtra
       Storage.Queries.Geometry
       Storage.Queries.GoHomeConfig
       Storage.Queries.ImageExtra
@@ -623,6 +624,7 @@ library
       Domain.Types.FleetOnwerDocumentVerificationConfig
       Domain.Types.FleetOwnerDocumentVerificationConfig
       Domain.Types.FleetOwnerInformation
+      Domain.Types.FleetRCAssociation
       Domain.Types.IdfyVerification
       Domain.Types.Image
       Domain.Types.InterCityTravelCities
@@ -686,6 +688,7 @@ library
       Storage.Beam.FleetOnwerDocumentVerificationConfig
       Storage.Beam.FleetOwnerDocumentVerificationConfig
       Storage.Beam.FleetOwnerInformation
+      Storage.Beam.FleetRCAssociation
       Storage.Beam.IdfyVerification
       Storage.Beam.Image
       Storage.Beam.InterCityTravelCities
@@ -749,6 +752,7 @@ library
       Storage.Queries.FleetOnwerDocumentVerificationConfig
       Storage.Queries.FleetOwnerDocumentVerificationConfig
       Storage.Queries.FleetOwnerInformation
+      Storage.Queries.FleetRCAssociation
       Storage.Queries.IdfyVerification
       Storage.Queries.Image
       Storage.Queries.InterCityTravelCities
@@ -774,6 +778,7 @@ library
       Storage.Queries.OrphanInstances.DriverRCAssociation
       Storage.Queries.OrphanInstances.DriverReferral
       Storage.Queries.OrphanInstances.Exophone
+      Storage.Queries.OrphanInstances.FleetRCAssociation
       Storage.Queries.OrphanInstances.Image
       Storage.Queries.OrphanInstances.PurchaseHistory
       Storage.Queries.OrphanInstances.Rating
