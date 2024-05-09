@@ -91,7 +91,7 @@ import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.Handlers as UI
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.HelpAndSupportScreen.Transformer (reportIssueMessageTransformer)
-import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, isTipEnabled, findingQuotesSearchExpired, tipEnabledState)
+import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, isTipEnabled, findingQuotesSearchExpired, tipEnabledState, getEstimateId)
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
@@ -199,6 +199,7 @@ import Helpers.Referral (applyReferralCode)
 import Helpers.SpecialZoneAndHotSpots
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Screens.HelpAndSupportScreen.Transformer (getUpdatedIssueList, getApiIssueList)
+import Components.ChooseVehicle as CCV
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -855,34 +856,59 @@ homeScreenFlow = do
                                                                                                       , showLoader = false }
                                                                              , rideSearchProps { cachedPredictions = cachedPredictions } }})
       homeScreenFlow
-    GET_QUOTES state -> do
+    SELECT_ESTIMATE_AND_QUOTES state -> do
+          let selectedEstimateOrQuote = state.data.selectedEstimatesObject
           setValueToLocalStore AUTO_SELECTING "false"
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
           setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-          liftFlowBT $ logEvent logField_ "ny_user_request_quotes"
-          liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_request_quote" $ [ {key : "Request Type", value : unsafeToForeign if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then "Auto Assign" else "Manual Assign"},
-                                                                                                          {key : "Estimate Fare (₹)", value : unsafeToForeign (state.data.suggestedAmount + state.data.rateCard.additionalFare)},
-                                                                                                          {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
-                                                                                                          {key : "Night Ride", value : unsafeToForeign state.data.rateCard.isNightShift}]
-          if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then do
-            void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_auto_confirm"
-            pure unit
-          else do
-            pure unit
-          void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
-          let topProvider = filter (\quotes -> quotes.providerType == ONUS && quotes.serviceTierName /= Just "Book Any") state.data.specialZoneQuoteList
-              mbSpecialZoneQuoteList = fromMaybe ChooseVehicle.config (head topProvider)
-              valid = timeValidity (getCurrentUTC "") mbSpecialZoneQuoteList.validTill
-          if valid then do
-            setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = FindingQuotes}})
-            void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates) (state.props.estimateId)
-            logStatus "finding_quotes" ("estimateId : " <> state.props.estimateId)
-            homeScreenFlow
-          else do
-            void $ pure $ toast $ getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN
-            findEstimates state
 
+          if state.data.iopState.showMultiProvider then do 
+            updateLocalStage ProviderSelection
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { iopState { providerSelectionStage = true }
+                                                                                      , estimateId = selectedEstimateOrQuote.id }
+                                                                                , data { iopState { providerSelectionStage = true }
+                                                                                } })
+          else do
+            setValueToLocalStore FARE_ESTIMATE_DATA selectedEstimateOrQuote.price
+            setValueToLocalStore SELECTED_VARIANT selectedEstimateOrQuote.vehicleVariant
+            case selectedEstimateOrQuote.searchResultType of
+              CCV.ESTIMATES -> do
+                let valid = timeValidity (getCurrentUTC "") selectedEstimateOrQuote.validTill
+                if valid then
+                  void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates) selectedEstimateOrQuote.id 
+                  void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
+                  setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
+                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindingQuotes
+                                                                                            , estimateId = selectedEstimateOrQuote.id
+                                                                                            , isPopUp = NoPopUp
+                                                                                            , searchExpire = (getSearchExpiryTime "LazyCheck") }
+                                                                                    , data { currentSearchResultType = ST.ESTIMATES } })
+                else do
+                  void $ pure $ toast (getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN)
+                  findEstimates state
+              CCV.QUOTES -> do
+                void $ pure $ enableMyLocation false
+                updateLocalStage ConfirmingRide
+                response  <- lift $ lift $ Remote.rideConfirm selectedEstimateOrQuote.id
+                case response of
+                  Right (ConfirmRes resp) -> do
+                    let bookingId = resp.bookingId
+                    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{ currentStage = ConfirmingRide
+                                                                                            , bookingId = bookingId
+                                                                                            , isPopUp = NoPopUp }
+                                                                                      , data { currentSearchResultType = ST.QUOTES } })
+                  Left err  -> do
+                    if not (err.code == 400 && (decodeError err.response.errorMessage "errorCode") == "QUOTE_EXPIRED") then
+                      pure $ toast (getString STR.ERROR_OCCURED_TRY_AGAIN) 
+                    else 
+                      pure unit
+                    void $ setValueToLocalStore AUTO_SELECTING "false"
+                    updateLocalStage QuoteList
+                    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{  currentStage = QuoteList
+                                                                                              , selectedQuote = Nothing
+                                                                                              , expiredQuotes = snoc state.props.expiredQuotes selectedEstimateOrQuote.id }
+                                                                                      , data { quoteListModelState = [] } })
+          homeScreenFlow
     SELECT_ESTIMATE state -> do
         logStatus "setting_price" ""
         void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))

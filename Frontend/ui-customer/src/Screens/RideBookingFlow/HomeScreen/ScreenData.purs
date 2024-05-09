@@ -18,10 +18,10 @@ module Screens.HomeScreen.ScreenData where
 import Common.Types.App (RateCardType(..))
 import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
-import Components.ChooseVehicle.Controller (SearchType(..)) as CV
+import Components.ChooseVehicle.Controller (SearchType(..), config) as CV
 import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..))
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), FareProductType(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
 import Prelude(negate)
@@ -102,51 +102,7 @@ initData = {
     , specialZoneQuoteList : []
     , specialZoneSelectedQuote : Nothing
     , specialZoneSelectedVariant : Nothing
-    , selectedEstimatesObject : {
-      vehicleImage: ""
-      , isSelected: false
-      , vehicleVariant: ""
-      , vehicleType: ""
-      , capacity: ""
-      , price: ""
-      , isCheckBox: false
-      , isEnabled: true
-      , activeIndex: 0
-      , index: 0
-      , id: ""
-      , maxPrice : Nothing
-      , minPrice : Nothing
-      , basePrice : 0
-      , showInfo : true
-      , searchResultType : CV.ESTIMATES
-      , isBookingOption : false
-      , pickUpCharges : 0.0
-      , layoutMargin : Margin 0 0 0 0
-      , tollCharge : 0.0
-      , serviceTierName : Nothing
-      , serviceTierShortDesc : Nothing
-      , extraFare: []
-      , additionalFare: 0
-      , driverAdditions: []
-      , fareInfoDescription: []
-      , isNightShift : false
-      , nightChargeTill : ""
-      , nightChargeFrom : ""
-      , airConditioned : Nothing
-      , showEditButton : false
-      , editBtnText : ""
-      , providerName : ""
-      , providerId : ""
-      , providerType : CT.ONUS
-      , singleVehicle : false
-      , priceShimmer : true
-      , services : []
-      , availableServices : []
-      , selectedServices : []
-      , currentEstimateHeight : 184
-      , selectedEstimateHeight : 0
-      , validTill : ""
-      }
+    , selectedEstimatesObject : CV.config
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
     , ratingViewState : {
@@ -299,7 +255,6 @@ initData = {
     , searchLocationModelProps : dummySearchLocationModelProps
     , flowWithoutOffers : true
     , showEducationalCarousel : false
-    , specialZoneType : ""
     , currentLocation : dummyLocation
     , isShorterTrip : false
     , locateOnMapLocation : {
@@ -504,24 +459,6 @@ dummyAddress =
   , "ward"      : Nothing
   , "placeId"   : Nothing
   }
-dummyQuoteAPIEntity :: QuoteAPIEntity
-dummyQuoteAPIEntity = QuoteAPIEntity {
-  agencyNumber : Nothing,
-  createdAt : "",
-  discount : Nothing,
-  estimatedTotalFare : 0,
-  agencyName : "",
-  vehicleVariant : "",
-  estimatedFare : 0,
-  tripTerms : [],
-  id : "",
-  agencyCompletedRidesCount : Nothing,
-  quoteDetails : QuoteAPIDetails {fareProductType : "", contents : dummyDriverOfferAPIEntity},
-  serviceTierShortDesc : Nothing,
-  serviceTierName : Nothing, 
-  airConditioned : Nothing
-  
-}
 
 dummyDriverOfferAPIEntity :: QuoteAPIContents
 dummyDriverOfferAPIEntity =

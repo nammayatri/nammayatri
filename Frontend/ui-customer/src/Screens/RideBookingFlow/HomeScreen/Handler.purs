@@ -231,3 +231,6 @@ homeScreen = do
     GoToRideRelatedIssues updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_RELATED_ISSUES updatedState)
+    SelectEstimateAndQuotes updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ SELECT_ESTIMATE_AND_QUOTES updatedState)

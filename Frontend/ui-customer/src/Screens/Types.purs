@@ -786,7 +786,6 @@ type HomeScreenStateProps =
   , flowWithoutOffers :: Boolean
   , showEducationalCarousel :: Boolean
   , locateOnMapLocation :: LocateOnMapLocation
-  , specialZoneType :: String
   , currentLocation :: Location
   , isShorterTrip :: Boolean
   , isNotificationExpanded :: Boolean
@@ -1022,6 +1021,13 @@ type ReferralScreenState =
     , referralComponentProps :: ReferralComponentState
   }
 
+
+type EstimatesAndQuotesInfo = {
+    defaultQuote :: ChooseVehicle.Config
+  , nearByDrivers :: Maybe Int
+  , zoneType :: SpecialTags
+  , hasToll :: Boolean
+}
 
 -- ################################## SelectLanguageScreenState ###############################
 
@@ -2331,3 +2337,11 @@ type SpecialZoneInfoPopUp = {
   , primaryButtonText :: String
   , icon :: String
 }
+
+-- type EstimatesAndQuotes = {
+--     agencyCompletedRidesCount :: Maybe Int
+--   , agencyName :: String
+--   , agencyNumber :: String
+--   , createdAt :: String
+--   , estimatedFare
+-- }

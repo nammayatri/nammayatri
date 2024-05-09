@@ -63,6 +63,7 @@ type Config
     , currentEstimateHeight :: Int
     , selectedEstimateHeight :: Int
     , validTill :: String
+    , specialLocationTag :: Maybe String
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -119,4 +120,5 @@ config =
   , currentEstimateHeight : 184 
   , selectedEstimateHeight : 0
   , validTill : ""
+  , specialLocationTag : Nothing
   }
