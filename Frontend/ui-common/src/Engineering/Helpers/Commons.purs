@@ -21,7 +21,7 @@ import Common.Types.Sdk (SDKRequest(..), SDKResponse(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Monad.State as S
-import Common.Types.App (Version(..), DateObj, CalendarDate, CalendarWeek, YoutubeData, CarouselHolderData)
+import Common.Types.App (Version(..), DateObj, CalendarDate, CalendarWeek, YoutubeData, CarouselHolderData, CalendarMonth)
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2, Fn3)
 import Data.Int as INT
@@ -94,6 +94,7 @@ foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String -> String
 foreign import getPastDays :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
+foreign import getPastMonths :: Int -> Array CalendarMonth
 foreign import getDayName :: String -> String
 foreign import getFutureDate :: String -> Int -> String
 foreign import setEventTimestamp :: String -> Effect Unit

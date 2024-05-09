@@ -763,8 +763,10 @@ type ReferralScreenStateProps = {
   , showDateSelector :: Boolean
   , days :: Array Common.CalendarDate
   , weeks :: Array Common.CalendarWeek
+  , months :: Array Common.CalendarMonth
   , selectedDay :: Common.CalendarDate
   , selectedWeek :: Common.CalendarWeek
+  , selectedMonth :: Common.CalendarMonth
   , rankersData :: Array RankCardData
   , currentDriverData :: RankCardData
   , showShimmer :: Boolean
@@ -1930,13 +1932,13 @@ type BookingOptionsScreenProps = {
   peakTime :: Boolean
 }
 
-data LeaderBoardType = Daily | Weekly
+data LeaderBoardType = Daily | Weekly | Monthly
 
 derive instance genericLeaderBoardType :: Generic LeaderBoardType _
 instance eqLeaderBoardType :: Eq LeaderBoardType where eq = genericEq
 
 
-data DateSelector = DaySelector Common.CalendarDate | WeekSelector Common.CalendarWeek
+data DateSelector = DaySelector Common.CalendarDate | WeekSelector Common.CalendarWeek |  MonthSelector Common.CalendarMonth
 
 type RankCardData = {
     goodName :: String
