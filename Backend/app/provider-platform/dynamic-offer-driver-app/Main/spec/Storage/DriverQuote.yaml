@@ -1,0 +1,151 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  SearchRequest: Domain.Types.SearchRequest
+  SearchTry: Domain.Types.SearchTry
+  Client: Domain.Types.Client
+  SearchRequestForDriver: Domain.Types.SearchRequestForDriver
+  TripCategory: Domain.Types.Common
+  Estimate: Domain.Types.Estimate
+  Person: Domain.Types.Person
+  ServiceTierType: Domain.Types.ServiceTierType
+  FareParameters: Domain.Types.FareParameters
+  DriverGoHomeRequest: Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
+  Version: Kernel.Types.Version
+  Device: Kernel.Types.Version
+  Variant: Domain.Types.Vehicle
+  LocalTime: Data.Time
+  Centesimal: Kernel.Types.Common
+  Money: Kernel.Types.Common
+  DeviceType: Kernel.Types.Version
+
+
+DriverQuote:
+  tabelName: driver_quote
+  beamInstance: MakeTableInstancesWithTModifier [("requestId", "search_request_id")]
+  derives: "Generic, Show"
+
+  types:
+    DriverQuoteStatus:
+      enum: "Active, Inactive"
+
+
+  fields:
+    id : Id DriverQuote
+    requestId : Id SearchRequest
+    searchTryId : Id SearchTry
+    clientId : Maybe (Id Client)
+    searchRequestForDriverId : Maybe (Id SearchRequestForDriver)
+    tripCategory : TripCategory
+    estimateId : Id Estimate
+    driverId : Id Person
+    driverName : Text
+    driverRating : Maybe Centesimal
+    status : DriverQuoteStatus
+    vehicleVariant : Variant
+    vehicleServiceTier : ServiceTierType|NoRelation
+    distance : Maybe Meters
+    distanceToPickup : Meters
+    durationToPickup : Seconds
+    validTill : UTCTime
+    estimatedFare : HighPrecMoney
+    currency : Currency
+    fareParams : FareParameters|NoRelation
+    providerId : Id Merchant
+    specialLocationTag : Maybe Text
+    goHomeRequestId : Maybe (Id DriverGoHomeRequest)
+    clientSdkVersion : Maybe Version
+    clientBundleVersion : Maybe Version
+    clientConfigVersion : Maybe Version
+    clientDevice : Maybe Device
+    backendConfigVersion : Maybe Version
+    backendAppVersion : Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  beamType:
+    tripCategory: Maybe TripCategory
+    vehicleServiceTier: Maybe ServiceTierType
+    validTill: LocalTime
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
+    clientOsVersion: Maybe Text
+    merchantOperatingCityId: Maybe Text
+    createdAt: LocalTime
+    updatedAt: LocalTime
+    currency: Maybe Currency
+
+  beamFields:
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
+
+    fareParams:
+      fareParametersId: Text
+
+    estimateFare:
+      estimateFare: Money
+      estimatedFareAmount: Maybe HighPrecMoney
+
+
+  fromTType:
+    fareParams: getFareParams|M
+    tripCategory: fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer) tripCategory|E
+    vehicleServiceTier: fromMaybe (SharedLogic.DriverPool.Types.castVariantToServiceTier vehicleVariant) vehicleServiceTier|E
+    clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
+    clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
+    clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
+    backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
+    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
+    createdAt: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
+    updatedAt: Data.Time.localTimeToUTC Data.Time.utc updatedAt|E
+    validTill: Data.Time.localTimeToUTC Data.Time.utc validTill|E
+    estimatedFare:  Kernel.Types.Common.mkAmountWithDefault estimatedFareAmount estimatedFare|E
+    currency: fromMaybe Kernel.Types.Common.INR currency|E
+
+  toTType:
+    fareParametersId: Kernel.Types.Id.getId ((.id) fareParams)|E
+    tripCategory: Kernel.Prelude.Just|I
+    clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
+    clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
+    clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
+    backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
+    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
+    clientOsType:  (clientDevice <&> (.deviceType))|E
+    vehicleServiceTier: Kernel.Prelude.Just|I
+    createdAt: Data.Time.utcToLocalTime Data.Time.utc createdAt|E
+    updatedAt: Data.Time.utcToLocalTime Data.Time.utc updatedAt|E
+    validTill: Data.Time.utcToLocalTime Data.Time.utc validTill|E
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findDriverQuoteBySTId:
+      kvFunction: findOneWithKV
+      where: searchTryId
+
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    searchTryId: SecondaryKey
+    requestId: SecondaryKey
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - updateByPrimaryKey
+
+

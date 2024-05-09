@@ -483,6 +483,7 @@ library
       Storage.Queries.DriverPlan
       Storage.Queries.DriverQuote
       Storage.Queries.DriverQuote.Internal
+      Storage.Queries.DriverQuoteExtra
       Storage.Queries.DriverRCAssociationExtra
       Storage.Queries.DriverReferralExtra
       Storage.Queries.DriverSSNExtra
@@ -550,6 +551,7 @@ library
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.DocumentVerificationConfig
       Storage.Queries.Transformers.DriverFee
+      Storage.Queries.Transformers.DriverQuote
       Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.QuestionInformation
       Storage.Queries.Transformers.ReelsData
@@ -621,6 +623,7 @@ library
       Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPanCard
       Domain.Types.DriverPoolConfig
+      Domain.Types.DriverQuote
       Domain.Types.DriverRCAssociation
       Domain.Types.DriverReferral
       Domain.Types.DriverSSN
@@ -688,6 +691,7 @@ library
       Storage.Beam.DriverModuleCompletion
       Storage.Beam.DriverPanCard
       Storage.Beam.DriverPoolConfig
+      Storage.Beam.DriverQuote
       Storage.Beam.DriverRCAssociation
       Storage.Beam.DriverReferral
       Storage.Beam.DriverSSN
@@ -755,6 +759,7 @@ library
       Storage.Queries.DriverModuleCompletion
       Storage.Queries.DriverPanCard
       Storage.Queries.DriverPoolConfig
+      Storage.Queries.DriverQuote
       Storage.Queries.DriverRCAssociation
       Storage.Queries.DriverReferral
       Storage.Queries.DriverSSN
@@ -785,6 +790,7 @@ library
       Storage.Queries.OrphanInstances.DriverInformation
       Storage.Queries.OrphanInstances.DriverLicense
       Storage.Queries.OrphanInstances.DriverPanCard
+      Storage.Queries.OrphanInstances.DriverQuote
       Storage.Queries.OrphanInstances.DriverRCAssociation
       Storage.Queries.OrphanInstances.DriverReferral
       Storage.Queries.OrphanInstances.DriverSSN

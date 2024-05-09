@@ -28,6 +28,7 @@ import qualified "rider-app" Domain.Types.Booking as AppRB
 import qualified "dynamic-offer-driver-app" Domain.Types.CancellationReason as SCR
 import qualified "rider-app" Domain.Types.CancellationReason as AppCR
 import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as TDrInfo
+import qualified "dynamic-offer-driver-app" Domain.Types.DriverQuote as DomainDQ
 import qualified "rider-app" Domain.Types.Estimate as AppEstimate
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as TDM
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant.MerchantServiceConfig as TDMSC

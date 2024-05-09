@@ -130,7 +130,7 @@ SearchRequestForDriver:
     customerCancellationDues: getCustomerCancellationDues
     driverStepFee: Kernel.Types.Common.mkAmountWithDefault driverStepFeeAmount <$> driverStepFee|E
     driverDefaultStepFee: Kernel.Types.Common.mkAmountWithDefault driverDefaultStepFeeAmount <$> driverDefaultStepFee|E
-    currency: fromMaybe INR currency|E
+    currency: fromMaybe Kernel.Types.Common.INR currency|E
 
 
   toTType:
@@ -154,8 +154,10 @@ SearchRequestForDriver:
     driverDefaultStepFee: Kernel.Prelude.roundToIntegral <$> driverDefaultStepFee|E
     driverStepFeeAmount: driverStepFee|E
     driverDefaultStepFeeAmount: driverDefaultStepFee|E
-    currency: Just currency|E
-
+    estimatedFare: Kernel.Prelude.roundToIntegral estimatedFare|E
+    estimatedFareAmount: Just estimatedFare|E
+    currency: Kernel.Prelude.Just|I
+    
   constriants:
     id: PrimaryKey
     searchTryId: SecondaryKey

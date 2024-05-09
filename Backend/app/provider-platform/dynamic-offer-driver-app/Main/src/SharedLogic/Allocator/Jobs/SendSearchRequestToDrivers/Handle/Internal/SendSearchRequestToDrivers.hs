@@ -180,7 +180,6 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 clientDevice = dpwRes.driverPoolResult.clientDevice,
                 backendConfigVersion = dpwRes.driverPoolResult.backendConfigVersion,
                 backendAppVersion = Just deploymentVersion.getDeploymentVersion,
-                updatedAt = now,
                 ..
               }
       pure searchRequestForDriver
