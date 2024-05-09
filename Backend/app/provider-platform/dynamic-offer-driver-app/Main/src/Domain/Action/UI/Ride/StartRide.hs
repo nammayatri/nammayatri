@@ -52,6 +52,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Notifications as Notify
 import Utils.Common.Cac.KeyNameConstants
 
 data StartRideReq = DriverReq DriverStartRideReq | DashboardReq DashboardStartRideReq
@@ -182,6 +183,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking updatedRide (Just point)
 
+  Notify.notifyOnRideStarted ride
   pure APISuccess.Success
   where
     isValidRideStatus status = status == DRide.NEW

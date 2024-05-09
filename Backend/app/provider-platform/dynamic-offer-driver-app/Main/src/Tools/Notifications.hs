@@ -45,6 +45,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
+import qualified Storage.Queries.Person as QPerson
 import Utils.Common.Cac.KeyNameConstants
 
 data EmptyDynamicParam = EmptyDynamicParam
@@ -878,6 +879,31 @@ notifyStopModification person entityData = do
         EulerHS.Prelude.unwords
           [ if entityData.isEdit then "Customer edited stop!" else "Customer added a stop!"
           ]
+
+notifyOnRideStarted ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  DRide.Ride ->
+  m ()
+notifyOnRideStarted ride = do
+  let personId = ride.driverId
+      isAirConditioned = fromMaybe False ((>= 0.0) <$> ride.vehicleServiceTierAirConditioned)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+      title =
+        T.pack
+          ( if isAirConditioned
+              then "Your AC ride has started"
+              else "Your ride has started"
+          )
+      body =
+        T.pack
+          ( if isAirConditioned
+              then "Please turn on AC, offer sakkath service and have a safe ride!"
+              else "Offer sakkath service and have a safe ride!"
+          )
+  notifyDriver merchantOperatingCityId FCM.TRIP_STARTED title body person person.deviceToken
 
 ----------------- we have to remove this once YATRI_PARTNER is migrated to new version ------------------
 
