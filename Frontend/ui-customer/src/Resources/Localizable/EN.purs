@@ -585,7 +585,7 @@ getEN stringKey =
         GOT_AN_OTP -> "Got an OTP?"
         JUST_ONE_LAST_THING -> "Just one last thing"
         YOUR_FEEDBACK_HELPS_US appName -> "Your feedback helps us improve the\n" <> appName <> " experience"
-        TOLL_CHARGES_WILL_BE_EXTRA -> "<b>Toll</b> charges are included"
+        TOLL_CHARGES_WILL_BE_EXTRA -> "Toll charges are included"
         AUTO_RICKSHAW -> "Auto Rickshaw"
         CABS_AVAILABLE -> "cabs available"
         PI_POINTER_1 -> "Drivers will be prompted to come to your exact location for pickup."

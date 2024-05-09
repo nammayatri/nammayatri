@@ -35,8 +35,8 @@ import Screens.Types (ZoneType(..), TipViewStage(..))
 import Data.Ord(min, max)
 import Resources.Constants (intMin, intMax)
 import Helpers.SpecialZoneAndHotSpots as HS
-import Data.Array (groupBy, head, sortBy, fromFoldable)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Array (groupBy, head, sortBy, fromFoldable, all)
+import Data.Maybe 
 import Data.Ord (comparing)
 import Data.Traversable (traverse)
 import Data.Foldable (minimumBy, maximumBy)
@@ -503,7 +503,7 @@ chooseYourRideView push config =
                   , height WRAP_CONTENT
                   , gravity CENTER_HORIZONTAL
                   , width MATCH_PARENT
-                  , visibility $ boolToVisibility config.showTollExtraCharges
+                  , visibility $ boolToVisibility $ config.showTollExtraCharges && maybe false (\item -> not $ item.serviceTierName == Just "Auto" || (item.vehicleVariant == "BOOK_ANY"  && all (_ ==  "Auto") item.selectedServices )) (config.quoteList !! config.activeIndex)
                   ] <> FontStyle.paragraphText TypoGraphy
                 , linearLayout
                   [ height $ V 1
