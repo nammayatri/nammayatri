@@ -54,6 +54,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.isDefaultEnabledOnManualVerification isDefaultEnabledOnManualVerification,
       Se.Set Beam.isDisabled isDisabled,
       Se.Set Beam.isHidden isHidden,
+      Se.Set Beam.isImageValidationRequired isImageValidationRequired,
       Se.Set Beam.isMandatory isMandatory,
       Se.Set Beam.maxRetryCount maxRetryCount,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

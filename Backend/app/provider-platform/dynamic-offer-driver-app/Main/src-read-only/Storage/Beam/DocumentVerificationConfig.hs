@@ -24,6 +24,7 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
     isDefaultEnabledOnManualVerification :: (B.C f Kernel.Prelude.Bool),
     isDisabled :: (B.C f Kernel.Prelude.Bool),
     isHidden :: (B.C f Kernel.Prelude.Bool),
+    isImageValidationRequired :: (B.C f Kernel.Prelude.Bool),
     isMandatory :: (B.C f Kernel.Prelude.Bool),
     maxRetryCount :: (B.C f Kernel.Prelude.Int),
     merchantId :: (B.C f Kernel.Prelude.Text),

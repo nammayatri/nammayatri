@@ -86,7 +86,8 @@ uploadDocument merchantShortId opCity driverId_ req = do
       ImageValidateRequest
         { image = req.imageBase64,
           imageType = mapDocumentType req.imageType,
-          rcNumber = req.rcNumber
+          rcNumber = req.rcNumber,
+          vehicleCategory = Nothing
         }
   pure $ Common.UploadDocumentResp {imageId = cast res.imageId}
 
