@@ -75,7 +75,7 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize)
-import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition, differenceBetweenTwoUTCInMinutes)
+import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition, showInAppNotification, inAppNotificationPayload, differenceBetweenTwoUTCInMinutes)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (printLog, logStatus)
@@ -142,6 +142,9 @@ import Components.ServiceTierCard.View as ServiceTierCard
 import Common.Types.App as CTP
 import JBridge as JB
 import Common.Types.App as CT
+import Helpers.API as API
+import Engineering.Helpers.SQLiteUtils
+import SQLStorage
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -165,6 +168,10 @@ screen initialState =
             else do
               pure unit
             when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ flowRunner defaultGlobalState $ computeListItem push
+            -- if ((getValueToLocalStore IS_OFFLINE) == "true") then do 
+            --   void $ pure $ spy "isofflien zxc inapp" (getValueToLocalStore IS_OFFLINE)
+              
+            -- else pure unit
             case initialState.props.currentStage of
               SearchLocationModel -> case initialState.props.isSearchLocation of
                 LocateOnMap -> do
@@ -2597,10 +2604,11 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
     let bookingId = if state.props.bookingId == "" then gbState.homeScreen.props.bookingId else state.props.bookingId
     if bookingId /= ""
       then do
-        respBooking <- rideBooking bookingId 
+      -- payload dbName transformToTable transformFromTable tableName custId
+        respBooking <- API.callAPIWithFallback (RideBookingReq bookingId) dbName transformRideToTable transformFromTableToResp RideT findActiveRide (deleteActiveRide (getValueToLocalStore CUSTOMER_ID))
+        -- respBooking <- API.callAPIWithFallback (RideBookingReq bookingId) dbName RideT findActiveRide
         case respBooking of
-          Right respBooking -> do
-            handleRideBookingResp respBooking
+          Right resp -> handleRideBookingResp resp
           Left _ -> pure unit
       else do
         mbResp <- getActiveBooking
@@ -2709,6 +2717,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
     getDuration factor counter = duration * (toNumber $ pow factor counter)
     isSpecialPickupZone = state.props.currentStage == RideAccepted && state.props.zoneType.priorityTag == SPECIAL_PICKUP && isJust state.data.driverInfoCardState.sourceAddress.area && state.data.config.feature.enableSpecialPickup
     handleRideBookingResp (RideBookingRes respBooking) = do
+      void $ pure $ spy "RideBookingRes zxc" respBooking
       let bookingStatus = respBooking.status
       void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {props{bookingId = respBooking.id}, data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes respBooking) (state.data.currentSearchResultType == QUOTES)}}}
       case bookingStatus of

@@ -339,8 +339,10 @@ window["onEvent'"] = function (_event, args) {
     refreshFlow();
   } else if (_event == "onLocationChanged" && !(window.receiverFlag)) {
     purescript.onConnectivityEvent("LOCATION_DISABLED")();
-  } else if (_event == "onInternetChanged") {
-    purescript.onConnectivityEvent("INTERNET_ACTION")();
+  } else if (_event == "onInternetDisconnected") {
+    purescript.onConnectivityEvent("INTERNET_ACTION_DISCONNECTED")();
+  }else if (_event == "onInternetReconnected") {
+    purescript.onConnectivityEvent("INTERNET_ACTION_CONNECTED")();
   }else if(_event == "onBundleUpdated"){
     purescript.onBundleUpdatedEvent(JSON.parse(args))();
   } else if ((_event == "onKeyboardOpen" || _event == "onKeyboardClose") && window.keyBoardCallback) {

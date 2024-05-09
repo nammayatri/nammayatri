@@ -37,12 +37,14 @@ import Foreign.Object (empty)
 import Helpers.Utils (decodeError, getTime)
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig, Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
 import JBridge as JB
+import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader, inAppNotificationPayload, showInAppNotification)
+import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig)
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
-import Prelude (not, Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when, (<$>))
+import Prelude (not, Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when, (<$>), negate)
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
 import Screens.Types (TicketServiceData, AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), City(..), AutoCompleteReqType(..))
@@ -57,12 +59,14 @@ import Foreign.Object (empty)
 import Data.String as DS
 import ConfigProvider as CP
 import Locale.Utils
+import Engineering.Helpers.BackTrack (liftFlowBT)
 import MerchantConfig.Types (GeoCodeConfig)
 import Debug
 import Effect.Uncurried (runEffectFn9)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import SessionCache
 
+import JBridge as JBridge
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
     regToken <- loadS $ show REGISTERATION_TOKEN
@@ -107,9 +111,14 @@ withAPIResult url f flow = do
     let end = getTime unit
     _ <- pure $ printLog "withAPIResult url" url
     case resp of
-        Right res -> void $ pure $ printLog "success resp" res
+        Right res -> do  
+            _ <- pure $ setValueToLocalStore IS_OFFLINE "false"
+            void $ pure $ printLog "success resp" res
         Left (err) -> do
             _ <- pure $ toggleBtnLoader "" false
+            if(err.code == -1) then do
+                liftFlow $  JBridge.showInAppNotification JBridge.inAppNotificationPayload{title = "No internet connection", message = "Please try again", channelId = "internetAction", showLoader = true, durationInMilliSeconds = 500000}
+            else pure unit
             let errResp = err.response
             _ <- pure $ printLog "error resp" errResp
             let userMessage = decodeError errResp.errorMessage "errorMessage"
@@ -132,9 +141,13 @@ withAPIResultBT url f errorHandler flow = do
     _ <- pure $ printLog "withAPIResultBT url" url
     case resp of
         Right res -> do
+            setValueToLocalStore IS_OFFLINE "false"
             pure res
         Left err -> do
             _ <- pure $ toggleBtnLoader "" false
+            if(err.code == -1) then do
+                lift $ lift $ liftFlow $JBridge.showInAppNotification JBridge.inAppNotificationPayload{title = "No internet connection", message = "Please try again", channelId = "internetAction", showLoader = true, durationInMilliSeconds = 500000}
+            else pure unit
             let errResp = err.response
             let userMessage = decodeError errResp.errorMessage "errorMessage"
             let codeMessage = decodeError errResp.errorMessage "errorCode"
@@ -272,6 +285,7 @@ searchLocationBT payload = do
   withAPIResultBT (EP.autoComplete "") identity errorHandler (lift $ lift $ callAPI headers payload)
   where
   errorHandler errorPayload  = do
+                pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage  = SearchLocationModel}})
                 BackT $ pure GoBack
 
@@ -427,6 +441,7 @@ rideBooking bookingId = do
     where
         unwrapResponse (x) = x
 
+
 ------------------------------------------------------------------------ CancelRideBT Function ----------------------------------------------------------------------------------------
 cancelRideBT :: CancelReq -> String -> FlowBT String CancelRes
 cancelRideBT payload bookingId = do
@@ -506,7 +521,6 @@ getProfileBT _  = do
     errorHandler (errorPayload) =  do
         BackT $ pure GoBack
 
--- updateProfileBT :: UpdateProfileReq -> FlowBT String UpdateProfileRes
 updateProfile (UpdateProfileReq payload) = do
         headers <- getHeaders "" false
         withAPIResult (EP.profile "") unwrapResponse $ callAPI headers (UpdateProfileReq payload)

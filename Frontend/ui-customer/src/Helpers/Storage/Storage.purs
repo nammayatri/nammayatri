@@ -105,6 +105,8 @@ data KeyStore
   | AC_POPUP_SHOWN_FOR_RIDE
   | STARTED_ESTIMATE_SEARCH
 
+  | IS_OFFLINE
+  
 derive instance genericKeyStore :: Generic KeyStore _
 
 instance showKeyStore :: Show KeyStore where

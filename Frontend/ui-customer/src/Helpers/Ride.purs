@@ -44,13 +44,20 @@ import Foreign.Generic (decodeJSON)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Common.Types.App as Common
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
+import Data.Function.Uncurried (Fn3, runFn3, runFn4, runFn6, runFn2)
+import Debug
+import Helpers.API as API
+import SQLStorage
+
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
   logField_ <- lift $ lift $ getLogFields
-  rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
+  rideBookingListResponse <- lift $ lift $ API.callAPIWithFallback  (RideBookingListReq "1" "0" "true" Nothing Nothing) dbName tranformFromRideBookingListRes tranformToRideBookingListRes RideT findActiveRide (deleteActiveRide (getValueToLocalStore CUSTOMER_ID))
+  -- rideBookingListResponse <- lift $ lift $ API.callAPIWithFallback  (RideBookingListReq "1" "0" "true" Nothing) dbName RideT findActiveRide
   case rideBookingListResponse of
     Right (RideBookingListRes listResp) -> do
+      void $ pure $ spy "rideBookingListResponse zxc" listResp
       if not (null listResp.list) then do
         (GlobalState state') <- getState
         let state = state'.homeScreen
@@ -60,10 +67,11 @@ checkRideStatus rideAssigned = do
             fareProductType = ((resp.bookingDetails) ^. _fareProductType)
             otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
             isQuotes = (fareProductType == "OneWaySpecialZoneAPIDetails" || otpCode /= Nothing)
+            driverInfo = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) isQuotes
             newState = 
               state
                 { data
-                    { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) isQuotes
+                    { driverInfoCardState = driverInfo
                     , finalAmount = fromMaybe 0 $ (fromMaybe dummyRideAPIEntity (head resp.rideList) )^. _computedPrice
                     , sourceAddress = getAddressFromBooking resp.fromLocation
                     , destinationAddress = getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
