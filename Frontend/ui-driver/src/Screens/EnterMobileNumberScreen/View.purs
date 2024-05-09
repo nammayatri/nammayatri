@@ -232,7 +232,7 @@ oAuthProvidersView state push =
       , color Color.black800
       ] <> FontStyle.subHeading2 TypoGraphy
     , PrimaryButton.view (push <<< (OAuthPB Google)) (googleProvider state)
-    , PrimaryButton.view (push <<< (OAuthPB Apple)) (appleProvider state)
+    , if EHC.os == "IOS" then PrimaryButton.view (push <<< (OAuthPB Apple)) (appleProvider state) else linearLayout[][]
     , textView $
         [ text "Or"
         , gravity CENTER
