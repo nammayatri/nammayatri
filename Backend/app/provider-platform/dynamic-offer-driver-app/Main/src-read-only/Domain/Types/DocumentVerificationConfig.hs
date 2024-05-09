@@ -21,6 +21,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     isDefaultEnabledOnManualVerification :: Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,
+    isImageValidationRequired :: Kernel.Prelude.Bool,
     isMandatory :: Kernel.Prelude.Bool,
     maxRetryCount :: Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -51,6 +52,7 @@ data DocumentType
   | ProfileDetails
   | SocialSecurityNumber
   | VehicleInspectionForm
+  | UploadProfile
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SupportedVehicleClasses
@@ -71,10 +73,10 @@ data VehicleClassVariantMap = VehicleClassVariantMap
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.Vehicle.Variant
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, (Ord), (Read))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentType))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SupportedVehicleClasses)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SupportedVehicleClasses))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleClassCheckType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VehicleClassCheckType))

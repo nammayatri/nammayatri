@@ -154,5 +154,5 @@ postSocialUpdateProfile (mbPersonId, _, _) req = do
                 SP.firstName = fromMaybe person.firstName req.firstName,
                 SP.lastName = req.lastName <|> person.lastName
               }
-      PQ.updateMobileNumberAndCode updPerson
+      PQ.updatePersonDetails updPerson
       pure Kernel.Types.APISuccess.Success

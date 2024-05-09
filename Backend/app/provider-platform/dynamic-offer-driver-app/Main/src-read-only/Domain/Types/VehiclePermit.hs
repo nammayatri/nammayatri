@@ -34,9 +34,9 @@ data VehiclePermitE e = VehiclePermit
   }
   deriving (Generic)
 
-type VehiclePermit = VehiclePermitE 'AsEncrypted
+type VehiclePermit = VehiclePermitE ('AsEncrypted)
 
-type DecryptedVehiclePermit = VehiclePermitE 'AsUnencrypted
+type DecryptedVehiclePermit = VehiclePermitE ('AsUnencrypted)
 
 instance EncryptedItem VehiclePermit where
   type Unencrypted VehiclePermit = (DecryptedVehiclePermit, HashSalt)

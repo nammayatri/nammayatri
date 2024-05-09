@@ -629,6 +629,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         vehicleCategory = DVeh.AUTO_CATEGORY,
         order = 0,
         isDefaultEnabledOnManualVerification = fromMaybe True isDefaultEnabledOnManualVerification,
+        isImageValidationRequired = fromMaybe True isImageValidationRequired,
         updatedAt = now,
         createdAt = now,
         ..
