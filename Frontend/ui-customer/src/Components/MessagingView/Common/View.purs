@@ -87,14 +87,15 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..), City(..))
+import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..), City(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Locale.Utils
 import Components.MessagingView.Common.Types
-
+import Components.MessagingView.View
+import Common.Types.App as CT
 
 
 messageNotificationView :: forall w action. (action -> Effect Unit) -> (MessageNotificationView action) -> PrestoDOM ( Effect Unit) w
@@ -117,11 +118,7 @@ messageNotificationView push state =
   , accessibility $ if state.isNotificationExpanded && os /= "IOS" then ENABLE else if not state.isNotificationExpanded then DISABLE_DESCENDANT else DISABLE
   , accessibilityHint $ "Quick Chat : Widget"
   , onAnimationEnd push $ const state.messageViewAnimationEnd
-  , visibility $ if ((not state.showNotificationBanner) && state.currentSearchResultType /= QUOTES && state.config.feature.enableChat) && state.config.feature.enableSuggestions 
-                  then VISIBLE 
-                  else if state.showNotificationBanner && os == "IOS" 
-                    then INVISIBLE 
-                    else GONE
+  , visibility $ boolToVisibility $ (((any (_ == state.currentStage)) [ RideAccepted, ChatWithDriver, RideStarted]) && state.currentSearchResultType /= CT.QUOTES CT.OneWaySpecialZoneAPIDetails && state.config.feature.enableChat) && state.config.feature.enableSuggestions && not state.removeNotification
   , cornerRadius 20.0
   ][linearLayout 
     [ height $ WRAP_CONTENT

@@ -2,7 +2,7 @@ module Components.ChooseVehicle.View where
 
 import Common.Types.App
 
-import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
+import Components.ChooseVehicle.Controller (Action(..), Config)
 import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||))
@@ -96,6 +96,7 @@ priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Ef
 priceDetailsView push config =
   let isActiveIndex = config.index == config.activeIndex
       infoIcon = if isActiveIndex then "ny_ic_info_blue_lg" else "ny_ic_info_grey"
+      enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY" && config.searchResultType == ESTIMATES
   in
   linearLayout
     [ height WRAP_CONTENT
@@ -117,7 +118,7 @@ priceDetailsView push config =
         , height $ V 15
         , margin $ Margin 4 6 0 0
         , clickable isActiveIndex
-        , visibility $ boolToVisibility config.showInfo
+        , visibility $ boolToVisibility $ config.showInfo && enableRateCard
         , onClick push $ const $ ShowRateCard config
         ]
     ]

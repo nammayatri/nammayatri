@@ -15,10 +15,10 @@
 
 module Screens.HomeScreen.ScreenData where
 
-import Common.Types.App (RateCardType(..), RideType(..), RentalBookingConfig)
+import Common.Types.App (RateCardType(..), RideType(..), RentalBookingConfig, SearchResultType(..))
 import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
-import Components.ChooseVehicle.Controller (SearchType(..)) as CV
+import Components.ChooseVehicle.Controller (config) as CV
 import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
@@ -465,6 +465,19 @@ dummyQuoteAPIEntity = QuoteAPIEntity {
   agencyCompletedRidesCount : 0,
   quoteDetails : QuoteAPIDetails {fareProductType : "", contents : dummyDriverOfferAPIEntity}
 }
+
+dummyAddress = 
+  { "area"      : Nothing
+  , "state"     : Nothing
+  , "country"   : Nothing
+  , "building"  : Nothing
+  , "door"      : Nothing
+  , "street"    : Nothing
+  , "city"      : Nothing
+  , "areaCode"  : Nothing
+  , "ward"      : Nothing
+  , "placeId"   : Nothing
+  }
 
 dummyDriverOfferAPIEntity :: QuoteAPIContents
 dummyDriverOfferAPIEntity =

@@ -75,13 +75,15 @@ checkRideStatus rideAssigned = do
                     { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) (searchResultType == QUOTES)
                     , finalAmount = fromMaybe 0 $ (fromMaybe dummyRideAPIEntity (head resp.rideList) )^. _computedPrice
                     , sourceAddress = getAddressFromBooking resp.fromLocation
-                    , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.dropLocation))
-                    , currentSearchResultType = searchResultType
+                    , destinationAddress = getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
+                    , currentSearchResultType = if isQuotes then Common.QUOTES Common.OneWaySpecialZoneAPIDetails else Common.ESTIMATES
                     , rideType = 
                         if fareProductType == "RENTAL" 
                           then RideType.RENTAL_RIDE 
                         else if fareProductType == "INTER_CITY" then RideType.INTERCITY
                         else RideType.NORMAL_RIDE
+                    , vehicleVariant = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._vehicleVariant
+                    , startedAtUTC = fromMaybe "" resp.rideStartTime
                     , rentalsInfo = (if rideScheduledAt == "" then Nothing else (Just{
                         rideScheduledAtUTC : rideScheduledAt
                       , bookingId : resp.id

@@ -4,6 +4,7 @@ import Prelude
 
 import MerchantConfig.Types (AppConfig)
 import Screens.Types (City, SearchResultType)
+import Data.Maybe (Maybe(..))
 import Common.Types.App 
 
 type DriverDetailsType

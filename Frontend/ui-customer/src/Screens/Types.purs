@@ -681,7 +681,6 @@ data Stage = HomeScreen
            | FavouriteLocationModel
            | ChatWithDriver
            | FindEstimateAndSearch
-           | RetryFindingQuote
            | PickUpFarFromCurrentLocation
            | LoadMap
            | RideSearch
@@ -938,7 +937,6 @@ type HomeScreenStateProps =
   , flowWithoutOffers :: Boolean
   , showEducationalCarousel :: Boolean
   , locateOnMapLocation :: LocateOnMapLocation
-  , specialZoneType :: String
   , currentLocation :: Location
   , isShorterTrip :: Boolean
   , isNotificationExpanded :: Boolean
@@ -1165,6 +1163,13 @@ type EstimateInfo = {
   extraFare :: Int,
   showRateCardIcon :: Boolean,
   zoneType :: SpecialTags
+}
+
+type EstimatesAndQuotesInfo = {
+    defaultQuote :: ChooseVehicle.Config
+  , nearByDrivers :: Maybe Int
+  , zoneType :: SpecialTags
+  , hasToll :: Boolean
 }
 
 -- ################################## SelectLanguageScreenState ###############################
@@ -1502,12 +1507,6 @@ instance eqLocItemType :: Eq LocItemType where eq = genericEq
 instance showLocItemType :: Show LocItemType where show = genericShow
 instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
 instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
-
-data SearchResultType = QUOTES | ESTIMATES | RENTALS | INTERCITY
-
-derive instance genericSearchResultType :: Generic SearchResultType _
-instance eqSearchResultType :: Eq SearchResultType where eq = genericEq
-instance showSearchResultType :: Show SearchResultType where show = genericShow
 
 type LocationTagBarState =
   { savedLocations :: Array LocationListItemState }
@@ -2158,6 +2157,30 @@ type RentalFareDetails = {
   perExtraMinRate :: Int,
   perHourCharge :: Int,
   nightShiftCharge :: Int
+}
+
+data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling
+
+derive instance genericMetroTicketBookingStage :: Generic MetroTicketBookingStage _
+instance eqMetroTicketBookingStage :: Eq MetroTicketBookingStage where eq = genericEq
+instance showMetroTicketBookingStage :: Show MetroTicketBookingStage where show = genericShow
+
+data TicketType = ONE_WAY_TICKET | ROUND_TRIP_TICKET
+
+derive instance genericTicketType :: Generic TicketType _
+instance eqTicketType :: Eq TicketType where eq = genericEq
+
+data LocationActionId = Src | Dest
+
+derive instance genericLocationActionId :: Generic LocationActionId _
+instance eqLocationActionId :: Eq LocationActionId where eq = genericEq
+instance showLocationActionId :: Show LocationActionId where show = genericShow
+
+
+-- ######################################### MetroTicketStatusScreenState ####################################################
+type MetroTicketStatusScreenState = {
+  data :: MetroTicketStatusScreenData,
+  props :: MetroTicketStatusScreenProps
 }
 
 data RentalScreenStage = RENTAL_SELECT_PACKAGE | RENTAL_SELECT_VARIANT | RENTAL_CONFIRMATION

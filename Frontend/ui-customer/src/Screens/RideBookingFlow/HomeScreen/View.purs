@@ -150,19 +150,30 @@ screen initialState =
             when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ flowRunner defaultGlobalState $ computeListItem push
             case initialState.props.currentStage of
               SearchLocationModel -> case initialState.props.isSearchLocation of
-                LocateOnMap -> do
-                  _ <- storeCallBackLocateOnMap push UpdateLocation
-                  pure unit
-                _ -> do
+                LocateOnMap ->
+                  void $ storeCallBackLocateOnMap push LocateOnMapCallBack
+                _ ->
                   case initialState.props.isSource of
                     Just index -> do
                       _ <- pure $ requestKeyboardShow (if index then (getNewIDWithTag "SourceEditText") else (getNewIDWithTag "DestinationEditText"))
                       pure unit
                     Nothing -> pure unit
-                  pure unit
               FindingEstimate -> do
-                _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                _ <- launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState
+                logStatus "find_estimate" ("searchId : " <> initialState.props.searchId)
+                void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+                estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
+              
+                if initialState.data.currentCityConfig.iopConfig.enable then do 
+                  when (not $ getValueToLocalStore STARTED_ESTIMATE_SEARCH == "TRUE") do -- Check if estimate search is already started
+                    void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "TRUE"
+                    void $ launchAff $ flowRunner defaultGlobalState $ getEstimatePolling (getValueToLocalStore TRACKING_ID) GetEstimates CheckFlowStatusAction 3 2000.0 push initialState
+                else if estimatesPolling.shouldPush then do
+                     void $ launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState estimatesPolling.id
+                else pure unit
+              TryAgain -> do
+                logStatus "find_estimate" ("searchId : " <> initialState.props.searchId)
+                estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
+                when estimatesPolling.shouldPush $ void $ launchAff $ flowRunner defaultGlobalState $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState estimatesPolling.id
                 pure unit
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
@@ -219,7 +230,7 @@ screen initialState =
                   void $ waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction
                 else 
                   when 
-                    (initialState.data.currentSearchResultType == QUOTES) $ do
+                    (initialState.data.currentSearchResultType == CT.QUOTES CT.OneWaySpecialZoneAPIDetails) $ do
                       let secondsLeft = initialState.data.config.driverInfoConfig.specialZoneQuoteExpirySeconds - (getExpiryTime initialState.data.driverInfoCardState.createdAt true)
                       void $ startTimer secondsLeft "SpecialZoneOTPExpiry" "1" push SpecialZoneOTPExpiryAction
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
@@ -229,14 +240,15 @@ screen initialState =
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup"
                 else pure unit
                 push LoadMessages
-                if(not initialState.props.chatcallbackInitiated && not initialState.props.isSpecialZone) then do
+                if (not initialState.props.chatcallbackInitiated && initialState.data.currentSearchResultType /= CT.QUOTES CT.OneWaySpecialZoneAPIDetails) then do
+                  -- @TODO need to revert once apk update is done
+                  --when (initialState.data.driverInfoCardState.providerType == CTP.ONUS) $ void $ JB.showInAppNotification JB.inAppNotificationPayload{title = "Showing Approximate Location", message = "Driver locations of other providers are only approximate", channelId = "ApproxLoc", showLoader = true}
                   _ <- clearChatMessages
                   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
                   _ <- storeCallBackOpenChatScreen push OpenChatScreen
                   _ <- startChatListenerService
                   _ <- pure $ scrollOnResume push ScrollToBottom
                   push InitializeChat
-                  pure unit
                 else
                   pure unit
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
@@ -502,7 +514,7 @@ bottomNavBarView push state = let
                 , {text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]))
     ]
 getMapHeight :: HomeScreenState -> Length
-getMapHeight state = V (if state.data.currentSearchResultType == QUOTES then (((screenHeight unit)/ 4)*3) 
+getMapHeight state = V (if state.data.currentSearchResultType == CT.QUOTES CT.OneWaySpecialZoneAPIDetails then (((screenHeight unit)/ 4)*3) 
                             else if (state.props.currentStage == RideAccepted || state.props.currentStage == ChatWithDriver) then ((screenHeight unit) - (getInfoCardPeekHeight state)) + 50
                             else (((screenHeight unit)/ 15)*10))
 
@@ -555,6 +567,10 @@ rideInfoView push state =
   let isClickable = os == "IOS"
       isWidgetVisible = ((((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) || (state.props.currentStage == RideStarted && state.data.rideType == RideType.RENTAL_RIDE ))&& state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && (os == "ANDROID" || state.props.enableChatWidget)) || (state.props.currentStage == RideStarted && os == "IOS")
       disableChatWidget = (not (os == "IOS" || state.props.enableChatWidget)) && ((((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver] || (state.props.currentStage == RideStarted && state.data.rideType == RideType.RENTAL_RIDE))) && state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat) && state.data.config.feature.enableSuggestions
+
+messageWidgetView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+messageWidgetView push state = 
+  let isWidgetVisible = ((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver] || state.props.isChatWithEMEnabled) && state.data.currentSearchResultType /= CT.QUOTES CT.OneWaySpecialZoneAPIDetails && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && not state.props.removeNotification
   in 
   linearLayout
   [ height MATCH_PARENT
@@ -618,7 +634,7 @@ rideInfoView push state =
      ]
   ]
   where disableSuggestions :: HomeScreenState -> Boolean
-        disableSuggestions state = (state.data.rideType == RideType.RENTAL_RIDE && state.props.currentStage == RideStarted) || state.data.currentSearchResultType == QUOTES || not state.data.config.feature.enableChat || not state.data.config.feature.enableSuggestions
+        disableSuggestions state = (state.data.rideType == RideType.RENTAL_RIDE && state.props.currentStage == RideStarted) || state.data.currentSearchResultType == CT.QUOTES CT.OneWaySpecialZoneAPIDetails || not state.data.config.feature.enableChat || not state.data.config.feature.enableSuggestions
 
 messagingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 messagingView push state = 
@@ -3050,7 +3066,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                     else pure unit
                   Nothing -> pure unit
         Left err -> pure unit
-    if (state.props.isSpecialZone && state.data.currentSearchResultType == QUOTES) && (isLocalStageOn RideAccepted) then do
+    if (state.props.isSpecialZone && state.data.currentSearchResultType == CT.QUOTES CT.OneWaySpecialZoneAPIDetails) && (isLocalStageOn RideAccepted) then do
       _ <- pure $ enableMyLocation true
       _ <- pure $ removeAllPolylines ""
       _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng zoomLevel "ZOOM"

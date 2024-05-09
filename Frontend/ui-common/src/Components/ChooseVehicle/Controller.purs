@@ -5,7 +5,7 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Foreign.Generic (decode, encode, class Decode, class Encode)
-import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (Margin(..))
 
 data Action
@@ -29,20 +29,24 @@ type Config
     , maxPrice :: Int
     , basePrice :: Int
     , showInfo :: Boolean
-    , searchResultType :: SearchType
+    , searchResultType :: CT.SearchResultType
     , isBookingOption :: Boolean
     , pickUpCharges :: Int 
     , layoutMargin :: Margin 
     , showStroke :: Boolean
+    , providerName :: String
+    , providerId :: String
+    , providerType :: CT.ProviderType
+    , singleVehicle :: Boolean
+    , priceShimmer :: Boolean
+    , availableServices :: Array String
+    , services :: Array String
+    , selectedServices :: Array String
+    , currentEstimateHeight :: Int
+    , selectedEstimateHeight :: Int
+    , validTill :: String
+    , specialLocationTag :: Maybe String
     }
-
-data SearchType = QUOTES | ESTIMATES
-
-derive instance genericSearchType :: Generic SearchType _
-instance eqSearchType :: Eq SearchType where eq = genericEq
-instance showSearchType :: Show SearchType where show = genericShow
-instance encodeSearchType :: Encode SearchType where encode = defaultEnumEncode
-instance decodeSearchType :: Decode SearchType where decode = defaultEnumDecode
 
 
 config :: Config
@@ -61,9 +65,34 @@ config =
   , maxPrice : 123
   , basePrice : 0 
   , showInfo : false
-  , searchResultType : QUOTES
+  , searchResultType : CT.QUOTES CT.ONE_WAY
   , isBookingOption : false
   , pickUpCharges : 0
   , layoutMargin : MarginHorizontal 12 12
   , showStroke : true
+  , tollCharge : 0.0
+  , serviceTierShortDesc : Nothing
+  , serviceTierName : Nothing
+  , extraFare: []
+  , additionalFare: 0
+  , fareInfoDescription: []
+  , driverAdditions: []
+  , isNightShift : false
+  , nightChargeTill : ""
+  , nightChargeFrom : ""
+  , airConditioned : Nothing
+  , showEditButton : false
+  , editBtnText : ""
+  , providerName : ""
+  , providerId : ""
+  , providerType : CT.ONUS
+  , singleVehicle : false
+  , priceShimmer : true
+  , availableServices : []
+  , services : [] 
+  , selectedServices : []
+  , currentEstimateHeight : 184 
+  , selectedEstimateHeight : 0
+  , validTill : ""
+  , specialLocationTag : Nothing
   }

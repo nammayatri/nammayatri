@@ -169,8 +169,7 @@ data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT_SCREEN ReportIssue
 
 data HOME_SCREEN_OUTPUT = LOGOUT
                         | RELOAD Boolean
-                        | CANCEL
-                        | RETRY
+                        | RELOAD_SCREEN
                         | NO_OUTPUT
                         | GO_TO_HELP
                         | GO_TO_NAMMASAFETY HomeScreenState Boolean Boolean
@@ -182,7 +181,6 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_MY_PROFILE Boolean
                         | LOCATION_SELECTED LocationListItemState Boolean
                         | HOME_SCREEN
-                        | GET_QUOTES HomeScreenState
                         | SELECT_ESTIMATE HomeScreenState
                         | GET_SELECT_LIST HomeScreenState
                         | CONFIRM_RIDE HomeScreenState
@@ -191,7 +189,6 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | FCM_NOTIFICATION String HomeScreenState
                         | SEARCH_LOCATION String HomeScreenState
                         | UPDATE_LOCATION_NAME HomeScreenState Number Number
-                        | UPDATE_PICKUP_NAME HomeScreenState Number Number
                         | GET_LOCATION_NAME HomeScreenState
                         | GO_TO_FAVOURITES_
                         | SUBMIT_RATING HomeScreenState
@@ -234,6 +231,16 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_RIDE_SEARCH_FLOW 
                         | CONFIRM_RENTAL_RIDE
                         | STAY_IN_HOME_SCREEN
+                        | GO_TO_MY_METRO_TICKETS
+                        | GO_TO_METRO_BOOKING HomeScreenState
+                        | GO_TO_SAFETY_EDUCATION
+                        | REPEAT_SEARCH HomeScreenState
+                        | CHANGE_VEHICLE_VARIANT HomeScreenState
+                        | GOTO_CONFIRMING_LOCATION_STAGE HomeScreenState
+                        | UPDATE_REFERRAL_CODE String
+                        | GO_TO_SAFETY_SETTING_SCREEN
+                        | GO_TO_RIDE_RELATED_ISSUES HomeScreenState
+                        | SELECT_ESTIMATE_AND_QUOTES HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
