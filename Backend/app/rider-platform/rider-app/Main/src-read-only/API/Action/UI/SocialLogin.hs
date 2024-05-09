@@ -19,32 +19,31 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( "social" :> "login" :> ReqBody ('[JSON]) API.Types.UI.SocialLogin.SocialLoginReq
+  ( "social" :> "login" :> ReqBody '[JSON] API.Types.UI.SocialLogin.SocialLoginReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SocialLogin.SocialLoginRes
       :<|> TokenAuth
-      :> "ui"
       :> "social"
       :> "update"
       :> "profile"
-      :> ReqBody ('[JSON]) API.Types.UI.SocialLogin.SocialUpdateProfileReq
+      :> ReqBody '[JSON] API.Types.UI.SocialLogin.SocialUpdateProfileReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = postSocialLogin :<|> postUiSocialUpdateProfile
+handler = postSocialLogin :<|> postSocialUpdateProfile
 
 postSocialLogin :: (API.Types.UI.SocialLogin.SocialLoginReq -> Environment.FlowHandler API.Types.UI.SocialLogin.SocialLoginRes)
 postSocialLogin a1 = withFlowHandlerAPI $ Domain.Action.UI.SocialLogin.postSocialLogin a1
 
-postUiSocialUpdateProfile ::
+postSocialUpdateProfile ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     API.Types.UI.SocialLogin.SocialUpdateProfileReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postUiSocialUpdateProfile a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SocialLogin.postUiSocialUpdateProfile (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postSocialUpdateProfile a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SocialLogin.postSocialUpdateProfile (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

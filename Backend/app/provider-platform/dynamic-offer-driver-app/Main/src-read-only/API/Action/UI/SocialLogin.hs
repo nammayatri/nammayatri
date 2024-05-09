@@ -25,7 +25,6 @@ type API =
            '[JSON]
            API.Types.UI.SocialLogin.SocialLoginRes
       :<|> TokenAuth
-      :> "ui"
       :> "social"
       :> "update"
       :> "profile"
@@ -36,12 +35,12 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = postSocialLogin :<|> postUiSocialUpdateProfile
+handler = postSocialLogin :<|> postSocialUpdateProfile
 
 postSocialLogin :: (API.Types.UI.SocialLogin.SocialLoginReq -> Environment.FlowHandler API.Types.UI.SocialLogin.SocialLoginRes)
 postSocialLogin a1 = withFlowHandlerAPI $ Domain.Action.UI.SocialLogin.postSocialLogin a1
 
-postUiSocialUpdateProfile ::
+postSocialUpdateProfile ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
@@ -49,4 +48,4 @@ postUiSocialUpdateProfile ::
     API.Types.UI.SocialLogin.SocialUpdateProfileReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postUiSocialUpdateProfile a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SocialLogin.postUiSocialUpdateProfile (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postSocialUpdateProfile a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SocialLogin.postSocialUpdateProfile (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

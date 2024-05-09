@@ -1,8 +1,7 @@
 imports:
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
   Merchant: Domain.Types.Merchant
-  ReelsData: Domain.Types.ReelsData
-  Language: Kernel.External.Types
+  City: Kernel.Types.Beckn.Context
 
 module: SocialLogin
 
@@ -14,7 +13,7 @@ types:
     email: Maybe Text
     tokenId: Text
     oauthProvider: OAuthProvider
-    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantOperatingCity: City
     merchantId: Id Merchant
     registrationLat: Maybe Double
     registrationLon: Maybe Double
@@ -35,7 +34,7 @@ apis:
       response:
         type: API.Types.UI.SocialLogin.SocialLoginRes
   - POST:
-      endpoint: /ui/social/update/profile
+      endpoint: /social/update/profile
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: API.Types.UI.SocialLogin.SocialUpdateProfileReq

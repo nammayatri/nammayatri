@@ -5,9 +5,9 @@ module API.Types.UI.SocialLogin where
 
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
@@ -17,7 +17,7 @@ data OAuthProvider = Google | IOS deriving (Eq, Show, Generic, ToJSON, FromJSON,
 data SocialLoginReq = SocialLoginReq
   { email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOperatingCity :: Kernel.Types.Beckn.Context.City,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     oauthProvider :: API.Types.UI.SocialLogin.OAuthProvider,
     registrationLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
