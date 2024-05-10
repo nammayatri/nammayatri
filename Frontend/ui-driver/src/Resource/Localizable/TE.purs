@@ -1376,3 +1376,6 @@ getTE stringKey =
         WE_WILL_USE_THIS_INFO -> "మేము ఈ సమాచారాన్ని ACకి సంబంధించి కస్టమర్ అంచనాలతో సరిపోల్చడానికి ఉపయోగిస్తాము"
         YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(మీ ప్రొఫైల్ నుండి ఈ వివరాన్ని ఎప్పటికప్పుడు మార్చవచ్చు)"
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "మీ కారు AC పని చేస్తుందా?"
+        SET_THE_AC_ON_TO_ENABLE name -> name <> "ను సక్రియం చేయండి"
+        ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK -> "అన్ని అర్హతలు ఎంచుకున్న వేరియంట్‌లు. దయచేసి తనిఖీ చేయండి"
+        TOP_AC_DRIVER -> "నమ్మ యాత్రిలో టాప్ AC డ్రైవర్ ఎలా ఉండాలో చూడండి"

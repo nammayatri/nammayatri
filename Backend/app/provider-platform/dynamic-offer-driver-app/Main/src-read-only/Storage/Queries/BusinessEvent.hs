@@ -27,7 +27,6 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BusinessEvent.BusinessEvent -> m ())
 updateByPrimaryKey (Domain.Types.BusinessEvent.BusinessEvent {..}) = do
-  _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bookingId (Kernel.Types.Id.getId <$> bookingId),
       Se.Set Beam.distance (Kernel.Types.Common.getMeters <$> distance),

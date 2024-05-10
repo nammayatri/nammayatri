@@ -19,6 +19,7 @@ import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import Domain.Types.UtilsTH
 import qualified Domain.Types.Vehicle as Vehicle
+import qualified Email.Types
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -127,6 +128,7 @@ data TransporterConfigT f = TransporterConfigT
     nightSafetyStartTime :: B.C f Seconds,
     nightSafetyEndTime :: B.C f Seconds,
     cancellationFee :: B.C f HighPrecMoney,
+    currency :: B.C f (Maybe Currency),
     driverDistanceTravelledOnPickupThresholdOnCancel :: B.C f Meters,
     driverTimeSpentOnPickupThresholdOnCancel :: B.C f Seconds,
     cancellationFeeDisputeLimit :: B.C f Int,
@@ -145,6 +147,7 @@ data TransporterConfigT f = TransporterConfigT
     orderAndNotificationStatusCheckFallBackTime :: B.C f Seconds,
     acStatusCheckGap :: B.C f Int,
     kaptureDisposition :: B.C f Text,
+    kaptureQueue :: B.C f Text,
     dummyFromLocation :: B.C f (Maybe A.Value),
     arrivedStopThreshold :: B.C f (Maybe HighPrecMeters),
     arrivedPickupThreshold :: B.C f (Maybe HighPrecMeters),
@@ -156,7 +159,8 @@ data TransporterConfigT f = TransporterConfigT
     considerDriversForSearch :: B.C f Bool,
     dlNumberVerification :: B.C f (Maybe Bool),
     pastDaysRideCounter :: B.C f Int,
-    placeNameCacheExpiryDays :: B.C f (Maybe Int)
+    placeNameCacheExpiryDays :: B.C f (Maybe Int),
+    emailOtpConfig :: B.C f (Maybe Email.Types.EmailOTPConfig)
   }
   deriving (Generic, B.Beamable)
 

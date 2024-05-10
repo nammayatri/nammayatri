@@ -28,10 +28,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common hiding (Error)
 import Servant hiding (throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Tools.Ticket as TT
 
 type SafetyWebhookAPI =
@@ -63,7 +63,7 @@ safetyWebhookHandler ::
 safetyWebhookHandler merchantShortId mbOpCity secret val = do
   merchant <- findMerchantByShortId merchantShortId
   merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just mbOpCity)
-  transporterConfig <- CQTC.findByMerchantOpCityId merchanOperatingCityId Nothing (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchanOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantOpCityId merchanOperatingCityId
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchanOperatingCityId.getId)
@@ -82,18 +82,18 @@ safetyWebhookHandler merchantShortId mbOpCity secret val = do
     DAT.Success (resp :: SafetyWebhookReq) -> do
       logInfo $ "Success: " <> show resp
       let description = encodeToText resp.suspectList
-      ticket <- TT.createTicket merchant.id merchanOperatingCityId (mkTicket description transporterConfig.kaptureDisposition)
+      ticket <- TT.createTicket merchant.id merchanOperatingCityId (mkTicket description transporterConfig)
       logInfo $ "Ticket: " <> show ticket
       pure Ack
     DAT.Error err -> do
       logInfo $ "Error 2: " <> show err
       pure Ack
   where
-    mkTicket description disposition =
+    mkTicket description tConfig =
       Ticket.CreateTicketReq
         { category = "BlackListPortal",
           subCategory = Just "SUSPECTED DRIVER LIST",
-          disposition = disposition,
+          disposition = tConfig.kaptureDisposition,
           issueId = Nothing,
           issueDescription = description,
           mediaFiles = Nothing,
@@ -101,5 +101,6 @@ safetyWebhookHandler merchantShortId mbOpCity secret val = do
           phoneNo = Nothing,
           personId = "SUSPECTED DRIVER LIST",
           classification = Ticket.DRIVER,
-          rideDescription = Nothing
+          rideDescription = Nothing,
+          queue = tConfig.kaptureQueue
         }

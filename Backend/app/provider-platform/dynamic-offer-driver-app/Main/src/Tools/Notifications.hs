@@ -19,6 +19,7 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.BookingUpdateRequest as DBUR
 import Domain.Types.Location
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -30,7 +31,7 @@ import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.SearchRequestForDriver
 import Domain.Types.SearchTry
-import EulerHS.Prelude hiding (id, null)
+import qualified EulerHS.Prelude hiding (null)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Notification.FCM.Flow as FCM
 import Kernel.External.Notification.FCM.Types as FCM
@@ -41,9 +42,10 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Version as Version
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
-import Storage.CachedQueries.Merchant.TransporterConfig
+import Utils.Common.Cac.KeyNameConstants
 
 data EmptyDynamicParam = EmptyDynamicParam
 
@@ -57,6 +59,20 @@ data EditLocationReq = EditLocationReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
+data UpdateLocationNotificationReq = UpdateLocationNotificationReq
+  { rideId :: Id DRide.Ride,
+    origin :: Maybe Location,
+    destination :: Maybe Location,
+    stops :: Maybe [Location],
+    bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest,
+    newEstimatedDistance :: HighPrecMeters,
+    newEstimatedFare :: HighPrecMoney,
+    oldEstimatedDistance :: HighPrecMeters,
+    oldEstimatedFare :: HighPrecMoney,
+    validTill :: UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
 notifyOnNewSearchRequestAvailable ::
   ( CacheFlow m r,
     EsqDBFlow m r
@@ -67,8 +83,8 @@ notifyOnNewSearchRequestAvailable ::
   SearchRequestForDriverAPIEntity ->
   m ()
 notifyOnNewSearchRequestAvailable merchantOpCityId personId mbDeviceToken entityData = do
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData (FCMNotificationRecipient personId.getId mbDeviceToken) EulerHS.Prelude.id
   where
     notifType = FCM.NEW_RIDE_AVAILABLE
     notificationData =
@@ -85,7 +101,7 @@ notifyOnNewSearchRequestAvailable merchantOpCityId personId mbDeviceToken entity
     title = FCMNotificationTitle "New ride available for offering"
     body =
       FCMNotificationBody $
-        unwords
+        EulerHS.Prelude.unwords
           [ "A new ride for",
             showTimeIst entityData.startTime,
             "is available",
@@ -109,7 +125,7 @@ notifyOnCancel ::
 notifyOnCancel merchantOpCityId booking person cancellationSource = do
   cancellationText <- getCancellationText
   let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   FCM.notifyPerson transporterConfig.fcmConfig (notificationData cancellationText) $ FCMNotificationRecipient person.id.getId person.deviceToken
   where
     notificationData cancellationText =
@@ -128,28 +144,28 @@ notifyOnCancel merchantOpCityId booking person cancellationSource = do
     getCancellationText = case cancellationSource of
       SBCR.ByUser ->
         return $
-          unwords
+          EulerHS.Prelude.unwords
             [ "Customer had to cancel your ride for",
               showTimeIst (booking.startTime) <> ".",
               "Check the app for more details."
             ]
       SBCR.ByMerchant ->
         return $
-          unwords
+          EulerHS.Prelude.unwords
             [ "Your agency had to cancel the ride for",
               showTimeIst (booking.startTime) <> ".",
               "Check the app for more details."
             ]
       SBCR.ByDriver ->
         return $
-          unwords
+          EulerHS.Prelude.unwords
             [ "You have cancelled the ride for",
               showTimeIst (booking.startTime) <> ".",
               "Check the app for more details."
             ]
       SBCR.ByApplication ->
         return $
-          unwords
+          EulerHS.Prelude.unwords
             [ "Sorry your ride for",
               showTimeIst (booking.startTime),
               "was cancelled.",
@@ -167,7 +183,7 @@ notifyOnRegistration ::
   Maybe FCM.FCMRecipientToken ->
   m ()
 notifyOnRegistration merchantOpCityId regToken personId mbToken = do
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   FCM.notifyPerson transporterConfig.fcmConfig notificationData $ FCMNotificationRecipient personId.getId mbToken
   where
     tokenId = RegToken.id regToken
@@ -185,7 +201,7 @@ notifyOnRegistration merchantOpCityId regToken personId mbToken = do
     title = FCMNotificationTitle $ T.pack "Registration Completed!"
     body =
       FCMNotificationBody $
-        unwords
+        EulerHS.Prelude.unwords
           [ "Welcome Yatri Partner!",
             "Click here to set up your account."
           ]
@@ -233,8 +249,8 @@ sendNotificationToDriver ::
   m ()
 sendNotificationToDriver merchantOpCityId displayOption priority notificationType notificationTitle message driver mbToken = do
   let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority False notificationData $ FCMNotificationRecipient driver.id.getId mbToken
+  transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority False notificationData (FCMNotificationRecipient driver.id.getId mbToken) EulerHS.Prelude.id
   where
     notificationData =
       FCM.FCMData
@@ -266,8 +282,8 @@ sendMessageToDriver ::
   m ()
 sendMessageToDriver merchantOpCityId displayOption priority notificationType notificationTitle message driver messageId = do
   let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority False notificationData $ FCMNotificationRecipient driver.id.getId driver.deviceToken
+  transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority False notificationData (FCMNotificationRecipient driver.id.getId driver.deviceToken) EulerHS.Prelude.id
   where
     notificationData =
       FCM.FCMData
@@ -294,13 +310,13 @@ notifyDriverNewAllocation ::
   Maybe FCM.FCMRecipientToken ->
   m ()
 notifyDriverNewAllocation merchantOpCityId bookingId personId mbToken = do
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbToken
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData (FCMNotificationRecipient personId.getId mbToken) EulerHS.Prelude.id
   where
     title = FCM.FCMNotificationTitle "New allocation request."
     body =
       FCM.FCMNotificationBody $
-        unwords
+        EulerHS.Prelude.unwords
           [ "New ride request!",
             "Check the app for more details."
           ]
@@ -325,13 +341,13 @@ notifyFarePolicyChange ::
   Maybe FCM.FCMRecipientToken ->
   m ()
 notifyFarePolicyChange merchantOpCityId coordinatorId mbToken = do
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   FCM.notifyPerson transporterConfig.fcmConfig notificationData $ FCMNotificationRecipient coordinatorId.getId mbToken
   where
     title = FCM.FCMNotificationTitle "Fare policy changed."
     body =
       FCM.FCMNotificationBody $
-        unwords
+        EulerHS.Prelude.unwords
           [ "Fare has been updated."
           ]
     notificationData =
@@ -355,13 +371,13 @@ notifyDiscountChange ::
   Maybe FCM.FCMRecipientToken ->
   m ()
 notifyDiscountChange merchantOpCityId coordinatorId mbToken = do
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   FCM.notifyPerson transporterConfig.fcmConfig notificationData $ FCMNotificationRecipient coordinatorId.getId mbToken
   where
     title = FCM.FCMNotificationTitle "Discount updated."
     body =
       FCM.FCMNotificationBody $
-        unwords
+        EulerHS.Prelude.unwords
           [ "Discount has been changed."
           ]
     notificationData =
@@ -383,19 +399,19 @@ notifyDriverClearedFare ::
   Id DMOC.MerchantOperatingCity ->
   Person ->
   Id SearchTry ->
-  Money ->
+  Price ->
   m ()
 notifyDriverClearedFare merchantOpCityId driver sReqId fare = do
   let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient driver.id.getId driver.deviceToken
+  transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData (FCMNotificationRecipient driver.id.getId driver.deviceToken) EulerHS.Prelude.id
   where
     title = FCM.FCMNotificationTitle "Clearing Fare!"
     body =
       FCM.FCMNotificationBody $
-        unwords
+        EulerHS.Prelude.unwords
           [ "Clearing fare - ",
-            show fare.getMoney <> "."
+            show fare.amount <> " " <> show fare.currency <> "."
           ]
     notificationData =
       FCM.FCMData
@@ -419,8 +435,8 @@ notifyOnCancelSearchRequest ::
   m ()
 notifyOnCancelSearchRequest merchantOpCityId person searchTryId = do
   let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
+  transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
   where
     notifType = FCM.CANCELLED_SEARCH_REQUEST
     notificationData =
@@ -437,7 +453,7 @@ notifyOnCancelSearchRequest merchantOpCityId person searchTryId = do
     title = FCMNotificationTitle "Search Request cancelled!"
     body =
       FCMNotificationBody $
-        unwords
+        EulerHS.Prelude.unwords
           [ "Search request has been cancelled by customer"
           ]
 
@@ -451,8 +467,8 @@ notifyPaymentFailed ::
   Id DOrder.PaymentOrder ->
   m ()
 notifyPaymentFailed merchantOpCityId personId mbDeviceToken orderId = do
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData (FCMNotificationRecipient personId.getId mbDeviceToken) EulerHS.Prelude.id
   where
     notifType = FCM.PAYMENT_FAILED
     notificationData =
@@ -469,7 +485,7 @@ notifyPaymentFailed merchantOpCityId personId mbDeviceToken orderId = do
     title = FCMNotificationTitle "Payment Failed!"
     body =
       FCMNotificationBody $
-        unwords
+        EulerHS.Prelude.unwords
           [ "Your payment attempt was unsuccessful."
           ]
 
@@ -483,8 +499,8 @@ notifyPaymentPending ::
   Id DOrder.PaymentOrder ->
   m ()
 notifyPaymentPending merchantOpCityId personId mbDeviceToken orderId = do
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData (FCMNotificationRecipient personId.getId mbDeviceToken) EulerHS.Prelude.id
   where
     notifType = FCM.PAYMENT_PENDING
     notificationData =
@@ -501,7 +517,7 @@ notifyPaymentPending merchantOpCityId personId mbDeviceToken orderId = do
     title = FCMNotificationTitle "Payment Pending!"
     body =
       FCMNotificationBody $
-        unwords
+        EulerHS.Prelude.unwords
           [ "To continue taking rides on Namma Yatri, clear you payment dues"
           ]
 
@@ -515,8 +531,8 @@ notifyPaymentSuccess ::
   m ()
 notifyPaymentSuccess merchantOpCityId person orderId = do
   let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
+  transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
   where
     notifType = FCM.PAYMENT_SUCCESS
     notificationData =
@@ -533,7 +549,7 @@ notifyPaymentSuccess merchantOpCityId person orderId = do
     title = FCMNotificationTitle "Payment Successful!"
     body =
       FCMNotificationBody $
-        unwords
+        EulerHS.Prelude.unwords
           [ "Your payment has been processed successfully. Start earning with Namma Yatri!"
           ]
 
@@ -546,8 +562,8 @@ notifyPaymentModeManualOnCancel ::
   Maybe FCM.FCMRecipientToken ->
   m ()
 notifyPaymentModeManualOnCancel merchantOpCityId personId mbDeviceToken = do
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData (FCMNotificationRecipient personId.getId mbDeviceToken) EulerHS.Prelude.id
   where
     notifType = FCM.PAYMENT_MODE_MANUAL
     notificationData =
@@ -564,7 +580,7 @@ notifyPaymentModeManualOnCancel merchantOpCityId personId mbDeviceToken = do
     title = FCMNotificationTitle "Payment mode changed to manual"
     body =
       FCMNotificationBody $
-        unwords
+        EulerHS.Prelude.unwords
           [ "You have cancelled your UPI Autopay. You can clear your dues manually from the Plan page."
           ]
 
@@ -577,8 +593,8 @@ notifyPaymentModeManualOnPause ::
   Maybe FCM.FCMRecipientToken ->
   m ()
 notifyPaymentModeManualOnPause merchantOpCityId personId mbDeviceToken = do
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData (FCMNotificationRecipient personId.getId mbDeviceToken) EulerHS.Prelude.id
   where
     notifType = FCM.PAYMENT_MODE_MANUAL
     notificationData =
@@ -595,7 +611,7 @@ notifyPaymentModeManualOnPause merchantOpCityId personId mbDeviceToken = do
     title = FCMNotificationTitle "Payment mode changed to manual"
     body =
       FCMNotificationBody $
-        unwords
+        EulerHS.Prelude.unwords
           [ "You have paused your UPI Autopay. You can clear your dues manually from the Plan page."
           ]
 
@@ -608,8 +624,8 @@ notifyPaymentModeManualOnSuspend ::
   m ()
 notifyPaymentModeManualOnSuspend merchantOpCityId person = do
   let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
+  transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
   where
     notifType = FCM.PAYMENT_MODE_MANUAL
     notificationData =
@@ -626,7 +642,7 @@ notifyPaymentModeManualOnSuspend merchantOpCityId person = do
     title = FCMNotificationTitle "Payment mode changed to manual"
     body =
       FCMNotificationBody $
-        unwords
+        EulerHS.Prelude.unwords
           [ "Your UPI Autopay has been suspended. You can clear your dues manually from the Plan page."
           ]
 
@@ -640,8 +656,8 @@ sendOverlay ::
   m ()
 sendOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} = do
   let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
+  transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
   where
     notifType = FCM.DRIVER_NOTIFY
     notificationData =
@@ -658,6 +674,58 @@ sendOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} = do
     notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title -- if nothing then anyways fcmShowNotification is false
     body = FCMNotificationBody $ fromMaybe "Description" description
 
+sendUpdateLocOverlay ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  FCM.FCMOverlayReq ->
+  UpdateLocationNotificationReq ->
+  m ()
+sendUpdateLocOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} entityData = do
+  let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
+  where
+    notifType = FCM.DRIVER_NOTIFY_LOCATION_UPDATE
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = if isJust req.title then FCM.SHOW else FCM.DO_NOT_SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = person.id.getId,
+          fcmEntityData = Just entityData,
+          fcmNotificationJSON = FCM.createAndroidNotification notifTitle body notifType Nothing,
+          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req,
+          fcmNotificationId = Nothing
+        }
+    notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title -- if nothing then anyways fcmShowNotification is false
+    body = FCMNotificationBody $ fromMaybe "Description" description
+
+buildFCMOverlayReq :: Text -> FCM.FCMOverlayReq
+buildFCMOverlayReq bookingUpdateReqId =
+  FCM.FCMOverlayReq
+    { title = Just "Trip Update !",
+      description = Nothing,
+      imageUrl = Just "https://firebasestorage.googleapis.com/v0/b/jp-beckn-dev.appspot.com/o/add_first_stop.png?alt=media&token=e2cb516b-d6e3-4980-8c1e-999bcf43b9ab",
+      okButtonText = Just "Accept & Navigate",
+      cancelButtonText = Just "Decline",
+      actions = [],
+      actions2 = [FCM.CALL_API FCM.CallAPIDetails {endPoint = "https://api.beckn.juspay.in/dobpp/ui/edit/result/" <> bookingUpdateReqId, method = "POST", reqBody = object ["action" .= String "ACCEPT"]}],
+      secondaryActions2 = Just [FCM.CALL_API FCM.CallAPIDetails {endPoint = "https://api.beckn.juspay.in/dobpp/ui/edit/result/" <> bookingUpdateReqId, method = "POST", reqBody = object ["action" .= String "REJECT"]}],
+      link = Nothing,
+      endPoint = Nothing,
+      method = Nothing,
+      reqBody = Null,
+      delay = Nothing,
+      contactSupportNumber = Nothing,
+      toastMessage = Nothing,
+      secondaryActions = Nothing,
+      socialMediaLinks = Nothing,
+      showPushNotification = Just True
+    }
+
 notifyPickupOrDropLocationChange ::
   ( CacheFlow m r,
     EsqDBFlow m r
@@ -667,8 +735,8 @@ notifyPickupOrDropLocationChange ::
   m ()
 notifyPickupOrDropLocationChange person entityData = do
   let newCityId = cityFallback person.clientBundleVersion person.merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
+  transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
   where
     notifType = FCM.EDIT_LOCATION
     notificationData =
@@ -685,7 +753,7 @@ notifyPickupOrDropLocationChange person entityData = do
     title = FCMNotificationTitle "Pickup and/or drop location has been changed by the customer"
     body =
       FCMNotificationBody $
-        unwords
+        EulerHS.Prelude.unwords
           [ "Customer has changed pickup or drop location. Please check the app for more details"
           ]
 
@@ -704,13 +772,13 @@ mkOverlayReq _overlay@DTMO.Overlay {..} modDescription modOkButtonText modCancel
 buildSendSearchRequestNotificationData ::
   ( ServiceFlow m r,
     ToJSON SearchRequestForDriverAPIEntity,
-    ToJSON b
+    ToJSON EmptyDynamicParam
   ) =>
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   SearchRequestForDriverAPIEntity ->
-  b ->
-  m (Notification.NotificationReq SearchRequestForDriverAPIEntity b)
+  EmptyDynamicParam ->
+  m (Notification.NotificationReq SearchRequestForDriverAPIEntity EmptyDynamicParam)
 buildSendSearchRequestNotificationData driverId mbDeviceToken entityData dynamicParam =
   return $
     Notification.NotificationReq
@@ -730,7 +798,7 @@ buildSendSearchRequestNotificationData driverId mbDeviceToken entityData dynamic
     title = "New ride available for offering"
     mkBody =
       cs $
-        unwords
+        EulerHS.Prelude.unwords
           [ "A new ride for",
             cs $ showTimeIst entityData.startTime,
             "is available",
@@ -743,13 +811,13 @@ buildSendSearchRequestNotificationData driverId mbDeviceToken entityData dynamic
 
 sendSearchRequestToDriverNotification ::
   ( ServiceFlow m r,
-    ToJSON a,
-    ToJSON b,
+    ToJSON SearchRequestForDriverAPIEntity,
+    ToJSON EmptyDynamicParam,
     HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  Notification.NotificationReq a b ->
+  Notification.NotificationReq SearchRequestForDriverAPIEntity EmptyDynamicParam ->
   m ()
 sendSearchRequestToDriverNotification merchantId merchantOpCityId req = Notification.notifyPersonWithAllProviders handler req False
   where
@@ -769,6 +837,10 @@ sendSearchRequestToDriverNotification merchantId merchantOpCityId req = Notifica
         DMSC.NotificationServiceConfig nsc -> pure nsc
         _ -> throwError $ InternalError "Unknow Service Config"
 
+    iosModifier (iosFCMdata :: (FCM.FCMData SearchRequestForDriverAPIEntity)) = iosFCMdata {fcmEntityData = modifyEntity iosFCMdata.fcmEntityData}
+
+    modifyEntity SearchRequestForDriverAPIEntity {..} = IOSSearchRequestForDriverAPIEntity {..}
+
 data StopReq = StopReq
   { bookingId :: Id Booking,
     stop :: Maybe LocationAPIEntity,
@@ -785,8 +857,8 @@ notifyStopModification ::
   m ()
 notifyStopModification person entityData = do
   let newCityId = cityFallback person.clientBundleVersion person.merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  transporterConfig <- findByMerchantOpCityId newCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken
+  transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
   where
     notifType = if entityData.isEdit then FCM.EDIT_STOP else FCM.ADD_STOP
     notificationData =
@@ -803,7 +875,7 @@ notifyStopModification person entityData = do
     title = FCMNotificationTitle (if entityData.isEdit then "Stop Edited" else "Stop Added")
     body =
       FCMNotificationBody $
-        unwords
+        EulerHS.Prelude.unwords
           [ if entityData.isEdit then "Customer edited stop!" else "Customer added a stop!"
           ]
 

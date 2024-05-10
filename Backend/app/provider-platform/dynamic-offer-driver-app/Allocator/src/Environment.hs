@@ -99,7 +99,8 @@ data HandlerEnv = HandlerEnv
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     singleBatchProcessingTempDelay :: NominalDiffTime,
-    ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig
+    ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
+    cacConfig :: CacConfig
   }
   deriving (Generic)
 

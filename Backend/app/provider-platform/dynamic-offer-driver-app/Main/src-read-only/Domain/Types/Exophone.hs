@@ -4,6 +4,7 @@
 
 module Domain.Types.Exophone where
 
+import Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity

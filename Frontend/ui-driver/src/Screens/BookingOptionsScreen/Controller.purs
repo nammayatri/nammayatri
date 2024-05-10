@@ -2,11 +2,12 @@ module Screens.BookingOptionsScreen.Controller where
 
 import Components.ChooseVehicle as ChooseVehicle
 import Components.PrimaryButton as PrimaryButton
+import Components.PopUpModal as PopUpModal
 import Data.Array (filter, length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Log (trackAppScreenRender)
 import Prelude (class Show, map, pure, show, unit, discard, void, (<>), (==), not, ($), (>))
-import PrestoDOM (Eval, update, continue, exit)
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (BookingOptionsScreenState, VehicleP, RidePreference)
 import Common.Types.App (LazyCheck(..))
@@ -15,6 +16,7 @@ import Helpers.Utils (getVehicleVariantImage, contactSupportNumber)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Effect.Unsafe (unsafePerformEffect)
+import JBridge as JB
 
 instance showAction :: Show Action where
   show _ = ""
@@ -32,6 +34,9 @@ data Action
   | ToggleRidePreference RidePreference
   | UpdateACAvailability Boolean
   | CallSupport
+  | ShowACVideoPopup
+  | TopAcDriverAction PopUpModal.Action
+  | OpenLink String
 
 data ScreenOutput
   = GoBack
@@ -39,11 +44,33 @@ data ScreenOutput
   | ToggleACAvailability BookingOptionsScreenState Boolean
 
 eval :: Action -> BookingOptionsScreenState -> Eval Action ScreenOutput BookingOptionsScreenState
-eval BackPressed state = exit GoBack
+eval BackPressed state = 
+  if state.props.acExplanationPopup then continue state { props { acExplanationPopup = false } }
+  else exit GoBack
 
-eval (ToggleRidePreference service) state = exit $ ChangeRidePreference state service
+eval (ToggleRidePreference service) state = 
+  if service.isUsageRestricted then do
+    void $ pure $ JB.toast $ getString $ SET_THE_AC_ON_TO_ENABLE service.name
+    update state
+  else exit $ ChangeRidePreference state service
 
 eval (UpdateACAvailability acServiceToggle) state = exit $ ToggleACAvailability state $ not acServiceToggle
+
+eval ShowACVideoPopup state = continue state { props { acExplanationPopup = not state.props.acExplanationPopup } }
+
+eval (TopAcDriverAction action) state = do
+  let acVideoLink = "https://www.youtube.com/watch?v=MbgxZkqxPLQ"
+  case action of
+    PopUpModal.DismissPopup -> continue state { props { acExplanationPopup = false } }
+    PopUpModal.OnButton2Click -> continue state { props { acExplanationPopup = false } }
+    PopUpModal.OnCoverImageClick -> continueWithCmd state [pure $ OpenLink acVideoLink]
+    PopUpModal.OnButton1Click -> continueWithCmd state [pure $ OpenLink acVideoLink]
+    _ -> continue state
+
+eval (OpenLink link) state = continueWithCmd state [ do 
+  void $ JB.openUrlInApp link
+  pure AfterRender
+  ]
 
 eval CallSupport state = do
   void $ pure $ unsafePerformEffect $ contactSupportNumber ""

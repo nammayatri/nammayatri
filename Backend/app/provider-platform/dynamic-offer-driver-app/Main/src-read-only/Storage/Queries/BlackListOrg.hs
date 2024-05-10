@@ -32,8 +32,11 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BlackListOrg.BlackListOrg -> m ())
 updateByPrimaryKey (Domain.Types.BlackListOrg.BlackListOrg {..}) = do
-  _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.domain domain, Se.Set Beam.subscriberId (Kernel.Types.Id.getShortId subscriberId)] [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+  updateWithKV
+    [ Se.Set Beam.domain domain,
+      Se.Set Beam.subscriberId (Kernel.Types.Id.getShortId subscriberId)
+    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.BlackListOrg Domain.Types.BlackListOrg.BlackListOrg where
   fromTType' (Beam.BlackListOrgT {..}) = do pure $ Just Domain.Types.BlackListOrg.BlackListOrg {domain = domain, id = Kernel.Types.Id.Id id, subscriberId = Kernel.Types.Id.ShortId subscriberId}

@@ -21,7 +21,7 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person (Person)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
-import Kernel.Types.Common (HighPrecMoney)
+import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id
 
 data RiderDetailsE e = RiderDetails
@@ -36,6 +36,7 @@ data RiderDetailsE e = RiderDetails
     hasTakenValidRide :: Bool,
     hasTakenValidRideAt :: Maybe UTCTime,
     cancellationDues :: HighPrecMoney,
+    currency :: Currency,
     disputeChancesUsed :: Int,
     merchantId :: Id Merchant,
     otpCode :: Maybe Text,

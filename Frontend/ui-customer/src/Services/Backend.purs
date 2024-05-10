@@ -397,6 +397,15 @@ selectEstimateBT payload estimateId = do
         withAPIResultBT (EP.selectEstimate estimateId) identity errorHandler (lift $ lift $ callAPI headers (SelectEstimateReq estimateId payload))
     where
       errorHandler errorPayload = do
+            let errResp = errorPayload.response
+                codeMessage = decodeError errResp.errorMessage "errorCode"
+            if  errorPayload.code == 400 && codeMessage == "SEARCH_REQUEST_EXPIRED" then
+                pure $ toast (getString ESTIMATES_EXPIRY_ERROR)
+            else if errorPayload.code == 400 then
+                pure $ toast codeMessage
+            else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = SearchLocationModel}})
+            _ <- pure $ setValueToLocalStore LOCAL_STAGE "SearchLocationModel"
             BackT $ pure GoBack
 
 selectEstimate payload estimateId = do
@@ -405,11 +414,12 @@ selectEstimate payload estimateId = do
     where
         unwrapResponse (x) = x
 
-makeEstimateSelectReq :: Boolean -> Maybe Int -> DEstimateSelect
-makeEstimateSelectReq isAutoAssigned tipForDriver= DEstimateSelect {
+makeEstimateSelectReq :: Boolean -> Maybe Int -> Array String -> DEstimateSelect
+makeEstimateSelectReq isAutoAssigned tipForDriver otherSelectedEstimates = DEstimateSelect {
       "customerExtraFee": tipForDriver,
       "autoAssignEnabled": isAutoAssigned,
-      "autoAssignEnabledV2": isAutoAssigned
+      "autoAssignEnabledV2": isAutoAssigned,
+      "otherSelectedEstimates": otherSelectedEstimates 
     }
 
 ------------------------------------------------------------------------ SelectList Function ------------------------------------------------------------------------------------------

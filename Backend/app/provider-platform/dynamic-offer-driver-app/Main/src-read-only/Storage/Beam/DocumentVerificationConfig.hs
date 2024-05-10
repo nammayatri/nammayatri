@@ -21,6 +21,7 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     disableWarning :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     documentType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
+    isDefaultEnabledOnManualVerification :: B.C f Kernel.Prelude.Bool,
     isDisabled :: B.C f Kernel.Prelude.Bool,
     isHidden :: B.C f Kernel.Prelude.Bool,
     isMandatory :: B.C f Kernel.Prelude.Bool,

@@ -13,12 +13,12 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FeedbackFormT f = FeedbackFormT
-  { answer :: (B.C f [Kernel.Prelude.Text]),
-    answerType :: (B.C f Domain.Types.FeedbackForm.AnswerType),
-    categoryName :: (B.C f Domain.Types.FeedbackForm.Category),
-    id :: (B.C f Kernel.Prelude.Text),
-    question :: (B.C f Kernel.Prelude.Text),
-    rating :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int))
+  { answer :: B.C f [Kernel.Prelude.Text],
+    answerType :: B.C f Domain.Types.FeedbackForm.AnswerType,
+    categoryName :: B.C f Domain.Types.FeedbackForm.Category,
+    id :: B.C f Kernel.Prelude.Text,
+    question :: B.C f Kernel.Prelude.Text,
+    rating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +28,6 @@ instance B.Table FeedbackFormT where
 
 type FeedbackForm = FeedbackFormT Identity
 
-$(enableKVPG (''FeedbackFormT) [('id)] [])
+$(enableKVPG ''FeedbackFormT ['id] [])
 
-$(mkTableInstances (''FeedbackFormT) "feedback_form")
+$(mkTableInstances ''FeedbackFormT "feedback_form")

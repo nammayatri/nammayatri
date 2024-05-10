@@ -33,7 +33,8 @@ import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverCoins.Types as DCT
 import SharedLogic.DriverFee (delCoinAdjustedInSubscriptionByDriverIdKey, getCoinAdjustedInSubscriptionByDriverIdKey)
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
+import qualified SharedLogic.Merchant as SMerchant
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.Queries.Coins.CoinHistory as CHistory
 import Storage.Queries.DailyStatsExtra as DS
 import Storage.Queries.DriverPlan as DPlan
@@ -41,6 +42,7 @@ import Storage.Queries.DriverStats as QDS
 import Storage.Queries.Person as Person
 import Storage.Queries.PurchaseHistory as PHistory
 import Tools.Error
+import Utils.Common.Cac.KeyNameConstants
 
 data CoinTransactionHistoryItem = CoinTransactionHistoryItem
   { coins :: Int,
@@ -68,16 +70,20 @@ data CoinUsageHistoryItem = CoinUsageHistoryItem
   { numCoins :: Int,
     createdAt :: UTCTime,
     title :: Text,
-    cash :: HighPrecMoney
+    cash :: HighPrecMoney,
+    cashWithCurrency :: PriceAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data CoinsUsageRes = CoinsUsageRes
   { coinBalance :: Int,
     totalCoinConvertedToCash :: HighPrecMoney,
+    totalCoinConvertedToCashWithCurrency :: PriceAPIEntity,
     coinConvertedToCashUsedForLatestDues :: Maybe Int,
     coinConvertedTocashLeft :: HighPrecMoney,
+    coinConvertedToCashLeftWithCurrency :: PriceAPIEntity,
     coinConversionRate :: HighPrecMoney,
+    coinConversionRateWithCurrency :: PriceAPIEntity,
     coinUsageHistory :: [CoinUsageHistoryItem]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -96,7 +102,7 @@ type AccumulationResult = [(Text, Int, CoinStatus)]
 
 getCoinEventSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> UTCTime -> Flow CoinTransactionRes
 getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
-  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
@@ -151,7 +157,7 @@ sumExpiredCoinsOnThatDate coinHistories time todayStart = do
 
 getCoinUsageSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> Flow CoinsUsageRes
 getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset = do
-  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
@@ -166,13 +172,17 @@ getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset =
     Nothing -> pure Nothing
   let coinConvertedTocashLeft = mbDriverStat <&> (.coinCovertedToCashLeft)
       totalCoinConvertedToCash = mbDriverStat <&> (.totalCoinsConvertedCash)
+  let currency = fromMaybe transporterConfig.currency (mbDriverStat <&> (.currency))
   pure
     CoinsUsageRes
       { coinBalance = coinBalance_,
         totalCoinConvertedToCash = fromMaybe 0.0 totalCoinConvertedToCash,
+        totalCoinConvertedToCashWithCurrency = PriceAPIEntity (fromMaybe 0.0 totalCoinConvertedToCash) currency,
         coinConversionRate = transporterConfig.coinConversionRate,
+        coinConversionRateWithCurrency = PriceAPIEntity transporterConfig.coinConversionRate currency,
         coinUsageHistory = coinUsageHistory,
         coinConvertedTocashLeft = fromMaybe 0.0 coinConvertedTocashLeft,
+        coinConvertedToCashLeftWithCurrency = PriceAPIEntity (fromMaybe 0.0 coinConvertedTocashLeft) currency,
         coinConvertedToCashUsedForLatestDues = coinConvertedToCashUsage
       }
   where
@@ -182,6 +192,7 @@ getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset =
         { numCoins = historyItem.numCoins,
           createdAt = historyItem.createdAt,
           cash = historyItem.cash,
+          cashWithCurrency = PriceAPIEntity historyItem.cash historyItem.currency,
           title = historyItem.title
         }
 
@@ -202,7 +213,8 @@ accumulateCoins targetAmount = takeCoinsRequired (targetAmount, []) False
 
 useCoinsHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> ConvertCoinToCashReq -> Flow APISuccess
 useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
-  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
   _ <- DPlan.findByDriverId driverId >>= fromMaybeM (InternalError $ "No plan against the driver id" <> driverId.getId <> "Please choose a plan")
@@ -228,6 +240,7 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
                 merchantOptCityId = merchantOpCityId.getId,
                 numCoins = coins,
                 cash = calculatedAmount,
+                currency,
                 createdAt = now,
                 updatedAt = now,
                 title = "converted from coins"
@@ -246,7 +259,7 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
 
 getRideStatusPastDays :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow RideStatusPastDaysRes
 getRideStatusPastDays (driverId, merchantId_, merchantOpCityId) = do
-  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
   localTimeToday <- getLocalCurrentTime transporterConfig.timeDiffFromUtc

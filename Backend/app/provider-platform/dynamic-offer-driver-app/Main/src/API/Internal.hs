@@ -11,6 +11,7 @@ import qualified API.Internal.CustomerCancellationDues as CancellationDues
 import qualified API.Internal.DriverInactiveFCM as DriverInactiveFCM
 import qualified API.Internal.DriverReferee as DriverReferee
 import qualified API.Internal.FeedbackForm as FeedbackForm
+import qualified API.Internal.ReportACIssue as ReportACIssue
 import Environment
 import Servant
 import Tools.Auth ()
@@ -19,6 +20,7 @@ type API =
   "internal"
     :> ( DriverReferee.API
            :<|> FeedbackForm.API
+           :<|> ReportACIssue.API
            :<|> Auth.API
            :<|> BulkLocUpdate.API
            :<|> CancellationDues.API
@@ -30,6 +32,7 @@ handler :: FlowServer API
 handler =
   DriverReferee.handler
     :<|> FeedbackForm.handler
+    :<|> ReportACIssue.handler
     :<|> Auth.handler
     :<|> BulkLocUpdate.handler
     :<|> CancellationDues.handler

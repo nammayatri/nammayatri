@@ -32,6 +32,6 @@ data EventType = DRIVER_IN_POOL | RIDE_COMMENCED | DRIVER_ASSIGNED | RIDE_CONFIR
 
 data WhenPoolWasComputed = ON_SEARCH | ON_CONFIRM | ON_REALLOCATION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EventType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EventType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''WhenPoolWasComputed))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''WhenPoolWasComputed)

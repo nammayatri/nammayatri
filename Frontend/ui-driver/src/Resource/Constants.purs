@@ -234,3 +234,9 @@ getCategoryFromVariant :: String -> Maybe ST.VehicleCategory -- check here if an
 getCategoryFromVariant variant = case variant of
   "AUTO_RICKSHAW" -> Just ST.AutoCategory
   _ -> Just ST.CarCategory
+
+serviceTierMapping :: String -> Maybe Boolean -> String
+serviceTierMapping tierName acRide = 
+  case acRide, tierName of
+    Just true, "AC Mini" -> "Mini"
+    _ , _ -> tierName

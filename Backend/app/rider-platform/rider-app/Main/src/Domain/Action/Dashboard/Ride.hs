@@ -37,12 +37,14 @@ import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking as DTB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import Domain.Types.CancellationReason
+import Domain.Types.Estimate
 import Domain.Types.Location (Location (..))
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.SearchRequest as DSearch
 import qualified Domain.Types.Sos as DSos
 import qualified Domain.Types.VehicleVariant as VehVar
 import Environment
@@ -62,8 +64,10 @@ import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.Sos as CQSos
+import qualified Storage.Clickhouse.EstimateBreakup as CH
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
+import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
@@ -311,20 +315,26 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
           endOtp = ride.endOtp
         }
 
-rideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id Common.Ride -> m Common.RideInfoRes
+rideInfo :: Id DM.Merchant -> Id Common.Ride -> Flow Common.RideInfoRes
 rideInfo merchantId reqRideId = do
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  estimatedDuration <- case booking.quoteId of
+  mbSearchReq :: Maybe DSearch.SearchRequest <- case booking.quoteId of
     Just quoteId -> do
       mbQuote <- B.runInReplica $ QQuote.findById quoteId
       case mbQuote of
-        Just quote -> do
-          mbSearchReq <- B.runInReplica $ QSearch.findById quote.requestId
-          case mbSearchReq of
-            Just searchReq -> pure searchReq.estimatedRideDuration
-            Nothing -> pure Nothing
+        Just quote -> B.runInReplica $ QSearch.findById quote.requestId
+        Nothing -> pure Nothing
+    Nothing -> pure Nothing
+  let estimatedDuration :: Maybe Seconds = (.estimatedRideDuration) =<< mbSearchReq
+  estBreakup <- case mbSearchReq of
+    Just searchreq -> do
+      mbEstimate <- B.runInReplica $ QEst.findBySRIdAndStatus COMPLETED searchreq.id
+      case mbEstimate of
+        Just estimate -> do
+          breakup <- CH.findAllByEstimateIdT estimate.id
+          pure $ Just breakup
         Nothing -> pure Nothing
     Nothing -> pure Nothing
   unless (merchantId == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
@@ -363,6 +373,8 @@ rideInfo merchantId reqRideId = do
         driverRegisteredAt = ride.driverRegisteredAt,
         vehicleNo = ride.vehicleNumber,
         vehicleModel = ride.vehicleModel,
+        vehicleVariant = castVehicleVariant ride.vehicleVariant,
+        vehicleServiceTierName = show <$> ride.vehicleServiceTierType,
         rideBookingTime = booking.createdAt,
         actualDriverArrivalTime = ride.driverArrivalTime,
         rideStartTime = ride.rideStartTime,
@@ -384,8 +396,23 @@ rideInfo merchantId reqRideId = do
         nextStopLocation = getStopFromBookingDetails booking.bookingDetails,
         rideScheduledAt = booking.startTime,
         fareProductType = mkFareProductType booking.bookingDetails,
-        endOtp = ride.endOtp
+        endOtp = ride.endOtp,
+        estimateFareBP = map transformEstimate <$> estBreakup
       }
+
+transformEstimate :: CH.EstimateBreakup -> Common.EstimateBreakup
+transformEstimate estimate =
+  Common.EstimateBreakup
+    { Common.price =
+        Common.EstimateBreakupPrice
+          { Common.value =
+              PriceAPIEntity
+                { amount = CH.priceValue estimate,
+                  currency = CH.priceCurrency estimate
+                }
+          },
+      Common.title = CH.title estimate
+    }
 
 mkFareProductType :: DTB.BookingDetails -> Common.FareProductType
 mkFareProductType bookingDetails = case bookingDetails of

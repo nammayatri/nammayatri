@@ -73,6 +73,7 @@ import RemoteConfig (RCCarousel(..))
 import Mobility.Prelude (boolToVisibility)
 import Constants 
 import LocalStorage.Cache (getValueFromCache)
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -439,7 +440,7 @@ freeTrialEndingPopupConfig state =
 paymentPendingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 paymentPendingPopupConfig state =
   let popupType = state.props.subscriptionPopupType
-      dues = if state.data.paymentState.totalPendingManualDues /= 0.0 then "( ₹" <> HU.getFixedTwoDecimals state.data.paymentState.totalPendingManualDues <> ") " else ""
+      dues = if state.data.paymentState.totalPendingManualDues /= 0.0 then "( ₹" <> getFixedTwoDecimals state.data.paymentState.totalPendingManualDues <> ") " else ""
       isHighDues = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.high_due_warning_limit
   in
   PopUpModal.config {
@@ -965,7 +966,7 @@ autopayBannerConfig state configureImage =
   let
     config = Banner.config
     bannerType = state.props.autoPayBanner
-    dues = HU.getFixedTwoDecimals state.data.paymentState.totalPendingManualDues
+    dues = getFixedTwoDecimals state.data.paymentState.totalPendingManualDues
     config' = config
       {
         backgroundColor = case bannerType of
@@ -977,7 +978,7 @@ autopayBannerConfig state configureImage =
                   FREE_TRIAL_BANNER -> getString SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES 
                   SETUP_AUTOPAY_BANNER -> getString SETUP_AUTOPAY_FOR_EASY_PAYMENTS
                   _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> getVarString CLEAR_DUES_BANNER_TITLE [dues]
-                  DUE_LIMIT_WARNING_BANNER -> getVarString DUE_LIMIT_WARNING_BANNER_TITLE [HU.getFixedTwoDecimals state.data.subsRemoteConfig.max_dues_limit]
+                  DUE_LIMIT_WARNING_BANNER -> getVarString DUE_LIMIT_WARNING_BANNER_TITLE [getFixedTwoDecimals state.data.subsRemoteConfig.max_dues_limit]
                   _ -> "",
         titleColor = case bannerType of
                         DUE_LIMIT_WARNING_BANNER -> Color.red
@@ -2038,3 +2039,44 @@ isAcWorkingPopupConfig state = PopUpModal.config {
     , height = V 190
     }
   }
+
+topAcDriverPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
+topAcDriverPopUpConfig state = let 
+  config' = PopUpModal.config
+    { gravity = CENTER,
+      margin = MarginHorizontal 24 24 ,
+      buttonLayoutMargin = Margin 16 0 16 20 ,
+      optionButtonOrientation = "VERTICAL",
+      primaryText {
+        text = getString TOP_AC_DRIVER,
+        margin = Margin 18 8 18 16 
+    },
+      secondaryText { visibility = GONE },
+      option1 {
+        text = getString WATCH_VIDEO,
+        margin = MarginHorizontal 16 16,
+        color = Color.yellow900,
+        background = Color.black900,
+        strokeColor = Color.white900,
+        width = MATCH_PARENT
+      },
+        option2 {
+        text = getString MAYBE_LATER,
+        margin = MarginHorizontal 16 16,
+        color = Color.black650,
+        background = Color.white900,
+        strokeColor = Color.white900,
+        width = MATCH_PARENT
+      },
+      backgroundClickable = true,
+      dismissPopup = true,
+      cornerRadius = Corners 15.0 true true true true,
+      coverImageConfig {
+        visibility = VISIBLE,
+        height = V 215,
+        width = V 320,
+        margin = MarginTop 16,
+        imageUrl = HU.fetchImage HU.FF_ASSET "ny_ac_explanation"
+      }
+    }
+  in config'

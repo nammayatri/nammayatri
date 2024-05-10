@@ -95,7 +95,8 @@ update config = do
       Se.Set BeamTC.orderAndNotificationStatusCheckTimeLimit (nominalDiffTimeToSeconds config.orderAndNotificationStatusCheckTimeLimit),
       Se.Set BeamTC.snapToRoadConfidenceThreshold config.snapToRoadConfidenceThreshold,
       Se.Set BeamTC.useWithSnapToRoadFallback config.useWithSnapToRoadFallback,
-      Se.Set BeamTC.updatedAt now
+      Se.Set BeamTC.updatedAt now,
+      Se.Set BeamTC.emailOtpConfig config.emailOtpConfig
     ]
     [Se.Is BeamTC.merchantOperatingCityId (Se.Eq $ getId config.merchantOperatingCityId)]
 
@@ -151,6 +152,8 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             canSuvDowngradeToHatchback = fromMaybe False canSuvDowngradeToHatchback,
             arrivedPickupThreshold = fromMaybe 100 arrivedPickupThreshold,
             variantsToEnableForSubscription = variantsToEnableForSubscription,
+            cancellationFee = cancellationFee,
+            currency = fromMaybe INR currency,
             ..
           }
     where
@@ -265,6 +268,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.nightSafetyStartTime = nightSafetyStartTime,
         BeamTC.nightSafetyEndTime = nightSafetyEndTime,
         BeamTC.cancellationFee = cancellationFee,
+        BeamTC.currency = Just currency,
         BeamTC.driverDistanceTravelledOnPickupThresholdOnCancel = driverDistanceTravelledOnPickupThresholdOnCancel,
         BeamTC.driverTimeSpentOnPickupThresholdOnCancel = driverTimeSpentOnPickupThresholdOnCancel,
         BeamTC.driverDistanceToPickupThresholdOnCancel = driverDistanceToPickupThresholdOnCancel,
@@ -288,11 +292,13 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.specialDrivers = specialDrivers,
         BeamTC.specialLocationTags = specialLocationTags,
         BeamTC.kaptureDisposition = kaptureDisposition,
+        BeamTC.kaptureQueue = kaptureQueue,
         BeamTC.fakeOtpMobileNumbers = fakeOtpMobileNumbers,
         BeamTC.dummyFromLocation = Just $ toJSON dummyFromLocation,
         BeamTC.dummyToLocation = Just $ toJSON dummyToLocation,
         BeamTC.variantsToEnableForSubscription = variantsToEnableForSubscription,
         BeamTC.dlNumberVerification = dlNumberVerification,
         BeamTC.pastDaysRideCounter = pastDaysRideCounter,
-        BeamTC.placeNameCacheExpiryDays = placeNameCacheExpiryDays
+        BeamTC.placeNameCacheExpiryDays = placeNameCacheExpiryDays,
+        BeamTC.emailOtpConfig = emailOtpConfig
       }

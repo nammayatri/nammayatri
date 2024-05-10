@@ -32,7 +32,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Prelude (map, show, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
+import Prelude (map, show, negate, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
 import Resources.Localizable.EN (getEN)
 import Screens.Types as ST
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
@@ -283,7 +283,13 @@ getVehicleCapacity variant =
   case fetchVehicleVariant variant of
     Just ST.SUV -> "6" 
     Just ST.AUTO_RICKSHAW -> "3"
-    _ -> "4" 
+    _ -> "4"
+
+intMax :: Int
+intMax = 2147483647
+
+intMin :: Int
+intMin = (-2147483647)
 
 getDisabilityType :: String -> Array ST.DisabilityT -> ST.DisabilityT 
 getDisabilityType disType disList = (fromMaybe dummyDisabilityList (head (filter(\item -> item.tag == disType) disList)))
@@ -316,3 +322,4 @@ maxImageUploadInIssueReporting = 3
 -- Id for emergency contact initial chat suggestion on remote config
 emergencyContactInitialChatSuggestionId :: String
 emergencyContactInitialChatSuggestionId = "d6cddbb1a6aee372c0c7f05173da8f95"
+

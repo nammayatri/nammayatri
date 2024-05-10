@@ -262,7 +262,7 @@ getEN stringKey =
         DAY_TIMES_OF -> ""
         DAYTIME_CHARGES_APPLICABLE_AT_NIGHT from till -> "x of daytime charges applicable at night from "<> from <>" to " <> till
         NIGHT_TIMES_OF -> ""
-        DAYTIME_CHARGES_APPLIED_AT_NIGHT from till -> "x of daytime charges applied to fare at night (🌙) from "<> from <>" to " <> till
+        DAYTIME_CHARGES_APPLIED_AT_NIGHT percentage from till -> percentage <> "x of daytime charges applied to fare at night (🌙) from "<> from <>" to " <> till
         DRIVERS_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC -> "* Driver may optionally request 10% of base fare (rounded to nearest Rs.10) to cover for traffic, chance of return trip etc."
         GOT_IT -> "Got It!"
         DAY_TIME_CHARGES from till -> "Daytime Charges ("<> from <> " to " <> till <> ")"
@@ -1111,6 +1111,7 @@ getEN stringKey =
         INVALID_CODE -> "Invalid Code!"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "Enter 6 digit referral code below"
         APPLY -> "Apply"
+        BOOK_ANY -> "Book Any"
         TOLL_CHARGES_INCLUDED -> "Toll Charges Included"
         ONE_CLICK_BOOKINGS ->  "One-Click Bookings"
         HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "Has your driver set the AC as per your preference?"
@@ -1140,3 +1141,9 @@ getEN stringKey =
         LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> "Learn about exclusive safety features on " <> merchantName 
         OTHER_PROVIDER_NO_RECEIPT -> "Driver receipt for rides fulfilled by other providers are not available yet."
         RIDE_FULFILLED_BY merchantName -> "Ride fulfilled by: " <> merchantName
+        RUSH_HOUR_CHARGES -> "Rush Hour Charges*"
+        TIP_CAN_BE_ADDED maxTip -> "Tip of upto ₹" <> maxTip <> " can be added to the ride fare."
+        RUSH_HOURS_DESC charges -> "*During Rush hours, "<> charges <>"% additional fare is applicable to compensate driver’s time for high traffic."
+        AC_TURNED_OFF -> "AC Turned Off"
+        ESTIMATES_EXPIRY_ERROR -> "Estimates has been expired. Please try again."
+        ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "Estimates has been expired. Fetching again, Please wait a moment and check again."

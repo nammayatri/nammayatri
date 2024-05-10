@@ -29,12 +29,14 @@ import Screens.Types (ReferralScreenState, ReferralStage(..))
 import Helpers.Referral (generateReferralLink)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Data.Array (elem)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Components.PopUpModal as PopUpModal
 import Storage (KeyStore(..), setValueToLocalStore)
 import Engineering.Helpers.Commons as EHC
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import DecodeUtil ( getAnyFromWindow)
+import Data.Function.Uncurried (runFn3)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -119,8 +121,10 @@ eval BackPressed state = do
 eval ShareAndRefer state = do
   let shareAppConfig = state.config.shareAppConfig
       title = shareAppConfig.title
+      appName = fromMaybe state.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just 
       code = if (state.referralCode `elem` ["__failed", "(null)",""]) then "" else "Referral Code : " <> state.referralCode
-      message = shareAppConfig.description <> code <>  "\n" <> (generateReferralLink (getValueToLocalStore CUSTOMER_LOCATION) "share" "referral" "refer" state.referralCode)
+      description = "Download " <> appName <> " now!."
+      message = shareAppConfig.description <> "\n" <> description <> "\n" <> code <>  "\n" <> (generateReferralLink (getValueToLocalStore CUSTOMER_LOCATION) "share" "referral" "refer" state.referralCode)
   void $ pure $ shareTextMessage title message
   continue state
 

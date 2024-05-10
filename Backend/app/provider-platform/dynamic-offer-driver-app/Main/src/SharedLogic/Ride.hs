@@ -38,8 +38,8 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -55,6 +55,7 @@ import Storage.Queries.VehicleRegistrationCertificate as QVRC
 import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
+import Utils.Common.Cac.KeyNameConstants
 
 initializeRide ::
   Id Merchant ->
@@ -95,7 +96,7 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
   Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken
 
   fork "DriverScoreEventHandler OnNewRideAssigned" $
-    DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId}
+    DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency}
 
   return (ride, rideDetails, vehicle)
   where
@@ -140,7 +141,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   now <- getCurrentTime
-  transporterConfig <- TC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   trackingUrl <- buildTrackingUrl guid
   return
     DRide.Ride
@@ -157,6 +158,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId = do
         endOtp = Nothing,
         trackingUrl = trackingUrl,
         fare = Nothing,
+        currency = booking.currency,
         traveledDistance = 0,
         chargeableDistance = Nothing,
         driverArrivalTime = Nothing,
@@ -209,7 +211,7 @@ buildTrackingUrl rideId = do
         baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
       }
 
-deactivateExistingQuotes :: Id DTMM.MerchantOperatingCity -> Id Merchant -> Id Person -> Id SearchTry -> Money -> Flow [SearchRequestForDriver]
+deactivateExistingQuotes :: Id DTMM.MerchantOperatingCity -> Id Merchant -> Id Person -> Id SearchTry -> Price -> Flow [SearchRequestForDriver]
 deactivateExistingQuotes merchantOpCityId merchantId quoteDriverId searchTryId estimatedFare = do
   driverSearchReqs <- QSRD.findAllActiveBySTId searchTryId
   QDQ.setInactiveBySTId searchTryId
@@ -217,7 +219,7 @@ deactivateExistingQuotes merchantOpCityId merchantId quoteDriverId searchTryId e
   pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare
   return driverSearchReqs
 
-pullExistingRideRequests :: Id DTMM.MerchantOperatingCity -> [SearchRequestForDriver] -> Id Merchant -> Id Person -> Money -> Flow ()
+pullExistingRideRequests :: Id DTMM.MerchantOperatingCity -> [SearchRequestForDriver] -> Id Merchant -> Id Person -> Price -> Flow ()
 pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare = do
   for_ driverSearchReqs $ \driverReq -> do
     let driverId = driverReq.driverId
@@ -236,3 +238,9 @@ multipleRouteKey id = "multiple-routes-" <> id
 
 confirmLockKey :: Id DBooking.Booking -> Text
 confirmLockKey (Id id) = "Driver:Confirm:BookingId-" <> id
+
+bookingRequestKeySoftUpdate :: Text -> Text
+bookingRequestKeySoftUpdate bId = "Driver:Booking:Request:SoftUpdate" <> bId
+
+multipleRouteKeySoftUpdate :: Text -> Text
+multipleRouteKeySoftUpdate id = "multiple-routes-SoftUpdate-" <> id

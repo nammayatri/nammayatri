@@ -43,6 +43,7 @@ healthCheck ::
     HasField "driverAppName" r Text,
     HasField "enablePrometheusMetricLogging" r Bool,
     HasField "enableRedisLatencyLogging" r Bool,
+    HasCacConfig r,
     (HasField "cacheConfig" r CacheConfig),
     (HasField "esqDBEnv" r EsqDBEnv),
     HasARTFlow r

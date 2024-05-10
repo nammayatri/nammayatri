@@ -17,6 +17,8 @@ imports:
   FRFSVehicleType: Domain.Types.Station
   CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
   City: Kernel.Types.Beckn.Context
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
 
 module: FRFSTicketService
 types:
@@ -85,6 +87,16 @@ types:
   FRFSCancelStatus:
     cancellationCharges : Maybe HighPrecMoney
     refundAmount : Maybe HighPrecMoney
+
+  FRFSConfigAPIRes:
+    bookingStartTime: UTCTime
+    bookingEndTime: UTCTime
+    roundTripTicketLimit: Int
+    oneWayTicketLimit: Int
+    metroStationTtl: Int
+    discount: Int
+    customDates: [Text]
+    customEndTime: Text
 
 apis:
   # GET metro stops for the merchant city
@@ -187,3 +199,14 @@ apis:
       auth: TokenAuth
       response:
         type: API.Types.UI.FRFSTicketService.FRFSCancelStatus
+
+
+  # Get FRFS Config
+  - GET:
+      endpoint: /frfs/config
+      mandatoryQuery:
+        city: City
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
+

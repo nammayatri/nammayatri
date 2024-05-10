@@ -90,6 +90,8 @@ instance FromTType' BeamMPN.Overlay Overlay where
             merchantId = Id merchantId,
             merchantOperatingCityId = Id merchantOperatingCityId,
             socialMediaLinks = valueToMaybe =<< socialMediaLinks,
+            actions2 = fromMaybe [] $ valueToMaybe actions2,
+            secondaryActions2 = valueToMaybe =<< secondaryActions2,
             ..
           }
     where
@@ -113,6 +115,7 @@ instance ToTType' BeamMPN.Overlay Overlay where
         BeamMPN.okButtonText = okButtonText,
         BeamMPN.cancelButtonText = cancelButtonText,
         BeamMPN.actions = actions,
+        BeamMPN.actions2 = toJSON actions2,
         BeamMPN.link = link,
         BeamMPN.method = method,
         BeamMPN.reqBody = reqBody,
@@ -121,6 +124,7 @@ instance ToTType' BeamMPN.Overlay Overlay where
         BeamMPN.contactSupportNumber = contactSupportNumber,
         BeamMPN.toastMessage = toastMessage,
         BeamMPN.secondaryActions = secondaryActions,
+        BeamMPN.secondaryActions2 = toJSON <$> secondaryActions2,
         BeamMPN.socialMediaLinks = toJSON <$> socialMediaLinks,
         BeamMPN.showPushNotification = showPushNotification
       }

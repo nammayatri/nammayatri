@@ -36,3 +36,10 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN is_blocked_route boolean 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate DROP COLUMN driver_pick_up_charge;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN min_fare_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN max_fare_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN currency character varying(255) ;

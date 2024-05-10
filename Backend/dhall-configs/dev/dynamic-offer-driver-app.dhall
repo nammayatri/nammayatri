@@ -227,16 +227,14 @@ let jobInfoMapx =
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
 
 let cacConfig =
-        { host = "http://localhost:8080"
-        , interval = 10
-        , tenants = [ "dev", "test" ]
-        , retryConnection = False
-        }
-      : { host : Text
-        , interval : Natural
-        , tenants : List Text
-        , retryConnection : Bool
-        }
+      { host = "http://localhost:8080"
+      , interval = 10
+      , tenant = "test"
+      , retryConnection = False
+      , cacExpTime = +86400
+      }
+
+let cacTenants = [ "dev", "test" ]
 
 let superPositionConfig =
         { host = "http://localhost:8080"
@@ -340,8 +338,10 @@ in  { esqDBCfg
     , internalEndPointMap = common.internalEndPointMap
     , _version = "2.0.0"
     , cacConfig
+    , cacTenants
     , superPositionConfig
     , maxStraightLineRectificationThreshold = +800
     , singleBatchProcessingTempDelay = +2
     , ondcTokenMap = sec.ondcTokenMap
+    , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
     }

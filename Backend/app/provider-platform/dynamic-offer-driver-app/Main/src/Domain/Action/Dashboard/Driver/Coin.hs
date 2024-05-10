@@ -33,9 +33,10 @@ import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverCoins.Types as DCT
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import Storage.Queries.Coins.CoinHistory as CHistory
 import Storage.Queries.Person as Person
 import Storage.Queries.PurchaseHistory as PHistory
@@ -45,7 +46,7 @@ bulkUploadCoinsHandler :: ShortId DM.Merchant -> Context.City -> Common.BulkUplo
 bulkUploadCoinsHandler merchantShortId opCity Common.BulkUploadCoinsReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchant.id.getId
   mapM_ (\Common.DriverIdListWithCoins {..} -> bulkUpdateByDriverId merchant.id merchantOpCityId (Id driverId :: Id SP.Person) DCT.BulkUploadFunction coins bulkUploadTitle expirationTime transporterConfig) driverIdListWithCoins
@@ -102,11 +103,12 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
 bulkUploadCoinsV2Handler :: ShortId DM.Merchant -> Context.City -> Common.BulkUploadCoinsReqV2 -> Flow APISuccess
 bulkUploadCoinsV2Handler merchantShortId opCity Common.BulkUploadCoinsReqV2 {..} = do
   merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchant.id.getId
-  mapM_ (\Common.DriverIdListWithAmount {..} -> bulkUpdateByDriverIdV2 merchant.id merchantOpCityId (Id driverId :: Id SP.Person) (castEventFunctionForCoinsReverse eventFunction) amount bulkUploadTitle expirationTime transporterConfig) driverIdListWithCoins
+  SMerchant.checkCurrencies merchantOpCity.currency $ driverIdListWithCoins <&> (.amountWithCurrency)
+  mapM_ (\Common.DriverIdListWithAmount {..} -> bulkUpdateByDriverIdV2 merchant.id merchantOpCity.id (Id driverId :: Id SP.Person) (castEventFunctionForCoinsReverse eventFunction) (fromMaybe amount $ amountWithCurrency <&> (.amount)) bulkUploadTitle expirationTime transporterConfig) driverIdListWithCoins
   pure Success
 
 bulkUpdateByDriverIdV2 ::
@@ -161,7 +163,7 @@ coinHistoryHandler :: ShortId DM.Merchant -> Context.City -> Id SP.Person -> May
 coinHistoryHandler merchantShortId opCity driverId mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchant.id.getId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
@@ -200,6 +202,7 @@ coinHistoryHandler merchantShortId opCity driverId mbLimit mbOffset = do
       Common.CoinBurnHistoryItem
         { numCoins = numCoins,
           cash = cash,
+          cashWithCurrency = PriceAPIEntity cash currency,
           title = title,
           createdAt = createdAt,
           updatedAt = updatedAt

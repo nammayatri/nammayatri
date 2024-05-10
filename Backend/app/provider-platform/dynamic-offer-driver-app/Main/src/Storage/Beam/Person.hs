@@ -69,7 +69,8 @@ data PersonT f = PersonT
     usedCoins :: B.C f Int,
     registrationLat :: B.C f (Maybe Double),
     registrationLon :: B.C f (Maybe Double),
-    useFakeOtp :: B.C f (Maybe Text)
+    useFakeOtp :: B.C f (Maybe Text),
+    driverTag :: B.C f (Maybe [Text])
   }
   deriving (Generic, B.Beamable)
 

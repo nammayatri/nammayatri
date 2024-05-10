@@ -15,17 +15,10 @@
 
 module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy) where
 
-import Control.Lens.Combinators
-import Control.Lens.Fold
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
-import qualified Data.Aeson as DA
-import Data.Aeson.Key as DAK
-import qualified Data.Aeson.KeyMap as DAKM
-import Data.Aeson.Lens
 import Data.Aeson.Types
 import Data.List.NonEmpty
 import Data.Text as Text
-import qualified Data.Vector as DV
 import qualified Domain.Types.Common as DTC
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
@@ -34,17 +27,16 @@ import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
 import Domain.Types.Merchant
 import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude as KP
-import Kernel.Types.Cac
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
-import Kernel.Utils.Logging
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
-    serviceCharge :: Maybe Money,
+    serviceCharge :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
+    currency :: Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
@@ -57,81 +49,17 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
   }
   deriving (Generic, Show)
 
-jsonToDriverExtraFeeBounds :: String -> String -> Maybe (NonEmpty DriverExtraFeeBounds)
-jsonToDriverExtraFeeBounds config key' =
-  let res' =
-        config
-          ^@.. _Value
-            . _Object
-            . reindexed
-              (dropPrefixFromConfig "farePolicyDriverExtraFeeBounds:")
-              ( itraversed
-                  . indices
-                    ( Text.isPrefixOf
-                        "farePolicyDriverExtraFeeBounds:"
-                        . DAK.toText
-                    )
-              )
-      res'' =
-        fromMaybe
-          (DA.Array (DV.fromList []))
-          (DAKM.lookup (DAK.fromText (Text.pack key')) (DAKM.fromList res'))
-      res = res'' ^? _JSON :: Maybe [DriverExtraFeeBounds]
-   in nonEmpty $ fromMaybe [] res
-
-farePolicyMiddleWare :: MonadFlow m => DAKM.KeyMap Value -> String -> String -> m (DAKM.KeyMap Value)
-farePolicyMiddleWare configMap config key' = do
-  let nightShiftStart = DAKM.lookup "nightShiftStart" configMap >>= fromJSONHelper
-      nightShiftEnd = DAKM.lookup "nightShiftEnd" configMap >>= fromJSONHelper
-      maxAllowedTripDistance = DAKM.lookup "maxAllowedTripDistance" configMap >>= fromJSONHelper
-      minAllowedTripDistance = DAKM.lookup "minAllowedTripDistance" configMap >>= fromJSONHelper
-      dEFB = jsonToDriverExtraFeeBounds config key'
-      nightShiftBounds = DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd
-      allowedTripDistanceBounds = DPM.AllowedTripDistanceBounds <$> maxAllowedTripDistance <*> minAllowedTripDistance
-      configMap' = KP.foldr DAKM.delete configMap ["nightShiftStart", "nightShiftEnd", "maxAllowedTripDistance", "minAllowedTripDistance"]
-  configMap'' <- case DAKM.lookup "farePolicyType" configMap' of
-    Just (String "Progressive") -> do
-      pfp <- jsonToFPProgressiveDetails config key'
-      pure $ toJSON (ProgressiveDetails <$> pfp)
-    Just (String "Slabs") -> do
-      sfp <- getFPSlabDetailsSlab config key'
-      pure $ toJSON (SlabsDetails <$> sfp)
-    Just (String "Rental") -> do
-      rfp <- jsonToFPRentalDetails config key'
-      pure $ toJSON (RentalDetails <$> rfp)
-    _ -> pure (toJSON (Nothing :: Maybe FarePolicyDetails))
-  pure $ KP.foldr (\(k, v) acc -> DAKM.insert k v acc) configMap' [("nightShiftBounds", DA.toJSON nightShiftBounds), ("allowedTripDistanceBounds", DA.toJSON allowedTripDistanceBounds), ("driverExtraFeeBounds", DA.toJSON dEFB), ("farePolicyDetails", configMap'')]
-
-jsonToFarePolicy :: MonadFlow m => String -> String -> m (Maybe FarePolicy)
-jsonToFarePolicy config key' = do
-  let res' =
-        config
-          ^@.. _Value
-            . _Object
-            . reindexed
-              (dropPrefixFromConfig "farePolicy:")
-              ( itraversed
-                  . indices
-                    ( Text.isPrefixOf
-                        "farePolicy:"
-                        . DAK.toText
-                    )
-              )
-  res'' <- farePolicyMiddleWare (DAKM.fromList res') config key'
-  let res = Object res'' ^? _JSON :: (Maybe FarePolicy)
-  when (isNothing res) do
-    logDebug $ "FarePolicy from CAC Not Parsable: " <> show res' <> " after middle parsing" <> show res'' <> " for key: " <> Text.pack key'
-  pure res
-
 type FarePolicy = FarePolicyD 'DTC.Safe
 
 instance FromJSON (FarePolicyD 'DTC.Unsafe)
 
 instance ToJSON (FarePolicyD 'DTC.Unsafe)
 
-instance FromJSON FarePolicy
+-- FIXME remove
+instance FromJSON (FarePolicyD 'DTC.Safe)
 
-instance ToJSON FarePolicy
+-- FIXME remove
+instance ToJSON (FarePolicyD 'DTC.Safe)
 
 data FarePolicyDetailsD (s :: DTC.UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s) | RentalDetails (FPRentalDetailsD s)
   deriving (Generic, Show)
@@ -158,8 +86,9 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     vehicleServiceTier :: DVST.ServiceTierType,
     tripCategory :: DTC.TripCategory,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
-    serviceCharge :: Maybe Money,
+    serviceCharge :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
+    currency :: Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,

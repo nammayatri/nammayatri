@@ -23,7 +23,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import Kernel.Types.Flow (FlowR)
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
-import Kernel.Utils.Common (CacheConfig)
+import Kernel.Utils.Common (CacConfig, CacheConfig)
 import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
@@ -58,7 +58,8 @@ data AppCfg = AppCfg
     driverInactiveSmsTemplate :: Text,
     cacheConfig :: CacheConfig,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    cacConfig :: CacConfig
   }
   deriving (Generic, FromDhall)
 
@@ -92,7 +93,8 @@ data AppEnv = AppEnv
     enablePrometheusMetricLogging :: Bool,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    cacConfig :: CacConfig
   }
   deriving (Generic)
 

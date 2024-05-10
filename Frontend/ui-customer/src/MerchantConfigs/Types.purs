@@ -70,7 +70,6 @@ type AppConfigCustomer a =
   , homeScreen :: HomeScreen
   , locationTagBar :: LocationTagBarConfig
   , cityConfig :: Array CityConfig
-  , enableSingleEstimate :: Boolean
   , driverLocationPolling :: DriverLocationPollingConfig
   , banners :: Banners
   , tipDisplayDuration :: Int
@@ -78,6 +77,7 @@ type AppConfigCustomer a =
   , tipEnabledCities :: Array String
   , referral :: ReferalConfig
   , safety :: Safety
+  , enableBookAny :: Boolean
   | a
   }
 
@@ -376,7 +376,8 @@ type VariantConfig = {
   suv :: VariantInfo,
   autoRickshaw :: VariantInfo,
   taxi :: VariantInfo,
-  taxiPlus :: VariantInfo
+  taxiPlus :: VariantInfo,
+  bookAny :: VariantInfo
 }
 
 type VariantInfo = {
@@ -399,7 +400,10 @@ type CityConfig = {
   iopConfig :: InteroperabilityConfig,
   estimateAndQuoteConfig :: EstimateConfig,
   featureConfig :: CityBasedFeatures,
-  referral :: ReferalConfig
+  referral :: ReferalConfig,
+  dashboardUrl :: String,
+  appLogo :: String,
+  appLogoLight :: String
 }
 
 type CityBasedFeatures = {

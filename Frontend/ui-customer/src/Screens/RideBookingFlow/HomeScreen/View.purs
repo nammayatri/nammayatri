@@ -1504,6 +1504,7 @@ topLeftIconView state push =
 estimatedFareView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 estimatedFareView push state =
   let tagConfig = specialZoneTagConfig state.props.zoneType.priorityTag
+      showTag = any (_ == state.props.zoneType.priorityTag) [SPECIAL_PICKUP, METRO]
   in
   linearLayout
   [ orientation VERTICAL
@@ -1528,7 +1529,7 @@ estimatedFareView push state =
       , orientation HORIZONTAL
       , gravity CENTER
       , padding (Padding 8 4 8 4)
-      , visibility if state.props.zoneType.priorityTag /= NOZONE then VISIBLE else GONE
+      , visibility $ boolToVisibility showTag
       , clickable $ isJust tagConfig.infoPopUpConfig
       , onClick push $ const $ SpecialZoneInfoTag
       ] [ imageView
@@ -2983,7 +2984,7 @@ homeScreenViewV2 push state =
                           , orientation VERTICAL
                           , id $ getNewIDWithTag "homescreenContent"
                           , gravity $ CENTER_HORIZONTAL
-                          ]$ [ savedLocationsView state push ] <>
+                          ]$ -- [ savedLocationsView state push ] <>
                           ((if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
                             [locationUnserviceableView push state]
                           else 
@@ -3022,7 +3023,7 @@ homeScreenViewV2 push state =
           , height $ V 135
           , width MATCH_PARENT
           , gravity CENTER_VERTICAL
-          , margin $ Margin 16 0 16 18
+          , margin $ Margin 16 0 16 8
           , onClick push $ const WhereToClick
           , accessibility DISABLE
           ]
@@ -3135,7 +3136,8 @@ homescreenHeader push state =
 
 pickupLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 pickupLocationView push state = 
-  linearLayout
+  let headerLogo = if DS.null state.data.currentCityConfig.appLogoLight then "ny_ic_logo_light" else state.data.currentCityConfig.appLogoLight
+  in linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -3196,7 +3198,7 @@ pickupLocationView push state =
                 , gravity CENTER_VERTICAL
                 , layoutGravity "center_vertical"
                 ][ imageView
-                    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_logo_light"
+                    [ imageWithFallback $ fetchImage FF_ASSET headerLogo 
                     , height $ V 50
                     , width $ V 110
                     , margin $ MarginHorizontal 10 10
@@ -3311,7 +3313,9 @@ mapView push state idTag =
     , onAnimationEnd
             ( \action -> do
                 _ <- push action
-                _ <- getCurrentPosition push CurrentLocation
+                if state.props.sourceLat == 0.0 && state.props.sourceLong == 0.0 then do
+                  void $ getCurrentPosition push CurrentLocation
+                else do push RemoveShimmer
                 _ <- showMap (getNewIDWithTag idTag) isCurrentLocationEnabled "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
                 if os == "IOS" then
                   case state.props.currentStage of  
@@ -3342,8 +3346,8 @@ mapView push state idTag =
         , width MATCH_PARENT
         , alignParentBottom "true,-1"
         , gravity RIGHT
-        , padding $ Padding 16 0 32 16
-        , visibility $ if isHomeScreenView state then VISIBLE else GONE
+        , padding $ Padding 16 0 22 16
+        , visibility $ boolToVisibility $ isHomeScreenView state
         ][ imageView
             [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_recenter_btn"
             , accessibility DISABLE
@@ -3422,7 +3426,7 @@ suggestionsView push state =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , padding $ PaddingBottom 10
-  , margin $ Margin 8 0 8 0
+  , margin $ Margin 8 10 8 0
   , visibility $ boolToVisibility $ suggestionViewVisibility state && not (state.props.showShimmer && null state.data.tripSuggestions)
   ]
   [ let isTripSuggestionsEmpty = null state.data.tripSuggestions
@@ -4073,42 +4077,52 @@ preferenceView push state =
       bookingPrefVisibility = (not state.data.currentCityConfig.iopConfig.enable) && state.data.config.estimateAndQuoteConfig.enableBookingPreference
       isProviderPrefView = state.data.currentCityConfig.iopConfig.enable
       followerBar = (showFollowerBar (fromMaybe [] state.data.followers) state) && (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver])
-  in  linearLayout
-      [ width MATCH_PARENT
-      , height MATCH_PARENT
-      , clickable dimLayout
-      , background if dimLayout then Color.blackLessTrans else Color.transparent
-      , onClick push $ const BackPressed
-      , padding $ Padding 0 20 18 0
-      , margin $ MarginTop if followerBar then 0 else safeMarginTop
-      , orientation VERTICAL
-      , gravity RIGHT
-      ] $ [ linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , gravity RIGHT
-            ][  linearLayout[weight 1.0][]
-              , linearLayout
-                [ height $ V 48
-                , width $ V 48
-                , stroke $ "1," <> Color.grey900
-                , background Color.white900
-                , gravity CENTER
-                , cornerRadius 24.0
-                , clickable true
-                , visibility $ boolToVisibility if isProviderPrefView then providerPrefVisibility else bookingPrefVisibility
-                , onClick push $ const ShowPref
-                , rippleColor Color.rippleShade
-                ]
-                [ imageView
-                    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pref"
-                    , height $ V 25
-                    , width $ V 25
-                    ]
-                ]
-            ]
-      ] <> if state.data.iopState.providerPrefVisible then [if isProviderPrefView then providerPreferenceOptions push state else bookingPrefOptions push state] else []
-        <> if state.data.iopState.providerPrefInfo then [requestInfoCardView push state isProviderPrefView] else []
+  in
+    relativeLayout [
+      width MATCH_PARENT
+    , height MATCH_PARENT
+    ] [
+      linearLayout[
+          width MATCH_PARENT
+        , height MATCH_PARENT
+        , clickable dimLayout
+        , background if dimLayout then Color.blackLessTrans else Color.transparent
+        , onClick push $ const $ if dimLayout then BackPressed else NoRender
+      ][]
+    , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , padding $ Padding 0 20 18 0
+        , margin $ MarginTop if followerBar then 0 else safeMarginTop
+        , orientation VERTICAL
+        , gravity RIGHT
+        ] $ [ linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , gravity RIGHT
+              ][  linearLayout[weight 1.0][]
+                , linearLayout
+                  [ height $ V 48
+                  , width $ V 48
+                  , stroke $ "1," <> Color.grey900
+                  , background Color.white900
+                  , gravity CENTER
+                  , cornerRadius 24.0
+                  , clickable true
+                  , visibility $ boolToVisibility if isProviderPrefView then providerPrefVisibility else bookingPrefVisibility
+                  , onClick push $ const ShowPref
+                  , rippleColor Color.rippleShade
+                  ]
+                  [ imageView
+                      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pref"
+                      , height $ V 25
+                      , width $ V 25
+                      ]
+                  ]
+              ]
+        ] <> if state.data.iopState.providerPrefVisible then [if isProviderPrefView then providerPreferenceOptions push state else bookingPrefOptions push state] else []
+          <> if state.data.iopState.providerPrefInfo then [requestInfoCardView push state isProviderPrefView] else []
+    ]
 
 requestInfoCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 requestInfoCardView push state providerPrefInfo =

@@ -4,13 +4,16 @@
 module Domain.Action.UI.DriverOnboardingV2 where
 
 import qualified API.Types.UI.DriverOnboardingV2
+import qualified API.Types.UI.DriverOnboardingV2 as APITypes
 import Data.OpenApi (ToSchema)
 import Domain.Types.Common
 import qualified Domain.Types.DocumentVerificationConfig
 import Domain.Types.DriverInformation
+import Domain.Types.DriverSSN
 import Domain.Types.FarePolicy
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Person
 import Domain.Types.ServiceTierType
 import qualified Domain.Types.Vehicle as DTV
@@ -19,26 +22,33 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Prelude
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
+import Kernel.External.Encryption (encrypt)
 import Kernel.External.Types (Language (..))
 import qualified Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Error
+import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import SharedLogic.DriverOnboarding
+import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.VehicleServiceTier
+import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverSSN as QDriverSSN
 import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Auth
 import Tools.Error
+import Utils.Common.Cac.KeyNameConstants
 
 stringToPrice :: Currency -> Text -> Maybe Price
 stringToPrice currency value = do
@@ -103,14 +113,25 @@ getDriverRateCard ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Domain.Types.ServiceTierType.ServiceTierType ->
-    Environment.Flow [API.Types.UI.DriverOnboardingV2.RateCardItem]
+    Kernel.Prelude.Maybe Meters ->
+    Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType ->
+    Environment.Flow [API.Types.UI.DriverOnboardingV2.RateCardResp]
   )
-getDriverRateCard (mbPersonId, _, merchantOperatingCityId) serviceTierType = do
-  _personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  fullFarePolicy <- getFarePolicy merchantOperatingCityId (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing Nothing
-  let rateCard = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id mkBreakupItem Nothing Nothing (fullFarePolicyToFarePolicy fullFarePolicy)
-  return rateCard
+getDriverRateCard (mbPersonId, _, merchantOperatingCityId) mbDistance mbServiceTierType = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast personId)))
+  case mbServiceTierType of
+    Just serviceTierType -> do
+      rateCard <- getRateCardForServiceTier transporterConfig (OneWay OneWayOnDemandDynamicOffer) serviceTierType
+      return [rateCard]
+    Nothing -> do
+      person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
+      vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
+      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
+      let driverVehicleServiceTierTypes = (\(vehicleServiceTier, _) -> vehicleServiceTier.serviceTierType) <$> selectVehicleTierForDriverWithUsageRestriction person driverInfo vehicle cityVehicleServiceTiers
+      rateCard <- mapM (getRateCardForServiceTier transporterConfig (OneWay OneWayOnDemandDynamicOffer)) driverVehicleServiceTierTypes
+      return rateCard
   where
     mkBreakupItem :: Text -> Text -> Maybe API.Types.UI.DriverOnboardingV2.RateCardItem
     mkBreakupItem title valueInText = do
@@ -120,6 +141,59 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) serviceTierType = do
           { title,
             price = priceObject.amountInt,
             priceWithCurrency = mkPriceAPIEntity priceObject
+          }
+    getRateCardForServiceTier :: Maybe TransporterConfig -> TripCategory -> Domain.Types.ServiceTierType.ServiceTierType -> Environment.Flow API.Types.UI.DriverOnboardingV2.RateCardResp
+    getRateCardForServiceTier transporterConfig tripCategory serviceTierType = do
+      now <- getCurrentTime
+      fullFarePolicy <- getFarePolicy merchantOperatingCityId (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing
+      let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id mkBreakupItem Nothing Nothing (fullFarePolicyToFarePolicy fullFarePolicy)
+      let isPeak = maybe False (> 1) fullFarePolicy.congestionChargeMultiplier
+      let mbIsNight =
+            if isRentalTrip tripCategory
+              then Just $ isNightAllowanceApplicable fullFarePolicy.nightShiftBounds now now (maybe 19800 (.timeDiffFromUtc) transporterConfig)
+              else isNightShift <$> fullFarePolicy.nightShiftBounds <*> Just now
+      let isNight = fromMaybe False mbIsNight
+      fareParams <-
+        calculateFareParameters
+          CalculateFareParametersParams
+            { farePolicy = fullFarePolicy,
+              actualDistance = mbDistance,
+              rideTime = now,
+              waitingTime = Nothing,
+              actualRideDuration = Nothing,
+              avgSpeedOfVehicle = Nothing,
+              driverSelectedFare = Nothing,
+              customerExtraFee = Nothing,
+              nightShiftCharge = Nothing,
+              customerCancellationDues = Nothing,
+              nightShiftOverlapChecking = isRentalTrip tripCategory,
+              estimatedDistance = mbDistance,
+              estimatedRideDuration = Nothing,
+              timeDiffFromUtc = transporterConfig <&> (.timeDiffFromUtc),
+              currency = INR, -- fix it later
+              tollCharges = Nothing
+            }
+      let totalFareAmount = fareSum fareParams
+      let perKmAmount :: Rational = totalFareAmount.getHighPrecMoney / fromIntegral (maybe 1 getMeters mbDistance)
+      let perKmRate =
+            PriceAPIEntity
+              { amount = HighPrecMoney perKmAmount,
+                currency = INR
+              }
+      let totalFare =
+            PriceAPIEntity
+              { amount = totalFareAmount,
+                currency = INR
+              }
+      return $
+        API.Types.UI.DriverOnboardingV2.RateCardResp
+          { serviceTierType,
+            perKmRate,
+            totalFare,
+            perMinuteRate = Nothing, -- TODO: Add per minute rate for USA
+            tripCategory,
+            farePolicyHour = if isPeak then APITypes.Peak else if isNight then APITypes.Night else APITypes.NonPeak,
+            rateCardItems
           }
 
 postDriverUpdateAirCondition ::
@@ -227,3 +301,25 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchanOperatingCityId) API.Types.U
     QDI.updateRentalAndInterCitySwitch canSwitchToRental' canSwitchToInterCity' personId
 
   return Success
+
+postDriverRegisterSsn ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.SSNReq ->
+    Environment.Flow APISuccess
+  )
+postDriverRegisterSsn (mbPersonId, _, _) API.Types.UI.DriverOnboardingV2.SSNReq {..} = do
+  ssn' <- encrypt ssn
+  id' <- generateGUID
+  driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  QDriverSSN.create (buildDriverSSN id' ssn' driverId)
+  return Success
+  where
+    buildDriverSSN id' ssn' driverId' =
+      Domain.Types.DriverSSN.DriverSSN
+        { id = id',
+          driverId = driverId',
+          ssn = ssn'
+        }

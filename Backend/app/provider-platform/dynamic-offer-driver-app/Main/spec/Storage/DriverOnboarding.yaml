@@ -201,6 +201,8 @@ VehicleRegistrationCertificate:
     manufacturerModel: Maybe Text
     vehicleColor: Maybe Text
     vehicleEnergyType: Maybe Text
+    vehicleDoors: Maybe Int
+    vehicleSeatBelts: Maybe Int
     reviewedAt: Maybe UTCTime
     reviewRequired: Maybe Bool
     verificationStatus: VerificationStatus
@@ -330,7 +332,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix"
   fields:
@@ -351,9 +353,11 @@ DocumentVerificationConfig:
     vehicleClassCheckType: VehicleClassCheckType
     rcNumberPrefixList: '[Text]'
     maxRetryCount: Int
+    isDefaultEnabledOnManualVerification: Bool
     order: Int
   default:
     order: "0"
+    isDefaultEnabledOnManualVerification: "true"
   constraints:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey
@@ -453,3 +457,18 @@ VehiclePUC:
       kvFunction: findAllWithKV
       where:
         and: [rcId, driverId]
+
+DriverSSN:
+  tableName: driver_ssn
+  fields:
+    id: Id DriverSSN
+    driverId: Id Person
+    ssn: EncryptedHashedField e Text
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+  queries:
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

@@ -119,6 +119,8 @@ dependencies:
   - base64-bytestring
   - pureMD5
   - lens-aeson
+  - http-client-tls
+  - http-conduit
 
 ghc-options:
   - -fwrite-ide-info

@@ -41,6 +41,7 @@ import Kernel.Storage.Hedis as Redis
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
 import Kernel.Types.App
 import Kernel.Types.Cache
+import qualified Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common (Distance, HighPrecMeters, Seconds, highPrecMetersToDistance)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Error
@@ -68,14 +69,6 @@ import System.Environment as SE
 import Tools.Metrics
 import Tools.Streaming.Kafka
 import TransactionLogs.Types
-
-data CacConfig = CacConfig
-  { host :: String,
-    interval :: Natural,
-    tenants :: [String],
-    retryConnection :: Bool
-  }
-  deriving (Generic, FromDhall)
 
 data SuperPositionConfig = SuperPositionConfig
   { host :: String,
@@ -148,9 +141,11 @@ data AppCfg = AppCfg
     _version :: Text,
     hotSpotExpiry :: Seconds,
     collectRouteData :: Bool,
-    cacConfig :: CacConfig,
+    cacConfig :: CF.CacConfig,
+    cacTenants :: [String],
     superPositionConfig :: SuperPositionConfig,
-    ondcTokenMap :: M.Map KeyConfig TokenConfig
+    ondcTokenMap :: M.Map KeyConfig TokenConfig,
+    iosValidateEnpoint :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -220,13 +215,15 @@ data AppEnv = AppEnv
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     _version :: Text,
     hotSpotExpiry :: Seconds,
-    cacConfig :: CacConfig,
+    cacConfig :: CF.CacConfig,
+    cacTenants :: [String],
     superPositionConfig :: SuperPositionConfig,
     collectRouteData :: Bool,
     shouldLogRequestId :: Bool,
     requestId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig
+    ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig,
+    iosValidateEnpoint :: Text
   }
   deriving (Generic)
 

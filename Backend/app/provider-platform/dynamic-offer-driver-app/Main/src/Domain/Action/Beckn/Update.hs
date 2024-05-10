@@ -33,9 +33,11 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.OnUpdate
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideRoute as RR
 import Environment
 import EulerHS.Prelude hiding (drop, id, state)
 import Kernel.Beam.Functions as B
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.LocationUpdates.Internal
@@ -44,10 +46,11 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.LocationMapping as SLM
+import SharedLogic.Ride
 import SharedLogic.TollsDetector
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.FareParameters as QFP
@@ -58,6 +61,7 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
+import Utils.Common.Cac.KeyNameConstants
 
 data DUpdateReq
   = UPaymentCompletedReq PaymentCompletedReq
@@ -151,7 +155,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     -----------1. Add a check for forward dispatch ride -----------------
     -----------2. Add a check for last location timestamp of driver ----------------- LTS dependency
     booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-    transporterConfig <- CTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+    transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     now <- getCurrentTime
     QL.create dropLocation
     let dropLatLong = Maps.LatLong {lat = dropLocation.lat, lon = dropLocation.lon}
@@ -180,8 +184,11 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         estimatedDistance <- shortestRoute.distance & fromMaybeM (InternalError "No distance found for new destination")
         (duration :: Seconds) <- shortestRoute.duration & fromMaybeM (InternalError "No duration found for new destination")
         logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show duration
-        fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id srcPt (Just dropLatLong) (Just booking.transactionId) (Just "transactionId") booking.tripCategory
-        farePolicy <- getFarePolicy merchantOperatingCity.id booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.transactionId) (Just "transactionId")
+        let routeInfo = RR.RouteInfo {distance = Just estimatedDistance, duration = Just duration, points = Just shortestRoute.points}
+        Redis.setExp (bookingRequestKeySoftUpdate booking.id.getId) routeInfo 600
+        Redis.setExp (multipleRouteKeySoftUpdate booking.id.getId) (map RR.createMultipleRouteInfo routeResponse) 600
+        fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id srcPt (Just dropLatLong) (Just (TransactionId (Id booking.transactionId))) booking.tripCategory
+        farePolicy <- getFarePolicy merchantOperatingCity.id booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just (TransactionId (Id booking.transactionId)))
         mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
         fareParameters <-
           calculateFareParameters
@@ -200,7 +207,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                 estimatedDistance = Just estimatedDistance,
                 estimatedRideDuration = Nothing,
                 timeDiffFromUtc = Nothing,
-                tollCharges = mbTollInfo <&> (\(tollCharges, _, _) -> tollCharges)
+                tollCharges = mbTollInfo <&> (\(tollCharges, _, _) -> tollCharges),
+                currency = booking.currency
               }
         QFP.create fareParameters
         let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now
@@ -222,12 +230,25 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         QBUR.updateStatusById DBUR.USER_CONFIRMED bookingUpdateReq.id
         if transporterConfig.editLocDriverPermissionNeeded
           then do
-            let entityData = Notify.EditLocationReq {..}
-            Notify.notifyPickupOrDropLocationChange person entityData
+            newEstimatedDistance <- bookingUpdateReq.estimatedDistance & fromMaybeM (InternalError $ "No estimated distance found for bookingUpdateReq with Id :" <> bookingUpdateReq.id.getId)
+            oldEstimatedDistance <- bookingUpdateReq.oldEstimatedDistance & fromMaybeM (InternalError $ "No estimated distance found for booking with Id :" <> booking.id.getId)
+            let entityData =
+                  Notify.UpdateLocationNotificationReq
+                    { rideId = ride.id,
+                      origin = Nothing,
+                      destination = Just dropLocation,
+                      stops = Nothing,
+                      bookingUpdateRequestId = bookingUpdateReq.id,
+                      newEstimatedDistance,
+                      newEstimatedFare = bookingUpdateReq.estimatedFare,
+                      oldEstimatedDistance,
+                      oldEstimatedFare = bookingUpdateReq.oldEstimatedFare,
+                      validTill = bookingUpdateReq.validTill
+                    }
+            let fcmOverlayReq = Notify.buildFCMOverlayReq bookingUpdateReq.id.getId
+            Notify.sendUpdateLocOverlay merchantOperatingCity.id person fcmOverlayReq entityData
           else void $ EditBooking.postEditResult (Just person.id, merchantOperatingCity.merchantId, merchantOperatingCity.id) bookingUpdateReq.id (EditBooking.EditBookingRespondAPIReq {action = EditBooking.ACCEPT})
       _ -> throwError (InvalidRequest "Invalid status for edit location request")
-
--- handler _ = throwError (InvalidRequest "Not Implemented")
 
 buildLocation :: MonadFlow m => Common.Location -> m DL.Location
 buildLocation location = do
@@ -319,7 +340,6 @@ buildbookingUpdateRequest :: MonadFlow m => DBooking.Booking -> Id DM.Merchant -
 buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParams farePolicyId maxEstimatedDistance currentPoint estimatedDistance validTill = do
   guid <- generateGUID
   now <- getCurrentTime
-  let (Money fare) = booking.estimatedFare
   return $
     DBUR.BookingUpdateRequest
       { id = guid,
@@ -334,7 +354,7 @@ buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParam
         currentPointLon = (.lon) <$> currentPoint,
         estimatedFare = HighPrecMoney $ toRational $ fareSum fareParams,
         estimatedDistance = Just $ metersToHighPrecMeters estimatedDistance,
-        oldEstimatedFare = HighPrecMoney $ toRational fare,
+        oldEstimatedFare = booking.estimatedFare,
         maxEstimatedDistance = metersToHighPrecMeters <$> maxEstimatedDistance,
         oldEstimatedDistance = metersToHighPrecMeters <$> booking.estimatedDistance,
         totalDistance = Nothing,

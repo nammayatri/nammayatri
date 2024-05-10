@@ -117,3 +117,7 @@ type ServiceConfig = ServiceConfigD 'Safe
 instance FromJSON (ServiceConfigD 'Unsafe)
 
 instance ToJSON (ServiceConfigD 'Unsafe)
+
+instance FromJSON (ServiceConfigD 'Safe)
+
+instance ToJSON (ServiceConfigD 'Safe)

@@ -259,7 +259,7 @@ getFR stringKey =
         DAY_TIMES_OF -> ""
         DAYTIME_CHARGES_APPLICABLE_AT_NIGHT from till -> "X des frais diurnes applicables la nuit de 22 h à 5 h"
         NIGHT_TIMES_OF -> ""
-        DAYTIME_CHARGES_APPLIED_AT_NIGHT from till -> "x des frais de jour appliqués au tarif de nuit (🌙) de 22 heures à 5 heures du matin"
+        DAYTIME_CHARGES_APPLIED_AT_NIGHT percentage from till -> percentage <> "x des frais diurnes appliqués au tarif de nuit (🌙) de "<> from <>" à " <> till
         DRIVERS_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC -> "* Le conducteur peut éventuellement demander 10% des tarifs de base (arrondi à Rs.10 le plus proche) pour couvrir le trafic, les chances de retour, etc."
         GOT_IT -> "J'ai compris!"
         DAY_TIME_CHARGES from till -> "Frais diurnes (de 5 h à 22 h)"
@@ -1114,6 +1114,7 @@ getFR stringKey =
         INVALID_CODE -> "Code invalide !"
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "Entrez un code de parrainage à 6 chiffres ci-dessous"
         APPLY -> "Appliquer"
+        BOOK_ANY -> "Réservez n'importe quel"
         TOLL_CHARGES_INCLUDED -> "Frais de péage inclus"
         ONE_CLICK_BOOKINGS -> "Réservations en un clic"
         HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "Votre chauffeur a-t-il réglé la climatisation selon vos préférences?"
@@ -1144,3 +1145,10 @@ getFR stringKey =
         LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> "En savoir plus sur les fonctionnalités de sécurité exclusives sur " <> merchantName
         OTHER_PROVIDER_NO_RECEIPT -> "Les reçus du conducteur pour les courses effectuées par d'autres prestataires ne sont pas encore disponibles."
         RIDE_FULFILLED_BY merchantName -> "Trajet effectué par : " <> merchantName
+        RUSH_HOUR_CHARGES -> "Frais de pointe*"
+        TIP_CAN_BE_ADDED maxTip -> "Un pourboire allant jusqu'à "<> maxTip <>" peut être ajouté au tarif de la course."
+        RUSH_HOURS_DESC charges -> "*Frais de pointe de " <> charges <> " applicables"
+        AC_TURNED_OFF -> "Climatisation éteinte"
+        ESTIMATES_EXPIRY_ERROR -> "Estimates has been expired. Please try again."
+        ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "Estimates has been expired. Fetching again, Please wait a moment and check again."
+

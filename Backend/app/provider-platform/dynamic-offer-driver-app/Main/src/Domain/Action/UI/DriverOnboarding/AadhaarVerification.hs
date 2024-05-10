@@ -43,8 +43,8 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.DriverImage as CQDI
-import Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.AadhaarOtpReq as QueryAR
 import qualified Storage.Queries.AadhaarOtpVerify as QueryAV
 import qualified Storage.Queries.AadhaarVerification as Q
@@ -54,6 +54,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as Person
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
+import Utils.Common.Cac.KeyNameConstants
 
 data VerifyAadhaarOtpReq = VerifyAadhaarOtpReq
   { otp :: Int,
@@ -90,7 +91,7 @@ generateAadhaarOtp isDashboard mbMerchant personId merchantOpCityId req = do
   let tryKey = makeGenerateOtpTryKey person.id
   numberOfTries :: Maybe Int <- Redis.safeGet tryKey
   let tried = fromMaybe 0 numberOfTries
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just driverInfo.driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (isDashboard || tried < transporterConfig.onboardingTryLimit) $ throwError (GenerateAadhaarOtpExceedLimit personId.getId)
   res <- AadhaarVerification.generateAadhaarOtp person.merchantId merchantOpCityId req
   aadhaarOtpEntity <- mkAadhaarOtp personId res
@@ -193,7 +194,7 @@ uploadOriginalAadhaarImage person image imageType = do
 
 uploadCompressedAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> ImageType -> m (Text, Either SomeException ())
 uploadCompressedAadhaarImage person merchantOpCityId image imageType = do
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound (merchantOpCityId.getId))
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound (merchantOpCityId.getId))
   let mbconfig = transporterConfig.aadhaarImageResizeConfig
   compImageFilePath <- S3.createFilePath "/driver-aadhaar-photo-resized/" ("driver-" <> getId person.id) S3.Image (parseImageExtension imageType)
   compImage <- maybe (return image) (\cfg -> fromMaybe image <$> resizeImage cfg.height cfg.width image imageType) mbconfig

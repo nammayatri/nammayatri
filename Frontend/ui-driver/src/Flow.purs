@@ -191,7 +191,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
       setValueToLocalStore BUNDLE_VERSION bundle
       setValueToLocalStore CONFIG_VERSION config
       setValueToLocalStore BASE_URL (getBaseUrl "dummy")
-      setValueToLocalStore RIDE_REQUEST_BUFFER "2"
+      setValueToLocalStore RIDE_REQUEST_BUFFER "0"
       setValueToLocalStore IS_BANNER_ACTIVE "True"
       setValueToLocalStore MESSAGES_DELAY "0"
       setValueToLocalStore SHOW_PAYMENT_MODAL "true"
@@ -965,6 +965,7 @@ addVehicleDetailsflow addRcFromProf = do
           case registerDriverRCResp of
             Right (DriverRCResp resp) -> do
               void $ pure $ toast $ getString RC_ADDED_SUCCESSFULLY
+              modifyScreenState $ HomeScreenStateType $ \hss -> hss{ props {acExplanationPopup = true}}
               liftFlowBT $ logEvent logField_ "ny_driver_submit_rc_details"
               setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
               (GlobalState state') <- getState
@@ -1014,6 +1015,7 @@ addVehicleDetailsflow addRcFromProf = do
           case registerDriverRCResp of
             Right (DriverRCResp resp) -> do
               void $ pure $ toast $ getString RC_ADDED_SUCCESSFULLY
+              modifyScreenState $ HomeScreenStateType $ \hss -> hss{ props {acExplanationPopup = true}}
               liftFlowBT $ logEvent logField_ "ny_driver_submit_rc_details"
               setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
               (GlobalState state') <- getState
@@ -1609,9 +1611,8 @@ bookingOptionsFlow = do
       canSwitchToRental' = fromMaybe false resp.canSwitchToRental
       defaultRide = fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption $ find (\item -> item.isDefault) ridePreferences'
 
-  modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> 
-    bookingOptions{ 
-      data { airConditioned = resp.airConditioned
+  modifyScreenState $ BookingOptionsScreenType (\bookingOptions ->  bookingOptions
+   { data { airConditioned = resp.airConditioned
            , vehicleType = show defaultRide.serviceTierType
            , vehicleName = defaultRide.name
            , canSwitchToInterCity = canSwitchToInterCity'
@@ -1623,6 +1624,7 @@ bookingOptionsFlow = do
   case action of
     UPDATE_AC_AVAILABILITY state toggleVal -> do
       void $ HelpersAPI.callApiBT $ Remote.mkUpdateAirConditionWorkingStatus toggleVal
+      pure if toggleVal then toast $ getString ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK else unit
       bookingOptionsFlow
     CHANGE_RIDE_PREFERENCE state service -> do
       void $ HelpersAPI.callApiBT $ Remote.mkUpdateDriverVehiclesServiceTier service
@@ -2374,7 +2376,9 @@ homeScreenFlow = do
                     vehicleModel = response.vehicleModel,
                     rideType = response.vehicleServiceTierName,
                     tripStartTime = response.tripStartTime,
-                    tripEndTime = response.tripEndTime
+                    tripEndTime = response.tripEndTime,
+                    acRide = response.isVehicleAirConditioned,
+                    vehicleServiceTier = response.vehicleServiceTier
                   }})
                 let payerVpa = fromMaybe "" response.payerVpa
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
@@ -3798,7 +3802,9 @@ driverEarningsFlow = do
       rideType = selectedCard.rideType,
       tripStartTime = selectedCard.tripStartTime,
       tripEndTime = selectedCard.tripEndTime,
-      vehicleModel = selectedCard.vehicleModel
+      vehicleModel = selectedCard.vehicleModel,
+      acRide = selectedCard.acRide,
+      vehicleServiceTier = selectedCard.vehicleServiceTier
       }})
       tripDetailsScreenFlow
     LOAD_MORE_HISTORY state -> do

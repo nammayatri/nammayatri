@@ -8,6 +8,8 @@ imports:
   Centesimal: Kernel.Types.Common
   PriceAPIEntity: Kernel.Types.Common
   Money: Kernel.Types.Common
+  Driver: Domain.Types.Person
+  TripCategory: Domain.Types.Common
 
 module: DriverOnboardingV2
 types:
@@ -15,7 +17,6 @@ types:
     autos: Maybe [DocumentVerificationConfigAPIEntity]
     cabs: Maybe [DocumentVerificationConfigAPIEntity]
     bikes: Maybe [DocumentVerificationConfigAPIEntity]
-
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
     title: Text
@@ -57,6 +58,18 @@ types:
     title: Text
     price: Money
     priceWithCurrency: PriceAPIEntity
+  SSNReq:
+    ssn: Text
+  FarePolicyHour:
+    enum: "Peak,NonPeak,Night"
+  RateCardResp:
+    serviceTierType: ServiceTierType
+    perKmRate: PriceAPIEntity
+    totalFare: PriceAPIEntity
+    perMinuteRate: Maybe PriceAPIEntity
+    tripCategory: TripCategory
+    farePolicyHour: FarePolicyHour
+    rateCardItems: [RateCardItem]
 
 apis:
   - GET:
@@ -67,12 +80,13 @@ apis:
       response:
         type: DocumentVerificationConfigList
   - GET:
-      endpoint: /driver/{vehicleServiceTier}/rateCard
-      params:
+      endpoint: /driver/rateCard
+      query:
         vehicleServiceTier: ServiceTierType
+        distance: Meters
       auth: TokenAuth PROVIDER_TYPE
       response:
-        type: '[RateCardItem]'
+        type: '[RateCardResp]'
   - POST:
       endpoint: /driver/updateAirCondition
       auth: TokenAuth PROVIDER_TYPE
@@ -90,5 +104,12 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: DriverVehicleServiceTiers
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /driver/register/ssn
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: SSNReq
       response:
         type: APISuccess

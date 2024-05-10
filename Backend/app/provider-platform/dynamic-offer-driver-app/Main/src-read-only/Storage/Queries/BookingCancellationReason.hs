@@ -38,11 +38,10 @@ findByPrimaryKey (Kernel.Types.Id.Id bookingId) = do findOneWithKV [Se.And [Se.I
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingCancellationReason.BookingCancellationReason -> m ())
 updateByPrimaryKey (Domain.Types.BookingCancellationReason.BookingCancellationReason {..}) = do
-  _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.additionalInfo additionalInfo,
-      Se.Set Beam.driverCancellationLocationLat ((driverCancellationLocation <&> (.lat))),
-      Se.Set Beam.driverCancellationLocationLon ((driverCancellationLocation <&> (.lon))),
+      Se.Set Beam.driverCancellationLocationLat (driverCancellationLocation <&> (.lat)),
+      Se.Set Beam.driverCancellationLocationLon (driverCancellationLocation <&> (.lon)),
       Se.Set Beam.driverDistToPickup driverDistToPickup,
       Se.Set Beam.driverId (Kernel.Types.Id.getId <$> driverId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

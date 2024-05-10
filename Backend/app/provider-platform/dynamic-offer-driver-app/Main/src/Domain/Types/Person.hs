@@ -48,7 +48,7 @@ $(mkHttpInstancesForEnum ''Role)
 -------------------------------------------------------------------------------------------
 data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL
   deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''IdentifierType)
 
@@ -103,7 +103,8 @@ data PersonE e = Person
     clientConfigVersion :: Maybe Version,
     clientDevice :: Maybe Device,
     backendConfigVersion :: Maybe Version,
-    backendAppVersion :: Maybe Text
+    backendAppVersion :: Maybe Text,
+    driverTag :: Maybe [Text]
   }
   deriving (Generic)
 

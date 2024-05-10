@@ -38,6 +38,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.ARTUtils (HasARTFlow)
 import Kernel.Tools.Metrics.CoreMetrics (HasCoreMetrics)
 import Kernel.Types.Base64
+import qualified Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -99,6 +100,7 @@ instance
     HasField "esqDBEnv" r EsqDBEnv,
     HasField "enablePrometheusMetricLogging" r Bool,
     HasField "enableRedisLatencyLogging" r Bool,
+    CF.HasCacConfig r,
     HasARTFlow r,
     HasCoreMetrics r,
     HasCacheConfig r

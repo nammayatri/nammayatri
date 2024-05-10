@@ -23,7 +23,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BookingUpdateRequest.BookingUpdateRequest] -> m ())
 createMany = traverse_ create
 
-findAllByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ([Domain.Types.BookingUpdateRequest.BookingUpdateRequest]))
+findAllByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m [Domain.Types.BookingUpdateRequest.BookingUpdateRequest])
 findAllByBookingId (Kernel.Types.Id.Id bookingId) = do findAllWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq bookingId]]
 
 findByBAPBUReqId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))

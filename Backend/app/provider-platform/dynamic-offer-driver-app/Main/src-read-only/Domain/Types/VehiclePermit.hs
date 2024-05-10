@@ -4,6 +4,7 @@
 
 module Domain.Types.VehiclePermit where
 
+import Data.Aeson
 import qualified Domain.Types.IdfyVerification
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant

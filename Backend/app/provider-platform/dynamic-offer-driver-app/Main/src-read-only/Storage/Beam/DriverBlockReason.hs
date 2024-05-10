@@ -12,13 +12,13 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data DriverBlockReasonT f = DriverBlockReasonT
-  { blockReason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    blockTimeInHours :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    reasonCode :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { blockReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    blockTimeInHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    reasonCode :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +28,6 @@ instance B.Table DriverBlockReasonT where
 
 type DriverBlockReason = DriverBlockReasonT Identity
 
-$(enableKVPG (''DriverBlockReasonT) [('reasonCode)] [])
+$(enableKVPG ''DriverBlockReasonT ['reasonCode] [])
 
-$(mkTableInstances (''DriverBlockReasonT) "driver_block_reason")
+$(mkTableInstances ''DriverBlockReasonT "driver_block_reason")

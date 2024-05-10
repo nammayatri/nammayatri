@@ -49,7 +49,9 @@ initData = {
       rideType : "",
       tripStartTime : Nothing,
       tripEndTime : Nothing,
-      vehicleModel : ""
+      vehicleModel : "",
+      acRide : Nothing,
+      vehicleServiceTier : ""
 
   },
   props: {

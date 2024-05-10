@@ -86,13 +86,17 @@ rideList ::
   Maybe (ShortId Common.Ride) ->
   Maybe Text ->
   Maybe Text ->
-  Maybe Money ->
+  Maybe HighPrecMoney ->
+  Maybe Currency ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   Flow Common.RideListRes
-rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFareDiff mbfrom mbto = do
+rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFareDiff mbCurrency mbfrom mbto = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  whenJust mbCurrency $ \currency -> do
+    unless (currency == merchantOpCity.currency) $
+      throwError (InvalidRequest "Invalid currency")
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset = fromMaybe 0 mbOffset
   let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
@@ -130,7 +134,8 @@ buildRideListItem QRide.RideItem {..} = do
         driverPhoneNo,
         vehicleNo = rideDetails.vehicleNumber,
         tripCategory = castTripCategory tripCategory,
-        fareDiff,
+        fareDiff = fareDiff <&> (.amountInt),
+        fareDiffWithCurrency = mkPriceAPIEntity <$> fareDiff,
         bookingStatus,
         rideCreatedAt = rideCreatedAt
       }
@@ -189,6 +194,7 @@ ticketRideList merchantShortId opCity mbRideShortId countryCode mbPhoneNumber _ 
           dropLocationAreaCode = (.areaCode) =<< detail.customerDropLocation,
           dropLocationArea = (.area) =<< detail.customerDropLocation,
           fare = detail.actualFare,
+          fareWithCurrency = detail.actualFareWithCurrency,
           personId = cast personId,
           classification = Ticket.DRIVER
         }
@@ -299,9 +305,12 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         chargeableDistance = ride.chargeableDistance,
         maxEstimatedDistance = highPrecMetersToMeters <$> booking.maxEstimatedDistance,
         estimatedRideDuration = secondsToMinutes <$> booking.estimatedDuration,
-        estimatedFare = booking.estimatedFare,
-        actualFare = ride.fare,
-        driverOfferedFare = (.fareParams.driverSelectedFare) =<< mQuote,
+        estimatedFare = roundToIntegral booking.estimatedFare,
+        estimatedFareWithCurrency = PriceAPIEntity booking.estimatedFare booking.currency,
+        actualFare = roundToIntegral <$> ride.fare,
+        actualFareWithCurrency = flip PriceAPIEntity ride.currency <$> ride.fare,
+        driverOfferedFare = roundToIntegral <$> ((.fareParams.driverSelectedFare) =<< mQuote),
+        driverOfferedFareWithCurrency = flip PriceAPIEntity ride.currency <$> ((.fareParams.driverSelectedFare) =<< mQuote),
         pickupDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just ride.createdAt),
         rideDuration = timeDiffInMinutes <$> ride.tripEndTime <*> ride.tripStartTime,
         bookingStatus = mkBookingStatus ride now,
@@ -544,6 +553,26 @@ buildFareBreakUp :: DFP.FareParameters -> Common.FareBreakUp
 buildFareBreakUp DFP.FareParameters {..} = do
   Common.FareBreakUp
     { fareParametersDetails = buildFareParametersDetails fareParametersDetails,
+      driverSelectedFare = roundToIntegral <$> driverSelectedFare,
+      customerExtraFee = roundToIntegral <$> customerExtraFee,
+      serviceCharge = roundToIntegral <$> serviceCharge,
+      govtCharges = roundToIntegral <$> govtCharges,
+      baseFare = roundToIntegral baseFare,
+      waitingCharge = roundToIntegral <$> waitingCharge,
+      rideExtraTimeFare = roundToIntegral <$> rideExtraTimeFare,
+      nightShiftCharge = roundToIntegral <$> nightShiftCharge,
+      congestionCharge = roundToIntegral <$> congestionCharge,
+      driverSelectedFareWithCurrency = flip PriceAPIEntity currency <$> driverSelectedFare,
+      customerExtraFeeWithCurrency = flip PriceAPIEntity currency <$> customerExtraFee,
+      serviceChargeWithCurrency = flip PriceAPIEntity currency <$> serviceCharge,
+      govtChargesWithCurrency = flip PriceAPIEntity currency <$> govtCharges,
+      baseFareWithCurrency = PriceAPIEntity baseFare currency,
+      waitingChargeWithCurrency = flip PriceAPIEntity currency <$> waitingCharge,
+      rideExtraTimeFareWithCurrency = flip PriceAPIEntity currency <$> rideExtraTimeFare,
+      nightShiftChargeWithCurrency = flip PriceAPIEntity currency <$> nightShiftCharge,
+      customerCancellationDuesWithCurrency = flip PriceAPIEntity currency <$> customerCancellationDues,
+      tollChargesWithCurrency = flip PriceAPIEntity currency <$> tollCharges,
+      congestionChargeWithCurrency = flip PriceAPIEntity currency <$> congestionCharge,
       ..
     }
 
@@ -551,6 +580,28 @@ buildFareParametersDetails :: DFP.FareParametersDetails -> Common.FareParameters
 buildFareParametersDetails = makeFareParam
 
 makeFareParam :: DFP.FareParametersDetails -> Common.FareParametersDetails
-makeFareParam (DFP.ProgressiveDetails DFP.FParamsProgressiveDetails {..}) = Common.ProgressiveDetails Common.FParamsProgressiveDetails {..}
-makeFareParam (DFP.SlabDetails DFP.FParamsSlabDetails {..}) = Common.SlabDetails Common.FParamsSlabDetails {..}
-makeFareParam (DFP.RentalDetails DFP.FParamsRentalDetails {..}) = Common.RentalDetails Common.FParamsRentalDetails {..}
+makeFareParam (DFP.ProgressiveDetails DFP.FParamsProgressiveDetails {..}) =
+  Common.ProgressiveDetails
+    Common.FParamsProgressiveDetails
+      { deadKmFare = roundToIntegral deadKmFare,
+        extraKmFare = roundToIntegral <$> extraKmFare,
+        deadKmFareWithCurrency = PriceAPIEntity deadKmFare currency,
+        extraKmFareWithCurrency = flip PriceAPIEntity currency <$> extraKmFare
+      }
+makeFareParam (DFP.SlabDetails DFP.FParamsSlabDetails {..}) =
+  Common.SlabDetails
+    Common.FParamsSlabDetails
+      { platformFeeWithCurrency = flip PriceAPIEntity currency <$> platformFee,
+        sgstWithCurrency = flip PriceAPIEntity currency <$> sgst,
+        cgstWithCurrency = flip PriceAPIEntity currency <$> cgst,
+        ..
+      }
+makeFareParam (DFP.RentalDetails DFP.FParamsRentalDetails {..}) =
+  Common.RentalDetails
+    Common.FParamsRentalDetails
+      { timeBasedFare = roundToIntegral timeBasedFare,
+        distBasedFare = roundToIntegral distBasedFare,
+        timeBasedFareWithCurrency = PriceAPIEntity timeBasedFare currency,
+        distBasedFareWithCurrency = PriceAPIEntity distBasedFare currency,
+        ..
+      }

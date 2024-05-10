@@ -26,9 +26,9 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, roundToHalf, setIsNotificationSchedulerRunningKey)
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverPlan as QDP
@@ -64,7 +64,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
     setIsNotificationSchedulerRunningKey startTime endTime merchantOpCityId serviceName True
-    transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     subscriptionConfig <-
       CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
         >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
@@ -134,7 +134,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         { driverId = driverFee_.driverId,
           mandateId = mandateId_,
           driverFeeId = driverFee_.id,
-          amount = roundToHalf $ (fromIntegral driverFee_.govtCharges) + driverFee_.platformFee.fee + driverFee_.platformFee.cgst + driverFee_.platformFee.sgst
+          amount = roundToHalf $ driverFee_.govtCharges + driverFee_.platformFee.fee + driverFee_.platformFee.cgst + driverFee_.platformFee.sgst
         }
 
 data DriverInfoForPDNotification = DriverInfoForPDNotification

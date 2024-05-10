@@ -51,7 +51,6 @@ window.getMerchantConfig = function () {
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"],
     "primaryButtonCornerRadius" : 8.0,
     "cancelSearchTextColor": "#E55454",
-    "enableSingleEstimate": true,
     "dashboardUrl" : "https://nammayatri.in/open?source=in-app",
     "driverInfoConfig": {
       "showTrackingButton" : false
@@ -263,7 +262,7 @@ window.getMerchantConfig = function () {
     ]
     , "estimateAndQuoteConfig" : 
       { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
-      , "variantOrder" : ["AUTO_RICKSHAW"]
+      , "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY"]
       , "variantInfo" : {
         "hatchback" : {
           "name" : "Hatchback",
@@ -288,8 +287,11 @@ window.getMerchantConfig = function () {
         "autoRickshaw" : {
           "name" : "Auto Rickshaw",
           "image" : "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png"
-        }
-
+        },
+        "bookAny" : {
+          "name" : "Book Any",
+          "image" : "ny_ic_auto_cab_green,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_cab_green.png"
+        },
       }
       , "enableOnlyAuto" : true
       , "showNearByDrivers": false

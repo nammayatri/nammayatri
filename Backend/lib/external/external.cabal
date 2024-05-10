@@ -26,6 +26,8 @@ flag Local
 
 library
   exposed-modules:
+      Email.AWS.Flow
+      Email.Types
       KafkaLogs.TransactionLogs
       TransactionLogs.Interface
       TransactionLogs.Interface.ONDC
@@ -75,8 +77,13 @@ library
   build-depends:
       aeson
     , aeson-casing
+    , amazonka
+    , amazonka-core
+    , amazonka-ses
     , base >=4.7 && <5
     , base64-bytestring
+    , beam-core
+    , beam-postgres
     , beckn-spec
     , binary
     , bytestring
@@ -114,6 +121,7 @@ library
     , passetto-client
     , persistent
     , persistent-postgresql
+    , postgresql-simple
     , prometheus-client
     , prometheus-metrics-ghc
     , prometheus-proc

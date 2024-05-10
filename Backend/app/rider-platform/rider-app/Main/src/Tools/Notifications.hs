@@ -475,10 +475,11 @@ notifyOnBookingReallocated booking = do
 
 notifyOnEstOrQuoteReallocated ::
   ServiceFlow m r =>
+  SBCR.CancellationSource ->
   SRB.Booking ->
   Text ->
   m ()
-notifyOnEstOrQuoteReallocated booking estOrQuoteId = do
+notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   tag <- getDisabilityTag person.hasDisability person.id
@@ -501,12 +502,38 @@ notifyOnEstOrQuoteReallocated booking estOrQuoteId = do
           sound = notificationSound
         }
     title = T.pack "Searching for a New Driver!"
-    body =
-      unwords
-        [ "The driver had cancelled the ride for",
-          showTimeIst (booking.startTime) <> ".",
-          "Please wait while we allocate you another driver."
-        ]
+    body = case cancellationSource of
+      SBCR.ByUser ->
+        unwords
+          [ "You have cancelled your ride for",
+            showTimeIst (booking.startTime) <> ".",
+            "Please wait while we allocate you another driver."
+          ]
+      SBCR.ByMerchant ->
+        unwords
+          [ "The ride for",
+            showTimeIst (booking.startTime),
+            "is cancelled. Please wait while we allocate you another driver."
+          ]
+      SBCR.ByDriver ->
+        unwords
+          [ "The driver had cancelled the ride for",
+            showTimeIst (booking.startTime) <> ".",
+            "Please wait while we allocate you another driver."
+          ]
+      SBCR.ByAllocator ->
+        unwords
+          [ "The ride for",
+            showTimeIst (booking.startTime),
+            "is cancelled. Please wait while we allocate you another driver."
+          ]
+      SBCR.ByApplication ->
+        unwords
+          [ "Sorry your ride for",
+            showTimeIst (booking.startTime),
+            "was cancelled.",
+            "Please wait while we allocate you another driver."
+          ]
 
 notifyOnQuoteReceived ::
   ServiceFlow m r =>

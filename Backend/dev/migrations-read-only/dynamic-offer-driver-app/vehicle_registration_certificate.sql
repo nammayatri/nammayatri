@@ -48,3 +48,9 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN a
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN user_passed_vehicle_category text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN vehicle_seat_belts integer ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN vehicle_doors integer ;

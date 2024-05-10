@@ -118,6 +118,8 @@ dependencies:
   - regex-posix
   - pureMD5
   - lens-aeson
+  - http-client
+  - http-client-tls
 
 ghc-options:
   - -fwrite-ide-info

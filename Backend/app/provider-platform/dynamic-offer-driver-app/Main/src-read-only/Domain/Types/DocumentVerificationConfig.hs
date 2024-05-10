@@ -4,6 +4,7 @@
 
 module Domain.Types.DocumentVerificationConfig where
 
+import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Vehicle
@@ -18,6 +19,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
+    isDefaultEnabledOnManualVerification :: Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,
     isMandatory :: Kernel.Prelude.Bool,
@@ -47,6 +49,9 @@ data DocumentType
   | VehicleFitnessCertificate
   | VehicleInsurance
   | VehiclePUC
+  | ProfileDetails
+  | SocialSecurityNumber
+  | VehicleInspectionForm
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SupportedVehicleClasses

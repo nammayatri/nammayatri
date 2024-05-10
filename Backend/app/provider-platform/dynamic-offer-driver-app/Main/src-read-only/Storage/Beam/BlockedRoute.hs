@@ -13,15 +13,15 @@ import qualified Kernel.Utils.ComputeIntersection
 import Tools.Beam.UtilsTH
 
 data BlockedRouteT f = BlockedRouteT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    enabled :: (B.C f Kernel.Prelude.Bool),
-    endSegment :: (B.C f Kernel.Utils.ComputeIntersection.LineSegment),
-    id :: (B.C f Kernel.Prelude.Text),
-    name :: (B.C f Kernel.Prelude.Text),
-    startSegment :: (B.C f Kernel.Utils.ComputeIntersection.LineSegment),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    enabled :: B.C f Kernel.Prelude.Bool,
+    endSegment :: B.C f Kernel.Utils.ComputeIntersection.LineSegment,
+    id :: B.C f Kernel.Prelude.Text,
+    name :: B.C f Kernel.Prelude.Text,
+    startSegment :: B.C f Kernel.Utils.ComputeIntersection.LineSegment,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table BlockedRouteT where
 
 type BlockedRoute = BlockedRouteT Identity
 
-$(enableKVPG (''BlockedRouteT) [('id)] [])
+$(enableKVPG ''BlockedRouteT ['id] [])
 
-$(mkTableInstances (''BlockedRouteT) "blocked_route")
+$(mkTableInstances ''BlockedRouteT "blocked_route")

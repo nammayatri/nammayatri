@@ -12,6 +12,7 @@ module Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDi
 
 import qualified Database.Beam as B
 import qualified Domain.Types.FarePolicy as Domain
+import Domain.Types.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Id as KTI
 import Kernel.Utils.Time (Seconds)
@@ -37,3 +38,4 @@ type FullFarePolicyRentalDetailsDistanceBuffers = (KTI.Id Domain.FarePolicy, Dom
 $(enableKVPG ''FarePolicyRentalDetailsDistanceBuffersT ['farePolicyId] [])
 
 $(mkTableInstances ''FarePolicyRentalDetailsDistanceBuffersT "fare_policy_rental_details_distance_buffers")
+$(mkCacParseInstanceList ''FarePolicyRentalDetailsDistanceBuffers)

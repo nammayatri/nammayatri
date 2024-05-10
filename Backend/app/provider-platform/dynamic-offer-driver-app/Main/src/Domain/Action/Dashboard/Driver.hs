@@ -73,6 +73,7 @@ module Domain.Action.Dashboard.Driver
     updateRCInvalidStatus,
     updateVehicleVariant,
     bulkReviewRCVariant,
+    updateDriverTag,
   )
 where
 
@@ -140,8 +141,10 @@ import SharedLogic.DriverOnboarding
 import qualified SharedLogic.EventTracking as SEVT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.VehicleServiceTier
+import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQGHC
 import Storage.CachedQueries.DriverBlockReason as DBR
@@ -149,7 +152,6 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarVerification as AV
@@ -177,6 +179,7 @@ import Tools.Error
 import qualified Tools.Notifications as TN
 import qualified Tools.SMS as Sms
 import Tools.Whatsapp as Whatsapp
+import Utils.Common.Cac.KeyNameConstants
 
 -- FIXME: not tested yet because of no onboarding test data
 driverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverDocumentsInfoRes
@@ -184,7 +187,7 @@ driverDocumentsInfo merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCity.id Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   let onboardingTryLimit = transporterConfig.onboardingTryLimit
   drivers <- B.runInReplica $ QDocStatus.fetchDriverDocsInfo merchant merchantOpCity Nothing
   pure $ foldl' (func onboardingTryLimit now) Common.emptyInfo drivers
@@ -314,7 +317,7 @@ getDriverDue merchantShortId _ mbMobileCountryCode phone = do
   driverFees <- findPendingFeesByDriverIdAndServiceName (cast driver.id) YATRI_SUBSCRIPTION
   driverFeeByInvoices <- case driverFees of
     [] -> pure []
-    _ -> SLDriverFee.groupDriverFeeByInvoices driverFees
+    driverFee : _ -> SLDriverFee.groupDriverFeeByInvoices driverFee.currency driverFees
   return $ map (mkPaymentDueResp driver.id) driverFeeByInvoices
   where
     mkPaymentDueResp driverId SLDriverFee.DriverFeeByInvoice {..} = do
@@ -324,13 +327,24 @@ getDriverDue merchantShortId _ mbMobileCountryCode phone = do
           driverId_ = cast driverId
       Common.DriverOutstandingBalanceResp
         { govtCharges = round govtCharges,
+          govtChargesWithCurrency = PriceAPIEntity govtCharges currency,
           platformFee = platformFee_,
           status = status_,
           driverId = driverId_,
+          totalFee = roundToIntegral totalFee,
+          totalEarnings = roundToIntegral totalEarnings,
+          totalFeeWithCurrency = PriceAPIEntity totalFee currency,
+          totalEarningsWithCurrency = PriceAPIEntity totalEarnings currency,
           ..
         }
 
-    mkPlatformFee SLDriverFee.PlatformFee {..} = Common.PlatformFee {..}
+    mkPlatformFee SLDriverFee.PlatformFee {..} =
+      Common.PlatformFee
+        { feeWithCurrency = PriceAPIEntity fee currency,
+          cgstWithCurrency = PriceAPIEntity cgst currency,
+          sgstWithCurrency = PriceAPIEntity sgst currency,
+          ..
+        }
 
     castStatus status = case status of -- only PENDING and OVERDUE possible
       ONGOING -> Common.ONGOING
@@ -542,8 +556,8 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   driverFees <- findPendingFeesByDriverIdAndServiceName driverId serviceName
-  let totalFee = sum $ map (\fee -> fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let totalFee = sum $ map (\fee -> fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   QDriverInfo.updatePendingPayment False driverId
   QDriverInfo.updateSubscription True driverId
@@ -736,7 +750,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         blockStateModifier = info.blockStateModifier,
         currentAcOffReportCount = maybe 0 round info.airConditionScore,
         totalAcRestrictionUnblockCount = info.acRestrictionLiftCount,
-        lastACStatusCheckedAt = info.lastACStatusCheckedAt
+        lastACStatusCheckedAt = info.lastACStatusCheckedAt,
+        driverTag = person.driverTag
       }
 
 buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity
@@ -851,7 +866,7 @@ addVehicle merchantShortId opCity reqDriverId req = do
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   mbLinkedVehicle <- QVehicle.findById personId
   whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
@@ -1172,7 +1187,7 @@ toggleDriverSubscriptionByService ::
   Flow ()
 toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanToAssign toToggle vehicleNo = do
   (autoPayStatus, driverPlan) <- DTPlan.getSubcriptionStatusWithPlan serviceName driverId
-  transporterConfig <- SCT.findByMerchantOpCityId mOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
   if toToggle
     then do
       planToAssign <- getPlanId mbPlanToAssign
@@ -1223,7 +1238,8 @@ runVerifyRCFlow personId merchant merchantOpCityId req = do
             dateOfRegistration = Nothing,
             vehicleCategory = Nothing,
             airConditioned = req.airConditioned,
-            multipleRC = Nothing
+            multipleRC = Nothing,
+            vehicleDetails = Nothing
           }
   void $ DomainRC.verifyRC True (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq
 
@@ -1334,7 +1350,7 @@ unlinkAadhaar :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow
 unlinkAadhaar merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
@@ -1442,17 +1458,27 @@ updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId serviceNam
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   maybe (pure ()) (`QDriverInfo.updateSubscription` personId) subscribed
-  dueDriverFee <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName personId serviceName
+  dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName personId serviceName
   let invoicesDataToUpdate = maybe [] mapToInvoiceInfoToUpdateAfterParse invoices
   mapM_ (\inv -> QINV.updateStatusAndTypeByMbdriverFeeIdAndInvoiceId inv.invoiceId inv.invoiceStatus Nothing inv.driverFeeId) invoicesDataToUpdate
   allDriverFeeByIds <- QDF.findAllByDriverFeeIds (maybe [] (map (\df -> cast (Id df.driverFeeId))) driverFees)
-  if isJust mkDuesToAmount
+  let reqMkDuesToAmount = (mkDuesToAmountWithCurrency <&> (.amount)) <|> mkDuesToAmount
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+  SMerchant.checkCurrencies currency $ do
+    let driverFeesFields = flip (maybe []) driverFees $
+          concatMap $ \driverFees' ->
+            [ driverFees'.platformFeeWithCurrency,
+              driverFees'.sgstWithCurrency,
+              driverFees'.cgstWithCurrency
+            ]
+    mkDuesToAmountWithCurrency : driverFeesFields
+  if isJust reqMkDuesToAmount
     then do
-      let amount = maybe 0 (/ (fromIntegral $ length dueDriverFee)) mkDuesToAmount
-      mapM_ (\feeId -> QDF.resetFee feeId 0 (PlatformFee amount 0 0) Nothing Nothing now) (dueDriverFee <&> (.id))
-      return $ mkResponse dueDriverFee
+      let amount = maybe 0.0 (/ (fromIntegral $ length dueDriverFees)) reqMkDuesToAmount
+      mapM_ (\fee -> QDF.resetFee fee.id 0 (PlatformFee {fee = amount, cgst = 0.0, sgst = 0.0, currency = fee.currency}) Nothing Nothing now) dueDriverFees
+      return $ mkResponse dueDriverFees
     else do
-      maybe (pure ()) (updateAccordingToProvidedFeeState now) driverFees
+      maybe (pure ()) (updateAccordingToProvidedFeeState currency now) driverFees
       return $ mkResponse allDriverFeeByIds
   where
     mkResponse driverFees' =
@@ -1460,6 +1486,7 @@ updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId serviceNam
         { driverFees = Just $ mapToDriverFeeToUpdate driverFees',
           invoices = Nothing,
           mkDuesToAmount = Nothing,
+          mkDuesToAmountWithCurrency = Nothing,
           subscribed = Nothing
         }
     mapToInvoiceInfoToUpdateAfterParse =
@@ -1482,17 +1509,20 @@ updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId serviceNam
                 mkCleared = Nothing,
                 platformFee = Just $ dfee.platformFee.fee,
                 cgst = Just dfee.platformFee.cgst,
-                sgst = Just dfee.platformFee.sgst
+                sgst = Just dfee.platformFee.sgst,
+                platformFeeWithCurrency = Just $ PriceAPIEntity dfee.platformFee.fee dfee.currency,
+                cgstWithCurrency = Just $ PriceAPIEntity dfee.platformFee.cgst dfee.currency,
+                sgstWithCurrency = Just $ PriceAPIEntity dfee.platformFee.sgst dfee.currency
               }
         )
-    updateAccordingToProvidedFeeState now =
+    updateAccordingToProvidedFeeState currency now =
       mapM_
         ( \fee -> do
             let id = cast (Id fee.driverFeeId)
-                platFormFee' = fromMaybe 0 (fee.platformFee)
-                sgst = fromMaybe 0 (fee.sgst)
-                cgst = fromMaybe 0 (fee.cgst)
-                platFormFee = PlatformFee platFormFee' sgst cgst
+                platFormFee' = fromMaybe 0 ((fee.platformFeeWithCurrency <&> (.amount)) <|> fee.platformFee)
+                sgst = fromMaybe 0 ((fee.sgstWithCurrency <&> (.amount)) <|> fee.sgst)
+                cgst = fromMaybe 0 ((fee.cgstWithCurrency <&> (.amount)) <|> fee.cgst)
+                platFormFee = PlatformFee {fee = platFormFee', sgst, cgst, currency}
             QDF.resetFee id 0 platFormFee Nothing Nothing now
             when (fee.mkManualDue == Just True) $ do QDF.updateAutoPayToManual id
             when (fee.mkAutoPayDue == Just True && fee.mkManualDue `elem` [Nothing, Just False]) $ do QDF.updateManualToAutoPay id
@@ -1768,7 +1798,7 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   -- limit checking
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   void $ checkIfVolunteerSMSSendingLimitExceeded volunteerId transporterConfig.volunteerSmsSendingLimit channel
   void $ checkIfDriverSMSReceivingLimitExceeded driverId.getId transporterConfig.driverSmsReceivingLimit channel
 
@@ -1830,7 +1860,7 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
       return $
         if null filteredDriverFees
           then 0
-          else sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
+          else sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
 
     templateText txt = "{#" <> txt <> "#}"
 
@@ -1916,7 +1946,7 @@ setServiceChargeEligibleFlagInDriverPlan merchantShortId opCity driverId req = d
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   let serviceName = mapServiceName req.serviceName
   driverPlan <- QDP.findByDriverIdWithServiceName personId serviceName
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let mbEnableServiceUsageCharge = driverPlan <&> (.enableServiceUsageCharge)
   when (mbEnableServiceUsageCharge /= Just req.serviceChargeEligibility) $ do
     QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName personId req.serviceChargeEligibility serviceName
@@ -2001,3 +2031,26 @@ updateVehicleVariantAndServiceTier variant vehicle = do
   vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId
   let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction driver driverInfo' vehicle vehicleServiceTiers
   QVehicle.updateVariantAndServiceTiers variant availableServiceTiersForDriver vehicle.driverId
+
+updateDriverTag :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverTagReq -> Flow APISuccess
+updateDriverTag merchantShortId opCity driverId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- merchant access checking
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  let tag =
+        if req.isAddingTag
+          then addDriverTag driver.driverTag (T.toUpper req.driverTag)
+          else removeDriverTag driver.driverTag (T.toUpper req.driverTag)
+  QPerson.updateTag personId tag
+  pure Success
+
+addDriverTag :: Maybe [Text] -> Text -> [Text]
+addDriverTag Nothing tag = [tag]
+addDriverTag (Just tags) tag = tags ++ [tag]
+
+removeDriverTag :: Maybe [Text] -> Text -> [Text]
+removeDriverTag Nothing _ = []
+removeDriverTag (Just tags) tag = filter (/= tag) tags

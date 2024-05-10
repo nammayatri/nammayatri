@@ -25,9 +25,9 @@ import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, roundToHalf)
 import Storage.Beam.Payment ()
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverPlan as QDP
@@ -56,7 +56,7 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
         serviceName = fromMaybe YATRI_SUBSCRIPTION jobData.serviceName
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
-    transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let limit = transporterConfig.driverFeeMandateExecutionBatchSize
     executionDate' <- getCurrentTime
     driverFees <- QDF.findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceName merchantId merchantOpCityId limit startTime endTime serviceName
@@ -112,7 +112,7 @@ buildExecutionRequestAndInvoice driverFee notification executionDate (driverPlan
       let executionRequest =
             PaymentInterface.MandateExecutionReq
               { orderId = invoice.invoiceShortId,
-                amount = roundToHalf $ (fromIntegral driverFee.govtCharges) + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst,
+                amount = roundToHalf $ driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst,
                 customerId = driverFee.driverId.getId,
                 notificationId = notification.shortId,
                 mandateId = mandateId.getId,

@@ -4,6 +4,7 @@
 
 module Domain.Types.IdfyVerification where
 
+import Data.Aeson
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant

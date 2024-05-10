@@ -48,9 +48,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding
+import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
-import Storage.CachedQueries.Merchant.TransporterConfig
 import qualified Storage.Queries.AadhaarVerification as SAV
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverLicense as DLQuery
@@ -65,6 +65,7 @@ import qualified Storage.Queries.VehicleInsurance as VIQuery
 import qualified Storage.Queries.VehiclePUC as VPUCQuery
 import qualified Storage.Queries.VehiclePermit as VPQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
+import Utils.Common.Cac.KeyNameConstants
 
 -- PENDING means "pending verification"
 -- FAILED is used when verification is failed
@@ -109,7 +110,7 @@ statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -
 statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
   -- multipleRC flag is temporary to support backward compatibility
   person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   merchantOperatingCity <- SMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   let language = fromMaybe merchantOperatingCity.language person.language
   (dlStatus, mDL, dlVerficationMessage) <- getDLAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit merchantOperatingCity.language
@@ -263,7 +264,7 @@ checkIfDocumentValid merchantOperatingCityId docType category status = do
       if verificationConfig.isMandatory
         then case status of
           VALID -> return True
-          MANUAL_VERIFICATION_REQUIRED -> return True
+          MANUAL_VERIFICATION_REQUIRED -> return verificationConfig.isDefaultEnabledOnManualVerification
           _ -> return False
         else return True
     Nothing -> return True

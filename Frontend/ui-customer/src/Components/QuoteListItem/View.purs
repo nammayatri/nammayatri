@@ -23,7 +23,7 @@ import Components.QuoteListItem.Controller (Action(..))
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number (ceil)
 import Effect (Effect)
 import Effect.Aff (launchAff)
@@ -117,7 +117,7 @@ driverImageView state =
       imageView
         [ margin (MarginLeft 27)
       , cornerRadius 18.0
-      , background state.appConfig.quoteListItemConfig.driverImagebg
+      -- , background state.appConfig.quoteListItemConfig.driverImagebg --Removing for now till we add driver images.
       , width (V 36)
       , height (V 36)
       , imageWithFallback ""
@@ -127,7 +127,7 @@ driverImageView state =
         [ height $ V state.appConfig.quoteListItemConfig.vehicleHeight
         , width $ V state.appConfig.quoteListItemConfig.vehicleWidth
         , cornerRadius 20.0
-        , imageWithFallback $ fetchImage FF_ASSET $ getVehicleVariantImage $ getValueToLocalStore SELECTED_VARIANT
+        , imageWithFallback $ fetchImage FF_ASSET $ state.vehicleImage
         , weight 1.0
         ]
       ]
@@ -203,15 +203,32 @@ driverNameAndTimeView state =
     ][  textView (
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ if state.timeLeft == 0 then (getString NEARBY) else show state.timeLeft <> (getString MINS_AWAY)
+        , text $ fromMaybe "" state.serviceTierName
         , color Color.black800
         ] <> FontStyle.subHeading1 LanguageStyle)
-      , textView (
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text state.driverName
-        , color Color.black700
-        ] <> FontStyle.tags LanguageStyle)
+      , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        ][ textView $ 
+           [ height WRAP_CONTENT
+           , width WRAP_CONTENT
+           , text if state.timeLeft == 0 then (getString NEARBY) else show state.timeLeft <> (getString MINS_AWAY)
+           , color Color.black700
+           ] <> FontStyle.tags LanguageStyle
+         , imageView
+           [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_circle_grey"
+           , width $ V 4
+           , height $ V 4
+           , margin $ Margin 4 2 4 0
+           ]
+         , textView $ 
+           [ height WRAP_CONTENT
+           , width WRAP_CONTENT
+           , text state.driverName
+           , color Color.black700
+           ] <> FontStyle.tags LanguageStyle 
+        ]
     ]
 
 primaryButtonView :: QuoteListItemState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w

@@ -26,7 +26,6 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FeedbackForm.FeedbackForm -> m ())
 updateByPrimaryKey (Domain.Types.FeedbackForm.FeedbackForm {..}) = do
-  _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.answer answer,
       Se.Set Beam.answerType answerType,

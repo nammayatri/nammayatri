@@ -22,8 +22,8 @@ window.getMerchantConfig = function () {
     "showDashboard": "true",
     "enableShareRide": "true",
     "autoVariantEnabled": true,
-    "shareAppTitle": "Share Namma Yatri!",
-    "shareAppContent": "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen",
+    "shareAppTitle": "Share Bridge!",
+    "shareAppContent": "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Bridge now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen",
     "DOCUMENT_LINK": "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA",
     "appLink": getAppLink(window.__OS),
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F",
@@ -79,17 +79,17 @@ window.getMerchantConfig = function () {
     "popupBackground" : "#FFFFFF",
     "englishStrings": {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
-      "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Welcome to Namma Yatri! \nTo start booking rides, please allow us to find you!",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Welcome to Bridge! \nTo start booking rides, please allow us to find you!",
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>",
-      "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Namma Yatri experience",
+      "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Bridge experience",
       "LEARN_HOW_TEXT" : "Learn how NammaYatri caters to your needs",
       "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE" : "Driver addition limits are calculated at 10% of the base fare rounded off to the nearest ₹10",
-      "FARE_INFO_TEXT" : "The fare is based on the Karnataka State Government Rules factoring auto driver's additions and is not determined by Namma Yatri.",
-      "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Namma Yatri from the settings app to start looking for rides.",
-      "TAXI_FROM_ZONE" : "from Namma Yatri Zone",
-      "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN" : "OTP for the Namma Yatri zone has been expired, please try booking again",
-      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Namma Yatri will try to resolve it in under 24 hours.",
-      "CALL_SUPPORT_DESCRIPTION" : "You are about to place a call to Namma Yatri Support. Do you want to proceed?",
+      "FARE_INFO_TEXT" : "The fare is based on the Karnataka State Government Rules factoring auto driver's additions and is not determined by Bridge.",
+      "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Bridge from the settings app to start looking for rides.",
+      "TAXI_FROM_ZONE" : "from Bridge Zone",
+      "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN" : "OTP for the Bridge zone has been expired, please try booking again",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Bridge will try to resolve it in under 24 hours.",
+      "CALL_SUPPORT_DESCRIPTION" : "You are about to place a call to Bridge Support. Do you want to proceed?",
       "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "We hope the issue is resolved, feel free to write to us at support@nammayatri.in for any queries."
     },
     "hindiStrings": {
@@ -184,7 +184,7 @@ window.getMerchantConfig = function () {
     },
     "terminateBtnConfig" : {
       "visibility" : false,
-      "title" : "Namma Yatri",
+      "title" : "Bridge",
       "imageUrl" : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
     }
     , "showDeleteAccount" : true
@@ -299,7 +299,7 @@ window.getMerchantConfig = function () {
     , "appData" : {
       "link" : getAppLink(window.__OS)
       , "supportMail" :"support@nammayatri.in"
-      , "name" : "Namma Yatri"
+      , "name" : "Bridge"
       , "website" : "https://nammayatri.in/"
     }
     , "referral" : {

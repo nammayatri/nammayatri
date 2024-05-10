@@ -10,3 +10,8 @@ ALTER TABLE atlas_driver_offer_bpp.purchase_history ADD COLUMN num_coins integer
 ALTER TABLE atlas_driver_offer_bpp.purchase_history ADD COLUMN title text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.purchase_history ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.purchase_history ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.purchase_history ADD COLUMN currency character varying(255) ;

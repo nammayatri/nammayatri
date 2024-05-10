@@ -23,9 +23,9 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "edit" :> "result" :> Capture "bookingUpdateRequestId" (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest)
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.EditBooking.EditBookingRespondAPIReq
-      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API

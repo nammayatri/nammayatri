@@ -50,8 +50,8 @@ import Kernel.Types.Validation
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as QODC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverLicense as Query
 import qualified Storage.Queries.IdfyVerification as IVQuery
@@ -61,6 +61,7 @@ import qualified Tools.DriverBackgroundVerification as DriverBackgroundVerificat
 import Tools.Error
 import qualified Tools.Ticket as TT
 import qualified Tools.Verification as Verification
+import Utils.Common.Cac.KeyNameConstants
 
 data DriverDLReq = DriverDLReq
   { driverLicenseNumber :: Text,
@@ -101,7 +102,7 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
   when driverInfo.blocked $ throwError DriverAccountBlocked
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
-  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId (Just driverInfo.driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.DriverLicense (fromMaybe CAR req.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
   nameOnCard <-
     if (isNothing dateOfIssue && documentVerificationConfig.checkExtraction && (not isDashboard || transporterConfig.checkImageExtractionForDashboard))
@@ -136,7 +137,7 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
           res -> do
             let description = encodeToText res
             logInfo $ "Success: " <> show description
-            ticket <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig.kaptureDisposition)
+            ticket <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig)
             logInfo $ "Ticket: " <> show ticket
             return ()
 
@@ -162,11 +163,12 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
         throwError (ImageInvalidType (show DTO.DriverLicense) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
-    mkTicket description disposition =
+    mkTicket description tConfig =
       Ticket.CreateTicketReq
         { category = "BlackListPortal",
           subCategory = Just "Onboarding Dl Verification",
-          disposition = disposition,
+          disposition = tConfig.kaptureDisposition,
+          queue = tConfig.kaptureQueue,
           issueId = Nothing,
           issueDescription = description,
           mediaFiles = Nothing,

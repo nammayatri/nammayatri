@@ -67,16 +67,19 @@ initData = {
     , startedAtUTC : ""
     , rateCard : {
        additionalFare : 0,
-       nightShiftMultiplier : 0.0,
-       nightCharges : false,
        currentRateCardType : DefaultRateCard,
        onFirstPage:false,
        baseFare : 0,
        extraFare : [],
-       pickUpCharges : 0,
+       pickUpCharges : 0.0,
        vehicleVariant : "",
        createdTime : "",
-       tollCharge : 0
+       tollCharge : 0.0,
+       driverAdditions : [],
+       fareInfoDescription : [],
+       isNightShift : false,
+       nightChargeTill : "",
+       nightChargeFrom : ""
        }
     , speed : 0
     , selectedLocationListItem : Nothing
@@ -117,17 +120,18 @@ initData = {
       , showInfo : true
       , searchResultType : CV.ESTIMATES
       , isBookingOption : false
-      , pickUpCharges : 0
+      , pickUpCharges : 0.0
       , layoutMargin : Margin 0 0 0 0
-      , isSingleEstimate : false
-      , tollCharge : 0
+      , tollCharge : 0.0
       , serviceTierName : Nothing
       , serviceTierShortDesc : Nothing
       , extraFare: []
       , additionalFare: 0
-      , nightShiftMultiplier: 0.0
-      , nightCharges: false
-      , baseFare : 0
+      , driverAdditions: []
+      , fareInfoDescription: []
+      , isNightShift : false
+      , nightChargeTill : ""
+      , nightChargeFrom : ""
       , airConditioned : Nothing
       , showEditButton : false
       , editBtnText : ""
@@ -136,6 +140,12 @@ initData = {
       , providerType : CT.ONUS
       , singleVehicle : false
       , priceShimmer : true
+      , services : []
+      , availableServices : []
+      , selectedServices : []
+      , currentEstimateHeight : 184
+      , selectedEstimateHeight : 0
+      , validTill : ""
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -186,6 +196,7 @@ initData = {
         providerPrefInfo : false,
         hasTopProviderEstimate : true
     }
+    , otherSelectedEstimates : []
     },
     props: {
       rideRequestFlow : false
@@ -357,6 +368,7 @@ initData = {
                                }
     , showAcWorkingPopup : false
     , repeateRideTimerStoped : false
+    , currentEstimateHeight : 184
   }
 }
 

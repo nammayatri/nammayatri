@@ -39,7 +39,9 @@ data Identifier = CUSTOMER | DRIVER
 data Ride = Ride
   { id :: Id Ride,
     shortId :: ShortId Ride,
-    createdAt :: UTCTime
+    merchantOperatingCityId :: Id MerchantOperatingCity,
+    createdAt :: UTCTime,
+    counterPartyRideId :: Maybe Text
   }
 
 data MerchantOperatingCity = MerchantOperatingCity
@@ -121,6 +123,8 @@ data RideInfoRes = RideInfoRes
     driverName :: Text,
     driverPhoneNo :: Maybe Text,
     vehicleNo :: Text,
+    vehicleVariant :: Maybe Text,
+    vehicleServiceTier :: Maybe Text,
     actualFare :: Maybe Money,
     bookingStatus :: Maybe BookingStatus
   }
@@ -180,5 +184,8 @@ data ChatDetail = ChatDetail
 data MerchantConfig = MerchantConfig
   { mediaFileSizeUpperLimit :: Int,
     mediaFileUrlPattern :: Text,
-    kaptureDisposition :: Text
+    kaptureDisposition :: Text,
+    kaptureQueue :: Text,
+    counterPartyUrl :: BaseUrl,
+    counterPartyApiKey :: Text
   }

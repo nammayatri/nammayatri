@@ -21,6 +21,11 @@ source-repository head
 
 library
   exposed-modules:
+      Utils.Common.Cac.ContextConstants
+      Utils.Common.Cac.KeyNameConstants
+      Utils.Common.Cac.PrefixConstants
+      Utils.Common.Cac.UtilsConstants
+      Utils.Common.CacUtils
       Utils.Common.Events
   other-modules:
       Paths_utils
@@ -88,8 +93,10 @@ library
     , extra
     , generic-lens
     , geohash ==1.0.1
+    , haskell-cac
     , hspec
     , http-client
+    , http-conduit
     , http-types
     , lens
     , location-updates

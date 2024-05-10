@@ -9,7 +9,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.Queries.DriverFee as QDF
 
 badDebtCalculation ::
@@ -27,7 +27,7 @@ badDebtCalculation Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
       merchantId = jobData.merchantId
       opCityId = jobData.merchantOperatingCityId
-  transporterConfig <- SCT.findByMerchantOpCityId opCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId opCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   driverFeesToUpdate <- B.runInReplica $ QDF.findAllDriverFeesRequiredToMovedIntoBadDebt merchantId transporterConfig
   void $ QDF.updateBadDebtDateAllDriverFeeIds merchantId (driverFeesToUpdate <&> (.id)) transporterConfig
   if null driverFeesToUpdate

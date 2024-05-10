@@ -11,10 +11,12 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.OnUpdate as OU
 import qualified Domain.Types.Person
+import Domain.Types.RideRoute
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -23,6 +25,7 @@ import Kernel.Utils.Error.Throwing
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.LocationMapping as SLM
+import SharedLogic.Ride
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.LocationMapping as QLM
@@ -54,6 +57,11 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
       dropLocMapRide <- SLM.buildDropLocationMapping dropLocMapping.locationId ride.id.getId DLM.RIDE (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
       QLM.create dropLocMapBooking
       QLM.create dropLocMapRide
+      routeInfo :: RouteInfo <- Redis.get (bookingRequestKeySoftUpdate booking.id.getId) >>= fromMaybeM (InternalError $ "BookingRequestRoute not found for bookingId: " <> booking.id.getId)
+      multipleRoutes :: Maybe RouteAndDeviationInfo <- Redis.get $ multipleRouteKeySoftUpdate booking.id.getId
+      Redis.setExp (searchRequestKey booking.transactionId) routeInfo 3600
+      whenJust multipleRoutes $ \allRoutes -> do
+        Redis.setExp (multipleRouteKey booking.transactionId) allRoutes 3600
       let estimatedDistance = highPrecMetersToMeters <$> bookingUpdateReq.estimatedDistance
       QB.updateMultipleById bookingUpdateReq.estimatedFare bookingUpdateReq.maxEstimatedDistance estimatedDistance bookingUpdateReq.fareParamsId.getId bookingUpdateReq.bookingId
       CallBAP.sendUpdateEditDestToBAP booking ride bookingUpdateReq Nothing Nothing OU.CONFIRM_UPDATE

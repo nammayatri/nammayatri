@@ -4,6 +4,7 @@
 
 module Domain.Types.MetaData where
 
+import Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.Person
 import Kernel.Prelude

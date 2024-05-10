@@ -16,6 +16,7 @@ import Tools.Beam.UtilsTH
 
 data EstimateT f = EstimateT
   { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     fareParamsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     farePolicyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -24,7 +25,9 @@ data EstimateT f = EstimateT
     isCustomerPrefferedSearchRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     maxFare :: B.C f Kernel.Types.Common.Money,
+    maxFareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     minFare :: B.C f Kernel.Types.Common.Money,
+    minFareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     requestId :: B.C f Kernel.Prelude.Text,
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

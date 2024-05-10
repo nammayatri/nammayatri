@@ -23,10 +23,10 @@ view config =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , padding $ Padding 8 4 8 4
+    , padding $ Padding 4 3 8 4
     , background Color.blue600
     , gravity CENTER_VERTICAL
-    , cornerRadius if EHC.os == "IOS" then 14.0 else 18.0
+    , cornerRadius if EHC.os == "IOS" then 13.0 else 18.0
     ]
     [ linearLayout
         [ height WRAP_CONTENT
@@ -56,7 +56,7 @@ view config =
           , width WRAP_CONTENT
           , text $ parseName config.name
           , color Color.black700
-          , margin $ MarginLeft 3
+          , margin $ MarginLeft 4
           ]
         <> FontStyle.tags TypoGraphy
     , case config.capacity of

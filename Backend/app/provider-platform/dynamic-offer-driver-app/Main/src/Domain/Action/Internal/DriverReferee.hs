@@ -26,6 +26,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
+import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.DriverInformation as DI
 import qualified Storage.Queries.DriverReferral as QDR
@@ -57,17 +58,18 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
   numberHash <- getDbHash customerMobileNumber
   driverReferralLinkage <- QDR.findByRefferalCode referralCode >>= fromMaybeM (InvalidRequest "Invalid referral code.")
   driverInfo <- DI.findById driverReferralLinkage.driverId >>= fromMaybeM (PersonNotFound driverReferralLinkage.driverId.getId)
+  currency <- maybe (pure INR) SMerchant.getCurrencyByMerchantOpCity driverInfo.merchantOperatingCityId
   unless (driverInfo.enabled) $
     throwError $ InvalidRequest "Driver is not enabled"
   mbRiderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id
   _ <- case mbRiderDetails of
     Just _ -> QRD.updateReferralInfo numberHash merchant.id referralCode driverReferralLinkage.driverId
     Nothing -> do
-      riderDetails <- mkRiderDetailsObj driverReferralLinkage.driverId
+      riderDetails <- mkRiderDetailsObj driverReferralLinkage.driverId currency
       QRD.create riderDetails
   pure Success
   where
-    mkRiderDetailsObj driverId = do
+    mkRiderDetailsObj driverId currency = do
       id <- generateGUID
       now <- getCurrentTime
       otp <- generateOTPCode
@@ -87,6 +89,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             hasTakenValidRideAt = Nothing,
             otpCode = Just otp,
             nightSafetyChecks = True,
-            cancellationDues = 0,
-            disputeChancesUsed = 0
+            cancellationDues = 0.0,
+            disputeChancesUsed = 0,
+            currency
           }

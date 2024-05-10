@@ -227,7 +227,7 @@ eval (CoinTransactionResponseAction (CoinTransactionRes resp)) state = do
         , coinsEarnedPreviousDay = resp.coinsEarnedPreviousDay
         , coinsEarnedToday = resp.todayCoinSummary
         , coinHistoryItems = events
-        , coinsToUse = (state.data.coinBalance / state.data.config.coinsConfig.stepFunctionForCoinConversion) * state.data.config.coinsConfig.stepFunctionForCoinConversion
+        , coinsToUse = (resp.coinBalance / state.data.config.coinsConfig.stepFunctionForCoinConversion) * state.data.config.coinsConfig.stepFunctionForCoinConversion
         }
       , props { showShimmer = false, showCoinsEarnedAnim = coinDifference}
       }
@@ -510,7 +510,9 @@ rideHistoryItemTransformer (RidesInfo ride) =
     tollCharge : fromMaybe 0 ride.tollCharges,
     rideType : ride.vehicleServiceTierName,
     tripStartTime : ride.tripStartTime,
-    tripEndTime : ride.tripEndTime
+    tripEndTime : ride.tripEndTime,
+    acRide : ride.isVehicleAirConditioned,
+    vehicleServiceTier : ride.vehicleServiceTier
   }
 
 getDisabilityType :: Maybe String -> Maybe DisabilityType
@@ -536,7 +538,7 @@ earningHistoryItemsListTransformer list =
           , event: ""
           , tagImages: getTagImages (RidesInfo ride)
           , cash: 0.0
-          , vehicleVariant : ride.vehicleVariant
+          , vehicleVariant : ride.vehicleServiceTier
           }
       )
       list

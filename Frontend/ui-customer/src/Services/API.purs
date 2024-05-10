@@ -596,7 +596,8 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   airConditioned :: Maybe Boolean,
   providerName :: Maybe String,
   providerId :: Maybe String,
-  isValueAddNP :: Maybe Boolean --true if entity is from ny
+  isValueAddNP :: Maybe Boolean, --true if entity is from ny
+  validTill :: String
 }
 
 newtype NightShiftRate = NightShiftRate {
@@ -611,7 +612,7 @@ newtype FareRange = FareRange {
 }
 
 newtype EstimateFares = EstimateFares {
-  price :: Int,
+  priceWithCurrency :: CTA.Price,
   title :: String
 }
 
@@ -1049,7 +1050,8 @@ newtype DEstimateSelect = DEstimateSelect
   {
     customerExtraFee :: Maybe Int,
     autoAssignEnabled :: Boolean,
-    autoAssignEnabledV2 :: Boolean
+    autoAssignEnabledV2 :: Boolean,
+    otherSelectedEstimates :: Array String
   }
 
 newtype SelectEstimateRes = SelectEstimateRes
@@ -1765,7 +1767,7 @@ newtype FlowStatusRes = FlowStatusRes
 data FlowStatus = IDLE {}
                 | SEARCHING { requestId :: String , validTill :: String }
                 | GOT_ESTIMATE { requestId :: String , validTill :: String }
-                | WAITING_FOR_DRIVER_OFFERS { validTill :: String , estimateId :: String}
+                | WAITING_FOR_DRIVER_OFFERS { validTill :: String , estimateId :: String, otherSelectedEstimates :: Maybe (Array String)}
                 | DRIVER_OFFERED_QUOTE { validTill :: String , estimateId :: String}
                 | WAITING_FOR_DRIVER_ASSIGNMENT { bookingId :: String , validTill :: String, fareProductType :: Maybe String }
                 | RIDE_ASSIGNED { rideId :: String }
