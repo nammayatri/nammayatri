@@ -455,8 +455,8 @@ view push state =
                     ]
                 ]
             , if (not state.props.rideRequestFlow) || any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, HomeScreen] then emptyTextView state else topLeftIconView state push
-            , rideRequestFlowView push state
             , if (any (_ == state.props.currentStage) [FindingEstimate, SettingPrice]) then preferenceView push state else emptyTextView state
+            , rideRequestFlowView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
             , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && onUsRide) then messageWidgetView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then rideDetailsBottomView push state else emptyTextView state
