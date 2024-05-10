@@ -20,13 +20,13 @@ import qualified Domain.Types.Vehicle as DV
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 
-selectVehicleTierForDriver :: DP.Person -> DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> [DVST.VehicleServiceTier]
-selectVehicleTierForDriver person driverInfo vehicle cityVehicleServiceTiers = do
-  let vehicleServiceTiersWithUsageRestriction = selectVehicleTierForDriverWithUsageRestriction person driverInfo vehicle cityVehicleServiceTiers
+selectVehicleTierForDriver :: Bool -> DP.Person -> DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> [DVST.VehicleServiceTier]
+selectVehicleTierForDriver onlyAutoSelected person driverInfo vehicle cityVehicleServiceTiers = do
+  let vehicleServiceTiersWithUsageRestriction = selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected person driverInfo vehicle cityVehicleServiceTiers
   map fst $ filter (not . snd) vehicleServiceTiersWithUsageRestriction
 
-selectVehicleTierForDriverWithUsageRestriction :: DP.Person -> DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> [(DVST.VehicleServiceTier, Bool)]
-selectVehicleTierForDriverWithUsageRestriction person driverInfo vehicle cityVehicleServiceTiers =
+selectVehicleTierForDriverWithUsageRestriction :: Bool -> DP.Person -> DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> [(DVST.VehicleServiceTier, Bool)]
+selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected person driverInfo vehicle cityVehicleServiceTiers =
   map mapUsageRestriction $ filter filterVehicleTier cityVehicleServiceTiers
   where
     mapUsageRestriction :: DVST.VehicleServiceTier -> (DVST.VehicleServiceTier, Bool)
@@ -42,7 +42,7 @@ selectVehicleTierForDriverWithUsageRestriction person driverInfo vehicle cityVeh
       let usageRestricted = not (luggageCapacityCheck && airConditionedCheck && driverRatingCheck && vehicleRatingCheck) -- && seatingCapacityCheck)
       (vehicleServiceTier, usageRestricted)
 
-    filterVehicleTier vehicleServiceTier = vehicle.variant `elem` vehicleServiceTier.allowedVehicleVariant
+    filterVehicleTier vehicleServiceTier = vehicle.variant `elem` (if onlyAutoSelected then vehicleServiceTier.autoSelectedVehicleVariant else vehicleServiceTier.allowedVehicleVariant)
 
     compareNumber :: Ord a => Maybe a -> Maybe a -> Bool
     compareNumber mbX mbY =

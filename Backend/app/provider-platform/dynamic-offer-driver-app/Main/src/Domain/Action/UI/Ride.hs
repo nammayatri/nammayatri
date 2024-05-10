@@ -370,9 +370,9 @@ otpRideCreate driver otpCode booking clientId = do
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc
       | otherwise = throwM exc
 
-    isNotAllowedVehicleVariant driverVehicle bookingServiceTier = do
+    isNotAllowedVehicleVariant driverVehicleVariant bookingServiceTier = do
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId bookingServiceTier booking.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show bookingServiceTier))
-      return $ driverVehicle `notElem` vehicleServiceTierItem.allowedVehicleVariant
+      return $ driverVehicleVariant `notElem` vehicleServiceTierItem.allowedVehicleVariant
 
 arrivedAtStop :: Id DRide.Ride -> LatLong -> Flow APISuccess
 arrivedAtStop rideId pt = do

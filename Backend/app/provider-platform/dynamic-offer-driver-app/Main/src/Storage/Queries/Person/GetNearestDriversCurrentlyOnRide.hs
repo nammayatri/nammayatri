@@ -108,7 +108,7 @@ getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong ra
       -- ideally should be there inside the vehicle.selectedServiceTiers but still to make sure we have a default service tier for the driver
       let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
       let mbDefaultServiceTierForDriver = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
-      let selectedDriverServiceTiers = DL.intersect vehicle.selectedServiceTiers ((.serviceTierType) <$> selectVehicleTierForDriver person info vehicle cityServiceTiers)
+      let selectedDriverServiceTiers = DL.intersect vehicle.selectedServiceTiers ((.serviceTierType) <$> selectVehicleTierForDriver False person info vehicle cityServiceTiers)
       if onRideRadiusValidity
         then do
           if null serviceTiers

@@ -17,6 +17,7 @@ import Tools.Beam.UtilsTH
 data VehicleServiceTierT f = VehicleServiceTierT
   { airConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     allowedVehicleVariant :: B.C f [Domain.Types.Vehicle.Variant],
+    autoSelectedVehicleVariant :: B.C f [Domain.Types.Vehicle.Variant],
     defaultForVehicleVariant :: B.C f [Domain.Types.Vehicle.Variant],
     driverRating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     id :: B.C f Kernel.Prelude.Text,

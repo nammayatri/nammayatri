@@ -87,7 +87,7 @@ data DriverCommonAPIs = DriverCommonAPIs
     listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DriverListRes,
     driverActivity :: Euler.EulerClient Driver.DriverActivityRes,
     disableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
-    removeACUsageRestriction :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    updateACUsageRestriction :: Id Driver.Driver -> Driver.UpdateACUsageRestrictionReq -> Euler.EulerClient APISuccess,
     blockDriverWithReason :: Id Driver.Driver -> Text -> Driver.BlockDriverWithReasonReq -> Euler.EulerClient APISuccess,
     blockDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     blockReasonList :: Euler.EulerClient [Driver.BlockReason],
@@ -298,7 +298,7 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> listDrivers
       :<|> driverActivity
       :<|> disableDriver
-      :<|> removeACUsageRestriction
+      :<|> updateACUsageRestriction
       :<|> blockDriverWithReason
       :<|> blockDriver
       :<|> blockReasonList
