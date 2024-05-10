@@ -23,6 +23,7 @@ import qualified API.Action.UI.CustomerReferral as CustomerReferral
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Invoice as Invoice
+import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.TicketService as TicketService
 import qualified API.UI.AadhaarVerification as AadhaarVerification
@@ -99,6 +100,7 @@ type API =
            :<|> FRFSTicketService.API
            :<|> Cac.API
            :<|> CustomerReferral.API
+           :<|> SocialLogin.API
        )
 
 handler :: FlowServer API
@@ -141,3 +143,4 @@ handler =
     :<|> FRFSTicketService.handler
     :<|> Cac.handler
     :<|> CustomerReferral.handler
+    :<|> SocialLogin.handler
