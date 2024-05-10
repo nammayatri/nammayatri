@@ -269,5 +269,5 @@ getRideStatusPastDays (driverId, merchantId_, merchantOpCityId) = do
   dailyRideSummary <- DS.findAllInRangeByDriverId driverId daysAgo localDateToday
   let ridesExceedThreshold = case dailyRideSummary of
         [] -> False
-        _ -> all (\res -> res.numRides > transporterConfig.pastDaysRideCounter) dailyRideSummary
+        _ -> length dailyRideSummary >= transporterConfig.pastDaysRideCounter && all (\res -> res.numRides > transporterConfig.pastDaysRideCounter) dailyRideSummary
   pure $ RideStatusPastDaysRes {rideCountPopupValue = ridesExceedThreshold}
