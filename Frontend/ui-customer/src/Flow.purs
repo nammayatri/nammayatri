@@ -856,7 +856,6 @@ homeScreenFlow = do
       homeScreenFlow
     GET_QUOTES state -> do
           setValueToLocalStore AUTO_SELECTING "false"
-          setValueToLocalStore LOCAL_STAGE (show FindingQuotes)
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
           setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
           liftFlowBT $ logEvent logField_ "ny_user_request_quotes"
@@ -870,16 +869,18 @@ homeScreenFlow = do
           else do
             pure unit
           void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
-          let topProvider = filter (\quotes -> quotes.providerType == ONUS ) state.data.specialZoneQuoteList
+          let topProvider = filter (\quotes -> quotes.providerType == ONUS && quotes.serviceTierName /= Just "Book Any") state.data.specialZoneQuoteList
               mbSpecialZoneQuoteList = fromMaybe ChooseVehicle.config (head topProvider)
               valid = timeValidity (getCurrentUTC "") mbSpecialZoneQuoteList.validTill
           if valid then do
+            setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = FindingQuotes}})
             void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates) (state.props.estimateId)
             logStatus "finding_quotes" ("estimateId : " <> state.props.estimateId)
             homeScreenFlow
-            else do
-              void $ pure $ toast (getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN)
-              findEstimates state
+          else do
+            void $ pure $ toast $ getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN
+            findEstimates state
 
     SELECT_ESTIMATE state -> do
         logStatus "setting_price" ""
@@ -1698,9 +1699,10 @@ homeScreenFlow = do
       safetyEducationFlow
     REPEAT_SEARCH state -> do
       cancelEstimate state.props.estimateId
-      let topProvider = filter (\quotes -> quotes.providerType == ONUS ) state.data.specialZoneQuoteList
+      let topProvider = filter (\quotes -> quotes.providerType == ONUS && quotes.serviceTierName /= Just "Book Any") state.data.specialZoneQuoteList
           mbSpecialZoneQuoteList = fromMaybe ChooseVehicle.config (head topProvider)
           valid = timeValidity (getCurrentUTC "") mbSpecialZoneQuoteList.validTill
+
       if (valid) then do
         updateLocalStage SettingPrice
         modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{currentStage = SettingPrice}})
