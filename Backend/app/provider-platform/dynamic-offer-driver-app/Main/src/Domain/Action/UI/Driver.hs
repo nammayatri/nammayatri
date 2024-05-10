@@ -852,16 +852,19 @@ getNearbySearchRequests ::
     CacheFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
-  Maybe (Id DSR.SearchRequest) ->
+  Maybe (Id DST.SearchTry) ->
   m GetNearbySearchRequestsRes
-getNearbySearchRequests (driverId, _, merchantOpCityId) _ = do
-  --todo fix: add code for filter using search req id
+getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
   nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig transporterConfig
   cancellationRatio <- DP.getLatestCancellationRatio cancellationScoreRelatedConfig merchantOpCityId (cast driverId)
   searchRequestForDriverAPIEntity <- mapM (buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig) nearbyReqs
-  return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
+  case searchTryIdReq of
+    Just stid -> do
+      let filteredSearchRequestForDriverAPIEntity = filter (\srfd -> srfd.searchTryId == stid) searchRequestForDriverAPIEntity
+      return $ GetNearbySearchRequestsRes filteredSearchRequestForDriverAPIEntity
+    Nothing -> return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
   where
     buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq = do
       let searchTryId = nearbyReq.searchTryId
