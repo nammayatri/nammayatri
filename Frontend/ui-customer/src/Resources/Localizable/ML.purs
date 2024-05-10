@@ -645,7 +645,7 @@ getML stringKey =
         WAITING_AT_PICKUP -> " പിക്കപ്പിൽ കാത്തിരിക്കുന്നു "
         PICKUP -> "പുരോഗമിക്കുക"
         PAY_BY_CASH_OR_UPI -> "പണമായി അടയ്ക്കുക / UPI "
-        YOU_WILL_PAY_FOR_EVERY_MINUTE -> "ആദ്യ 3 മിനിറ്റിൽ വെയിറ്റിംഗ് ചാർജ് പൂജ്യമാണ്. ഒരു മിനിറ്റിന് ₹1.5 വെയിറ്റിംഗ് ചാർജ് അതിനുശേഷം ബാധകമാകും."
+        YOU_WILL_PAY_FOR_EVERY_MINUTE freeMinutes chargePerMin -> "ആദ്യ " <> freeMinutes <> " മിനിറ്റിന് കാത്തിരിക്കല്‍ ചാര്‍ജ് സുന്നം. പിന്നിട്ട് "<> chargePerMin <>" കാത്തിരിക്കല്‍ ചാര്‍ജ് പ്രയോജനപ്പെടും."
         WAIT_TIMER -> "വെയ്റ്റ് ടൈമർ"
         HOW_LONG_DRIVER_WAITED_FOR_PICKUP -> "പിക്കപ്പിൽ ഡ്രൈവർ എത്ര നേരം കാത്തിരുന്നുവെന്ന് കാണിക്കുന്നു."
         CHAT_WITH -> "ചാറ്റ് ചെയ്യുക"

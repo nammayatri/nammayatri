@@ -41,11 +41,12 @@ import Types.App (defaultGlobalState)
 import JBridge(fromMetersToKm, getLayoutBounds)
 import Engineering.Helpers.Suggestions (getMessageFromKey, chatSuggestion)
 import Helpers.Utils (parseFloat)
-import Data.Int(toNumber)
+import Data.Int(toNumber, fromString)
 import MerchantConfig.Types (DriverInfoConfig)
 import Mobility.Prelude (boolToVisibility)
 import Data.Function.Uncurried(runFn1)
 import Components.ServiceTierCard.View as ServiceTierCard
+import Resources.Constants (getVehicleCapacity)
  
 ---------------------------------- driverDetailsView ---------------------------------------
 driverDetailsView :: forall w. DriverDetailsType -> String -> String -> PrestoDOM (Effect Unit) w
@@ -212,7 +213,7 @@ driverDetailsView config uid nid =
 
         serviceTierConfig name = {
           name : name,
-          capacity : Nothing,
+          capacity : fromString $ getVehicleCapacity config.vehicleVariant,
           isAc : Nothing
         }
 

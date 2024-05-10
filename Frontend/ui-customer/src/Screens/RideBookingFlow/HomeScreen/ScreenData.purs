@@ -197,6 +197,7 @@ initData = {
         hasTopProviderEstimate : true
     }
     , otherSelectedEstimates : []
+    , rateCardCache : Nothing
     },
     props: {
       rideRequestFlow : false

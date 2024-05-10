@@ -300,7 +300,10 @@ screen initialState =
                 _, _ -> pure (pure unit)
             else
               pure (pure unit)
-        )
+        ),
+        (\push -> do
+            when (Arr.elem initialState.props.currentStage [RideStarted, RideAccepted]) $ push UpdateRateCardCache
+            pure (pure unit))
       ]
   , eval:
       \action state -> do

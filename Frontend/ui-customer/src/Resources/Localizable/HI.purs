@@ -646,7 +646,7 @@ getHI stringKey =
         WAITING_AT_PICKUP -> "पिकअप की प्रतीक्षा में"
         PICKUP -> "पिकअप"
         PAY_BY_CASH_OR_UPI -> "भुगतान नकद / UPI द्वारा करें "
-        YOU_WILL_PAY_FOR_EVERY_MINUTE -> "पहले 3 मिनट के लिए वेटिंग चार्ज शून्य है।. इसके बाद प्रति मिनट 1.5 रुपये का प्रतीक्षा शुल्क लागू होगा।"
+        YOU_WILL_PAY_FOR_EVERY_MINUTE freeMinutes chargePerMin -> "पहले "<> freeMinutes <>" मिनट के लिए वेटिंग चार्ज शून्य है।. इसके बाद "<> chargePerMin <> " का प्रतीक्षा शुल्क लागू होगा।"
         WAIT_TIMER -> "प्रतीक्षा टाइमर"
         HOW_LONG_DRIVER_WAITED_FOR_PICKUP -> "आपको दिखाता है कि ड्राइवर ने पिकअप के लिए कितनी देर तक इंतजार किया है।"
         CHAT_WITH -> "से बातचीत"

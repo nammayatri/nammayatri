@@ -646,7 +646,7 @@ getKN stringKey =
         WAITING_AT_PICKUP -> " ಪಿಕಪ್‌ನಲ್ಲಿ ಕಾಯುತ್ತಿದ್ದಾರೆ "
         PICKUP -> "ಪಿಕಪ್"
         PAY_BY_CASH_OR_UPI -> "ನಗದು / UPI ಮೂಲಕ ಪಾವತಿಸಿ "
-        YOU_WILL_PAY_FOR_EVERY_MINUTE -> "ಮೊದಲ 3 ನಿಮಿಷಗಳವರೆಗೆ ಕಾಯುವ ಶುಲ್ಕ ಶೂನ್ಯವಾಗಿರುತ್ತದೆ. ಪ್ರತಿ ನಿಮಿಷಕ್ಕೆ ₹1.5 ವೇಟಿಂಗ್ ಚಾರ್ಜ್ ನಂತರ ಅನ್ವಯಿಸುತ್ತದೆ."
+        YOU_WILL_PAY_FOR_EVERY_MINUTE freeMinutes chargePerMin -> "ಮೊದಲ " <> freeMinutes <> " ನಿಮಿಷಗಳಲ್ಲಿ ಕಾಯಿಲ್ ಶುಲ್ಕ ಶೂನ್ಯವಾಗಿದೆ. ನಂತರ "<> chargePerMin <>" ಕಾಯಿಲ್ ಶುಲ್ಕ ಅನ್ನು ಅನ್ವಯಿಸಲಾಗುತ್ತದೆ."
         WAIT_TIMER -> "ವೇಟ್ ಟೈಮರ್"
         HOW_LONG_DRIVER_WAITED_FOR_PICKUP -> "ಪಿಕಪ್‌ನಲ್ಲಿ ಡ್ರೈವರ್ ಎಷ್ಟು ಸಮಯ ಕಾಯುತ್ತಿದ್ದಾರೆಂದು ನಿಮಗೆ ತೋರಿಸುತ್ತದೆ."
         CHAT_WITH -> "ಚಾಟ್ ಮಾಡಿ"

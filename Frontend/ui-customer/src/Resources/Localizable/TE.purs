@@ -661,7 +661,7 @@ getTE stringKey =
     WAITING_AT_PICKUP -> "పికప్ వద్ద వేచి ఉంది "
     PICKUP -> "పికప్"
     PAY_BY_CASH_OR_UPI -> "నగదు / UPI ద్వారా చెల్లించండి "
-    YOU_WILL_PAY_FOR_EVERY_MINUTE -> "మొదటి 3 నిమిషాలకు వెయిటింగ్ ఛార్జ్ సున్నా. ఆ తర్వాత నిమిషానికి ₹1.5 వెయిటింగ్ ఛార్జీ వర్తిస్తుంది."
+    YOU_WILL_PAY_FOR_EVERY_MINUTE freeMinutes chargePerMin -> "మొదటి " <> freeMinutes <> " నిమిషాలకు కోయిలి చార్జీ సున్నంగా ఉంది. తరువాత "<> chargePerMin <>" కోయిలి చార్జీ అప్లికేబుల్ అవుతుంది."
     WAIT_TIMER -> "వెయిట్ టైమర్"
     HOW_LONG_DRIVER_WAITED_FOR_PICKUP -> "పికప్ వద్ద డ్రైవర్ ఎంతసేపు వేచి ఉన్నాడో మీకు చూపుతుంది."
     CHAT_WITH -> "తో చాట్ చేయండి"
