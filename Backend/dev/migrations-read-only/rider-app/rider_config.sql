@@ -63,4 +63,4 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN email_otp_config text ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.rider_config ALTER COLUMN email_otp_config TYPE json;
+ALTER TABLE atlas_app.rider_config ALTER COLUMN email_otp_config TYPE json USING email_otp_config::json;

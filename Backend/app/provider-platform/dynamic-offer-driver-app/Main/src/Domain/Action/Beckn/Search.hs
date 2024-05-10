@@ -166,8 +166,8 @@ handler ValidatedDSearchReq {..} sReq = do
     case sReq.dropLocation of
       Just dropLoc -> do
         serviceableRoute <- getRouteServiceability merchant.id merchantOpCityId sReq.pickupLocation dropLoc sReq.routePoints sReq.routeDistance sReq.routeDuration sReq.multipleRoutes
-        let estimatedDistance = serviceableRoute.routeDistance
-            estimatedDuration = serviceableRoute.routeDuration
+        let estimatedDistance = fromMaybe serviceableRoute.routeDistance sReq.routeDistance
+            estimatedDuration = fromMaybe serviceableRoute.routeDuration sReq.routeDuration
         logDebug $ "distance: " <> show estimatedDistance
         let routeInfo = RouteInfo {distance = Just estimatedDistance, duration = Just estimatedDuration, points = Just serviceableRoute.routePoints}
         toLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.dropAddrress sReq.customerLanguage dropLoc
