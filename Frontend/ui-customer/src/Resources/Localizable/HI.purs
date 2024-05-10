@@ -1117,7 +1117,7 @@ getHI stringKey =
         HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "क्या आपके ड्राइवर ने एसी को आपकी पसंद के अनुसार सेट किया है?"
         NO_REPORT_AN_ISSUE -> "नहीं, समस्या रिपोर्ट करें"
         GREAT_ENJOY_THE_TRIP -> "बढ़िया, सफर का आनंद लें!"
-        ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "अपनी बजट फ्रेंडली, नॉन-एसी यात्रा का आनंद लें!"
+        ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "अपनी बजट फ्रेंडली,\nनॉन-एसी यात्रा का आनंद लें!"
         AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "इस राइड पर एसी उपलब्ध नहीं है"
         AC_NOT_WORKING_DESC -> "एसी काम नहीं कर रहा / ड्राइवर ने ऑन करने से मना कर दिया"
         SHOWING_FARE_FROM_MULTI_PROVIDER -> "एकाधिक प्रदाताओं से किराए दिखाए जा रहे हैं"

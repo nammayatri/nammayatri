@@ -211,7 +211,7 @@ config = {
   needHelpText : "",
   safetyTitle : "",
   toll : {
-    actualAmount : 0,
+    actualAmount : 0.0,
     text : "",
     visibility : GONE,
     textColor : Color.black600,
@@ -357,7 +357,7 @@ type RentalRideConfig = {
 }
 
 type Toll = {
-  actualAmount :: Int
+  actualAmount :: Number
 , text :: String
 , visibility :: Visibility
 , textColor :: Color

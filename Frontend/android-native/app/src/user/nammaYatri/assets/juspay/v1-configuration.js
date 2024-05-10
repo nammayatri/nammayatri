@@ -194,6 +194,9 @@ window.getMerchantConfig = function () {
       "isServiceablePopupFullScreen" : true,
     }
     , "tipEnabledCities" : ["Bangalore", "Hyderabad"]
+    , "acPopupConfig" : {
+        "enable" : true
+    }
     , "autoSelectBackground" : "#53BB6F"
     , "enableMockLocation" : true
     , "defaultLanguage" : "EN_US"

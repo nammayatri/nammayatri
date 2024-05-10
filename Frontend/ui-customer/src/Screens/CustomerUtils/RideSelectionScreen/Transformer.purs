@@ -40,6 +40,7 @@ import Screens.RideSelectionScreen.ScreenData
 import JBridge (differenceBetweenTwoUTCInMinutes)
 import Data.Function.Uncurried (runFn2)
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
 
 myRideListTransformerProp :: Array RideBookingRes  -> Array ItemState
 myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropValue "COMPLETED") || item.status == (toPropValue "CANCELLED"))) (map (\(RideBookingRes ride) -> 
@@ -153,8 +154,8 @@ matchRidebyId rideOne rideTwo = rideOne.bookingId == rideTwo.bookingId
 
 getFares ∷ Array FareBreakupAPIEntity → Fares
 getFares fares = {
-  baseFare : (getCurrency appConfig) <>  " " <> (show $ ((getFareFromArray fares "BASE_FARE") + (getFareFromArray fares "EXTRA_DISTANCE_FARE")) - 10)
+  baseFare : (getCurrency appConfig) <>  " " <> (getFixedTwoDecimals $ ((getFareFromArray fares "BASE_FARE") + (getFareFromArray fares "EXTRA_DISTANCE_FARE")) - 10.0)
 , pickupCharges : (getCurrency appConfig) <> " 10.0"
-, waitingCharges : (getCurrency appConfig) <> " " <> (show $ getFareFromArray fares "WAITING_CHARGES")
-, nominalFare : (getCurrency appConfig) <> " " <> (show $ getFareFromArray fares "DRIVER_SELECTED_FARE")
+, waitingCharges : (getCurrency appConfig) <> " " <> (getFixedTwoDecimals $ getFareFromArray fares "WAITING_CHARGES")
+, nominalFare : (getCurrency appConfig) <> " " <> (getFixedTwoDecimals $ getFareFromArray fares "DRIVER_SELECTED_FARE")
 }

@@ -511,11 +511,12 @@ view push state =
   ]
   where
     showAcView :: HomeScreenState -> Boolean
-    showAcView state = (getValueFromCache (show AC_POPUP_SHOWN_FOR_RIDE) getKeyInSharedPrefKeys) /= state.data.driverInfoCardState.rideId 
+    showAcView state = ((getValueFromCache (show AC_POPUP_SHOWN_FOR_RIDE) getKeyInSharedPrefKeys) /= state.data.driverInfoCardState.rideId )
                         && state.props.currentStage == RideStarted
-                        && runFn2 differenceBetweenTwoUTCInMinutes (getCurrentUTC "") state.data.startedAtUTC > 4
+                        && (((not $ ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing) 
+                         || (runFn2 differenceBetweenTwoUTCInMinutes (getCurrentUTC "") state.data.startedAtUTC > state.data.config.acPopupConfig.showAfterTime)))
                         && state.props.showAcWorkingPopup
-                        && state.data.config.feature.enableAcPopup
+                        && state.data.config.acPopupConfig.enable
                         && state.data.driverInfoCardState.serviceTierName /= Just "Auto"
 
     showSafetyAlertPopup = Arr.notElem (getValueToLocalNativeStore SAFETY_ALERT_TYPE) ["__failed", "false", "(null)"]

@@ -41,6 +41,7 @@ import Screens.HelpAndSupportScreen.Transformer
 import Screens.RideSelectionScreen.Controller 
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.Types as ST
+import Components.ServiceTierCard.View as ServiceTierCard
 
 rideSelection :: FlowBT String FlowState
 rideSelection = do
@@ -86,13 +87,14 @@ selectRideHandler state = do
 
   let language = fetchLanguage $ getLanguageLocale languageKey
   (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language state.selectedCategory.categoryId "" ""
-
+  (GlobalState globalState) <- getState
   let 
+    transformedOptions = transformIssueOptions getOptionsRes.options state.selectedItem globalState.helpAndSupportScreen.data.ongoingIssueList
     getOptionsRes' = mapWithIndex (
       \index (Option optionObj) -> optionObj { 
         option = (show (index + 1)) <> ". " <> optionObj.option 
       }
-    ) getOptionsRes.options
+    ) transformedOptions
 
     messages' = mapWithIndex (
       \index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500*(index + 1))
@@ -145,3 +147,17 @@ refreshScreenHandler state = do
     }
   )
   App.BackT $ App.NoBack <$> (pure  RideSelectionScreenFlow)
+
+transformIssueOptions :: Array Option -> Maybe IndividualRideCardState -> Array ST.IssueInfo -> Array Option
+transformIssueOptions options mbRide ongoingIssues = filteredOptionsForAc
+  where
+    filteredOptionsForAc = case mbRide of
+      Just ride -> let alreadyHasAcIssue = any (\issue -> issue.optionLabel == Just "AC_RELATED_ISSUE" && issue.rideId == Just ride.rideId) ongoingIssues
+                   in
+                    case ride.serviceTierName of
+                      (Just name) -> if not alreadyHasAcIssue && ServiceTierCard.showACDetails name Nothing
+                                then options 
+                                else filteredOptions
+                      Nothing -> filteredOptions
+      Nothing -> filteredOptions
+    filteredOptions = filter (\(Option option) -> option.label /= "AC_RELATED_ISSUE") options

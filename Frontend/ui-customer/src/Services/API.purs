@@ -935,7 +935,7 @@ newtype RideBookingRes = RideBookingRes {
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
-  amount :: Int,
+  amountWithCurrency :: CTA.Price,
   description :: String
 }
 
@@ -2552,7 +2552,9 @@ newtype IssueReportCustomerListItem = IssueReportCustomerListItem
     status :: String,
     category :: String,
     createdAt :: String,
-    issueReportShortId :: Maybe String
+    issueReportShortId :: Maybe String,
+    optionLabel :: Maybe String,
+    rideId :: Maybe String
   }
 
 instance makeFetchIssueListReq :: RestEndpoint FetchIssueListReq FetchIssueListResp where

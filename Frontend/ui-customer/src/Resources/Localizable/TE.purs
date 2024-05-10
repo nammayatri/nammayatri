@@ -1131,7 +1131,7 @@ getTE stringKey =
     HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "మీ డ్రైవర్ మీ ప్రాధాన్యతను ప్రకారం సెట్ చేసాడా?"
     NO_REPORT_AN_ISSUE -> "లేదు, సమస్యను నివేదించండి"
     GREAT_ENJOY_THE_TRIP -> "బాగా ఆనందించండి!"
-    ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "మీ బడ్జెట్ స్నేహితుగా నా-AC రైడ్ ఆనందించండి"
+    ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "మీ బడ్జెట్ స్నేహితుగా\nనా-AC రైడ్ ఆనందించండి"
     AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "ఈ రైడ్ లో ఎసి అందుబాటులో లేదు"
     AC_NOT_WORKING_DESC -> "ఎసి పని చేస్తుంది లేదు / డ్రైవర్ ఆన్ చేయడానికి నిరాకరించాడు"
     SHOWING_FARE_FROM_MULTI_PROVIDER -> "బహుళ ప్రొవైడర్ల నుండి ఛార్జీలను చూపుతోంది"

@@ -228,3 +228,6 @@ homeScreen = do
     UpdateReferralCode updatedState code -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ UPDATE_REFERRAL_CODE code)
+    GoToRideRelatedIssues updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_RELATED_ISSUES updatedState)
