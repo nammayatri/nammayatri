@@ -120,6 +120,7 @@ driverImageView state =
         [ margin (MarginLeft 27)
       , cornerRadius 18.0
       -- , background state.appConfig.quoteListItemConfig.driverImagebg --Removing for now till we add driver images.
+      , visibility GONE
       , width (V 36)
       , height (V 36)
       , imageWithFallback ""

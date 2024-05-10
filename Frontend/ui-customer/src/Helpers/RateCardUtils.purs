@@ -63,12 +63,12 @@ getFareBreakupList (EstimateAPIEntity estimate) maxTip =
   }
   where
   fareBreakupConstructed = 
-    [ { key: getString $ MIN_FARE_UPTO $ (EHU.getFixedTwoDecimals (baseDistance.amount / 1000.0)) <> " km", val: baseFare } ]
+    [ { key: getString $ MIN_FARE_UPTO $ (EHU.formatNumber (baseDistance.amount / 1000.0) Nothing) <> " km", val: baseFare } ]
     <> (map constructExtraFareBreakup extraFareBreakup)
     <> (if congestionCharges.amount > 0.0 then [ { key: getString RUSH_HOUR_CHARGES, val: (EHU.getFixedTwoDecimals congestionCharges.amount) <> "%"}]  else [])
     <> (if tollCharge.amount > 0.0 then [ { key: getString TOLL_CHARGES_ESTIMATED, val: priceToBeDisplayed tollCharge } ] else [])
     <> [ { key: getString PICKUP_CHARGE, val: pickupCharges } ]
-    <> [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.getFixedTwoDecimals freeWaitingTime.amount, val: priceToBeDisplayed waitingCharge <> "/min" } ]
+    <> [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.formatNumber freeWaitingTime.amount Nothing, val: priceToBeDisplayed waitingCharge <> "/min" } ]
 
   fareInfoDescription = 
     [ getString TOTAL_FARE_MAY_CHANGE_DUE_TO_CHANGE_IN_ROUTE
@@ -151,7 +151,7 @@ getFareBreakupList (EstimateAPIEntity estimate) maxTip =
 
       upperlimit = case limits DA.!! 1 of
         Just "Above" -> "+"
-        Just limit -> "-" <> show ((fromMaybe 0.0 $ DN.fromString limit) / 1000.0)<> "km"
+        Just limit -> "-" <> EHU.formatNumber ((fromMaybe 0.0 $ DN.fromString limit) / 1000.0) Nothing <> "km"
         Nothing -> ""
 
       lowerlimit = case (limits DA.!! 0) of
@@ -163,14 +163,14 @@ getFareBreakupList (EstimateAPIEntity estimate) maxTip =
   constructExtraFareBreakup :: StepFare -> FareList
   constructExtraFareBreakup item =
     let
-      lowerlimit = show ( item.lLimit / 1000.0) <> "km"
+      lowerlimit = EHU.formatNumber ( item.lLimit / 1000.0) Nothing <> "km"
     in
       { key: getString $ FARE_FOR $ lowerlimit <> item.uLimit, val: item.price }
 
   constructDriverAdditions :: StepFare -> FareList
   constructDriverAdditions item =
     let
-      lowerlimit = show (item.lLimit / 1000.0) <> "km"
+      lowerlimit = EHU.formatNumber (item.lLimit / 1000.0) Nothing <> "km"
     in
       { key: lowerlimit <> item.uLimit, val: item.price }
 

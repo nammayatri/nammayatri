@@ -647,7 +647,7 @@ getFR stringKey =
         WAITING_AT_PICKUP -> " en attente au ramassage "
         PICKUP -> "ramasser"
         PAY_BY_CASH_OR_UPI -> "Payer en espèces / UPI "
-        YOU_WILL_PAY_FOR_EVERY_MINUTE -> "Les frais d'attente sont nuls pendant les 3 premières minutes. Vous serez payé pour 1.5 ₹ par minute de temps d'attente après cela."
+        YOU_WILL_PAY_FOR_EVERY_MINUTE freeMinutes chargePerMin -> "Les frais d'attente sont nuls pendant les 3 premières minutes. Vous serez payé pour 1.5 ₹ par minute de temps d'attente après cela."
         HOW_LONG_DRIVER_WAITED_FOR_PICKUP ->"Vous indique combien de temps le chauffeur a attendu lors de la prise en charge."
         CHAT_WITH -> "Parler avec"
         QUICK -> "rapide"

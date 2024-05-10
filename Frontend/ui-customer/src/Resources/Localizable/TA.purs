@@ -662,7 +662,7 @@ getTA stringKey =
     WAITING_AT_PICKUP -> "பிக்அப்பில் காத்திருக்கிறது"
     PICKUP -> "பிக்அப்"
     PAY_BY_CASH_OR_UPI -> "பணமாக செலுத்து / UPI"
-    YOU_WILL_PAY_FOR_EVERY_MINUTE -> "முதல் 3 நிமிடங்களுக்கு காத்திருப்பு கட்டணம் பூஜ்ஜியம். ஒரு நிமிடத்திற்கு ₹1.5 காத்திருப்பு கட்டணம் அதன் பிறகு பொருந்தும்."
+    YOU_WILL_PAY_FOR_EVERY_MINUTE freeMinutes chargePerMin -> "முதல் " <> freeMinutes <> " நிமிடங்களுக்கு காதிரிகை கட்டணம் பூஜ்யம். பின்னர் "<> chargePerMin <>" காதிரிகை கட்டணம் விண்ணப்பிக்கப்படும்."
     WAIT_TIMER -> "வெயிட் டைமர்"
     HOW_LONG_DRIVER_WAITED_FOR_PICKUP -> "பிக்கப்பில் டிரைவர் எவ்வளவு நேரம் காத்திருந்தார் என்பதைக் காட்டுகிறது."
     CHAT_WITH -> ""

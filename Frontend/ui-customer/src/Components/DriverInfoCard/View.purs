@@ -276,7 +276,7 @@ otpAndWaitView push state =
            , cornerRadius if os == "IOS" then 20.0 else 32.0
            , background Color.white900
            , clickable true
-           , onClick push $ const WaitingInfo
+           , onClick push $ const $ if state.props.isRateCardAvailable then WaitingInfo else NoAction
            , gravity CENTER
            , accessibility DISABLE
            , margin $ Margin 6 8 8 8
@@ -297,6 +297,7 @@ otpAndWaitView push state =
                , accessibility DISABLE
                , margin $ MarginRight 4
                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
+               , visibility $ boolToVisibility state.props.isRateCardAvailable 
                ]
            , waitTimeView push state
            ])]
@@ -892,10 +893,23 @@ paymentMethodView push state title shouldShowIcon uid =
       , width WRAP_CONTENT
       , gravity LEFT
       , accessibility DISABLE_DESCENDANT
-      ][  textView $
-          [ text title
-          , color Color.black700
-          ] <> FontStyle.body3 TypoGraphy
+      ][  linearLayout
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , gravity CENTER_VERTICAL
+          , onClick push $ const RateCardInfo
+          ][ textView $
+             [ text title
+             , color Color.black700
+             ] <> FontStyle.body3 TypoGraphy
+          , imageView
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
+            , height $ V 16
+            , width $ V 16
+            , visibility $ boolToVisibility state.props.isRateCardAvailable 
+            , margin $ MarginLeft 2
+            ]
+          ]
         , textView $
           [ text $ state.data.config.currency <> show state.data.price
           , margin $ MarginTop 4

@@ -306,10 +306,10 @@ driverAdditionView push config =
             , gravity CENTER
             ] <> showCornerRadii index)
             [  relativeLayout 
-                [ width WRAP_CONTENT
+                ([ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , background Color.blue600
-                ] 
+                ] <> showCornerRadii index)
                 [ textView $
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
