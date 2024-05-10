@@ -375,9 +375,9 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
   pid <- BC.generateGUID
   now <- getCurrentTime
   let useFakeOtp = req.mobileNumber >>= (\n -> if n `elem` merchant.fakeOtpMobileNumbers then Just "7891" else Nothing)
-  personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken req.deviceToken)
   riderConfig <- CQRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
-  let isBlockedBySameDeviceToken = (riderConfig.shouldBlockedBySameDeviceToken) && maybe False (.blocked) personWithSameDeviceToken
+  personWithSameDeviceToken <- if riderConfig.shouldBlockedBySameDeviceToken then listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken req.deviceToken) else return Nothing
+  let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   useFraudDetection <- do
     if isBlockedBySameDeviceToken
       then do
