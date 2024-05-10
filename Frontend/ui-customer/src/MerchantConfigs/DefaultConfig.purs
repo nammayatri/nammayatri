@@ -199,9 +199,8 @@ config =
         },
         bookAny : {
           name : "Book Any",
-          image : "ny_ic_auto_cab,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_cab.png"
+          image : "ny_ic_auto_cab_green,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_cab_green.png"
         }
-
       }
       , enableOnlyAuto : false
       , showNearByDrivers: false
