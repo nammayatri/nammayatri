@@ -35,3 +35,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN default_for_v
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN priority integer NOT NULL default 0;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN auto_selected_vehicle_variant text[] NOT NULL default '{}';

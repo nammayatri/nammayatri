@@ -388,11 +388,21 @@ type DisableDriverAPI =
 ---------------------------------------------------------
 -- remove driver ac restriction ----------------------------------------
 
-type RemoveACUsageRestrictionAPI =
+type UpdateACUsageRestrictionAPI =
   Capture "driverId" (Id Driver)
     :> "acRestriction"
-    :> "remove"
+    :> "update"
+    :> ReqBody '[JSON] UpdateACUsageRestrictionReq
     :> Post '[JSON] APISuccess
+
+newtype UpdateACUsageRestrictionReq = UpdateACUsageRestrictionReq
+  { isWorking :: Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateACUsageRestrictionReq where
+  hideSecrets = identity
 
 ---------------------------------------------------------
 -- block driver with reason ----------------------------------------
@@ -517,6 +527,8 @@ data DriverInfoRes = DriverInfoRes
     currentAcOffReportCount :: Int,
     totalAcRestrictionUnblockCount :: Int,
     lastACStatusCheckedAt :: Maybe UTCTime,
+    currentACStatus :: Bool,
+    blockedDueToRiderComplains :: Bool,
     blockStateModifier :: Maybe Text,
     driverTag :: Maybe [Text]
   }

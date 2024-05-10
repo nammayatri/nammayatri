@@ -120,16 +120,17 @@ getDriverRateCard ::
 getDriverRateCard (mbPersonId, _, merchantOperatingCityId) mbDistance mbServiceTierType = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast personId)))
+  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
+  vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
+  let driverVehicleServiceTierTypes = (\(vehicleServiceTier, _) -> vehicleServiceTier.serviceTierType) <$> selectVehicleTierForDriverWithUsageRestriction False person driverInfo vehicle cityVehicleServiceTiers
   case mbServiceTierType of
     Just serviceTierType -> do
+      when (serviceTierType `notElem` driverVehicleServiceTierTypes) $ throwError $ InvalidRequest ("Service tier " <> show serviceTierType <> " not available for driver")
       rateCard <- getRateCardForServiceTier transporterConfig (OneWay OneWayOnDemandDynamicOffer) serviceTierType
       return [rateCard]
     Nothing -> do
-      person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
-      vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
-      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
-      let driverVehicleServiceTierTypes = (\(vehicleServiceTier, _) -> vehicleServiceTier.serviceTierType) <$> selectVehicleTierForDriverWithUsageRestriction person driverInfo vehicle cityVehicleServiceTiers
       rateCard <- mapM (getRateCardForServiceTier transporterConfig (OneWay OneWayOnDemandDynamicOffer)) driverVehicleServiceTierTypes
       return rateCard
   where
@@ -173,8 +174,8 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) mbDistance mbServiceT
               currency = INR, -- fix it later
               tollCharges = Nothing
             }
-      let totalFareAmount = fareSum fareParams
-      let perKmAmount :: Rational = totalFareAmount.getHighPrecMoney / fromIntegral (maybe 1 getMeters mbDistance)
+      let totalFareAmount = perRideKmFareParamsSum fareParams
+      let perKmAmount :: Rational = totalFareAmount.getHighPrecMoney / fromIntegral (maybe 1 (getKilometers . metersToKilometers) mbDistance)
       let perKmRate =
             PriceAPIEntity
               { amount = HighPrecMoney perKmAmount,
@@ -225,22 +226,22 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchanOperatingCityId) = do
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchanOperatingCityId
   let personLangauge = fromMaybe ENGLISH person.language
 
-  let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction person driverInfo vehicle cityVehicleServiceTiers
+  let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False person driverInfo vehicle cityVehicleServiceTiers
+  let serviceTierACThresholds = map (\(VehicleServiceTier {..}, _) -> airConditioned) driverVehicleServiceTierTypes
+  let isACAllowedForDriver = checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
+  let isACWorking = vehicle.airConditioned /= Just False
   let tierOptions =
         driverVehicleServiceTierTypes <&> \(VehicleServiceTier {..}, usageRestricted) -> do
           API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier
             { isSelected = serviceTierType `elem` vehicle.selectedServiceTiers,
-              isDefault = vehicle.variant `elem` defaultForVehicleVariant,
+              isDefault = (vehicle.variant `elem` defaultForVehicleVariant) || (isNothing airConditioned && not (isACAllowedForDriver && isACWorking)),
               isUsageRestricted = Just usageRestricted,
               ..
             }
 
-  mbAirConditioned <- do
-    let serviceTierACThresholds = map (\(VehicleServiceTier {..}, _) -> airConditioned) driverVehicleServiceTierTypes
+  mbAirConditioned <-
     if any isJust serviceTierACThresholds
       then do
-        let isACAllowedForDriver = checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
-        let isACWorking = vehicle.airConditioned /= Just False
         restrictionMessageItem <-
           if not isACAllowedForDriver
             then MTQuery.findByErrorAndLanguage "AC_RESTRICTION_MESSAGE" personLangauge
@@ -282,15 +283,19 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchanOperatingCityId) API.Types.U
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
 
-  let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction person driverInfo vehicle cityVehicleServiceTiers
+  let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False person driverInfo vehicle cityVehicleServiceTiers
+  let serviceTierACThresholds = map (\(vst, _) -> vst.airConditioned) driverVehicleServiceTierTypes
+  let isACAllowedForDriver = checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
+  let isACWorkingForVehicle = vehicle.airConditioned /= Just False
   mbSelectedServiceTiers <-
     driverVehicleServiceTierTypes `forM` \(driverServiceTier, _) -> do
       let isAlreadySelected = driverServiceTier.serviceTierType `elem` vehicle.selectedServiceTiers
+          isNonAcServiceTier = isNothing driverServiceTier.airConditioned
           isDefault = vehicle.variant `elem` driverServiceTier.defaultForVehicleVariant
           mbServiceTierDriverRequest = find (\tier -> tier.serviceTierType == driverServiceTier.serviceTierType) tiers
           isSelected = maybe isAlreadySelected (.isSelected) mbServiceTierDriverRequest
 
-      if isSelected || isDefault
+      if isSelected || isDefault || (isNonAcServiceTier && not (isACAllowedForDriver && isACWorkingForVehicle))
         then return $ Just driverServiceTier.serviceTierType
         else return Nothing
 

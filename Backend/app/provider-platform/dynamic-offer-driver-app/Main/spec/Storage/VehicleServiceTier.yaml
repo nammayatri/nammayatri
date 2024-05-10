@@ -22,14 +22,17 @@ VehicleServiceTier:
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
     allowedVehicleVariant: '[Variant]'
+    autoSelectedVehicleVariant: '[Variant]'
     defaultForVehicleVariant: '[Variant]'
     priority: Int
   sqlType:
     allowedVehicleVariant: text[]
     defaultForVehicleVariant: text[]
+    autoSelectedVehicleVariant: text[]
     driverRating: double precision
   default:
     priority: '0'
+    autoSelectedVehicleVariant: "'{}'"
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
