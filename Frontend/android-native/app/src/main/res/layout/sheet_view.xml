@@ -442,9 +442,9 @@
                                                     app:cardBackgroundColor="@color/blue800"
                                                     android:theme="@style/Theme.MaterialComponents.Light"
                                                     app:cardCornerRadius="28dp"
+                                                    android:layout_marginRight="6dp"
                                                     app:contentPadding="5dp"
-                                                    app:cardElevation="0dp"
-                                                    android:layout_marginLeft="5dp">
+                                                    app:cardElevation="0dp">
 
                                                     <LinearLayout
                                                         android:layout_width="match_parent"
@@ -461,9 +461,10 @@
                                                             android:layout_width="wrap_content"
                                                             android:layout_height="wrap_content"
                                                             android:textSize="18dp"
-                                                            android:layout_marginStart="5dp"
+                                                            android:layout_marginLeft="5dp"
                                                             android:gravity="center"
                                                             android:textColor="@color/white"
+                                                            android:layout_marginRight="4dp"
                                                             android:textFontWeight="600"
                                                             android:fontFamily="@font/dmsans_bold"
                                                             android:text="AC"/>
@@ -479,11 +480,11 @@
                                                 android:layout_width="wrap_content"
                                                 android:layout_height="wrap_content"
                                                 android:textSize="16dp"
-                                                android:layout_marginStart="5dp"
                                                 android:textColor="@color/blue800"
                                                 android:gravity="center"
                                                 android:singleLine="false"
                                                 android:textFontWeight="600"
+                                                android:layout_marginLeft="1dp"
                                                 android:paddingBottom="2dp"
                                                 android:fontFamily="@font/plus_jakartasans_semibold"
                                                 android:text="Comfy"/>
