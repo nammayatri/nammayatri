@@ -129,7 +129,7 @@ sourceToDestinationConfig state = let
 topicsList :: ST.TripDetailsScreenState -> Array CategoryListType
 topicsList state =  
   let appConfig = getAppConfig Const.appConfig 
-      neededCategories = ["LOST_AND_FOUND", "PAYMENT_RELATED", "FARE_DISCREPANCY", "SAFETY"]
+      neededCategories = ["RIDE_RELATED", "LOST_AND_FOUND", "PAYMENT_RELATED", "FARE_DISCREPANCY", "SAFETY"]
   in 
   if appConfig.feature.enableSelfServe then 
     filter (\obj -> elem obj.categoryAction neededCategories) state.data.categories 

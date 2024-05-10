@@ -77,7 +77,7 @@ import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, vo
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
 import Helpers.Pooling(delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
-import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId)
+import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, dummyPrice)
 import Screens (getScreen)
 import Screens.AccountSetUpScreen.ScreenData as AccountSetUpScreenData
 import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
@@ -198,6 +198,7 @@ import Helpers.API as HelpersAPI
 import Helpers.Referral (applyReferralCode)
 import Helpers.SpecialZoneAndHotSpots
 import Components.ChooseVehicle.Controller as ChooseVehicle
+import Screens.HelpAndSupportScreen.Transformer (getUpdatedIssueList, getApiIssueList)
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -1730,6 +1731,26 @@ homeScreenFlow = do
         REFERRAL_INVALID -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props{ referralComponentProps{ isInvalidCode = true } } })
         _ -> pure unit
       homeScreenFlow
+    GO_TO_RIDE_RELATED_ISSUES state -> do
+      let rideId = state.data.driverInfoCardState.rideId
+          language = fetchLanguage $ getLanguageLocale languageKey 
+      void $ lift $ lift $ toggleLoader true
+      categoryId <- fetchParticularIssueCategory "RIDE_RELATED"
+      case categoryId of
+        Just categoryId -> do
+          (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language categoryId "" ""
+          let getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj { option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) getOptionsRes.options
+              messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsRes.messages
+              chats' = map (\(Message currMessage) -> Chat {chatId : currMessage.id, 
+                                                            chatType : "IssueMessage", 
+                                                            timestamp : (getCurrentUTC "")} )getOptionsRes.messages
+          void $ lift $ lift $ toggleLoader false
+          modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data {entryPoint = ReportIssueChatScreenData.HomeScreenEntry, chats = chats', tripId = Just rideId, categoryName = "Ride Related Issue", categoryId = categoryId, options = getOptionsRes', chatConfig { messages = messages' },  selectedRide = Nothing } } )
+          flowRouter IssueReportChatScreenFlow
+        Nothing -> do
+          void $ lift $ lift $ toggleLoader false
+          void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+          homeScreenFlow
     _ -> homeScreenFlow
 
 findEstimates :: HomeScreenState -> FlowBT String Unit
@@ -2075,8 +2096,15 @@ tripDetailsScreenFlow = do
       tripDetailsScreenFlow 
     GO_TO_ISSUE_CHAT_SCREEN updatedState selectedCategory -> do
       let language = fetchLanguage $ getLanguageLocale languageKey
+      currentIssueList <- if selectedCategory.categoryAction == "RIDE_RELATED" 
+                              then do
+                                (FetchIssueListResp issueListResponse) <- Remote.fetchIssueListBT language
+                                let issues = getApiIssueList issueListResponse.issues
+                                pure $ getUpdatedIssueList ["OPEN", "PENDING", "RESOLVED", "REOPENED"] issues 
+                              else pure []
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" ""
-      let options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) getOptionsRes.options
+      let filteredOptions = UI.transformIssueOptions getOptionsRes.options (Just updatedState.data.selectedItem) currentIssueList
+          options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) filteredOptions
           messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))getOptionsRes.messages
           chats' = map (\(Message currMessage) -> Chat {
                       chatId : currMessage.id,
@@ -2085,7 +2113,7 @@ tripDetailsScreenFlow = do
                     }) getOptionsRes.messages
           categoryName = getTitle selectedCategory.categoryAction
           merchantExoPhone' = if updatedState.data.selectedItem.merchantExoPhone == "" then Nothing else Just updatedState.data.selectedItem.merchantExoPhone
-      modifyScreenState $ ReportIssueChatScreenStateType (\ reportIssueChatState -> reportIssueChatState { data { merchantExoPhone = merchantExoPhone',  selectedRide = Just updatedState.data.selectedItem, entryPoint = ReportIssueChatScreenData.TripDetailsScreenEntry, chats = chats', categoryName = categoryName, categoryId = selectedCategory.categoryId, options = options', chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'} }})
+      modifyScreenState $ ReportIssueChatScreenStateType (\ reportIssueChatState -> reportIssueChatState { data { merchantExoPhone = merchantExoPhone',  selectedRide = Just updatedState.data.selectedItem, entryPoint = ReportIssueChatScreenData.TripDetailsScreenEntry, chats = chats', categoryName = categoryName, categoryId = selectedCategory.categoryId, options = options', chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'}, tripId = Just updatedState.data.selectedItem.rideId }})
       flowRouter IssueReportChatScreenFlow
 
 
@@ -2909,7 +2937,7 @@ rideCompletedDetails (RideBookingRes resp) = do
       finalAmount =  getFinalAmount (RideBookingRes resp)
       timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
       nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
-      actualTollCharge = maybe 0 (\obj ->  obj^._amount) $ Arr.find (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.fareBreakup)
+      actualTollCharge = maybe dummyPrice (\obj ->  obj^._amountWithCurrency) $ Arr.find (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.fareBreakup)
 
   [ {key : "Estimate ride distance (km)", value : unsafeToForeign (fromMaybe 0 contents.estimatedDistance/1000)},
           {key : "Actual ride distance (km)", value : unsafeToForeign ((fromMaybe 0 ride.chargeableRideDistance)/1000)},
@@ -2919,8 +2947,8 @@ rideCompletedDetails (RideBookingRes resp) = do
           {key : "Difference between estimated and actual fares (₹)", value : unsafeToForeign (resp.estimatedFare - finalAmount)},
           {key : "Driver pickup charges (₹)", value : unsafeToForeign "10"},
           {key : "Night ride", value : unsafeToForeign nightChargesVal},
-          {key : "Actual Toll Charges", value : unsafeToForeign actualTollCharge},
-          {key : "Has Toll", value : unsafeToForeign (maybe false (\charge -> charge /= 0) (Just actualTollCharge))}]
+          {key : "Actual Toll Charges", value : unsafeToForeign actualTollCharge.amount},
+          {key : "Has Toll", value : unsafeToForeign (maybe false (\charge -> charge.amount /= 0.0) (Just actualTollCharge))}]
 
 personStatsData :: PersonStatsRes -> GetProfileRes -> Array ClevertapEventParams
 personStatsData (PersonStatsRes resp) (GetProfileRes response) = [{key : "First ride taken" , value : unsafeToForeign if response.hasTakenRide then "true" else "false"},
@@ -4081,3 +4109,12 @@ firstRideCompletedEvent str = do
         else setValueToLocalStore CUSTOMER_FIRST_RIDE "false"
       Left (err) -> pure unit
   else pure unit
+
+fetchParticularIssueCategory :: String -> FlowBT String (Maybe String)
+fetchParticularIssueCategory categoryLabel = do
+  let language = fetchLanguage $ getLanguageLocale languageKey
+  (GetCategoriesRes response) <- Remote.getCategoriesBT language
+  let category = Arr.find (\(Category item) -> item.label == categoryLabel) response.categories
+  case category of
+    Just (Category item) -> pure $ Just item.issueCategoryId
+    Nothing -> pure Nothing

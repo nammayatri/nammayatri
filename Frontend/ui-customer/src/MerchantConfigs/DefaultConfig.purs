@@ -233,8 +233,7 @@ config =
     shareWithEmergencyContacts: true,
     enableAutoReferral : true,
     enableCustomerSupportForSafety : false,
-    enableSpecialPickup : JB.jBridgeMethodExists "locateOnMapV2",
-    enableAcPopup : false
+    enableSpecialPickup : JB.jBridgeMethodExists "locateOnMapV2"
   }
 
   , rideCompletedCardConfig : {
@@ -432,6 +431,10 @@ config =
       pastRideInterval : 15
   }
   , enableBookAny : true
+  , acPopupConfig : {
+      enable : false,
+      showAfterTime : 3
+    }
 }
 
 defaultCityConfig :: CityConfig

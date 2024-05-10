@@ -1118,7 +1118,7 @@ getML stringKey =
         HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "നിങ്ങളുടെ ഡ്രൈവർ എന്തുപോലെ ആസ്വദിക്കുന്നത് പുനഃപ്രയോഗിച്ചുകൊണ്ടാണ്?"
         NO_REPORT_AN_ISSUE -> "ഇല്ല, ഒരു സമസ്യ റിപ്പോർട്ട് ചെയ്യുക"
         GREAT_ENJOY_THE_TRIP -> "വളരെ നന്ദി! യാത്ര ആസ്വദിക്കുക"
-        ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "നിങ്ങളുടെ ബജറ്റ് സൗഹൃദമായ നോൺ-AC റൈഡ് ആസ്വദിക്കുക"
+        ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "നിങ്ങളുടെ ബജറ്റ് സൗഹൃദമായ\nനോൺ-AC റൈഡ് ആസ്വദിക്കുക"
         AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "ഈ റൈഡിൽ എസി ലഭ്യമല്ല"
         AC_NOT_WORKING_DESC -> "എസി പ്രവർത്തിക്കുന്നില്ല / ഡ്രൈവർ ഓണ് ചെയ്യാനായി നിരാകരിച്ചു"
         SHOWING_FARE_FROM_MULTI_PROVIDER -> "ഒന്നിലധികം ദാതാക്കളിൽ നിന്നുള്ള നിരക്കുകൾ കാണിക്കുന്നു"

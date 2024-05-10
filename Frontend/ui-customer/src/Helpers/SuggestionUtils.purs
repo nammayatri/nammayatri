@@ -163,7 +163,7 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config is
           updatedTrips = map updateExisting trips
           tripExists = any (\tripItem -> (getDistanceBwCordinates tripItem.sourceLat tripItem.sourceLong trip.sourceLat trip.sourceLong) < config.tripDistanceThreshold
             && (getDistanceBwCordinates tripItem.destLat tripItem.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold && tripItem.serviceTierNameV2 == trip.serviceTierNameV2) updatedTrips
-          sortedTrips = sortTripsByScore updatedTrips
+          sortedTrips = sortTripsByScore $ updateVariantInfo updatedTrips
         in
           if tripExists
           then sortedTrips
@@ -349,7 +349,7 @@ getLocationFromTrip locationType trip sourceLat sourceLong =
     }
 
 transformTrip :: Trip -> Trip 
-transformTrip trip = trip { serviceTierNameV2 = correctServiceTierName trip.serviceTierNameV2 }
+transformTrip trip = fixVariantForTrip $ trip { serviceTierNameV2 = correctServiceTierName trip.serviceTierNameV2 }
 
 correctServiceTierName :: Maybe String -> Maybe String
 correctServiceTierName serviceTierName = 
@@ -443,3 +443,23 @@ getHelperLists savedLocationResp recentPredictionsObject state lat lon =
         
       trips = map (\item -> transformTrip item) sortedTripList
   in {savedLocationsWithOtherTag, recentlySearchedLocations, suggestionsMap, trips, suggestedDestinations}
+
+updateVariantInfo :: Array Trip -> Array Trip
+updateVariantInfo trips = 
+  map fixVariantForTrip trips 
+
+fixVariantForTrip :: Trip -> Trip
+fixVariantForTrip trip = 
+  if (DA.notElem trip.serviceTierNameV2 [Just "Auto", Just "AUTO_RICKSHAW"]) && trip.vehicleVariant == Just "AUTO_RICKSHAW"
+    then trip {vehicleVariant = getVariant trip.serviceTierNameV2 trip.vehicleVariant}
+    else trip
+
+getVariant :: Maybe String -> Maybe String -> Maybe String
+getVariant serviceTier variant = 
+  case serviceTier of
+    Just "Auto" -> Just "AUTO_RICKSHAW"
+    Just "Sedan" -> Just "SEDAN"
+    Just "AC Mini" -> Just "HATCHBACK"
+    Just "XL Cab" -> Just "SUV"
+    Just "Non-AC Mini" -> Just "TAXI"
+    _ -> variant

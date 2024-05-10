@@ -92,6 +92,7 @@ import ConfigProvider
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
 import Data.Lens ((^.), view)
 import Components.ServiceTierCard.View as ServiceTierCard
+import Resources.Constants (dummyPrice)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -1577,7 +1578,7 @@ rideCompletedCardConfig state =
       headerConfig = mkHeaderConfig state.props.nightSafetyFlow state.props.showOfferedAssistancePopUp
       appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
       isRecentRide = EHC.getExpiryTime (fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
-      actualTollCharge =  maybe 0 (\obj ->  obj^._amount) $ DA.find (\entity  -> entity ^._description == "TOLL_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
+      actualTollCharge =  maybe dummyPrice (\(API.FareBreakupAPIEntity obj) ->  obj.amountWithCurrency) $ DA.find (\entity  -> entity ^._description == "TOLL_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
       serviceTier = fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _serviceTierName)
   in RideCompletedCard.config {
         isDriver = false,
@@ -1626,11 +1627,11 @@ rideCompletedCardConfig state =
         needHelpText = getString NEED_HELP,
         serviceTierAndAC = serviceTier
       , toll {
-          actualAmount = actualTollCharge
-        , text =if actualTollCharge > 0 then getString TOLL_CHARGES_INCLUDED  else getString TOLL_ROAD_CHANGED -- Handle after design finalized 
-        , visibility = boolToVisibility $ actualTollCharge > 0 || (getValueToLocalStore HAS_TOLL_CHARGES == "true") 
+          actualAmount = actualTollCharge.amount
+        , text =if actualTollCharge.amount > 0.0 then getString TOLL_CHARGES_INCLUDED  else getString TOLL_ROAD_CHANGED -- Handle after design finalized 
+        , visibility = boolToVisibility $ actualTollCharge.amount > 0.0 || (getValueToLocalStore HAS_TOLL_CHARGES == "true") 
         , image = fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
-        , imageVisibility = boolToVisibility $ actualTollCharge > 0 
+        , imageVisibility = boolToVisibility $ actualTollCharge.amount > 0.0
         }
       }
   where 

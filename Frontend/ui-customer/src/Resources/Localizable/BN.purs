@@ -1119,7 +1119,7 @@ getBN stringKey =
         HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "আপনার ড্রাইভার কি আপনার পছন্দ অনুযায়ী এসি সেট করেছেন?"
         NO_REPORT_AN_ISSUE -> "না, একটি সমস্যা রিপোর্ট করুন"
         GREAT_ENJOY_THE_TRIP -> "অসাধারণ! ভ্রমণ উপভোগ করুন"
-        ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "আপনার বাজেট বন্ধুত্বপূর্ণ নন-এসি রাইড উপভোগ করুন"
+        ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "আপনার বাজেট বন্ধুত্বপূর্ণ নন-এসি\nরাইড উপভোগ করুন"
         AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "এই রাইডে এসি উপলব্ধ নয়"
         AC_NOT_WORKING_DESC -> "এসি কাজ করছে না / চালক অন করতে অসমর্থ"
         SHOWING_FARE_FROM_MULTI_PROVIDER -> "একাধিক প্রদানকারীর থেকে ভাড়া দেখানো হচ্ছে"

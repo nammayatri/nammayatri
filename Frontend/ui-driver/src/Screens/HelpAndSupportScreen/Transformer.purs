@@ -22,7 +22,9 @@ getApiIssueList issueList = map (\(IssueReportDriverListItem issue) -> {
                   _ -> ""
               ,
    createdAt : getExactTime $ runFn2 differenceBetweenTwoUTC (getCurrentUTC "") issue.createdAt,
-   issueReportShortId : issue.issueReportShortId
+   issueReportShortId : issue.issueReportShortId,
+   optionLabel : issue.optionLabel,
+   rideId : issue.rideId
 }) issueList
 
 getExactTime :: Int -> String

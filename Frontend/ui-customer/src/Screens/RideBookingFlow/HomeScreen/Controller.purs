@@ -732,6 +732,7 @@ data ScreenOutput = LogoutUser
                   | ExitToConfirmingLocationStage HomeScreenState
                   | UpdateReferralCode HomeScreenState String
                   | GoToSafetySettingScreen 
+                  | GoToRideRelatedIssues HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -2944,7 +2945,11 @@ eval (AcWorkingPopupAction (PopUpModal.OnButton1Click)) state = do
 
 eval (AcWorkingPopupAction (PopUpModal.OnButton2Click)) state = do
   void $ pure $ setValueToCache (show AC_POPUP_SHOWN_FOR_RIDE) state.data.driverInfoCardState.rideId (\id -> id)
-  continue state{props{showAcWorkingPopup = false}}
+  let isAcCabRide = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
+  if isAcCabRide then
+    exit $ GoToRideRelatedIssues state
+  else 
+    continue state{props{showAcWorkingPopup = false}}
 
 eval (AcWorkingPopupAction PopUpModal.DismissPopup) state = continue state{props{showAcWorkingPopup = false}}
 

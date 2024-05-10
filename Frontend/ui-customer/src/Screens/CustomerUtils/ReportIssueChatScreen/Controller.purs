@@ -25,7 +25,7 @@ import Components.PrimaryButton.Controller (Action(..)) as PrimaryButton
 import Components.PrimaryEditText.Controller (Action(..)) as PrimaryEditText
 import Components.RecordAudioModel.Controller (Action(..)) as RecordAudioModel
 import Components.ViewImageModel.Controller as ViewImageModel
-import Data.Array (deleteAt, length, snoc)
+import Data.Array (deleteAt, length, snoc, filter)
 import Data.Either (Either(..))
 import Data.Foldable (find)
 import Data.Int (fromString)
@@ -53,6 +53,7 @@ import PrestoDOM (updateWithCmdAndExit)
 import Timers
 import Effect.Uncurried 
 import Screens.ReportIssueChatScreen.ScreenData (ReportIssueChatScreenState, ReportIssueChatScreenEntryPoint(..))
+import Components.ServiceTierCard.View as ServiceTierCard
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

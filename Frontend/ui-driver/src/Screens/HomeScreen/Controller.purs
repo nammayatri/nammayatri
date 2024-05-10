@@ -1514,7 +1514,7 @@ activeRideDetail state (RidesInfo ride) =
   driverVehicle : ride.vehicleVariant,
   serviceTier : ride.vehicleServiceTierName,
   capacity : ride.vehicleCapacity,
-  hasToll :  maybe false (\charge -> charge /= 0) ride.estimatedTollCharges,
+  hasToll :  maybe false (\charge -> charge /= 0.0) ride.estimatedTollCharges,
   estimatedTollCharge : ride.estimatedTollCharges,
   acRide : ride.isVehicleAirConditioned
 }

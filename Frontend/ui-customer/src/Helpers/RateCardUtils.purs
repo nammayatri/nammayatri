@@ -105,14 +105,18 @@ getFareBreakupList (EstimateAPIEntity estimate) maxTip =
     else 1.0
 
   nightShiftStartSeconds = fetchSpecificFare fareBreakup "NIGHT_SHIFT_START_TIME_IN_SECONDS"
-  nightShiftStart = EHC.parseSecondsOfDayToUTC $ DI.round nightShiftStartSeconds.amount
+  nightShiftStart = EHC.parseSecondsOfDayToUTC $ (DI.round nightShiftStartSeconds.amount)
 
   nightShiftEndSeconds = fetchSpecificFare fareBreakup "NIGHT_SHIFT_END_TIME_IN_SECONDS"
   nightShiftEnd = EHC.parseSecondsOfDayToUTC $ (DI.round nightShiftEndSeconds.amount + 86400)
+  nightShiftEnd_ = EHC.parseSecondsOfDayToUTC $ (DI.round nightShiftEndSeconds.amount) -- For after midnight case
+
+  midNightUtc = EHC.getMidnightUTC unit
 
   nightShiftRate = fetchSpecificFare fareBreakup "NIGHT_SHIFT_CHARGE_PERCENTAGE"
 
-  isNightShift = JB.withinTimeRange nightShiftStart nightShiftEnd (EHC.getCurrentUTC "")
+  isNightShift = (JB.withinTimeRange nightShiftStart nightShiftEnd (EHC.getCurrentUTC ""))
+                 || (JB.withinTimeRange midNightUtc nightShiftEnd_ (EHC.getCurrentUTC ""))
 
   nightCharges =
     if isNightShift then

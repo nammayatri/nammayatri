@@ -157,8 +157,8 @@ initData =
           , disability: Nothing
           , payerVpa: ""
           , specialZonePickup: Nothing
-          , actualTollCharge : 0
-          , estimatedTollCharge : 0
+          , actualTollCharge : 0.0
+          , estimatedTollCharge : 0.0
           , capacity : Nothing
           , serviceTier : ""
           }
