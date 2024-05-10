@@ -162,13 +162,10 @@ pureFareSum fareParams = do
 
 perRideKmFareParamsSum :: FareParameters -> HighPrecMoney
 perRideKmFareParamsSum fareParams = do
-  let distanceAndTimeBasedFare =
-        case fareParams.fareParametersDetails of
-          DFParams.ProgressiveDetails det -> fromMaybe 0.0 det.extraKmFare
-          DFParams.SlabDetails _ -> 0.0
-          DFParams.RentalDetails det -> det.distBasedFare + det.timeBasedFare
+  let (partOfNightShiftCharge, notPartOfNightShiftCharge, _) = countFullFareOfParamsDetails fareParams.fareParametersDetails
   fareParams.baseFare
-    + distanceAndTimeBasedFare
+    + partOfNightShiftCharge
+    + notPartOfNightShiftCharge
     + fromMaybe 0.0 fareParams.nightShiftCharge
     + fromMaybe 0.0 fareParams.congestionCharge
 
