@@ -98,7 +98,7 @@ import Screens.RideBookingFlow.HomeScreen.Config
 import Services.API
 import Screens.NammaSafetyFlow.Components.ContactsList (contactCardView)
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), RideBookingListRes(..))
-import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..),City(..), BottomNavBarIcon(..), NewContacts, ReferralStatus(..))
+import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..),City(..), BottomNavBarIcon(..), NewContacts, ReferralStatus(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, getRouteMarkers, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
@@ -240,7 +240,7 @@ screen initialState =
                   void $ waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction
                 else 
                   when 
-                    (initialState.data.currentSearchResultType == QUOTES) $ do
+                    (initialState.data.currentSearchResultType == CT.QUOTES CT.OneWaySpecialZoneAPIDetails) $ do
                       let secondsLeft = initialState.data.config.driverInfoConfig.specialZoneQuoteExpirySeconds - (getExpiryTime initialState.data.driverInfoCardState.createdAt true)
                       void $ startTimer secondsLeft "SpecialZoneOTPExpiry" "1" push SpecialZoneOTPExpiryAction
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
@@ -254,7 +254,7 @@ screen initialState =
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup" 1
                 else pure unit
                 push LoadMessages
-                when (not initialState.props.chatcallbackInitiated && initialState.data.currentSearchResultType /= QUOTES) $ do
+                when (not initialState.props.chatcallbackInitiated && initialState.data.currentSearchResultType /= CT.QUOTES CT.OneWaySpecialZoneAPIDetails) $ do
                   -- @TODO need to revert once apk update is done
                   --when (initialState.data.driverInfoCardState.providerType == CTP.ONUS) $ void $ JB.showInAppNotification JB.inAppNotificationPayload{title = "Showing Approximate Location", message = "Driver locations of other providers are only approximate", channelId = "ApproxLoc", showLoader = true}
                   startChatSerivces push initialState.data.driverInfoCardState.bppRideId "Customer" false
@@ -581,7 +581,7 @@ bottomNavBarView push state = let
                 , {text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]))
     ]
 getMapHeight :: HomeScreenState -> Length
-getMapHeight state = V (if state.data.currentSearchResultType == QUOTES then (((screenHeight unit)/ 4)*3) 
+getMapHeight state = V (if state.data.currentSearchResultType == CT.QUOTES CT.OneWaySpecialZoneAPIDetails then (((screenHeight unit)/ 4)*3) 
                             else if (state.props.currentStage == RideAccepted || state.props.currentStage == ChatWithDriver) then ((screenHeight unit) - (getInfoCardPeekHeight state)) + 50
                             else (((screenHeight unit)/ 15)*10))
 
@@ -631,7 +631,7 @@ cancelSearchPopUp push state =
 
 messageWidgetView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 messageWidgetView push state = 
-  let isWidgetVisible = ((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver] || state.props.isChatWithEMEnabled) && state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && not state.props.removeNotification
+  let isWidgetVisible = ((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver] || state.props.isChatWithEMEnabled) && state.data.currentSearchResultType /= CT.QUOTES CT.OneWaySpecialZoneAPIDetails && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && not state.props.removeNotification
   in 
   linearLayout
   [ height MATCH_PARENT
@@ -663,7 +663,7 @@ messageWidgetView push state =
      ]
   ]
   where disableSuggestions :: HomeScreenState -> Boolean
-        disableSuggestions state = state.data.currentSearchResultType == QUOTES || not state.data.config.feature.enableChat || not state.data.config.feature.enableSuggestions
+        disableSuggestions state = state.data.currentSearchResultType == CT.QUOTES CT.OneWaySpecialZoneAPIDetails || not state.data.config.feature.enableChat || not state.data.config.feature.enableSuggestions
 
 messagingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 messagingView push state = 
@@ -2614,7 +2614,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
           Just resp -> do
             void $ liftFlow $ push $ UpdateBookingDetails resp
             handleRideBookingResp resp
-    if (state.props.isSpecialZone && state.data.currentSearchResultType == QUOTES) && (isLocalStageOn RideAccepted) then do
+    if (state.props.isSpecialZone && state.data.currentSearchResultType == CT.QUOTES CT.OneWaySpecialZoneAPIDetails) && (isLocalStageOn RideAccepted) then do
       _ <- pure $ enableMyLocation true
       _ <- pure $ removeAllPolylines ""
       _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng zoomLevel "ZOOM"
@@ -2715,7 +2715,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
     isSpecialPickupZone = state.props.currentStage == RideAccepted && state.props.zoneType.priorityTag == SPECIAL_PICKUP && isJust state.data.driverInfoCardState.sourceAddress.area && state.data.config.feature.enableSpecialPickup
     handleRideBookingResp (RideBookingRes respBooking) = do
       let bookingStatus = respBooking.status
-      void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {props{bookingId = respBooking.id}, data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes respBooking) (state.data.currentSearchResultType == QUOTES)}}}
+      void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {props{bookingId = respBooking.id}, data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes respBooking) (state.data.currentSearchResultType == CT.QUOTES CT.OneWaySpecialZoneAPIDetails)}}}
       case bookingStatus of
         "REALLOCATED" -> do
             doAff do liftEffect $ push $ action bookingStatus

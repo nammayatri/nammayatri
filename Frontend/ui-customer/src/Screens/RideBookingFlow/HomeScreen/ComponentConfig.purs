@@ -820,7 +820,7 @@ isMockLocationConfig state =
 
 waitTimeInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
 waitTimeInfoCardConfig state = let
-  waitTimeConfig = textConfig $ state.data.currentSearchResultType == ST.QUOTES
+  waitTimeConfig = textConfig $ state.data.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{
     title {
@@ -1027,7 +1027,7 @@ messagingViewConfig state = let
 
 getDefaultPeekHeight :: ST.HomeScreenState -> Int
 getDefaultPeekHeight state = do
-  let isQuotes = state.data.currentSearchResultType == ST.QUOTES
+  let isQuotes = state.data.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails
       height = case state.props.currentStage == ST.RideAccepted of 
                   true -> if isQuotes then 285 else 381
                   false -> if isQuotes then 377 else 368

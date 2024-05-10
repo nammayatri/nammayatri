@@ -94,6 +94,7 @@ import Data.Function.Uncurried (runFn1)
 import Constants (defaultDensity)
 import Mobility.Prelude
 import MerchantConfig.Types 
+import Common.Types.App as CT
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -885,3 +886,12 @@ getSelectedServices dummy =
     Kochi -> ["Eco", "Hatchback", "Sedan"]
     Pondicherry -> ["Eco", "Auto"]
     _ ->  ["Eco", "Hatchback", "Sedan"] 
+
+getFareProductType :: String -> CT.FareProductType
+getFareProductType fareType = case fareType of
+  "OneWaySpecialZoneAPIDetails" -> CT.OneWaySpecialZoneAPIDetails
+  "DRIVER_OFFER"                -> CT.DRIVER_OFFER
+  "ONE_WAY"                     -> CT.ONE_WAY
+  "INTER_CITY"                  -> CT.INTER_CITY
+  "RENTAL"                      -> CT.RENTAL
+  _                             -> CT.ONE_WAY

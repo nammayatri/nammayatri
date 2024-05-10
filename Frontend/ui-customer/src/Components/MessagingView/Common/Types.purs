@@ -2,9 +2,9 @@ module Components.MessagingView.Common.Types where
 
 import Prelude
 
-import Common.Types.App (ChatComponent)
+import Common.Types.App (ChatComponent, SearchResultType)
 import MerchantConfig.Types (AppConfig)
-import Screens.Types (SearchResultType, Stage)
+import Screens.Types (Stage)
 import Components.ChatView.Controller (ChatComponentConfig)
 import Components.MessagingView.Controller 
 

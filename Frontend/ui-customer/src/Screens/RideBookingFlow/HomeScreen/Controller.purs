@@ -95,7 +95,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, dummyEstimateEntity, getEstimateIdFromSelectedServices)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..), City(..))
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..), City(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -1194,7 +1194,7 @@ eval OnResumeCallback state =
       let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime "LazyCheck"))
       void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
       continue state
-    "RideAccepted" | state.data.currentSearchResultType == QUOTES -> exit $ ReloadScreen state
+    "RideAccepted" | state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails -> exit $ Retry state
     _ -> continue state
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
@@ -2377,12 +2377,11 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
     allQuoteListWithUpdatedIndex = spy "debug quotes allQuoteListWithUpdatedIndex" (mapWithIndex (\index item -> item{ index = index }) (estimates <> quotes))
     quoteList = filter (\item -> item.providerType == ONUS || (item.providerType == OFFUS && state.data.currentCityConfig.iopConfig.enable)) allQuoteListWithUpdatedIndex
     repeatRideFailCheck =  not $ checkRecentRideVariantInEstimates quoteList state.props.repeatRideServiceTierName -- check if the repeat ride variant is available in the estimates
-    isRepeatRide = if state.props.isRepeatRide && repeatRideFailCheck then false else state.props.isRepeatRide -- if repeat ride is enabled and the variant is not available in the estimates then disable repeat ride
+    isRepeatRide = state.props.isRepeatRide && repeatRideFailCheck -- if repeat ride is enabled and the variant is not available in the estimates then disable repeat ride
     nYQuotes = filter (\item -> item.providerType == ONUS) quoteList
-    othersQuotes = filter (\item -> item.providerType == OFFUS && state.data.currentCityConfig.iopConfig.enable) quoteList
-    showMultiProvider' =  if alreadyGotEstimates then 
-                            state.data.iopState.showMultiProvider 
-                          else 
+    showMultiProvider' =  if alreadyGotEstimates then
+                            state.data.iopState.showMultiProvider
+                          else
                             null nYQuotes -- if we already got the estimate show current screen only else if we have NY show ny provider else show multi provider    
 
     defaultSelected = fromMaybe ChooseVehicleController.config $ 
@@ -2443,7 +2442,7 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
   else do
     void $ pure $ updateLocalStage SearchLocationModel
     void $ pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
-    continue state { props {currentStage = SearchLocationModel}, data{currentSearchResultType = ESTIMATES}}
+    continue state { props {currentStage = SearchLocationModel}, data{currentSearchResultType = CTP.ESTIMATES}}
 
   where 
     isEstimateFareBreakupHastitle fareBreakUpList title = any (\item -> item ^. _title == title) fareBreakUpList
@@ -2552,7 +2551,7 @@ eval (GetRideConfirmation (RideBookingRes response)) state = do
                                 , bookingId = response.id
                                 , isInApp = true
                                 , isSpecialZone = isSpecialZoneOtpRide }
-                        , data { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == QUOTES) }
+                        , data { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails) }
                         }
   exit $ RideConfirmed newState
 
@@ -2944,7 +2943,7 @@ eval (UpdateBookingDetails (RideBookingRes response)) state = do
                         _ -> RideAccepted
                     , bookingId = response.id
                     }, data { 
-                      driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == QUOTES)}}
+                      driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails)}}
   continue newState
 
 eval (ReferralComponentAction componentAction) state =
@@ -3387,7 +3386,7 @@ callDriver state callType = do
 
 getInfoCardPeekHeight :: HomeScreenState -> Int
 getInfoCardPeekHeight state = 
-  let bottomSheetLayout = (runFn1 getLayoutBounds $ getNewIDWithTag (if state.data.currentSearchResultType == QUOTES then "driverInfoViewSpecialZone" else "driverInfoView"))
+  let bottomSheetLayout = (runFn1 getLayoutBounds $ getNewIDWithTag (if state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails then "driverInfoViewSpecialZone" else "driverInfoView"))
       brandingBanner = runFn1 getLayoutBounds $ getNewIDWithTag "BrandingBanner"
       actionsView = runFn1 getLayoutBounds $ getNewIDWithTag "DriverInfoCardActionView"
       pixels = runFn1 getPixels FunctionCall

@@ -1362,12 +1362,6 @@ instance showLocItemType :: Show LocItemType where show = genericShow
 instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
 instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
 
-data SearchResultType = QUOTES | ESTIMATES
-
-derive instance genericSearchResultType :: Generic SearchResultType _
-instance eqSearchResultType :: Eq SearchResultType where eq = genericEq
-instance showSearchResultType :: Show SearchResultType where show = genericShow
-
 type LocationTagBarState =
   { savedLocations :: Array LocationListItemState }
 
@@ -2209,7 +2203,7 @@ derive instance genericMetroTicketBookingStage :: Generic MetroTicketBookingStag
 instance eqMetroTicketBookingStage :: Eq MetroTicketBookingStage where eq = genericEq
 instance showMetroTicketBookingStage :: Show MetroTicketBookingStage where show = genericShow
 
-data TicketType = ONE_WAY | ROUND_TRIP
+data TicketType = ONE_WAY_TICKET | ROUND_TRIP_TICKET
 
 derive instance genericTicketType :: Generic TicketType _
 instance eqTicketType :: Eq TicketType where eq = genericEq
@@ -2336,11 +2330,3 @@ type SpecialZoneInfoPopUp = {
   , primaryButtonText :: String
   , icon :: String
 }
-
--- type EstimatesAndQuotes = {
---     agencyCompletedRidesCount :: Maybe Int
---   , agencyName :: String
---   , agencyNumber :: String
---   , createdAt :: String
---   , estimatedFare
--- }

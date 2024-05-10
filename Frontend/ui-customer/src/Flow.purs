@@ -102,7 +102,7 @@ import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutpu
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
-import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationTextField(..), SearchLocationScreenState, SearchLocationActionType(..), SearchLocationStage(..), LocationInfo, BottomNavBarIcon(..), FollowRideScreenStage(..), ReferralStatus(..), LocationType(..), Station(..),MetroTicketBookingStage(..), MetroStations(..))
+import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationTextField(..), SearchLocationScreenState, SearchLocationActionType(..), SearchLocationStage(..), LocationInfo, BottomNavBarIcon(..), FollowRideScreenStage(..), ReferralStatus(..), LocationType(..), Station(..),MetroTicketBookingStage(..), MetroStations(..))
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (ScreenOutput(..)) as RideScheduledScreenOutput
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig, getTipViewData, setTipViewData)
@@ -871,7 +871,7 @@ homeScreenFlow = do
             setValueToLocalStore FARE_ESTIMATE_DATA selectedEstimateOrQuote.price
             setValueToLocalStore SELECTED_VARIANT selectedEstimateOrQuote.vehicleVariant
             case selectedEstimateOrQuote.searchResultType of
-              CCV.ESTIMATES -> do
+              Common.ESTIMATES -> do
                 let valid = timeValidity (getCurrentUTC "") selectedEstimateOrQuote.validTill
                 if valid then do
                   void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates) selectedEstimateOrQuote.id 
@@ -881,11 +881,11 @@ homeScreenFlow = do
                                                                                             , estimateId = selectedEstimateOrQuote.id
                                                                                             , isPopUp = NoPopUp
                                                                                             , searchExpire = (getSearchExpiryTime "LazyCheck") }
-                                                                                    , data { currentSearchResultType = ST.ESTIMATES } })
+                                                                                    , data { currentSearchResultType = selectedEstimateOrQuote.searchResultType } })
                 else do
                   void $ pure $ toast (getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN)
                   findEstimates state
-              CCV.QUOTES _ -> do
+              Common.QUOTES _ -> do
                 void $ pure $ enableMyLocation false
                 updateLocalStage ConfirmingRide
                 response  <- lift $ lift $ Remote.rideConfirm selectedEstimateOrQuote.id
@@ -895,7 +895,7 @@ homeScreenFlow = do
                     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{ currentStage = ConfirmingRide
                                                                                             , bookingId = bookingId
                                                                                             , isPopUp = NoPopUp }
-                                                                                      , data { currentSearchResultType = ST.QUOTES } })
+                                                                                      , data { currentSearchResultType = selectedEstimateOrQuote.searchResultType } })
                   Left err  -> do
                     if not (err.code == 400 && (decodeError err.response.errorMessage "errorCode") == "QUOTE_EXPIRED") then
                       pure $ toast (getString STR.ERROR_OCCURED_TRY_AGAIN) 

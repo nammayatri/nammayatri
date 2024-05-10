@@ -61,7 +61,7 @@ import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Localizable.EN (getEN)
-import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..), City(..), NavigationMode(..))
+import Screens.Types (Stage(..), ZoneType(..), SheetState(..), City(..), NavigationMode(..))
 import Storage (KeyStore(..))
 import Storage ( getValueToLocalStore, KeyStore(..)) as STO
 import Styles.Colors as Color
@@ -105,7 +105,7 @@ driverInfoViewSpecialZone push state =
   linearLayout
   [ width  MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility if state.props.currentSearchResultType == QUOTES then VISIBLE else GONE
+  , visibility if state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails then VISIBLE else GONE
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -265,9 +265,9 @@ otpAndWaitView push state =
         , otpView push state
         ]
       -- , trackRideView push state -- TODO :: may use in future
-     ] <> if (state.props.currentSearchResultType == QUOTES || state.data.driverArrived) then 
+     ] <> if (state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails || state.data.driverArrived) then 
            [(PrestoAnim.animationSet [ fadeIn true ] $ 
-           let isQuotes = state.props.currentSearchResultType == QUOTES
+           let isQuotes = state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails
            in
            linearLayout
            [ width WRAP_CONTENT
@@ -363,7 +363,7 @@ waitTimeView push state =
   ]
 
 waitTimeHint :: DriverInfoCardState -> String
-waitTimeHint state = (if state.props.currentSearchResultType == QUOTES then "O T P Expires in : " else "Wait Time : ") <> case STR.split (STR.Pattern ":") state.data.waitingTime of
+waitTimeHint state = (if state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails then "O T P Expires in : " else "Wait Time : ") <> case STR.split (STR.Pattern ":") state.data.waitingTime of
                         [minutes, seconds] -> do 
                           let min = STR.trim $ minutes
                           let sec = STR.trim $ seconds
@@ -377,7 +377,7 @@ colorForWaitTime state =
   case waitTime of
     [minutes, _] -> 
       let mins = fromMaybe 0 (fromString (STR.trim minutes))
-          threshold = if state.props.currentSearchResultType == QUOTES then mins < 5 else mins > 2
+          threshold = if state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails then mins < 5 else mins > 2
       in
       if threshold then Color.carnation100 else Color.grey700 
     _ -> Color.grey700
@@ -528,7 +528,7 @@ navigateView push state =
   , accessibility ENABLE
   , accessibilityHint $ (getEN $ GO_TO_ZONE "GO_TO_ZONE") <> " : Button"
   , accessibility DISABLE_DESCENDANT
-  , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES && rideNotStarted state
+  , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails && rideNotStarted state
   , onClick push $ const $ OnNavigate WALK state.data.sourceLat state.data.sourceLng
   ][ imageView
      [ width $ V 20
@@ -555,7 +555,7 @@ driverInfoView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility if state.props.currentSearchResultType == QUOTES then GONE else VISIBLE
+  , visibility if state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails then GONE else VISIBLE
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT

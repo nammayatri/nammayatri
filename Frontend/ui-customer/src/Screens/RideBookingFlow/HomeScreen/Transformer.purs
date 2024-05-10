@@ -19,7 +19,7 @@ import Prelude
 
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
 
-import Components.ChooseVehicle (Config, config, SearchType(..), FareProductType(..)) as ChooseVehicle
+import Components.ChooseVehicle (Config, config) as ChooseVehicle
 import Components.QuoteListItem.Controller (config) as QLI
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Array (mapWithIndex, filter, head, find, foldl)
@@ -38,7 +38,7 @@ import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..))
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..))
 import Services.Backend as Remote
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
@@ -141,7 +141,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
                         (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else
                           (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0))
       , eta : Nothing
-      , currentSearchResultType : if isQuote then QUOTES else ESTIMATES
+      , currentSearchResultType : if isQuote then CT.QUOTES CT.OneWaySpecialZoneAPIDetails else CT.ESTIMATES
       , vehicleDetails : rideList.vehicleModel
       , registrationNumber : rideList.vehicleNumber
       , rating : (fromMaybe 0.0 rideList.driverRatings)
@@ -346,7 +346,7 @@ getSpecialZoneQuote quote index =
       , id = trim quoteEntity.id
       , capacity = getVehicleCapacity quoteEntity.vehicleVariant
       , showInfo = estimatesConfig.showInfoIcon
-      , searchResultType = ChooseVehicle.QUOTES ChooseVehicle.OneWaySpecialZoneAPIDetails
+      , searchResultType = CT.QUOTES CT.OneWaySpecialZoneAPIDetails
       , pickUpCharges = 0.0
       , serviceTierName = quoteEntity.serviceTierName
       , serviceTierShortDesc = quoteEntity.serviceTierShortDesc
@@ -362,9 +362,8 @@ getEstimateList estimates estimateAndQuoteConfig activeIndex =
   let estimatesWithOrWithoutBookAny = (createEstimateForBookAny estimates) <> estimates
       filteredWithVariantAndFare = filterWithFareAndVariant estimatesWithOrWithoutBookAny estimateAndQuoteConfig
       estimatesConfig = mapWithIndex (\index item -> getEstimates item filteredWithVariantAndFare index activeIndex) filteredWithVariantAndFare
-      updatedBookAnyEstimate = updateBookAnyEstimate estimatesConfig 
   in
-    updatedBookAnyEstimate
+    updateBookAnyEstimate estimatesConfig 
 
 filterWithFareAndVariant :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Array EstimateAPIEntity
 filterWithFareAndVariant estimates estimateAndQuoteConfig =
@@ -486,7 +485,7 @@ getEstimates (EstimateAPIEntity estimate) estimates index activeIndex =
       , capacity = getVehicleCapacity estimate.vehicleVariant
       , showInfo = config.estimateAndQuoteConfig.showInfoIcon
       , basePrice = estimate.estimatedTotalFare
-      , searchResultType = ChooseVehicle.ESTIMATES
+      , searchResultType = CT.ESTIMATES
       , serviceTierName =  mapServiceTierName estimate.vehicleVariant estimate.isValueAddNP estimate.serviceTierName
       , serviceTierShortDesc = mapServiceTierShortDesc estimate.vehicleVariant estimate.isValueAddNP estimate.serviceTierShortDesc
       , extraFare = breakupConfig.fareList

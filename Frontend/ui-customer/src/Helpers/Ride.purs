@@ -33,7 +33,7 @@ import Screens.HomeScreen.ScreenData (dummyRideBooking, initData) as HSD
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo)
 import Data.Lens ((^.))
 import Accessor
-import Screens.Types (Stage(..), SearchResultType(..), PopupType(..), FlowStatusData(..))
+import Screens.Types (Stage(..), PopupType(..), FlowStatusData(..))
 import Engineering.Helpers.Commons (liftFlow, convertUTCtoISC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
@@ -67,7 +67,7 @@ checkRideStatus rideAssigned = do
                     , finalAmount = fromMaybe 0 $ (fromMaybe dummyRideAPIEntity (head resp.rideList) )^. _computedPrice
                     , sourceAddress = getAddressFromBooking resp.fromLocation
                     , destinationAddress = getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
-                    , currentSearchResultType = if isQuotes then QUOTES else ESTIMATES
+                    , currentSearchResultType = if isQuotes then Common.QUOTES Common.OneWaySpecialZoneAPIDetails else Common.ESTIMATES
                     , vehicleVariant = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._vehicleVariant
                     , startedAtUTC = fromMaybe "" resp.rideStartTime
                     },

@@ -3,12 +3,12 @@ module Components.DriverInfoCard.Common.Types where
 import Prelude
 
 import MerchantConfig.Types (AppConfig)
-import Screens.Types (City, SearchResultType)
+import Screens.Types (City)
 import Data.Maybe (Maybe(..))
 import Common.Types.App as CTP
 
 type DriverDetailsType
-  = { searchType :: SearchResultType
+  = { searchType :: CTP.SearchResultType
   , rating :: Number
   , driverName :: String
   , vehicleDetails :: String

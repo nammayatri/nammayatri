@@ -170,7 +170,7 @@ mockDriverInfo =
   , driverName: "Test Driver"
   , eta: Nothing
   , vehicleDetails: "AUTO_RICKSHAW"
-  , currentSearchResultType: ESTIMATES
+  , currentSearchResultType: CT.ESTIMATES
   , registrationNumber: "XXXXXXXXXX"
   , rating: 5.0
   , startedAt: ""

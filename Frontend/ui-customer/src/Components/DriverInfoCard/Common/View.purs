@@ -31,7 +31,7 @@ import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margi
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..),City(..))
+import Screens.Types (Stage(..), ZoneType(..), SheetState(..),City(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
@@ -57,10 +57,10 @@ driverDetailsView config uid nid =
   , padding $ PaddingHorizontal 16 16
   , width MATCH_PARENT
   , id $ getNewIDWithTag uid
-  , margin $ Margin 16 (if config.searchType == QUOTES then 12 else 0) 16 (if config.enablePaddingBottom then safeMarginBottom else 0)
+  , margin $ Margin 16 (if config.searchType == QUOTES OneWaySpecialZoneAPIDetails then 12 else 0) 16 (if config.enablePaddingBottom then safeMarginBottom else 0)
   , background Color.white900
   , cornerRadius 8.0
-  , visibility $  boolToVisibility $ if config.searchType == QUOTES then config.rideStarted else true
+  , visibility $  boolToVisibility $ if config.searchType == QUOTES OneWaySpecialZoneAPIDetails then config.rideStarted else true
   , gravity BOTTOM
   ][  linearLayout
       [ orientation VERTICAL

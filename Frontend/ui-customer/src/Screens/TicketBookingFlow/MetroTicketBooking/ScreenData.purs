@@ -21,7 +21,7 @@ import ConfigProvider
 initData :: ST.MetroTicketBookingScreenState
 initData = {
   data: {
-    ticketType : ST.ONE_WAY
+    ticketType : ST.ONE_WAY_TICKET
   , ticketCount : 1
   , srcLoc : ""
   , destLoc : ""
