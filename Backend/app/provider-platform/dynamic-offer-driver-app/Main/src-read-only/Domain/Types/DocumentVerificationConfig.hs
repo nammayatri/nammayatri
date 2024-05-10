@@ -17,6 +17,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     dependencyDocumentType :: [Domain.Types.DocumentVerificationConfig.DocumentType],
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    doStrictVerifcation :: Kernel.Prelude.Bool,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     isDefaultEnabledOnManualVerification :: Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,
