@@ -1484,7 +1484,8 @@ mkUpdateDriverVehiclesServiceTier ridePreferences =
                 serviceTierType : ridePreferences.serviceTierType,
                 shortDescription : Nothing,
                 vehicleRating : Nothing,
-                isUsageRestricted : Nothing
+                isUsageRestricted : Nothing,
+                priority : Nothing
             }
         ]
     in 

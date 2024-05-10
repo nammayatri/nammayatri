@@ -1880,7 +1880,8 @@ type RidePreference = {
   serviceTierType :: API.ServiceTierType,
   shortDescription :: Maybe String,
   vehicleRating :: Maybe Number,
-  isUsageRestricted :: Boolean
+  isUsageRestricted :: Boolean,
+  priority :: Int
 }
 
 type BookingOptionsScreenProps = {

@@ -3,6 +3,7 @@ module Screens.BookingOptionsScreen.View where
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Ord (compare)
 import Debug (spy)
 import Effect (Effect)
 import Font.Size as FontSize
@@ -206,6 +207,10 @@ acCheckForDriversView push state =
 
 downgradeVehicleView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 downgradeVehicleView push state =
+  let
+    compareRidePreferences a b = compare a.priority b.priority
+    defaultRidePreferences = DA.sortBy compareRidePreferences state.data.ridePreferences
+  in
     linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -248,21 +253,21 @@ downgradeVehicleView push state =
               , height WRAP_CONTENT
               , orientation VERTICAL
               ]
-              ( [ serviceTierItem push state.data.defaultRidePreference state.props.downgraded false
-                ]
-                  <> ( map
-                        ( \item ->
-                            linearLayout
-                              [ height WRAP_CONTENT
-                              , width MATCH_PARENT
-                              ]
-                              [ serviceTierItem push item state.props.downgraded false ]
-                        )
-                        (DA.filter (\pref -> not pref.isDefault) state.data.ridePreferences)
-                    )
-              )
+              ( ridePreferencesView push state defaultRidePreferences)
           ]
       ]
+
+ridePreferencesView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> Array ST.RidePreference -> Array ( PrestoDOM (Effect Unit) w )
+ridePreferencesView push state ridePreferences =
+  map
+    ( \item ->
+        linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          ]
+          [ serviceTierItem push item state.props.downgraded false ]
+    ) ridePreferences
+  
 
 serviceTierItem :: forall w. (Action -> Effect Unit) -> ST.RidePreference -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
 serviceTierItem push service enabled opacity =
