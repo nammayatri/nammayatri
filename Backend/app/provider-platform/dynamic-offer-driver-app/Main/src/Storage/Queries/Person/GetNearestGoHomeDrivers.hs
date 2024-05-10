@@ -93,7 +93,14 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
       -- ideally should be there inside the vehicle.selectedServiceTiers but still to make sure we have a default service tier for the driver
       let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
       let mbDefaultServiceTierForDriver = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
-      let selectedDriverServiceTiers = DL.intersect vehicle.selectedServiceTiers ((.serviceTierType) <$> selectVehicleTierForDriver False person info vehicle cityServiceTiers)
+      let availableTiersWithUsageRestriction = selectVehicleTierForDriverWithUsageRestriction False person info vehicle cityServiceTiers
+      let ifUsageRestricted = any (\(_, usageRestricted) -> usageRestricted) availableTiersWithUsageRestriction
+      let selectedDriverServiceTiers =
+            if ifUsageRestricted
+              then do
+                (.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction) -- no need to check for user selection always send for available tiers
+              else do
+                DL.intersect vehicle.selectedServiceTiers ((.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction))
       if null serviceTiers
         then Just $ mapMaybe (mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap) selectedDriverServiceTiers
         else do

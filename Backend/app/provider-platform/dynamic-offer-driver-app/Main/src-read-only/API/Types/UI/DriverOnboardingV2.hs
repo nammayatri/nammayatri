@@ -52,6 +52,7 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
     longDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     name :: Kernel.Prelude.Text,
+    priority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     serviceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
     shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

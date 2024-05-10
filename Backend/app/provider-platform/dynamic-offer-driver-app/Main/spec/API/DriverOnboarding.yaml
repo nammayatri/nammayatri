@@ -54,6 +54,7 @@ types:
     vehicleRating: Maybe Double
     isDefault: Bool
     isSelected: Bool
+    priority: Maybe Int
   RateCardItem:
     title: Text
     price: Money

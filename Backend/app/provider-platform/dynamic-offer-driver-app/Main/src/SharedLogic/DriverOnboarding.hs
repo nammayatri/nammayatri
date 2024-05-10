@@ -158,13 +158,6 @@ checkAndUpdateAirConditioned isDashboard isAirConditioned personId cityVehicleSe
   QVehicle.updateAirConditioned (Just isAirConditioned) personId
   whenJust mbRc $ \rc -> QRC.updateAirConditioned (Just isAirConditioned) rc.id
 
-  -- enabled All Non AC variants for the drivers in case of AC turned Off
-  unless isAirConditioned $ do
-    person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-    updatedVehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId) -- Don't use run in replica here as updated in last step
-    let selectedServiceTiers = (.serviceTierType) <$> selectVehicleTierForDriver False person driverInfo updatedVehicle cityVehicleServiceTiers
-    QVehicle.updateSelectedServiceTiers selectedServiceTiers personId
-
 checkIfACAllowedForDriver :: DI.DriverInformation -> [Double] -> Bool
 checkIfACAllowedForDriver driverInfo serviceTierACThresholds = null serviceTierACThresholds || any ((fromMaybe 0 driverInfo.airConditionScore) <=) serviceTierACThresholds
 

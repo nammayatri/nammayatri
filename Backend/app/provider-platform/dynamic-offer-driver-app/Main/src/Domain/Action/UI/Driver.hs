@@ -256,6 +256,7 @@ data DriverInformationRes = DriverInformationRes
     manualDuesWithCurrency :: Maybe PriceAPIEntity,
     blockStateModifier :: Maybe Text,
     isVehicleSupported :: Bool,
+    checkIfACWorking :: Bool,
     frontendConfigHash :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
