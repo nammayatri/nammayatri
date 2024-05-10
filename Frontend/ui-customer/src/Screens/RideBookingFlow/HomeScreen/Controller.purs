@@ -1138,9 +1138,8 @@ eval (RepeatRideCountDown seconds status timerID) state = do
   else if status == "EXPIRED" then do
     void $ pure $ clearTimerWithId timerID
     void $ pure $ performHapticFeedback unit
-    void $ pure $ updateLocalStage FindingQuotes
     void $ pure $ setValueToLocalStore SELECTED_VARIANT state.data.selectedEstimatesObject.vehicleVariant
-    let updatedState = state{data{rideHistoryTrip = Nothing}, props{repeatRideTimerId = "", currentStage = FindingQuotes,repeateRideTimerStoped = true, searchExpire = (getSearchExpiryTime "LazyCheck")}}
+    let updatedState = state{data{rideHistoryTrip = Nothing}, props{repeatRideTimerId = "",repeateRideTimerStoped = true, searchExpire = (getSearchExpiryTime "LazyCheck")}}
     updateAndExit (updatedState) (GetQuotes updatedState)
   else continue state{props{repeatRideTimer = (show seconds), repeatRideTimerId = timerID, repeateRideTimerStoped = false}}
 
@@ -1803,9 +1802,8 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
         updateAndExit updatedState $  (UpdatedSource updatedState)
       SettingPrice -> do
                         void $ pure $ performHapticFeedback unit
-                        _ <- pure $ updateLocalStage FindingQuotes
                         void $ pure $ setValueToLocalStore SELECTED_VARIANT state.data.selectedEstimatesObject.vehicleVariant
-                        let updatedState = state{data{rideHistoryTrip = Nothing}, props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
+                        let updatedState = state{data{rideHistoryTrip = Nothing}, props{ searchExpire = (getSearchExpiryTime "LazyCheck")}}
                         updateAndExit (updatedState) (GetQuotes updatedState)
       _            -> continue state
 
@@ -2370,9 +2368,8 @@ eval (PickUpFarFromCurrentLocAC (PopUpModal.OnButton1Click)) state = do
 eval (EstimateChangedPopUpController (PopUpModal.OnButton1Click)) state = exit $ GoToHome state
 
 eval (EstimateChangedPopUpController (PopUpModal.OnButton2Click)) state = do
-  _ <- pure $ updateLocalStage FindingQuotes
   let
-    updatedState = state { props { currentStage = FindingQuotes, isEstimateChanged = false, searchExpire = (getSearchExpiryTime "LazyCheck") } }
+    updatedState = state { props { isEstimateChanged = false, searchExpire = (getSearchExpiryTime "LazyCheck") } }
   updateAndExit updatedState $ GetQuotes updatedState
 
 eval CloseLocationTracking state = continue state { props { isLocationTracking = false } }
@@ -2430,9 +2427,8 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes) count ) state = do
           if (estimatedPrice > state.data.suggestedAmount) then
             continue state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, isEstimateChanged = true } }
           else do
-            _ <- pure $ updateLocalStage FindingQuotes
             let
-              updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } }
+              updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, searchExpire = (getSearchExpiryTime "LazyCheck") } }
             updateAndExit updatedState $ GetQuotes updatedState
 
 
@@ -2725,12 +2721,12 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
     void $  pure $ updateLocalStage ProviderSelection 
     exit $ Cancel state { data { iopState { providerSelectionStage = true}, otherSelectedEstimates = otherSelectedEstimates}, props {estimateId = estimateId}}
   else do
-    _ <- pure $ updateLocalStage FindingQuotes
+    
     let customerTip = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.customerTip else state.props.customerTip
         tipViewProps = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.tipViewProps 
                           else if state.props.tipViewProps.stage == TIP_AMOUNT_SELECTED then state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH}
                           else state.props.tipViewProps
-        updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck"), customerTip = customerTip, tipViewProps = tipViewProps, estimateId = estimateId}, data{otherSelectedEstimates = otherSelectedEstimates}}
+        updatedState = state{props{ searchExpire = (getSearchExpiryTime "LazyCheck"), customerTip = customerTip, tipViewProps = tipViewProps, estimateId = estimateId}, data{otherSelectedEstimates = otherSelectedEstimates}}
     void $ pure $ setTipViewData (TipViewData { stage : tipViewProps.stage , activeIndex : tipViewProps.activeIndex , isVisible : tipViewProps.isVisible })
     updateAndExit (updatedState) (GetQuotes updatedState)
 
@@ -2742,11 +2738,10 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelTimer)) sta
   continue state { data { iopState { timerVal = "0"}}}
 
 eval (QuoteListModelActionController (QuoteListModelController.ProviderModelAC (PM.ButtonClick (PrimaryButtonController.OnClick)))) state = do
-  void $ pure $ updateLocalStage FindingQuotes
   void $ pure $ clearTimerWithId state.data.iopState.timerId
   void $ pure $ spy "ButtonClick state" state
   
-  let updatedState = state{props{ currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}, data { iopState { providerSelectionStage = false}}}
+  let updatedState = state{props{searchExpire = (getSearchExpiryTime "LazyCheck")}, data { iopState { providerSelectionStage = false}}}
   void $ pure $ spy "ButtonClick updatedState" updatedState
   updateAndExit (updatedState) (GetQuotes updatedState)
 
@@ -3381,8 +3376,7 @@ estimatesListTryAgainFlow (GetQuotesRes quotesRes) state = do
       if (estimatedPrice >  state.data.selectedEstimatesObject.basePrice) then
             continue state { data { suggestedAmount = estimatedPrice }, props { estimateId = defaultQuote.id, isEstimateChanged = true } }
       else do
-        _ <- pure $ updateLocalStage FindingQuotes
-        let updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = defaultQuote.id, currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } }
+        let updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = defaultQuote.id, searchExpire = (getSearchExpiryTime "LazyCheck") } }
         updateAndExit updatedState $ GetQuotes updatedState
 
 
