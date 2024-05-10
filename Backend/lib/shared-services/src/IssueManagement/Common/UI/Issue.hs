@@ -233,6 +233,7 @@ type IgmStatusAPI =
 
 type ResolveIgmIssueAPI =
   MandatoryQueryParam "response" CustomerResponse
+    :> MandatoryQueryParam "rating" CustomerRating
     :> Post '[JSON] APISuccess
 
 data CustomerResponse
@@ -248,3 +249,17 @@ instance FromHttpApiData CustomerResponse where
 instance ToHttpApiData CustomerResponse where
   toUrlPiece ACCEPT = "accept"
   toUrlPiece ESCALATE = "escalate"
+
+data CustomerRating
+  = THUMBS_UP
+  | THUMBS_DOWN
+  deriving (Eq, Show, Ord, Read, Generic, ToJSON, FromJSON, ToParamSchema, ToSchema)
+
+instance FromHttpApiData CustomerRating where
+  parseUrlPiece "thumbsup" = pure THUMBS_UP
+  parseUrlPiece "thumbsdown" = pure THUMBS_DOWN
+  parseUrlPiece _ = Left "Unable to parse customer rating"
+
+instance ToHttpApiData CustomerRating where
+  toUrlPiece THUMBS_UP = "thumbsup"
+  toUrlPiece THUMBS_DOWN = "thumbsdown"

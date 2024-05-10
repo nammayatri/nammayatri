@@ -87,15 +87,30 @@ tfLocation location_code =
 encodeToText' :: (ToJSON a) => a -> Maybe Text
 encodeToText' = A.decode . A.encode
 
-mapIssueStatus :: Maybe Common.CustomerResponse -> Maybe Text
-mapIssueStatus mbResp =
+mapBecknIssueStatus :: Maybe Common.CustomerResponse -> Maybe Text
+mapBecknIssueStatus mbResp =
   case mbResp of
     Just resp | resp == Common.ACCEPT -> Just $ show Spec.CLOSED
     _ -> Just $ show Spec.OPEN
 
-mapIssueType :: Maybe Common.CustomerResponse -> Maybe DIGM.IssueType -> Maybe Text
-mapIssueType (Just Common.ACCEPT) (Just DIGM.ISSUE) = Just $ show Spec.TYPE_ISSUE
-mapIssueType _ _ = Just $ show Spec.GRIEVANCE
+mapBecknIssueType :: Maybe Common.CustomerResponse -> Maybe DIGM.IssueType -> Maybe Text
+mapBecknIssueType Nothing (Just _) = Nothing -- this case should never happen
+mapBecknIssueType Nothing _ = Just $ show Spec.TYPE_ISSUE
+mapBecknIssueType (Just Common.ACCEPT) (Just DIGM.ISSUE) = Just $ show Spec.TYPE_ISSUE
+mapBecknIssueType _ Nothing = Nothing -- this case should never happen as code will already throw error if issue doesnot exist
+mapBecknIssueType _ _ = Just $ show Spec.GRIEVANCE
+
+mapDomainIssueStatus :: Maybe Common.CustomerResponse -> DIGM.Status
+mapDomainIssueStatus mbResp =
+  case mbResp of
+    Just resp | resp == Common.ACCEPT -> DIGM.CLOSED
+    Just resp | resp == Common.ESCALATE -> DIGM.ESCALATED
+    _ -> DIGM.OPEN
+
+mapDomainIssueType :: Maybe Common.CustomerResponse -> DIGM.IssueType -> DIGM.IssueType
+mapDomainIssueType Nothing DIGM.ISSUE = DIGM.ISSUE
+mapDomainIssueType (Just Common.ACCEPT) DIGM.ISSUE = DIGM.ISSUE
+mapDomainIssueType _ _ = DIGM.GRIEVANCE
 
 timeToText :: UTCTime -> Text
 timeToText = T.pack . show
@@ -119,6 +134,22 @@ buildIGMIssue now issueId booking rider transactionId = do
       bookingId = booking.id,
       updatedAt = convertRFC3339ToUTC now
     }
+
+updateIGMIssue :: Maybe DIGM.IGMIssue -> Maybe Common.CustomerResponse -> UTCTime -> Maybe DIGM.IGMIssue
+updateIGMIssue Nothing _ _ = Nothing
+updateIGMIssue (Just igmIssue) mbResponse now = do
+  let updatedIssue =
+        igmIssue
+          { DIGM.issueType = mapDomainIssueType mbResponse igmIssue.issueType,
+            DIGM.issueStatus = mapDomainIssueStatus mbResponse,
+            DIGM.updatedAt = now
+          }
+  Just updatedIssue
+
+mapRating :: Maybe Common.CustomerResponse -> Maybe Common.CustomerRating -> Maybe Text
+mapRating (Just Common.ACCEPT) (Just Common.THUMBS_UP) = Just $ show Spec.THUMBS_UP
+mapRating (Just Common.ACCEPT) (Just Common.THUMBS_DOWN) = Just $ show Spec.THUMBS_DOWN
+mapRating _ _ = Nothing
 
 data BppData = BppData
   { bppId :: Text,

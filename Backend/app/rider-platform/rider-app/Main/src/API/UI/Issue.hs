@@ -207,7 +207,7 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
       merchantOperatingCity <- CQMOC.findById igmReq.booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show igmReq.booking.merchantOperatingCityId)
       option <- maybe (return Nothing) (\id -> QIO.findById id CUSTOMER) req.optionId
       category <- QIC.findById req.categoryId CUSTOMER >>= fromMaybeM (InvalidRequest "Issue Category not found")
-      (becknIssueReq, issueId, igmIssue) <- ACL.buildIssueReq igmReq.booking igmReq.ride category option req.description merchant person igmConfig merchantOperatingCity Nothing Nothing
+      (becknIssueReq, issueId, igmIssue) <- ACL.buildIssueReq igmReq.booking igmReq.ride category option req.description merchant person igmConfig merchantOperatingCity Nothing Nothing Nothing
       QIGM.create igmIssue
       fork "sending beckn issue" . withShortRetry $ do
         void $ CallBPP.issue igmReq.booking.providerUrl becknIssueReq
@@ -248,8 +248,8 @@ igmIssueStatus (_, merchantId) = withFlowHandlerAPI $ do
       void $ CallBPP.issueStatus booking.providerUrl becknIssueStatusReq
   return Success
 
-resolveIGMIssue :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> CustomerResponse -> FlowHandler APISuccess
-resolveIGMIssue (personId, merchantId) issueReportId response = withFlowHandlerAPI $ do
+resolveIGMIssue :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> CustomerResponse -> Common.CustomerRating -> FlowHandler APISuccess
+resolveIGMIssue (personId, merchantId) issueReportId response rating = withFlowHandlerAPI $ do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (InternalError $ "Issue Report not found " <> show issueReportId.getId)
   becknIssueId <- maybe (throwError $ InvalidRequest "IGM Issue Id not found") return issueReport.becknIssueId
@@ -265,6 +265,7 @@ resolveIGMIssue (personId, merchantId) issueReportId response = withFlowHandlerA
       ride <- runInReplica $ QR.findByRBId booking.id >>= fromMaybeM (RideNotFound booking.id.getId)
       option <- maybe (return Nothing) (\id -> QIO.findById id CUSTOMER) issueReport.optionId
       category <- QIC.findById issueReport.categoryId CUSTOMER >>= fromMaybeM (InvalidRequest "Issue Category not found")
-      (becknIssueReq, _, _) <- ACL.buildIssueReq booking ride category option issueReport.description merchant person igmConfig merchantOperatingCity (Just response) (Just igmIssue)
+      (becknIssueReq, _, updatedIgmIssue) <- ACL.buildIssueReq booking ride category option issueReport.description merchant person igmConfig merchantOperatingCity (Just response) (Just rating) (Just igmIssue)
+      QIGM.updateByPrimaryKey updatedIgmIssue
       fork "sending beckn issue" . withShortRetry $ do
         void $ CallBPP.issue booking.providerUrl becknIssueReq

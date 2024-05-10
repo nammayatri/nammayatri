@@ -19,6 +19,7 @@ import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec
 import qualified IGM.Utils as Utils
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Utils.Common
 
 buildIssueStatusReq ::
@@ -28,7 +29,9 @@ buildIssueStatusReq ::
 buildIssueStatusReq req = do
   Utils.validateContext Spec.ISSUE_STATUS req.issueStatusReqContext
   let issueId = req.issueStatusReqMessage.issueStatusReqMessageIssueId
+  bapId <- req.issueStatusReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
   pure $
     DIssueStatus.DIssueStatus
-      { issueId = issueId
+      { issueId = issueId,
+        ..
       }

@@ -45,43 +45,44 @@ buildIssueReq ::
   IGMConfig ->
   MerchantOperatingCity ->
   Maybe Common.CustomerResponse ->
+  Maybe Common.CustomerRating ->
   Maybe IGMIssue ->
   m (Spec.IssueReq, Text, IGMIssue)
-buildIssueReq booking ride category option description merchant rider igmConfig merchantOperatingCity mbCustomerAction mbIgmIssue = do
+buildIssueReq booking ride category option description merchant rider igmConfig merchantOperatingCity mbCustomerAction mbCustomerRating mbIgmIssue = do
   now <- getCurrentTime
   let validTill = addUTCTime (intToNominalDiffTime 30) now
       ttl = diffUTCTime validTill now
       nowRFC3339 = UTCTimeRFC3339 now
-  transactionId <- generateGUID
   messageId <- generateGUID
-  (issueId, mbType) <- case mbIgmIssue of
+  (issueId, mbType, transactionId) <- case mbIgmIssue of
     Nothing -> do
       issueId <- generateGUID
-      pure (issueId, Nothing)
-    Just igmIssue -> pure (igmIssue.id.getId, Just igmIssue.issueType)
+      transactionId <- generateGUID
+      pure (issueId, Nothing, transactionId)
+    Just igmIssue -> pure (igmIssue.id.getId, Just igmIssue.issueType, igmIssue.transactionId)
   context <- Utils.buildContext Spec.ISSUE Spec.ON_DEMAND merchant transactionId messageId merchantOperatingCity.city (Just $ Utils.BppData booking.providerId (showBaseUrl booking.providerUrl)) (Just $ Utils.durationToText ttl)
-  let igmIssue = fromMaybe (Utils.buildIGMIssue nowRFC3339 issueId booking rider transactionId) mbIgmIssue
+  let igmIssue = fromMaybe (Utils.buildIGMIssue nowRFC3339 issueId booking rider transactionId) (Utils.updateIGMIssue mbIgmIssue mbCustomerAction now)
   pure $
     ( Spec.IssueReq
         { context,
-          issueReqMessage = tfIssueReqMessage category option description nowRFC3339 issueId merchant booking ride rider igmConfig mbCustomerAction mbType
+          issueReqMessage = tfIssueReqMessage category option description nowRFC3339 issueId merchant booking ride rider igmConfig mbCustomerAction mbCustomerRating mbType
         },
       issueId,
       igmIssue
     )
 
-tfIssueReqMessage :: Common.IssueCategory -> Maybe (Common.IssueOption) -> Text -> UTCTimeRFC3339 -> Text -> DM.Merchant -> Booking -> Ride -> Person -> IGMConfig -> Maybe Common.CustomerResponse -> Maybe IssueType -> Spec.IssueReqMessage
-tfIssueReqMessage category option description now issueId merchant booking ride rider igmConfig mbCustomerAction mbType =
+tfIssueReqMessage :: Common.IssueCategory -> Maybe (Common.IssueOption) -> Text -> UTCTimeRFC3339 -> Text -> DM.Merchant -> Booking -> Ride -> Person -> IGMConfig -> Maybe Common.CustomerResponse -> Maybe Common.CustomerRating -> Maybe IssueType -> Spec.IssueReqMessage
+tfIssueReqMessage category option description now issueId merchant booking ride rider igmConfig mbCustomerAction mbCustomerRating mbType =
   Spec.IssueReqMessage
-    { issueReqMessageIssue = tfIssue category option description now issueId merchant booking ride rider igmConfig mbCustomerAction mbType
+    { issueReqMessageIssue = tfIssue category option description now issueId merchant booking ride rider igmConfig mbCustomerAction mbCustomerRating mbType
     }
 
-tfIssue :: Common.IssueCategory -> Maybe (Common.IssueOption) -> Text -> UTCTimeRFC3339 -> Text -> DM.Merchant -> Booking -> Ride -> Person -> IGMConfig -> Maybe Common.CustomerResponse -> Maybe IssueType -> Spec.Issue
-tfIssue category option description now issueId merchant booking ride rider igmConfig mbCustomerAction mbType = do
+tfIssue :: Common.IssueCategory -> Maybe (Common.IssueOption) -> Text -> UTCTimeRFC3339 -> Text -> DM.Merchant -> Booking -> Ride -> Person -> IGMConfig -> Maybe Common.CustomerResponse -> Maybe Common.CustomerRating -> Maybe IssueType -> Spec.Issue
+tfIssue category option description now issueId merchant booking ride rider igmConfig mbCustomerAction mbCustomerRating mbType = do
   let issueCategory = category.igmCategory
       issueSubCategory = option >>= (.igmSubCategory)
-      issueType = Utils.mapIssueType mbCustomerAction mbType
-      issueStatus = Utils.mapIssueStatus mbCustomerAction
+      issueType = Utils.mapBecknIssueType mbCustomerAction mbType
+      issueStatus = Utils.mapBecknIssueStatus mbCustomerAction
   Spec.Issue
     { issueCategory = issueCategory,
       issueComplainantInfo = tfComplainantInfo booking rider,
@@ -99,7 +100,7 @@ tfIssue category option description now issueId merchant booking ride rider igmC
       issueStatus = issueStatus,
       issueSubCategory = issueSubCategory,
       issueUpdatedAt = now,
-      issueRating = Nothing
+      issueRating = Utils.mapRating mbCustomerAction mbCustomerRating
     }
 
 tfDescription :: Text -> Maybe Spec.IssueDescription
@@ -206,7 +207,7 @@ tfOrg :: DM.Merchant -> Maybe Spec.OrganizationOrg
 tfOrg merchant =
   Just $
     Spec.OrganizationOrg
-      { organizationOrgName = Just $ merchant.bapId <> "::TRV10" -- shrey00 : make a function for this
+      { organizationOrgName = Just $ merchant.bapId <> "::ONDC:TRV10" -- shrey00 : make a function for this
       }
 
 tfPerson :: IGMConfig -> Maybe Spec.ComplainantPerson

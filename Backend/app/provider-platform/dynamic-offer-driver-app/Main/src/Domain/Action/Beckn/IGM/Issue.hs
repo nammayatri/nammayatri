@@ -71,7 +71,8 @@ data ValidatedDIssue = ValidatedDIssue
     igmConfig :: IGMConfig,
     createdAt :: UTCTimeRFC3339,
     merchantOperatingCity :: MerchantOperatingCity,
-    merchant :: Merchant
+    merchant :: Merchant,
+    bppId :: Text
   }
 
 data IssueRes = IssueRes
@@ -84,7 +85,9 @@ data IssueRes = IssueRes
     updatedAt :: UTCTimeRFC3339,
     merchant' :: Merchant,
     merchantOperatingCity :: MerchantOperatingCity,
-    issueStatus :: DIGM.Status
+    issueStatus :: DIGM.Status,
+    bapId :: Text,
+    bppId :: Text
   }
 
 validateRequest :: Id Merchant -> DIssue -> Flow (ValidatedDIssue)
@@ -95,24 +98,25 @@ validateRequest merchantId dIssue@DIssue {..} = do
   issueStatus <- mapStatusAndTypeToStatus issueStatusText issueTypeText
   issueType <- mapType issueTypeText
   igmConfig <- QIGMConfig.findByMerchantId merchantId >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchantId)
+  let bppId = merchant.subscriberId.getShortId
   pure $ ValidatedDIssue {..}
 
 handler :: ValidatedDIssue -> Flow (IssueRes)
 handler ValidatedDIssue {..} = do
   now <- getCurrentTime
   issueRes <- case issueStatus of
-    DIGM.OPEN -> openBecknIssue ValidatedDIssue {..} now
+    DIGM.OPEN -> openBecknIssue ValidatedDIssue {..}
     DIGM.ESCALATED -> escalateBecknIssue ValidatedDIssue {..} now
     DIGM.CLOSED -> closeBecknIssue ValidatedDIssue {..} now
   pure $ issueRes
 
-openBecknIssue :: ValidatedDIssue -> UTCTime -> Flow (IssueRes)
-openBecknIssue dIssue@ValidatedDIssue {..} now = do
+openBecknIssue :: ValidatedDIssue -> Flow (IssueRes)
+openBecknIssue dIssue@ValidatedDIssue {..} = do
   ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
   -- riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id") -- shrey00 : incorporate it back?
   let igmIssue =
         DIGM.IGMIssue
-          { DIGM.createdAt = now,
+          { DIGM.createdAt = convertRFC3339ToUTC createdAt,
             DIGM.customerEmail = customerEmail,
             DIGM.customerName = customerName,
             DIGM.customerPhone = customerPhone,
@@ -123,10 +127,10 @@ openBecknIssue dIssue@ValidatedDIssue {..} now = do
             DIGM.issueType = issueType,
             DIGM.respondentAction = Nothing,
             DIGM.resolutionAction = Nothing,
-            DIGM.updatedAt = now,
+            DIGM.updatedAt = convertRFC3339ToUTC createdAt,
             DIGM.merchantId = booking.providerId
           }
-  category <- QIC.findByIGMIssueCategory issueCategory >>= fromMaybeM (InvalidRequest "Issue Category not found")
+  category <- QIC.findByIGMIssueCategory issueCategory >>= fromMaybeM (InvalidRequest "Issue Category not found or unsupported")
   QIGM.create igmIssue
   mbOption <- QIO.findByIGMIssueSubCategory issueSubCategory
   let optionId = mbOption <&> (.id)
@@ -140,8 +144,8 @@ openBecknIssue dIssue@ValidatedDIssue {..} now = do
         groName = igmConfig.groName,
         groPhone = igmConfig.groPhone,
         groEmail = igmConfig.groEmail,
-        createdAt = UTCTimeRFC3339 now,
-        updatedAt = UTCTimeRFC3339 now,
+        createdAt = createdAt,
+        updatedAt = createdAt,
         merchant' = dIssue.merchant,
         merchantOperatingCity = merchantOperatingCity,
         ..
@@ -168,7 +172,7 @@ escalateBecknIssue dIssue@ValidatedDIssue {..} now = do
         updatedAt = UTCTimeRFC3339 now,
         merchant' = dIssue.merchant,
         merchantOperatingCity = merchantOperatingCity,
-        issueStatus = issueStatus
+        ..
       }
 
 closeBecknIssue :: ValidatedDIssue -> UTCTime -> Flow (IssueRes)
@@ -194,7 +198,7 @@ closeBecknIssue dIssue@ValidatedDIssue {..} now = do
         updatedAt = UTCTimeRFC3339 now,
         merchant' = dIssue.merchant,
         merchantOperatingCity = merchantOperatingCity,
-        issueStatus = issueStatus
+        ..
       }
 
 mapType :: MonadFlow m => Text -> m DIGM.IssueType
