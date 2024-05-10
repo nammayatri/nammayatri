@@ -228,31 +228,35 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchanOperatingCityId) = do
 
   let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False person driverInfo vehicle cityVehicleServiceTiers
   let serviceTierACThresholds = map (\(VehicleServiceTier {..}, _) -> airConditioned) driverVehicleServiceTierTypes
+  let isACCheckEnabledForCity = any isJust serviceTierACThresholds
   let isACAllowedForDriver = checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
-  let isACWorking = vehicle.airConditioned /= Just False
+  let isACWorkingForVehicle = vehicle.airConditioned /= Just False
+  let isACWorking = isACAllowedForDriver && isACWorkingForVehicle
   let tierOptions =
         driverVehicleServiceTierTypes <&> \(VehicleServiceTier {..}, usageRestricted) -> do
+          let isNonACDefault = isACCheckEnabledForCity && not isACWorking && isNothing airConditioned
           API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier
-            { isSelected = serviceTierType `elem` vehicle.selectedServiceTiers,
-              isDefault = (vehicle.variant `elem` defaultForVehicleVariant) || (isNothing airConditioned && not (isACAllowedForDriver && isACWorking)),
+            { isSelected = (serviceTierType `elem` vehicle.selectedServiceTiers) || isNonACDefault,
+              isDefault = (vehicle.variant `elem` defaultForVehicleVariant) || isNonACDefault,
               isUsageRestricted = Just usageRestricted,
+              priority = Just priority,
               ..
             }
 
   mbAirConditioned <-
-    if any isJust serviceTierACThresholds
+    if isACCheckEnabledForCity
       then do
         restrictionMessageItem <-
           if not isACAllowedForDriver
             then MTQuery.findByErrorAndLanguage "AC_RESTRICTION_MESSAGE" personLangauge
             else
-              if isACWorking
+              if isACWorkingForVehicle
                 then MTQuery.findByErrorAndLanguage "AC_WORKING_MESSAGE" personLangauge
                 else return Nothing
         return $
           Just $
             API.Types.UI.DriverOnboardingV2.AirConditionedTier
-              { isWorking = isACAllowedForDriver && isACWorking,
+              { isWorking = isACWorking,
                 restrictionMessage = restrictionMessageItem <&> (.message),
                 usageRestrictionType = driverInfo.acUsageRestrictionType
               }
@@ -284,18 +288,14 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchanOperatingCityId) API.Types.U
   vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
 
   let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False person driverInfo vehicle cityVehicleServiceTiers
-  let serviceTierACThresholds = map (\(vst, _) -> vst.airConditioned) driverVehicleServiceTierTypes
-  let isACAllowedForDriver = checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
-  let isACWorkingForVehicle = vehicle.airConditioned /= Just False
   mbSelectedServiceTiers <-
     driverVehicleServiceTierTypes `forM` \(driverServiceTier, _) -> do
       let isAlreadySelected = driverServiceTier.serviceTierType `elem` vehicle.selectedServiceTiers
-          isNonAcServiceTier = isNothing driverServiceTier.airConditioned
           isDefault = vehicle.variant `elem` driverServiceTier.defaultForVehicleVariant
           mbServiceTierDriverRequest = find (\tier -> tier.serviceTierType == driverServiceTier.serviceTierType) tiers
           isSelected = maybe isAlreadySelected (.isSelected) mbServiceTierDriverRequest
 
-      if isSelected || isDefault || (isNonAcServiceTier && not (isACAllowedForDriver && isACWorkingForVehicle))
+      if isSelected || isDefault
         then return $ Just driverServiceTier.serviceTierType
         else return Nothing
 

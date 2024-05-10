@@ -20,11 +20,6 @@ import qualified Domain.Types.Vehicle as DV
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 
-selectVehicleTierForDriver :: Bool -> DP.Person -> DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> [DVST.VehicleServiceTier]
-selectVehicleTierForDriver onlyAutoSelected person driverInfo vehicle cityVehicleServiceTiers = do
-  let vehicleServiceTiersWithUsageRestriction = selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected person driverInfo vehicle cityVehicleServiceTiers
-  map fst $ filter (not . snd) vehicleServiceTiersWithUsageRestriction
-
 selectVehicleTierForDriverWithUsageRestriction :: Bool -> DP.Person -> DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> [(DVST.VehicleServiceTier, Bool)]
 selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected person driverInfo vehicle cityVehicleServiceTiers =
   map mapUsageRestriction $ filter filterVehicleTier cityVehicleServiceTiers
