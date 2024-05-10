@@ -279,7 +279,6 @@ library
       Domain.Types.RideRoute
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
-      Domain.Types.SearchTry
       Domain.Types.ServiceTierType
       Domain.Types.UtilsTH
       Environment
@@ -404,7 +403,6 @@ library
       Storage.Beam.RiderDetails
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequest.SearchReqLocation
-      Storage.Beam.SearchTry
       Storage.Beam.SystemConfigs
       Storage.Cac.DriverIntelligentPoolConfig
       Storage.Cac.DriverPoolConfig
@@ -546,7 +544,7 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.SearchRequestForDriverExtra
-      Storage.Queries.SearchTry
+      Storage.Queries.SearchTryExtra
       Storage.Queries.Status
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.DocumentVerificationConfig
@@ -558,6 +556,7 @@ library
       Storage.Queries.Transformers.RegistrationToken
       Storage.Queries.Transformers.Ride
       Storage.Queries.Transformers.SearchRequestForDriver
+      Storage.Queries.Transformers.SearchTry
       Storage.Queries.TranslationsExtra
       Storage.Queries.Vehicle.Internal
       Storage.Queries.VehicleDetailsExtra
@@ -654,6 +653,7 @@ library
       Domain.Types.RegistrationToken
       Domain.Types.Ride
       Domain.Types.SearchRequestForDriver
+      Domain.Types.SearchTry
       Domain.Types.SubscriptionConfig
       Domain.Types.Toll
       Domain.Types.Translations
@@ -722,6 +722,7 @@ library
       Storage.Beam.RegistrationToken
       Storage.Beam.Ride
       Storage.Beam.SearchRequestForDriver
+      Storage.Beam.SearchTry
       Storage.Beam.SubscriptionConfig
       Storage.Beam.Toll
       Storage.Beam.Translations
@@ -804,6 +805,7 @@ library
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.SearchRequestForDriver
+      Storage.Queries.OrphanInstances.SearchTry
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.Vehicle
       Storage.Queries.OrphanInstances.VehicleDetails
@@ -821,6 +823,7 @@ library
       Storage.Queries.RegistrationToken
       Storage.Queries.Ride
       Storage.Queries.SearchRequestForDriver
+      Storage.Queries.SearchTry
       Storage.Queries.SubscriptionConfig
       Storage.Queries.Toll
       Storage.Queries.Translations

@@ -1,0 +1,50 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+module Storage.Beam.SearchTry where
+
+import qualified Database.Beam as B
+import qualified Domain.Types.Common
+import qualified Domain.Types.SearchTry
+import qualified Domain.Types.ServiceTierType
+import Kernel.External.Encryption
+import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
+import Tools.Beam.UtilsTH
+
+data SearchTryT f = SearchTryT
+  { baseFare :: (B.C f Kernel.Types.Common.Money),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    customerExtraFee :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money)),
+    estimateId :: (B.C f Kernel.Prelude.Text),
+    estimateIds :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
+    id :: (B.C f Kernel.Prelude.Text),
+    isScheduled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    messageId :: (B.C f Kernel.Prelude.Text),
+    requestId :: (B.C f Kernel.Prelude.Text),
+    searchRepeatCounter :: (B.C f Kernel.Prelude.Int),
+    searchRepeatType :: (B.C f Domain.Types.SearchTry.SearchRepeatType),
+    startTime :: (B.C f Kernel.Prelude.UTCTime),
+    status :: (B.C f Domain.Types.SearchTry.SearchTryStatus),
+    tripCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory)),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    validTill :: (B.C f Kernel.Prelude.UTCTime),
+    vehicleVariant :: (B.C f Domain.Types.ServiceTierType.ServiceTierType),
+    vehicleServiceTierName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text))
+  }
+  deriving (Generic, B.Beamable)
+
+instance B.Table SearchTryT where
+  data PrimaryKey SearchTryT f = SearchTryId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = SearchTryId . id
+
+type SearchTry = SearchTryT Identity
+
+$(enableKVPG (''SearchTryT) [('id)] [])
+
+$(mkTableInstances (''SearchTryT) "search_try")

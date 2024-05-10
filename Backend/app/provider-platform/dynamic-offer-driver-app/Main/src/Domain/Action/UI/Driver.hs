@@ -1066,7 +1066,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       when isBookingCancelled' $ throwError (InternalError "BOOKING_CANCELLED")
       CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
       unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
-      QST.updateStatus searchTry.id DST.COMPLETED
+      QST.updateStatus DST.COMPLETED searchTry.id
       (ride, _, vehicle) <- initializeRide merchantId driver booking Nothing Nothing clientId
       driverFCMPulledList <- deactivateExistingQuotes merchantOpCityId merchantId driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
       void $ sendRideAssignedUpdateToBAP booking ride driver vehicle

@@ -120,7 +120,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
         Just scheduleTime -> scheduleBatching searchTry scheduleTime
         Nothing -> do
           booking <- QRB.findByQuoteId searchTry.estimateId >>= fromMaybeM (BookingDoesNotExist searchTry.estimateId)
-          QST.updateStatus searchTry.id DST.CANCELLED
+          QST.updateStatus DST.CANCELLED searchTry.id
           SBooking.cancelBooking booking Nothing merchant
   where
     scheduleBatching searchTry inTime = do
@@ -156,7 +156,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               --   throwError SearchTryEstimatedFareChanged
               searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory customerExtraFee messageId serviceTier
               when (oldSearchTry.status == DST.ACTIVE) $ do
-                QST.updateStatus oldSearchTry.id DST.CANCELLED
+                QST.updateStatus DST.CANCELLED oldSearchTry.id
                 void $ QDQ.setInactiveBySTId oldSearchTry.id
               _ <- QST.create searchTry
               return searchTry
