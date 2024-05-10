@@ -71,7 +71,7 @@ postSocialLogin req = do
   result <- L.runIO $ fetchTokenInfo iosValidateEnpoint req.oauthProvider req.tokenId
   case result of
     Right info -> do
-      oldPerson <- PQ.findByEmail (Just info.email)
+      oldPerson <- PQ.findByEmailAndMerchant req.merchantId info.email
       moc <- CQMOC.findByMerchantIdAndCity req.merchantId req.merchantOperatingCity >>= fromMaybeM (MerchantOperatingCityNotFound $ show req.merchantOperatingCity)
       person <-
         case oldPerson of
