@@ -142,6 +142,7 @@ acCheckForDriversView push state =
               , cornerRadius 100.0
               , background backgroundColor
               , stroke $ "1," <> backgroundColor
+              , onClick push $ const $ UpdateACAvailability airConditionedData.isWorking
               , gravity CENTER_VERTICAL
               ]
               [ linearLayout
@@ -332,6 +333,7 @@ toggleView push enabled default service =
       , alpha if default then 0.5 else 1.0
       , background backgroundColor
       , stroke $ "1," <> backgroundColor
+      , onClick push $ const $ ToggleRidePreference service
       , gravity CENTER_VERTICAL
       , clickable $ not $ default
       ]
